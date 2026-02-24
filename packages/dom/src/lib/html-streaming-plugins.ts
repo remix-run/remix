@@ -1,8 +1,9 @@
 import { defineStreamingPlugin } from '@remix-run/reconciler'
 import type { StreamingPluginDefinition } from '@remix-run/reconciler'
+import { normalizeDomProps, shouldNormalizeDomProps } from './plugins/normalize-dom-props.ts'
 
 export function createHtmlStreamingPlugins(): StreamingPluginDefinition[] {
-  return [stylePropsStreamingPlugin, frameworkPropsStreamingPlugin]
+  return [stylePropsStreamingPlugin, frameworkPropsStreamingPlugin, attributePropsStreamingPlugin]
 }
 
 let frameworkPropsStreamingPlugin = defineStreamingPlugin({
@@ -45,6 +46,25 @@ let stylePropsStreamingPlugin = defineStreamingPlugin({
         }
         props.style = serializeStyleObject(style as Record<string, unknown>)
         context.replaceProps(props)
+      },
+    }
+  },
+})
+
+let attributePropsStreamingPlugin = defineStreamingPlugin({
+  phase: 'special',
+  priority: 10,
+  shouldActivate(context) {
+    return shouldNormalizeDomProps(context.delta.nextProps)
+  },
+  setup() {
+    return {
+      commit(context) {
+        let props = context.remainingPropsView()
+        let next = normalizeDomProps(props)
+        if (next !== props) {
+          context.replaceProps(next)
+        }
       },
     }
   },

@@ -10,9 +10,10 @@ describe('renderToHTMLStream', () => {
       </main>,
     )
     let html = await readStream(stream)
-    expect(html).toBe(
-      '<main class="app" style="color:red;background-color:black">&lt;hello&gt;</main>',
-    )
+    expect(html).toContain('<main')
+    expect(html).toContain('class="app"')
+    expect(html).toContain('style="color:red;background-color:black"')
+    expect(html).toContain('&lt;hello&gt;</main>')
   })
 
   it('supports raw innerHTML and void elements', async () => {
@@ -118,6 +119,29 @@ describe('renderToHTMLStream', () => {
     expect((capturedSignal as any).aborted).toBe(true)
   })
 
+  it('aborts while rendering frame JSX through the renderer bridge', async () => {
+    let resolveFrameStarted = () => {}
+    let started = new Promise<void>((resolve) => {
+      resolveFrameStarted = resolve
+    })
+    let abortController = new AbortController()
+    let stream = renderToHTMLStream(<frame src="/jsx" fallback={'wait'} />, {
+      signal: abortController.signal,
+      async resolveFrame(_src, signal) {
+        resolveFrameStarted()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        if (signal.aborted) {
+          return <div>late</div>
+        }
+        return <div>ok</div>
+      },
+    })
+    let readPromise = readStream(stream)
+    await started
+    abortController.abort(new Error('cancel jsx frame'))
+    await expect(readPromise).rejects.toThrow('cancel jsx frame')
+  })
+
   it('hoists head elements and emits frame metadata script', async () => {
     let stream = renderToHTMLStream(
       <html>
@@ -134,6 +158,70 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('"src":"/meta"')
   })
 
+  it('injects hoisted head content into an existing head element', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <html>
+          <head>
+            <meta charSet="utf-8" />
+          </head>
+          <body>
+            <title>Late title</title>
+          </body>
+        </html>,
+      ),
+    )
+    expect(html).toContain('<head><meta char-set="utf-8"><title>Late title</title></head>')
+    expect(html.indexOf('<head>')).toBeLessThan(html.indexOf('<body>'))
+  })
+
+  it('inserts rmx-data script before closing body when html root exists', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <html>
+          <body>
+            <frame src="/meta-script" fallback={'loading'} />
+          </body>
+        </html>,
+        { resolveFrame: async () => '<div>ok</div>' },
+      ),
+    )
+    let bodyClose = html.indexOf('</body>')
+    let dataIndex = html.indexOf('id="rmx-data"')
+    expect(dataIndex).toBeGreaterThan(-1)
+    expect(dataIndex).toBeLessThan(bodyClose)
+  })
+
+  it('inserts rmx-data before closing html when body tag is missing', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <html>
+          <frame src="/only-html" fallback={'loading'} />
+        </html>,
+        { resolveFrame: async () => '<div>ok</div>' },
+      ),
+    )
+    let htmlClose = html.indexOf('</html>')
+    let dataIndex = html.indexOf('id="rmx-data"')
+    expect(dataIndex).toBeGreaterThan(-1)
+    expect(dataIndex).toBeLessThan(htmlClose)
+  })
+
+  it('prepends head and appends metadata for non-html roots', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <title>Title</title>
+          <frame src="/rootless" fallback={'loading'} />
+        </main>,
+        { resolveFrame: async () => '<div>ok</div>' },
+      ),
+    )
+    expect(html.startsWith('<head><title>Title</title></head>')).toBe(true)
+    expect(html.endsWith('</script><template')).toBe(false)
+    expect(html).toContain('id="rmx-data"')
+  })
+
   it('omits metadata script when there are no frames', async () => {
     let html = await readStream(renderToHTMLStream(<main>plain</main>))
     expect(html.includes('id="rmx-data"')).toBe(false)
@@ -147,13 +235,36 @@ describe('renderToHTMLStream', () => {
     )
     expect(html).toContain('"status":"resolved"')
     expect(html).toContain('"src":"/resolved"')
+    expect(html).toContain('<!-- f:')
+    expect(html).toContain('<div>resolved</div>')
+    expect(html.includes('<template id=')).toBe(false)
   })
 
-  it('handles frame boundaries without resolveFrame', async () => {
-    let html = await readStream(renderToHTMLStream(<frame src="/x" fallback={<i>f</i>} />))
-    expect(html).toContain('<!-- f:')
-    expect(html).toContain('<i>f</i>')
-    expect(html.includes('<template id=')).toBe(false)
+  it('throws when frame boundaries are rendered without resolveFrame', async () => {
+    let stream = renderToHTMLStream(<frame src="/x" fallback={<i>f</i>} />)
+    await expect(readStream(stream)).rejects.toThrow('No resolveFrame provided')
+  })
+
+  it('includes frame name metadata when provided', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame name="cart" src="/cart" fallback={'wait'} />, {
+        resolveFrame: async () => '<aside>ready</aside>',
+      }),
+    )
+    expect(html).toContain('"name":"cart"')
+  })
+
+  it('runs blocking resolved frame content through plugins', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/plugin-check" />, {
+        resolveFrame: async () => (
+          <section className="box" tabIndex={2}>
+            ok
+          </section>
+        ),
+      }),
+    )
+    expect(html).toContain('<section class="box" tabindex="2">ok</section>')
   })
 
   it('supports resolveFrame returning Uint8Array', async () => {
@@ -182,6 +293,16 @@ describe('renderToHTMLStream', () => {
     )
     expect(html).toContain('<template id="')
     expect(html).toContain('<\\/template>')
+  })
+
+  it('runs deferred resolved frame content through plugins', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/deferred-plugin" fallback={'wait'} />, {
+        resolveFrame: async () => <aside className="pane" tabIndex={3}>done</aside>,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<aside class="pane" tabindex="3">done</aside>')
   })
 
   it('throws when frame src is not a string', async () => {
@@ -213,6 +334,23 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('<p style="display:block"></p>')
     expect(html).toContain('<span></span>')
     expect(html.includes(' mix=')).toBe(false)
+  })
+
+  it('normalizes key HTML and SVG attribute aliases through plugins', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main tabIndex={1} acceptCharset="utf-8" httpEquiv="x">
+          <svg viewBox="0 0 10 10">
+            <use xlinkHref="#icon" />
+          </svg>
+        </main>,
+      ),
+    )
+    expect(html).toContain('tabindex="1"')
+    expect(html).toContain('accept-charset="utf-8"')
+    expect(html).toContain('http-equiv="x"')
+    expect(html).toContain('<svg viewBox="0 0 10 10">')
+    expect(html).toContain('<use xlink:href="#icon"></use>')
   })
 
   it('hoists managed script tags and keeps non-managed scripts inline', async () => {

@@ -7,9 +7,12 @@ import {
 } from './client-entry.ts'
 
 let encoder = new TextEncoder()
+export let HTML_STREAMING_FINALIZE_PREFIX = '<!-- rmx:finalize:'
+export let HTML_STREAMING_FINALIZE_SUFFIX = ' -->'
 
 type FrameMeta = {
   status: 'pending' | 'resolved'
+  name?: string
   src: string
 }
 
@@ -49,10 +52,18 @@ let voidElements = new Set([
 export type ResolveFrame = (
   src: string,
   signal: AbortSignal,
-) => Promise<string | Uint8Array | ReadableStream<Uint8Array>> | string | Uint8Array | ReadableStream<Uint8Array>
+) =>
+  | Promise<ResolveFrameValue>
+  | ResolveFrameValue
+
+type ResolveFrameValue = string | Uint8Array | ReadableStream<Uint8Array> | StreamingRenderValue
 
 type HtmlStreamingPolicyOptions = {
   resolveFrame?: ResolveFrame
+  renderFrameValueToString?: (
+    value: null | StreamingRenderValue,
+    signal: AbortSignal,
+  ) => Promise<string>
 }
 
 export function createHtmlStreamingPolicy(
@@ -93,21 +104,45 @@ export function createHtmlStreamingPolicy(
       if (typeof src !== 'string') {
         throw new Error('<frame> requires a "src" string prop')
       }
+      if (!options.resolveFrame) {
+        throw new Error('No resolveFrame provided')
+      }
       let frameId = crypto.randomUUID()
-      let content =
+      let fallbackContent =
         'fallback' in input.props ? (input.props.fallback as null | StreamingRenderValue) : null
+      let frameName = typeof input.props.name === 'string' ? input.props.name : undefined
       context.frameData.set(frameId, {
-        status: content == null ? 'resolved' : 'pending',
+        status: fallbackContent == null ? 'resolved' : 'pending',
+        name: frameName,
         src,
       })
-      let deferred = options.resolveFrame
-        ? resolveFrameTemplate(options.resolveFrame, frameId, src, signal)
-        : Promise.resolve(undefined)
+      if (fallbackContent != null) {
+        let deferred = resolveFrameTemplate(
+          options.resolveFrame,
+          options.renderFrameValueToString,
+          frameId,
+          src,
+          signal,
+        ).catch((error) => {
+          if (signal.aborted) return new Uint8Array()
+          throw error
+        })
+        return {
+          open: encoder.encode(`<!-- f:${frameId} -->`),
+          content: fallbackContent,
+          close: encoder.encode('<!-- /f -->'),
+          deferred,
+        }
+      }
+      let blocking = resolveFrameBlockingContent(
+        options.resolveFrame,
+        options.renderFrameValueToString,
+        src,
+        signal,
+      )
       return {
-        open: encoder.encode(`<!-- f:${frameId} -->`),
-        content,
+        open: emitBlockingFrameBoundaryOpen(frameId, blocking),
         close: encoder.encode('<!-- /f -->'),
-        deferred,
       }
     },
     beginElement(input, context) {
@@ -168,18 +203,18 @@ export function createHtmlStreamingPolicy(
       return
     },
     finalize(context) {
-      let chunks: Uint8Array[] = []
-      if (context.hoistedHeadElements.length > 0) {
-        let wrapped = context.hasHtmlRoot
-          ? `<head>${context.hoistedHeadElements.join('')}</head>`
-          : `<head>${context.hoistedHeadElements.join('')}</head>`
-        chunks.push(encoder.encode(wrapped))
-      }
+      let headHtml = context.hoistedHeadElements.join('')
       let rmxDataScript = serializeRmxDataScript(context.hydrationData, context.frameData)
-      if (rmxDataScript) {
-        chunks.push(encoder.encode(rmxDataScript))
-      }
-      return chunks
+      if (!headHtml && !rmxDataScript) return
+      let payload = encodeURIComponent(
+        JSON.stringify({
+          headHtml,
+          rmxDataScript,
+        }),
+      )
+      return encoder.encode(
+        `${HTML_STREAMING_FINALIZE_PREFIX}${payload}${HTML_STREAMING_FINALIZE_SUFFIX}`,
+      )
     },
   }
 }
@@ -221,10 +256,7 @@ function currentSink(context: HtmlRootContext) {
 }
 
 function toAttributeName(name: string) {
-  if (name === 'className') return 'class'
-  if (name === 'htmlFor') return 'for'
-  if (name.startsWith('aria-') || name.startsWith('data-')) return name
-  return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+  return name
 }
 
 function escapeHtml(value: string) {
@@ -240,22 +272,55 @@ function escapeHtmlAttribute(value: string) {
 
 async function resolveFrameTemplate(
   resolveFrame: ResolveFrame,
+  renderFrameValueToString: HtmlStreamingPolicyOptions['renderFrameValueToString'],
   frameId: string,
   src: string,
   signal: AbortSignal,
 ) {
-  if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
   let resolved = await resolveFrame(src, signal)
-  let html = ''
-  if (typeof resolved === 'string') {
-    html = resolved
-  } else if (resolved instanceof Uint8Array) {
-    html = new TextDecoder().decode(resolved)
-  } else {
-    html = await readByteStream(resolved, signal)
-  }
+  let html = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
   let escaped = html.replace(/<\/template/gi, '<\\/template')
   return encoder.encode(`<template id="${frameId}">${escaped}</template>`)
+}
+
+async function resolveFrameBlockingContent(
+  resolveFrame: ResolveFrame,
+  renderFrameValueToString: HtmlStreamingPolicyOptions['renderFrameValueToString'],
+  src: string,
+  signal: AbortSignal,
+) {
+  let resolved = await resolveFrame(src, signal)
+  let html = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
+  return encoder.encode(html)
+}
+
+async function* emitBlockingFrameBoundaryOpen(frameId: string, blocking: Promise<Uint8Array>) {
+  yield encoder.encode(`<!-- f:${frameId} -->`)
+  yield await blocking
+}
+
+async function resolvedFrameToHtml(
+  value: ResolveFrameValue,
+  renderFrameValueToString: HtmlStreamingPolicyOptions['renderFrameValueToString'],
+  signal: AbortSignal,
+) {
+  if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
+  if (typeof value === 'string') return value
+  if (value instanceof Uint8Array) return new TextDecoder().decode(value)
+  if (isByteStream(value)) return readByteStream(value, signal)
+  if (!renderFrameValueToString) {
+    throw new Error('Missing frame renderer')
+  }
+  return renderFrameValueToString(value, signal)
+}
+
+function isByteStream(value: unknown): value is ReadableStream<Uint8Array> {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'getReader' in value &&
+    typeof (value as ReadableStream<Uint8Array>).getReader === 'function'
+  )
 }
 
 async function readByteStream(stream: ReadableStream<Uint8Array>, signal: AbortSignal) {

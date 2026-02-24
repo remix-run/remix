@@ -29,6 +29,7 @@ export type DomElementProps<node extends EventTarget> = {
 
 export type FrameElementProps = {
   src: string
+  name?: string
   fallback?: RenderValue
   key?: unknown
 }
