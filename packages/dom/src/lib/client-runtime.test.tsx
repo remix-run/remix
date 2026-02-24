@@ -82,6 +82,69 @@ describe('boot', () => {
     expect(document.body.innerHTML).toContain('client sidebar')
   })
 
+  it('supports frame reload from streamed HTML chunks', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p>loading</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"resolved","name":"streamed","src":"/frame/streamed"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let encoder = new TextEncoder()
+    let resolveFrame = vi.fn(async () => {
+      let bytes = encoder.encode('<div>streamed chunk content</div>')
+      return new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes.slice(0, 10))
+          controller.enqueue(bytes.slice(10))
+          controller.close()
+        },
+      })
+    })
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame,
+    })
+    await runtime.ready()
+
+    let frame = runtime.frames.get('streamed')
+    expect(frame).toBeDefined()
+    await frame?.reload()
+
+    expect(document.body.innerHTML).toContain('streamed chunk content')
+  })
+
+  it('disposes hydrated roots and frame content', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button>server A</button><!-- /rmx:h -->',
+      '<!-- f:f1 --><p>loading</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/a.js","exportName":"EntryA","props":{"label":"A"}}},"f":{"f1":{"status":"resolved","name":"sidebar","src":"/frame/sidebar"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => (props: { label: string }) => <button>{`client ${props.label}`}</button>,
+      resolveFrame: async () => '<div>frame body</div>',
+    })
+    await runtime.ready()
+    await runtime.frames.get('sidebar')?.reload()
+    expect(document.body.innerHTML).toContain('client A')
+    expect(document.body.innerHTML).toContain('frame body')
+
+    runtime.dispose()
+    expect(document.body.innerHTML).not.toContain('client A')
+    expect(runtime.frames.get('sidebar')).toBeUndefined()
+    expect(document.body.innerHTML).toContain('frame body')
+  })
+
   it('reports malformed boundaries via onError', async () => {
     document.body.innerHTML = [
       '<main>',

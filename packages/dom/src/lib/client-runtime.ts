@@ -148,6 +148,7 @@ export function boot(options: BootOptions): RuntimeHandle {
     try {
       mergeRmxDataFromScope(state.data, doc, options.onError)
       let container = doc.body ?? doc.documentElement ?? doc
+      pruneDisconnectedRuntimeNodes(state)
       await hydrateContainer(state, Array.from(container.childNodes), topFrame)
       runtime.flush()
     } catch (error) {
@@ -175,6 +176,7 @@ async function hydrateContainer(
   ownerFrame: FrameHandle,
 ) {
   if (state.disposed) return
+  pruneDisconnectedRuntimeNodes(state)
   let hydrationBoundaries = findHydrationBoundaries(nodes, (error) => state.options.onError?.(error, null))
   let hydrationJobs = hydrationBoundaries.map((boundary) => hydrateBoundary(state, boundary, ownerFrame))
   await Promise.all(hydrationJobs)
@@ -327,6 +329,18 @@ function disposeFrameState(state: RuntimeState, frameState: FrameState) {
   state.frameStatesByStart.delete(frameState.start)
   if (frameState.handle.name && state.namedFrames.get(frameState.handle.name) === frameState.handle) {
     state.namedFrames.delete(frameState.handle.name)
+  }
+}
+
+function pruneDisconnectedRuntimeNodes(state: RuntimeState) {
+  for (let [start, root] of Array.from(state.rootsByStart.entries())) {
+    if (start.isConnected) continue
+    root.dispose()
+    state.rootsByStart.delete(start)
+  }
+  for (let frameState of Array.from(state.frameStatesByStart.values())) {
+    if (frameState.start.isConnected) continue
+    disposeFrameState(state, frameState)
   }
 }
 
@@ -549,16 +563,23 @@ async function toHTML(
   let reader = content.getReader()
   let decoder = new TextDecoder()
   let html = ''
-  while (true) {
-    if (signal.aborted) break
-    let { done, value } = await reader.read()
-    if (done) break
-    if (value) {
-      html += decoder.decode(value, { stream: true })
+  try {
+    while (true) {
+      if (signal.aborted) {
+        await reader.cancel()
+        break
+      }
+      let { done, value } = await reader.read()
+      if (done) break
+      if (value) {
+        html += decoder.decode(value, { stream: true })
+      }
     }
+    html += decoder.decode()
+    return html
+  } finally {
+    reader.releaseLock()
   }
-  html += decoder.decode()
-  return html
 }
 
 function reviveSerializedObject(value: unknown) {
