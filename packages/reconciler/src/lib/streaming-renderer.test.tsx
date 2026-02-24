@@ -412,8 +412,8 @@ describe('createStreamingRenderer', () => {
     let html = await renderer.createRoot(<Comp />).toString()
     assert.equal(html, '<tasked>ok</tasked>')
     assert.equal(queued, 1)
-    assert.ok(updatePromise)
-    let signal = await updatePromise
+    if (!updatePromise) throw new Error('expected component update signal promise')
+    let signal = (await updatePromise) as AbortSignal
     assert.equal(signal.aborted, false)
   })
 
@@ -561,7 +561,7 @@ describe('createStreamingRenderer', () => {
             handle.queueTask(() => {
               queued++
             })
-            return null
+            return
           },
         }),
       ],

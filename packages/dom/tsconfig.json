@@ -13,5 +13,5 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src"]
+  "include": ["src", "vitest.config.ts"]
 }

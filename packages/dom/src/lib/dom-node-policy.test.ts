@@ -129,4 +129,32 @@ describe('dom node policy', () => {
     let node = policy.createElement(pseudoParent, 'div')
     expect(node.namespaceURI).toBe(HTML_NAMESPACE)
   })
+
+  it('reuses existing nodes when cursor scope points at a matching element', () => {
+    let reconciler = new EventTarget()
+    let policy = createDomNodePolicy(document)(reconciler)
+    let container = document.createElement('div')
+    let comment = document.createComment('skip')
+    let existing = document.createElement('item')
+    container.append(comment, existing)
+
+    let enter = new Event('enterChildren') as Event & {
+      parent?: unknown
+      startAnchor?: unknown
+      endAnchor?: unknown
+    }
+    enter.parent = container
+    reconciler.dispatchEvent(enter)
+
+    policy.prepareHostMount?.(container, {
+      type: 'item',
+      key: 'reused',
+      props: {},
+      children: [],
+    })
+
+    let created = policy.createElement(container, 'item')
+    expect(created).toBe(existing)
+    expect(getDomHostInput(existing)?.key).toBe('reused')
+  })
 })

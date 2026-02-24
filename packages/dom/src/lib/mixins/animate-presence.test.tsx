@@ -130,6 +130,37 @@ describe('animate presence mixins', () => {
     expect(container.firstElementChild).toBeNull()
   })
 
+  it('removes retained exiting node when animation.finished rejects', async () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let rejectFinished = (_reason?: unknown) => {}
+    let animation = {
+      playState: 'running' as AnimationPlayState,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      reverse: vi.fn(),
+      cancel: vi.fn(),
+      finished: new Promise((_, reject) => {
+        rejectFinished = reject
+      }),
+    } as unknown as Animation
+    node.animate = vi.fn(() => animation)
+
+    root.render(null)
+    root.flush()
+    expect(container.firstElementChild).toBe(node)
+
+    rejectFinished(new Error('done'))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(container.firstElementChild).toBeNull()
+  })
+
   it('retains inline styles while exiting node is kept in dom', () => {
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
@@ -314,13 +345,16 @@ describe('animate presence mixins', () => {
     let enterCalls = animateSpy.mock.calls as unknown[][]
     let enterKeyframes = (enterCalls[0]?.[0] ?? []) as Keyframe[]
     expect(enterKeyframes[0]).toMatchObject({ opacity: 0 })
+    animateSpy.mockRestore()
 
-    root.render(<div key="x" mix={[animateExit({ keyframes: [] })]} />)
-    root.flush()
-    let node = container.firstElementChild as HTMLElement
+    let exitContainer = document.createElement('div')
+    let exitRoot = reconciler.createRoot(exitContainer)
+    exitRoot.render(<div key="x" mix={[animateExit({ keyframes: [] })]} />)
+    exitRoot.flush()
+    let node = exitContainer.firstElementChild as HTMLElement
     node.animate = vi.fn(() => animation)
-    root.render(null)
-    root.flush()
+    exitRoot.render(null)
+    exitRoot.flush()
     let exitCalls = (node.animate as any).mock.calls as unknown[][]
     let exitKeyframes = (exitCalls[0]?.[0] ?? []) as Keyframe[]
     expect(exitKeyframes[1]).toMatchObject({ opacity: 0 })
