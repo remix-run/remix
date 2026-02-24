@@ -321,11 +321,9 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
 
 async function replaceFrameContent(state: RuntimeState, frameState: FrameState, html: string) {
   if (frameState.disposed || state.disposed) return
-  disposeOwnedInsideRange(state, frameState.start, frameState.end)
-  clearRange(frameState.start, frameState.end)
   let fragment = createFragmentFromString(state.doc, html)
   mergeRmxDataFromScope(state.data, fragment, state.options.onError)
-  frameState.start.parentNode?.insertBefore(fragment, frameState.end)
+  diffRangeWithFragment(state, frameState.start, frameState.end, fragment)
   await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
 }
 
@@ -443,6 +441,14 @@ function isHydrationEnd(node: Comment) {
   return node.data.trim() === '/rmx:h'
 }
 
+function isHydrationStartComment(node: Node): node is Comment {
+  return node instanceof Comment && isHydrationStart(node)
+}
+
+function isHydrationEndComment(node: Node): node is Comment {
+  return node instanceof Comment && isHydrationEnd(node)
+}
+
 function isFrameStart(node: Node): node is Comment {
   return node instanceof Comment && node.data.trim().startsWith('f:')
 }
@@ -453,6 +459,18 @@ function isFrameStartComment(node: Comment) {
 
 function isFrameEnd(node: Comment) {
   return node.data.trim() === '/f'
+}
+
+function isTextNode(node: Node): node is Text {
+  return node.nodeType === Node.TEXT_NODE
+}
+
+function isElementNode(node: Node): node is Element {
+  return node.nodeType === Node.ELEMENT_NODE
+}
+
+function isCommentNode(node: Node): node is Comment {
+  return node.nodeType === Node.COMMENT_NODE
 }
 
 function findEndMarker(
@@ -563,10 +581,249 @@ async function replaceFrameContentFragment(
   fragment: DocumentFragment,
 ) {
   if (frameState.disposed || state.disposed) return
-  disposeOwnedInsideRange(state, frameState.start, frameState.end)
-  clearRange(frameState.start, frameState.end)
-  frameState.start.parentNode?.insertBefore(fragment, frameState.end)
+  diffRangeWithFragment(state, frameState.start, frameState.end, fragment)
   await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
+}
+
+function diffRangeWithFragment(
+  state: RuntimeState,
+  start: Comment,
+  end: Comment,
+  fragment: DocumentFragment,
+) {
+  let parent = start.parentNode
+  if (!parent || parent !== end.parentNode) return
+  let current = getRangeNodes(start, end)
+  let next = Array.from(fragment.childNodes)
+  diffNodes(state, parent, current, next, end)
+}
+
+function diffNodes(
+  state: RuntimeState,
+  parent: Node,
+  currentNodes: Node[],
+  nextNodes: Node[],
+  tailRef: ChildNode | null,
+) {
+  let maxLength = Math.max(currentNodes.length, nextNodes.length)
+  for (let index = 0; index < maxLength; index++) {
+    let current = currentNodes[index]
+    let next = nextNodes[index]
+    if (!current && next) {
+      parent.insertBefore(next, tailRef)
+      continue
+    }
+    if (current && !next) {
+      disposeNodeRuntime(state, current)
+      parent.removeChild(current)
+      continue
+    }
+    if (!current || !next) continue
+    let cursor = diffNode(state, current, next)
+    if (cursor) {
+      index = nextNodes.indexOf(cursor)
+    }
+  }
+}
+
+function diffNode(state: RuntimeState, current: Node, next: Node): null | ChildNode {
+  if (isTextNode(current) && isTextNode(next)) {
+    if (current.textContent !== next.textContent) {
+      current.textContent = next.textContent
+    }
+    return null
+  }
+
+  if (isHydrationStartComment(current) && isHydrationStartComment(next)) {
+    if (current.data !== next.data) {
+      current.data = next.data
+    }
+    return findEndMarker(next, isHydrationStart, isHydrationEnd)
+  }
+
+  if (isCommentNode(current) && isCommentNode(next)) {
+    if (current.data !== next.data) {
+      current.data = next.data
+    }
+    return null
+  }
+
+  if (isElementNode(current) && isElementNode(next)) {
+    if (current.tagName !== next.tagName) {
+      let parent = current.parentNode
+      if (!parent) return null
+      disposeNodeRuntime(state, current)
+      parent.replaceChild(next, current)
+      return null
+    }
+    diffElementAttributes(current, next)
+    diffElementChildren(state, current, next)
+    return null
+  }
+
+  let parent = current.parentNode
+  if (!parent) return null
+  disposeNodeRuntime(state, current)
+  parent.replaceChild(next, current)
+  return null
+}
+
+function diffElementAttributes(current: Element, next: Element) {
+  let previousNames = current.getAttributeNames()
+  let nextNames = next.getAttributeNames()
+  let nextNameSet = new Set(nextNames)
+
+  for (let name of previousNames) {
+    if (!nextNameSet.has(name)) {
+      current.removeAttribute(name)
+    }
+  }
+
+  for (let name of nextNames) {
+    let previousValue = current.getAttribute(name)
+    let nextValue = next.getAttribute(name)
+    if (previousValue !== nextValue) {
+      current.setAttribute(name, nextValue == null ? '' : String(nextValue))
+    }
+  }
+}
+
+function diffElementChildren(state: RuntimeState, current: Element, next: Element) {
+  let currentChildren = Array.from(current.childNodes)
+  let nextChildren = Array.from(next.childNodes)
+  let used = new Array<boolean>(currentChildren.length).fill(false)
+  let keyToIndex = new Map<string, number>()
+
+  for (let index = 0; index < currentChildren.length; index++) {
+    let node = currentChildren[index]
+    if (!isElementNode(node)) continue
+    let key = node.getAttribute('data-key')
+    if (key == null) continue
+    keyToIndex.set(key, index)
+  }
+
+  let matchIndexForNext = new Array<number>(nextChildren.length).fill(-1)
+  for (let index = 0; index < nextChildren.length; index++) {
+    let nextChild = nextChildren[index]
+    let matchIndex = -1
+    if (isElementNode(nextChild)) {
+      let key = nextChild.getAttribute('data-key')
+      if (key != null) {
+        let mapped = keyToIndex.get(key)
+        if (mapped !== undefined && !used[mapped]) {
+          matchIndex = mapped
+        }
+      }
+    }
+    if (
+      matchIndex === -1 &&
+      index < currentChildren.length &&
+      !used[index] &&
+      areComparableNodeTypes(currentChildren[index]!, nextChild)
+    ) {
+      matchIndex = index
+    }
+    if (matchIndex !== -1) {
+      used[matchIndex] = true
+    }
+    matchIndexForNext[index] = matchIndex
+  }
+
+  let committed: Array<undefined | Node> = new Array(nextChildren.length)
+  for (let index = 0; index < nextChildren.length; index++) {
+    let matchIndex = matchIndexForNext[index]
+    if (matchIndex === -1) {
+      committed[index] = nextChildren[index]
+      continue
+    }
+    let currentChild = currentChildren[matchIndex]!
+    let cursor = diffNode(state, currentChild, nextChildren[index]!)
+    if (!cursor) {
+      committed[index] = currentChild
+      continue
+    }
+    let nextEndIndex = nextChildren.indexOf(cursor)
+    let currentEndIndex = findHydrationEndIndex(currentChildren, matchIndex)
+    for (let rangeIndex = matchIndex; rangeIndex <= currentEndIndex; rangeIndex++) {
+      used[rangeIndex] = true
+    }
+    committed[index] = currentChild
+    committed[nextEndIndex] = currentChildren[currentEndIndex]
+    for (let skip = index + 1; skip < nextEndIndex; skip++) {
+      committed[skip] = undefined
+    }
+    index = nextEndIndex
+  }
+
+  let anchor: null | Node = null
+  for (let index = committed.length - 1; index >= 0; index--) {
+    let node = committed[index]
+    if (!node) continue
+    let ref = anchor && anchor.parentNode === current ? anchor : null
+    if (isHydrationStartComment(node) || isHydrationEndComment(node)) {
+      if (node.parentNode !== current) {
+        current.insertBefore(node, ref)
+      }
+      anchor = node
+      continue
+    }
+    if (node.parentNode === current) {
+      let targetNext = ref
+      let inPlace =
+        (targetNext === null && node.nextSibling === null) || node.nextSibling === targetNext
+      if (!inPlace) {
+        current.insertBefore(node, targetNext)
+      }
+    } else {
+      current.insertBefore(node, ref)
+    }
+    if (node.parentNode === current) {
+      anchor = node
+    }
+  }
+
+  for (let index = 0; index < currentChildren.length; index++) {
+    if (used[index]) continue
+    let node = currentChildren[index]!
+    disposeNodeRuntime(state, node)
+    current.removeChild(node)
+  }
+}
+
+function disposeNodeRuntime(state: RuntimeState, node: Node) {
+  if (isHydrationStartComment(node)) {
+    let root = state.rootsByStart.get(node)
+    if (root) {
+      root.dispose()
+      state.rootsByStart.delete(node)
+    }
+  }
+  if (isFrameStart(node)) {
+    let frameState = state.frameStatesByStart.get(node)
+    if (frameState) {
+      disposeFrameState(state, frameState)
+      return
+    }
+  }
+  for (let child of Array.from(node.childNodes)) {
+    disposeNodeRuntime(state, child)
+  }
+}
+
+function areComparableNodeTypes(current: Node, next: Node) {
+  if (isTextNode(current) && isTextNode(next)) return true
+  if (isElementNode(current) && isElementNode(next)) return current.tagName === next.tagName
+  if (isHydrationStartComment(current) && isHydrationStartComment(next)) return true
+  if (isHydrationEndComment(current) && isHydrationEndComment(next)) return true
+  if (isCommentNode(current) && isCommentNode(next)) return true
+  return false
+}
+
+function findHydrationEndIndex(nodes: Node[], startIndex: number) {
+  for (let index = startIndex + 1; index < nodes.length; index++) {
+    if (isHydrationEndComment(nodes[index]!)) return index
+  }
+  return startIndex
 }
 
 function startFrameTemplateObservation(state: RuntimeState) {
