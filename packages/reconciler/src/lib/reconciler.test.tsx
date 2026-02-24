@@ -126,6 +126,62 @@ describe('incremental reconciler validation', () => {
     assert.equal(root.inspect(), '<wrapper><leaf>1</leaf></wrapper>')
   })
 
+  it('provides and reads context values through component ancestry', () => {
+    let Provider: Component<undefined, { children?: unknown }> = (handle) => {
+      handle.context.set({ value: 'test' })
+      return (props) => <wrap>{props.children}</wrap>
+    }
+    let Child: Component<undefined, {}> = (handle) => {
+      let value = handle.context.get(Provider) as { value: string }
+      return () => <leaf>{value.value}</leaf>
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(
+      <Provider>
+        <Child />
+      </Provider>,
+    )
+    root.flush()
+
+    assert.equal(root.inspect(), '<wrap><leaf>test</leaf></wrap>')
+  })
+
+  it('updates descendant context reads after provider updates context and rerenders', () => {
+    let updateProvider = () => {}
+    let Provider: Component<undefined, { children?: unknown }> = (handle) => {
+      let value = 'first'
+      handle.context.set({ value })
+      updateProvider = () => {
+        value = 'second'
+        handle.context.set({ value })
+        handle.update()
+      }
+      return (props) => <wrap>{props.children}</wrap>
+    }
+    let Child: Component<undefined, {}> = (handle) => {
+      return () => {
+        let contextValue = handle.context.get(Provider) as { value: string }
+        return <leaf>{contextValue.value}</leaf>
+      }
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(
+      <Provider>
+        <Child />
+      </Provider>,
+    )
+    root.flush()
+    assert.equal(root.inspect(), '<wrap><leaf>first</leaf></wrap>')
+
+    updateProvider()
+    root.flush()
+    assert.equal(root.inspect(), '<wrap><leaf>second</leaf></wrap>')
+  })
+
   it('bails out component subtree when props are shallow-equal and no local update is pending', () => {
     let renders = 0
     let Child: Component<undefined, { label: string }> = () => (props) => {

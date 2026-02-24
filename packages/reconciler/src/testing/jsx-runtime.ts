@@ -12,6 +12,10 @@ export type ComponentHandle = {
   id: string
   update(): Promise<AbortSignal>
   queueTask(task: (signal: AbortSignal) => void): void
+  context: {
+    set(values: unknown): void
+    get(providerType: unknown): unknown | undefined
+  }
 }
 export type RenderValue =
   | ReconcilerJsxElement

@@ -7,6 +7,21 @@ export type UpdateHandle = {
   queueTask(task: RootTask): void
 }
 
+export type NoContext = Record<string, never>
+
+export type ContextFrom<componentType> =
+  componentType extends Component<any, any, any, infer provided>
+    ? provided
+    : componentType extends (handle: ComponentHandle<infer provided>, ...args: any[]) => any
+      ? provided
+      : never
+
+export interface Context<contextValue> {
+  set(values: contextValue): void
+  get<componentType>(component: componentType): ContextFrom<componentType>
+  get(component: unknown): unknown | undefined
+}
+
 export type ComponentFrameHandle = {
   src: string
   reload(): Promise<AbortSignal>
@@ -17,16 +32,17 @@ export type ComponentFrameRegistry = {
   get(name: string): undefined | ComponentFrameHandle
 }
 
-export type ComponentHandle = UpdateHandle & {
+export type ComponentHandle<contextValue = NoContext> = UpdateHandle & {
   id: string
   frame: ComponentFrameHandle
   frames: ComponentFrameRegistry
+  context: Context<contextValue>
 }
 
 export type HostTask<element> = (node: element, signal: AbortSignal) => void
 
-export type Component<setup, renderProps, renderValue> = (
-  handle: ComponentHandle,
+export type Component<setup, renderProps, renderValue, contextValue = NoContext> = (
+  handle: ComponentHandle<contextValue>,
   setup: setup,
 ) => (props: renderProps) => renderValue
 
@@ -213,6 +229,7 @@ export type CommittedComponentNode<parent, node, text extends node, element exte
   pendingUpdate: boolean
   child: null | CommittedNode<parent, node, text, element>
   handle: ComponentHandle
+  parentComponent: null | CommittedComponentNode<parent, node, text, element>
 }
 
 export type CommittedNode<parent, node, text extends node, element extends node> =

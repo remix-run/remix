@@ -100,6 +100,11 @@ type NodeResult<parent, node, text extends node, element extends node> = {
   changed: boolean
 }
 
+let CONTEXT_VALUE = Symbol('component-context-value')
+type InternalComponentHandle = ComponentHandle & {
+  [CONTEXT_VALUE]: unknown
+}
+
 export function createReconciler<parent, node, text extends node, element extends node>(
   options: ReconcilerOptions<parent, node, text, element>,
 ) {
@@ -244,6 +249,7 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
     leadingAnchor: null | node = null,
     trailingAnchor: null | node = null,
+    parentComponent: null | CommittedComponentNode<parent, node, text, element> = null,
   ) {
     policyEvents.dispatchEvent(
       new ReconcilerEnterChildrenEvent(parentNode, leadingAnchor, trailingAnchor),
@@ -276,7 +282,13 @@ export function createReconciler<parent, node, text extends node, element extend
             changed = true
           }
           let previousMaterial = firstMaterialNode(currentChildren[matchIndex])
-          let reconciled = reconcileNode(currentChildren[matchIndex], next, parentNode, root)
+          let reconciled = reconcileNode(
+            currentChildren[matchIndex],
+            next,
+            parentNode,
+            root,
+            parentComponent,
+          )
           let nextMaterial = firstMaterialNode(reconciled.node)
           if (previousMaterial !== nextMaterial) {
             requiresPlacement = true
@@ -287,7 +299,7 @@ export function createReconciler<parent, node, text extends node, element extend
           sourceIndices.push(matchIndex)
           continue
         }
-        let mounted = mountNode(parentNode, next, root)
+        let mounted = mountNode(parentNode, next, root, parentComponent)
         requiresPlacement = true
         changed = true
         nextCommitted.push(mounted.node)
@@ -359,9 +371,10 @@ export function createReconciler<parent, node, text extends node, element extend
     next: RenderNode,
     parentNode: parent | element,
     root: RootState<parent, node, text, element>,
+    parentComponent: null | CommittedComponentNode<parent, node, text, element>,
   ): NodeResult<parent, node, text, element> {
     if (!isCompatible(current, next)) {
-      let mounted = mountNode(parentNode, next, root)
+      let mounted = mountNode(parentNode, next, root, parentComponent)
       removeNode(parentNode, current, root)
       return {
         node: mounted.node,
@@ -407,6 +420,9 @@ export function createReconciler<parent, node, text extends node, element extend
         current.children,
         normalizeToRenderNodes(next.children),
         root,
+        null,
+        null,
+        parentComponent,
       )
       current.children = childrenResult.children
       return {
@@ -416,6 +432,7 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     if (next.kind === 'component' && current.kind === 'component') {
+      current.parentComponent = parentComponent
       current.key = next.key
       let propsChanged = !shallowEqualProps(current.props, next.props)
       current.props = next.props
@@ -431,14 +448,14 @@ export function createReconciler<parent, node, text extends node, element extend
       let nextChild = normalizeSingle(rendered)
       if (nextChild) {
         if (current.child) {
-          let childResult = reconcileNode(current.child, nextChild, parentNode, root)
+          let childResult = reconcileNode(current.child, nextChild, parentNode, root, current)
           current.child = childResult.node
           return {
             node: current,
             changed: propsChanged || childResult.changed,
           }
         } else {
-          let mounted = mountNode(parentNode, nextChild, root)
+          let mounted = mountNode(parentNode, nextChild, root, current)
           current.child = mounted.node
           return {
             node: current,
@@ -459,7 +476,7 @@ export function createReconciler<parent, node, text extends node, element extend
       }
     }
 
-    let mounted = mountNode(parentNode, next, root)
+    let mounted = mountNode(parentNode, next, root, parentComponent)
     removeNode(parentNode, current, root)
     return {
       node: mounted.node,
@@ -471,6 +488,7 @@ export function createReconciler<parent, node, text extends node, element extend
     parentNode: parent | element,
     next: RenderNode,
     root: RootState<parent, node, text, element>,
+    parentComponent: null | CommittedComponentNode<parent, node, text, element>,
   ): NodeResult<parent, node, text, element> {
     if (next.kind === 'text') {
       let textNode = policy.createText(parentNode, next.value)
@@ -515,6 +533,9 @@ export function createReconciler<parent, node, text extends node, element extend
             retained.children,
             normalizeToRenderNodes(next.children),
             root,
+            null,
+            null,
+            parentComponent,
           )
           retained.children = childrenResult.children
           root.dirtyNodeIds.add(retained.id)
@@ -544,7 +565,7 @@ export function createReconciler<parent, node, text extends node, element extend
         activePluginIds: [],
       }
       let children = normalizeToRenderNodes(next.children)
-      let childrenResult = reconcileChildren(node, [], children, root)
+      let childrenResult = reconcileChildren(node, [], children, root, null, null, parentComponent)
       committed.children = childrenResult.children
       root.pendingHostCommits.push({
         host: committed,
@@ -563,11 +584,16 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     let committed: CommittedComponentNode<parent, node, text, element>
-    let handle = createUpdateHandle(root, `c${nextComponentId++}`, () => {
-      committed.pendingUpdate = true
-      root.dirtyNodeIds.add(committed.id)
-      root.hasPendingComponentUpdate = true
-    })
+    let handle = createUpdateHandle(
+      root,
+      `c${nextComponentId++}`,
+      () => {
+        committed.pendingUpdate = true
+        root.dirtyNodeIds.add(committed.id)
+        root.hasPendingComponentUpdate = true
+      },
+      (providerType) => findContextFromAncestry(parentComponent, providerType),
+    )
     let render = next.type(handle, next.setup)
     let childValue = render(next.props)
     committed = {
@@ -580,10 +606,11 @@ export function createReconciler<parent, node, text extends node, element extend
       pendingUpdate: false,
       child: null,
       handle,
+      parentComponent,
     }
     let normalized = normalizeSingle(childValue)
     if (normalized) {
-      let mounted = mountNode(parentNode, normalized, root)
+      let mounted = mountNode(parentNode, normalized, root, committed)
       committed.child = mounted.node
     }
     root.dirtyNodeIds.add(committed.id)
@@ -597,12 +624,13 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
     id: string,
     markDirty: () => void,
+    getContext: (providerType: unknown) => unknown,
   ): ComponentHandle {
     let frame = {
       src: '/',
       reload: async () => AbortSignal.abort('Frame reload is unavailable in this runtime'),
     }
-    let handle: ComponentHandle = {
+    let handle: InternalComponentHandle = {
       id,
       frame,
       frames: {
@@ -621,12 +649,35 @@ export function createReconciler<parent, node, text extends node, element extend
       queueTask(task) {
         root.pendingTasks.push(task)
       },
+      context: {
+        set(value) {
+          handle[CONTEXT_VALUE] = value
+        },
+        get(providerType: unknown) {
+          return getContext(providerType)
+        },
+      },
+      [CONTEXT_VALUE]: undefined,
     }
     let extended = options.extendComponentHandle?.(handle)
     if (extended && typeof extended === 'object') {
       Object.assign(handle, extended)
     }
     return handle
+  }
+
+  function findContextFromAncestry(
+    parentComponent: null | CommittedComponentNode<parent, node, text, element>,
+    providerType: unknown,
+  ) {
+    let current = parentComponent
+    while (current) {
+      if (current.type === providerType) {
+        return (current.handle as InternalComponentHandle)[CONTEXT_VALUE]
+      }
+      current = current.parentComponent
+    }
+    return undefined
   }
 
   function removeNode(

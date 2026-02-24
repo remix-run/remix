@@ -417,6 +417,28 @@ describe('createStreamingRenderer', () => {
     assert.equal(signal.aborted, false)
   })
 
+  it('provides component context to descendants during streaming render', async () => {
+    let Provider = (handle: any) => {
+      handle.context.set({ theme: 'dark' })
+      return (props: any) => <provider>{props.children}</provider>
+    }
+    let Child = (handle: any) => {
+      let contextValue = handle.context.get(Provider) as { theme: string }
+      return () => <child>{contextValue.theme}</child>
+    }
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+    })
+    let html = await renderer
+      .createRoot(
+        <Provider>
+          <Child />
+        </Provider>,
+      )
+      .toString()
+    assert.equal(html, '<provider><child>dark</child></provider>')
+  })
+
   it('handles beginRoot promise rejection', async () => {
     let renderer = createStreamingRenderer({
       policy: {

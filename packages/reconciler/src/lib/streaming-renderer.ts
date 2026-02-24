@@ -55,6 +55,12 @@ type StreamingRendererOptions<chunk, rootContext, elementState> = {
   plugins?: StreamingPluginDefinition[]
 }
 
+type StreamingComponentContextNode = {
+  type: unknown
+  parentComponent: null | StreamingComponentContextNode
+  contextValue: unknown
+}
+
 export function createStreamingRenderer<chunk, rootContext = unknown, elementState = unknown>(
   options: StreamingRendererOptions<chunk, rootContext, elementState>,
 ): StreamingRenderer<chunk> {
@@ -159,17 +165,18 @@ async function emitValue<chunk, rootContext, elementState>(
   root: StreamingRendererRoot<chunk>,
   state: StreamingRootState<chunk, rootContext, elementState>,
   plugins: PreparedStreamingPlugins,
+  parentComponent: null | StreamingComponentContextNode = null,
 ) {
   ensureNotAborted(state.abortController.signal)
   if (value == null || typeof value === 'boolean') return
   if (isPromiseLike(value)) {
     let resolved = await awaitWithAbort(value, state.abortController.signal)
-    await emitValue(resolved, controller, root, state, plugins)
+    await emitValue(resolved, controller, root, state, plugins, parentComponent)
     return
   }
   if (Array.isArray(value)) {
     for (let child of value) {
-      await emitValue(child, controller, root, state, plugins)
+      await emitValue(child, controller, root, state, plugins, parentComponent)
     }
     return
   }
@@ -183,7 +190,7 @@ async function emitValue<chunk, rootContext, elementState>(
   if (value.type === RECONCILER_FRAGMENT) {
     let children = readChildren(value)
     for (let child of children) {
-      await emitValue(child, controller, root, state, plugins)
+      await emitValue(child, controller, root, state, plugins, parentComponent)
     }
     return
   }
@@ -196,11 +203,19 @@ async function emitValue<chunk, rootContext, elementState>(
       props = { ...props }
       delete props.setup
     }
-    let handle = createComponentUpdateHandle(
-      `c${state.componentId++}`,
-      state.abortController.signal,
-      state.tasks,
-    )
+    let componentNode: StreamingComponentContextNode = {
+      type: componentType,
+      parentComponent,
+      contextValue: undefined,
+    }
+    let handle = createComponentUpdateHandle(`c${state.componentId++}`, state.abortController.signal, state.tasks, {
+      getContext(providerType) {
+        return findContextFromAncestry(componentNode.parentComponent, providerType)
+      },
+      setContext(value) {
+        componentNode.contextValue = value
+      },
+    })
     let render = componentType(handle, setup)
     let rendered = render(props)
     let componentBoundaryInput: StreamingComponentInput = {
@@ -222,7 +237,7 @@ async function emitValue<chunk, rootContext, elementState>(
     if (boundary) {
       await emitChunkOutput(boundary.open, controller, state.abortController.signal)
       if (boundary.content !== undefined) {
-        await emitValue(boundary.content, controller, root, state, plugins)
+        await emitValue(boundary.content, controller, root, state, plugins, componentNode)
       }
       await emitChunkOutput(boundary.close, controller, state.abortController.signal)
       if (boundary.deferred) {
@@ -230,7 +245,7 @@ async function emitValue<chunk, rootContext, elementState>(
       }
       return
     }
-    await emitValue(rendered, controller, root, state, plugins)
+    await emitValue(rendered, controller, root, state, plugins, componentNode)
     return
   }
 
@@ -263,7 +278,7 @@ async function emitValue<chunk, rootContext, elementState>(
   if (boundary) {
     await emitChunkOutput(boundary.open, controller, state.abortController.signal)
     if (boundary.content !== undefined) {
-      await emitValue(boundary.content, controller, root, state, plugins)
+      await emitValue(boundary.content, controller, root, state, plugins, parentComponent)
     }
     await emitChunkOutput(boundary.close, controller, state.abortController.signal)
     if (boundary.deferred) {
@@ -290,7 +305,7 @@ async function emitValue<chunk, rootContext, elementState>(
     await emitChunkOutput(start.body, controller, state.abortController.signal)
   } else if (!start.skipChildren) {
     for (let child of host.childrenInput) {
-      await emitValue(child, controller, root, state, plugins)
+      await emitValue(child, controller, root, state, plugins, parentComponent)
     }
   }
   let closeOutput = await awaitWithAbort(
@@ -418,6 +433,10 @@ function createComponentUpdateHandle(
   id: string,
   signal: AbortSignal,
   tasks: RootTask[],
+  options: {
+    getContext(providerType: unknown): unknown
+    setContext(value: unknown): void
+  },
 ): ComponentHandle {
   let frame = {
     src: '/',
@@ -436,7 +455,29 @@ function createComponentUpdateHandle(
     queueTask(task) {
       tasks.push(task)
     },
+    context: {
+      set(value) {
+        options.setContext(value)
+      },
+      get(providerType: unknown) {
+        return options.getContext(providerType)
+      },
+    },
   }
+}
+
+function findContextFromAncestry(
+  parentComponent: null | StreamingComponentContextNode,
+  providerType: unknown,
+) {
+  let current = parentComponent
+  while (current) {
+    if (current.type === providerType) {
+      return current.contextValue
+    }
+    current = current.parentComponent
+  }
+  return undefined
 }
 
 async function runPendingTasks(state: StreamingRootState<any, any, any>) {

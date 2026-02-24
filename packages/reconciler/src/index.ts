@@ -21,6 +21,8 @@ export { RECONCILER_PROP_KEYS } from './testing/jsx.ts'
 export { RECONCILER_PROP_SHAPE } from './testing/jsx.ts'
 
 export type {
+  Context,
+  ContextFrom,
   ComponentHandle,
   ComponentFrameHandle,
   ComponentFrameRegistry,
@@ -44,6 +46,7 @@ export type {
   RenderValue,
   RootTarget,
   RootTask as Task,
+  NoContext,
   StreamingChunkOutput,
   StreamingBoundaryInput,
   StreamingBoundaryResult,
