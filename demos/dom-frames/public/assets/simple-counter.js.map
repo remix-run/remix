@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../app/assets/simple-counter.tsx"],
+  "sourcesContent": ["import { clientEntry, on, type ComponentHandle } from '@remix-run/dom'\n\ntype CounterProps = { label: string }\n\nexport let SimpleCounter = clientEntry(\n  '/assets/simple-counter.js#SimpleCounter',\n  function SimpleCounter(handle: ComponentHandle, initial: number) {\n    let count = initial\n    return (props: CounterProps) => (\n      <button\n        type=\"button\"\n        style={{\n          border: '1px solid #2a3c60',\n          borderRadius: '10px',\n          padding: '8px 12px',\n          background: '#182542',\n          color: '#f1f5ff',\n          fontSize: '14px',\n          cursor: 'pointer',\n        }}\n        mix={[\n          on('click', () => {\n            count++\n            void handle.update()\n          }),\n        ]}\n      >\n        {props.label}: {count}\n      </button>\n    )\n  },\n)\n"],
+  "mappings": "6DAIO,IAAIA,EAAgBC,EACzB,0CACA,SAAuBC,EAAyBC,EAAiB,CAC/D,IAAIC,EAAQD,EACZ,OAAQE,GACNC,EAAC,UACC,KAAK,SACL,MAAO,CACL,OAAQ,oBACR,aAAc,OACd,QAAS,WACT,WAAY,UACZ,MAAO,UACP,SAAU,OACV,OAAQ,SACV,EACA,IAAK,CACHC,EAAG,QAAS,IAAM,CAChBH,IACKF,EAAO,OAAO,CACrB,CAAC,CACH,EAEC,UAAAG,EAAM,MAAM,KAAGD,GAClB,CAEJ,CACF",
+  "names": ["SimpleCounter", "clientEntry", "handle", "initial", "count", "props", "jsxs", "on"]
+}

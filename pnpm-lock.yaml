@@ -73,6 +73,37 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  demos/dom-frames:
+    dependencies:
+      '@remix-run/dom':
+        specifier: workspace:*
+        version: link:../../packages/dom
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../packages/logger-middleware
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+      '@remix-run/static-middleware':
+        specifier: workspace:*
+        version: link:../../packages/static-middleware
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
   demos/frames:
     dependencies:
       remix:

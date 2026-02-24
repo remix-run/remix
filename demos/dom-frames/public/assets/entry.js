@@ -1,0 +1,2 @@
+import{e as n}from"./chunks/chunk-6HDORRPU.js";var a=n({document,async loadModule(t,e){let o=(await import(t))[e];if(typeof o!="function")throw new Error(`Export "${e}" from "${t}" is not a component function`);return o},async resolveFrame(t,e){let r=await fetch(t,{headers:{accept:"text/html"},signal:e});return r.ok?r.body?r.body:await r.text():`<pre>Frame error: ${r.status} ${r.statusText}</pre>`},onError(t){console.error(t)}});a.ready();
+//# sourceMappingURL=entry.js.map

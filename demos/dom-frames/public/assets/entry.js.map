@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../app/assets/entry.tsx"],
+  "sourcesContent": ["import { boot } from '@remix-run/dom'\n\nlet runtime = boot({\n  document,\n  async loadModule(moduleUrl, exportName) {\n    let mod = await import(moduleUrl)\n    let exp = (mod as Record<string, unknown>)[exportName]\n    if (typeof exp !== 'function') {\n      throw new Error(`Export \"${exportName}\" from \"${moduleUrl}\" is not a component function`)\n    }\n    return exp\n  },\n  async resolveFrame(src, signal) {\n    let response = await fetch(src, {\n      headers: { accept: 'text/html' },\n      signal,\n    })\n    if (!response.ok) {\n      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`\n    }\n    if (response.body) return response.body\n    return await response.text()\n  },\n  onError(error) {\n    console.error(error)\n  },\n})\n\nvoid runtime.ready()\n"],
+  "mappings": "+CAEA,IAAIA,EAAUC,EAAK,CACjB,SACA,MAAM,WAAWC,EAAWC,EAAY,CAEtC,IAAIC,GADM,MAAM,OAAOF,IACoBC,CAAU,EACrD,GAAI,OAAOC,GAAQ,WACjB,MAAM,IAAI,MAAM,WAAWD,CAAU,WAAWD,CAAS,+BAA+B,EAE1F,OAAOE,CACT,EACA,MAAM,aAAaC,EAAKC,EAAQ,CAC9B,IAAIC,EAAW,MAAM,MAAMF,EAAK,CAC9B,QAAS,CAAE,OAAQ,WAAY,EAC/B,OAAAC,CACF,CAAC,EACD,OAAKC,EAAS,GAGVA,EAAS,KAAaA,EAAS,KAC5B,MAAMA,EAAS,KAAK,EAHlB,qBAAqBA,EAAS,MAAM,IAAIA,EAAS,UAAU,QAItE,EACA,QAAQC,EAAO,CACb,QAAQ,MAAMA,CAAK,CACrB,CACF,CAAC,EAEIR,EAAQ,MAAM",
+  "names": ["runtime", "boot", "moduleUrl", "exportName", "exp", "src", "signal", "response", "error"]
+}
