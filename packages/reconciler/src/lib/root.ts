@@ -137,11 +137,13 @@ export function createReconciler<parent, node, text extends node, element extend
           if (root.disposed) return
           root.renderValue = null
           flushWork()
+          finalizePendingRetainedHosts(root)
         },
         dispose() {
           if (root.disposed) return
           root.renderValue = null
           flushWork()
+          finalizePendingRetainedHosts(root)
           root.disposed = true
         },
       }) as ReconcilerRoot<RenderValue>
@@ -191,6 +193,24 @@ export function createReconciler<parent, node, text extends node, element extend
       runHostPlugins(commit.host, commit.delta, root)
     }
     root.pendingHostCommits.length = 0
+  }
+
+  function finalizePendingRetainedHosts(root: RootState<parent, node, text, element>) {
+    let retainedHosts: PendingRetainedHost<parent, node, text, element>[] = []
+    for (let byType of root.pendingRetainedByParent.values()) {
+      for (let byKey of byType.values()) {
+        for (let bucket of byKey.values()) {
+          for (let retained of bucket) {
+            retainedHosts.push(retained)
+          }
+        }
+      }
+    }
+    for (let retained of retainedHosts) {
+      if (retained.canceled) continue
+      retained.canceled = true
+      finalizeRetainedHost(retained, root)
+    }
   }
 
   function reconcileChildren(

@@ -242,7 +242,8 @@ describe('animate presence mixins', () => {
     root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
-    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    let calls = animateSpy.mock.calls as unknown[][]
+    let keyframes = (calls[0]?.[0] ?? []) as Keyframe[]
     let options = animateSpy.mock.calls[0]?.[1] as number
     expect(keyframes[0]).toMatchObject({ opacity: 0, transform: 'scale(0.8)' })
     expect(options).toBe(120)
@@ -266,7 +267,8 @@ describe('animate presence mixins', () => {
     )
     root.flush()
 
-    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    let calls = animateSpy.mock.calls as unknown[][]
+    let keyframes = (calls[0]?.[0] ?? []) as Keyframe[]
     expect(keyframes[0]).toMatchObject({ opacity: 0 })
   })
 
@@ -294,7 +296,8 @@ describe('animate presence mixins', () => {
     root.render(null)
     root.flush()
 
-    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    let calls = animateSpy.mock.calls as unknown[][]
+    let keyframes = (calls[0]?.[0] ?? []) as Keyframe[]
     expect(keyframes[1]?.opacity).toBe(1)
     expect(keyframes[1]?.transform).toBeUndefined()
   })
@@ -308,7 +311,8 @@ describe('animate presence mixins', () => {
 
     root.render(<div mix={[animateEntrance({ keyframes: [] })]} />)
     root.flush()
-    let enterKeyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    let enterCalls = animateSpy.mock.calls as unknown[][]
+    let enterKeyframes = (enterCalls[0]?.[0] ?? []) as Keyframe[]
     expect(enterKeyframes[0]).toMatchObject({ opacity: 0 })
 
     root.render(<div key="x" mix={[animateExit({ keyframes: [] })]} />)
@@ -359,7 +363,29 @@ describe('animate presence mixins', () => {
     expect(animateSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('reuses active exit animation on repeated detach attempts', () => {
+  it('removes active exiting nodes immediately when root is removed', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+
+    root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let animateSpy = vi.fn(() => animation)
+    node.animate = animateSpy
+
+    root.render(null)
+    root.flush()
+    root.remove()
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+    expect(container.firstElementChild).toBeNull()
+  })
+
+  it('keeps exiting nodes retained across repeated root.render(null) calls', () => {
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
@@ -377,6 +403,50 @@ describe('animate presence mixins', () => {
     root.render(null)
     root.flush()
 
+    expect(container.firstElementChild).toBe(node)
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses active exit animation across multiple exit mixins on the same node', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+
+    root.render(
+      <div key="same" mix={[animateExit({ keyframes: { opacity: 0 } }), animateExit()]} />,
+    )
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    node.animate = vi.fn(() => animation)
+
+    root.render(null)
+    root.flush()
+
+    let animateCalls = (node.animate as any).mock.calls as unknown[][]
+    expect(animateCalls).toHaveLength(1)
+  })
+
+  it('removes active exiting nodes immediately when root is disposed', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+
+    root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let animateSpy = vi.fn(() => animation)
+    node.animate = animateSpy
+
+    root.render(null)
+    root.flush()
+    root.dispose()
+    root.flush()
+
+    expect(container.firstElementChild).toBeNull()
     expect(animateSpy).toHaveBeenCalledTimes(1)
   })
 

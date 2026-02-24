@@ -106,21 +106,21 @@ let animateExitMixin = createMixin<
   handle.addEventListener('detach', (event) => {
     if (!activeNode) return
     let detachEvent = event as MixinDetachEvent
-    detachEvent.retain()
 
     let presence = presenceByNode.get(activeNode)
     if (presence?.direction === 'enter' && isAnimationActive(presence.animation)) {
+      detachEvent.retain()
       presence.animation.reverse()
       presenceByNode.set(activeNode, { animation: presence.animation, direction: 'exit' })
       detachEvent.waitUntil(finishedPromise(presence.animation))
       return
     }
-    /* c8 ignore next 4 */
     if (presence?.direction === 'exit' && isAnimationActive(presence.animation)) {
       detachEvent.waitUntil(finishedPromise(presence.animation))
       return
     }
 
+    detachEvent.retain()
     let keyframes = createPresenceKeyframes(latestOptions?.keyframes, 'exit', defaultExitDefinition)
     let optionsWithDefaults = withDefaultFill(latestOptions?.options, 'forwards')
     let animation = activeNode.animate(keyframes, optionsWithDefaults)
@@ -133,7 +133,6 @@ let animateExitMixin = createMixin<
     if (!activeNode) return
     let presence = presenceByNode.get(activeNode)
     if (!presence) return
-    /* c8 ignore next */
     presenceByNode.delete(activeNode)
   })
 
