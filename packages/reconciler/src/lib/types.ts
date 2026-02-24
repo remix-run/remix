@@ -5,8 +5,20 @@ export type UpdateHandle = {
   queueTask(task: RootTask): void
 }
 
+export type ComponentFrameHandle = {
+  src: string
+  reload(): Promise<AbortSignal>
+}
+
+export type ComponentFrameRegistry = {
+  top: ComponentFrameHandle
+  get(name: string): undefined | ComponentFrameHandle
+}
+
 export type ComponentHandle = UpdateHandle & {
   id: string
+  frame?: ComponentFrameHandle
+  frames?: ComponentFrameRegistry
 }
 
 export type HostTask<element> = (node: element, signal: AbortSignal) => void

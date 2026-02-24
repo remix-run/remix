@@ -66,6 +66,7 @@ type RootState<parent, node, text extends node, element extends node> = {
 type ReconcilerOptions<parent, node, text extends node, element extends node> = {
   policy: NodePolicyDefinition<parent, node, text, element>
   plugins?: Array<PluginDefinition<any>>
+  extendComponentHandle?: (handle: ComponentHandle) => void | Partial<ComponentHandle>
 }
 
 type PreparedPlugins = {
@@ -593,7 +594,7 @@ export function createReconciler<parent, node, text extends node, element extend
     id: string,
     markDirty: () => void,
   ): ComponentHandle {
-    return {
+    let handle: ComponentHandle = {
       id,
       update() {
         return new Promise((resolve) => {
@@ -606,6 +607,11 @@ export function createReconciler<parent, node, text extends node, element extend
         root.pendingTasks.push(task)
       },
     }
+    let extended = options.extendComponentHandle?.(handle)
+    if (extended && typeof extended === 'object') {
+      Object.assign(handle, extended)
+    }
+    return handle
   }
 
   function removeNode(
