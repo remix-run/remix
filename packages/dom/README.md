@@ -94,7 +94,16 @@ runtime.addEventListener('error', (event) => {
 await runtime.ready()
 ```
 
-### `clientEntry` (server-side artifacts only)
+Runtime handle surface:
+
+- `runtime.ready()` waits for initial boundary discovery + hydration
+- `runtime.flush()` flushes hydrated reconciler roots
+- `runtime.dispose()` tears down hydrated roots/runtime observers
+- `runtime.frame` is always the root frame handle for the current URL
+- `runtime.frames.get(name)` returns named frame handles (supports `await frame.reload()`)
+- runtime errors are emitted as `'error'` events (`RuntimeErrorEvent` with `error` + `boundaryId`)
+
+### `clientEntry` SSR markers
 
 Use `clientEntry` to annotate components that should emit hydration markers + metadata during SSR:
 

@@ -103,7 +103,7 @@ Important guarantees:
 
 ## NodePolicy Contract
 
-A policy implements host operations used by reconciliation:
+A policy (created with `createNodePolicy(...)`) implements host operations used by reconciliation:
 
 - node creation/text updates: `createElement`, `createText`, `setText`
 - traversal/introspection: `getParent`, `getType`, `firstChild`, `nextSibling`

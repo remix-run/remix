@@ -41,7 +41,7 @@ let reconciler = createReconciler({
 })
 ```
 
-### `createRoot(container)`
+### `createRoot(target)`
 
 Returns a root `EventTarget` with:
 
@@ -49,6 +49,11 @@ Returns a root `EventTarget` with:
 - `flush()` to force a sync flush
 - `remove()` to remove rendered content
 - `dispose()` to remove content and stop scheduling
+
+`target` can be either:
+
+- a single parent/container node
+- a range tuple: `[startBoundary, endBoundary]`
 
 ```ts
 let root = reconciler.createRoot(container)
@@ -181,38 +186,42 @@ Implement these capabilities:
 - optional mount preprocessing: `prepareHostMount`
 
 ```ts
-let nodePolicy = {
-  createText(value) {
-    return document.createTextNode(value)
-  },
-  setText(node, value) {
-    node.nodeValue = value
-  },
-  createElement(_parent, type) {
-    return document.createElement(type)
-  },
-  getType(node) {
-    return node.tagName.toLowerCase()
-  },
-  getParent(node) {
-    return node.parentNode
-  },
-  firstChild(parent) {
-    return parent.firstChild
-  },
-  nextSibling(node) {
-    return node.nextSibling
-  },
-  insert(parent, node, anchor) {
-    parent.insertBefore(node, anchor)
-  },
-  move(parent, node, anchor) {
-    parent.insertBefore(node, anchor)
-  },
-  remove(parent, node) {
-    parent.removeChild(node)
-  },
-}
+import { createNodePolicy } from '@remix-run/reconciler'
+
+let nodePolicy = createNodePolicy(() => {
+  return {
+    createText(value) {
+      return document.createTextNode(value)
+    },
+    setText(node, value) {
+      node.nodeValue = value
+    },
+    createElement(_parent, type) {
+      return document.createElement(type)
+    },
+    getType(node) {
+      return node.tagName.toLowerCase()
+    },
+    getParent(node) {
+      return node.parentNode
+    },
+    firstChild(parent) {
+      return parent.firstChild
+    },
+    nextSibling(node) {
+      return node.nextSibling
+    },
+    insert(parent, node, anchor) {
+      parent.insertBefore(node, anchor)
+    },
+    move(parent, node, anchor) {
+      parent.insertBefore(node, anchor)
+    },
+    remove(parent, node) {
+      parent.removeChild(node)
+    },
+  }
+})
 ```
 
 Guidelines:
@@ -279,7 +288,10 @@ Guidelines:
 ## Minimal flow
 
 ```ts
-let reconciler = createReconciler(nodePolicy, [myPlugin])
+let reconciler = createReconciler({
+  policy: nodePolicy,
+  plugins: [myPlugin],
+})
 let root = reconciler.createRoot(container)
 
 root.addEventListener('error', (event) => {
