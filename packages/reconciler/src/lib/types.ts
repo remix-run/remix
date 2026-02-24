@@ -26,7 +26,7 @@ export type ReconcilerElement = {
 export type RootTarget<parent, node> = parent | [node, node]
 
 export type NodePolicy<parent, node, text extends node, element extends node> = {
-  createText(value: string): text
+  createText(parent: parent | element, value: string): text
   setText(node: text, value: string): void
   prepareHostMount?(parent: parent | element, input: HostInput): void
   createElement(parent: parent | element, type: string): element
@@ -38,6 +38,10 @@ export type NodePolicy<parent, node, text extends node, element extends node> = 
   move(parent: parent | element, node: node, anchor: null | node): void
   remove(parent: parent | element, node: node): void
 }
+
+export type NodePolicyDefinition<parent, node, text extends node, element extends node> = (
+  reconciler: EventTarget,
+) => NodePolicy<parent, node, text, element>
 
 export type HostInput = {
   type: string
@@ -208,6 +212,32 @@ export class ReconcilerErrorEvent extends Event {
   }
 }
 
+export class ReconcilerEnterChildrenEvent<parent, node, element extends node> extends Event {
+  parent: parent | element
+  startAnchor: null | node
+  endAnchor: null | node
+
+  constructor(parent: parent | element, startAnchor: null | node, endAnchor: null | node) {
+    super('enterChildren')
+    this.parent = parent
+    this.startAnchor = startAnchor
+    this.endAnchor = endAnchor
+  }
+}
+
+export class ReconcilerLeaveChildrenEvent<parent, node, element extends node> extends Event {
+  parent: parent | element
+  startAnchor: null | node
+  endAnchor: null | node
+
+  constructor(parent: parent | element, startAnchor: null | node, endAnchor: null | node) {
+    super('leaveChildren')
+    this.parent = parent
+    this.startAnchor = startAnchor
+    this.endAnchor = endAnchor
+  }
+}
+
 export class PluginCommitEvent<element = EventTarget> extends Event {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
@@ -283,6 +313,12 @@ export function definePlugin<element>(
   plugin: Plugin<element> | ((root: PluginRootHandle) => Plugin<element>),
 ) {
   return plugin
+}
+
+export function createNodePolicy<parent, node, text extends node, element extends node>(
+  definition: NodePolicyDefinition<parent, node, text, element>,
+) {
+  return definition
 }
 
 export type StreamingChunkOutput<chunk> =

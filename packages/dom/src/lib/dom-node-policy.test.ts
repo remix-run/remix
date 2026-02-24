@@ -5,13 +5,15 @@ const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
 describe('dom node policy', () => {
+  let createPolicy = () => createDomNodePolicy(document)(new EventTarget())
+
   it('supports basic create/insert/move/remove operations', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let container = document.createElement('div')
 
     let alpha = policy.createElement(container, 'alpha')
     let beta = policy.createElement(container, 'beta')
-    let text = policy.createText('x')
+    let text = policy.createText(container, 'x')
 
     policy.insert(container, alpha, null)
     policy.insert(container, beta, null)
@@ -26,7 +28,7 @@ describe('dom node policy', () => {
   })
 
   it('creates svg nodes in the svg namespace', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let svg = document.createElementNS(SVG_NAMESPACE, 'svg')
 
     let circle = policy.createElement(svg, 'circle')
@@ -37,7 +39,7 @@ describe('dom node policy', () => {
   })
 
   it('uses html namespace under foreignObject', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let svg = document.createElementNS(SVG_NAMESPACE, 'svg')
     let foreignObject = document.createElementNS(SVG_NAMESPACE, 'foreignObject')
     policy.insert(svg, foreignObject, null)
@@ -50,14 +52,14 @@ describe('dom node policy', () => {
   })
 
   it('updates text nodes through setText', () => {
-    let policy = createDomNodePolicy(document)
-    let text = policy.createText('hello')
+    let policy = createPolicy()
+    let text = policy.createText(document.body, 'hello')
     policy.setText(text, 'updated')
     expect(text.data).toBe('updated')
   })
 
   it('provides getType/firstChild traversal helpers', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let container = document.createElement('div')
     let alpha = policy.createElement(container, 'alpha')
     let beta = policy.createElement(container, 'beta')
@@ -71,7 +73,7 @@ describe('dom node policy', () => {
   })
 
   it('tracks latest host input metadata for created elements', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let container = document.createElement('div')
 
     policy.prepareHostMount?.(container, {
@@ -86,7 +88,7 @@ describe('dom node policy', () => {
   })
 
   it('falls back to normal remove when parent does not match', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let firstParent = document.createElement('div')
     let secondParent = document.createElement('div')
     let node = policy.createElement(firstParent, 'item')
@@ -97,7 +99,7 @@ describe('dom node policy', () => {
   })
 
   it('resolves namespace inside a shadow root host', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let host = document.createElement('div')
     let shadow = host.attachShadow({ mode: 'open' })
     let node = policy.createElement(shadow, 'span')
@@ -105,7 +107,7 @@ describe('dom node policy', () => {
   })
 
   it('resolves svg namespace for fragment-like parents with svg hosts', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let pseudoShadowRoot = {
       nodeType: Node.DOCUMENT_FRAGMENT_NODE,
       host: {
@@ -119,7 +121,7 @@ describe('dom node policy', () => {
   })
 
   it('falls back to html namespace for non-element/non-fragment parents', () => {
-    let policy = createDomNodePolicy(document)
+    let policy = createPolicy()
     let pseudoParent = {
       nodeType: Node.DOCUMENT_NODE,
       insertBefore: document.body.insertBefore.bind(document.body),

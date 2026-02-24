@@ -7,7 +7,7 @@ import { createTestContainer, createTestNodePolicy, stringifyTestNode } from '..
 import { createTestNodeReconciler } from '../testing/test-node-reconciler.ts'
 import type { Component } from '../testing/jsx-runtime.ts'
 import { createReconciler } from './root.ts'
-import { definePlugin } from './types.ts'
+import { createNodePolicy, definePlugin } from './types.ts'
 
 describe('incremental reconciler validation', () => {
   it('reconciles complex mixed host/component trees with children composition', () => {
@@ -1094,8 +1094,8 @@ describe('incremental reconciler validation', () => {
     let policy = createTestNodePolicy()
     let container = createTestContainer()
     let before = policy.createElement(container, 'before')
-    let start = policy.createText('[')
-    let end = policy.createText(']')
+    let start = policy.createText(container, '[')
+    let end = policy.createText(container, ']')
     let after = policy.createElement(container, 'after')
     policy.insert(container, before, null)
     policy.insert(container, start, null)
@@ -1103,7 +1103,7 @@ describe('incremental reconciler validation', () => {
     policy.insert(container, after, null)
 
     let reconciler = createReconciler({
-      policy,
+      policy: createNodePolicy(() => policy),
     })
     let root = reconciler.createRoot([start, end])
     root.render(
@@ -1124,8 +1124,8 @@ describe('incremental reconciler validation', () => {
     let policy = createTestNodePolicy()
     let container = createTestContainer()
     let before = policy.createElement(container, 'before')
-    let start = policy.createText('[')
-    let end = policy.createText(']')
+    let start = policy.createText(container, '[')
+    let end = policy.createText(container, ']')
     let after = policy.createElement(container, 'after')
     policy.insert(container, before, null)
     policy.insert(container, start, null)
@@ -1133,7 +1133,7 @@ describe('incremental reconciler validation', () => {
     policy.insert(container, after, null)
 
     let reconciler = createReconciler({
-      policy,
+      policy: createNodePolicy(() => policy),
     })
     let root = reconciler.createRoot([start, end])
     root.render(<x>X</x>)
@@ -1149,13 +1149,13 @@ describe('incremental reconciler validation', () => {
     let policy = createTestNodePolicy()
     let leftContainer = createTestContainer()
     let rightContainer = createTestContainer()
-    let start = policy.createText('start')
-    let end = policy.createText('end')
+    let start = policy.createText(leftContainer, 'start')
+    let end = policy.createText(rightContainer, 'end')
     policy.insert(leftContainer, start, null)
     policy.insert(rightContainer, end, null)
 
     let reconciler = createReconciler({
-      policy,
+      policy: createNodePolicy(() => policy),
     })
     assert.throws(
       () => {
@@ -1168,11 +1168,11 @@ describe('incremental reconciler validation', () => {
   it('throws when range root boundaries are the same node', () => {
     let policy = createTestNodePolicy()
     let container = createTestContainer()
-    let marker = policy.createText('marker')
+    let marker = policy.createText(container, 'marker')
     policy.insert(container, marker, null)
 
     let reconciler = createReconciler({
-      policy,
+      policy: createNodePolicy(() => policy),
     })
     assert.throws(
       () => {
@@ -1185,13 +1185,13 @@ describe('incremental reconciler validation', () => {
   it('throws when range root end boundary does not follow start boundary', () => {
     let policy = createTestNodePolicy()
     let container = createTestContainer()
-    let start = policy.createText('start')
-    let end = policy.createText('end')
+    let start = policy.createText(container, 'start')
+    let end = policy.createText(container, 'end')
     policy.insert(container, end, null)
     policy.insert(container, start, null)
 
     let reconciler = createReconciler({
-      policy,
+      policy: createNodePolicy(() => policy),
     })
     assert.throws(
       () => {
@@ -1199,5 +1199,37 @@ describe('incremental reconciler validation', () => {
       },
       /must follow start/,
     )
+  })
+
+  it('dispatches enter/leave children lifecycle events to node policies', () => {
+    let observed: string[] = []
+    let policy = createTestNodePolicy()
+    let reconciler = createReconciler({
+      policy: createNodePolicy((policyReconciler) => {
+        policyReconciler.addEventListener('enterChildren', (event) => {
+          let enter = event as Event & { parent: unknown; endAnchor: unknown }
+          observed.push(`enter:${enter.endAnchor == null ? 'null' : 'node'}`)
+          assert.ok(enter.parent != null)
+        })
+        policyReconciler.addEventListener('leaveChildren', (event) => {
+          let leave = event as Event & { parent: unknown; endAnchor: unknown }
+          observed.push(`leave:${leave.endAnchor == null ? 'null' : 'node'}`)
+          assert.ok(leave.parent != null)
+        })
+        return policy
+      }),
+    })
+    let container = createTestContainer()
+    let root = reconciler.createRoot(container)
+    root.render(
+      <root>
+        <a>A</a>
+      </root>,
+    )
+    root.flush()
+
+    assert.equal(observed.length > 0, true)
+    assert.equal(observed.filter((entry) => entry.startsWith('enter')).length, 3)
+    assert.equal(observed.filter((entry) => entry.startsWith('leave')).length, 3)
   })
 })

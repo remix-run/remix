@@ -1,10 +1,12 @@
 export { createReconciler } from './lib/root.ts'
 export { createStreamingRenderer } from './lib/streaming-renderer.ts'
 export { definePlugin } from './lib/types.ts'
+export { createNodePolicy } from './lib/types.ts'
 export { defineStreamingPlugin } from './lib/types.ts'
 export { PluginAfterCommitEvent, PluginBeforeCommitEvent } from './lib/types.ts'
 export { PluginCommitEvent } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
+export { ReconcilerEnterChildrenEvent, ReconcilerLeaveChildrenEvent } from './lib/types.ts'
 export { StreamingAfterCommitEvent, StreamingBeforeCommitEvent, StreamingErrorEvent } from './lib/types.ts'
 export { createMixin, mixPlugin } from './lib/mix-plugin.ts'
 export { createTestNodeReconciler } from './testing/test-node-reconciler.ts'
@@ -27,6 +29,7 @@ export type {
   UpdateHandle,
   HostInput,
   NodePolicy,
+  NodePolicyDefinition,
   Plugin,
   PluginDefinition,
   PluginHostContext,

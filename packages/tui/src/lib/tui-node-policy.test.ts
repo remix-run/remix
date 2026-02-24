@@ -8,13 +8,15 @@ import {
 import { createTestHostBridge } from '../testing/test-host-bridge.ts'
 
 describe('tui node policy', () => {
+  let createPolicy = () => createTuiNodePolicy()(new EventTarget())
+
   it('maintains parent and child invariants through insert/move/remove', () => {
     let bridge = createTestHostBridge()
-    let policy = createTuiNodePolicy()
+    let policy = createPolicy()
     let container = createTuiContainer({ type: 'root' }, bridge)
     let first = policy.createElement(container, 'box')
     let second = policy.createElement(container, 'text')
-    let text = policy.createText('hello')
+    let text = policy.createText(first, 'hello')
 
     policy.insert(container, first, null)
     policy.insert(container, second, null)
@@ -32,7 +34,7 @@ describe('tui node policy', () => {
 
   it('throws on illegal operations', () => {
     let bridge = createTestHostBridge()
-    let policy = createTuiNodePolicy()
+    let policy = createPolicy()
     let container = createTuiContainer({ type: 'root' }, bridge)
     let a = policy.createElement(container, 'box')
     let b = policy.createElement(container, 'box')

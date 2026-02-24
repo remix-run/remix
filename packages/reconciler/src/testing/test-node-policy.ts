@@ -46,7 +46,7 @@ export function createTestNodePolicy(): TestNodePolicy {
 
   return {
     operations,
-    createText(value) {
+    createText(_parent, value) {
       return {
         kind: 'text',
         value,

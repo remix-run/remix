@@ -10,7 +10,9 @@ import {
   PluginBeforeCommitEvent,
   PluginCommitEvent,
   PluginDetachEvent,
+  ReconcilerEnterChildrenEvent,
   ReconcilerErrorEvent,
+  ReconcilerLeaveChildrenEvent,
 } from './types.ts'
 import type {
   ComponentHandle,
@@ -23,6 +25,7 @@ import type {
   HostPropDelta,
   HostRenderNode,
   NodePolicy,
+  NodePolicyDefinition,
   Plugin,
   PluginDefinition,
   PluginHostContext,
@@ -41,6 +44,7 @@ import type {
 type RootState<parent, node, text extends node, element extends node> = {
   target: RootTarget<parent, node>
   container: parent | element
+  boundaryStart: null | node
   boundaryEnd: null | node
   api: ReconcilerRoot<RenderValue>
   current: CommittedNode<parent, node, text, element>[]
@@ -60,7 +64,7 @@ type RootState<parent, node, text extends node, element extends node> = {
 }
 
 type ReconcilerOptions<parent, node, text extends node, element extends node> = {
-  policy: NodePolicy<parent, node, text, element>
+  policy: NodePolicyDefinition<parent, node, text, element>
   plugins?: Array<PluginDefinition<any>>
 }
 
@@ -94,7 +98,8 @@ type NodeResult<parent, node, text extends node, element extends node> = {
 export function createReconciler<parent, node, text extends node, element extends node>(
   options: ReconcilerOptions<parent, node, text, element>,
 ) {
-  let policy = options.policy
+  let policyEvents = new EventTarget()
+  let policy = materializeNodePolicy(options.policy, policyEvents)
   let pluginRootHandle = new EventTarget() as PluginRootHandle
   pluginRootHandle.root = createEmptyRootFacade()
   let plugins = preparePlugins(materializePlugins(options.plugins ?? [], pluginRootHandle))
@@ -110,6 +115,7 @@ export function createReconciler<parent, node, text extends node, element extend
       let root: RootState<parent, node, text, element> = {
         target,
         container: resolvedTarget.container,
+        boundaryStart: resolvedTarget.boundaryStart,
         boundaryEnd: resolvedTarget.boundaryEnd,
         api: createEmptyRootFacade(),
         current: [],
@@ -174,6 +180,7 @@ export function createReconciler<parent, node, text extends node, element extend
             root.current,
             nextNodes,
             root,
+            root.boundaryStart,
             root.boundaryEnd,
           )
           root.current = children
@@ -230,70 +237,80 @@ export function createReconciler<parent, node, text extends node, element extend
     currentChildren: CommittedNode<parent, node, text, element>[],
     nextNodes: RenderNode[],
     root: RootState<parent, node, text, element>,
+    leadingAnchor: null | node = null,
     trailingAnchor: null | node = null,
   ) {
-    let requiresPlacement = false
-    let changed = false
-    let used: boolean[] = []
-    for (let index = 0; index < currentChildren.length; index++) used[index] = false
+    policyEvents.dispatchEvent(
+      new ReconcilerEnterChildrenEvent(parentNode, leadingAnchor, trailingAnchor),
+    )
+    try {
+      let requiresPlacement = false
+      let changed = false
+      let used: boolean[] = []
+      for (let index = 0; index < currentChildren.length; index++) used[index] = false
 
-    let keyed = new Map<unknown, number[]>()
-    for (let index = 0; index < currentChildren.length; index++) {
-      let current = currentChildren[index]
-      if (current.key == null) continue
-      let bucket = keyed.get(current.key) ?? []
-      bucket.push(index)
-      keyed.set(current.key, bucket)
-    }
-
-    let nextCommitted: CommittedNode<parent, node, text, element>[] = []
-    let sourceIndices: number[] = []
-    let scanIndex = 0
-    for (let next of nextNodes) {
-      let matchIndex = findMatchIndex(currentChildren, used, keyed, next, scanIndex)
-      if (matchIndex >= 0) {
-        used[matchIndex] = true
-        if (matchIndex === scanIndex) scanIndex++
-        if (matchIndex !== nextCommitted.length) {
-          requiresPlacement = true
-          changed = true
-        }
-        let previousMaterial = firstMaterialNode(currentChildren[matchIndex])
-        let reconciled = reconcileNode(currentChildren[matchIndex], next, parentNode, root)
-        let nextMaterial = firstMaterialNode(reconciled.node)
-        if (previousMaterial !== nextMaterial) {
-          requiresPlacement = true
-          changed = true
-        }
-        changed = changed || reconciled.changed
-        nextCommitted.push(reconciled.node)
-        sourceIndices.push(matchIndex)
-        continue
+      let keyed = new Map<unknown, number[]>()
+      for (let index = 0; index < currentChildren.length; index++) {
+        let current = currentChildren[index]
+        if (current.key == null) continue
+        let bucket = keyed.get(current.key) ?? []
+        bucket.push(index)
+        keyed.set(current.key, bucket)
       }
-      let mounted = mountNode(parentNode, next, root)
-      requiresPlacement = true
-      changed = true
-      nextCommitted.push(mounted.node)
-      sourceIndices.push(-1)
-    }
 
-    for (let index = 0; index < currentChildren.length; index++) {
-      if (used[index]) continue
-      requiresPlacement = true
-      changed = true
-      removeNode(parentNode, currentChildren[index], root)
-    }
-
-    if (requiresPlacement) {
-      if (canUseMinimalMovePlacement(currentChildren, nextNodes, sourceIndices)) {
-        placeChildrenWithMinimalMoves(parentNode, nextCommitted, sourceIndices, trailingAnchor)
-      } else {
-        placeChildren(parentNode, nextCommitted, trailingAnchor)
+      let nextCommitted: CommittedNode<parent, node, text, element>[] = []
+      let sourceIndices: number[] = []
+      let scanIndex = 0
+      for (let next of nextNodes) {
+        let matchIndex = findMatchIndex(currentChildren, used, keyed, next, scanIndex)
+        if (matchIndex >= 0) {
+          used[matchIndex] = true
+          if (matchIndex === scanIndex) scanIndex++
+          if (matchIndex !== nextCommitted.length) {
+            requiresPlacement = true
+            changed = true
+          }
+          let previousMaterial = firstMaterialNode(currentChildren[matchIndex])
+          let reconciled = reconcileNode(currentChildren[matchIndex], next, parentNode, root)
+          let nextMaterial = firstMaterialNode(reconciled.node)
+          if (previousMaterial !== nextMaterial) {
+            requiresPlacement = true
+            changed = true
+          }
+          changed = changed || reconciled.changed
+          nextCommitted.push(reconciled.node)
+          sourceIndices.push(matchIndex)
+          continue
+        }
+        let mounted = mountNode(parentNode, next, root)
+        requiresPlacement = true
+        changed = true
+        nextCommitted.push(mounted.node)
+        sourceIndices.push(-1)
       }
-    }
-    return {
-      children: nextCommitted,
-      changed,
+
+      for (let index = 0; index < currentChildren.length; index++) {
+        if (used[index]) continue
+        requiresPlacement = true
+        changed = true
+        removeNode(parentNode, currentChildren[index], root)
+      }
+
+      if (requiresPlacement) {
+        if (canUseMinimalMovePlacement(currentChildren, nextNodes, sourceIndices)) {
+          placeChildrenWithMinimalMoves(parentNode, nextCommitted, sourceIndices, trailingAnchor)
+        } else {
+          placeChildren(parentNode, nextCommitted, trailingAnchor)
+        }
+      }
+      return {
+        children: nextCommitted,
+        changed,
+      }
+    } finally {
+      policyEvents.dispatchEvent(
+        new ReconcilerLeaveChildrenEvent(parentNode, leadingAnchor, trailingAnchor),
+      )
     }
   }
 
@@ -451,7 +468,7 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
   ): NodeResult<parent, node, text, element> {
     if (next.kind === 'text') {
-      let textNode = policy.createText(next.value)
+      let textNode = policy.createText(parentNode, next.value)
       let committed: CommittedTextNode<text> = {
         id: nextNodeId++,
         kind: 'text',
@@ -1000,6 +1017,7 @@ export function createReconciler<parent, node, text extends node, element extend
     if (!Array.isArray(target)) {
       return {
         container: target,
+        boundaryStart: null as null | node,
         boundaryEnd: null as null | node,
       }
     }
@@ -1017,6 +1035,7 @@ export function createReconciler<parent, node, text extends node, element extend
       if (cursor === end) {
         return {
           container: startParent,
+          boundaryStart: start,
           boundaryEnd: end,
         }
       }
@@ -1079,6 +1098,13 @@ function materializePlugins(plugins: Array<PluginDefinition<any>>, root: PluginR
     output.push(plugin)
   }
   return output
+}
+
+function materializeNodePolicy<parent, node, text extends node, element extends node>(
+  policy: NodePolicyDefinition<parent, node, text, element>,
+  reconciler: EventTarget,
+): NodePolicy<parent, node, text, element> {
+  return policy(reconciler)
 }
 
 function createEmptyRootFacade(): ReconcilerRoot<RenderValue> {
