@@ -1,7 +1,6 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX } from '../jsx/runtime.ts'
-import type { DispatchedEvent } from '../jsx/runtime.ts'
+import type { DispatchedEvent, DomElementType } from '../jsx/jsx-runtime.ts'
 
 type EventMap<target extends EventTarget> = target extends HTMLElement
   ? HTMLElementEventMap
@@ -27,8 +26,6 @@ type OnHandler<target extends EventTarget, event extends Event> = (
   event: DispatchedEvent<event, target>,
   reentrySignal: AbortSignal,
 ) => void
-
-type DomElementType = Extract<keyof JSX.IntrinsicElements, string>
 
 let onMixin = createMixin<
   [type: string, handler: OnHandler<EventTarget, Event>],

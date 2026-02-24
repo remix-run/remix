@@ -21,8 +21,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./jsx-runtime": "./src/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./jsx-runtime": "./src/lib/jsx/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/lib/jsx/jsx-dev-runtime.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,12 +32,12 @@
         "default": "./dist/index.js"
       },
       "./jsx-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
+        "types": "./dist/lib/jsx/jsx-runtime.d.ts",
+        "default": "./dist/lib/jsx/jsx-runtime.js"
       },
       "./jsx-dev-runtime": {
-        "types": "./dist/jsx-dev-runtime.d.ts",
-        "default": "./dist/jsx-dev-runtime.js"
+        "types": "./dist/lib/jsx/jsx-dev-runtime.d.ts",
+        "default": "./dist/lib/jsx/jsx-dev-runtime.js"
       },
       "./package.json": "./package.json"
     }

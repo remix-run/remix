@@ -6,7 +6,7 @@ import {
 } from '@remix-run/reconciler'
 import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
 import type { MixValue } from '@remix-run/reconciler'
-import type * as dom from '../jsx-props.ts'
+import type * as dom from './props.ts'
 
 export const Fragment = RECONCILER_FRAGMENT
 
@@ -37,6 +37,7 @@ export type FrameElementProps = {
 export type DomHTMLElements = JSX.IntrinsicHTMLElements
 export type DomSVGElements = JSX.IntrinsicSVGElements
 export type DomMathMLElements = JSX.IntrinsicMathMLElements
+export type DomElementType = Extract<keyof JSX.IntrinsicElements, string>
 
 export function jsx(
   type: unknown,

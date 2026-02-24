@@ -1,6 +1,6 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX } from '../jsx/runtime.ts'
+import type { DomElementType } from '../jsx/jsx-runtime.ts'
 
 type CssScalar = string | number
 type CssInput = {
@@ -19,8 +19,6 @@ type DocumentStyles = {
 }
 
 let documentStylesByRef = new WeakMap<Document, DocumentStyles>()
-
-type DomElementType = Extract<keyof JSX.IntrinsicElements, string>
 
 let cssMixin = createMixin<[styles: CssInput | null | undefined], Element, DomElementType>(
   (handle) => {

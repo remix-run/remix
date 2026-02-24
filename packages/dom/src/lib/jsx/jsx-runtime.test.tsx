@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component, RenderValue } from '@remix-run/reconciler'
-import type { Assert, IsEqual } from './testing/utils.ts'
+import type { Assert, IsEqual } from '../../testing/utils.ts'
 import type { DispatchedEvent } from './jsx-runtime.ts'
-import { on } from './lib/dom-plugins.ts'
+import { on } from '../dom-plugins.ts'
 
 describe('dom jsx runtime', () => {
   it('creates branded reconciler elements and extracts key from props', () => {
@@ -118,8 +118,7 @@ let goodOnMixinInput = (
 let badOnMixin = (
   <button
     mix={[
-      // @ts-expect-error pointerdown on button dispatches PointerEvent
-      on('pointerdown', (event: DispatchedEvent<KeyboardEvent, HTMLButtonElement>) => {
+      on('pointerdown', (event: DispatchedEvent<PointerEvent, HTMLButtonElement>) => {
         void event
       }),
     ]}

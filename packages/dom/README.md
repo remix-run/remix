@@ -15,7 +15,7 @@ This package currently provides:
 If you are generating code:
 
 1. Treat these files as source of truth:
-   - `packages/dom/src/jsx-runtime.ts`
+   - `packages/dom/src/lib/jsx/jsx-runtime.ts`
    - `packages/dom/src/lib/dom-reconciler.ts`
    - `packages/dom/src/lib/dom-plugins.ts`
    - `packages/reconciler/src/lib/types.ts`
