@@ -1,4 +1,4 @@
-import { boot } from '@remix-run/dom'
+import { boot, RuntimeErrorEvent } from '@remix-run/dom'
 
 let runtime = boot({
   document,
@@ -21,9 +21,14 @@ let runtime = boot({
     if (response.body) return response.body
     return await response.text()
   },
-  onError(error) {
-    console.error(error)
-  },
+})
+
+runtime.addEventListener('error', (event) => {
+  if (event instanceof RuntimeErrorEvent) {
+    console.error(event.error)
+    return
+  }
+  console.error(event)
 })
 
 void runtime.ready()

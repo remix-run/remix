@@ -57,7 +57,6 @@ export type BootOptions = {
   document?: Document
   loadModule: ClientModuleLoader
   resolveFrame?: ResolveFrame
-  onError?: (error: unknown, boundaryId: null | string) => void
 }
 
 export type FrameHandle = EventTarget &
@@ -79,6 +78,17 @@ export type RuntimeHandle = EventTarget & {
   ready(): Promise<void>
   flush(): void
   dispose(): void
+}
+
+export class RuntimeErrorEvent extends Event {
+  error: unknown
+  boundaryId: null | string
+
+  constructor(error: unknown, boundaryId: null | string) {
+    super('error')
+    this.error = error
+    this.boundaryId = boundaryId
+  }
 }
 
 type RuntimeState = {
@@ -160,7 +170,7 @@ export function boot(options: BootOptions): RuntimeHandle {
 
   let readyPromise = (async () => {
     try {
-      mergeRmxDataFromScope(state.data, doc, options.onError)
+      mergeRmxDataFromScope(state, state.data, doc)
       startFrameTemplateObservation(state)
       processExistingFrameTemplates(state)
       let container = doc.body ?? doc.documentElement ?? doc
@@ -168,7 +178,7 @@ export function boot(options: BootOptions): RuntimeHandle {
       await hydrateContainer(state, Array.from(container.childNodes), topFrame)
       runtime.flush()
     } catch (error) {
-      options.onError?.(error, null)
+      reportRuntimeError(state, error, null)
     }
   })()
 
@@ -193,11 +203,13 @@ async function hydrateContainer(
 ) {
   if (state.disposed) return
   pruneDisconnectedRuntimeNodes(state)
-  let hydrationBoundaries = findHydrationBoundaries(nodes, (error) => state.options.onError?.(error, null))
+  let hydrationBoundaries = findHydrationBoundaries(nodes, (error) =>
+    reportRuntimeError(state, error, null),
+  )
   let hydrationJobs = hydrationBoundaries.map((boundary) => hydrateBoundary(state, boundary, ownerFrame))
   await Promise.all(hydrationJobs)
 
-  let frameBoundaries = findFrameBoundaries(nodes, (error) => state.options.onError?.(error, null))
+  let frameBoundaries = findFrameBoundaries(nodes, (error) => reportRuntimeError(state, error, null))
   for (let boundary of frameBoundaries) {
     let frameData = state.data.f?.[boundary.id]
     if (!frameData || typeof frameData.src !== 'string') continue
@@ -228,7 +240,7 @@ async function hydrateBoundary(state: RuntimeState, boundary: HydrationBoundary,
     }
     root.render(jsx(component, reviveSerializedObject(entry.props) as any))
   } catch (error) {
-    state.options.onError?.(error, boundary.id)
+    reportRuntimeError(state, error, boundary.id)
   }
 }
 
@@ -322,7 +334,7 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
 async function replaceFrameContent(state: RuntimeState, frameState: FrameState, html: string) {
   if (frameState.disposed || state.disposed) return
   let fragment = createFragmentFromString(state.doc, html)
-  mergeRmxDataFromScope(state.data, fragment, state.options.onError)
+  mergeRmxDataFromScope(state, state.data, fragment)
   diffRangeWithFragment(state, frameState.start, frameState.end, fragment)
   await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
 }
@@ -523,9 +535,9 @@ function isNodeInsideRange(node: Node, start: Node, end: Node) {
 }
 
 function mergeRmxDataFromScope(
+  state: RuntimeState,
   into: RmxData,
   scope: Document | DocumentFragment,
-  onError?: (error: unknown, boundaryId: null | string) => void,
 ) {
   let scripts = Array.from(scope.querySelectorAll('script#rmx-data'))
   for (let script of scripts) {
@@ -534,7 +546,7 @@ function mergeRmxDataFromScope(
     try {
       parsed = JSON.parse(script.textContent || '{}') as RmxData
     } catch (error) {
-      onError?.(error, null)
+      reportRuntimeError(state, error, null)
     }
     mergeRmxData(into, parsed)
     script.remove()
@@ -569,7 +581,7 @@ async function applyFrameTemplate(
   fragment: DocumentFragment,
 ) {
   if (state.disposed || frameState.disposed || frameState.status !== 'pending') return
-  mergeRmxDataFromScope(state.data, fragment, state.options.onError)
+  mergeRmxDataFromScope(state, state.data, fragment)
   await replaceFrameContentFragment(state, frameState, fragment)
   frameState.status = 'resolved'
   state.runtime.flush()
@@ -859,7 +871,7 @@ function scheduleHydrationPass(state: RuntimeState) {
         state.runtime.flush()
       })
       .catch((error) => {
-        state.options.onError?.(error, null)
+        reportRuntimeError(state, error, null)
       })
   })
 }
@@ -914,7 +926,7 @@ function processFrameTemplateElement(state: RuntimeState, template: HTMLTemplate
   let frameState = state.frameStatesById.get(frameId)
   if (frameState && !frameState.disposed && frameState.status === 'pending') {
     void applyFrameTemplate(state, frameState, fragment).catch((error) =>
-      state.options.onError?.(error, frameId),
+      reportRuntimeError(state, error, frameId),
     )
     return
   }
@@ -956,7 +968,7 @@ async function getOrLoadModule(
       state.moduleCache.set(key, component)
       return component
     } catch (error) {
-      state.options.onError?.(error, boundaryId)
+      reportRuntimeError(state, error, boundaryId)
       return undefined
     } finally {
       state.moduleLoads.delete(key)
@@ -1023,4 +1035,11 @@ function reviveSerializedValue(value: unknown): unknown {
     output[key] = reviveSerializedValue(record[key])
   }
   return output
+}
+
+function reportRuntimeError(state: RuntimeState, error: unknown, boundaryId: null | string) {
+  queueMicrotask(() => {
+    if (state.disposed) return
+    state.runtime.dispatchEvent(new RuntimeErrorEvent(error, boundaryId))
+  })
 }

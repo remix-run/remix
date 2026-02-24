@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { boot } from './client-runtime.ts'
+import { boot, RuntimeErrorEvent } from './client-runtime.ts'
 import { clientEntry } from './client-entry.ts'
 import { renderToHTMLStream } from './render-to-html-stream.ts'
 
@@ -271,9 +271,10 @@ describe('boot', () => {
       loadModule: async () => () => <button>noop</button>,
     })
     await runtime.ready()
-
-    expect(document.body.innerHTML).toContain('early resolved content')
-    expect(document.body.innerHTML).not.toContain('loading frame')
+    await waitFor(() => {
+      expect(document.body.innerHTML).toContain('early resolved content')
+      expect(document.body.innerHTML).not.toContain('loading frame')
+    })
   })
 
   it('does not block ready on hydration markers from late frame templates', async () => {
@@ -397,7 +398,7 @@ describe('boot', () => {
     expect(document.body.innerHTML).toContain('frame body')
   })
 
-  it('reports malformed boundaries via onError', async () => {
+  it('reports malformed boundaries via runtime error events', async () => {
     document.body.innerHTML = [
       '<main>',
       '<!-- rmx:h:oops --><button>server</button>',
@@ -411,9 +412,10 @@ describe('boot', () => {
     let runtime = boot({
       document,
       loadModule: async () => () => <button>never</button>,
-      onError(error) {
-        errors.push(error)
-      },
+    })
+    runtime.addEventListener('error', (event) => {
+      if (!(event instanceof RuntimeErrorEvent)) return
+      errors.push(event.error)
     })
     await runtime.ready()
 

@@ -8,7 +8,7 @@ This package currently provides:
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
 - a DOM plugin pipeline (`createDomPlugins(document)`)
 - first-class mixins (`on`, `css`, `animateLayout`) via `mixPlugin`
-- server-side `clientEntry(...)` markers/payload generation for future hydration
+- `clientEntry(...)` markers/payload generation and `boot(...)` hydration runtime
 
 ## Agent-first orientation
 
@@ -60,7 +60,39 @@ Notes:
 - supports cancellation with `signal`
 - supports `<frame src fallback>` async boundaries via `resolveFrame`
 - includes server-side client-entry markers and `rmx-data` hydration payloads
-- hydration/bootstrap runtime concerns are intentionally out of scope for this API phase
+- hydration/bootstrap options are intentionally out of scope for this server API
+
+## Client runtime
+
+Use `boot` in the browser to hydrate server-emitted client-entry boundaries and wire frame runtime behavior:
+
+```ts
+import { boot, RuntimeErrorEvent } from '@remix-run/dom'
+
+let runtime = boot({
+  document,
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    let value = (mod as Record<string, unknown>)[exportName]
+    if (typeof value !== 'function') {
+      throw new Error(`Export "${exportName}" from "${moduleUrl}" is not a component function`)
+    }
+    return value
+  },
+  async resolveFrame(src, signal) {
+    let response = await fetch(src, { signal })
+    return await response.text()
+  },
+})
+
+runtime.addEventListener('error', (event) => {
+  if (event instanceof RuntimeErrorEvent) {
+    console.error(event.error)
+  }
+})
+
+await runtime.ready()
+```
 
 ### `clientEntry` (server-side artifacts only)
 
@@ -80,7 +112,7 @@ Current behavior:
 
 - wraps rendered output with `<!-- rmx:h:{id} --> ... <!-- /rmx:h -->`
 - appends hydration metadata under `h` in `<script type="application/json" id="rmx-data">`
-- does not hydrate on the client yet (runtime is intentionally deferred)
+- hydrates on the client via `boot(...)`
 
 `tsconfig.json` example for DOM JSX:
 
