@@ -5,7 +5,7 @@ import { attributePropsPlugin } from './attribute-props-plugin.ts'
 
 describe('attribute props plugin', () => {
   it('normalizes special HTML and SVG attribute prop names', () => {
-    let reconciler = createDomReconciler(document, [attributePropsPlugin as any, basicPropsPlugin as any])
+    let reconciler = createDomReconciler(document, [attributePropsPlugin, basicPropsPlugin])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
