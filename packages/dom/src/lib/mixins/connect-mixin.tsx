@@ -22,10 +22,10 @@ export let connect = createMixin<
     }
   })
 
-  return (callback, props) => {
+  return (callback) => {
     if (!capturedCallback) {
       capturedCallback = callback
     }
-    return <handle.element {...props} />
+    return handle.element
   }
 })

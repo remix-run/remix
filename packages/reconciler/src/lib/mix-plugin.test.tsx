@@ -91,6 +91,50 @@ describe('mix plugin', () => {
     assert.deepEqual(observedClassNames, ['base from-mix', 'next again'])
   })
 
+  it('supports returning handle.element as a passthrough fast path', () => {
+    let calls = 0
+    let observedClassNames: string[] = []
+
+    let passthrough = createMixin<[], EventTarget>((handle) => (_props) => {
+      calls++
+      return handle.element
+    })
+
+    let classNamePlugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: ['className'],
+      shouldActivate(context) {
+        return typeof context.delta.nextProps.className === 'string'
+      },
+      setup() {
+        return {
+          commit(context) {
+            observedClassNames.push(context.delta.nextProps.className as string)
+            context.consume('className')
+          },
+        }
+      },
+    })
+
+    let reconciler = createTestNodeReconciler([mixPlugin as any, classNamePlugin as any])
+    let root = reconciler.createRoot()
+    root.render(
+      <button className="base" mix={[passthrough()]}>
+        hello
+      </button>,
+    )
+    root.flush()
+    root.render(
+      <button className="next" mix={[passthrough()]}>
+        hello
+      </button>,
+    )
+    root.flush()
+
+    assert.equal(calls, 2)
+    assert.deepEqual(observedClassNames, ['base', 'next'])
+  })
+
   it('composes nested mixins returned from mixin render', () => {
     let applied = 0
 
