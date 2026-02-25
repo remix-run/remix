@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/dom": "workspace:^"
+    "@remix-run/dom": "workspace:^",
+    "@remix-run/interaction": "workspace:^",
+    "@remix-run/typed-event-target": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:",
