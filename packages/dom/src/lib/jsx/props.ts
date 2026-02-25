@@ -1,4 +1,5 @@
 import type { MixValue, RenderValue } from '@remix-run/reconciler'
+import type { JSX } from './jsx-runtime.ts'
 
 /**
  * Adapted from Preact:
@@ -24,6 +25,7 @@ export interface HostProps<eventTarget extends EventTarget> {
 type StyleProps = Record<string, string | number | null | undefined>
 
 export type Trackable<T> = T
+export type Props<elementType extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[elementType]
 
 export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   extends HTMLProps<eventTarget> {

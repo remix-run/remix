@@ -41,6 +41,7 @@ export type {
   MixinDescriptor,
   MixinType,
 } from './lib/jsx/jsx-runtime.ts'
+export type { Props } from './lib/jsx/props.ts'
 
 export type {
   DomElementNode,

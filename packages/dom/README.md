@@ -150,6 +150,19 @@ Current behavior:
 }
 ```
 
+### Typing host-wrapper components
+
+Use `Props<'tag'>` to mirror intrinsic host element props when building wrapper components:
+
+```ts
+import type { Props } from '@remix-run/dom'
+
+type ButtonProps = Props<'button'>
+```
+
+This includes tag-specific attributes/events plus DOM runtime host props like `children`, `mix`,
+and `innerHTML`.
+
 The DOM JSX runtime supports host props like `style` and `mix`.
 Event handling is expressed with mixins using `on(...)`.
 
