@@ -110,6 +110,8 @@ Client runtime event notes:
 
 - pre/post apply events are emitted on the `RuntimeHandle` (not `document`)
 - pre/post apply events are generic runtime hooks (no CSS-specific semantics)
+- SSR css mixin output is consolidated to one server `<style data-rmx-css-mixin ...>` per render scope
+  (initial document scope and each deferred frame template scope)
 - `css` mixin uses pre-apply to adopt/remove server style tags from incoming frame fragments before insertion
 - this avoids hydration/diff drift from transient server-only style nodes
 

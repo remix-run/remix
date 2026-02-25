@@ -741,25 +741,32 @@ describe('renderToHTMLStream', () => {
     expect(classNames[0]).toBe(classNames[1])
     let ruleMatch = new RegExp(`\\.${classNames[0]}\\{`, 'g')
     expect((html.match(ruleMatch) ?? []).length).toBe(1)
+    expect((html.match(/data-rmx-css-mixin/g) ?? []).length).toBe(1)
   })
 
-  it('emits css style tags for deferred frame templates', async () => {
+  it('emits one css style tag per streaming scope', async () => {
     let html = await readStream(
       renderToHTMLStream(
         <main>
-          <div mix={[css({ color: 'red' })]}>root</div>
+          <div mix={[css({ color: 'tomato' })]}>root a</div>
+          <div mix={[css({ borderColor: 'lime', borderStyle: 'solid' })]}>root b</div>
           <frame src="/frame-a" fallback={<p>loading</p>} />
         </main>,
         {
           resolveFrame: async () => (
             <section>
-              <div mix={[css({ backgroundColor: 'black' })]}>frame</div>
+              <div mix={[css({ backgroundColor: 'black' })]}>frame a</div>
+              <div mix={[css({ color: 'blueviolet', marginTop: 12 })]}>frame b</div>
             </section>
           ),
         },
       ),
     )
-    expect((html.match(/data-rmx-css-mixin/g) ?? []).length).toBeGreaterThanOrEqual(2)
+    expect((html.match(/data-rmx-css-mixin/g) ?? []).length).toBe(2)
+    expect((html.match(/color:tomato;/g) ?? []).length).toBe(1)
+    expect((html.match(/border-color:lime;border-style:solid;/g) ?? []).length).toBe(1)
+    expect((html.match(/background-color:black;/g) ?? []).length).toBe(1)
+    expect((html.match(/color:blueviolet;margin-top:12px;/g) ?? []).length).toBe(1)
     expect(html).toContain('<template id="')
   })
 

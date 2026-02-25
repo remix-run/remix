@@ -190,21 +190,27 @@ function startRuntimePreApplyListener(doc: Document, documentStyles: DocumentSty
 
 function adoptServerStylesInNode(node: Node, documentStyles: DocumentStyles) {
   if (node instanceof HTMLStyleElement) {
-    if (!node.hasAttribute(CSS_MIXIN_STYLE_TAG_ATTR)) return
-    if (node === documentStyles.styleElement) return
-    if (node.getAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR) === 'client') return
+    if (!isServerCssStyleElement(node, documentStyles)) return
     adoptServerStyleTag(node, documentStyles)
     return
   }
   if (!(node instanceof Element || node instanceof Document || node instanceof DocumentFragment)) return
-  let serverStyles = node.querySelectorAll(`style[${CSS_MIXIN_STYLE_TAG_ATTR}]`)
+  let serverStyles = node.querySelectorAll(
+    `style[${CSS_MIXIN_STYLE_TAG_ATTR}]:not([${CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR}="client"])`,
+  )
   for (let index = 0; index < serverStyles.length; index++) {
     let styleElement = serverStyles[index]
     if (!(styleElement instanceof HTMLStyleElement)) continue
-    if (styleElement === documentStyles.styleElement) continue
-    if (styleElement.getAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR) === 'client') continue
+    if (!isServerCssStyleElement(styleElement, documentStyles)) continue
     adoptServerStyleTag(styleElement, documentStyles)
   }
+}
+
+function isServerCssStyleElement(styleElement: HTMLStyleElement, documentStyles: DocumentStyles) {
+  if (!styleElement.hasAttribute(CSS_MIXIN_STYLE_TAG_ATTR)) return false
+  if (styleElement === documentStyles.styleElement) return false
+  if (styleElement.getAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR) === 'client') return false
+  return true
 }
 
 function adoptServerStyleTag(styleElement: HTMLStyleElement, documentStyles: DocumentStyles) {

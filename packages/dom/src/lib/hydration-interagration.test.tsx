@@ -170,7 +170,7 @@ describe('hydration integration', () => {
     extraStyleB.setAttribute('data-rmx-css-origin', 'server')
     extraStyleB.textContent = '.rmx-css-extra-b{color:orange;}'
     document.body.appendChild(extraStyleB)
-    expect(document.querySelectorAll('style[data-rmx-css-mixin]').length).toBeGreaterThanOrEqual(3)
+    expect(document.querySelectorAll('style[data-rmx-css-mixin]').length).toBe(3)
 
     let runtime = boot({
       document,

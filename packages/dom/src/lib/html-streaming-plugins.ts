@@ -1,14 +1,12 @@
 import { defineStreamingPlugin } from '@remix-run/reconciler'
 import type { StreamingPluginDefinition } from '@remix-run/reconciler'
 import { normalizeDomProps, shouldNormalizeDomProps } from './plugins/normalize-dom-props.ts'
-import { collectHtmlStreamingHeadHtml } from './html-streaming-contributions.ts'
+import { collectHtmlStreamingCssChunk } from './html-streaming-contributions.ts'
 import {
   appendClassName,
   compileCss,
   createCssClassName,
   createCssKey,
-  CSS_MIXIN_STYLE_TAG_ATTR,
-  CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR,
   isCssInput,
   isCssMixinDescriptor,
   type CssInput,
@@ -54,11 +52,7 @@ let cssMixStreamingPlugin = defineStreamingPlugin({
           let key = createCssKey(styleValue as CssInput)
           let className = createCssClassName(key)
           let cssText = compileCss(`.${className}`, styleValue as CssInput)
-          collectHtmlStreamingHeadHtml(
-            context.root,
-            `css:${key}`,
-            `<style ${CSS_MIXIN_STYLE_TAG_ATTR} ${CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR}="server">${cssText}</style>`,
-          )
+          collectHtmlStreamingCssChunk(context.root, key, cssText)
           nextClassName = appendClassName(nextClassName, className)
         }
         if (nextClassName !== props.className) {
