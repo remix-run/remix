@@ -8,6 +8,7 @@ export {
   animateExit,
   animateLayout,
   basicPropsPlugin,
+  connect,
   createMixin,
   css,
   createDomPlugins,
@@ -15,6 +16,7 @@ export {
   getDocumentState,
   mixPlugin,
   on,
+  pressEvents,
   spring,
   stylePropsPlugin,
 } from './lib/dom-plugins.ts'
