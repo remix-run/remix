@@ -1,4 +1,4 @@
-import { createMixin, on } from '@remix-run/dom'
+import { createMixin, on } from '@remix-run/dom/spa'
 
 export type DragDetail = {
   left: number

@@ -1,7 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { logger } from '@remix-run/logger-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
-import { css } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
 import { renderToHTMLStream } from '@remix-run/dom/server'
 import { routes } from './routes.ts'
 import { SimpleCounter } from './assets/simple-counter.tsx'

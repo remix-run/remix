@@ -1,4 +1,6 @@
-import { animateLayout, on, spring } from '@remix-run/dom'
+import { on } from '@remix-run/dom/spa'
+import { animateLayout } from '@remix-run/dom/animate-layout'
+import { spring } from '@remix-run/dom/spring'
 
 type DemoHandle = {
   update(): Promise<AbortSignal>

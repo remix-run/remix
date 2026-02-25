@@ -1,6 +1,6 @@
-import { css } from '@remix-run/dom'
-import type { DomElementProps } from '@remix-run/dom'
-import type { MixValue } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
+import type { DomElementProps } from '@remix-run/dom/spa'
+import type { MixProp } from '@remix-run/dom/spa'
 
 type ChildrenProps = { children?: any }
 type DivProps = DomElementProps<HTMLDivElement>
@@ -176,9 +176,9 @@ let logoStyle = css({
   letterSpacing: 1,
 })
 
-function mergeMix<node extends EventTarget>(base: unknown, next: MixValue<node> | undefined) {
-  if (!next) return [base] as MixValue<node>
-  return [base, ...next] as MixValue<node>
+function mergeMix<node extends EventTarget>(base: unknown, next: MixProp<node> | undefined) {
+  if (!next) return [base] as MixProp<node>
+  return [base, ...next] as MixProp<node>
 }
 
 export function Layout() {

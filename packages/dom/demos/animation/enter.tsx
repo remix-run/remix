@@ -1,4 +1,5 @@
-import { animateEntrance, spring } from '@remix-run/dom'
+import { animateEntrance } from '@remix-run/dom/animate-entrance'
+import { spring } from '@remix-run/dom/spring'
 
 type DemoHandle = {
   update(): Promise<AbortSignal>

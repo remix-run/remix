@@ -1,4 +1,4 @@
-import { createDomReconciler, css, on } from '@remix-run/dom'
+import { css, on, render } from '@remix-run/dom/spa'
 
 let baseButton = css({
   display: 'inline-flex',
@@ -139,6 +139,4 @@ function App(handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
 }
 
 document.body.style.margin = '0'
-let reconciler = createDomReconciler(document)
-let root = reconciler.createRoot(document.body)
-root.render(<App />)
+let root = render(<App />, document.body)

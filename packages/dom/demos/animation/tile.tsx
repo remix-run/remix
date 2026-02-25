@@ -1,4 +1,4 @@
-import { on } from '@remix-run/dom'
+import { on } from '@remix-run/dom/spa'
 import type { RenderValue } from '@remix-run/reconciler'
 import { panel, replayButton, tileBody } from './styles.ts'
 

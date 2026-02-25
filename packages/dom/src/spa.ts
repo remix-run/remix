@@ -1,14 +1,7 @@
+import { createDomReconciler } from './lib/client/dom-reconciler.ts'
+
 export { createMixin, mixPlugin } from '@remix-run/reconciler'
 export { createDomNodePolicy } from './lib/client/dom-node-policy.ts'
-export { clientEntry } from './lib/shared/hydration/client-entry.ts'
-export {
-  AFTER_FRAME_APPLY_EVENT,
-  AfterFrameApplyEvent,
-  BEFORE_FRAME_APPLY_EVENT,
-  BeforeFrameApplyEvent,
-  boot,
-  RuntimeErrorEvent,
-} from './lib/client/client-runtime.ts'
 export { basicPropsPlugin } from './lib/client/plugins/basic-props-plugin.ts'
 export { attributePropsPlugin } from './lib/client/plugins/attribute-props-plugin.ts'
 export {
@@ -38,20 +31,13 @@ export type {
 } from './lib/client/dom-node-policy.ts'
 
 export type { Component, ComponentHandle } from '@remix-run/reconciler'
-export type {
-  BootOptions,
-  ClientModuleLoader,
-  DomRuntimeApplyKind,
-  FrameHandle,
-  FrameRegistry,
-  ResolveFrame,
-  RuntimeHandle,
-} from './lib/client/client-runtime.ts'
-export type {
-  EntryComponent,
-  SerializableArray,
-  SerializableObject,
-  SerializablePrimitive,
-  SerializableProps,
-  SerializableValue,
-} from './lib/shared/hydration/client-entry.ts'
+
+export function render(
+  value: Parameters<ReturnType<ReturnType<typeof createDomReconciler>['createRoot']>['render']>[0],
+  container: Parameters<ReturnType<typeof createDomReconciler>['createRoot']>[0],
+  options?: Parameters<typeof createDomReconciler>[1],
+) {
+  let root = createDomReconciler(document, options).createRoot(container)
+  root.render(value)
+  return root
+}

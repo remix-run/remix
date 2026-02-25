@@ -1,4 +1,4 @@
-import { createDomReconciler, on } from '@remix-run/dom'
+import { on, render } from '@remix-run/dom/spa'
 
 type ListItem = {
   id: string
@@ -79,10 +79,8 @@ function App(handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
   )
 }
 
-let reconciler = createDomReconciler(document)
 let container = document.getElementById('app')
 if (!container) {
   throw new Error('expected #app container')
 }
-let root = reconciler.createRoot(container)
-root.render(<App />)
+let root = render(<App />, container)

@@ -1,4 +1,4 @@
-import { createMixin } from '@remix-run/dom'
+import { createMixin } from '@remix-run/dom/spa'
 
 const tapEventType = 'rmx:tempo-taps' as const
 

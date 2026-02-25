@@ -1,4 +1,5 @@
-import { clientEntry, css, on, type ComponentHandle } from '@remix-run/dom'
+import { clientEntry, on, type ComponentHandle } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
 
 type CounterProps = {
   label: string

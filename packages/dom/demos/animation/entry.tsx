@@ -1,4 +1,4 @@
-import { createDomReconciler } from '@remix-run/dom'
+import { render } from '@remix-run/dom/spa'
 import { AnimateLayout } from './animate-layout.tsx'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
@@ -38,6 +38,4 @@ function App(_handle: DemoHandle, _setup: unknown) {
 }
 
 document.body.style.margin = '0'
-let reconciler = createDomReconciler(document)
-let root = reconciler.createRoot(document.body)
-root.render(<App />)
+let root = render(<App />, document.body)

@@ -1,5 +1,5 @@
-import { createDomReconciler, on } from '@remix-run/dom'
-import type { ComponentHandle } from '@remix-run/dom'
+import { on, render } from '@remix-run/dom/spa'
+import type { ComponentHandle } from '@remix-run/dom/spa'
 
 function Counter(handle: ComponentHandle, _setup: unknown) {
   let count = 0
@@ -18,6 +18,4 @@ function Counter(handle: ComponentHandle, _setup: unknown) {
   )
 }
 
-let reconciler = createDomReconciler(document)
-let root = reconciler.createRoot(document.body)
-root.render(<Counter />)
+let root = render(<Counter />, document.body)

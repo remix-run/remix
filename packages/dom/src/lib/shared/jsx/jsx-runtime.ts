@@ -17,14 +17,18 @@ export type DispatchedEvent<event extends Event, node extends EventTarget> = eve
   currentTarget: node
 }
 
-export type { MixValue, MixinDescriptor, MixinType } from '@remix-run/reconciler'
+export type MixProp<node = unknown, elementType extends string = string> = MixValue<
+  node,
+  elementType
+>
+export type { MixinDescriptor, MixinType } from '@remix-run/reconciler'
 
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
   innerHTML?: string | null
   key?: unknown
   style?: Record<string, string | number | null | undefined>
-  mix?: MixValue<node>
+  mix?: MixProp<node>
 } & Record<string, unknown>
 
 export type FrameElementProps = {

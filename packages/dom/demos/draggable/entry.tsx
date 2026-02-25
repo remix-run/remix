@@ -1,4 +1,4 @@
-import { createDomReconciler } from '@remix-run/dom'
+import { render } from '@remix-run/dom/spa'
 import { draggable } from './draggable.tsx'
 
 function App(_handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
@@ -42,6 +42,4 @@ function App(_handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
   )
 }
 
-let reconciler = createDomReconciler(document)
-let root = reconciler.createRoot(document.body)
-root.render(<App />)
+let root = render(<App />, document.body)

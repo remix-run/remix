@@ -1,4 +1,6 @@
-import { connect, css, on, pressEvents, type ComponentHandle } from '@remix-run/dom'
+import { connect, on, type ComponentHandle } from '@remix-run/dom/spa'
+import { css } from '@remix-run/dom/css'
+import { pressEvents } from '@remix-run/dom/press-events'
 import { Drummer } from './drummer.ts'
 import {
   BPMDisplay,

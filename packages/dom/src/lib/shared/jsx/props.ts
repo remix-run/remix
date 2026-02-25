@@ -1,4 +1,5 @@
-import type { MixValue, RenderValue } from '@remix-run/reconciler'
+import type { RenderValue } from '@remix-run/reconciler'
+import type { MixProp } from './jsx-runtime.ts'
 import type { JSX } from './jsx-runtime.ts'
 
 /**
@@ -12,7 +13,7 @@ type Booleanish = boolean | 'true' | 'false'
 export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RenderValue
-  mix?: MixValue<eventTarget>
+  mix?: MixProp<eventTarget>
   [name: string]: unknown
   /**
    * Set the innerHTML of the element directly.

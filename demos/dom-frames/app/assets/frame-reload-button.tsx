@@ -1,4 +1,5 @@
-import { clientEntry, css, on, type ComponentHandle } from '@remix-run/dom'
+import { clientEntry, on, type ComponentHandle } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
 
 export let FrameReloadButton = clientEntry(
   '/assets/frame-reload-button.js#FrameReloadButton',

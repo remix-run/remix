@@ -21,7 +21,17 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./spa": "./src/spa.ts",
     "./server": "./src/server.ts",
+    "./reconciler": "./src/lib/client/dom-reconciler.ts",
+    "./spring": "./src/lib/shared/spring.ts",
+    "./connect": "./src/lib/client/mixins/connect-mixin.tsx",
+    "./css": "./src/lib/client/mixins/css-mixin.tsx",
+    "./on": "./src/lib/client/mixins/on-mixin.tsx",
+    "./press-events": "./src/lib/client/mixins/press-mixin.tsx",
+    "./animate-layout": "./src/lib/client/mixins/animate-layout-mixin.tsx",
+    "./animate-entrance": "./src/lib/client/mixins/animate-presence.tsx",
+    "./animate-exit": "./src/lib/client/mixins/animate-presence.tsx",
     "./jsx-runtime": "./src/lib/shared/jsx/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/lib/shared/jsx/jsx-dev-runtime.ts",
     "./package.json": "./package.json"
@@ -32,9 +42,49 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./spa": {
+        "types": "./dist/spa.d.ts",
+        "default": "./dist/spa.js"
+      },
       "./server": {
         "types": "./dist/server.d.ts",
         "default": "./dist/server.js"
+      },
+      "./reconciler": {
+        "types": "./dist/lib/client/dom-reconciler.d.ts",
+        "default": "./dist/lib/client/dom-reconciler.js"
+      },
+      "./spring": {
+        "types": "./dist/lib/shared/spring.d.ts",
+        "default": "./dist/lib/shared/spring.js"
+      },
+      "./connect": {
+        "types": "./dist/lib/client/mixins/connect-mixin.d.ts",
+        "default": "./dist/lib/client/mixins/connect-mixin.js"
+      },
+      "./css": {
+        "types": "./dist/lib/client/mixins/css-mixin.d.ts",
+        "default": "./dist/lib/client/mixins/css-mixin.js"
+      },
+      "./on": {
+        "types": "./dist/lib/client/mixins/on-mixin.d.ts",
+        "default": "./dist/lib/client/mixins/on-mixin.js"
+      },
+      "./press-events": {
+        "types": "./dist/lib/client/mixins/press-mixin.d.ts",
+        "default": "./dist/lib/client/mixins/press-mixin.js"
+      },
+      "./animate-layout": {
+        "types": "./dist/lib/client/mixins/animate-layout-mixin.d.ts",
+        "default": "./dist/lib/client/mixins/animate-layout-mixin.js"
+      },
+      "./animate-entrance": {
+        "types": "./dist/lib/client/mixins/animate-presence.d.ts",
+        "default": "./dist/lib/client/mixins/animate-presence.js"
+      },
+      "./animate-exit": {
+        "types": "./dist/lib/client/mixins/animate-presence.d.ts",
+        "default": "./dist/lib/client/mixins/animate-presence.js"
       },
       "./jsx-runtime": {
         "types": "./dist/lib/shared/jsx/jsx-runtime.d.ts",

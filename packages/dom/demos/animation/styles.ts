@@ -1,4 +1,4 @@
-import { css } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
 
 export let panel = css({
   backgroundColor: 'white',

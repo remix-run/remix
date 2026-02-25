@@ -7,7 +7,11 @@ export { PluginAfterCommitEvent, PluginBeforeCommitEvent } from './lib/types.ts'
 export { PluginCommitEvent } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
 export { ReconcilerEnterChildrenEvent, ReconcilerLeaveChildrenEvent } from './lib/types.ts'
-export { StreamingAfterCommitEvent, StreamingBeforeCommitEvent, StreamingErrorEvent } from './lib/types.ts'
+export {
+  StreamingAfterCommitEvent,
+  StreamingBeforeCommitEvent,
+  StreamingErrorEvent,
+} from './lib/types.ts'
 export { createMixin, mixPlugin } from './lib/mix-plugin.ts'
 export { createTestNodeReconciler } from './testing/test-node-reconciler.ts'
 export {
@@ -39,10 +43,8 @@ export type {
   PluginHostContext,
   PluginNodeScope,
   PluginPhase,
-  PreparedPlugin,
   ReconcilerElement,
   ReconcilerRoot,
-  RenderNode,
   RenderValue,
   RootTarget,
   RootTask as Task,
@@ -68,12 +70,3 @@ export type {
 } from './lib/types.ts'
 
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mix-plugin.ts'
-
-export type {
-  TestContainerNode,
-  TestElementNode,
-  TestNode,
-  TestNodePolicy,
-  TestTextNode,
-  TestTraversal,
-} from './testing/test-node-policy.ts'

@@ -1,4 +1,5 @@
-import { clientEntry, css, type ComponentHandle } from '@remix-run/dom'
+import { clientEntry, type ComponentHandle } from '@remix-run/dom'
+import { css } from '@remix-run/dom/css'
 
 export let HydrationBadge = clientEntry(
   '/assets/hydration-badge.js#HydrationBadge',
