@@ -166,6 +166,7 @@ type RuntimeState = {
   templateObserver: null | MutationObserver
   pendingHydrationPass: boolean
   reconcilerByFrame: WeakMap<object, ReturnType<typeof createDomReconciler>>
+  topReloadController: null | AbortController
   disposed: boolean
   runtime: RuntimeHandle
 }
@@ -173,14 +174,15 @@ type RuntimeState = {
 export function boot(options: BootOptions): RuntimeHandle {
   let doc = options.document ?? document
   let eventTarget = new TypedEventTarget<RuntimeHandleEventMap>()
-  let topFrame = createRootFrameHandle(doc)
+  let state: RuntimeState
+  let topFrame = createRootFrameHandle(doc, () => reloadTopFrame(state, topFrame))
   let frames: FrameRegistry = {
     top: topFrame,
     get(name) {
       return state.namedFrames.get(name)
     },
   }
-  let state: RuntimeState = {
+  state = {
     doc,
     options,
     data: {},
@@ -194,6 +196,7 @@ export function boot(options: BootOptions): RuntimeHandle {
     templateObserver: null,
     pendingHydrationPass: false,
     reconcilerByFrame: new WeakMap(),
+    topReloadController: null,
     disposed: false,
     runtime: null as unknown as RuntimeHandle,
   }
@@ -212,6 +215,8 @@ export function boot(options: BootOptions): RuntimeHandle {
     dispose() {
       if (state.disposed) return
       state.disposed = true
+      state.topReloadController?.abort()
+      state.topReloadController = null
       if (runtimeByDocument.get(state.doc) === runtime) {
         runtimeByDocument.delete(state.doc)
       }
@@ -250,15 +255,40 @@ export function boot(options: BootOptions): RuntimeHandle {
   return runtime
 }
 
-function createRootFrameHandle(doc: Document): FrameHandle {
+function createRootFrameHandle(doc: Document, onReload: () => Promise<AbortSignal>): FrameHandle {
   let target = new TypedEventTarget<FrameHandleEventMap>()
   return Object.assign(target, {
     id: 'root',
     src: doc.location?.href ?? '/',
-    reload: async () => {
-      throw new Error('Root frame cannot be reloaded directly')
-    },
+    reload: onReload,
   }) as FrameHandle
+}
+
+async function reloadTopFrame(state: RuntimeState, handle: FrameHandle): Promise<AbortSignal> {
+  if (!state.options.resolveFrame) {
+    throw new Error('No resolveFrame provided')
+  }
+  if (state.disposed) {
+    return AbortSignal.abort('runtime disposed')
+  }
+  state.topReloadController?.abort()
+  let controller = new AbortController()
+  state.topReloadController = controller
+  handle.dispatchEvent(new Event('reloadStart'))
+  try {
+    let content = await state.options.resolveFrame(handle.src, controller.signal)
+    if (controller.signal.aborted) return controller.signal
+    let html = await toHTML(content, controller.signal)
+    if (controller.signal.aborted) return controller.signal
+    await replaceTopFrameContent(state, handle, html)
+    state.runtime.flush()
+    return controller.signal
+  } finally {
+    if (state.topReloadController === controller) {
+      state.topReloadController = null
+      handle.dispatchEvent(new Event('reloadComplete'))
+    }
+  }
 }
 
 async function hydrateContainer(
@@ -400,6 +430,48 @@ async function replaceFrameContent(state: RuntimeState, frameState: FrameState, 
   if (frameState.disposed || state.disposed) return
   let fragment = createFragmentFromString(state.doc, html)
   await replaceFrameContentFragment(state, frameState, fragment, 'frame-reload')
+}
+
+async function replaceTopFrameContent(state: RuntimeState, topFrame: FrameHandle, html: string) {
+  if (state.disposed) return
+  resetHydratedRuntimeState(state)
+  if (isFullDocumentHtml(html)) {
+    let parsed = new DOMParser().parseFromString(html, 'text/html')
+    mergeRmxDataFromScope(state, state.data, parsed)
+    let currentHead = state.doc.head
+    let currentBody = state.doc.body
+    if (currentHead && parsed.head) {
+      diffNodes(state, currentHead, Array.from(currentHead.childNodes), Array.from(parsed.head.childNodes), null)
+    }
+    if (currentBody && parsed.body) {
+      diffNodes(state, currentBody, Array.from(currentBody.childNodes), Array.from(parsed.body.childNodes), null)
+      processExistingFrameTemplates(state)
+      await hydrateContainer(state, Array.from(currentBody.childNodes), topFrame)
+    }
+    return
+  }
+
+  let currentBody = state.doc.body ?? state.doc.documentElement
+  if (!currentBody) return
+  let fragment = createFragmentFromString(state.doc, html)
+  mergeRmxDataFromScope(state, state.data, fragment)
+  diffNodes(state, currentBody, Array.from(currentBody.childNodes), Array.from(fragment.childNodes), null)
+  processExistingFrameTemplates(state)
+  await hydrateContainer(state, Array.from(currentBody.childNodes), topFrame)
+}
+
+function resetHydratedRuntimeState(state: RuntimeState) {
+  for (let root of Array.from(state.rootsByStart.values())) {
+    root.dispose()
+  }
+  state.rootsByStart.clear()
+  for (let frameState of Array.from(state.frameStatesByStart.values())) {
+    disposeFrameState(state, frameState)
+  }
+  state.frameStatesByStart.clear()
+  state.frameStatesById.clear()
+  state.namedFrames.clear()
+  state.pendingFrameTemplates.clear()
 }
 
 function emitRuntimePreApply(
@@ -1077,6 +1149,11 @@ function createFragmentFromString(doc: Document, html: string) {
   let template = doc.createElement('template')
   template.innerHTML = html.trim()
   return template.content
+}
+
+function isFullDocumentHtml(html: string) {
+  let trimmed = html.trimStart()
+  return /^<!doctype html\b/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)
 }
 
 async function toHTML(

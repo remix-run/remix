@@ -120,6 +120,35 @@ describe('boot', () => {
     expect(document.body.innerHTML).toContain('streamed chunk content')
   })
 
+  it('reloads the top frame from a full document response', async () => {
+    document.body.innerHTML = '<main><p>before top reload</p></main>'
+    let resolveFrame = vi.fn(async () =>
+      [
+        '<!doctype html>',
+        '<html>',
+        '<head><title>Top Reloaded</title></head>',
+        '<body>',
+        '<main>',
+        '<!-- rmx:h:h1 --><button id="entry">server</button><!-- /rmx:h -->',
+        '<script type="application/json" id="rmx-data">',
+        '{"h":{"h1":{"moduleUrl":"/entries/top.js","exportName":"TopEntry","props":{"label":"top"}}}}',
+        '</script>',
+        '</main>',
+        '</body>',
+        '</html>',
+      ].join(''),
+    )
+    let loadModule = vi.fn(async () => () => (props: { label: string }) => <button id="entry">{props.label}</button>)
+
+    let runtime = boot({ document, loadModule, resolveFrame })
+    await runtime.ready()
+    await runtime.frames.top.reload()
+
+    expect(resolveFrame).toHaveBeenCalledWith(document.location.href, expect.any(AbortSignal))
+    expect(document.title).toBe('Top Reloaded')
+    expect(document.getElementById('entry')?.textContent).toBe('top')
+  })
+
   it('preserves static node identity when reloading frame content', async () => {
     document.body.innerHTML = [
       '<main>',
