@@ -14,6 +14,8 @@ Author mixins with:
 ```ts
 createMixin<[...args], NodeType>((handle, type) => {
   return (...args, props) => <handle.element {...props} />
+  // or, when no prop changes are needed:
+  // return (...args) => handle.element
 })
 ```
 
@@ -28,8 +30,8 @@ Important behavior:
 
 ## Authoring Rules
 
-1. Always return `<handle.element ... />` from render paths unless intentionally no-op.
-2. Preserve incoming props by default: spread `...props`.
+1. Return `<handle.element ... />` when changing props; return `handle.element` directly as a passthrough when no prop changes are needed.
+2. Preserve incoming props by default when returning JSX: spread `...props`.
 3. Compose nested mixins through `props.mix` (not custom prop names).
 4. Keep side effects in lifecycle hooks or `queueTask`, not during pure prop transforms.
 5. Use explicit node types in `createMixin<..., HTMLElement>` when node APIs are needed.
@@ -84,7 +86,7 @@ let clickable = createMixin<[], HTMLElement>((handle) => {
 ## Implementation Checklist
 
 - [ ] `createMixin` generic includes correct node type (`HTMLElement`, `Element`, etc.)
-- [ ] render returns `<handle.element ... />`
+- [ ] render returns `<handle.element ... />` for prop changes, or `handle.element` for passthrough
 - [ ] incoming `props` are preserved
 - [ ] nested composition uses `mix`
 - [ ] node side effects use `queueTask`
