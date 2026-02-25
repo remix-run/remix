@@ -1,5 +1,5 @@
 import { TypedEventTarget } from '@remix-run/typed-event-target'
-import type { Component, ComponentHandle } from '@remix-run/reconciler'
+import type { Component } from '@remix-run/reconciler'
 import { jsx } from '../shared/jsx/jsx-runtime.ts'
 import { createDomReconciler } from './dom-reconciler.ts'
 
@@ -71,13 +71,12 @@ type RuntimeHandleEventMap = {
   afterFrameApply: AfterFrameApplyEvent
 }
 
-export type FrameHandle = TypedEventTarget<FrameHandleEventMap> &
-  {
-    src: string
-    reload(): Promise<AbortSignal>
-    id: string
-    name?: string
-  }
+export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
+  src: string
+  reload(): Promise<AbortSignal>
+  id: string
+  name?: string
+}
 
 export type FrameRegistry = {
   top: FrameHandle
@@ -291,20 +290,20 @@ async function reloadTopFrame(state: RuntimeState, handle: FrameHandle): Promise
   }
 }
 
-async function hydrateContainer(
-  state: RuntimeState,
-  nodes: Node[],
-  ownerFrame: FrameHandle,
-) {
+async function hydrateContainer(state: RuntimeState, nodes: Node[], ownerFrame: FrameHandle) {
   if (state.disposed) return
   pruneDisconnectedRuntimeNodes(state)
   let hydrationBoundaries = findHydrationBoundaries(nodes, (error) =>
     reportRuntimeError(state, error, null),
   )
-  let hydrationJobs = hydrationBoundaries.map((boundary) => hydrateBoundary(state, boundary, ownerFrame))
+  let hydrationJobs = hydrationBoundaries.map((boundary) =>
+    hydrateBoundary(state, boundary, ownerFrame),
+  )
   await Promise.all(hydrationJobs)
 
-  let frameBoundaries = findFrameBoundaries(nodes, (error) => reportRuntimeError(state, error, null))
+  let frameBoundaries = findFrameBoundaries(nodes, (error) =>
+    reportRuntimeError(state, error, null),
+  )
   for (let boundary of frameBoundaries) {
     let frameData = state.data.f?.[boundary.id]
     if (!frameData || typeof frameData.src !== 'string') continue
@@ -314,7 +313,11 @@ async function hydrateContainer(
   }
 }
 
-async function hydrateBoundary(state: RuntimeState, boundary: HydrationBoundary, ownerFrame: FrameHandle) {
+async function hydrateBoundary(
+  state: RuntimeState,
+  boundary: HydrationBoundary,
+  ownerFrame: FrameHandle,
+) {
   let entry = state.data.h?.[boundary.id]
   if (!entry) return
   let component = await getOrLoadModule(
@@ -344,26 +347,21 @@ function getReconcilerForFrame(state: RuntimeState, frame: FrameHandle) {
   if (existing) return existing
   let created = createDomReconciler(state.doc, {
     extendComponentHandle(handle) {
-      return attachFrameHandle(handle, frame, state.runtime.frames)
+      return {
+        frame,
+        frames: state.runtime.frames,
+      }
     },
   })
   state.reconcilerByFrame.set(frame, created)
   return created
 }
 
-function attachFrameHandle(
-  handle: ComponentHandle,
-  frame: FrameHandle,
-  frames: FrameRegistry,
-): Partial<ComponentHandle> {
-  return {
-    ...handle,
-    frame,
-    frames,
-  }
-}
-
-function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, data: FrameData): FrameState {
+function getOrCreateFrameState(
+  state: RuntimeState,
+  boundary: FrameBoundary,
+  data: FrameData,
+): FrameState {
   let existing = state.frameStatesByStart.get(boundary.start)
   if (existing) {
     existing.end = boundary.end
@@ -441,10 +439,22 @@ async function replaceTopFrameContent(state: RuntimeState, topFrame: FrameHandle
     let currentHead = state.doc.head
     let currentBody = state.doc.body
     if (currentHead && parsed.head) {
-      diffNodes(state, currentHead, Array.from(currentHead.childNodes), Array.from(parsed.head.childNodes), null)
+      diffNodes(
+        state,
+        currentHead,
+        Array.from(currentHead.childNodes),
+        Array.from(parsed.head.childNodes),
+        null,
+      )
     }
     if (currentBody && parsed.body) {
-      diffNodes(state, currentBody, Array.from(currentBody.childNodes), Array.from(parsed.body.childNodes), null)
+      diffNodes(
+        state,
+        currentBody,
+        Array.from(currentBody.childNodes),
+        Array.from(parsed.body.childNodes),
+        null,
+      )
       processExistingFrameTemplates(state)
       await hydrateContainer(state, Array.from(currentBody.childNodes), topFrame)
     }
@@ -456,7 +466,13 @@ async function replaceTopFrameContent(state: RuntimeState, topFrame: FrameHandle
   let fragment = createFragmentFromString(state.doc, html)
   hoistHeadElements(state.doc, fragment)
   mergeRmxDataFromScope(state, state.data, fragment)
-  diffNodes(state, currentBody, Array.from(currentBody.childNodes), Array.from(fragment.childNodes), null)
+  diffNodes(
+    state,
+    currentBody,
+    Array.from(currentBody.childNodes),
+    Array.from(fragment.childNodes),
+    null,
+  )
   processExistingFrameTemplates(state)
   await hydrateContainer(state, Array.from(currentBody.childNodes), topFrame)
 }
@@ -542,7 +558,10 @@ function disposeFrameState(state: RuntimeState, frameState: FrameState) {
   if (state.frameStatesById.get(frameState.id) === frameState) {
     state.frameStatesById.delete(frameState.id)
   }
-  if (frameState.handle.name && state.namedFrames.get(frameState.handle.name) === frameState.handle) {
+  if (
+    frameState.handle.name &&
+    state.namedFrames.get(frameState.handle.name) === frameState.handle
+  ) {
     state.namedFrames.delete(frameState.handle.name)
   }
 }
