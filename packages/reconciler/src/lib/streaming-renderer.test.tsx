@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { createStreamingRenderer } from './streaming-renderer.ts'
 import { defineStreamingPlugin } from './types.ts'
 import type { StreamingPolicy } from './types.ts'
+import type { StreamingRendererRoot } from './types.ts'
 import { RECONCILER_NODE_CHILDREN } from '../testing/jsx.ts'
 
 type ElementState = {
@@ -307,6 +308,77 @@ describe('createStreamingRenderer', () => {
     assert.equal(seen.toString, '')
   })
 
+  it('provides a writable per-root store on the streaming root facade', async () => {
+    let key = Symbol('store')
+    let seen = {
+      factoryValue: '',
+      hasStableIdentity: false,
+    }
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        (pluginRoot) => {
+          let value = pluginRoot.root.getOrCreateStore(key, () => ({ label: 'factory' }))
+          seen.factoryValue = value.label
+          let second = pluginRoot.root.getOrCreateStore(key, () => ({ label: 'new' }))
+          seen.hasStableIdentity = value === second
+          return { phase: 'special' }
+        },
+      ],
+    })
+    let root = renderer.createRoot(<x />)
+    let storeValue = root.getOrCreateStore(key, () => ({ label: 'runtime' }))
+    assert.equal(storeValue.label, 'runtime')
+    assert.equal(root.getStore<{ label: string }>(key)?.label, 'runtime')
+    assert.equal(seen.factoryValue, 'factory')
+    assert.equal(seen.hasStableIdentity, true)
+  })
+
+  it('shares root store state between streaming plugins and policy', async () => {
+    let key = Symbol('shared')
+    let policy: StreamingPolicy<string, { root: StreamingRendererRoot<string> }, ElementState> = {
+      beginRoot(root) {
+        return { root }
+      },
+      beginElement(input, context) {
+        let values = context.root.getOrCreateStore<string[]>(key, () => [])
+        values.push(`policy:${input.type}`)
+        return { state: { type: input.type }, open: `<${input.type}>` }
+      },
+      text(value) {
+        return value
+      },
+      endElement(state) {
+        return `</${state.type}>`
+      },
+      finalize(context) {
+        let values = context.root.getStore<string[]>(key) ?? []
+        return `<store>${values.join(',')}</store>`
+      },
+    }
+    let renderer = createStreamingRenderer({
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit(context) {
+                let values = context.root.getOrCreateStore<string[]>(key, () => [])
+                values.push('plugin')
+              },
+            }
+          },
+        }),
+      ],
+      policy,
+    })
+    let html = await renderer.createRoot(<a />).toString()
+    assert.equal(html, '<a></a><store>plugin,policy:a</store>')
+  })
+
   it('decodes mixed Uint8Array and string chunk outputs', async () => {
     let encoder = new TextEncoder()
     let renderer = createStreamingRenderer<Uint8Array | string, void, ElementState>({
@@ -441,7 +513,9 @@ describe('createStreamingRenderer', () => {
 
   it('returns undefined for missing provider context during streaming render', async () => {
     let MissingProvider = () => () => <unused />
-    let Consumer = (handle: any) => () => <child>{String(handle.context.get(MissingProvider))}</child>
+    let Consumer = (handle: any) => () => (
+      <child>{String(handle.context.get(MissingProvider))}</child>
+    )
     let renderer = createStreamingRenderer({
       policy: testPolicy,
     })

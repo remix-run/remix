@@ -1,7 +1,14 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
 export { clientEntry } from './lib/client-entry.ts'
-export { boot, RuntimeErrorEvent } from './lib/client-runtime.ts'
+export {
+  boot,
+  DomRuntimePostApplyEvent,
+  DomRuntimePreApplyEvent,
+  DOM_RUNTIME_POST_APPLY_EVENT,
+  DOM_RUNTIME_PRE_APPLY_EVENT,
+  RuntimeErrorEvent,
+} from './lib/client-runtime.ts'
 export { renderToHTMLStream } from './lib/render-to-html-stream.ts'
 export {
   animateEntrance,
@@ -48,6 +55,7 @@ export type { Component, ComponentHandle } from '@remix-run/reconciler'
 export type {
   BootOptions,
   ClientModuleLoader,
+  DomRuntimeApplyKind,
   FrameHandle,
   FrameRegistry,
   ResolveFrame,

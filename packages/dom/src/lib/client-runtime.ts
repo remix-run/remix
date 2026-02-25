@@ -67,6 +67,8 @@ type FrameHandleEventMap = {
 
 type RuntimeHandleEventMap = {
   error: RuntimeErrorEvent
+  'dom-runtime:pre-apply': DomRuntimePreApplyEvent
+  'dom-runtime:post-apply': DomRuntimePostApplyEvent
 }
 
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> &
@@ -90,6 +92,51 @@ export type RuntimeHandle = TypedEventTarget<RuntimeHandleEventMap> & {
   dispose(): void
 }
 
+let runtimeByDocument = new WeakMap<Document, RuntimeHandle>()
+
+export let DOM_RUNTIME_PRE_APPLY_EVENT = 'dom-runtime:pre-apply'
+export let DOM_RUNTIME_POST_APPLY_EVENT = 'dom-runtime:post-apply'
+
+export type DomRuntimeApplyKind = 'frame-template' | 'frame-reload'
+
+export class DomRuntimePreApplyEvent extends Event {
+  doc: Document
+  fragment: DocumentFragment
+  start: Comment
+  end: Comment
+  kind: DomRuntimeApplyKind
+
+  constructor(
+    doc: Document,
+    fragment: DocumentFragment,
+    start: Comment,
+    end: Comment,
+    kind: DomRuntimeApplyKind,
+  ) {
+    super(DOM_RUNTIME_PRE_APPLY_EVENT)
+    this.doc = doc
+    this.fragment = fragment
+    this.start = start
+    this.end = end
+    this.kind = kind
+  }
+}
+
+export class DomRuntimePostApplyEvent extends Event {
+  doc: Document
+  start: Comment
+  end: Comment
+  kind: DomRuntimeApplyKind
+
+  constructor(doc: Document, start: Comment, end: Comment, kind: DomRuntimeApplyKind) {
+    super(DOM_RUNTIME_POST_APPLY_EVENT)
+    this.doc = doc
+    this.start = start
+    this.end = end
+    this.kind = kind
+  }
+}
+
 export class RuntimeErrorEvent extends Event {
   error: unknown
   boundaryId: null | string
@@ -99,6 +146,10 @@ export class RuntimeErrorEvent extends Event {
     this.error = error
     this.boundaryId = boundaryId
   }
+}
+
+export function readRuntimeHandleForDocument(doc: Document) {
+  return runtimeByDocument.get(doc)
 }
 
 type RuntimeState = {
@@ -161,6 +212,9 @@ export function boot(options: BootOptions): RuntimeHandle {
     dispose() {
       if (state.disposed) return
       state.disposed = true
+      if (runtimeByDocument.get(state.doc) === runtime) {
+        runtimeByDocument.delete(state.doc)
+      }
       for (let frameState of Array.from(state.frameStatesByStart.values())) {
         disposeFrameState(state, frameState)
       }
@@ -177,6 +231,7 @@ export function boot(options: BootOptions): RuntimeHandle {
     },
   }) as RuntimeHandle
   state.runtime = runtime
+  runtimeByDocument.set(doc, runtime)
 
   let readyPromise = (async () => {
     try {
@@ -344,8 +399,49 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
 async function replaceFrameContent(state: RuntimeState, frameState: FrameState, html: string) {
   if (frameState.disposed || state.disposed) return
   let fragment = createFragmentFromString(state.doc, html)
+  await replaceFrameContentFragment(state, frameState, fragment, 'frame-reload')
+}
+
+function emitRuntimePreApply(
+  state: RuntimeState,
+  fragment: DocumentFragment,
+  start: Comment,
+  end: Comment,
+  kind: DomRuntimeApplyKind,
+) {
+  state.runtime.dispatchEvent(new DomRuntimePreApplyEvent(state.doc, fragment, start, end, kind))
+}
+
+function emitRuntimePostApply(
+  state: RuntimeState,
+  start: Comment,
+  end: Comment,
+  kind: DomRuntimeApplyKind,
+) {
+  state.runtime.dispatchEvent(new DomRuntimePostApplyEvent(state.doc, start, end, kind))
+}
+
+function applyFragmentWithRuntimeHooks(
+  state: RuntimeState,
+  start: Comment,
+  end: Comment,
+  fragment: DocumentFragment,
+  kind: DomRuntimeApplyKind,
+) {
+  emitRuntimePreApply(state, fragment, start, end, kind)
   mergeRmxDataFromScope(state, state.data, fragment)
-  diffRangeWithFragment(state, frameState.start, frameState.end, fragment)
+  diffRangeWithFragment(state, start, end, fragment)
+  emitRuntimePostApply(state, start, end, kind)
+}
+
+async function replaceFrameContentFragment(
+  state: RuntimeState,
+  frameState: FrameState,
+  fragment: DocumentFragment,
+  kind: DomRuntimeApplyKind,
+) {
+  if (frameState.disposed || state.disposed) return
+  applyFragmentWithRuntimeHooks(state, frameState.start, frameState.end, fragment, kind)
   await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
 }
 
@@ -591,20 +687,9 @@ async function applyFrameTemplate(
   fragment: DocumentFragment,
 ) {
   if (state.disposed || frameState.disposed || frameState.status !== 'pending') return
-  mergeRmxDataFromScope(state, state.data, fragment)
-  await replaceFrameContentFragment(state, frameState, fragment)
+  await replaceFrameContentFragment(state, frameState, fragment, 'frame-template')
   frameState.status = 'resolved'
   state.runtime.flush()
-}
-
-async function replaceFrameContentFragment(
-  state: RuntimeState,
-  frameState: FrameState,
-  fragment: DocumentFragment,
-) {
-  if (frameState.disposed || state.disposed) return
-  diffRangeWithFragment(state, frameState.start, frameState.end, fragment)
-  await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
 }
 
 function diffRangeWithFragment(

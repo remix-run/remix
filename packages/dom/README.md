@@ -102,6 +102,16 @@ Runtime handle surface:
 - `runtime.frame` is always the root frame handle for the current URL
 - `runtime.frames.get(name)` returns named frame handles (supports `await frame.reload()`)
 - runtime errors are emitted as `'error'` events (`RuntimeErrorEvent` with `error` + `boundaryId`)
+- runtime dispatches generic DOM lifecycle events:
+  - `'dom-runtime:pre-apply'` (`DomRuntimePreApplyEvent`) before runtime applies a fragment/range update
+  - `'dom-runtime:post-apply'` (`DomRuntimePostApplyEvent`) after runtime commits that update
+
+Client runtime event notes:
+
+- pre/post apply events are emitted on the `RuntimeHandle` (not `document`)
+- pre/post apply events are generic runtime hooks (no CSS-specific semantics)
+- `css` mixin uses pre-apply to adopt/remove server style tags from incoming frame fragments before insertion
+- this avoids hydration/diff drift from transient server-only style nodes
 
 ### `clientEntry` SSR markers
 

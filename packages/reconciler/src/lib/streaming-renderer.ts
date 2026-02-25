@@ -27,6 +27,7 @@ import type {
   StreamingRenderer,
   StreamingRendererRoot,
   StreamingRendererRootEventMap,
+  StreamingRootStoreKey,
 } from './types.ts'
 
 type PreparedStreamingPlugins = {
@@ -64,9 +65,12 @@ type StreamingComponentContextNode = {
 export function createStreamingRenderer<chunk, rootContext = unknown, elementState = unknown>(
   options: StreamingRendererOptions<chunk, rootContext, elementState>,
 ): StreamingRenderer<chunk> {
-  let pluginRootHandle = new TypedEventTarget<StreamingPluginRootHandleEventMap>() as StreamingPluginRootHandle
+  let pluginRootHandle =
+    new TypedEventTarget<StreamingPluginRootHandleEventMap>() as StreamingPluginRootHandle
   pluginRootHandle.root = createEmptyStreamingRootFacade()
-  let plugins = prepareStreamingPlugins(materializeStreamingPlugins(options.plugins ?? [], pluginRootHandle))
+  let plugins = prepareStreamingPlugins(
+    materializeStreamingPlugins(options.plugins ?? [], pluginRootHandle),
+  )
   return {
     createRoot(value) {
       let root = createStreamingRoot(value, options.policy, plugins)
@@ -81,10 +85,14 @@ function createStreamingRoot<chunk, rootContext, elementState>(
   policy: StreamingPolicy<chunk, rootContext, elementState>,
   plugins: PreparedStreamingPlugins,
 ) {
+  let store = new Map<StreamingRootStoreKey, unknown>()
   let root = Object.assign(new TypedEventTarget<StreamingRendererRootEventMap<chunk>>(), {
     stream,
     toString,
     abort,
+    getStore,
+    setStore,
+    getOrCreateStore,
   }) as StreamingRendererRoot<chunk>
 
   let state: StreamingRootState<chunk, rootContext, elementState> = {
@@ -95,7 +103,7 @@ function createStreamingRoot<chunk, rootContext, elementState>(
     rootContext: undefined as rootContext,
     started: false,
     nodeId: 1,
-          componentId: 1,
+    componentId: 1,
     onError(error) {
       let err = error instanceof Error ? error : new Error(String(error))
       console.error(err)
@@ -120,7 +128,10 @@ function createStreamingRoot<chunk, rootContext, elementState>(
           await emitValue(value, controller, root, state, plugins)
           await runPendingTasks(state)
           await emitChunkOutput(
-            await awaitWithAbort(state.policy.finalize?.(state.rootContext), state.abortController.signal),
+            await awaitWithAbort(
+              state.policy.finalize?.(state.rootContext),
+              state.abortController.signal,
+            ),
             controller,
             state.abortController.signal,
           )
@@ -128,7 +139,9 @@ function createStreamingRoot<chunk, rootContext, elementState>(
           root.dispatchEvent(new StreamingAfterCommitEvent(root))
           controller.close()
         } catch (error) {
-          if (!(state.abortController.signal.aborted && error === state.abortController.signal.reason)) {
+          if (
+            !(state.abortController.signal.aborted && error === state.abortController.signal.reason)
+          ) {
             state.onError(error)
           }
           root.dispatchEvent(new StreamingErrorEvent(error))
@@ -156,6 +169,24 @@ function createStreamingRoot<chunk, rootContext, elementState>(
 
   function abort(reason?: unknown) {
     state.abortController.abort(reason)
+  }
+
+  function getStore<value>(key: StreamingRootStoreKey) {
+    return store.get(key) as undefined | value
+  }
+
+  function setStore<value>(key: StreamingRootStoreKey, value: value) {
+    store.set(key, value)
+    return value
+  }
+
+  function getOrCreateStore<value>(key: StreamingRootStoreKey, create: () => value) {
+    if (store.has(key)) {
+      return store.get(key) as value
+    }
+    let value = create()
+    store.set(key, value)
+    return value
   }
 }
 
@@ -208,14 +239,19 @@ async function emitValue<chunk, rootContext, elementState>(
       parentComponent,
       contextValue: undefined,
     }
-    let handle = createComponentUpdateHandle(`c${state.componentId++}`, state.abortController.signal, state.tasks, {
-      getContext(providerType) {
-        return findContextFromAncestry(componentNode.parentComponent, providerType)
+    let handle = createComponentUpdateHandle(
+      `c${state.componentId++}`,
+      state.abortController.signal,
+      state.tasks,
+      {
+        getContext(providerType) {
+          return findContextFromAncestry(componentNode.parentComponent, providerType)
+        },
+        setContext(value) {
+          componentNode.contextValue = value
+        },
       },
-      setContext(value) {
-        componentNode.contextValue = value
-      },
-    })
+    )
     let render = componentType(handle, setup)
     let rendered = render(props)
     let componentBoundaryInput: StreamingComponentInput = {
@@ -289,14 +325,14 @@ async function emitValue<chunk, rootContext, elementState>(
   }
   let start = await awaitWithAbort(
     state.policy.beginElement(
-    {
-      kind: 'host',
-      type: host.type,
-      key: host.key,
-      props: nextProps,
-      children: host.childrenInput,
-    },
-    state.rootContext,
+      {
+        kind: 'host',
+        type: host.type,
+        key: host.key,
+        props: nextProps,
+        children: host.childrenInput,
+      },
+      state.rootContext,
     ),
     state.abortController.signal,
   )
@@ -386,7 +422,11 @@ function runHostPlugins(
     }
 
     for (let prepared of ordered) {
-      if (routedIdSet.size > 0 && !routedIdSet.has(prepared.id) && prepared.routingKeys.length > 0) {
+      if (
+        routedIdSet.size > 0 &&
+        !routedIdSet.has(prepared.id) &&
+        prepared.routingKeys.length > 0
+      ) {
         continue
       }
       let shouldActivate = prepared.plugin.shouldActivate?.(context) ?? true
@@ -537,7 +577,10 @@ function ensureNotAborted(signal: AbortSignal) {
   throw signal.reason ?? new Error('stream aborted')
 }
 
-async function awaitWithAbort<value>(input: value | Promise<value>, signal: AbortSignal): Promise<value> {
+async function awaitWithAbort<value>(
+  input: value | Promise<value>,
+  signal: AbortSignal,
+): Promise<value> {
   ensureNotAborted(signal)
   if (!isPromiseLike(input)) return input
   return new Promise<value>((resolve, reject) => {
@@ -620,9 +663,9 @@ function comparePreparedStreamingPlugin(a: PreparedStreamingPlugin, b: PreparedS
 }
 
 function readChildren(element: ReconcilerElement) {
-  let cached = (element as ReconcilerElement & { [RECONCILER_NODE_CHILDREN]?: StreamingRenderValue[] })[
-    RECONCILER_NODE_CHILDREN
-  ]
+  let cached = (
+    element as ReconcilerElement & { [RECONCILER_NODE_CHILDREN]?: StreamingRenderValue[] }
+  )[RECONCILER_NODE_CHILDREN]
   if (cached) return cached
   let children = element.props.children
   if (children == null) return []
@@ -660,6 +703,7 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
 }
 
 function createEmptyStreamingRootFacade() {
+  let store = new Map<StreamingRootStoreKey, unknown>()
   return Object.assign(new TypedEventTarget<StreamingRendererRootEventMap<any>>(), {
     stream() {
       return new ReadableStream()
@@ -668,6 +712,21 @@ function createEmptyStreamingRootFacade() {
       return ''
     },
     abort() {},
+    getStore<value>(key: StreamingRootStoreKey) {
+      return store.get(key) as undefined | value
+    },
+    setStore<value>(key: StreamingRootStoreKey, value: value) {
+      store.set(key, value)
+      return value
+    },
+    getOrCreateStore<value>(key: StreamingRootStoreKey, create: () => value) {
+      if (store.has(key)) {
+        return store.get(key) as value
+      }
+      let value = create()
+      store.set(key, value)
+      return value
+    },
   }) as StreamingRendererRoot<any>
 }
 

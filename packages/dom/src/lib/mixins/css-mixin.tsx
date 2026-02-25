@@ -1,42 +1,58 @@
 import { createMixin } from '@remix-run/reconciler'
+import type { MixinDescriptor } from '@remix-run/reconciler'
 import type { DomElementType } from '../jsx/jsx-runtime.ts'
-
-type CssScalar = string | number
-type CssInput = {
-  [key: string]: CssScalar | CssInput | null | undefined
-}
+import {
+  appendClassName,
+  compileCss,
+  createCssClassName,
+  createCssKey,
+  CSS_MIXIN_STYLE_TAG_ATTR,
+  CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR,
+  isCssInput,
+  markCssMixinDescriptor,
+  type CssInput,
+} from './css-shared.ts'
+import {
+  DomRuntimePreApplyEvent,
+  readRuntimeHandleForDocument,
+} from '../client-runtime.ts'
 
 type CssEntry = {
   className: string
   cssText: string
   refCount: number
+  fromServer: boolean
 }
 
 type DocumentStyles = {
   styleElement: HTMLStyleElement
-  entries: Map<string, CssEntry>
+  entriesByClassName: Map<string, CssEntry>
+  entriesByKey: Map<string, CssEntry>
+  serverCssChunks: Set<string>
+  processedServerStyles: WeakSet<HTMLStyleElement>
+  runtime: null | EventTarget
+  runtimePreApplyListener: null | EventListener
 }
 
 let documentStylesByRef = new WeakMap<Document, DocumentStyles>()
 
-export let css = createMixin<[styles: CssInput | null | undefined], Element, DomElementType>(
+let cssMixin = createMixin<[styles: CssInput | null | undefined], Element, DomElementType>(
   (handle) => {
     let currentDoc: null | Document = null
     let currentKey = ''
-    let currentClassName = ''
 
     handle.addEventListener('remove', () => {
       detach()
     })
 
     return (styles, props) => {
-      if (styles == null || typeof styles !== 'object' || Array.isArray(styles)) {
+      if (!isCssInput(styles)) {
         detach()
         return <handle.element {...props} />
       }
 
-      let nextKey = stableSerialize(styles)
-      let nextClassName = `rmx-css-${hashString(nextKey)}`
+      let nextKey = createCssKey(styles)
+      let nextClassName = createCssClassName(nextKey)
       handle.queueTask((node) => {
         if (!(node instanceof Element)) return
         let doc = node.ownerDocument
@@ -47,7 +63,6 @@ export let css = createMixin<[styles: CssInput | null | undefined], Element, Dom
         entry.refCount++
         currentDoc = doc
         currentKey = nextKey
-        currentClassName = entry.className
       })
 
       let nextProps = {
@@ -58,159 +73,159 @@ export let css = createMixin<[styles: CssInput | null | undefined], Element, Dom
     }
 
     function detach() {
-      if (!currentDoc || !currentKey || !currentClassName) return
+      if (!currentDoc || !currentKey) return
       let styles = documentStylesByRef.get(currentDoc)
-      let entry = styles?.entries.get(currentKey)
+      let entry = styles?.entriesByKey.get(currentKey)
       if (entry) {
         entry.refCount--
-        if (entry.refCount <= 0) {
-          styles?.entries.delete(currentKey)
-          if (styles) syncStyleSheet(styles)
+        if (entry.refCount <= 0 && !entry.fromServer && styles) {
+          styles.entriesByClassName.delete(entry.className)
+          for (let [key, keyEntry] of styles.entriesByKey) {
+            if (keyEntry === entry) {
+              styles.entriesByKey.delete(key)
+            }
+          }
+          syncStyleSheet(styles)
         }
       }
       currentDoc = null
       currentKey = ''
-      currentClassName = ''
     }
   },
 )
 
+export function css<node extends Element = Element>(
+  styles: CssInput | null | undefined,
+): MixinDescriptor<node, [styles: CssInput | null | undefined]> {
+  let descriptor = cssMixin(styles) as MixinDescriptor<node, [styles: CssInput | null | undefined]>
+  return markCssMixinDescriptor(
+    descriptor as MixinDescriptor<Element, [styles: CssInput | null | undefined], string>,
+  ) as MixinDescriptor<node, [styles: CssInput | null | undefined]>
+}
+
 function getOrCreateCssEntry(doc: Document, styles: CssInput, key: string) {
   let documentStyles = getDocumentStyles(doc)
-  let existing = documentStyles.entries.get(key)
+  let existing = documentStyles.entriesByKey.get(key)
   if (existing) return existing
-  let className = `rmx-css-${hashString(key)}`
+  let className = createCssClassName(key)
+  let existingByClass = documentStyles.entriesByClassName.get(className)
+  if (existingByClass) {
+    documentStyles.entriesByKey.set(key, existingByClass)
+    return existingByClass
+  }
   let cssText = compileCss(`.${className}`, styles)
   let created: CssEntry = {
     className,
     cssText,
     refCount: 0,
+    fromServer: false,
   }
-  documentStyles.entries.set(key, created)
+  documentStyles.entriesByClassName.set(className, created)
+  documentStyles.entriesByKey.set(key, created)
   syncStyleSheet(documentStyles)
   return created
 }
 
 function getDocumentStyles(doc: Document) {
   let existing = documentStylesByRef.get(doc)
-  if (existing) return existing
+  if (existing) {
+    startRuntimePreApplyListener(doc, existing)
+    return existing
+  }
   let styleElement = doc.createElement('style')
-  styleElement.setAttribute('data-rmx-css-mixin', '')
-  doc.head.appendChild(styleElement)
+  styleElement.setAttribute(CSS_MIXIN_STYLE_TAG_ATTR, '')
+  styleElement.setAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR, 'client')
   let created: DocumentStyles = {
     styleElement,
-    entries: new Map(),
+    entriesByClassName: new Map(),
+    entriesByKey: new Map(),
+    serverCssChunks: new Set(),
+    processedServerStyles: new WeakSet(),
+    runtime: null,
+    runtimePreApplyListener: null,
   }
+  adoptExistingServerStyles(doc, created)
+  startRuntimePreApplyListener(doc, created)
+  doc.head.appendChild(styleElement)
   documentStylesByRef.set(doc, created)
   return created
 }
 
 function syncStyleSheet(documentStyles: DocumentStyles) {
   let cssText = ''
-  for (let [, entry] of documentStyles.entries) {
+  for (let chunk of documentStyles.serverCssChunks) {
+    cssText += chunk
+  }
+  for (let [, entry] of documentStyles.entriesByClassName) {
+    if (entry.fromServer) continue
     cssText += entry.cssText
   }
   documentStyles.styleElement.textContent = cssText
 }
 
-function compileCss(selector: string, styles: CssInput): string {
-  let declarations = ''
-  let nestedBlocks = ''
-  for (let key in styles) {
-    let value = styles[key]
-    if (value == null) continue
-    if (isCssInput(value)) {
-      if (key.startsWith('@')) {
-        let nestedCss = compileCss(selector, value)
-        if (nestedCss) nestedBlocks += `${key}{${nestedCss}}`
-        continue
-      }
-      let nestedSelector = toNestedSelector(selector, key)
-      nestedBlocks += compileCss(nestedSelector, value)
-      continue
-    }
-    declarations += `${toCssPropertyName(key)}:${toCssValue(key, value)};`
+function adoptExistingServerStyles(doc: Document, documentStyles: DocumentStyles) {
+  adoptServerStylesInNode(doc, documentStyles)
+}
+
+function startRuntimePreApplyListener(doc: Document, documentStyles: DocumentStyles) {
+  let runtime = readRuntimeHandleForDocument(doc)
+  if (!runtime) return
+  if (documentStyles.runtime === runtime && documentStyles.runtimePreApplyListener) return
+  if (documentStyles.runtime && documentStyles.runtimePreApplyListener) {
+    documentStyles.runtime.removeEventListener('dom-runtime:pre-apply', documentStyles.runtimePreApplyListener)
   }
-  let output = ''
-  if (declarations) output += `${selector}{${declarations}}`
-  output += nestedBlocks
-  return output
-}
-
-function toNestedSelector(parent: string, key: string) {
-  if (key.startsWith('&')) return key.replaceAll('&', parent)
-  if (key.startsWith(':')) return `${parent}${key}`
-  return `${parent} ${key}`
-}
-
-function toCssPropertyName(value: string) {
-  if (value.startsWith('--')) return value
-  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-}
-
-function toCssValue(key: string, value: CssScalar) {
-  if (typeof value === 'number' && !isUnitlessProperty(key)) {
-    return `${value}px`
+  let listener = (event: Event) => {
+    if (!(event instanceof DomRuntimePreApplyEvent)) return
+    if (event.doc !== doc) return
+    adoptServerStylesInNode(event.fragment, documentStyles)
   }
-  return String(value)
+  documentStyles.runtime = runtime
+  documentStyles.runtimePreApplyListener = listener
+  runtime.addEventListener('dom-runtime:pre-apply', listener)
 }
 
-function appendClassName(existing: unknown, nextClassName: string) {
-  if (typeof existing !== 'string' || existing.length === 0) return nextClassName
-  let classNames = existing.split(/\s+/).filter(Boolean)
-  if (classNames.includes(nextClassName)) return existing
-  return `${existing} ${nextClassName}`
-}
-
-function isCssInput(value: unknown): value is CssInput {
-  if (!value || typeof value !== 'object') return false
-  return !Array.isArray(value)
-}
-
-function isUnitlessProperty(key: string) {
-  return (
-    key === 'opacity' ||
-    key === 'zIndex' ||
-    key === 'fontWeight' ||
-    key === 'lineHeight' ||
-    key === 'flex' ||
-    key === 'flexGrow' ||
-    key === 'flexShrink' ||
-    key === 'order'
-  )
-}
-
-function stableSerialize(value: unknown): string {
-  if (value == null) return 'null'
-  if (typeof value === 'string') return JSON.stringify(value)
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  if (Array.isArray(value)) {
-    let output = '['
-    for (let index = 0; index < value.length; index++) {
-      if (index > 0) output += ','
-      output += stableSerialize(value[index])
-    }
-    output += ']'
-    return output
+function adoptServerStylesInNode(node: Node, documentStyles: DocumentStyles) {
+  if (node instanceof HTMLStyleElement) {
+    if (!node.hasAttribute(CSS_MIXIN_STYLE_TAG_ATTR)) return
+    if (node === documentStyles.styleElement) return
+    if (node.getAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR) === 'client') return
+    adoptServerStyleTag(node, documentStyles)
+    return
   }
-  if (typeof value === 'object') {
-    let keys = Object.keys(value as Record<string, unknown>).sort()
-    let output = '{'
-    for (let index = 0; index < keys.length; index++) {
-      let key = keys[index]
-      if (index > 0) output += ','
-      output += `${JSON.stringify(key)}:${stableSerialize((value as Record<string, unknown>)[key])}`
-    }
-    output += '}'
-    return output
+  if (!(node instanceof Element || node instanceof Document || node instanceof DocumentFragment)) return
+  let serverStyles = node.querySelectorAll(`style[${CSS_MIXIN_STYLE_TAG_ATTR}]`)
+  for (let index = 0; index < serverStyles.length; index++) {
+    let styleElement = serverStyles[index]
+    if (!(styleElement instanceof HTMLStyleElement)) continue
+    if (styleElement === documentStyles.styleElement) continue
+    if (styleElement.getAttribute(CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR) === 'client') continue
+    adoptServerStyleTag(styleElement, documentStyles)
   }
-  return ''
 }
 
-function hashString(input: string) {
-  let hash = 5381
-  for (let index = 0; index < input.length; index++) {
-    hash = ((hash << 5) + hash + input.charCodeAt(index)) | 0
+function adoptServerStyleTag(styleElement: HTMLStyleElement, documentStyles: DocumentStyles) {
+  if (documentStyles.processedServerStyles.has(styleElement)) return
+  documentStyles.processedServerStyles.add(styleElement)
+  let cssText = styleElement.textContent?.trim() ?? ''
+  if (cssText.length > 0) {
+    documentStyles.serverCssChunks.add(cssText)
+    seedServerClasses(cssText, documentStyles)
+    syncStyleSheet(documentStyles)
   }
-  return (hash >>> 0).toString(36)
+  styleElement.remove()
+}
+
+function seedServerClasses(cssText: string, documentStyles: DocumentStyles) {
+  let matches = cssText.matchAll(/\.([a-zA-Z0-9_-]+)/g)
+  for (let match of matches) {
+    let className = match[1]
+    if (!className?.startsWith('rmx-css-')) continue
+    if (documentStyles.entriesByClassName.has(className)) continue
+    documentStyles.entriesByClassName.set(className, {
+      className,
+      cssText: '',
+      refCount: 0,
+      fromServer: true,
+    })
+  }
 }

@@ -423,12 +423,17 @@ export type StreamingPolicy<chunk, rootContext = unknown, elementState = unknown
   ):
     | StreamingElementStart<chunk, elementState>
     | Promise<StreamingElementStart<chunk, elementState>>
-  text(value: string, context: rootContext): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
+  text(
+    value: string,
+    context: rootContext,
+  ): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
   endElement(
     state: elementState,
     context: rootContext,
   ): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
-  finalize?(context: rootContext): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
+  finalize?(
+    context: rootContext,
+  ): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
 }
 
 export type StreamingHostNode = {
@@ -505,11 +510,18 @@ export type StreamingRendererRootEventMap<chunk> = {
   error: StreamingErrorEvent
 }
 
-export type StreamingRendererRoot<chunk> = TypedEventTarget<StreamingRendererRootEventMap<chunk>> & {
+export type StreamingRendererRoot<chunk> = TypedEventTarget<
+  StreamingRendererRootEventMap<chunk>
+> & {
   stream(): ReadableStream<chunk>
   toString(): Promise<string>
   abort(reason?: unknown): void
+  getStore<value>(key: StreamingRootStoreKey): undefined | value
+  setStore<value>(key: StreamingRootStoreKey, value: value): value
+  getOrCreateStore<value>(key: StreamingRootStoreKey, create: () => value): value
 }
+
+export type StreamingRootStoreKey = string | symbol
 
 export type StreamingRenderer<chunk> = {
   createRoot(value: null | StreamingRenderValue): StreamingRendererRoot<chunk>
@@ -549,9 +561,7 @@ export function defineStreamingPlugin<phase extends PluginPhase>(
   plugin: (root: StreamingPluginRootHandle) => StreamingPlugin<phase>,
 ): (root: StreamingPluginRootHandle) => StreamingPlugin<phase>
 export function defineStreamingPlugin<phase extends PluginPhase>(
-  plugin:
-    | StreamingPlugin<phase>
-    | ((root: StreamingPluginRootHandle) => StreamingPlugin<phase>),
+  plugin: StreamingPlugin<phase> | ((root: StreamingPluginRootHandle) => StreamingPlugin<phase>),
 ) {
   return plugin
 }

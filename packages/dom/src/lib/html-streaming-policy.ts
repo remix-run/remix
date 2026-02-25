@@ -1,10 +1,12 @@
 import type { StreamingPolicy } from '@remix-run/reconciler'
 import type { StreamingRenderValue } from '@remix-run/reconciler'
+import type { StreamingRendererRoot } from '@remix-run/reconciler'
 import {
   isEntry,
   serializeHydrationProps,
   type HydrationData,
 } from './client-entry.ts'
+import { readHtmlStreamingHeadHtml } from './html-streaming-contributions.ts'
 
 let encoder = new TextEncoder()
 export let HTML_STREAMING_FINALIZE_PREFIX = '<!-- rmx:finalize:'
@@ -17,6 +19,7 @@ type FrameMeta = {
 }
 
 type HtmlRootContext = {
+  root: StreamingRendererRoot<Uint8Array>
   insideHead: number
   hasHtmlRoot: boolean
   hoistedHeadElements: string[]
@@ -75,8 +78,9 @@ export function createHtmlStreamingPolicy(
   options: HtmlStreamingPolicyOptions = {},
 ): StreamingPolicy<Uint8Array, HtmlRootContext, HtmlElementState> {
   return {
-    beginRoot() {
+    beginRoot(root) {
       return {
+        root,
         insideHead: 0,
         hasHtmlRoot: false,
         hoistedHeadElements: [],
@@ -214,6 +218,10 @@ export function createHtmlStreamingPolicy(
       return
     },
     finalize(context) {
+      let headContributions = readHtmlStreamingHeadHtml(context.root)
+      if (headContributions.length > 0) {
+        context.hoistedHeadElements.push(...headContributions)
+      }
       let headHtml = context.hoistedHeadElements.join('')
       let rmxDataScript = serializeRmxDataScript(context.hydrationData, context.frameData)
       if (!headHtml && !rmxDataScript) return

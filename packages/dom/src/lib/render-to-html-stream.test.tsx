@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clientEntry } from '../index.ts'
+import { clientEntry, css } from '../index.ts'
 import { renderToHTMLStream } from './render-to-html-stream.ts'
 
 describe('renderToHTMLStream', () => {
@@ -136,10 +136,14 @@ describe('renderToHTMLStream', () => {
     let firstTemplateHtml = await readUntil(
       reader,
       decoder,
-      (html) => html.includes(`<template id="${frameBId}">`) || html.includes(`<template id="${frameAId}">`),
+      (html) =>
+        html.includes(`<template id="${frameBId}">`) ||
+        html.includes(`<template id="${frameAId}">`),
       100,
     )
-    expect(firstTemplateHtml).toContain(`<template id="${frameBId}"><aside>done b</aside></template>`)
+    expect(firstTemplateHtml).toContain(
+      `<template id="${frameBId}"><aside>done b</aside></template>`,
+    )
     expect(firstTemplateHtml.includes(`<template id="${frameAId}">`)).toBe(false)
 
     resolveA('<aside>done a</aside>')
@@ -449,7 +453,11 @@ describe('renderToHTMLStream', () => {
   it('runs deferred resolved frame content through plugins', async () => {
     let html = await readStream(
       renderToHTMLStream(<frame src="/deferred-plugin" fallback={'wait'} />, {
-        resolveFrame: async () => <aside className="pane" tabIndex={3}>done</aside>,
+        resolveFrame: async () => (
+          <aside className="pane" tabIndex={3}>
+            done
+          </aside>
+        ),
       }),
     )
     expect(html).toContain('<template id="')
@@ -703,6 +711,58 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('<use xlink:href="#icon"></use>')
   })
 
+  it('emits css mixin styles and generated classes during SSR', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <button mix={[css({ color: 'red', fontSize: 14 })]}>hello</button>
+        </main>,
+      ),
+    )
+    let classMatch = html.match(/class="(rmx-css-[^"]+)"/)
+    expect(classMatch).toBeTruthy()
+    let className = classMatch?.[1]
+    if (!className) throw new Error('missing generated css class')
+    expect(html).toContain('<style data-rmx-css-mixin data-rmx-css-origin="server">')
+    expect(html).toContain(`.${className}{color:red;font-size:14px;}`)
+  })
+
+  it('dedupes css mixin classes/rules for equivalent style objects', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <button mix={[css({ color: 'hotpink', paddingTop: 8 })]}>a</button>
+          <button mix={[css({ paddingTop: 8, color: 'hotpink' })]}>b</button>
+        </main>,
+      ),
+    )
+    let classNames = Array.from(html.matchAll(/class="(rmx-css-[^"]+)"/g)).map((match) => match[1])
+    expect(classNames.length).toBe(2)
+    expect(classNames[0]).toBe(classNames[1])
+    let ruleMatch = new RegExp(`\\.${classNames[0]}\\{`, 'g')
+    expect((html.match(ruleMatch) ?? []).length).toBe(1)
+  })
+
+  it('emits css style tags for deferred frame templates', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <div mix={[css({ color: 'red' })]}>root</div>
+          <frame src="/frame-a" fallback={<p>loading</p>} />
+        </main>,
+        {
+          resolveFrame: async () => (
+            <section>
+              <div mix={[css({ backgroundColor: 'black' })]}>frame</div>
+            </section>
+          ),
+        },
+      ),
+    )
+    expect((html.match(/data-rmx-css-mixin/g) ?? []).length).toBeGreaterThanOrEqual(2)
+    expect(html).toContain('<template id="')
+  })
+
   it('hoists managed script tags and keeps non-managed scripts inline', async () => {
     let html = await readStream(
       renderToHTMLStream(
@@ -759,9 +819,7 @@ describe('renderToHTMLStream', () => {
     let EscapeEntry = clientEntry('/entries/escape.js#Escape', () => (props: { text: string }) => (
       <div>{props.text}</div>
     ))
-    let html = await readStream(
-      renderToHTMLStream(<EscapeEntry text={'</script><x>'} />),
-    )
+    let html = await readStream(renderToHTMLStream(<EscapeEntry text={'</script><x>'} />))
     expect(html).toContain('\\u003c/script>\\u003cx>')
   })
 

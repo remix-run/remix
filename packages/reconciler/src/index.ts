@@ -64,6 +64,7 @@ export type {
   StreamingRenderValue,
   StreamingRenderer,
   StreamingRendererRoot,
+  StreamingRootStoreKey,
 } from './lib/types.ts'
 
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mix-plugin.ts'

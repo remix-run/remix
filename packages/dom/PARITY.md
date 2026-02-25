@@ -19,6 +19,10 @@ The major gaps that were originally called out here are now addressed:
 These are currently intentional (not regressions):
 
 - frame markers remain `<!-- f:{id} --> ... <!-- /f -->` (not legacy marker format)
+- CSS handling is mixin-owned end-to-end:
+  - server CSS output is contributed via generic streaming root-store head contributions
+  - client CSS adoption hooks into generic runtime pre/post apply events
+  - DOM policy/runtime internals remain CSS-agnostic
 
 ## Remaining parity decisions
 

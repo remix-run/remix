@@ -86,6 +86,12 @@ Streaming lifecycle guarantees:
 - dispatches `error` with `cause` when traversal/policy/plugin work throws
 - `abort(reason)` cancels pending async work and errors the stream
 
+Streaming root store:
+
+- each `StreamingRendererRoot` exposes a root-scoped shared store
+- use `root.getStore(key)`, `root.setStore(key, value)`, and `root.getOrCreateStore(key, create)`
+- this is the intentional channel for policy/plugin coordination without out-of-band module state
+
 Ordering guarantees:
 
 - chunks from a node are emitted in traversal order
