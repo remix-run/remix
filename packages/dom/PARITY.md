@@ -13,6 +13,7 @@ The major gaps that were originally called out here are now addressed:
 - `clientEntry` SSR markers + client runtime hydration (`boot`) are implemented
 - nested/blocking/non-blocking frame streaming behavior has parity-focused tests
 - frame reload now diffs existing DOM and preserves hydrated component state
+- client runtime hoists head-managed nodes from frame fragment paths (early templates, late templates, `frame.reload()`, and top-frame fragment reloads)
 
 ## Intentional differences from legacy `component`
 

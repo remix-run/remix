@@ -120,6 +120,52 @@ describe('boot', () => {
     expect(document.body.innerHTML).toContain('streamed chunk content')
   })
 
+  it('aborts in-flight streamed frame reload when a newer reload starts', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p>loading</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"resolved","name":"swap-stream","src":"/frame/swap-stream"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let encoder = new TextEncoder()
+    let resolveFrame = vi.fn(async () => {
+      if (resolveFrame.mock.calls.length === 1) {
+        return new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode('<div>first '))
+            setTimeout(() => {
+              controller.enqueue(encoder.encode('reload</div>'))
+              controller.close()
+            }, 20)
+          },
+        })
+      }
+      return '<div>second reload</div>'
+    })
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame,
+    })
+    await runtime.ready()
+
+    let frame = runtime.frames.get('swap-stream')
+    expect(frame).toBeDefined()
+
+    let firstReload = frame!.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    let secondSignal = await frame!.reload()
+    let firstSignal = await firstReload
+
+    expect(firstSignal.aborted).toBe(true)
+    expect(secondSignal.aborted).toBe(false)
+    expect(document.body.innerHTML).toContain('second reload')
+  })
+
   it('reloads the top frame from a full document response', async () => {
     document.body.innerHTML = '<main><p>before top reload</p></main>'
     let resolveFrame = vi.fn(async () =>
@@ -147,6 +193,98 @@ describe('boot', () => {
     expect(resolveFrame).toHaveBeenCalledWith(document.location.href, expect.any(AbortSignal))
     expect(document.title).toBe('Top Reloaded')
     expect(document.getElementById('entry')?.textContent).toBe('top')
+  })
+
+  it('hoists head-managed elements on frame reload and keeps regular scripts in frame scope', async () => {
+    let renderCount = 0
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p id="frame-content">initial</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"resolved","name":"head-frame","src":"/frame/head"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let resolveFrame = vi.fn(async () => {
+      renderCount++
+      return [
+        `<title>Frame head reload ${renderCount}</title>`,
+        `<meta name="frame-head-reload" content="frame-${renderCount}" />`,
+        `<script type="application/ld+json">{"count":${renderCount}}</script>`,
+        `<script type="text/javascript">window.__frameRegular = ${renderCount}</script>`,
+        `<section><p id="frame-content">frame ${renderCount}</p></section>`,
+      ].join('')
+    })
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame,
+    })
+    await runtime.ready()
+    let frame = runtime.frames.get('head-frame')
+    expect(frame).toBeDefined()
+
+    await frame?.reload()
+    await waitFor(() => {
+      expect(document.getElementById('frame-content')?.textContent).toBe('frame 1')
+    })
+
+    expect(
+      document.head.querySelector('meta[name="frame-head-reload"]')?.getAttribute('content'),
+    ).toBe('frame-1')
+    expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toContain(
+      '"count":1',
+    )
+    expect(document.querySelector('main script[type="text/javascript"]')).toBeTruthy()
+    expect(document.querySelector('main title')).toBeNull()
+    expect(document.querySelector('main meta[name="frame-head-reload"]')).toBeNull()
+    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+
+    await frame?.reload()
+    await waitFor(() => {
+      expect(document.getElementById('frame-content')?.textContent).toBe('frame 2')
+    })
+
+    let headTitles = Array.from(document.head.querySelectorAll('title')).filter((title) =>
+      title.textContent?.startsWith('Frame head reload'),
+    )
+    expect(headTitles).toHaveLength(2)
+    expect(document.head.querySelectorAll('meta[name="frame-head-reload"]')).toHaveLength(2)
+    expect(document.head.querySelectorAll('script[type="application/ld+json"]')).toHaveLength(2)
+  })
+
+  it('hoists head-managed elements on non-full-document top frame reload', async () => {
+    document.body.innerHTML = '<main><p id="before-top-fragment">before</p></main>'
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame: async () =>
+        [
+          '<title>Top fragment reload</title>',
+          '<meta name="top-fragment-meta" content="top-fragment" />',
+          '<script type="application/ld+json">{"top":true}</script>',
+          '<script type="text/javascript">window.__topRegular = true</script>',
+          '<main><p id="after-top-fragment">after</p></main>',
+        ].join(''),
+    })
+    await runtime.ready()
+    await runtime.frames.top.reload()
+    await waitFor(() => {
+      expect(document.getElementById('after-top-fragment')).toBeTruthy()
+    })
+
+    expect(
+      document.head.querySelector('meta[name="top-fragment-meta"]')?.getAttribute('content'),
+    ).toBe('top-fragment')
+    let topLdJsonScripts = Array.from(document.head.querySelectorAll('script[type="application/ld+json"]'))
+    expect(topLdJsonScripts.some((script) => script.textContent?.includes('"top":true'))).toBe(true)
+    expect(document.querySelector('main title')).toBeNull()
+    expect(document.querySelector('main meta[name="top-fragment-meta"]')).toBeNull()
+    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+    expect(document.body.querySelector('script[type="text/javascript"]')).toBeTruthy()
   })
 
   it('preserves static node identity when reloading frame content', async () => {
@@ -277,12 +415,27 @@ describe('boot', () => {
 
     let template = document.createElement('template')
     template.id = 'f1'
-    template.innerHTML = '<p>resolved frame content</p>'
+    template.innerHTML = [
+      '<title>Late template title</title>',
+      '<meta name="late-template-meta" content="late-template" />',
+      '<script type="application/ld+json">{"late":true}</script>',
+      '<script type="text/javascript">window.__lateTemplateScript = true</script>',
+      '<p>resolved frame content</p>',
+    ].join('')
     document.body.appendChild(template)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.body.innerHTML).toContain('resolved frame content')
     expect(document.body.innerHTML).not.toContain('loading frame')
+    expect(
+      document.head.querySelector('meta[name="late-template-meta"]')?.getAttribute('content'),
+    ).toBe('late-template')
+    let lateLdJsonScripts = Array.from(document.head.querySelectorAll('script[type="application/ld+json"]'))
+    expect(lateLdJsonScripts.some((script) => script.textContent?.includes('"late":true'))).toBe(true)
+    expect(document.querySelector('main title')).toBeNull()
+    expect(document.querySelector('main meta[name="late-template-meta"]')).toBeNull()
+    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+    expect(document.querySelector('main script[type="text/javascript"]')).toBeTruthy()
   })
 
   it('consumes early frame templates that exist before boot starts', async () => {
@@ -292,7 +445,15 @@ describe('boot', () => {
       '<script type="application/json" id="rmx-data">',
       '{"f":{"f1":{"status":"pending","name":"early","src":"/frame/early"}}}',
       '</script>',
-      '<template id="f1"><p>early resolved content</p></template>',
+      [
+        '<template id="f1">',
+        '<title>Early template title</title>',
+        '<meta name="early-template-meta" content="early-template" />',
+        '<script type="application/ld+json">{"early":true}</script>',
+        '<script type="text/javascript">window.__earlyTemplateScript = true</script>',
+        '<p>early resolved content</p>',
+        '</template>',
+      ].join(''),
       '</main>',
     ].join('')
 
@@ -305,6 +466,15 @@ describe('boot', () => {
       expect(document.body.innerHTML).toContain('early resolved content')
       expect(document.body.innerHTML).not.toContain('loading frame')
     })
+    expect(
+      document.head.querySelector('meta[name="early-template-meta"]')?.getAttribute('content'),
+    ).toBe('early-template')
+    let earlyLdJsonScripts = Array.from(document.head.querySelectorAll('script[type="application/ld+json"]'))
+    expect(earlyLdJsonScripts.some((script) => script.textContent?.includes('"early":true'))).toBe(true)
+    expect(document.querySelector('main title')).toBeNull()
+    expect(document.querySelector('main meta[name="early-template-meta"]')).toBeNull()
+    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+    expect(document.querySelector('main script[type="text/javascript"]')).toBeTruthy()
   })
 
   it('does not block ready on hydration markers from late frame templates', async () => {

@@ -110,6 +110,10 @@ Client runtime event notes:
 
 - pre/post apply events are emitted on the `RuntimeHandle` (not `document`)
 - pre/post apply events are generic runtime hooks (no CSS-specific semantics)
+- client runtime hoists head-managed fragment nodes (`title`, `meta`, `link`, `style`, `script[type="application/ld+json"]`)
+  during frame template adoption and frame reload fragment applies (early templates, late templates, and `frame.reload()`)
+- regular scripts are not hoisted from frame fragments
+- `frames.top.reload()` full-document responses diff parsed `head`/`body`; non-full-document responses use fragment hoisting + body diff
 - SSR css mixin output is consolidated to one server `<style data-rmx-css-mixin ...>` per render scope
   (initial document scope and each deferred frame template scope)
 - `css` mixin uses pre-apply to adopt/remove server style tags from incoming frame fragments before insertion

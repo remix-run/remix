@@ -121,17 +121,56 @@ export function createDomNodePolicy(document: Document): DomNodePolicyDefinition
         return node.nextSibling
       },
       insert(parent, node, anchor) {
-        parent.insertBefore(node, anchor)
+        let targetParent = resolveInsertionParent(parent, node)
+        let targetAnchor = targetParent === parent ? anchor : null
+        targetParent.insertBefore(node, targetAnchor)
       },
       move(parent, node, anchor) {
-        parent.insertBefore(node, anchor)
+        let targetParent = resolveInsertionParent(parent, node)
+        let targetAnchor = targetParent === parent ? anchor : null
+        targetParent.insertBefore(node, targetAnchor)
       },
       remove(parent, node) {
-        if (node.parentNode !== parent) return
-        node.parentNode?.removeChild(node)
+        if (node.parentNode === parent) {
+          node.parentNode.removeChild(node)
+          return
+        }
+        let hoistParent = resolveHoistTarget(parent, node)
+        if (hoistParent && node.parentNode === hoistParent) {
+          hoistParent.removeChild(node)
+        }
       },
     }
   })
+}
+
+function resolveInsertionParent(parent: DomParentNode, node: DomNode): DomParentNode {
+  let hoistParent = resolveHoistTarget(parent, node)
+  if (hoistParent) return hoistParent
+  return parent
+}
+
+function resolveHoistTarget(parent: DomParentNode, node: DomNode): null | DomParentNode {
+  if (!(node instanceof Element)) return null
+  if (!isHeadManagedElementNode(node)) return null
+  if (parent instanceof ShadowRoot) return null
+  let doc = parent.nodeType === Node.DOCUMENT_NODE ? (parent as Document) : parent.ownerDocument
+  if (!doc?.head) return null
+  if (parent === doc.head) return null
+  return doc.head
+}
+
+function isHeadManagedElementNode(element: Element): boolean {
+  let namespace = element.namespaceURI || HTML_NAMESPACE
+  if (namespace !== HTML_NAMESPACE) return false
+  let tag = element.localName
+  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
+    return true
+  }
+  if (tag === 'script') {
+    return element.getAttribute('type') === 'application/ld+json'
+  }
+  return false
 }
 
 function getCursorScope(scopes: CursorScope[], parent: DomParentNode | DomElementNode) {

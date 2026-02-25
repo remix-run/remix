@@ -454,6 +454,7 @@ async function replaceTopFrameContent(state: RuntimeState, topFrame: FrameHandle
   let currentBody = state.doc.body ?? state.doc.documentElement
   if (!currentBody) return
   let fragment = createFragmentFromString(state.doc, html)
+  hoistHeadElements(state.doc, fragment)
   mergeRmxDataFromScope(state, state.data, fragment)
   diffNodes(state, currentBody, Array.from(currentBody.childNodes), Array.from(fragment.childNodes), null)
   processExistingFrameTemplates(state)
@@ -501,6 +502,7 @@ function applyFragmentWithRuntimeHooks(
   kind: DomRuntimeApplyKind,
 ) {
   emitRuntimePreApply(state, fragment, start, end, kind)
+  hoistHeadElements(state.doc, fragment)
   mergeRmxDataFromScope(state, state.data, fragment)
   diffRangeWithFragment(state, start, end, fragment)
   emitRuntimePostApply(state, start, end, kind)
@@ -1149,6 +1151,41 @@ function createFragmentFromString(doc: Document, html: string) {
   let template = doc.createElement('template')
   template.innerHTML = html.trim()
   return template.content
+}
+
+function hoistHeadElements(doc: Document, fragment: DocumentFragment): void {
+  let target = doc.head
+  if (!target) return
+
+  let heads = Array.from(fragment.querySelectorAll('head'))
+  for (let head of heads) {
+    while (head.firstChild) {
+      target.appendChild(head.firstChild)
+    }
+    head.remove()
+  }
+
+  // Fragment parsing can normalize head content to top-level siblings.
+  let maybeHeadManaged = Array.from(
+    fragment.querySelectorAll('title,meta,link,style,script[type="application/ld+json"]'),
+  )
+
+  for (let element of maybeHeadManaged) {
+    if (!(element instanceof Element)) continue
+    if (!isHeadManagedElementNode(element)) continue
+    target.appendChild(element)
+  }
+}
+
+function isHeadManagedElementNode(element: Element): boolean {
+  let tag = element.tagName.toLowerCase()
+  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
+    return true
+  }
+  if (tag === 'script') {
+    return element.getAttribute('type') === 'application/ld+json'
+  }
+  return false
 }
 
 function isFullDocumentHtml(html: string) {

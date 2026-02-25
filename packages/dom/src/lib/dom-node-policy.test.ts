@@ -103,6 +103,50 @@ describe('dom node policy', () => {
     expect(firstParent.firstChild).toBe(node)
   })
 
+  it('hoists head-managed html elements to document head', () => {
+    let policy = createPolicy()
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+
+    let title = policy.createElement(container, 'title')
+    policy.insert(container, title, null)
+    expect(document.head.contains(title)).toBe(true)
+    expect(container.contains(title)).toBe(false)
+
+    let meta = policy.createElement(container, 'meta')
+    ;(meta as HTMLMetaElement).setAttribute('name', 'description')
+    ;(meta as HTMLMetaElement).setAttribute('content', 'desc')
+    policy.insert(container, meta, null)
+    expect(document.head.contains(meta)).toBe(true)
+
+    let ldJson = policy.createElement(container, 'script')
+    ;(ldJson as HTMLScriptElement).setAttribute('type', 'application/ld+json')
+    ldJson.textContent = '{"x":1}'
+    policy.insert(container, ldJson, null)
+    expect(document.head.contains(ldJson)).toBe(true)
+
+    let regularScript = policy.createElement(container, 'script')
+    ;(regularScript as HTMLScriptElement).setAttribute('type', 'text/javascript')
+    regularScript.textContent = 'window.__notHoisted = true'
+    policy.insert(container, regularScript, null)
+    expect(container.contains(regularScript)).toBe(true)
+    expect(document.head.contains(regularScript)).toBe(false)
+  })
+
+  it('removes hoisted head-managed elements when removed by original parent', () => {
+    let policy = createPolicy()
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+
+    let title = policy.createElement(container, 'title')
+    title.textContent = 'Policy title'
+    policy.insert(container, title, null)
+    expect(document.head.contains(title)).toBe(true)
+
+    policy.remove(container, title)
+    expect(document.head.contains(title)).toBe(false)
+  })
+
   it('resolves namespace inside a shadow root host', () => {
     let policy = createPolicy()
     let host = document.createElement('div')
