@@ -19,14 +19,13 @@ The major gaps that were originally called out here are now addressed:
 These are currently intentional (not regressions):
 
 - frame markers remain `<!-- f:{id} --> ... <!-- /f -->` (not legacy marker format)
-- `css` prop parity is not targeted; styling is mixin/`style` based in current DOM runtime
-- host-prop `on={{...}}` / `connect` semantics are not first-class; event behavior uses mixins (`on(...)`)
 
 ## Remaining parity decisions
 
+- `css` prop parity is not targeted; styling is mixin/`style` based in current DOM runtime
+- host-prop `on={{...}}` / `connect` semantics are not first-class; event behavior uses mixins (`on(...)`)
 - `tween` / `easings` export parity is still a product decision (`spring` exists today)
-- JSX intrinsic typing remains intentionally simpler than legacy `component`
-- `ComponentHandle` is intentionally different from legacy handle APIs (for example no built-in `context` helpers)
+- `ComponentHandle.context`
 
 ## Historical note
 
