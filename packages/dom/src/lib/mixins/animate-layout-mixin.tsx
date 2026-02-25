@@ -1,5 +1,4 @@
 import { createMixin } from '@remix-run/reconciler'
-import type { MixinDescriptor } from '@remix-run/reconciler'
 import type { DomElementType } from '../jsx/jsx-runtime.ts'
 
 export type AnimateLayoutOptions = {
@@ -7,11 +6,8 @@ export type AnimateLayoutOptions = {
   easing?: string
 }
 
-let animateLayoutMixin = createMixin<
-  [options: AnimateLayoutOptions | undefined],
-  HTMLElement,
-  DomElementType
->((handle) => {
+export let animateLayout = createMixin<[options?: AnimateLayoutOptions], HTMLElement, DomElementType>(
+  (handle) => {
   let activeNode: null | HTMLElement = null
   let previousRect: null | DOMRect = null
   let beforeCommitRect: null | DOMRect = null
@@ -96,13 +92,5 @@ let animateLayoutMixin = createMixin<
 
     return <handle.element {...props} />
   }
-})
-
-export function animateLayout<node extends HTMLElement = HTMLElement>(
-  options?: AnimateLayoutOptions,
-): MixinDescriptor<node, [options: AnimateLayoutOptions | undefined]> {
-  return animateLayoutMixin(options) as MixinDescriptor<
-    node,
-    [options: AnimateLayoutOptions | undefined]
-  >
-}
+  },
+)

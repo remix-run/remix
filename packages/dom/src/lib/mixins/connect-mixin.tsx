@@ -1,41 +1,31 @@
 import { createMixin } from '@remix-run/reconciler'
-import type { MixinDescriptor } from '@remix-run/reconciler'
 import type { DomElementType } from '../jsx/jsx-runtime.ts'
 
-type ConnectCallback<target extends EventTarget> = (node: target, signal: AbortSignal) => void
+type ConnectCallback<target extends EventTarget> = (node: target, signal?: AbortSignal) => void
 
-let connectMixin = createMixin<
+export let connect = createMixin<
   [callback: ConnectCallback<EventTarget>],
   EventTarget,
   DomElementType
 >((handle) => {
-  let activeNode: null | EventTarget = null
-  let activeController: null | AbortController = null
+  let capturedCallback: ConnectCallback<EventTarget>
 
-  function disconnect() {
-    activeController?.abort()
-    activeController = null
-    activeNode = null
-  }
-
-  handle.addEventListener('remove', disconnect)
+  handle.queueTask((node) => {
+    if (capturedCallback.length === 1) {
+      capturedCallback(node)
+    } else {
+      let controller = new AbortController()
+      capturedCallback(node, controller.signal)
+      handle.addEventListener('remove', () => {
+        controller.abort()
+      })
+    }
+  })
 
   return (callback, props) => {
-    handle.queueTask((node) => {
-      if (activeNode === node) return
-      activeController?.abort()
-      activeNode = node
-      activeController = new AbortController()
-      callback(node, activeController.signal)
-    })
+    if (!capturedCallback) {
+      capturedCallback = callback
+    }
     return <handle.element {...props} />
   }
 })
-
-export function connect<target extends EventTarget>(
-  callback: ConnectCallback<target>,
-): MixinDescriptor<target, [callback: ConnectCallback<target>]> {
-  return connectMixin(
-    callback as ConnectCallback<EventTarget>,
-  ) as unknown as MixinDescriptor<target, [callback: ConnectCallback<target>]>
-}

@@ -1,5 +1,4 @@
 import { createMixin } from '@remix-run/reconciler'
-import type { MixinDescriptor } from '@remix-run/reconciler'
 import type { DomElementType } from '../jsx/jsx-runtime.ts'
 import { getDomHostInput } from '../dom-node-policy.ts'
 
@@ -25,11 +24,8 @@ let presenceByNode = new WeakMap<
 >()
 let seenEntranceByParent = new WeakMap<Node, Map<string, Set<unknown>>>()
 
-let animateEntranceMixin = createMixin<
-  [options: AnimateEntranceOptions | undefined],
-  HTMLElement,
-  DomElementType
->((handle) => {
+export let animateEntrance = createMixin<[options?: AnimateEntranceOptions], HTMLElement, DomElementType>(
+  (handle) => {
   let activeNode: null | HTMLElement = null
   let latestOptions: AnimateEntranceOptions | undefined = undefined
   let hasPlayedInitialEnter = false
@@ -87,13 +83,11 @@ let animateEntranceMixin = createMixin<
     })
     return <handle.element {...props} />
   }
-})
+  },
+)
 
-let animateExitMixin = createMixin<
-  [options: AnimateExitOptions | undefined],
-  HTMLElement,
-  DomElementType
->((handle) => {
+export let animateExit = createMixin<[options?: AnimateExitOptions], HTMLElement, DomElementType>(
+  (handle) => {
   let activeNode: null | HTMLElement = null
   let latestOptions: AnimateExitOptions | undefined = undefined
 
@@ -142,25 +136,8 @@ let animateExitMixin = createMixin<
     })
     return <handle.element {...props} />
   }
-})
-
-export function animateEntrance<node extends HTMLElement = HTMLElement>(
-  options?: AnimateEntranceOptions,
-): MixinDescriptor<node, [options: AnimateEntranceOptions | undefined]> {
-  return animateEntranceMixin(options) as MixinDescriptor<
-    node,
-    [options: AnimateEntranceOptions | undefined]
-  >
-}
-
-export function animateExit<node extends HTMLElement = HTMLElement>(
-  options?: AnimateExitOptions,
-): MixinDescriptor<node, [options: AnimateExitOptions | undefined]> {
-  return animateExitMixin(options) as MixinDescriptor<
-    node,
-    [options: AnimateExitOptions | undefined]
-  >
-}
+  },
+)
 
 function createPresenceKeyframes(
   definition: AnimateKeyframes | undefined,

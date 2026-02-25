@@ -14,12 +14,28 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, elementType>,
   type: elementType,
-) => (...args: [...args, currentProps: Record<string, unknown>]) => void | null | ReconcilerElement
+) => (
+  ...args: [...args, currentProps: Record<string, unknown>]
+) => void | null | ReconcilerElement | MixinElement<elementType>
+
+type RebindNode<value, baseNode, boundNode> = value extends (...args: infer fnArgs) => infer fnResult
+  ? (...args: RebindTuple<fnArgs, baseNode, boundNode>) => RebindNode<fnResult, baseNode, boundNode>
+  : [value] extends [baseNode]
+    ? [baseNode] extends [value]
+      ? boundNode
+      : value
+    : value
+
+type RebindTuple<args extends unknown[], baseNode, boundNode> = {
+  [index in keyof args]: RebindNode<args[index], baseNode, boundNode>
+}
 
 type MixinRuntimeType<args extends unknown[] = unknown[], elementType extends string = string> = (
   handle: MixinHandle<unknown, elementType>,
   type: elementType,
-) => (...args: [...args, currentProps: Record<string, unknown>]) => void | null | ReconcilerElement
+) => (
+  ...args: [...args, currentProps: Record<string, unknown>]
+) => void | null | ReconcilerElement | MixinElement<elementType>
 
 export type MixinDescriptor<
   node = unknown,
@@ -60,7 +76,7 @@ type AnyMixinType = MixinRuntimeType<unknown[]>
 type AnyMixinDescriptor = MixinDescriptor<unknown, unknown[]>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: Record<string, unknown>]
-) => void | null | ReconcilerElement
+) => void | null | ReconcilerElement | MixinElement<string>
 type RunnerEntry = {
   type: AnyMixinType
   runner: AnyMixinRunner
@@ -89,9 +105,11 @@ export function createMixin<
   node = unknown,
   elementType extends string = string,
 >(type: MixinType<node, args, elementType>) {
-  return (...args: args): MixinDescriptor<node, args, elementType> => ({
-    type: type as unknown as MixinRuntimeType<args, elementType>,
-    args,
+  return <boundNode extends node = node>(
+    ...args: RebindTuple<args, node, boundNode>
+  ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, elementType> => ({
+    type: type as unknown as MixinRuntimeType<RebindTuple<args, node, boundNode>, elementType>,
+    args: args as unknown as RebindTuple<args, node, boundNode>,
   })
 }
 
@@ -142,6 +160,16 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
           if (!runner) continue
           let result = runner(...descriptor.args, composedProps)
           if (!result) continue
+          if (isMixinElement(result)) {
+            if (result.__rmxMixinElementType !== hostType) {
+              handle.root.dispatchEvent(
+                new ReconcilerErrorEvent(
+                  new Error('mixins must return an element with the same host type'),
+                ),
+              )
+            }
+            continue
+          }
           if (!isReconcilerElement(result)) {
             handle.root.dispatchEvent(
               new ReconcilerErrorEvent(new Error('mixins must return a reconciler element')),

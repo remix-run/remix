@@ -15,7 +15,7 @@ describe('connect mixin', () => {
         mix={[
           connect((node) => {
             calls++
-            connectedNode = node as HTMLButtonElement
+            connectedNode = node
           }),
         ]}
       >
@@ -42,7 +42,7 @@ describe('connect mixin', () => {
   })
 
   it('aborts signal when connected node is removed', () => {
-    let connectedSignal!: AbortSignal
+    let connectedSignal: AbortSignal | undefined
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
@@ -60,6 +60,7 @@ describe('connect mixin', () => {
     )
     root.flush()
 
+    if (!connectedSignal) throw new Error('expected signal')
     expect(connectedSignal.aborted).toBe(false)
 
     root.render(null)
