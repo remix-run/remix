@@ -67,8 +67,8 @@ type FrameHandleEventMap = {
 
 type RuntimeHandleEventMap = {
   error: RuntimeErrorEvent
-  'dom-runtime:pre-apply': DomRuntimePreApplyEvent
-  'dom-runtime:post-apply': DomRuntimePostApplyEvent
+  beforeFrameApply: BeforeFrameApplyEvent
+  afterFrameApply: AfterFrameApplyEvent
 }
 
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> &
@@ -94,12 +94,12 @@ export type RuntimeHandle = TypedEventTarget<RuntimeHandleEventMap> & {
 
 let runtimeByDocument = new WeakMap<Document, RuntimeHandle>()
 
-export let DOM_RUNTIME_PRE_APPLY_EVENT = 'dom-runtime:pre-apply'
-export let DOM_RUNTIME_POST_APPLY_EVENT = 'dom-runtime:post-apply'
+export let BEFORE_FRAME_APPLY_EVENT = 'beforeFrameApply'
+export let AFTER_FRAME_APPLY_EVENT = 'afterFrameApply'
 
 export type DomRuntimeApplyKind = 'frame-template' | 'frame-reload'
 
-export class DomRuntimePreApplyEvent extends Event {
+export class BeforeFrameApplyEvent extends Event {
   doc: Document
   fragment: DocumentFragment
   start: Comment
@@ -113,7 +113,7 @@ export class DomRuntimePreApplyEvent extends Event {
     end: Comment,
     kind: DomRuntimeApplyKind,
   ) {
-    super(DOM_RUNTIME_PRE_APPLY_EVENT)
+    super(BEFORE_FRAME_APPLY_EVENT)
     this.doc = doc
     this.fragment = fragment
     this.start = start
@@ -122,14 +122,14 @@ export class DomRuntimePreApplyEvent extends Event {
   }
 }
 
-export class DomRuntimePostApplyEvent extends Event {
+export class AfterFrameApplyEvent extends Event {
   doc: Document
   start: Comment
   end: Comment
   kind: DomRuntimeApplyKind
 
   constructor(doc: Document, start: Comment, end: Comment, kind: DomRuntimeApplyKind) {
-    super(DOM_RUNTIME_POST_APPLY_EVENT)
+    super(AFTER_FRAME_APPLY_EVENT)
     this.doc = doc
     this.start = start
     this.end = end
@@ -409,7 +409,7 @@ function emitRuntimePreApply(
   end: Comment,
   kind: DomRuntimeApplyKind,
 ) {
-  state.runtime.dispatchEvent(new DomRuntimePreApplyEvent(state.doc, fragment, start, end, kind))
+  state.runtime.dispatchEvent(new BeforeFrameApplyEvent(state.doc, fragment, start, end, kind))
 }
 
 function emitRuntimePostApply(
@@ -418,7 +418,7 @@ function emitRuntimePostApply(
   end: Comment,
   kind: DomRuntimeApplyKind,
 ) {
-  state.runtime.dispatchEvent(new DomRuntimePostApplyEvent(state.doc, start, end, kind))
+  state.runtime.dispatchEvent(new AfterFrameApplyEvent(state.doc, start, end, kind))
 }
 
 function applyFragmentWithRuntimeHooks(

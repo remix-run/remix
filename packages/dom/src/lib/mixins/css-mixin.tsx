@@ -13,7 +13,8 @@ import {
   type CssInput,
 } from './css-shared.ts'
 import {
-  DomRuntimePreApplyEvent,
+  BeforeFrameApplyEvent,
+  BEFORE_FRAME_APPLY_EVENT,
   readRuntimeHandleForDocument,
 } from '../client-runtime.ts'
 
@@ -172,16 +173,19 @@ function startRuntimePreApplyListener(doc: Document, documentStyles: DocumentSty
   if (!runtime) return
   if (documentStyles.runtime === runtime && documentStyles.runtimePreApplyListener) return
   if (documentStyles.runtime && documentStyles.runtimePreApplyListener) {
-    documentStyles.runtime.removeEventListener('dom-runtime:pre-apply', documentStyles.runtimePreApplyListener)
+    documentStyles.runtime.removeEventListener(
+      BEFORE_FRAME_APPLY_EVENT,
+      documentStyles.runtimePreApplyListener,
+    )
   }
   let listener = (event: Event) => {
-    if (!(event instanceof DomRuntimePreApplyEvent)) return
+    if (!(event instanceof BeforeFrameApplyEvent)) return
     if (event.doc !== doc) return
     adoptServerStylesInNode(event.fragment, documentStyles)
   }
   documentStyles.runtime = runtime
   documentStyles.runtimePreApplyListener = listener
-  runtime.addEventListener('dom-runtime:pre-apply', listener)
+  runtime.addEventListener(BEFORE_FRAME_APPLY_EVENT, listener)
 }
 
 function adoptServerStylesInNode(node: Node, documentStyles: DocumentStyles) {

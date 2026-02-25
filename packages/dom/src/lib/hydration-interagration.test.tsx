@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { boot, clientEntry, css, on, renderToHTMLStream, type ComponentHandle } from '../index.ts'
-import { DomRuntimePreApplyEvent } from './client-runtime.ts'
+import { BeforeFrameApplyEvent } from './client-runtime.ts'
 
 describe('hydration integration', () => {
   afterEach(() => {
@@ -228,8 +228,8 @@ describe('hydration integration', () => {
     await runtime.ready()
     expect(document.getElementById('late-fallback')).toBeTruthy()
     let sawCleanFragment = false
-    runtime.addEventListener('dom-runtime:pre-apply', (event) => {
-      if (!(event instanceof DomRuntimePreApplyEvent)) return
+    runtime.addEventListener('beforeFrameApply', (event) => {
+      if (!(event instanceof BeforeFrameApplyEvent)) return
       if (event.kind !== 'frame-template') return
       if (event.start.data.trim() !== 'f:f1') return
       let styleCount = event.fragment.querySelectorAll('style[data-rmx-css-mixin]').length

@@ -103,8 +103,8 @@ Runtime handle surface:
 - `runtime.frames.get(name)` returns named frame handles (supports `await frame.reload()`)
 - runtime errors are emitted as `'error'` events (`RuntimeErrorEvent` with `error` + `boundaryId`)
 - runtime dispatches generic DOM lifecycle events:
-  - `'dom-runtime:pre-apply'` (`DomRuntimePreApplyEvent`) before runtime applies a fragment/range update
-  - `'dom-runtime:post-apply'` (`DomRuntimePostApplyEvent`) after runtime commits that update
+  - `'beforeFrameApply'` (`BeforeFrameApplyEvent`) before runtime applies a frame fragment/range update
+  - `'afterFrameApply'` (`AfterFrameApplyEvent`) after runtime commits that frame update
 
 Client runtime event notes:
 
