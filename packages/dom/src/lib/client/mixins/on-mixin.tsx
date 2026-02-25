@@ -39,7 +39,7 @@ let onMixin = createMixin<
 
   let listener: EventListener = (event) => {
     if (!activeHandler) return
-    reentryController?.abort()
+    reentryController?.abort('event handler superseded')
     reentryController = new AbortController()
     activeHandler(event as DispatchedEvent<Event, EventTarget>, reentryController.signal)
   }
@@ -56,7 +56,7 @@ let onMixin = createMixin<
   }
 
   handle.addEventListener('remove', () => {
-    reentryController?.abort()
+    reentryController?.abort('event handler removed')
     detach()
     activeNode = null
     activeType = ''

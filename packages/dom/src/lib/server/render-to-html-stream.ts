@@ -27,7 +27,7 @@ export function renderToHTMLStream(
     signal: AbortSignal,
   ) => {
     let frameRoot = renderer.createRoot(frameValue)
-    signal.addEventListener('abort', () => frameRoot.abort(signal.reason), { once: true })
+    signal.addEventListener('abort', () => frameRoot.abort(resolveAbortReason(signal, 'frame')), { once: true })
     let stream = createFinalizedHtmlStream(frameRoot.stream())
     return readStreamToString(stream)
   }
@@ -52,18 +52,23 @@ export function renderToHTMLStream(
   }
   if (options.signal) {
     if (options.signal.aborted) {
-      root.abort(options.signal.reason)
+      root.abort(resolveAbortReason(options.signal, 'root'))
     } else {
       options.signal.addEventListener(
         'abort',
         () => {
-          root.abort(options.signal?.reason)
+          root.abort(resolveAbortReason(options.signal, 'root'))
         },
         { once: true },
       )
     }
   }
   return createFinalizedHtmlStream(root.stream())
+}
+
+function resolveAbortReason(signal: AbortSignal, scope: 'frame' | 'root') {
+  if (signal.reason !== undefined) return signal.reason
+  return `render ${scope} aborted`
 }
 
 async function readStreamToString(stream: ReadableStream<Uint8Array>) {

@@ -181,7 +181,7 @@ export function createReconciler<parent, node, text extends node, element extend
         try {
           pluginRootHandle.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
           rootApi.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
-          root.renderController?.abort()
+          root.renderController?.abort('render superseded')
           root.renderController = new AbortController()
           root.dirtyNodeIds.clear()
           root.pendingHostCommits.length = 0
@@ -704,7 +704,7 @@ export function createReconciler<parent, node, text extends node, element extend
   ) {
     if (nodeToRemove.kind === 'component') {
       let internalHandle = nodeToRemove.handle as InternalComponentHandle
-      internalHandle[COMPONENT_SIGNAL_CONTROLLER]?.abort()
+      internalHandle[COMPONENT_SIGNAL_CONTROLLER]?.abort('component removed')
       if (nodeToRemove.child) {
         removeNode(parentNode, nodeToRemove.child, root)
       }

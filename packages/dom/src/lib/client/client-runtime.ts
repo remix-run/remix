@@ -214,7 +214,7 @@ export function boot(options: BootOptions): RuntimeHandle {
     dispose() {
       if (state.disposed) return
       state.disposed = true
-      state.topReloadController?.abort()
+      state.topReloadController?.abort('runtime disposed')
       state.topReloadController = null
       if (runtimeByDocument.get(state.doc) === runtime) {
         runtimeByDocument.delete(state.doc)
@@ -270,7 +270,7 @@ async function reloadTopFrame(state: RuntimeState, handle: FrameHandle): Promise
   if (state.disposed) {
     return AbortSignal.abort('runtime disposed')
   }
-  state.topReloadController?.abort()
+  state.topReloadController?.abort('reload superseded')
   let controller = new AbortController()
   state.topReloadController = controller
   handle.dispatchEvent(new Event('reloadStart'))
@@ -282,6 +282,11 @@ async function reloadTopFrame(state: RuntimeState, handle: FrameHandle): Promise
     await replaceTopFrameContent(state, handle, html)
     state.runtime.flush()
     return controller.signal
+  } catch (error) {
+    if (isExpectedAbort(controller.signal, error)) {
+      return controller.signal
+    }
+    throw error
   } finally {
     if (state.topReloadController === controller) {
       state.topReloadController = null
@@ -396,7 +401,7 @@ function getOrCreateFrameState(
       if (frameState.disposed) {
         return AbortSignal.abort('frame disposed')
       }
-      frameState.reloadController?.abort()
+      frameState.reloadController?.abort('reload superseded')
       let controller = new AbortController()
       frameState.reloadController = controller
       handle.dispatchEvent(new Event('reloadStart'))
@@ -408,6 +413,11 @@ function getOrCreateFrameState(
         await replaceFrameContent(state, frameState, html)
         state.runtime.flush()
         return controller.signal
+      } catch (error) {
+        if (isExpectedAbort(controller.signal, error)) {
+          return controller.signal
+        }
+        throw error
       } finally {
         if (frameState.reloadController === controller) {
           handle.dispatchEvent(new Event('reloadComplete'))
@@ -551,7 +561,7 @@ function disposeOwnedInsideRange(state: RuntimeState, start: Comment, end: Comme
 function disposeFrameState(state: RuntimeState, frameState: FrameState) {
   if (frameState.disposed) return
   frameState.disposed = true
-  frameState.reloadController?.abort()
+  frameState.reloadController?.abort('frame disposed')
   frameState.reloadController = null
   disposeOwnedInsideRange(state, frameState.start, frameState.end)
   state.frameStatesByStart.delete(frameState.start)
@@ -1210,6 +1220,21 @@ function isHeadManagedElementNode(element: Element): boolean {
 function isFullDocumentHtml(html: string) {
   let trimmed = html.trimStart()
   return /^<!doctype html\b/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)
+}
+
+function isExpectedAbort(signal: AbortSignal, error: unknown): boolean {
+  if (!signal.aborted) return false
+  if (error === signal.reason) return true
+  return signal.reason === undefined && isAbortErrorLike(error)
+}
+
+function isAbortErrorLike(error: unknown): error is { name: string } {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'name' in error &&
+      (error as { name?: unknown }).name === 'AbortError',
+  )
 }
 
 async function toHTML(

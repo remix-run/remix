@@ -17,7 +17,7 @@ export let connect = createMixin<
       let controller = new AbortController()
       capturedCallback(node, controller.signal)
       handle.addEventListener('remove', () => {
-        controller.abort()
+        controller.abort('connection removed')
       })
     }
   })

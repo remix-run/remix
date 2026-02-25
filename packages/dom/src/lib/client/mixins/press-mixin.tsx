@@ -173,7 +173,7 @@ let pressBehaviorMixin = createMixin<[], Element, DomElementType>((handle) => {
     )
 
     removeListeners = () => {
-      controller.abort()
+      controller.abort('press listeners removed')
     }
   }
 

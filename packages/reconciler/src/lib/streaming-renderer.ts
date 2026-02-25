@@ -168,7 +168,7 @@ function createStreamingRoot<chunk, rootContext, elementState>(
   }
 
   function abort(reason?: unknown) {
-    state.abortController.abort(reason)
+    state.abortController.abort(reason ?? 'stream aborted')
   }
 
   function getStore<value>(key: StreamingRootStoreKey) {
