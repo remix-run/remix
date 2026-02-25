@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { clientEntry, css } from '../index.ts'
 import { renderToHTMLStream } from './render-to-html-stream.ts'
+import { on } from './mixins/on-mixin.tsx'
 
 describe('renderToHTMLStream', () => {
   it('renders html with escaped text and serialized attributes', async () => {
@@ -742,6 +743,36 @@ describe('renderToHTMLStream', () => {
     let ruleMatch = new RegExp(`\\.${classNames[0]}\\{`, 'g')
     expect((html.match(ruleMatch) ?? []).length).toBe(1)
     expect((html.match(/data-rmx-css-mixin/g) ?? []).length).toBe(1)
+  })
+
+  it('handles mixed css and non-css mixins during streaming plugin normalization', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <button mix={[css({ color: 'teal' }), on('click', () => {})]}>mixed</button>
+        </main>,
+      ),
+    )
+    expect(html).toContain('<style data-rmx-css-mixin data-rmx-css-origin="server">')
+    expect(html).toContain('color:teal;')
+    expect(html).toContain('>mixed</button>')
+    expect(html.includes(' mix=')).toBe(false)
+  })
+
+  it('skips invalid css mix inputs and nullish style object entries', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <div id="a" mix={[css(null as any)]} />
+          <div id="b" style={null as any} />
+          <div id="c" style={{ color: false as any, borderColor: null as any, width: 12 }} />
+        </main>,
+      ),
+    )
+    expect(html.includes('data-rmx-css-mixin')).toBe(false)
+    expect(html).toContain('<div id="a"></div>')
+    expect(html).toContain('<div id="b"></div>')
+    expect(html).toContain('<div id="c" style="width:12"></div>')
   })
 
   it('emits one css style tag per streaming scope', async () => {

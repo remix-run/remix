@@ -46,6 +46,5 @@ function readConsolidatedCssHeadHtml(root: StreamingRendererRoot<any>) {
   let cssEntries = root.getStore<CssChunkContributions>(HTML_STREAMING_CSS_CHUNKS_STORE_KEY)
   if (!cssEntries || cssEntries.size === 0) return ''
   let cssText = Array.from(cssEntries.values()).join('')
-  if (!cssText) return ''
   return `<style ${CSS_MIXIN_STYLE_TAG_ATTR} ${CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR}="server">${cssText}</style>`
 }

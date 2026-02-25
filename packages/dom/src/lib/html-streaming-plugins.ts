@@ -37,8 +37,7 @@ let cssMixStreamingPlugin = defineStreamingPlugin({
     return {
       commit(context) {
         let props = context.remainingPropsView()
-        let mix = props.mix
-        if (!Array.isArray(mix)) return
+        let mix = props.mix as unknown[]
         let nonCssMix: unknown[] = []
         let nextClassName = props.className
         for (let index = 0; index < mix.length; index++) {
