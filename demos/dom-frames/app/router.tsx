@@ -169,7 +169,9 @@ router.get(routes.frameReload, async (context) => {
   let content = (
     <div mix={[css(cardStyle)]}>
       <p mix={[css({ marginTop: '0' })]}>
-        This frame contains a client entry button that calls <code>handle.frame.reload()</code>.
+        This frame contains client entry buttons that call <code>handle.frame.reload()</code> and{' '}
+        <code>handle.frames.top.reload()</code>. Top-frame reloads fetch full-document HTML and apply
+        it with document-aware diffing.
       </p>
       <frame
         src={routes.frames.reloadableClock.href()}
@@ -266,7 +268,10 @@ router.get(routes.frames.reloadableClock, async () => {
           </div>
         </div>
         <SimpleCounter setup={0} label="Frame counter" serverTime={serverTime} />
-        <FrameReloadButton />
+        <div mix={[css({ display: 'flex', gap: '10px', alignItems: 'center' })]}>
+          <FrameReloadButton />
+          <FrameReloadButton target="top" />
+        </div>
       </div>,
       { onError: console.error },
     ),

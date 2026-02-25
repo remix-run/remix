@@ -4,7 +4,7 @@ export let FrameReloadButton = clientEntry(
   '/assets/frame-reload-button.js#FrameReloadButton',
   function FrameReloadButton(handle: ComponentHandle) {
     let pending = false
-    return () => (
+    return (props: { target?: 'current' | 'top' }) => (
       <button
         type="button"
         mix={[
@@ -20,14 +20,17 @@ export let FrameReloadButton = clientEntry(
           on('click', async () => {
             pending = true
             handle.update()
-            let signal = await handle.frame.reload()
+            let signal =
+              props.target === 'top'
+                ? await handle.frames.top.reload()
+                : await handle.frame.reload()
             if (signal.aborted) return
             pending = false
             handle.update()
           }),
         ]}
       >
-        {pending ? 'Reloading frame…' : 'Reload frame'}
+        {pending ? 'Reloading…' : props.target === 'top' ? 'Reload top frame' : 'Reload frame'}
       </button>
     )
   },
