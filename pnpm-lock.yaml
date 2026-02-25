@@ -435,9 +435,27 @@ importers:
 
   packages/dom/demos:
     dependencies:
+      '@remix-run/compression-middleware':
+        specifier: workspace:^
+        version: link:../../compression-middleware
       '@remix-run/dom':
         specifier: workspace:^
         version: link:..
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../../fetch-router
+      '@remix-run/interaction':
+        specifier: workspace:^
+        version: link:../../interaction
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../../node-fetch-server
+      '@remix-run/static-middleware':
+        specifier: workspace:^
+        version: link:../../static-middleware
+      '@remix-run/typed-event-target':
+        specifier: workspace:^
+        version: link:../../typed-event-target
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

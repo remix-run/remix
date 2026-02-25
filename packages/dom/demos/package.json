@@ -3,8 +3,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/compression-middleware": "workspace:^",
     "@remix-run/dom": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^",
     "@remix-run/interaction": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/static-middleware": "workspace:^",
     "@remix-run/typed-event-target": "workspace:^"
   },
   "devDependencies": {
@@ -14,7 +18,7 @@
   },
   "scripts": {
     "dev": "concurrently \"pnpm dev:browser\" \"pnpm dev:server\"",
-    "dev:browser": "esbuild ./*/entry.tsx --bundle --outdir=. --outbase=. --entry-names=\"[dir]/[name].bundled\" --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch",
+    "dev:browser": "esbuild ./*/entry.tsx --bundle --minify --outdir=. --outbase=. --entry-names=\"[dir]/[name].bundled\" --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch",
     "dev:server": "node --experimental-strip-types --watch server.ts",
     "build": "esbuild ./*/entry.tsx --bundle --outdir=. --outbase=. --entry-names=\"[dir]/[name].bundled\" --format=esm --platform=browser --target=es2020",
     "start": "node --experimental-strip-types server.ts"
