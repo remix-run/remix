@@ -195,6 +195,29 @@ describe('boot', () => {
     expect(document.getElementById('entry')?.textContent).toBe('top')
   })
 
+  it('throws when reloading top frame without resolveFrame', async () => {
+    document.body.innerHTML = '<main><p>no resolver</p></main>'
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+    })
+    await runtime.ready()
+    await expect(runtime.frames.top.reload()).rejects.toThrow('No resolveFrame provided')
+  })
+
+  it('returns aborted signal when reloading top frame after runtime disposal', async () => {
+    document.body.innerHTML = '<main><p>dispose before reload</p></main>'
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame: async () => '<main><p>never applied</p></main>',
+    })
+    await runtime.ready()
+    runtime.dispose()
+    let signal = await runtime.frames.top.reload()
+    expect(signal.aborted).toBe(true)
+  })
+
   it('hoists head-managed elements on frame reload and keeps regular scripts in frame scope', async () => {
     let renderCount = 0
     document.body.innerHTML = [
@@ -285,6 +308,34 @@ describe('boot', () => {
     expect(document.querySelector('main meta[name="top-fragment-meta"]')).toBeNull()
     expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
     expect(document.body.querySelector('script[type="text/javascript"]')).toBeTruthy()
+  })
+
+  it('hoists children from explicit head wrappers in top frame fragment reloads', async () => {
+    document.body.innerHTML = '<main><p id="before-head-wrapper">before</p></main>'
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame: async () =>
+        [
+          '<head>',
+          '<title>Head wrapper title</title>',
+          '<meta name="head-wrapper-meta" content="head-wrapper" />',
+          '</head>',
+          '<main><p id="after-head-wrapper">after</p></main>',
+        ].join(''),
+    })
+    await runtime.ready()
+    await runtime.frames.top.reload()
+    await waitFor(() => {
+      expect(document.getElementById('after-head-wrapper')).toBeTruthy()
+    })
+    let headTitles = Array.from(document.head.querySelectorAll('title'))
+    expect(headTitles.some((title) => title.textContent === 'Head wrapper title')).toBe(true)
+    expect(document.head.querySelector('meta[name="head-wrapper-meta"]')?.getAttribute('content')).toBe(
+      'head-wrapper',
+    )
+    expect(document.querySelector('main title')).toBeNull()
+    expect(document.querySelector('main meta[name="head-wrapper-meta"]')).toBeNull()
   })
 
   it('preserves static node identity when reloading frame content', async () => {

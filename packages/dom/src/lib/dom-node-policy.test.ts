@@ -147,6 +147,16 @@ describe('dom node policy', () => {
     expect(document.head.contains(title)).toBe(false)
   })
 
+  it('inserts directly into head when parent is already document head', () => {
+    let policy = createPolicy()
+    let title = policy.createElement(document.head, 'title')
+    title.textContent = 'direct head insert'
+    policy.insert(document.head, title, null)
+    expect(document.head.contains(title)).toBe(true)
+    policy.remove(document.head, title)
+    expect(document.head.contains(title)).toBe(false)
+  })
+
   it('resolves namespace inside a shadow root host', () => {
     let policy = createPolicy()
     let host = document.createElement('div')
