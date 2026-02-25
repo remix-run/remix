@@ -120,6 +120,24 @@ The current runtime optimizes for:
 - lazy plugin setup per host only when active
 - deterministic teardown of active plugin scopes
 - batched scheduler flush behavior
+- host-children referential bailout when `childrenInput` is unchanged
+
+### Host children identity bailout
+
+During host reconciliation, if a compatible host node receives the same children
+input reference (`current.childrenInput === next.children`), the runtime can skip
+`reconcileChildren(...)` for that host subtree.
+
+Guardrail:
+
+- the bailout is disabled while `root.hasPendingComponentUpdate` is true so
+  component/plugin scheduled updates still traverse and commit correctly
+
+Scope:
+
+- this bailout applies to host children traversal
+- component-node bailout remains props/update driven (`shallowEqualProps` + no
+  pending updates)
 
 ## Agent Guidelines
 

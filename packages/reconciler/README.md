@@ -113,6 +113,22 @@ The scheduler handles:
 - root lifecycle events (`beforeCommit` / `afterCommit`)
 - cascading update guardrails
 
+### Element identity bailout strategy
+
+Host reconciliation includes a referential-identity bailout for children input:
+
+- when `current.childrenInput === next.children`, host child reconciliation is skipped
+- this is the fast path for memoized element reuse (for example `let myEl = <node />`)
+- host prop diffing still runs, so host prop updates continue to commit normally
+- the bailout is guarded by pending component work, so local `handle.update()` and
+  plugin-triggered updates still propagate through stable ancestors
+
+For components, bailout behavior is still props-driven:
+
+- compatible component nodes bail out when props are shallow-equal and no update is pending
+- stable component element identity is beneficial because it tends to preserve
+  stable props/children references across renders
+
 ### Plugin model
 
 Plugins are root-scoped factories with per-node setup scopes.
