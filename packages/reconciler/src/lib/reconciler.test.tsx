@@ -245,6 +245,76 @@ describe('incremental reconciler validation', () => {
     assert.equal(renders, 1)
   })
 
+  it('skips reconciling host children when element children input is referentially stable', () => {
+    let memoEnterCount = 0
+    let policy = createTestNodePolicy()
+    let reconciler = createReconciler({
+      policy: createNodePolicy((policyReconciler) => {
+        policyReconciler.addEventListener('enterChildren', (event) => {
+          let parent = (event as Event & { parent: unknown }).parent as
+            | { kind?: unknown; type?: unknown }
+            | undefined
+          if (parent?.kind === 'element' && parent.type === 'memo') {
+            memoEnterCount++
+          }
+        })
+        return policy
+      }),
+    })
+    let container = createTestContainer()
+    let root = reconciler.createRoot(container)
+    let memoNode = (
+      <memo>
+        <span>Some text</span>
+      </memo>
+    )
+
+    root.render(
+      <root>
+        {memoNode}
+        <other>Other stuff</other>
+      </root>,
+    )
+    root.flush()
+    assert.equal(memoEnterCount, 1)
+
+    root.render(
+      <root>
+        {memoNode}
+        <other>Other stuff</other>
+      </root>,
+    )
+    root.flush()
+    assert.equal(memoEnterCount, 1)
+  })
+
+  it('does not skip stable host children when component updates are pending', () => {
+    let updateLeaf = () => {}
+    let Leaf: Component<undefined, {}> = (handle) => {
+      let value = 0
+      updateLeaf = () => {
+        value++
+        handle.update()
+      }
+      return () => <leaf>{String(value)}</leaf>
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+    let memoNode = (
+      <memo>
+        <Leaf />
+      </memo>
+    )
+
+    root.render(<root>{memoNode}</root>)
+    root.flush()
+    assert.equal(root.inspect(), '<root><memo><leaf>0</leaf></memo></root>')
+
+    updateLeaf()
+    root.flush()
+    assert.equal(root.inspect(), '<root><memo><leaf>1</leaf></memo></root>')
+  })
+
   it('runs routed plugins only when dependencies change', () => {
     let pluginApplies = 0
     let routedPlugin = definePlugin({

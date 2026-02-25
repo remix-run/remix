@@ -398,6 +398,7 @@ export function createReconciler<parent, node, text extends node, element extend
 
     if (next.kind === 'host' && current.kind === 'host') {
       let previousProps = current.props
+      let childrenUnchanged = current.childrenInput === next.children
       let propsChangedKeys = listChangedPropKeys(previousProps, next.props)
       let propsChanged = propsChangedKeys.length > 0
       current.key = next.key
@@ -414,6 +415,12 @@ export function createReconciler<parent, node, text extends node, element extend
             changedKeys: propsChangedKeys,
           },
         })
+      }
+      if (childrenUnchanged && !root.hasPendingComponentUpdate) {
+        return {
+          node: current,
+          changed: propsChanged,
+        }
       }
       let childrenResult = reconcileChildren(
         current.node,
