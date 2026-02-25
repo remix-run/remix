@@ -4,7 +4,7 @@ import {
   RECONCILER_PROP_KEYS,
   RECONCILER_PROP_SHAPE,
 } from '@remix-run/reconciler'
-import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
+import type { ReconcilerElement, RenderValue } from '@remix-run/reconciler'
 import type { MixValue } from '@remix-run/reconciler'
 import type * as dom from './props.ts'
 
@@ -110,7 +110,9 @@ function toPropShape(keys: string[]) {
 
 export namespace JSX {
   export type Element = DomJsxElement
-  export type ElementType = keyof IntrinsicElements | Component<any, any, RenderValue>
+  export type ElementType =
+    | keyof IntrinsicElements
+    | ((handle: import('@remix-run/reconciler').ComponentHandle<any>, setup: any) => (props: any) => any)
   export interface IntrinsicSVGElements {
     svg: dom.SVGProps<SVGSVGElement>
     animate: dom.SVGProps<SVGAnimateElement>
@@ -351,7 +353,10 @@ export namespace JSX {
     key?: unknown
   }
   export type LibraryManagedAttributes<component, props> =
-    component extends Component<infer setup, infer renderProps, any>
+    component extends (
+      handle: import('@remix-run/reconciler').ComponentHandle<any>,
+      setup: infer setup,
+    ) => (props: infer renderProps) => any
       ? (unknown extends setup
           ? {}
           : undefined extends setup
