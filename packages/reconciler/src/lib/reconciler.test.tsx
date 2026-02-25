@@ -3,7 +3,11 @@ import { describe, it } from 'node:test'
 import { RECONCILER_PROP_KEYS } from '../testing/jsx.ts'
 import { RECONCILER_NODE_CHILDREN } from '../testing/jsx.ts'
 import { jsx } from '../testing/jsx-runtime.ts'
-import { createTestContainer, createTestNodePolicy, stringifyTestNode } from '../testing/test-node-policy.ts'
+import {
+  createTestContainer,
+  createTestNodePolicy,
+  stringifyTestNode,
+} from '../testing/test-node-policy.ts'
 import { createTestNodeReconciler } from '../testing/test-node-reconciler.ts'
 import type { Component } from '../testing/jsx-runtime.ts'
 import { createReconciler } from './root.ts'
@@ -160,12 +164,9 @@ describe('incremental reconciler validation', () => {
       }
       return (props) => <wrap>{props.children}</wrap>
     }
-    let Child: Component<undefined, {}> = (handle) => {
-      return () => {
-        let contextValue = handle.context.get(Provider) as { value: string }
-        return <leaf>{contextValue.value}</leaf>
-      }
-    }
+    let Child: Component<undefined, {}> = (handle) => () => (
+      <leaf>{(handle.context.get(Provider) as { value: string }).value}</leaf>
+    )
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()
 
@@ -184,12 +185,9 @@ describe('incremental reconciler validation', () => {
 
   it('returns undefined when no matching context provider exists', () => {
     let MissingProvider: Component<undefined, {}> = () => () => <unused />
-    let Consumer: Component<undefined, {}> = (handle) => {
-      return () => {
-        let contextValue = handle.context.get(MissingProvider)
-        return <leaf>{String(contextValue)}</leaf>
-      }
-    }
+    let Consumer: Component<undefined, {}> = (handle) => () => (
+      <leaf>{String(handle.context.get(MissingProvider))}</leaf>
+    )
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()
 
@@ -199,18 +197,14 @@ describe('incremental reconciler validation', () => {
   })
 
   it('prefers nearest provider when multiple providers share the same component type', () => {
-    let Provider: Component<undefined, { value: string; children?: unknown }> = (handle) => {
-      return (props) => {
+    let Provider: Component<undefined, { value: string; children?: unknown }> = (handle) =>
+      (props) => {
         handle.context.set({ value: props.value })
         return <wrap>{props.children}</wrap>
       }
-    }
-    let Consumer: Component<undefined, {}> = (handle) => {
-      return () => {
-        let contextValue = handle.context.get(Provider) as { value: string }
-        return <leaf>{contextValue.value}</leaf>
-      }
-    }
+    let Consumer: Component<undefined, {}> = (handle) => () => (
+      <leaf>{(handle.context.get(Provider) as { value: string }).value}</leaf>
+    )
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()
 
@@ -515,7 +509,7 @@ describe('incremental reconciler validation', () => {
 
   it('supports plugins without setup scopes', () => {
     let shouldActivateCalls = 0
-    let plugin = definePlugin<EventTarget>({
+    let plugin = definePlugin({
       phase: 'special',
       keys: [],
       shouldActivate() {
@@ -523,7 +517,8 @@ describe('incremental reconciler validation', () => {
         return true
       },
     })
-    let reconciler = createTestNodeReconciler([plugin as any])
+
+    let reconciler = createTestNodeReconciler([plugin])
     let root = reconciler.createRoot()
     root.render(<item />)
     root.flush()
@@ -1103,7 +1098,7 @@ describe('incremental reconciler validation', () => {
   it('ignores non-element object values in children lists', () => {
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()
-    root.render(<node>{[({ junk: true } as unknown), 'ok']}</node>)
+    root.render(<node>{[{ junk: true } as unknown, 'ok']}</node>)
     root.flush()
     assert.equal(root.inspect(), '<node>ok</node>')
   })
@@ -1213,10 +1208,7 @@ describe('incremental reconciler validation', () => {
     )
     root.flush()
 
-    assert.equal(
-      stringifyTestNode(container),
-      '<before></before>[<a>A</a><b>B</b>]<after></after>',
-    )
+    assert.equal(stringifyTestNode(container), '<before></before>[<a>A</a><b>B</b>]<after></after>')
   })
 
   it('remove() only clears content inside a bounded range root', () => {
@@ -1256,12 +1248,9 @@ describe('incremental reconciler validation', () => {
     let reconciler = createReconciler({
       policy: createNodePolicy(() => policy),
     })
-    assert.throws(
-      () => {
-        reconciler.createRoot([start, end])
-      },
-      /boundaries must share the same parent/,
-    )
+    assert.throws(() => {
+      reconciler.createRoot([start, end])
+    }, /boundaries must share the same parent/)
   })
 
   it('throws when range root boundaries are the same node', () => {
@@ -1273,12 +1262,9 @@ describe('incremental reconciler validation', () => {
     let reconciler = createReconciler({
       policy: createNodePolicy(() => policy),
     })
-    assert.throws(
-      () => {
-        reconciler.createRoot([marker, marker])
-      },
-      /must be distinct/,
-    )
+    assert.throws(() => {
+      reconciler.createRoot([marker, marker])
+    }, /must be distinct/)
   })
 
   it('throws when range root end boundary does not follow start boundary', () => {
@@ -1292,12 +1278,9 @@ describe('incremental reconciler validation', () => {
     let reconciler = createReconciler({
       policy: createNodePolicy(() => policy),
     })
-    assert.throws(
-      () => {
-        reconciler.createRoot([start, end])
-      },
-      /must follow start/,
-    )
+    assert.throws(() => {
+      reconciler.createRoot([start, end])
+    }, /must follow start/)
   })
 
   it('dispatches enter/leave children lifecycle events to node policies', () => {

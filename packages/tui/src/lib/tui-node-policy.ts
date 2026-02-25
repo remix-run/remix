@@ -46,8 +46,7 @@ export function createTuiContainer(host: unknown, bridge: TuiHostBridge): TuiCon
 }
 
 export function createTuiNodePolicy(): TuiNodePolicyDefinition {
-  return createNodePolicy(() => {
-    return {
+  return createNodePolicy(() => ({
       createText(parent, value) {
         let bridge = parent.bridge
         return {
@@ -136,8 +135,7 @@ export function createTuiNodePolicy(): TuiNodePolicyDefinition {
         node.parent = null
         parent.bridge.remove(parent.host, node.host)
       },
-    }
-  })
+    }))
 }
 
 export function assertTuiTreeConsistency(container: TuiContainerNode) {

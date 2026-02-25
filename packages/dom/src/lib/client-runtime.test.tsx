@@ -130,9 +130,10 @@ describe('boot', () => {
       '</main>',
     ].join('')
 
-    let resolveFrame = vi.fn(async () => {
-      return '<section id="panel"><h2 id="title">Activity</h2><p id="value">Server: 2</p></section>'
-    })
+    let resolveFrame = vi.fn(
+      async () =>
+        '<section id="panel"><h2 id="title">Activity</h2><p id="value">Server: 2</p></section>',
+    )
     let runtime = boot({
       document,
       loadModule: async () => () => <button>noop</button>,
@@ -169,8 +170,8 @@ describe('boot', () => {
         )
       },
     )
-    let renderFrameHtml = async (label: string, setup: number) => {
-      return await readStream(
+    let renderFrameHtml = async (label: string, setup: number) =>
+      readStream(
         renderToHTMLStream(
           <section id="panel">
             <h2 id="title">Activity</h2>
@@ -178,7 +179,6 @@ describe('boot', () => {
           </section>,
         ),
       )
-    }
 
     let initialHtml = await readStream(
       renderToHTMLStream(<frame name="panel" src="/frame/panel" />, {
@@ -187,8 +187,9 @@ describe('boot', () => {
     )
     document.body.innerHTML = initialHtml
 
-    let loadModule = vi.fn(async () => {
-      return function Counter(handle: any, initial: number) {
+    let loadModule = vi.fn(
+      async () =>
+        function Counter(handle: any, initial: number) {
         let count = initial
         triggerIncrement = async () => {
           count++
@@ -199,8 +200,8 @@ describe('boot', () => {
             {props.label}: {count}
           </button>
         )
-      }
-    })
+        },
+    )
     let runtime = boot({
       document,
       loadModule,

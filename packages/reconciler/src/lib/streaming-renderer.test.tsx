@@ -441,9 +441,7 @@ describe('createStreamingRenderer', () => {
 
   it('returns undefined for missing provider context during streaming render', async () => {
     let MissingProvider = () => () => <unused />
-    let Consumer = (handle: any) => {
-      return () => <child>{String(handle.context.get(MissingProvider))}</child>
-    }
+    let Consumer = (handle: any) => () => <child>{String(handle.context.get(MissingProvider))}</child>
     let renderer = createStreamingRenderer({
       policy: testPolicy,
     })
