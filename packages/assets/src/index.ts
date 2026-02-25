@@ -1,3 +1,10 @@
+export {
+  AssetError,
+  AssetNotFoundError,
+  AssetVariantRequiredError,
+  AssetVariantNotFoundError,
+  AssetVariantUnexpectedError,
+} from './lib/errors.ts'
 export { createDevAssetsHandler } from './lib/dev-handler.ts'
 export { createDevAssetResolver } from './lib/dev-assets.ts'
 export { createAssetResolver } from './lib/assets.ts'

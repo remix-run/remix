@@ -6,6 +6,12 @@ import * as os from 'node:os'
 import { pathToFileURL } from 'node:url'
 
 import { createDevAssetResolver } from './dev-assets.ts'
+import {
+  AssetNotFoundError,
+  AssetVariantRequiredError,
+  AssetVariantNotFoundError,
+  AssetVariantUnexpectedError,
+} from './errors.ts'
 
 describe('createDevAssetResolver', () => {
   let tempDir: string
@@ -30,8 +36,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
+        assert.equal(entry.href, '/__@assets/entry.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -43,8 +48,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.deepEqual(entry!.preloads, ['/__@assets/entry.tsx'])
+        assert.deepEqual(entry.preloads, ['/__@assets/entry.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -56,9 +60,8 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('components/Button.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/components/Button.tsx')
-        assert.deepEqual(entry!.preloads, ['/__@assets/components/Button.tsx'])
+        assert.equal(entry.href, '/__@assets/components/Button.tsx')
+        assert.deepEqual(entry.preloads, ['/__@assets/components/Button.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -70,8 +73,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('/entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
+        assert.equal(entry.href, '/__@assets/entry.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -83,8 +85,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('///entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
+        assert.equal(entry.href, '/__@assets/entry.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -99,9 +100,8 @@ describe('createDevAssetResolver', () => {
 
         let entry = resolveAsset(fileUrl)
 
-        assert.ok(entry, 'entry should not be null for file:// URL under root')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
-        assert.deepEqual(entry!.preloads, ['/__@assets/entry.tsx'])
+        assert.equal(entry.href, '/__@assets/entry.tsx')
+        assert.deepEqual(entry.preloads, ['/__@assets/entry.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -116,30 +116,29 @@ describe('createDevAssetResolver', () => {
 
         let entry = resolveAsset(fileUrl)
 
-        assert.ok(entry, 'entry should not be null for file:// URL under root')
-        assert.equal(entry!.href, '/__@assets/components/Button.tsx')
+        assert.equal(entry.href, '/__@assets/components/Button.tsx')
       } finally {
         cleanupTempDir()
       }
     })
 
-    it('returns null if entry file does not exist', () => {
+    it('throws AssetNotFoundError if entry file does not exist', () => {
       setupTempDir()
       try {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.equal(resolveAsset('nonexistent.tsx'), null)
+        assert.throws(() => resolveAsset('nonexistent.tsx'), AssetNotFoundError)
       } finally {
         cleanupTempDir()
       }
     })
 
-    it('returns null for nested non-existent paths', () => {
+    it('throws AssetNotFoundError for nested non-existent paths', () => {
       setupTempDir()
       try {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.equal(resolveAsset('missing/file.tsx'), null)
+        assert.throws(() => resolveAsset('missing/file.tsx'), AssetNotFoundError)
       } finally {
         cleanupTempDir()
       }
@@ -152,8 +151,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: relativePath })
         let entry = resolveAsset('entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
+        assert.equal(entry.href, '/__@assets/entry.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -165,8 +163,7 @@ describe('createDevAssetResolver', () => {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
         let entry = resolveAsset('entry.tsx')
 
-        assert.ok(entry, 'entry should not be null')
-        assert.equal(entry!.href, '/__@assets/entry.tsx')
+        assert.equal(entry.href, '/__@assets/entry.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -180,12 +177,8 @@ describe('createDevAssetResolver', () => {
           source: { scripts: ['entry.tsx'] },
         })
 
-        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
-        assert.equal(
-          resolveAsset('components/Button.tsx'),
-          null,
-          'components/Button.tsx should not be accessible',
-        )
+        assert.doesNotThrow(() => resolveAsset('entry.tsx'))
+        assert.throws(() => resolveAsset('components/Button.tsx'), AssetNotFoundError)
       } finally {
         cleanupTempDir()
       }
@@ -198,11 +191,8 @@ describe('createDevAssetResolver', () => {
       try {
         let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
-        assert.ok(
-          resolveAsset('components/Button.tsx'),
-          'components/Button.tsx should be accessible',
-        )
+        assert.doesNotThrow(() => resolveAsset('entry.tsx'))
+        assert.doesNotThrow(() => resolveAsset('components/Button.tsx'))
       } finally {
         cleanupTempDir()
       }
@@ -216,12 +206,8 @@ describe('createDevAssetResolver', () => {
           source: { scripts: ['entry.tsx'] },
         })
 
-        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
-        assert.equal(
-          resolveAsset('components/Button.tsx'),
-          null,
-          'components/Button.tsx should not be accessible',
-        )
+        assert.doesNotThrow(() => resolveAsset('entry.tsx'))
+        assert.throws(() => resolveAsset('components/Button.tsx'), AssetNotFoundError)
       } finally {
         cleanupTempDir()
       }
@@ -235,11 +221,8 @@ describe('createDevAssetResolver', () => {
           source: { scripts: ['entry.tsx', 'components/Button.tsx'] },
         })
 
-        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
-        assert.ok(
-          resolveAsset('components/Button.tsx'),
-          'components/Button.tsx should be accessible',
-        )
+        assert.doesNotThrow(() => resolveAsset('entry.tsx'))
+        assert.doesNotThrow(() => resolveAsset('components/Button.tsx'))
       } finally {
         cleanupTempDir()
       }
@@ -253,14 +236,14 @@ describe('createDevAssetResolver', () => {
           source: { scripts: ['entry.tsx'] },
         })
 
-        assert.ok(resolveAsset('entry.tsx'), 'without leading slash should work')
-        assert.ok(resolveAsset('/entry.tsx'), 'with leading slash should work')
+        assert.doesNotThrow(() => resolveAsset('entry.tsx'))
+        assert.doesNotThrow(() => resolveAsset('/entry.tsx'))
       } finally {
         cleanupTempDir()
       }
     })
 
-    it('returns null for non-script files even if they exist', () => {
+    it('throws AssetNotFoundError for non-script files even if they exist', () => {
       setupTempDir()
       try {
         let resolveAsset = createDevAssetResolver({
@@ -268,7 +251,7 @@ describe('createDevAssetResolver', () => {
           source: { scripts: ['entry.tsx'] },
         })
 
-        assert.equal(resolveAsset('components/Button.tsx'), null)
+        assert.throws(() => resolveAsset('components/Button.tsx'), AssetNotFoundError)
       } finally {
         cleanupTempDir()
       }
@@ -296,7 +279,6 @@ describe('createDevAssetResolver', () => {
         })
 
         let entry = resolveAsset('images/logo.txt', 'small')
-        assert.ok(entry, 'entry should not be null')
         assert.equal(entry.href, '/__@assets/images/logo.txt?@small')
         assert.deepEqual(entry.preloads, [])
       } finally {
@@ -304,7 +286,7 @@ describe('createDevAssetResolver', () => {
       }
     })
 
-    it('returns null for missing required variant', () => {
+    it('throws AssetVariantRequiredError when no variant is provided and no defaultVariant is set', () => {
       setupTempDir()
       try {
         fs.mkdirSync(path.join(tempDir, 'images'))
@@ -323,7 +305,46 @@ describe('createDevAssetResolver', () => {
           },
         })
 
-        assert.equal(resolveAsset('images/logo.txt'), null)
+        assert.throws(() => resolveAsset('images/logo.txt'), AssetVariantRequiredError)
+      } finally {
+        cleanupTempDir()
+      }
+    })
+
+    it('throws AssetVariantNotFoundError when an unknown variant is requested', () => {
+      setupTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'images'))
+        fs.writeFileSync(path.join(tempDir, 'images', 'logo.txt'), 'logo')
+        let resolveAsset = createDevAssetResolver({
+          root: tempDir,
+          source: {
+            files: [
+              {
+                include: 'images/**/*.txt',
+                variants: {
+                  small: (data) => data,
+                },
+              },
+            ],
+          },
+        })
+
+        assert.throws(
+          () => resolveAsset('images/logo.txt', 'large' as any),
+          AssetVariantNotFoundError,
+        )
+      } finally {
+        cleanupTempDir()
+      }
+    })
+
+    it('throws AssetVariantUnexpectedError when a variant is requested on a non-variant asset', () => {
+      setupTempDir()
+      try {
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+
+        assert.throws(() => resolveAsset('entry.tsx', 'small' as any), AssetVariantUnexpectedError)
       } finally {
         cleanupTempDir()
       }
@@ -349,7 +370,6 @@ describe('createDevAssetResolver', () => {
         })
 
         let entry = resolveAsset('images/avatar@2x', 'card')
-        assert.ok(entry, 'entry should not be null')
         assert.equal(entry.href, '/__@assets/images/avatar%402x?@card')
       } finally {
         cleanupTempDir()

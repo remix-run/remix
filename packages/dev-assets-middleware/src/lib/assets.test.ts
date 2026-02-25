@@ -37,7 +37,7 @@ describe('createDevAssets', () => {
       let placeholderFilePath = path.join(tmpDir, '.assets', 'app', 'entry.tsx.placeholder.ts')
       let content = fs.readFileSync(placeholderFilePath, 'utf-8')
       assert.ok(
-        content.includes("export const href = '/__@assets/app/entry.tsx'"),
+        content.includes("href: '/__@assets/app/entry.tsx'"),
         `Expected placeholder URL in generated .placeholder.ts, got:\n${content}`,
       )
     } finally {
@@ -191,8 +191,13 @@ describe('middleware wiring', () => {
           }).middleware,
           async (context, _next) => {
             let entry = context.assets.resolve('entry.ts')
-            let withVariant = context.assets.resolve('entry.ts', 'thumbnail' as never)
-            return Response.json({ entry, withVariant })
+            let withVariantError: string | null = null
+            try {
+              context.assets.resolve('entry.ts', 'thumbnail' as never)
+            } catch (e) {
+              withVariantError = (e as Error).name
+            }
+            return Response.json({ entry, withVariantError })
           },
         ],
       })
@@ -203,7 +208,7 @@ describe('middleware wiring', () => {
         href: '/__@assets/entry.ts',
         preloads: ['/__@assets/entry.ts'],
       })
-      assert.equal(json.withVariant, null)
+      assert.equal(json.withVariantError, 'AssetVariantUnexpectedError')
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -243,8 +248,13 @@ describe('middleware wiring', () => {
           async (context, _next) => {
             let defaultVariant = context.assets.resolve('images/logo.png')
             let thumbVariant = context.assets.resolve('images/logo.png', 'thumb')
-            let missingVariant = context.assets.resolve('images/logo.png', 'missing' as never)
-            return Response.json({ defaultVariant, thumbVariant, missingVariant })
+            let missingVariantError: string | null = null
+            try {
+              context.assets.resolve('images/logo.png', 'missing' as never)
+            } catch (e) {
+              missingVariantError = (e as Error).name
+            }
+            return Response.json({ defaultVariant, thumbVariant, missingVariantError })
           },
         ],
       })
@@ -259,7 +269,7 @@ describe('middleware wiring', () => {
         href: '/__@assets/images/logo.png?@thumb',
         preloads: [],
       })
-      assert.equal(json.missingVariant, null)
+      assert.equal(json.missingVariantError, 'AssetVariantNotFoundError')
     } finally {
       devAssets.close()
       fs.rmSync(tmpDir, { recursive: true, force: true })

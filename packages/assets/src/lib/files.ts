@@ -120,9 +120,9 @@ export type VariantArg<files extends FilesConfig, sourcePath extends string> =
 export type TypedAssetResolver<files extends FilesConfig> = <const sourcePath extends string>(
   entryPath: sourcePath,
   ...variant: VariantArg<files, NoInfer<sourcePath>>
-) => AssetEntry | null
+) => AssetEntry
 
-type DefaultAssetResolver = (entryPath: string, variant?: string) => AssetEntry | null
+type DefaultAssetResolver = (entryPath: string, variant?: string) => AssetEntry
 type HasBroadIncludes<files extends FilesConfig> = string extends files[number]['include']
   ? true
   : false

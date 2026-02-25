@@ -39,11 +39,29 @@ let router = createRouter({
 
 router.get('/', ({ assets }) => {
   let entry = assets.resolve('app/entry.tsx')
-  entry?.href // '/app/entry.tsx'
-  entry?.preloads // ['/app/entry.tsx']
+  entry.href // '/__@assets/app/entry.tsx'
+  entry.preloads // ['/__@assets/app/entry.tsx']
 
   let thumbnail = assets.resolve('app/images/logo.png', 'thumbnail')
-  thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
+  thumbnail.href // '/__@assets/app/images/logo.png?@thumbnail'
+})
+```
+
+`resolve()` throws an `AssetError` (from `remix/assets`) if the file doesn't exist on disk or the variant arguments are invalid. Because missing assets are typically programmer errors, it's common to let the error propagate to a top-level error handler rather than catching it at every call site.
+
+```ts
+import { AssetError } from 'remix/assets'
+
+router.get('/', ({ assets }) => {
+  try {
+    let entry = assets.resolve('app/entry.tsx')
+    // use entry ...
+  } catch (err) {
+    if (err instanceof AssetError) {
+      return new Response('Asset not found', { status: 500 })
+    }
+    throw err
+  }
 })
 
 // On server shutdown, stop the file watcher

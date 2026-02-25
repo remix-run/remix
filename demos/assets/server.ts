@@ -135,9 +135,9 @@ async function main() {
       <section>
         <h2>Same source, three variants (dynamic resolve)</h2>
         <div class="variant-row">
-          ${bbqThumbnail ? `<figure class="variant"><img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" /><p>thumbnail: 120w, jpg</p></figure>` : ''}
-          ${bbqCard ? `<figure class="variant"><img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" /><p>card: 280w, jpg</p></figure>` : ''}
-          ${bbqHero ? `<figure class="variant"><img src="${bbqHero.href}" width="560" alt="BBQ cover hero variant" /><p>hero: 560w, jpg</p></figure>` : ''}
+          <figure class="variant"><img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" /><p>thumbnail: 120w, jpg</p></figure>
+          <figure class="variant"><img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" /><p>card: 280w, jpg</p></figure>
+          <figure class="variant"><img src="${bbqHero.href}" width="560" alt="BBQ cover hero variant" /><p>hero: 560w, jpg</p></figure>
         </div>
       </section>
       <section>

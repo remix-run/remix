@@ -50,12 +50,14 @@ let manifest = await loadManifest()
 let resolveAsset = createAssetResolver(manifest, { baseUrl: '/assets' })
 
 let entry = resolveAsset('app/entry.tsx')
-entry?.href // '/build/assets/entry-ABC123.js'
-entry?.preloads // ['/build/assets/entry-ABC123.js', '/build/assets/utils-DEF456.js', ...]
+entry.href // '/build/assets/entry-ABC123.js'
+entry.preloads // ['/build/assets/entry-ABC123.js', '/build/assets/utils-DEF456.js', ...]
 
 let thumbnail = resolveAsset('app/images/logo.png', 'thumbnail')
-thumbnail?.href // '/build/assets/images/logo-@thumbnail-ABC123.png'
+thumbnail.href // '/build/assets/images/logo-@thumbnail-ABC123.png'
 ```
+
+If the asset isn't found in the manifest, `resolve()` throws an `AssetError`. See [Error handling](#error-handling) below.
 
 ### Development Assets Handler
 
@@ -109,11 +111,11 @@ let resolveAsset = createDevAssetResolver({
 })
 
 let entry = resolveAsset('app/entry.tsx')
-entry?.href // '/app/entry.tsx'
-entry?.preloads // ['/app/entry.tsx']
+entry.href // '/__@assets/app/entry.tsx'
+entry.preloads // ['/__@assets/app/entry.tsx']
 
 let thumbnail = resolveAsset('app/images/logo.png', 'thumbnail')
-thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
+thumbnail.href // '/__@assets/app/images/logo.png?@thumbnail'
 ```
 
 ### Asset Imports
@@ -135,9 +137,9 @@ These imports don't require a build step to resolve — they point to real files
 You can watch for source file changes and regenerate asset files during development:
 
 ```ts
-import { codegenWatch } from 'remix/assets'
+import { watchCodegenPlaceholders } from 'remix/assets'
 
-let watcher = await codegenWatch({
+let watcher = await watchCodegenPlaceholders({
   scripts: ['app/entry.tsx'],
   files: [
     {
@@ -160,9 +162,9 @@ This is also handled automatically when using the assets development handler or 
 You can also generate the files once (e.g. as part of a build step):
 
 ```ts
-import { codegen } from 'remix/assets'
+import { codegenPlaceholders } from 'remix/assets'
 
-await codegen({
+await codegenPlaceholders({
   scripts: ['app/entry.tsx'],
   files: [
     {
@@ -183,41 +185,40 @@ await codegen({
 Generated files are placed in `.assets/` by default. Assets found via `scripts` get an `href` and `preloads` array, while assets found via `files` get an `href`, or when variants are configured, an `href` for the default variant (if present) and a `variants` object:
 
 ```ts
-// .assets/app/entry.tsx.dev.ts
-export const href = '/app/entry.tsx'
-export const preloads = ['/app/entry.tsx']
+// .assets/app/entry.tsx.placeholder.ts
+export const href = '/__@assets/app/entry.tsx'
+export const preloads = ['/__@assets/app/entry.tsx#preloads'] as const
 
-// .assets/app/images/logo.png.dev.ts
-export const href = '/__@files/app/images/logo.png?@card'
+// .assets/app/images/logo.png.placeholder.ts
+export const href = '/__@assets/app/images/logo.png?@card'
 export const variants = {
-  thumbnail: { href: '/__@files/app/images/logo.png?@thumbnail' },
-  card: { href: '/__@files/app/images/logo.png?@card' },
-  hero: { href: '/__@files/app/images/logo.png?@hero' },
-}
+  thumbnail: { href: '/__@assets/app/images/logo.png?@thumbnail' },
+  card: { href: '/__@assets/app/images/logo.png?@card' },
+  hero: { href: '/__@assets/app/images/logo.png?@hero' },
+} as const
 ```
 
-To support convenient importing of these files, configure [subpath imports](https://nodejs.org/api/packages.html#subpath-imports) in `package.json` to route `#assets/*` to the generated files, selecting `.build.ts` asset files by default, and `.dev.ts` in development and test environments:
+To support convenient importing of these files, configure [subpath imports](https://nodejs.org/api/packages.html#subpath-imports) in `package.json` to route `#assets/*` to the generated files, selecting `.build.ts` asset files by default, and `.placeholder.ts` when the `placeholder` condition is active:
 
 ```json
 {
   "imports": {
     "#assets/*": {
-      "development": "./.assets/*.dev.ts",
-      "test": "./.assets/*.dev.ts",
+      "placeholder": "./.assets/*.placeholder.ts",
       "default": "./.assets/*.build.ts"
     }
   }
 }
 ```
 
-To resolve the `development` condition, pass `--conditions=development` to Node.js (e.g. `NODE_OPTIONS='--conditions=development'`).
+To resolve the `placeholder` condition, pass `--conditions=placeholder` to Node.js (e.g. `NODE_OPTIONS='--conditions=placeholder'`).
 
-You can also configure TypeScript to resolve using the `development` condition so that the more lightweight `.dev.ts` files are used instead of the heavier `.build.ts` files, allowing for type checking without a full build.
+You can also configure TypeScript to resolve using the `placeholder` condition so that the more lightweight `.placeholder.ts` files are used instead of the heavier `.build.ts` files, allowing for type checking without a full build.
 
 ```json
 {
   "compilerOptions": {
-    "customConditions": ["development"]
+    "customConditions": ["placeholder"]
   }
 }
 ```
@@ -225,13 +226,40 @@ You can also configure TypeScript to resolve using the `development` condition s
 To verify generated files are up to date (e.g. in CI):
 
 ```ts
-import { codegenCheck } from 'remix/assets'
+import { checkCodegenPlaceholders } from 'remix/assets'
 
-let result = await codegenCheck({ scripts: ['app/entry.tsx'], files: [...] })
+let result = await checkCodegenPlaceholders({ scripts: ['app/entry.tsx'], files: [...] })
 result.missing // source files with no generated file
 result.stale // generated files with no matching source
 result.outdated // generated files whose content is out of date
 ```
+
+### Error Handling
+
+`resolve()` throws if the requested asset isn't found or the variant arguments are invalid. All errors extend the base `AssetError` class:
+
+| Error class                   | When thrown                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `AssetNotFoundError`          | Asset path not in manifest (production) or not on disk (dev)                   |
+| `AssetVariantRequiredError`   | Asset has variants but no variant was requested and no `defaultVariant` is set |
+| `AssetVariantNotFoundError`   | The requested variant doesn't exist                                            |
+| `AssetVariantUnexpectedError` | A variant was requested but the asset has no variants configured               |
+
+```ts
+import { AssetError } from 'remix/assets'
+
+try {
+  let entry = resolveAsset('app/entry.tsx')
+  // use entry.href, entry.preloads ...
+} catch (err) {
+  if (err instanceof AssetError) {
+    return new Response('Asset not found', { status: 500 })
+  }
+  throw err
+}
+```
+
+Because missing assets are almost always programmer errors rather than recoverable runtime conditions, it's common to let `AssetError` propagate to a top-level error handler rather than catching it at every call site.
 
 ### Workspace Access
 

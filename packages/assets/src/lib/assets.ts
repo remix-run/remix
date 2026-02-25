@@ -2,6 +2,12 @@ import { relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { AssetResolver, FilesConfig } from './files.ts'
 import type { AssetsManifest } from './manifest-types.ts'
+import {
+  AssetNotFoundError,
+  AssetVariantNotFoundError,
+  AssetVariantRequiredError,
+  AssetVariantUnexpectedError,
+} from './errors.ts'
 
 export interface CreateAssetResolverOptions {
   /**
@@ -94,25 +100,27 @@ export function createAssetResolver<files extends FilesConfig = FilesConfig>(
     let fileOutput = fileOutputs[normalizedPath]
     if (fileOutput) {
       if ('path' in fileOutput) {
-        if (variant) return null
+        if (variant) throw new AssetVariantUnexpectedError(normalizedPath, variant)
         let href = outputPathToHref(fileOutput.path, baseUrl)
         return { href, preloads: [] }
       }
 
+      let availableVariants = Object.keys(fileOutput.variants)
       let selectedVariant = variant ?? fileOutput.defaultVariant
-      if (!selectedVariant) return null
+      if (!selectedVariant) throw new AssetVariantRequiredError(normalizedPath, availableVariants)
       let selectedOutput = fileOutput.variants[selectedVariant]
-      if (!selectedOutput) return null
+      if (!selectedOutput)
+        throw new AssetVariantNotFoundError(normalizedPath, selectedVariant, availableVariants)
       let href = outputPathToHref(selectedOutput.path, baseUrl)
       return { href, preloads: [] }
     }
 
-    if (variant) return null
+    if (variant) throw new AssetVariantUnexpectedError(normalizedPath, variant)
 
     // Look up the output file for this entry point
     let outputPath = entryToOutput.get(normalizedPath)
     if (!outputPath) {
-      return null
+      throw new AssetNotFoundError(normalizedPath)
     }
 
     let href = outputPathToHref(outputPath, baseUrl)

@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert/strict'
-import type { AssetsManifest } from '@remix-run/assets'
+import {
+  type AssetsManifest,
+  AssetNotFoundError,
+  AssetVariantRequiredError,
+  AssetVariantNotFoundError,
+  AssetVariantUnexpectedError,
+} from '@remix-run/assets'
 import { assets } from './assets.ts'
 
 function toCurrentManifest(manifest: {
@@ -37,9 +43,8 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/images/logo.png', 'card')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/assets/logo-card-abc123.png')
-    assert.deepEqual(result?.preloads, [])
+    assert.equal(result.href, '/assets/logo-card-abc123.png')
+    assert.deepEqual(result.preloads, [])
   })
 
   it('resolves file asset default variant when variant is omitted', () => {
@@ -62,12 +67,11 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/images/logo.png')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/assets/logo-optimized-abc123.png')
-    assert.deepEqual(result?.preloads, [])
+    assert.equal(result.href, '/assets/logo-optimized-abc123.png')
+    assert.deepEqual(result.preloads, [])
   })
 
-  it('returns null when variant is omitted for file that has no default variant', () => {
+  it('throws AssetVariantRequiredError when variant is omitted for file that has no default variant', () => {
     let manifest = {
       files: {
         outputs: {
@@ -84,11 +88,55 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.resolve('app/images/logo.png')
-    assert.equal(result, null)
+    assert.throws(
+      () => mockContext.assets.resolve('app/images/logo.png'),
+      AssetVariantRequiredError,
+    )
   })
 
-  it('returns null for non-existent entry points', () => {
+  it('throws AssetVariantNotFoundError when an unknown variant is requested', () => {
+    let manifest = {
+      files: {
+        outputs: {
+          'app/images/logo.png': {
+            variants: {
+              card: { path: 'assets/logo-card-abc123.png' },
+            },
+          },
+        },
+      },
+    }
+
+    let middleware = assets(toCurrentManifest(manifest))
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    assert.throws(
+      () => mockContext.assets.resolve('app/images/logo.png', 'large'),
+      AssetVariantNotFoundError,
+    )
+  })
+
+  it('throws AssetVariantUnexpectedError when a variant is requested on a script entry', () => {
+    let manifest = {
+      outputs: {
+        'build/entry-ABC123.js': {
+          entryPoint: 'app/entry.tsx',
+        },
+      },
+    }
+
+    let middleware = assets(toCurrentManifest(manifest))
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    assert.throws(
+      () => mockContext.assets.resolve('app/entry.tsx', 'small'),
+      AssetVariantUnexpectedError,
+    )
+  })
+
+  it('throws AssetNotFoundError for non-existent entry points', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -101,8 +149,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.resolve('app/non-existent.tsx')
-    assert.equal(result, null)
+    assert.throws(() => mockContext.assets.resolve('app/non-existent.tsx'), AssetNotFoundError)
   })
 
   it('returns href for an entry point', () => {
@@ -119,8 +166,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/entry-ABC123.js')
+    assert.equal(result.href, '/build/entry-ABC123.js')
   })
 
   it('prepends baseUrl when provided (locally-scoped manifest)', () => {
@@ -139,9 +185,8 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/assets/entry-ABC123.js')
-    assert.deepEqual(result?.preloads, [
+    assert.equal(result.href, '/build/assets/entry-ABC123.js')
+    assert.deepEqual(result.preloads, [
       '/build/assets/entry-ABC123.js',
       '/build/assets/chunk-DEF456.js',
     ])
@@ -159,8 +204,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/assets/entry.js')
+    assert.equal(result.href, '/assets/entry.js')
   })
 
   it('normalizes entry paths with leading slashes', () => {
@@ -177,8 +221,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('/app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/entry.js')
+    assert.equal(result.href, '/build/entry.js')
   })
 
   it('normalizes entry paths with leading ./', () => {
@@ -195,8 +238,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('./app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/entry.js')
+    assert.equal(result.href, '/build/entry.js')
   })
 
   it('includes the entry in preloads', () => {
@@ -213,8 +255,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.deepEqual(result?.preloads, ['/build/entry.js'])
+    assert.deepEqual(result.preloads, ['/build/entry.js'])
   })
 
   it('includes static imports in preloads', () => {
@@ -233,8 +274,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.deepEqual(result?.preloads, ['/build/entry.js', '/build/chunk-utils.js'])
+    assert.deepEqual(result.preloads, ['/build/entry.js', '/build/chunk-utils.js'])
   })
 
   it('includes transitive static imports in preloads', () => {
@@ -259,8 +299,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.deepEqual(result?.preloads, [
+    assert.deepEqual(result.preloads, [
       '/build/entry.js',
       '/build/chunk-a.js',
       '/build/chunk-b.js',
@@ -288,8 +327,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.deepEqual(result?.preloads, ['/build/entry.js', '/build/chunk-static.js'])
+    assert.deepEqual(result.preloads, ['/build/entry.js', '/build/chunk-static.js'])
   })
 
   it('handles circular imports without infinite loop', () => {
@@ -313,12 +351,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.deepEqual(result?.preloads, [
-      '/build/entry.js',
-      '/build/chunk-a.js',
-      '/build/chunk-b.js',
-    ])
+    assert.deepEqual(result.preloads, ['/build/entry.js', '/build/chunk-a.js', '/build/chunk-b.js'])
   })
 
   it('caches preload resolution', () => {
@@ -339,8 +372,7 @@ describe('assets middleware', () => {
     let result1 = mockContext.assets.resolve('app/entry.tsx')
     let result2 = mockContext.assets.resolve('app/entry.tsx')
 
-    // Same array reference indicates caching
-    assert.equal(result1?.preloads, result2?.preloads)
+    assert.equal(result1.preloads, result2.preloads)
   })
 
   it('handles multiple entry points', () => {
@@ -363,10 +395,10 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let main = mockContext.assets.resolve('app/main.tsx')
-    assert.deepEqual(main?.preloads, ['/build/main.js', '/build/shared.js'])
+    assert.deepEqual(main.preloads, ['/build/main.js', '/build/shared.js'])
 
     let admin = mockContext.assets.resolve('app/admin.tsx')
-    assert.deepEqual(admin?.preloads, ['/build/admin.js', '/build/shared.js'])
+    assert.deepEqual(admin.preloads, ['/build/admin.js', '/build/shared.js'])
   })
 
   it('handles output paths with ./ prefix', () => {
@@ -383,8 +415,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/entry.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/entry.js')
+    assert.equal(result.href, '/build/entry.js')
   })
 
   it('handles nested entry point paths', () => {
@@ -401,8 +432,7 @@ describe('assets middleware', () => {
     middleware(mockContext as any, async () => new Response())
 
     let result = mockContext.assets.resolve('app/routes/admin/dashboard.tsx')
-    assert.notEqual(result, null)
-    assert.equal(result?.href, '/build/routes/admin/dashboard.js')
+    assert.equal(result.href, '/build/routes/admin/dashboard.js')
   })
 
   it('sets assets on context and calls next', async () => {
@@ -445,7 +475,6 @@ describe('assets middleware', () => {
       return new Response('ok')
     })
 
-    assert.notEqual(capturedEntry, null)
     assert.equal(capturedEntry.href, '/build/entry.js')
   })
 })

@@ -5,12 +5,17 @@ import {
   compileFileRules,
   findFileRule,
   normalizeSourcePath,
-  selectVariant,
   type AssetEntry,
   type AssetResolver,
   type FilesConfig,
   type AssetsSource,
 } from './files.ts'
+import {
+  AssetNotFoundError,
+  AssetVariantNotFoundError,
+  AssetVariantRequiredError,
+  AssetVariantUnexpectedError,
+} from './errors.ts'
 
 export interface CreateDevAssetResolverOptions<files extends FilesConfig = FilesConfig> {
   /** Project root. Default: process.cwd() */
@@ -77,28 +82,32 @@ export function createDevAssetResolver<files extends FilesConfig = FilesConfig>(
     }
   }
 
-  return (entryPath: string, variant?: string): AssetEntry | null => {
+  return (entryPath: string, variant?: string): AssetEntry => {
     let normalizedPath = normalizeEntryPath(entryPath)
     let filePath = path.join(absoluteRoot, ...normalizedPath.split('/'))
     if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-      return null
+      throw new AssetNotFoundError(normalizedPath)
     }
 
     let matchingRule = findFileRule(normalizedPath, undefined, compiledFileRules)
     if (matchingRule) {
       if (matchingRule.variants) {
-        let selectedVariant = selectVariant(matchingRule, variant)
-        if (!selectedVariant) return null
+        let availableVariants = Object.keys(matchingRule.variants)
+        let selectedVariant = variant ?? matchingRule.defaultVariant
+        if (!selectedVariant) throw new AssetVariantRequiredError(normalizedPath, availableVariants)
+        if (!matchingRule.variants[selectedVariant]) {
+          throw new AssetVariantNotFoundError(normalizedPath, selectedVariant, availableVariants)
+        }
         let href = createDevFileHref(normalizedPath, selectedVariant)
         return { href, preloads: [] }
       }
-      if (variant) return null
+      if (variant) throw new AssetVariantUnexpectedError(normalizedPath, variant)
       let href = createDevFileHref(normalizedPath, undefined)
       return { href, preloads: [] }
     }
 
-    if (variant) return null
-    if (allowedSet && !allowedSet.has(normalizedPath)) return null
+    if (variant) throw new AssetVariantUnexpectedError(normalizedPath, variant)
+    if (allowedSet && !allowedSet.has(normalizedPath)) throw new AssetNotFoundError(normalizedPath)
     let href = '/__@assets/' + normalizedPath
     return { href, preloads: [href] }
   }

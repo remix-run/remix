@@ -32,6 +32,24 @@ router.get('/', ({ assets }) => {
 })
 ```
 
+`resolve()` throws an `AssetError` (from `remix/assets`) if the path isn't in the manifest or the variant arguments are invalid. Because missing assets are typically programmer errors, it's common to let the error propagate to a top-level error handler rather than catching it at every call site.
+
+```ts
+import { AssetError } from 'remix/assets'
+
+router.get('/', ({ assets }) => {
+  try {
+    let entry = assets.resolve('app/entry.tsx')
+    // use entry ...
+  } catch (err) {
+    if (err instanceof AssetError) {
+      return new Response('Asset not found', { status: 500 })
+    }
+    throw err
+  }
+})
+```
+
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
