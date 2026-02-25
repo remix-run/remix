@@ -1,4 +1,5 @@
 import { on } from '@remix-run/dom'
+import type { RenderValue } from '@remix-run/reconciler'
 import { panel, replayButton, tileBody } from './styles.ts'
 
 type DemoHandle = {
@@ -7,7 +8,7 @@ type DemoHandle = {
 
 export function Tile(handle: DemoHandle, _setup: unknown) {
   let remountKey = 0
-  return (props: { title: string; notes?: string; children: unknown }) => (
+  return (props: { title: string; notes?: string; children: RenderValue }) => (
     <section mix={[panel]}>
       <button
         mix={[

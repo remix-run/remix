@@ -28,7 +28,7 @@ export type MixinDescriptor<
 > = {
   type: MixinRuntimeType<args, elementType>
   args: args
-  readonly __node?: node
+  readonly __node?: (node: node) => void
 }
 
 export type MixValue<node = unknown, elementType extends string = string> = ReadonlyArray<
