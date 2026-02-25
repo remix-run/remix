@@ -34,6 +34,7 @@ export type ComponentFrameRegistry = {
 
 export type ComponentHandle<contextValue = NoContext> = UpdateHandle & {
   id: string
+  signal: AbortSignal
   frame: ComponentFrameHandle
   frames: ComponentFrameRegistry
   context: Context<contextValue>

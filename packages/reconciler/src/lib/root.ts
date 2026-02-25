@@ -101,8 +101,10 @@ type NodeResult<parent, node, text extends node, element extends node> = {
 }
 
 let CONTEXT_VALUE = Symbol('component-context-value')
+let COMPONENT_SIGNAL_CONTROLLER = Symbol('component-signal-controller')
 type InternalComponentHandle = ComponentHandle & {
   [CONTEXT_VALUE]: unknown
+  [COMPONENT_SIGNAL_CONTROLLER]?: AbortController
 }
 
 export function createReconciler<parent, node, text extends node, element extends node>(
@@ -653,6 +655,14 @@ export function createReconciler<parent, node, text extends node, element extend
           root.enqueue()
         })
       },
+      get signal() {
+        let controller = handle[COMPONENT_SIGNAL_CONTROLLER]
+        if (!controller) {
+          controller = new AbortController()
+          handle[COMPONENT_SIGNAL_CONTROLLER] = controller
+        }
+        return controller.signal
+      },
       queueTask(task) {
         root.pendingTasks.push(task)
       },
@@ -693,6 +703,8 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
   ) {
     if (nodeToRemove.kind === 'component') {
+      let internalHandle = nodeToRemove.handle as InternalComponentHandle
+      internalHandle[COMPONENT_SIGNAL_CONTROLLER]?.abort()
       if (nodeToRemove.child) {
         removeNode(parentNode, nodeToRemove.child, root)
       }

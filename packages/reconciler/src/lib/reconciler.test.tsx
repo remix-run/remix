@@ -102,6 +102,40 @@ describe('incremental reconciler validation', () => {
     assert.equal(setupIds[1]!.startsWith('c'), true)
   })
 
+  it('provides handle.signal for mounted components', () => {
+    let capturedSignal: AbortSignal | undefined
+    let App: Component<undefined, {}> = (handle) => {
+      capturedSignal = handle.signal
+      return () => null
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(<App />)
+    root.flush()
+
+    assert.equal(capturedSignal instanceof AbortSignal, true)
+    assert.equal(capturedSignal?.aborted, false)
+  })
+
+  it('aborts handle.signal when a component is removed', () => {
+    let capturedSignal: AbortSignal | undefined
+    let App: Component<undefined, {}> = (handle) => {
+      capturedSignal = handle.signal
+      return () => null
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(capturedSignal?.aborted, false)
+
+    root.render(null)
+    root.flush()
+    assert.equal(capturedSignal?.aborted, true)
+  })
+
   it('propagates local component updates through stable ancestors', () => {
     let updateLeaf = () => {}
     let Leaf: Component<undefined, {}> = (handle) => {

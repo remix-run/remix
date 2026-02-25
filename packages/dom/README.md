@@ -253,3 +253,32 @@ function Counter(handle: ComponentHandle, _setup: unknown) {
 ```
 
 Prefer mixins for reusable host behavior (app + platform) and keep component setup focused on local state orchestration.
+
+### `ComponentHandle.signal` for global listeners
+
+`ComponentHandle.signal` is aborted when the component is removed from the tree.
+This is useful for wiring global event targets (like `document`/`window`) with automatic cleanup.
+
+```tsx
+import type { ComponentHandle } from '@remix-run/dom'
+
+function GlobalKeys(handle: ComponentHandle) {
+  let pressed: string[] = []
+
+  let onKeyDown = (event: KeyboardEvent) => {
+    pressed.push(event.key)
+    void handle.update()
+  }
+
+  document.addEventListener('keydown', onKeyDown)
+  handle.signal.addEventListener(
+    'abort',
+    () => {
+      document.removeEventListener('keydown', onKeyDown)
+    },
+    { once: true },
+  )
+
+  return () => <pre>{pressed.join(', ')}</pre>
+}
+```

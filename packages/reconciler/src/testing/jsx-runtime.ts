@@ -10,6 +10,7 @@ const EMPTY_CHILDREN: RenderValue[] = []
 
 export type ComponentHandle = {
   id: string
+  signal: AbortSignal
   update(): Promise<AbortSignal>
   queueTask(task: (signal: AbortSignal) => void): void
   context: {
