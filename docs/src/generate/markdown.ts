@@ -182,12 +182,6 @@ async function getInterfaceFunctionMarkdown(comment: DocumentedInterfaceFunction
     summary(comment),
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
-    comment.example
-      ? h2(
-          'Example',
-          comment.example.trim().startsWith('```') ? comment.example : await pre(comment.example),
-        )
-      : undefined,
     comment.parameters.length > 0
       ? h2(
           'Params',

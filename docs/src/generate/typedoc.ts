@@ -53,8 +53,12 @@ async function loadTypedocJson(opts: {
       entryPoints: [opts.entryPoints],
       entryPointStrategy: 'packages',
       packageOptions: {
+        // Allow custom tags
         blockTags: [...typedoc.OptionDefaults.blockTags, '@alias'],
+        // Tag to use in source code links
         gitRevision: opts.tag,
+        // exclude test files via the build config
+        tsconfig: 'tsconfig.build.json',
       },
     })
     let reflection = await app.convert()
