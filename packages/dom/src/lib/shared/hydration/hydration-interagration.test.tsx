@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { boot, clientEntry, css, on, renderToHTMLStream, type ComponentHandle } from '../index.ts'
-import { BeforeFrameApplyEvent } from './client-runtime.ts'
+import { boot, clientEntry, css, on, type ComponentHandle } from '../../../index.ts'
+import { renderToHTMLStream } from '../../../server.ts'
+import { BeforeFrameApplyEvent } from '../../client/client-runtime.ts'
 
 describe('hydration integration', () => {
   afterEach(() => {

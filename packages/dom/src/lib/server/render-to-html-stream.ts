@@ -1,12 +1,15 @@
 import { createStreamingRenderer } from '@remix-run/reconciler'
 import type { StreamingRenderValue } from '@remix-run/reconciler'
-import { createHtmlStreamingPlugins } from './html-streaming-plugins.ts'
 import { createHtmlStreamingPolicy } from './html-streaming-policy.ts'
 import {
   HTML_STREAMING_FINALIZE_PREFIX,
   HTML_STREAMING_FINALIZE_SUFFIX,
 } from './html-streaming-policy.ts'
 import type { ResolveFrame } from './html-streaming-policy.ts'
+import { cssMixinStreamingPlugin } from './mixins/css-mixin-streaming.ts'
+import { stylePropsStreamingPlugin } from './plugins/style-props-streaming-plugin.ts'
+import { frameworkPropsStreamingPlugin } from './plugins/framework-props-streaming-plugin.ts'
+import { attributePropsStreamingPlugin } from './plugins/attribute-props-streaming-plugin.ts'
 
 export type RenderToHTMLStreamOptions = {
   onError?: (error: unknown) => void
@@ -33,7 +36,12 @@ export function renderToHTMLStream(
       resolveFrame: options.resolveFrame,
       renderFrameValueToString,
     }),
-    plugins: createHtmlStreamingPlugins(),
+    plugins: [
+      cssMixinStreamingPlugin,
+      stylePropsStreamingPlugin,
+      frameworkPropsStreamingPlugin,
+      attributePropsStreamingPlugin,
+    ],
   })
   let root = renderer.createRoot(value)
   if (options.onError) {

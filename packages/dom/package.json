@@ -21,8 +21,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./jsx-runtime": "./src/lib/jsx/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/lib/jsx/jsx-dev-runtime.ts",
+    "./server": "./src/server.ts",
+    "./jsx-runtime": "./src/lib/shared/jsx/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/lib/shared/jsx/jsx-dev-runtime.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -31,13 +32,17 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
       "./jsx-runtime": {
-        "types": "./dist/lib/jsx/jsx-runtime.d.ts",
-        "default": "./dist/lib/jsx/jsx-runtime.js"
+        "types": "./dist/lib/shared/jsx/jsx-runtime.d.ts",
+        "default": "./dist/lib/shared/jsx/jsx-runtime.js"
       },
       "./jsx-dev-runtime": {
-        "types": "./dist/lib/jsx/jsx-dev-runtime.d.ts",
-        "default": "./dist/lib/jsx/jsx-dev-runtime.js"
+        "types": "./dist/lib/shared/jsx/jsx-dev-runtime.d.ts",
+        "default": "./dist/lib/shared/jsx/jsx-dev-runtime.js"
       },
       "./package.json": "./package.json"
     }

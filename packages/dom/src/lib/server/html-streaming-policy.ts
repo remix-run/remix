@@ -5,7 +5,7 @@ import {
   isEntry,
   serializeHydrationProps,
   type HydrationData,
-} from './client-entry.ts'
+} from '../shared/hydration/client-entry.ts'
 import { readHtmlStreamingHeadHtml } from './html-streaming-contributions.ts'
 
 let encoder = new TextEncoder()

@@ -1,5 +1,5 @@
 import { createMixin } from '@remix-run/reconciler'
-import type { DomElementType } from '../jsx/jsx-runtime.ts'
+import type { DomElementType } from '../../shared/jsx/jsx-runtime.ts'
 
 type ConnectCallback<target extends EventTarget> = (node: target, signal?: AbortSignal) => void
 

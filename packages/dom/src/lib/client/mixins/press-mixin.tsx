@@ -1,6 +1,6 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { DomElementType } from '../jsx/jsx-runtime.ts'
+import type { DomElementType } from '../../shared/jsx/jsx-runtime.ts'
 
 const pressType = 'rmx:press'
 const pressDownType = 'rmx:press-down'
@@ -29,7 +29,7 @@ export class PressEvent extends Event {
   }
 }
 
-let pressBehaviorMixin = createMixin<[], HTMLElement, DomElementType>((handle) => {
+let pressBehaviorMixin = createMixin<[], Element, DomElementType>((handle) => {
   let activeNode: null | HTMLElement = null
   let removeListeners: null | (() => void) = null
   let isPointerDown = false
@@ -188,7 +188,7 @@ let pressBehaviorMixin = createMixin<[], HTMLElement, DomElementType>((handle) =
   }
 })
 
-type PressEventsMixin = (() => MixinDescriptor<HTMLElement, []>) & {
+type PressEventsMixin = (<node extends Element = Element>() => MixinDescriptor<node, []>) & {
   press: string
   down: string
   up: string
@@ -196,7 +196,7 @@ type PressEventsMixin = (() => MixinDescriptor<HTMLElement, []>) & {
   cancel: string
 }
 
-export let pressEvents = Object.assign(() => pressBehaviorMixin(), {
+export let pressEvents = Object.assign(<node extends Element = Element>() => pressBehaviorMixin() as MixinDescriptor<node, []>, {
   press: pressType,
   down: pressDownType,
   up: pressUpType,

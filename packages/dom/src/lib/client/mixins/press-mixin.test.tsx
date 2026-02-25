@@ -179,7 +179,9 @@ describe('press mixin', () => {
 
     button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }))
     button.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'a' }))
-    button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', repeat: true }))
+    button.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', repeat: true }),
+    )
     expect(downCount).toBe(0)
 
     button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }))

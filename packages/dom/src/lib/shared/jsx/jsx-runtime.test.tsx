@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component, RenderValue } from '@remix-run/reconciler'
-import type { Assert, IsEqual } from '../../testing/utils.ts'
+import type { Assert, IsEqual } from '../../../testing/utils.ts'
 import type { DispatchedEvent } from './jsx-runtime.ts'
-import { on } from '../dom-plugins.ts'
+import { on } from '../../client/mixins/on-mixin.tsx'
 
 describe('dom jsx runtime', () => {
   it('creates branded reconciler elements and extracts key from props', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { boot, RuntimeErrorEvent } from './client-runtime.ts'
-import { clientEntry } from './client-entry.ts'
-import { renderToHTMLStream } from './render-to-html-stream.ts'
+import { clientEntry } from '../shared/hydration/client-entry.ts'
+import { renderToHTMLStream } from '../server/render-to-html-stream.ts'
 
 describe('boot', () => {
   it('hydrates boundaries discovered from rmx-data payload', async () => {

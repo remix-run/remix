@@ -1,5 +1,5 @@
 import { createMixin } from '@remix-run/reconciler'
-import type { DomElementType } from '../jsx/jsx-runtime.ts'
+import type { DomElementType } from '../../shared/jsx/jsx-runtime.ts'
 import { getDomHostInput } from '../dom-node-policy.ts'
 
 type AnimateKeyframes = Parameters<Element['animate']>[0]

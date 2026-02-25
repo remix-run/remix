@@ -1,6 +1,6 @@
 import { TypedEventTarget } from '@remix-run/typed-event-target'
 import type { Component, ComponentHandle } from '@remix-run/reconciler'
-import { jsx } from './jsx/jsx-runtime.ts'
+import { jsx } from '../shared/jsx/jsx-runtime.ts'
 import { createDomReconciler } from './dom-reconciler.ts'
 
 type HydrationData = {

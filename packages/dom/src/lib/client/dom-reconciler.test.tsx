@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDomReconciler } from './dom-reconciler.ts'
-import { on } from './dom-plugins.ts'
+import { on } from './mixins/on-mixin.tsx'
 
 describe('dom reconciler plugins', () => {
   it('applies on/style/basic props and updates/removes them', () => {

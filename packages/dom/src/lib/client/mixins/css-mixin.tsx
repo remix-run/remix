@@ -1,17 +1,19 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { DomElementType } from '../jsx/jsx-runtime.ts'
+import type { DomElementType } from '../../shared/jsx/jsx-runtime.ts'
 import {
   appendClassName,
   compileCss,
   createCssClassName,
   createCssKey,
+  isCssInput,
+  type CssInput,
+} from '../../shared/css/css-compile.ts'
+import {
   CSS_MIXIN_STYLE_TAG_ATTR,
   CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR,
-  isCssInput,
   markCssMixinDescriptor,
-  type CssInput,
-} from './css-shared.ts'
+} from '../../shared/css/css-mixin-tag.ts'
 import {
   BeforeFrameApplyEvent,
   BEFORE_FRAME_APPLY_EVENT,

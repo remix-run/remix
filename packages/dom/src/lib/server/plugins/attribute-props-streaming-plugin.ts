@@ -1,9 +1,7 @@
-import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
-import type { DomElementNode } from '../dom-node-policy.ts'
-import { normalizeDomProps, shouldNormalizeDomProps } from './normalize-dom-props.ts'
+import { defineStreamingPlugin } from '@remix-run/reconciler'
+import { normalizeDomProps, shouldNormalizeDomProps } from '../../shared/dom/normalize-dom-props.ts'
 
-export let attributePropsPlugin: Plugin<DomElementNode> = definePlugin({
+export let attributePropsStreamingPlugin = defineStreamingPlugin({
   phase: 'special',
   priority: 10,
   shouldActivate(context) {

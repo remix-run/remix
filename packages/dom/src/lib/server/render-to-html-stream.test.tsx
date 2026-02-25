@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { clientEntry, css } from '../index.ts'
+import { clientEntry, css } from '../../index.ts'
 import { renderToHTMLStream } from './render-to-html-stream.ts'
-import { on } from './mixins/on-mixin.tsx'
+import { on } from '../client/mixins/on-mixin.tsx'
 
 describe('renderToHTMLStream', () => {
   it('renders html with escaped text and serialized attributes', async () => {

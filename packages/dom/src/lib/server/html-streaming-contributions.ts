@@ -1,5 +1,8 @@
 import type { StreamingRendererRoot } from '@remix-run/reconciler'
-import { CSS_MIXIN_STYLE_TAG_ATTR, CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR } from './mixins/css-shared.ts'
+import {
+  CSS_MIXIN_STYLE_TAG_ATTR,
+  CSS_MIXIN_STYLE_TAG_ORIGIN_ATTR,
+} from '../shared/css/css-mixin-tag.ts'
 
 let HTML_STREAMING_CSS_CHUNKS_STORE_KEY = Symbol.for('rmx.dom.streaming.css-chunks')
 
