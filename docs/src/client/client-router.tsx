@@ -66,6 +66,12 @@ export const ClientRouter = clientEntry(
               // Update active sidebar link
               $$('nav a.active').forEach((e) => e.classList.remove('active'))
               $(`nav a[href="${routes.docs.href(nextMatch.params)}"]`)?.classList.add('active')
+
+              // Close mobile nav
+              let toggle = $('#nav-toggle') as HTMLInputElement | null
+              if (toggle) {
+                toggle.checked = false
+              }
             },
           })
         },

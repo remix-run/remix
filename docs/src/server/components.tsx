@@ -69,26 +69,41 @@ function Document(handle: Handle) {
 
 function Layout() {
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
-    <div class="container">
-      <div class="sidebar">
-        <header>
-          <a href={routes.home.href({ version: undefined })} class="logo">
-            <RemixLogoLight />
-            <RemixLogoDark />
-          </a>
-          <div class="toggle">
-            <LightDarkToggle />
-          </div>
-        </header>
-        <nav>
-          <VersionDropdown />
-          <Nav />
-        </nav>
+    <>
+      <input class="nav-toggle" id="nav-toggle" type="checkbox" aria-hidden="true" tabIndex={-1} />
+      <div class="mobile-header">
+        <label class="nav-toggle-open" for="nav-toggle" aria-label="Open navigation menu">
+          <span aria-hidden="true">☰</span>
+          <span class="visually-hidden">Open navigation menu</span>
+        </label>
       </div>
-      <main class="main">
-        <div class="content">{children}</div>
-      </main>
-    </div>
+      <div class="container">
+        <div class="sidebar">
+          <header>
+            <a href={routes.home.href({ version: undefined })} class="logo">
+              <RemixLogoLight />
+              <RemixLogoDark />
+            </a>
+            <div class="sidebar-actions">
+              <div class="toggle">
+                <LightDarkToggle />
+              </div>
+              <label class="nav-toggle-close" for="nav-toggle" aria-label="Close navigation menu">
+                <span aria-hidden="true">×</span>
+                <span class="visually-hidden">Close navigation menu</span>
+              </label>
+            </div>
+          </header>
+          <nav>
+            <VersionDropdown />
+            <Nav />
+          </nav>
+        </div>
+        <main class="main">
+          <div class="content">{children}</div>
+        </main>
+      </div>
+    </>
   )
 }
 
