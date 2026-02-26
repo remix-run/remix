@@ -82,3 +82,23 @@ jobs:
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Output tag
+  #       run: echo "tag=remix@$(node -p "require('./packages/remix/package.json').version")" >> $GITHUB_OUTPUT
+
+  # docs:
+  #   name: Update API Docs
+  #   needs: publish
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Trigger remix-api-docs
+  #       uses: actions/github-script@v8
+  #       with:
+  #         github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
+  #         script: |
+  #           await github.rest.repos.createDispatchEvent({
+  #             owner: 'remix-run',
+  #             repo: 'remix-api-docs',
+  #             event_type: 'update-docs',
+  #             client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
+  #           });
