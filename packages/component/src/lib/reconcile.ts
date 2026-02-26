@@ -49,6 +49,7 @@ import {
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
+  getMixinRuntimeSignal,
   prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
@@ -281,8 +282,8 @@ function bindNodeMixRuntime(
       enqueueUpdate(done) {
         scheduler.enqueueTasks([
           () => {
-            if (state?.controller.signal.aborted) {
-              done(state.controller.signal)
+            if (state?.aborted) {
+              done(getMixinRuntimeSignal(state))
               return
             }
 
@@ -304,7 +305,7 @@ function bindNodeMixRuntime(
               node._events = undefined
             }
 
-            done(state?.controller.signal ?? AbortSignal.abort())
+            done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
           },
         ])
       },

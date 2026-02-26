@@ -58,7 +58,6 @@ export type MixinHandle<
 > = TypedEventTarget<MixinHandleEventMap<node>> & {
   id: string
   frame: FrameHandle
-  signal: AbortSignal
   element: MixinElement<node, props>
   update(): Promise<AbortSignal>
   queueTask(task: (node: node, signal: AbortSignal) => void): void
@@ -72,7 +71,7 @@ type MixinRuntimeType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (...args: [...args, currentProps: props]) => void | null | RemixElement
+) => (...args: [...args, currentProps: props]) => void | null | RemixElement | MixinElement<node, props>
 
 export type MixinType<
   node extends EventTarget = Element,
@@ -81,7 +80,7 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (...args: [...args, currentProps: props]) => void | null | RemixElement
+) => (...args: [...args, currentProps: props]) => void | null | RemixElement | MixinElement<node, props>
 
 export type MixinDescriptor<
   node extends EventTarget = Element,
@@ -102,7 +101,7 @@ type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
-) => void | null | RemixElement
+) => void | null | RemixElement | MixinElement<Element, ElementProps>
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
 
 type RunnerEntry = {
@@ -133,7 +132,8 @@ type ResolveMixedPropsOutput = {
 
 export type MixinRuntimeState = {
   id: string
-  controller: AbortController
+  controller?: AbortController
+  aborted: boolean
   runners: RunnerEntry[]
   binding?: MixinRuntimeBinding
   removePrepared?: boolean
@@ -179,7 +179,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
         hostType,
         frame: input.frame,
         scheduler,
-        controller: state.controller,
+        getSignal: () => getMixinRuntimeSignal(state),
         getBinding: () => state.binding,
       })
       entry = {
@@ -196,6 +196,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 
     let result = entry.runner(...descriptor.args, composedProps)
     if (!result) continue
+    if (isMixinElement(result)) continue
 
     if (!isRemixElement(result)) {
       console.error(new Error('mixins must return a remix element'))
@@ -247,7 +248,8 @@ export function teardownMixins(state?: MixinRuntimeState) {
   prepareMixinRemoval(state)
   cancelPendingMixinRemoval(state)
   state.runners.length = 0
-  state.controller.abort()
+  state.aborted = true
+  state.controller?.abort()
   state.pendingRemoval = undefined
   state.removePrepared = true
 }
@@ -313,7 +315,7 @@ export function cancelPendingMixinRemoval(
 function createMixinRuntimeState(): MixinRuntimeState {
   return {
     id: `m${++mixinHandleId}`,
-    controller: new AbortController(),
+    aborted: false,
     runners: [],
   }
 }
@@ -323,7 +325,7 @@ function createMixinHandle(options: {
   hostType: string
   frame: FrameHandle
   scheduler: Scheduler
-  controller: AbortController
+  getSignal: () => AbortSignal
   getBinding: () => MixinRuntimeBinding | undefined
 }): AnyMixinHandle {
   let handle = new TypedEventTarget<MixinHandleEventMap<Element>>() as AnyMixinHandle
@@ -337,17 +339,17 @@ function createMixinHandle(options: {
   element.__rmxMixinElementType = options.hostType
   handle.id = options.id
   handle.frame = options.frame
-  handle.signal = options.controller.signal
   handle.element = element
   handle.update = () =>
     new Promise((resolve) => {
-      if (options.controller.signal.aborted) {
-        resolve(options.controller.signal)
+      let signal = options.getSignal()
+      if (signal.aborted) {
+        resolve(signal)
         return
       }
       let binding = options.getBinding()
       if (!binding) {
-        resolve(options.controller.signal)
+        resolve(signal)
         return
       }
       binding.enqueueUpdate(resolve)
@@ -357,15 +359,27 @@ function createMixinHandle(options: {
       () => {
         let binding = options.getBinding()
         invariant(binding)
-        task(binding.node, options.controller.signal)
+        task(binding.node, options.getSignal())
       },
     ])
   }
   handle.on = <target extends EventTarget>(target: target, listeners: EventListeners<target>) => {
-    let container = createContainer(target, { signal: options.controller.signal })
+    let container = createContainer(target, { signal: options.getSignal() })
     container.set(listeners)
   }
   return handle
+}
+
+export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
+  let controller = state.controller
+  if (!controller) {
+    controller = new AbortController()
+    if (state.aborted) {
+      controller.abort()
+    }
+    state.controller = controller
+  }
+  return controller.signal
 }
 
 function dispatchMixinInsert(
