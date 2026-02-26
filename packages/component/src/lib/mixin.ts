@@ -1,8 +1,9 @@
 import { createContainer, TypedEventTarget } from '@remix-run/interaction'
 import type { EventListeners } from '@remix-run/interaction'
-import type { FrameHandle, Task } from './component.ts'
+import type { FrameHandle } from './component.ts'
 import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
+import { invariant } from './invariant.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (...args: infer fnArgs) => infer fnResult
   ? (...args: RebindTuple<fnArgs, baseNode, boundNode>) => RebindNode<fnResult, baseNode, boundNode>
@@ -51,7 +52,7 @@ export type MixinHandle<
   signal: AbortSignal
   element: MixinElement<node, props>
   update(): Promise<AbortSignal>
-  queueTask(task: Task): void
+  queueTask(task: (node: node, signal: AbortSignal) => void): void
   on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => void
 }
 
@@ -291,7 +292,13 @@ function createMixinHandle(options: {
       binding.enqueueUpdate(resolve)
     })
   handle.queueTask = (task) => {
-    options.scheduler.enqueueTasks([() => task(options.controller.signal)])
+    options.scheduler.enqueueTasks([
+      () => {
+        let binding = options.getBinding()
+        invariant(binding)
+        task(binding.node, options.controller.signal)
+      },
+    ])
   }
   handle.on = <target extends EventTarget>(target: target, listeners: EventListeners<target>) => {
     let container = createContainer(target, { signal: options.controller.signal })

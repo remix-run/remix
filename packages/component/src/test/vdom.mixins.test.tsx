@@ -217,7 +217,7 @@ describe('vnode mixins', () => {
     invariant(button)
     button.click()
     root.flush()
-    expect(calls).toEqual(['second', 'first'])
+    expect(calls).toEqual(['first', 'second'])
   })
 
   it('updates only host props when mixin calls handle.update', () => {

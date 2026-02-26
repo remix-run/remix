@@ -22,29 +22,30 @@ type ListenerFor<target extends EventTarget, type extends EventType<target>> = S
   EnsureEvent<EventMap<target>[type], target>
 >
 
-type OnMixinProps = ElementProps & {
-  connect?: (node: Element, signal: AbortSignal) => void
-}
-
 let onMixin = createMixin<
   Element,
   [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean],
-  OnMixinProps
+  ElementProps
 >((handle) => {
   let currentHandler: SignaledListener<Event> = () => {}
   let currentType = ''
   let currentCapture = false
-  let currentNode: Element | null = null
   let reentry: AbortController | null = null
-  let teardownNode: (() => void) | null = null
 
   let stableHandler = (event: Event) => {
-    if (reentry) {
-      reentry.abort(new DOMException('', 'EventReentry'))
-    }
+    reentry?.abort(new DOMException('', 'EventReentry'))
     reentry = new AbortController()
     void currentHandler(event, reentry.signal)
   }
+
+  handle.addEventListener('insert', (event) => {
+    let node = event.node
+    node.addEventListener(currentType, stableHandler, currentCapture)
+    handle.addEventListener('remove', () => {
+      node.removeEventListener(currentType, stableHandler, currentCapture)
+      reentry?.abort(new DOMException('', 'AbortError'))
+    })
+  })
 
   return (type, handler, captureBoolean = false, props) => {
     let previousType = currentType
@@ -54,55 +55,30 @@ let onMixin = createMixin<
     currentHandler = handler
     currentCapture = captureBoolean
 
-    if (needsRebind && currentNode) {
-      currentNode.removeEventListener(previousType, stableHandler, previousCapture)
-      currentNode.addEventListener(type, stableHandler, captureBoolean)
+    if (needsRebind) {
+      handle.queueTask((node) => {
+        node.removeEventListener(previousType, stableHandler, previousCapture)
+        node.addEventListener(type, stableHandler, captureBoolean)
+      })
     }
 
-    return (
-      <handle.element
-        {...props}
-        connect={(nextNode, signal) => {
-          if (currentNode !== nextNode) {
-            teardownNode?.()
-            currentNode = nextNode
-            currentNode.addEventListener(type, stableHandler, captureBoolean)
-            teardownNode = () => {
-              if (reentry) {
-                reentry.abort(new DOMException('', 'AbortError'))
-                reentry = null
-              }
-              nextNode.removeEventListener(type, stableHandler, captureBoolean)
-            }
-          }
-
-          signal.addEventListener(
-            'abort',
-            () => {
-              teardownNode?.()
-              teardownNode = null
-              if (currentNode === nextNode) {
-                currentNode = null
-              }
-            },
-            { once: true },
-          )
-        }}
-      />
-    )
+    return <handle.element {...props} />
   }
 })
 
-export function on<target extends EventTarget = Element, type extends EventType<target> = EventType<target>>(
+export function on<
+  target extends EventTarget = Element,
+  type extends EventType<target> = EventType<target>,
+>(
   type: type,
   handler: ListenerFor<target, type>,
   captureBoolean?: boolean,
 ): MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps> {
-  return onMixin(type as string, handler as unknown as SignaledListener<Event>, captureBoolean) as unknown as MixinDescriptor<
-    target,
-    [type, ListenerFor<target, type>, boolean?],
-    ElementProps
-  >
+  return onMixin(
+    type as string,
+    handler as unknown as SignaledListener<Event>,
+    captureBoolean,
+  ) as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
 }
 
 // prettier-ignore
