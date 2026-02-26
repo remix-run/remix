@@ -96,6 +96,10 @@ type RunnerEntry = {
   handle: AnyMixinHandle
 }
 
+export type MixinRuntimeBinding = {
+  enqueueUpdate(done: (signal: AbortSignal) => void): void
+}
+
 type ResolveMixedPropsInput = {
   hostType: string
   frame: FrameHandle
@@ -113,6 +117,7 @@ export type MixinRuntimeState = {
   id: string
   controller: AbortController
   runners: RunnerEntry[]
+  binding?: MixinRuntimeBinding
 }
 
 let mixinHandleId = 0
@@ -155,6 +160,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
         frame: input.frame,
         scheduler,
         controller: state.controller,
+        getBinding: () => state.binding,
       })
       entry = {
         type: descriptor.type as AnyMixinType,
@@ -213,11 +219,17 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 
 export function teardownMixins(state?: MixinRuntimeState) {
   if (!state) return
+  state.binding = undefined
   for (let entry of state.runners) {
     entry.handle.dispatchEvent(new Event('remove'))
   }
   state.runners.length = 0
   state.controller.abort()
+}
+
+export function bindMixinRuntime(state: MixinRuntimeState | undefined, binding?: MixinRuntimeBinding) {
+  if (!state) return
+  state.binding = binding
 }
 
 function createMixinRuntimeState(): MixinRuntimeState {
@@ -234,6 +246,7 @@ function createMixinHandle(options: {
   frame: FrameHandle
   scheduler: Scheduler
   controller: AbortController
+  getBinding: () => MixinRuntimeBinding | undefined
 }): AnyMixinHandle {
   let handle = new TypedEventTarget<MixinHandleEventMap>() as AnyMixinHandle
   let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
@@ -250,7 +263,16 @@ function createMixinHandle(options: {
   handle.element = element
   handle.update = () =>
     new Promise((resolve) => {
-      options.scheduler.enqueueTasks([() => resolve(options.controller.signal)])
+      if (options.controller.signal.aborted) {
+        resolve(options.controller.signal)
+        return
+      }
+      let binding = options.getBinding()
+      if (!binding) {
+        resolve(options.controller.signal)
+        return
+      }
+      binding.enqueueUpdate(resolve)
     })
   handle.queueTask = (task) => {
     options.scheduler.enqueueTasks([() => task(options.controller.signal)])

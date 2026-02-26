@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { createMixin } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
+import type { Handle } from '../lib/component.ts'
 
 describe('vnode mixins', () => {
   it('composes mixins in order and does not leak mix to the DOM', () => {
@@ -66,5 +67,47 @@ describe('vnode mixins', () => {
 
     expect(removedA).toBe(1)
     expect(removedB).toBe(1)
+  })
+
+  it('updates only host props when mixin calls handle.update', () => {
+    let appRenderCount = 0
+
+    let withCounter = createMixin((handle) => {
+      let count = 0
+      return (props: { ['data-count']?: string; on?: { click?: () => void } }) => (
+        <handle.element
+          {...props}
+          data-count={String(count)}
+          on={{
+            ...props.on,
+            click() {
+              count++
+              handle.update()
+            },
+          }}
+        />
+      )
+    })
+
+    function App(_handle: Handle) {
+      appRenderCount++
+      return () => <button mix={[withCounter()]}>click</button>
+    }
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<App />)
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    expect(button.getAttribute('data-count')).toBe('0')
+    expect(appRenderCount).toBe(1)
+
+    button.click()
+    root.flush()
+
+    expect(button.getAttribute('data-count')).toBe('1')
+    expect(appRenderCount).toBe(1)
   })
 })

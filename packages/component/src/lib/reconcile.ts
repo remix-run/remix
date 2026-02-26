@@ -47,6 +47,7 @@ import {
   updateLayoutElement,
 } from './layout-animation.ts'
 import {
+  bindMixinRuntime,
   resolveMixedProps,
   teardownMixins,
   type MixinRuntimeState,
@@ -94,6 +95,47 @@ function resolveNodeMixProps(
   node._mixState = resolved.state
   node._mixedProps = resolved.props
   return resolved.props
+}
+
+function bindNodeMixRuntime(
+  node: CommittedHostNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+) {
+  let state = node._mixState as MixinRuntimeState | undefined
+  bindMixinRuntime(state, {
+    enqueueUpdate(done) {
+      scheduler.enqueueTasks([
+        () => {
+          if (state?.controller.signal.aborted) {
+            done(state.controller.signal)
+            return
+          }
+
+          let prevProps = getHostProps(node)
+          let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
+          diffHostProps(prevProps, nextProps, node._dom, styles)
+
+          let nextOn = nextProps.on
+          if (nextOn) {
+            if (node._events) {
+              node._events.set(nextOn)
+            } else {
+              let eventsContainer = createContainer(node._dom)
+              eventsContainer.set(nextOn)
+              node._events = eventsContainer
+            }
+          } else if (node._events) {
+            node._events.dispose()
+            node._events = undefined
+          }
+
+          done(state?.controller.signal ?? AbortSignal.abort())
+        },
+      ])
+    },
+  })
 }
 
 function isHeadHostNode(node: HostNode): boolean {
@@ -291,6 +333,8 @@ function diffHost(
     unregisterLayoutElement(curr._dom)
   }
 
+  bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+
   return
 }
 
@@ -452,6 +496,7 @@ function insert(
         )
         diffHostProps({}, hostProps, targetHead, styles)
         setupHostNode(node, targetHead, scheduler)
+        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         return cursor
       }
     }
@@ -500,6 +545,7 @@ function insert(
         }
 
         setupHostNode(node, cursor, scheduler)
+        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         if (isHeadManagedHostNode(node)) {
           let targetHead = getDocumentHead(domParent)
           if (targetHead && cursor.parentNode !== targetHead) {
@@ -536,6 +582,7 @@ function insert(
             }
 
             setupHostNode(node, nextSibling, scheduler)
+            bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
             if (isHeadManagedHostNode(node)) {
               let targetHead = getDocumentHead(domParent)
               if (targetHead && nextSibling.parentNode !== targetHead) {
@@ -563,6 +610,7 @@ function insert(
     }
 
     setupHostNode(node, dom, scheduler)
+    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
     if (isHeadManagedHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
@@ -1620,4 +1668,6 @@ function reclaimExitingNode(
     scheduler.enqueueTasks([() => eventsContainer.dispose()])
     newNode._events = undefined
   }
+
+  bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles)
 }
