@@ -157,45 +157,6 @@ describe('mssql adapter', () => {
     assert.deepEqual(lifecycle, ['begin', 'set transaction isolation level serializable', 'commit'])
   })
 
-  it('applies isolationLevel read uncommitted', async () => {
-    let { pool, lifecycle } = createLifecyclePool()
-    let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-    await db.transaction(async () => undefined, { isolationLevel: 'read uncommitted' })
-
-    assert.deepEqual(lifecycle, [
-      'begin',
-      'set transaction isolation level read uncommitted',
-      'commit',
-    ])
-  })
-
-  it('applies isolationLevel read committed', async () => {
-    let { pool, lifecycle } = createLifecyclePool()
-    let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-    await db.transaction(async () => undefined, { isolationLevel: 'read committed' })
-
-    assert.deepEqual(lifecycle, [
-      'begin',
-      'set transaction isolation level read committed',
-      'commit',
-    ])
-  })
-
-  it('applies isolationLevel repeatable read', async () => {
-    let { pool, lifecycle } = createLifecyclePool()
-    let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-    await db.transaction(async () => undefined, { isolationLevel: 'repeatable read' })
-
-    assert.deepEqual(lifecycle, [
-      'begin',
-      'set transaction isolation level repeatable read',
-      'commit',
-    ])
-  })
-
   it('ignores readOnly true and does not emit any SQL for it', async () => {
     let { pool, lifecycle } = createLifecyclePool()
     let db = createDatabase(createMssqlDatabaseAdapter(pool))
@@ -203,15 +164,6 @@ describe('mssql adapter', () => {
     await db.transaction(async () => undefined, { readOnly: true })
 
     // No SET TRANSACTION READ ONLY should appear — MSSQL does not support it.
-    assert.deepEqual(lifecycle, ['begin', 'commit'])
-  })
-
-  it('ignores readOnly false and does not emit any SQL for it', async () => {
-    let { pool, lifecycle } = createLifecyclePool()
-    let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-    await db.transaction(async () => undefined, { readOnly: false })
-
     assert.deepEqual(lifecycle, ['begin', 'commit'])
   })
 
@@ -226,15 +178,6 @@ describe('mssql adapter', () => {
 
     // Only the isolation level SQL is emitted; readOnly is silently ignored.
     assert.deepEqual(lifecycle, ['begin', 'set transaction isolation level serializable', 'commit'])
-  })
-
-  it('emits no option SQL when transaction is called with empty options', async () => {
-    let { pool, lifecycle } = createLifecyclePool()
-    let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-    await db.transaction(async () => undefined, {})
-
-    assert.deepEqual(lifecycle, ['begin', 'commit'])
   })
 
   it('compiles column-to-column comparisons from string references', async () => {

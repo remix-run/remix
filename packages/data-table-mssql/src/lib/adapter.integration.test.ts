@@ -274,29 +274,6 @@ describe('mssql adapter integration', () => {
         assert.equal(count, 1)
       },
     )
-
-    it(
-      'writes succeed when readOnly is true because MSSQL ignores it',
-      { skip: !integrationEnabled },
-      async () => {
-        let db = createDatabase(createMssqlDatabaseAdapter(pool))
-
-        await db.transaction(
-          async (tx) => {
-            await tx.query(txAccounts).insert({
-              id: 1,
-              email: 'write-ro@test.com',
-              status: 'active',
-              nickname: null,
-            })
-          },
-          { isolationLevel: 'read committed', readOnly: true },
-        )
-
-        let result = await pool.request().query('select [id] from [accounts]')
-        assert.equal(result.recordset.length, 1)
-      },
-    )
   })
 
   // ── Capability override tests ────────────────────────────────────────

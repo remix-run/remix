@@ -11,7 +11,7 @@ import { getTablePrimaryKey } from '@remix-run/data-table'
 import { compileMssqlStatement } from './sql-compiler.ts'
 
 /**
- * Result shape returned by mssql request `query()` calls.
+ * Result shape returned by mssql `query()` calls.
  */
 export type MssqlQueryResult = {
   recordset?: unknown[]
@@ -19,9 +19,9 @@ export type MssqlQueryResult = {
 }
 
 /**
- * Minimal mssql request contract used by this adapter.
+ * Minimal mssql request contract used internally by this adapter.
  */
-export type MssqlDatabaseRequest = {
+type MssqlDatabaseRequest = {
   input(name: string, value: unknown): MssqlDatabaseRequest
   query(text: string): Promise<MssqlQueryResult>
 }
@@ -34,25 +34,20 @@ export type MssqlDatabaseClient = {
 }
 
 /**
- * Minimal mssql transaction contract used by this adapter.
+ * Mssql transaction client with begin/commit/rollback lifecycle.
  */
 export type MssqlDatabaseTransaction = MssqlDatabaseClient & {
+  begin(): Promise<unknown>
   commit(): Promise<void>
   rollback(): Promise<void>
 }
 
 /**
- * Internal handle returned by pool.transaction() before begin() is called.
- */
-type MssqlTransactionHandle = MssqlDatabaseTransaction & {
-  begin(): Promise<unknown>
-}
-
-/**
- * Minimal mssql pool contract used by this adapter.
+ * Mssql pool-like client contract used by this adapter.
  */
 export type MssqlDatabasePool = MssqlDatabaseClient & {
-  transaction(): MssqlTransactionHandle
+  query(command: string): Promise<MssqlQueryResult>
+  transaction(): MssqlDatabaseTransaction
 }
 
 /**
@@ -92,8 +87,8 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
     }
 
     let statement = compileMssqlStatement(request.statement)
-    let queryable = this.#resolveClient(request.transaction)
-    let result = await runMssqlQuery(queryable, statement.text, statement.values)
+    let client = this.#resolveClient(request.transaction)
+    let result = await runMssqlQuery(client, statement.text, statement.values)
     let rows = normalizeRows(result.recordset ?? [])
 
     if (request.statement.kind === 'count' || request.statement.kind === 'exists') {

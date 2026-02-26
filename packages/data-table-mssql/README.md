@@ -70,6 +70,13 @@ await db.transaction(async (txDb) => txDb.exec('select 1'), {
 })
 ```
 
+### Savepoints
+
+MSSQL uses `SAVE TRANSACTION` / `ROLLBACK TRANSACTION` instead of the standard
+`SAVEPOINT` / `ROLLBACK TO SAVEPOINT` syntax. Additionally, MSSQL does not
+support `RELEASE SAVEPOINT`, so `releaseSavepoint` is a no-op in this adapter.
+All other savepoint operations work as expected.
+
 ### Capability Overrides For Testing
 
 You can override capabilities to verify fallback paths in tests.

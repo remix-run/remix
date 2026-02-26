@@ -2,7 +2,7 @@
   "name": "@remix-run/data-table-mssql",
   "version": "0.0.0",
   "description": "MSSQL adapter for @remix-run/data-table",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "author": "Isaac Cloos <cloosisaac@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
