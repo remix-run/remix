@@ -1,6 +1,7 @@
 import { createRoot, type Handle, type RemixNode } from 'remix/component'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
+import { MultiStateBadge } from './multi-state-badge.tsx'
 
 function Tile(handle: Handle) {
   let remountKey = 0
@@ -95,6 +96,9 @@ createRoot(document.body).render(
       </Tile>
       <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
         <ExitAnimation />
+      </Tile>
+      <Tile title="Multi-State Badge" notes="Animated icon/label swap with WAAPI shake">
+        <MultiStateBadge />
       </Tile>
     </div>
   </>,
