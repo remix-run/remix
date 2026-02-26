@@ -23,6 +23,7 @@
 ## Code Style
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
+- **One-off scripts**: Write one-off scripts in this repo as TypeScript and make them executable natively with modern Node.js (for example, executable `.ts` files)
 - **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
 - **Functions**: Use regular function declarations/expressions by default. For callback-based APIs (array methods, Promise callbacks, test callbacks, transaction callbacks, etc.), prefer arrow functions over `function` expressions. When an arrow callback only returns a single expression, use a concise body (`value => expression`) instead of braces/`return`
 - **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
@@ -61,3 +62,11 @@
 - **Manual releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, and creates a git commit. Push to `main` and the publish workflow will handle the rest (including tags and GitHub releases).
 - **How publishing works**: The publish workflow checks for change files. If none exist, it runs `pnpm publish --recursive --report-summary`, reads the summary JSON to see what was published, then creates git tags and GitHub releases for each published package.
 - **Test change/release code with preview scripts**: When modifying any change/release code, run `pnpm changes:preview` to test locally. For the release PR script, run `node ./scripts/release-pr.ts --preview`. For the publish script, run `node ./scripts/publish.ts --dry-run` to see what commands would be executed without actually publishing.
+
+## Skills
+
+A skill is a reusable local instruction set stored in a `SKILL.md` file.
+
+### Available skills
+
+- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./skills/supersede-pr/SKILL.md`)

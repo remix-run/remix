@@ -1,0 +1,4 @@
+interface:
+  display_name: "Supersede PR"
+  short_description: "Close superseded pull requests safely"
+  default_prompt: "Use $supersede-pr to replace a PR and close the superseded PR safely."
