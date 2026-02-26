@@ -8,7 +8,9 @@ describe('animate entrance/exit mixins', () => {
     let container = document.createElement('div')
     let root = createRoot(container)
 
-    root.render(<div key="item" id="reclaim-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />)
+    root.render(
+      <div key="item" id="reclaim-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />,
+    )
     root.flush()
 
     let first = container.querySelector('#reclaim-target')
@@ -18,7 +20,9 @@ describe('animate entrance/exit mixins', () => {
     root.flush()
     expect(container.querySelector('#reclaim-target')).toBe(first)
 
-    root.render(<div key="item" id="reclaim-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />)
+    root.render(
+      <div key="item" id="reclaim-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />,
+    )
     root.flush()
 
     let second = container.querySelector('#reclaim-target')
@@ -29,23 +33,23 @@ describe('animate entrance/exit mixins', () => {
     let reverse = vi.fn()
     let commitStyles = vi.fn()
     let cancel = vi.fn()
-    let animateSpy = vi
-      .spyOn(HTMLElement.prototype, 'animate')
-      .mockImplementation(
-        () =>
-          ({
-            playState: 'running',
-            reverse,
-            commitStyles,
-            cancel,
-            finished: new Promise(() => {}),
-          }) as unknown as Animation,
-      )
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+      () =>
+        ({
+          playState: 'running',
+          reverse,
+          commitStyles,
+          cancel,
+          finished: new Promise(() => {}),
+        }) as unknown as Animation,
+    )
 
     let container = document.createElement('div')
     let root = createRoot(container)
 
-    root.render(<div key="item" id="reverse-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />)
+    root.render(
+      <div key="item" id="reverse-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />,
+    )
     root.flush()
 
     root.render(null)
@@ -53,7 +57,9 @@ describe('animate entrance/exit mixins', () => {
     await Promise.resolve()
     expect(animateSpy).toHaveBeenCalledTimes(1)
 
-    root.render(<div key="item" id="reverse-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />)
+    root.render(
+      <div key="item" id="reverse-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />,
+    )
     root.flush()
     await Promise.resolve()
 
@@ -66,16 +72,14 @@ describe('animate entrance/exit mixins', () => {
 
   it('does not reverse on initial insert when entrance and exit mixins are both present', () => {
     let reverse = vi.fn()
-    let animateSpy = vi
-      .spyOn(HTMLElement.prototype, 'animate')
-      .mockImplementation(
-        () =>
-          ({
-            playState: 'running',
-            reverse,
-            finished: new Promise(() => {}),
-          }) as unknown as Animation,
-      )
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+      () =>
+        ({
+          playState: 'running',
+          reverse,
+          finished: new Promise(() => {}),
+        }) as unknown as Animation,
+    )
 
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -83,7 +87,10 @@ describe('animate entrance/exit mixins', () => {
       <div
         key="both"
         id="both-mixins-target"
-        mix={[animateEntrance({ opacity: 0, duration: 150 }), animateExit({ opacity: 0, duration: 150 })]}
+        mix={[
+          animateEntrance({ opacity: 0, duration: 150 }),
+          animateExit({ opacity: 0, duration: 150 }),
+        ]}
       />,
     )
     root.flush()
@@ -96,7 +103,10 @@ describe('animate entrance/exit mixins', () => {
   it('keeps persist behavior after reclaim interruption completes', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)
-    let mix = [animateEntrance({ opacity: 0, duration: 40 }), animateExit({ opacity: 0, duration: 40 })]
+    let mix = [
+      animateEntrance({ opacity: 0, duration: 40 }),
+      animateExit({ opacity: 0, duration: 40 }),
+    ]
 
     root.render(<div key="item" id="persist-after-interrupt" mix={mix} />)
     root.flush()
@@ -115,18 +125,16 @@ describe('animate entrance/exit mixins', () => {
   })
 
   it('skips first entrance when initial is false, but animates on reclaimed add', async () => {
-    let animateSpy = vi
-      .spyOn(HTMLElement.prototype, 'animate')
-      .mockImplementation(
-        () =>
-          ({
-            playState: 'running',
-            reverse: vi.fn(),
-            commitStyles: vi.fn(),
-            cancel: vi.fn(),
-            finished: new Promise(() => {}),
-          }) as unknown as Animation,
-      )
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+      () =>
+        ({
+          playState: 'running',
+          reverse: vi.fn(),
+          commitStyles: vi.fn(),
+          cancel: vi.fn(),
+          finished: new Promise(() => {}),
+        }) as unknown as Animation,
+    )
 
     let container = document.createElement('div')
     let root = createRoot(container)

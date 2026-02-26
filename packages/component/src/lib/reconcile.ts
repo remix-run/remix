@@ -127,7 +127,10 @@ type ControlledReflectionState = {
   onChange: () => void
 }
 
-function ensureControlledReflection(node: CommittedHostNode, scheduler: Scheduler): ControlledReflectionState {
+function ensureControlledReflection(
+  node: CommittedHostNode,
+  scheduler: Scheduler,
+): ControlledReflectionState {
   let existing = node._controlledState as ControlledReflectionState | undefined
   if (existing) return existing
 
@@ -174,7 +177,10 @@ function syncControlledReflection(node: CommittedHostNode, props: ElementProps):
   state.pendingRestoreVersion++
 }
 
-function scheduleControlledRestore(node: CommittedHostNode, state: ControlledReflectionState): void {
+function scheduleControlledRestore(
+  node: CommittedHostNode,
+  state: ControlledReflectionState,
+): void {
   if (state.disposed) return
   let version = ++state.pendingRestoreVersion
   queueMicrotask(() => {
@@ -184,7 +190,10 @@ function scheduleControlledRestore(node: CommittedHostNode, state: ControlledRef
   })
 }
 
-function restoreControlledReflections(node: CommittedHostNode, state: ControlledReflectionState): void {
+function restoreControlledReflections(
+  node: CommittedHostNode,
+  state: ControlledReflectionState,
+): void {
   let element = node._dom
   if (state.hasControlledValue && readDomProp(element, 'value') !== state.controlledValue) {
     setPropertyReflection(element, 'value', state.controlledValue)
@@ -219,7 +228,10 @@ function hasControlledCheckedProp(props: ElementProps): boolean {
   return 'checked' in props && props.checked !== undefined
 }
 
-function canReflectProperty(element: Element, key: string): element is Element & Record<string, unknown> {
+function canReflectProperty(
+  element: Element,
+  key: string,
+): element is Element & Record<string, unknown> {
   return key in element && !key.includes('-')
 }
 
@@ -260,41 +272,45 @@ function bindNodeMixRuntime(
   parent?: ParentNode,
 ) {
   let state = node._mixState as MixinRuntimeState | undefined
-  bindMixinRuntime(state, {
-    node: node._dom,
-    parent: parent ?? (node._dom.parentNode as ParentNode),
-    key: node.key,
-    enqueueUpdate(done) {
-      scheduler.enqueueTasks([
-        () => {
-          if (state?.controller.signal.aborted) {
-            done(state.controller.signal)
-            return
-          }
-
-          let prevProps = getHostProps(node)
-          let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
-          diffHostProps(prevProps, nextProps, node._dom, styles)
-
-          let nextOn = nextProps.on
-          if (nextOn) {
-            if (node._events) {
-              node._events.set(nextOn)
-            } else {
-              let eventsContainer = createContainer(node._dom)
-              eventsContainer.set(nextOn)
-              node._events = eventsContainer
+  bindMixinRuntime(
+    state,
+    {
+      node: node._dom,
+      parent: parent ?? (node._dom.parentNode as ParentNode),
+      key: node.key,
+      enqueueUpdate(done) {
+        scheduler.enqueueTasks([
+          () => {
+            if (state?.controller.signal.aborted) {
+              done(state.controller.signal)
+              return
             }
-          } else if (node._events) {
-            node._events.dispose()
-            node._events = undefined
-          }
 
-          done(state?.controller.signal ?? AbortSignal.abort())
-        },
-      ])
+            let prevProps = getHostProps(node)
+            let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
+            diffHostProps(prevProps, nextProps, node._dom, styles)
+
+            let nextOn = nextProps.on
+            if (nextOn) {
+              if (node._events) {
+                node._events.set(nextOn)
+              } else {
+                let eventsContainer = createContainer(node._dom)
+                eventsContainer.set(nextOn)
+                node._events = eventsContainer
+              }
+            } else if (node._events) {
+              node._events.dispose()
+              node._events = undefined
+            }
+
+            done(state?.controller.signal ?? AbortSignal.abort())
+          },
+        ])
+      },
     },
-  }, { reclaimed })
+    { reclaimed },
+  )
 }
 
 function isHeadHostNode(node: HostNode): boolean {
@@ -671,15 +687,7 @@ function insert(
     // Check for matching mixin-persisted node that can be reclaimed
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
-      reclaimPersistedMixinNode(
-        persistedNode,
-        node,
-        frame,
-        scheduler,
-        styles,
-        vParent,
-        rootTarget,
-      )
+      reclaimPersistedMixinNode(persistedNode, node, frame, scheduler, styles, vParent, rootTarget)
       return cursor
     }
 

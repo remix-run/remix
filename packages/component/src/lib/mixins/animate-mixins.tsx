@@ -181,7 +181,7 @@ let animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Eleme
 
       let config = resolveEnterConfig(currentConfig)
       if (!config) return
-    if (shouldSkipInitialEntrance(event, config)) return
+      if (shouldSkipInitialEntrance(event, config)) return
       let keyframes = buildEnterKeyframes(config)
       let options = createAnimationOptions(config, 'backwards')
       let animation = (node as HTMLElement).animate(keyframes, options)

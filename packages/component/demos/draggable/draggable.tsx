@@ -34,7 +34,7 @@ let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle)
     return (
       <handle.element
         {...props}
-          connect={(nextNode, signal) => {
+        connect={(nextNode, signal) => {
           node = nextNode
           signal.addEventListener(
             'abort',

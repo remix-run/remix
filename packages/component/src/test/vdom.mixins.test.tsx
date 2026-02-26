@@ -27,9 +27,11 @@ describe('vnode mixins', () => {
     let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) => (
       <handle.element {...props} data-mixed={value} />
     ))
-    let withNested = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) => (
-      <handle.element {...props} mix={[withData(value)]} />
-    ))
+    let withNested = createMixin(
+      (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+        <handle.element {...props} mix={[withData(value)]} />
+      ),
+    )
 
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -292,9 +294,11 @@ describe('vnode mixins', () => {
     expect(removeCalls).toBe(1)
     expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)
 
-    let release = releaseRemoval ?? (() => {
-      throw new Error('expected deferred remove callback')
-    })
+    let release =
+      releaseRemoval ??
+      (() => {
+        throw new Error('expected deferred remove callback')
+      })
     release()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(container.querySelector('#deferred-remove')).toBe(null)

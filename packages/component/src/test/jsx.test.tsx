@@ -263,9 +263,9 @@ describe('jsx', () => {
     })
 
     it('allows optional explicit narrowing for specific element kinds', () => {
-      let inputOnly = createMixin<HTMLInputElement>(
-        (handle) => (props: Props<'input'>) => <handle.element {...props} />,
-      )
+      let inputOnly = createMixin<HTMLInputElement>((handle) => (props: Props<'input'>) => (
+        <handle.element {...props} />
+      ))
 
       let good = <input mix={[inputOnly()]} />
       // @ts-expect-error input-only mixin should not apply to button
@@ -303,7 +303,9 @@ describe('jsx', () => {
           {...props}
           mix={[
             on('pointerdown', (event, signal) => {
-              type inferredEvent = Assert<Equal<typeof event, Dispatched<PointerEvent, HTMLElement>>>
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLElement>>
+              >
               type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
               type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
             }),

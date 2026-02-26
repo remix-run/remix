@@ -5,7 +5,9 @@ import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
 import { invariant } from './invariant.ts'
 
-type RebindNode<value, baseNode, boundNode> = value extends (...args: infer fnArgs) => infer fnResult
+type RebindNode<value, baseNode, boundNode> = value extends (
+  ...args: infer fnArgs
+) => infer fnResult
   ? (...args: RebindTuple<fnArgs, baseNode, boundNode>) => RebindNode<fnResult, baseNode, boundNode>
   : [value] extends [baseNode]
     ? [baseNode] extends [value]
@@ -152,11 +154,7 @@ export function createMixin<
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({
-    type: type as unknown as MixinRuntimeType<
-      RebindTuple<args, node, boundNode>,
-      boundNode,
-      props
-    >,
+    type: type as unknown as MixinRuntimeType<RebindTuple<args, node, boundNode>, boundNode, props>,
     args: args as RebindTuple<args, node, boundNode>,
   })
 }
