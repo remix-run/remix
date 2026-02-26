@@ -4,7 +4,7 @@ This guide will help you get started.
 
 ## Setting Up Your Environment
 
-We develop Remix using [pnpm](https://pnpm.io) on Node 24.
+We develop Remix using [pnpm](https://pnpm.io) on Node 25.
 
 If you're using [VS Code](https://code.visualstudio.com/), we recommend installing the [`node:test runner` extension](https://marketplace.visualstudio.com/items?itemName=connor4312.nodejs-testing) for a smooth testing experience.
 
