@@ -86,10 +86,7 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     ? path.join(outputDir, urlPath, 'index.html')
     : path.join(outputDir, urlPath)
 
-  console.log(
-    `${isHtmlFile ? `Crawled` : `  Asset`} ` +
-      `${urlPath} -> ./${path.relative(process.cwd(), outputPath)}`,
-  )
+  console.log(`Crawled ${urlPath} -> ./${path.relative(process.cwd(), outputPath)}`)
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
