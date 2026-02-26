@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
 import type { Dispatched } from '@remix-run/interaction'
 import type { Handle } from '../lib/component'
+import { createMixin } from '../index.ts'
+import type { MixinHandle, Props } from '../index.ts'
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -244,6 +246,31 @@ describe('jsx', () => {
           Various properties
         </div>
       )
+    })
+  })
+
+  describe('mixins', () => {
+    it('infers mixin usage from scoped callback annotations without top-level generics', () => {
+      let buttonOnly = createMixin(
+        (handle: MixinHandle<HTMLButtonElement, Props<'button'>>) => (props: Props<'button'>) => {
+          type inferredButtonProps = Assert<Equal<typeof props, Props<'button'>>>
+          return <handle.element {...props} />
+        },
+      )
+
+      let good = <button mix={[buttonOnly()]} />
+      // @ts-expect-error button-scoped mixin should not apply to div
+      let bad = <div mix={[buttonOnly()]} />
+    })
+
+    it('allows optional explicit narrowing for specific element kinds', () => {
+      let inputOnly = createMixin<HTMLInputElement>(
+        (handle) => (props: Props<'input'>) => <handle.element {...props} />,
+      )
+
+      let good = <input mix={[inputOnly()]} />
+      // @ts-expect-error input-only mixin should not apply to button
+      let bad = <button mix={[inputOnly()]} />
     })
   })
 })

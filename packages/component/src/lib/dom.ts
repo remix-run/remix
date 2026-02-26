@@ -1,6 +1,7 @@
 import type { CSSProps, StyleProps } from './style/lib/style.ts'
 import type { EventListeners } from '@remix-run/interaction'
 import type { RemixNode } from './jsx.ts'
+import type { MixValue } from './mixin.ts'
 
 /**
  * Adapted from Preact:
@@ -107,6 +108,7 @@ export interface AnimateProp {
 export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode
+  mix?: MixValue<eventTarget>
   on?: EventListeners<eventTarget> | undefined
   css?: CSSProps
   connect?: (node: eventTarget, signal: AbortSignal) => void

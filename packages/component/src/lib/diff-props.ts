@@ -74,6 +74,7 @@ function canUseProperty(
 function isFrameworkProp(name: string): boolean {
   return (
     name === 'children' ||
+    name === 'mix' ||
     name === 'key' ||
     name === 'on' ||
     name === 'css' ||

@@ -28,6 +28,7 @@ import {
 import { invariant } from './invariant.ts'
 import { diffHostProps, cleanupCssProps } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
+import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'
 import { toVNode } from './to-vnode.ts'
@@ -45,6 +46,11 @@ import {
   unregisterLayoutElement,
   updateLayoutElement,
 } from './layout-animation.ts'
+import {
+  resolveMixedProps,
+  teardownMixins,
+  type MixinRuntimeState,
+} from './mixin.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -68,6 +74,28 @@ function getSvgContext(vParent: VNode, nodeType: VNodeType): boolean {
   return vParent._svg ?? false
 }
 
+function getHostProps(node: HostNode | CommittedHostNode): ElementProps {
+  return node._mixedProps ?? node.props
+}
+
+function resolveNodeMixProps(
+  node: HostNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  state?: MixinRuntimeState,
+): ElementProps {
+  let resolved = resolveMixedProps({
+    hostType: node.type,
+    frame,
+    scheduler,
+    props: node.props,
+    state,
+  })
+  node._mixState = resolved.state
+  node._mixedProps = resolved.props
+  return resolved.props
+}
+
 function isHeadHostNode(node: HostNode): boolean {
   return node.type.toLowerCase() === 'head'
 }
@@ -78,7 +106,8 @@ function isHeadManagedHostNode(node: HostNode): boolean {
     return true
   }
   if (tag === 'script') {
-    return node.props?.type === 'application/ld+json'
+    let props = getHostProps(node)
+    return props.type === 'application/ld+json'
   }
   return false
 }
@@ -198,13 +227,21 @@ function diffHost(
   vParent: VNode,
   rootTarget: EventTarget,
 ) {
+  let currProps = getHostProps(curr)
+  let nextProps = resolveNodeMixProps(
+    next,
+    frame,
+    scheduler,
+    curr._mixState as MixinRuntimeState | undefined,
+  )
+
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
-  if (next.props.innerHTML != null) {
+  if (nextProps.innerHTML != null) {
     // innerHTML is set, update it if changed
-    if (curr.props.innerHTML !== next.props.innerHTML) {
-      curr._dom.innerHTML = next.props.innerHTML
+    if (currProps.innerHTML !== nextProps.innerHTML) {
+      curr._dom.innerHTML = nextProps.innerHTML as string
     }
-  } else if (curr.props.innerHTML != null) {
+  } else if (currProps.innerHTML != null) {
     // innerHTML was removed, clear it before adding children
     curr._dom.innerHTML = ''
   }
@@ -219,13 +256,13 @@ function diffHost(
     next,
     rootTarget,
   )
-  diffHostProps(curr.props, next.props, curr._dom, styles)
+  diffHostProps(currProps, nextProps, curr._dom, styles)
 
   next._dom = curr._dom
   next._parent = vParent
   next._controller = curr._controller
 
-  let nextOn = next.props.on
+  let nextOn = nextProps.on
   if (nextOn) {
     if (curr._events) {
       // Update existing container
@@ -259,15 +296,16 @@ function diffHost(
 
 function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void {
   node._dom = dom
+  let props = getHostProps(node)
 
-  let on = node.props.on
+  let on = props.on
   if (on) {
     let eventsContainer = createContainer(dom)
     scheduler.enqueueTasks([() => eventsContainer.set(on)])
     node._events = eventsContainer
   }
 
-  let connect = node.props.connect
+  let connect = props.connect
   let presenceConfig = getPresenceConfig(node)
   let playEnter = shouldPlayEnterAnimation(presenceConfig?.enter)
 
@@ -382,6 +420,8 @@ function insert(
   }
 
   if (isHostNode(node)) {
+    let hostProps = resolveNodeMixProps(node, frame, scheduler)
+
     if (isHeadHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
@@ -410,7 +450,7 @@ function insert(
           rootTarget,
           childCursor,
         )
-        diffHostProps({}, node.props, targetHead, styles)
+        diffHostProps({}, hostProps, targetHead, styles)
         setupHostNode(node, targetHead, scheduler)
         return cursor
       }
@@ -438,11 +478,11 @@ function insert(
       let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
       if (cursorTag === node.type) {
         let nextCursor = cursor.nextSibling
-        diffHostProps({}, node.props, cursor, styles)
+        diffHostProps({}, hostProps, cursor, styles)
 
         // Handle innerHTML prop
-        if (node.props.innerHTML != null) {
-          cursor.innerHTML = node.props.innerHTML
+        if (hostProps.innerHTML != null) {
+          cursor.innerHTML = hostProps.innerHTML as string
         } else {
           let childCursor = cursor.firstChild
           // Ignore excess nodes - browser extensions may inject content
@@ -476,10 +516,10 @@ function insert(
           if (nextTag === node.type) {
             let nextCursor = nextSibling.nextSibling
             // Found a match after skipping - adopt it and leave skipped node in place
-            diffHostProps({}, node.props, nextSibling, styles)
+            diffHostProps({}, hostProps, nextSibling, styles)
 
-            if (node.props.innerHTML != null) {
-              nextSibling.innerHTML = node.props.innerHTML
+            if (hostProps.innerHTML != null) {
+              nextSibling.innerHTML = hostProps.innerHTML as string
             } else {
               let childCursor = nextSibling.firstChild
               diffChildren(
@@ -513,11 +553,11 @@ function insert(
     let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
-    diffHostProps({}, node.props, dom, styles)
+    diffHostProps({}, hostProps, dom, styles)
 
     // Handle innerHTML prop
-    if (node.props.innerHTML != null) {
-      dom.innerHTML = node.props.innerHTML
+    if (hostProps.innerHTML != null) {
+      dom.innerHTML = hostProps.innerHTML as string
     } else {
       diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget)
     }
@@ -1042,7 +1082,8 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
       cleanupDescendants(child, scheduler, styles)
     }
 
-    cleanupCssProps(node.props, styles)
+    cleanupCssProps(getHostProps(node), styles)
+    teardownMixins(node._mixState as MixinRuntimeState | undefined)
 
     // Unregister from layout animations
     let presenceConfig = getPresenceConfig(node)
@@ -1172,7 +1213,8 @@ function performHostNodeRemoval(
     }
   }
 
-  cleanupCssProps(node.props, styles)
+  cleanupCssProps(getHostProps(node), styles)
+  teardownMixins(node._mixState as MixinRuntimeState | undefined)
 
   // Unregister from layout animations
   let presenceConfig = getPresenceConfig(node)
@@ -1538,9 +1580,17 @@ function reclaimExitingNode(
   newNode._controller = exitingNode._controller
   newNode._events = exitingNode._events
   newNode._animation = exitingNode._animation
+  newNode._mixState = exitingNode._mixState
 
   // Diff props on the existing DOM element
-  diffHostProps(exitingNode.props, newNode.props, exitingNode._dom, styles)
+  let prevProps = getHostProps(exitingNode)
+  let nextProps = resolveNodeMixProps(
+    newNode,
+    frame,
+    scheduler,
+    newNode._mixState as MixinRuntimeState | undefined,
+  )
+  diffHostProps(prevProps, nextProps, exitingNode._dom, styles)
 
   // Diff children
   diffChildren(
@@ -1555,7 +1605,7 @@ function reclaimExitingNode(
   )
 
   // Update event listeners if needed
-  let nextOn = newNode.props.on
+  let nextOn = nextProps.on
   if (nextOn) {
     if (newNode._events) {
       let eventsContainer = newNode._events

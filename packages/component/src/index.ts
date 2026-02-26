@@ -48,6 +48,8 @@ export type {
   PresenceKeyframeConfig,
   AnimateProp,
 } from './lib/dom.ts'
+export { createMixin } from './lib/mixin.ts'
+export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'
 
 // -- Animation --
 export { spring } from './lib/spring.ts'

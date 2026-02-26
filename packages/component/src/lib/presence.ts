@@ -74,7 +74,8 @@ function normalizePresence(presence: AnimateProp): NormalizedPresenceProp {
 
 // Get animate config from node props
 export function getPresenceConfig(node: HostNode): NormalizedPresenceProp | null {
-  let animate = node.props.animate
+  let props = node._mixedProps ?? node.props
+  let animate = props.animate
   if (!animate) return null
   return normalizePresence(animate)
 }

@@ -17,6 +17,7 @@ export type VNodeType =
 export type VNode<T extends VNodeType = VNodeType> = {
   type: T
   props?: ElementProps
+  _mixedProps?: ElementProps
   key?: string
 
   // _prefixes assigned during reconciliation
@@ -25,6 +26,7 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _dom?: unknown
   _events?: EventsContainer<EventTarget>
   _controller?: AbortController
+  _mixState?: unknown
   _svg?: boolean
   // Range roots render between comment boundary markers
   _rangeStart?: Node
