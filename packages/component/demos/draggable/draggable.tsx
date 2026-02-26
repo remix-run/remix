@@ -1,4 +1,4 @@
-import { createMixin } from 'remix/component'
+import { createMixin, on } from 'remix/component'
 import type { EventListeners } from '@remix-run/interaction'
 
 export type DragDetail = {
@@ -47,11 +47,7 @@ let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle)
             { once: true },
           )
         }}
-        on={{
-          pointerdown(event) {
-            onPointerDown(event)
-          },
-        }}
+        mix={[on('pointerdown', (event) => onPointerDown(event))]}
       />
     )
   }

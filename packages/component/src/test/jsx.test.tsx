@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
-import type { Dispatched } from '@remix-run/interaction'
 import type { Handle } from '../lib/component'
-import { createMixin } from '../index.ts'
-import type { MixinHandle, Props } from '../index.ts'
+import { createMixin, on } from '../index.ts'
+import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -271,6 +270,37 @@ describe('jsx', () => {
       let good = <input mix={[inputOnly()]} />
       // @ts-expect-error input-only mixin should not apply to button
       let bad = <button mix={[inputOnly()]} />
+    })
+
+    it('infers on mixin event/currentTarget types from host context', () => {
+      let direct = (
+        <button
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+              >
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      )
+
+      let withOnMixin = createMixin<HTMLElement>((handle) => (props: Props<'div'>) => (
+        <handle.element
+          {...props}
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<Equal<typeof event, Dispatched<PointerEvent, HTMLElement>>>
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      ))
+
+      let applied = <div mix={[withOnMixin()]} />
     })
   })
 })

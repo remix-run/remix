@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
-import { createMixin } from '../index.ts'
+import { createMixin, on } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
 import type { Handle } from '../lib/component.ts'
 
@@ -165,6 +165,34 @@ describe('vnode mixins', () => {
     button.click()
     root.flush()
     expect(calls).toEqual(['b', 'a', 'base'])
+  })
+
+  it('supports on mixin helper composition standalone', () => {
+    let calls: string[] = []
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls.push('first')
+          }),
+          on('click', () => {
+            calls.push('second')
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.click()
+    root.flush()
+    expect(calls).toEqual(['second', 'first'])
   })
 
   it('updates only host props when mixin calls handle.update', () => {
