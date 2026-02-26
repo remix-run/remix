@@ -52,6 +52,8 @@ export { createMixin } from './lib/mixin.ts'
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched } from './lib/mixins/on-mixin.tsx'
+export { ref } from './lib/mixins/ref-mixin.tsx'
+export type { RefCallback } from './lib/mixins/ref-mixin.tsx'
 export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
 
 // -- Animation --

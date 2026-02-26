@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
 import type { Handle } from '../lib/component'
-import { createMixin, on } from '../index.ts'
+import { createMixin, on, ref } from '../index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
 describe('jsx', () => {
@@ -314,6 +314,19 @@ describe('jsx', () => {
       ))
 
       let applied = <div mix={[withOnMixin()]} />
+    })
+
+    it('infers ref mixin node type from host context', () => {
+      let element = (
+        <button
+          mix={[
+            ref((node, signal) => {
+              type inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      )
     })
   })
 })
