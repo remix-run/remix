@@ -3,7 +3,7 @@ export function throwIfPotentialCSRFAttack(headers: Headers) {
   let originDomain =
     typeof originHeader === "string" && originHeader !== "null"
       ? new URL(originHeader).host
-      : originHeader;
+      : undefined;
   let host = parseHostHeader(headers);
 
   if (originDomain && (!host || originDomain !== host.value)) {
