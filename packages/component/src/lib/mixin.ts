@@ -36,10 +36,17 @@ export type MixinElement<
 
 export type MixinInsertEvent<node extends EventTarget = Element> = Event & {
   node: node
+  reclaimed: boolean
+  parent: ParentNode
+  key?: string
+}
+
+export type MixinRemoveEvent = Event & {
+  persistNode(teardown: (signal: AbortSignal) => void | Promise<void>): void
 }
 
 type MixinHandleEventMap<node extends EventTarget = Element> = {
-  remove: Event
+  remove: MixinRemoveEvent
   insert: MixinInsertEvent<node>
 }
 
@@ -104,6 +111,8 @@ type RunnerEntry = {
 
 export type MixinRuntimeBinding = {
   node: Element
+  parent: ParentNode
+  key?: string
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 
@@ -125,6 +134,12 @@ export type MixinRuntimeState = {
   controller: AbortController
   runners: RunnerEntry[]
   binding?: MixinRuntimeBinding
+  removePrepared?: boolean
+  pendingRemoval?: {
+    signal: AbortSignal
+    cancel: (reason?: unknown) => void
+    done: Promise<void>
+  }
 }
 
 let mixinHandleId = 0
@@ -175,9 +190,9 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
         handle,
       }
       state.runners[index] = entry
-      let boundNode = state.binding?.node
-      if (boundNode) {
-        dispatchMixinInsert(entry.handle, boundNode)
+      let binding = state.binding
+      if (binding?.node) {
+        dispatchMixinInsert(entry.handle, binding.node, false, binding.parent, binding.key)
       }
     }
 
@@ -231,22 +246,70 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 export function teardownMixins(state?: MixinRuntimeState) {
   if (!state) return
   state.binding = undefined
-  for (let entry of state.runners) {
-    entry.handle.dispatchEvent(new Event('remove'))
-  }
+  prepareMixinRemoval(state)
+  cancelPendingMixinRemoval(state)
   state.runners.length = 0
   state.controller.abort()
+  state.pendingRemoval = undefined
+  state.removePrepared = true
 }
 
-export function bindMixinRuntime(state: MixinRuntimeState | undefined, binding?: MixinRuntimeBinding) {
+export function bindMixinRuntime(
+  state: MixinRuntimeState | undefined,
+  binding?: MixinRuntimeBinding,
+  options?: { reclaimed?: boolean },
+) {
   if (!state) return
   let previousNode = state.binding?.node
-  state.binding = binding
-  let nextNode = binding?.node
-  if (!nextNode || previousNode === nextNode) return
+  let nextBinding = binding
+  state.binding = nextBinding
+  if (!nextBinding?.node || previousNode === nextBinding.node) return
+  let nextNode = nextBinding.node
   for (let entry of state.runners) {
-    dispatchMixinInsert(entry.handle, nextNode)
+    dispatchMixinInsert(
+      entry.handle,
+      nextNode,
+      options?.reclaimed === true,
+      nextBinding.parent,
+      nextBinding.key,
+    )
   }
+}
+
+export function prepareMixinRemoval(state?: MixinRuntimeState) {
+  if (!state || state.removePrepared) return state?.pendingRemoval?.done
+  state.removePrepared = true
+
+  let pendingRemoval: MixinRuntimeState['pendingRemoval']
+  let registerPersistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
+    if (pendingRemoval) return
+    let controller = new AbortController()
+    let done = Promise.resolve().then(() => teardown(controller.signal))
+    pendingRemoval = {
+      signal: controller.signal,
+      cancel(reason) {
+        controller.abort(reason)
+      },
+      done,
+    }
+  }
+
+  for (let entry of state.runners) {
+    dispatchMixinRemove(entry.handle, registerPersistNode)
+  }
+
+  state.pendingRemoval = pendingRemoval
+  return pendingRemoval?.done
+}
+
+export function cancelPendingMixinRemoval(
+  state?: MixinRuntimeState,
+  reason: unknown = new DOMException('', 'AbortError'),
+) {
+  if (!state?.pendingRemoval) return
+  state.pendingRemoval.cancel(reason)
+  state.pendingRemoval = undefined
+  state.removePrepared = false
 }
 
 function createMixinRuntimeState(): MixinRuntimeState {
@@ -307,9 +370,27 @@ function createMixinHandle(options: {
   return handle
 }
 
-function dispatchMixinInsert(handle: AnyMixinHandle, node: Element) {
+function dispatchMixinInsert(
+  handle: AnyMixinHandle,
+  node: Element,
+  reclaimed: boolean,
+  parent: ParentNode,
+  key?: string,
+) {
   let event = new Event('insert') as MixinInsertEvent<Element>
   event.node = node
+  event.reclaimed = reclaimed
+  event.parent = parent
+  event.key = key
+  handle.dispatchEvent(event)
+}
+
+function dispatchMixinRemove(
+  handle: AnyMixinHandle,
+  persistNode: (teardown: (signal: AbortSignal) => void | Promise<void>) => void,
+) {
+  let event = new Event('remove') as MixinRemoveEvent
+  event.persistNode = persistNode
   handle.dispatchEvent(event)
 }
 

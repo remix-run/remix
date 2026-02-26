@@ -52,6 +52,7 @@ export { createMixin } from './lib/mixin.ts'
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched } from './lib/mixins/on-mixin.tsx'
+export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
 
 // -- Animation --
 export { spring } from './lib/spring.ts'

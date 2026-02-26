@@ -261,4 +261,42 @@ describe('vnode mixins', () => {
     expect(button.getAttribute('data-count')).toBe('1')
     expect(appRenderCount).toBe(1)
   })
+
+  it('defers host removal when remove.persistNode is used', async () => {
+    let releaseRemoval: (() => void) | null = null
+    let removeCalls = 0
+    let withDeferredRemove = createMixin((handle) => {
+      handle.addEventListener('remove', (event) => {
+        removeCalls++
+        event.persistNode(
+          () =>
+            new Promise<void>((resolve) => {
+              releaseRemoval = () => resolve()
+            }),
+        )
+      })
+      return (props: { id?: string }) => <handle.element {...props} id="deferred-remove" />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div key="deferred" mix={[withDeferredRemove()]} />)
+    root.flush()
+
+    let beforeRemove = container.querySelector('#deferred-remove')
+    invariant(beforeRemove)
+
+    root.render(null)
+    root.flush()
+    await Promise.resolve()
+    expect(removeCalls).toBe(1)
+    expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)
+
+    let release = releaseRemoval ?? (() => {
+      throw new Error('expected deferred remove callback')
+    })
+    release()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(container.querySelector('#deferred-remove')).toBe(null)
+  })
 })

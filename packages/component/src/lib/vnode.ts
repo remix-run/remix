@@ -55,6 +55,9 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _animation?: Animation
   _exiting?: boolean
   _exitingParent?: ParentNode
+  _persistedByMixins?: boolean
+  _persistedParentByMixins?: ParentNode
+  _persistedRemovalToken?: number
 }
 
 export type FragmentNode = VNode & {

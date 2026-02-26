@@ -48,6 +48,8 @@ import {
 } from './layout-animation.ts'
 import {
   bindMixinRuntime,
+  cancelPendingMixinRemoval,
+  prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
   type MixinRuntimeState,
@@ -60,6 +62,8 @@ const INSERT_VNODE = 1 << 0
 const MATCHED = 1 << 1
 
 let idCounter = 0
+let persistedRemovalToken = 0
+let persistedMixinNodes = new Set<CommittedHostNode>()
 
 // Compute SVG context for a node based on its parent and type.
 // Returns true if the node is within an SVG subtree, false otherwise.
@@ -77,6 +81,36 @@ function getSvgContext(vParent: VNode, nodeType: VNodeType): boolean {
 
 function getHostProps(node: HostNode | CommittedHostNode): ElementProps {
   return node._mixedProps ?? node.props
+}
+
+function markNodePersistedByMixins(node: CommittedHostNode, domParent: ParentNode, token: number) {
+  node._persistedByMixins = true
+  node._persistedParentByMixins = domParent
+  node._persistedRemovalToken = token
+  persistedMixinNodes.add(node)
+  bindMixinRuntime(node._mixState as MixinRuntimeState | undefined, undefined)
+}
+
+function unmarkNodePersistedByMixins(node: CommittedHostNode) {
+  node._persistedByMixins = false
+  node._persistedParentByMixins = undefined
+  node._persistedRemovalToken = undefined
+  persistedMixinNodes.delete(node)
+}
+
+function findMatchingPersistedMixinNode(
+  type: string,
+  key: string | undefined,
+  domParent: ParentNode,
+): CommittedHostNode | null {
+  if (key == null) return null
+  for (let node of persistedMixinNodes) {
+    if (node._persistedParentByMixins !== domParent) continue
+    if (node.type !== type) continue
+    if (node.key !== key) continue
+    return node
+  }
+  return null
 }
 
 type ControlledReflectionState = {
@@ -222,10 +256,14 @@ function bindNodeMixRuntime(
   frame: FrameHandle,
   scheduler: Scheduler,
   styles: StyleManager,
+  reclaimed: boolean = false,
+  parent?: ParentNode,
 ) {
   let state = node._mixState as MixinRuntimeState | undefined
   bindMixinRuntime(state, {
     node: node._dom,
+    parent: parent ?? (node._dom.parentNode as ParentNode),
+    key: node.key,
     enqueueUpdate(done) {
       scheduler.enqueueTasks([
         () => {
@@ -256,7 +294,7 @@ function bindNodeMixRuntime(
         },
       ])
     },
-  })
+  }, { reclaimed })
 }
 
 function isHeadHostNode(node: HostNode): boolean {
@@ -630,7 +668,22 @@ function insert(
       }
     }
 
-    // Check for matching exiting node that can be reclaimed
+    // Check for matching mixin-persisted node that can be reclaimed
+    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
+    if (persistedNode) {
+      reclaimPersistedMixinNode(
+        persistedNode,
+        node,
+        frame,
+        scheduler,
+        styles,
+        vParent,
+        rootTarget,
+      )
+      return cursor
+    }
+
+    // Check for matching animate-exiting node that can be reclaimed
     let exitingNode = findMatchingExitingNode(node.type, node.key, domParent)
     if (exitingNode) {
       reclaimExitingNode(
@@ -739,7 +792,7 @@ function insert(
     }
 
     setupHostNode(node, dom, scheduler)
-    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
     if (isHeadManagedHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
@@ -1312,6 +1365,22 @@ export function remove(
     if (node._exiting) {
       return
     }
+    if (node._persistedByMixins) return
+
+    let persistedRemoval = prepareMixinRemoval(node._mixState as MixinRuntimeState | undefined)
+    if (persistedRemoval) {
+      let token = ++persistedRemovalToken
+      markNodePersistedByMixins(node, domParent, token)
+      void persistedRemoval
+        .catch(() => {})
+        .finally(() => {
+          if (!node._persistedByMixins) return
+          if (node._persistedRemovalToken !== token) return
+          unmarkNodePersistedByMixins(node)
+          performHostNodeRemoval(node, domParent, scheduler, styles)
+        })
+      return
+    }
 
     let presenceConfig = getPresenceConfig(node)
 
@@ -1804,4 +1873,65 @@ function reclaimExitingNode(
   }
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles)
+}
+
+function reclaimPersistedMixinNode(
+  persistedNode: CommittedHostNode,
+  newNode: HostNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+  vParent: VNode,
+  rootTarget: EventTarget,
+): void {
+  cancelPendingMixinRemoval(persistedNode._mixState as MixinRuntimeState | undefined)
+  unmarkNodePersistedByMixins(persistedNode)
+
+  newNode._dom = persistedNode._dom
+  newNode._parent = vParent
+  newNode._controller = persistedNode._controller
+  newNode._events = persistedNode._events
+  newNode._animation = persistedNode._animation
+  newNode._mixState = persistedNode._mixState
+  newNode._controlledState = persistedNode._controlledState
+
+  let prevProps = getHostProps(persistedNode)
+  let nextProps = resolveNodeMixProps(
+    newNode,
+    frame,
+    scheduler,
+    newNode._mixState as MixinRuntimeState | undefined,
+  )
+  diffHostProps(prevProps, nextProps, persistedNode._dom, styles)
+  ensureControlledReflection(newNode as CommittedHostNode, scheduler)
+  syncControlledReflection(newNode as CommittedHostNode, nextProps)
+
+  diffChildren(
+    persistedNode._children,
+    newNode._children,
+    persistedNode._dom,
+    frame,
+    scheduler,
+    styles,
+    newNode,
+    rootTarget,
+  )
+
+  let nextOn = nextProps.on
+  if (nextOn) {
+    if (newNode._events) {
+      let eventsContainer = newNode._events
+      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
+    } else {
+      let eventsContainer = createContainer(persistedNode._dom)
+      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
+      newNode._events = eventsContainer
+    }
+  } else if (newNode._events) {
+    let eventsContainer = newNode._events
+    scheduler.enqueueTasks([() => eventsContainer.dispose()])
+    newNode._events = undefined
+  }
+
+  bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
 }
