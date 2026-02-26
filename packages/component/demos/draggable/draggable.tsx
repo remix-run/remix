@@ -1,4 +1,5 @@
 import { createMixin } from 'remix/component'
+import type { EventListeners } from '@remix-run/interaction'
 
 export type DragDetail = {
   left: number
@@ -9,13 +10,11 @@ export let dragStartEvent = 'rmx:dragstart' as const
 export let dragEndEvent = 'rmx:dragend' as const
 
 type DraggableProps = {
-  on?: {
-    pointerdown?: (event: PointerEvent) => void
-  } & Record<string, unknown>
+  on?: EventListeners<HTMLElement>
   connect?: (node: HTMLElement, signal: AbortSignal) => void
 }
 
-let baseDraggable = createMixin((handle) => {
+let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle) => {
   let node: HTMLElement | null = null
   let enabled = true
   let pointerId: number | null = null
@@ -26,7 +25,7 @@ let baseDraggable = createMixin((handle) => {
 
   handle.addEventListener('remove', stopDrag)
 
-  return (nextEnabled: boolean = true, props: DraggableProps) => {
+  return (nextEnabled: boolean = true, props) => {
     enabled = nextEnabled
     if (!enabled) {
       stopDrag()
@@ -35,7 +34,7 @@ let baseDraggable = createMixin((handle) => {
     return (
       <handle.element
         {...props}
-        connect={(nextNode: HTMLElement, signal: AbortSignal) => {
+          connect={(nextNode, signal) => {
           node = nextNode
           signal.addEventListener(
             'abort',
@@ -49,9 +48,7 @@ let baseDraggable = createMixin((handle) => {
           )
         }}
         on={{
-          ...props.on,
-          pointerdown(event: PointerEvent) {
-            props.on?.pointerdown?.(event)
+          pointerdown(event) {
             onPointerDown(event)
           },
         }}

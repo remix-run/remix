@@ -119,6 +119,54 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['b', 'a', 'base'])
   })
 
+  it('composes on listeners across mixins and base props', () => {
+    let calls: string[] = []
+
+    let withOnA = createMixin((handle) => (props: { on?: { click?: () => void } }) => (
+      <handle.element
+        {...props}
+        on={{
+          click() {
+            calls.push('a')
+          },
+        }}
+      />
+    ))
+
+    let withOnB = createMixin((handle) => (props: { on?: { click?: () => void } }) => (
+      <handle.element
+        {...props}
+        on={{
+          click() {
+            calls.push('b')
+          },
+        }}
+      />
+    ))
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(
+      <button
+        on={{
+          click() {
+            calls.push('base')
+          },
+        }}
+        mix={[withOnA(), withOnB()]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.click()
+    root.flush()
+    expect(calls).toEqual(['b', 'a', 'base'])
+  })
+
   it('updates only host props when mixin calls handle.update', () => {
     let appRenderCount = 0
 

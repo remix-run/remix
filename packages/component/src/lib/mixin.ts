@@ -17,14 +17,14 @@ type RebindTuple<args extends unknown[], baseNode, boundNode> = {
 }
 
 export type MixinProps<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 > = props & {
   mix?: MixValue<node, props>
 }
 
 export type MixinElement<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 > = ((
   handle: { update(): Promise<AbortSignal> },
@@ -38,7 +38,7 @@ type MixinHandleEventMap = {
 }
 
 export type MixinHandle<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 > = TypedEventTarget<MixinHandleEventMap> & {
   id: string
@@ -52,7 +52,7 @@ export type MixinHandle<
 
 type MixinRuntimeType<
   args extends unknown[] = [],
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 > = (
   handle: MixinHandle<node, props>,
@@ -60,7 +60,7 @@ type MixinRuntimeType<
 ) => (...args: [...args, currentProps: props]) => void | null | RemixElement
 
 export type MixinType<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 > = (
@@ -69,7 +69,7 @@ export type MixinType<
 ) => (...args: [...args, currentProps: props]) => void | null | RemixElement
 
 export type MixinDescriptor<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 > = {
@@ -79,16 +79,16 @@ export type MixinDescriptor<
 }
 
 export type MixValue<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
 > = ReadonlyArray<MixinDescriptor<node, any, props>>
 
-type AnyMixinType = MixinRuntimeType<unknown[], EventTarget, ElementProps>
-type AnyMixinDescriptor = MixinDescriptor<EventTarget, unknown[], ElementProps>
+type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
+type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
 ) => void | null | RemixElement
-type AnyMixinHandle = MixinHandle<EventTarget, ElementProps>
+type AnyMixinHandle = MixinHandle<Element, ElementProps>
 
 type RunnerEntry = {
   type: AnyMixinType
@@ -123,7 +123,7 @@ export type MixinRuntimeState = {
 let mixinHandleId = 0
 
 export function createMixin<
-  node extends EventTarget = EventTarget,
+  node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 >(type: MixinType<node, args, props>) {
@@ -254,7 +254,7 @@ function createMixinHandle(options: {
     type: options.hostType,
     key: null,
     props,
-  })) as unknown as MixinElement<EventTarget, ElementProps>
+  })) as unknown as MixinElement<Element, ElementProps>
 
   element.__rmxMixinElementType = options.hostType
   handle.id = options.id
@@ -301,15 +301,44 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   let composed = { ...previous, ...next }
   let previousConnect = previous.connect
   let nextConnect = next.connect
+  let previousOn = previous.on
+  let nextOn = next.on
 
   if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
-    composed.connect = (node: EventTarget, signal: AbortSignal) => {
+    composed.connect = (node: Element, signal: AbortSignal) => {
       nextConnect(node, signal)
       previousConnect(node, signal)
     }
   }
 
+  if (isRecord(previousOn) && isRecord(nextOn)) {
+    composed.on = composeOnListeners(previousOn, nextOn)
+  }
+
   return composed
+}
+
+function composeOnListeners(previous: Record<string, unknown>, next: Record<string, unknown>) {
+  let merged: Record<string, unknown> = { ...previous, ...next }
+
+  for (let key in previous) {
+    if (!(key in next)) continue
+    merged[key] = composeListenerValue(next[key], previous[key])
+  }
+
+  return merged
+}
+
+function composeListenerValue(next: unknown, previous: unknown) {
+  if (next == null) return previous
+  if (previous == null) return next
+  let nextValues = Array.isArray(next) ? next : [next]
+  let previousValues = Array.isArray(previous) ? previous : [previous]
+  return [...nextValues, ...previousValues]
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function isRemixElement(value: unknown): value is RemixElement {
@@ -317,7 +346,7 @@ function isRemixElement(value: unknown): value is RemixElement {
   return (value as { $rmx?: unknown }).$rmx === true
 }
 
-function isMixinElement(value: unknown): value is MixinElement<EventTarget, ElementProps> {
+function isMixinElement(value: unknown): value is MixinElement<Element, ElementProps> {
   if (typeof value !== 'function') return false
   return '__rmxMixinElementType' in value
 }
