@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as semver from 'semver'
 import { Frame, type RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
@@ -22,7 +23,8 @@ const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 
 export const getDefaultVersions = (): ServerContext['versions'] => {
-  return [{ version: JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version, crawl: true }]
+  let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
+  return [{ version, crawl: semver.prerelease(version) === null }]
 }
 
 export function createRouter(versions?: ServerContext['versions']) {

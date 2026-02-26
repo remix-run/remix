@@ -108,7 +108,7 @@ function Layout() {
 }
 
 export function VersionDropdown(handle: Handle) {
-  let { versions, activeVersion, slug } = handle.context.get(ServerPage)
+  let { versions, activeVersion } = handle.context.get(ServerPage)
   let latestVersion = versions[0]?.version
 
   // When we're displaying an active version, only include versions up until
@@ -146,33 +146,27 @@ function VersionLink(handle: Handle) {
     version: { version: string; crawl: boolean }
     latest: boolean
   }) => {
-    let includeLatestLink = latest && !activeVersion
+    let isRootDocsLink = latest && !activeVersion
     return (
       <>
         <a
           href={routes.home.href({
-            version: !includeLatestLink ? version.version : undefined,
+            version: !isRootDocsLink ? version.version : undefined,
           })}
-          style={{ display: latest ? 'inline-block' : undefined }}
           rel={!version.crawl ? 'nofollow' : undefined}
           class={!slug && version.version === activeVersion ? 'active' : undefined}
         >
           {version.version}
         </a>
 
-        {includeLatestLink ? (
-          <>
-            {/* Indicate latest only on root (latest) sites */}
-            <span> (latest)</span>
-            {/* Hidden link to allow crawling for the latest version */}
-            <a
-              href={routes.home.href({ version: version.version })}
-              style={{ display: 'none' }}
-              rel={!version.crawl ? 'nofollow' : undefined}
-            >
-              {version.version}
-            </a>
-          </>
+        {/* Indicate latest only on root (latest) sites */}
+        {isRootDocsLink ? <span> (latest)</span> : null}
+
+        {/* Hidden link to allow crawling for the latest version */}
+        {isRootDocsLink && version.crawl ? (
+          <a href={routes.home.href({ version: version.version })} style={{ display: 'none' }}>
+            {version.version}
+          </a>
         ) : null}
       </>
     )
