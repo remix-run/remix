@@ -16,9 +16,9 @@ type SignaledListener<event extends Event> = (
   signal: AbortSignal,
 ) => void | Promise<void>
 
-type EventType<target extends EventTarget> = keyof EventMap<target>
+type EventType<target extends Element> = keyof EventMap<target>
 
-type ListenerFor<target extends EventTarget, type extends EventType<target>> = SignaledListener<
+type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
   EnsureEvent<EventMap<target>[type], target>
 >
 
@@ -67,13 +67,15 @@ let onMixin = createMixin<
 })
 
 export function on<
-  target extends EventTarget = Element,
+  target extends Element = Element,
   type extends EventType<target> = EventType<target>,
 >(
   type: type,
   handler: ListenerFor<target, type>,
   captureBoolean?: boolean,
 ): MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps> {
+  // Keep this typed wrapper so JSX host context can infer event/currentTarget
+  // from `type`, rather than exposing the raw `string` + `Event` runtime signature.
   return onMixin(
     type as string,
     handler as unknown as SignaledListener<Event>,
@@ -87,13 +89,5 @@ type EventMap<target extends EventTarget> = (
   target extends SVGSVGElement ? SVGSVGElementEventMap :
   target extends SVGElement ? SVGElementEventMap :
   target extends Element ? ElementEventMap :
-  target extends Window ? WindowEventMap :
-  target extends Document ? DocumentEventMap :
-  target extends MediaQueryList ? MediaQueryListEventMap :
-  target extends EventSource ? EventSourceEventMap :
-  target extends FileReader ? FileReaderEventMap :
-  target extends AbortSignal ? AbortSignalEventMap :
-  target extends Animation ? AnimationEventMap :
-  target extends EventTarget ? GlobalEventHandlersEventMap :
   never
 )
