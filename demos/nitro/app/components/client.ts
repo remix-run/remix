@@ -2,9 +2,10 @@ import { run } from 'remix/component'
 
 let app = run(document, {
   async loadModule({ src }, exportName, chunks) {
-    let modPromise = import(src)
-    chunks.map(({ src }) => import(src).catch())
+    let modPromise = import(/* @vite-ignore */ src)
+    chunks.map(({ src }) => import(/* @vite-ignore */ src).catch())
     let mod = await modPromise
+
     let exp = (mod as any)[exportName]
     if (typeof exp !== 'function') {
       throw new Error(`Export "${exportName}" from "${src}" is not a function`)

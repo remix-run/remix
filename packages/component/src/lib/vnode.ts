@@ -31,7 +31,11 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _rangeEnd?: Node
   _pendingHydrationComponentId?: string
   _frameInstance?: unknown
-  _frameFallbackRoot?: { render: (element: RemixNode) => void; dispose: () => void }
+  _frameFallbackRoot?: {
+    render: (element: RemixNode) => void
+    dispose: () => void
+    abandon: () => void
+  }
   _frameResolveToken?: number
   _frameResolveController?: AbortController
   _frameResolved?: boolean

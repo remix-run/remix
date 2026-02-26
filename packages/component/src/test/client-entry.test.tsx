@@ -62,8 +62,10 @@ describe('clientEntry', () => {
       let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
 
       expect(EntryComponent.$entry).toBe(true)
-      expect(EntryComponent.$moduleUrl).toBe('/js/test.js')
-      expect(EntryComponent.$exportName).toBe('TestComponent')
+      expect(EntryComponent.$asset).toEqual({
+        exportName: 'TestComponent',
+        js: [{ src: '/js/test.js' }],
+      })
     })
 
     it('parses module URL and export name from href', () => {
@@ -73,8 +75,10 @@ describe('clientEntry', () => {
 
       let EntryComponent = clientEntry('/js/components.js#MyComponent', MyComponent)
 
-      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
-      expect(EntryComponent.$exportName).toBe('MyComponent')
+      expect(EntryComponent.$asset).toEqual({
+        exportName: 'MyComponent',
+        js: [{ src: '/js/components.js' }],
+      })
     })
 
     it('uses component name as fallback when no export name provided', () => {
@@ -84,8 +88,10 @@ describe('clientEntry', () => {
 
       let EntryComponent = clientEntry('/js/components.js', NamedComponent)
 
-      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
-      expect(EntryComponent.$exportName).toBe('NamedComponent')
+      expect(EntryComponent.$asset).toEqual({
+        exportName: 'NamedComponent',
+        js: [{ src: '/js/components.js' }],
+      })
     })
 
     it('preserves the original component functionality', () => {
@@ -146,7 +152,7 @@ describe('clientEntry', () => {
 
       expect(() => {
         clientEntry('/js/test.js', anonymousComponent)
-      }).toThrow('clientEntry() requires either an export name in the href')
+      }).toThrow('clientEntry() requires either an exportName in the asset, a hash in a string ')
     })
 
     it('throws error when no export name and component name is empty', () => {
@@ -159,7 +165,7 @@ describe('clientEntry', () => {
 
       expect(() => {
         clientEntry('/js/test.js', TestComponent)
-      }).toThrow('clientEntry() requires either an export name in the href')
+      }).toThrow('clientEntry() requires either an exportName in the asset, a hash in a string ')
     })
   })
 
@@ -279,8 +285,10 @@ describe('clientEntry', () => {
       let EntryCounter = clientEntry('/js/counter.js#Counter', Counter)
 
       expect(EntryCounter.$entry).toBe(true)
-      expect(EntryCounter.$moduleUrl).toBe('/js/counter.js')
-      expect(EntryCounter.$exportName).toBe('Counter')
+      expect(EntryCounter.$asset).toEqual({
+        exportName: 'Counter',
+        js: [{ src: '/js/counter.js' }],
+      })
     })
 
     it('handles simple components that return JSX directly', () => {
@@ -291,8 +299,10 @@ describe('clientEntry', () => {
       let EntrySimple = clientEntry('/js/simple.js#SimpleComponent', SimpleComponent)
 
       expect(EntrySimple.$entry).toBe(true)
-      expect(EntrySimple.$moduleUrl).toBe('/js/simple.js')
-      expect(EntrySimple.$exportName).toBe('SimpleComponent')
+      expect(EntrySimple.$asset).toEqual({
+        exportName: 'SimpleComponent',
+        js: [{ src: '/js/simple.js' }],
+      })
     })
   })
 })
