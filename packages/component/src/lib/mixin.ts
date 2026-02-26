@@ -195,7 +195,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 
     let nestedDescriptors = resolveMixDescriptors(result.props as ElementProps)
     for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = withoutMix(result.props as ElementProps)
+    composedProps = composeMixinProps(composedProps, withoutMix(result.props as ElementProps))
   }
 
   for (let index = descriptors.length; index < state.runners.length; index++) {
@@ -295,6 +295,21 @@ function withoutMix(props: ElementProps): ElementProps {
   let output = { ...props }
   delete output.mix
   return output
+}
+
+function composeMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
+  let composed = { ...previous, ...next }
+  let previousConnect = previous.connect
+  let nextConnect = next.connect
+
+  if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
+    composed.connect = (node: EventTarget, signal: AbortSignal) => {
+      nextConnect(node, signal)
+      previousConnect(node, signal)
+    }
+  }
+
+  return composed
 }
 
 function isRemixElement(value: unknown): value is RemixElement {

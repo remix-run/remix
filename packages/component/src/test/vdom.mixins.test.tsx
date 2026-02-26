@@ -69,6 +69,56 @@ describe('vnode mixins', () => {
     expect(removedB).toBe(1)
   })
 
+  it('composes connect callbacks across mixins and base props', () => {
+    let calls: string[] = []
+
+    let withConnectA = createMixin((handle) => (props: { connect?: (node: Element) => void }) => (
+      <handle.element
+        {...props}
+        connect={(node: Element) => {
+          calls.push('a')
+          if (node instanceof HTMLElement) {
+            node.dataset.a = '1'
+          }
+        }}
+      />
+    ))
+
+    let withConnectB = createMixin((handle) => (props: { connect?: (node: Element) => void }) => (
+      <handle.element
+        {...props}
+        connect={(node: Element) => {
+          calls.push('b')
+          if (node instanceof HTMLElement) {
+            node.dataset.b = '1'
+          }
+        }}
+      />
+    ))
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(
+      <div
+        connect={(node: Element) => {
+          calls.push('base')
+          if (node instanceof HTMLElement) {
+            node.dataset.base = '1'
+          }
+        }}
+        mix={[withConnectA(), withConnectB()]}
+      />,
+    )
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.dataset.a).toBe('1')
+    expect(div.dataset.b).toBe('1')
+    expect(div.dataset.base).toBe('1')
+    expect(calls).toEqual(['b', 'a', 'base'])
+  })
+
   it('updates only host props when mixin calls handle.update', () => {
     let appRenderCount = 0
 
