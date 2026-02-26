@@ -42,6 +42,22 @@ describe('vnode mixins', () => {
     expect(div.getAttribute('data-mixed')).toBe('nested')
   })
 
+  it('supports raw handle.element passthrough returns', () => {
+    let withPassthrough = createMixin((handle) => (_props: { title?: string }) => handle.element)
+    let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+      <handle.element {...props} title={title} />
+    ))
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withPassthrough(), withTitle('ok')]} />)
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.getAttribute('title')).toBe('ok')
+  })
+
   it('runs remove lifecycle when descriptor type changes and on unmount', () => {
     let removedA = 0
     let removedB = 0
