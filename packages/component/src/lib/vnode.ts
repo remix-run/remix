@@ -27,6 +27,7 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _events?: EventsContainer<EventTarget>
   _controller?: AbortController
   _mixState?: unknown
+  _controlledState?: unknown
   _svg?: boolean
   // Range roots render between comment boundary markers
   _rangeStart?: Node

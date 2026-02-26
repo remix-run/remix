@@ -79,6 +79,126 @@ function getHostProps(node: HostNode | CommittedHostNode): ElementProps {
   return node._mixedProps ?? node.props
 }
 
+type ControlledReflectionState = {
+  disposed: boolean
+  listenersAttached: boolean
+  pendingRestoreVersion: number
+  managesValue: boolean
+  managesChecked: boolean
+  hasControlledValue: boolean
+  controlledValue: unknown
+  hasControlledChecked: boolean
+  controlledChecked: unknown
+  onInput: () => void
+  onChange: () => void
+}
+
+function ensureControlledReflection(node: CommittedHostNode, scheduler: Scheduler): ControlledReflectionState {
+  let existing = node._controlledState as ControlledReflectionState | undefined
+  if (existing) return existing
+
+  let state: ControlledReflectionState = {
+    disposed: false,
+    listenersAttached: false,
+    pendingRestoreVersion: 0,
+    managesValue: false,
+    managesChecked: false,
+    hasControlledValue: false,
+    controlledValue: undefined,
+    hasControlledChecked: false,
+    controlledChecked: undefined,
+    onInput: () => {
+      scheduleControlledRestore(node, state)
+    },
+    onChange: () => {
+      scheduleControlledRestore(node, state)
+    },
+  }
+
+  node._controlledState = state
+  scheduler.enqueueTasks([
+    () => {
+      if (state.disposed) return
+      node._dom.addEventListener('input', state.onInput)
+      node._dom.addEventListener('change', state.onChange)
+      state.listenersAttached = true
+    },
+  ])
+  return state
+}
+
+function syncControlledReflection(node: CommittedHostNode, props: ElementProps): void {
+  let state = node._controlledState as ControlledReflectionState | undefined
+  if (!state || state.disposed) return
+
+  state.managesValue = canManageValue(node.type, node._dom)
+  state.managesChecked = canReflectProperty(node._dom, 'checked')
+  state.hasControlledValue = state.managesValue && hasControlledValueProp(props)
+  state.controlledValue = props.value
+  state.hasControlledChecked = state.managesChecked && hasControlledCheckedProp(props)
+  state.controlledChecked = props.checked
+  state.pendingRestoreVersion++
+}
+
+function scheduleControlledRestore(node: CommittedHostNode, state: ControlledReflectionState): void {
+  if (state.disposed) return
+  let version = ++state.pendingRestoreVersion
+  queueMicrotask(() => {
+    if (state.disposed) return
+    if (state.pendingRestoreVersion !== version) return
+    restoreControlledReflections(node, state)
+  })
+}
+
+function restoreControlledReflections(node: CommittedHostNode, state: ControlledReflectionState): void {
+  let element = node._dom
+  if (state.hasControlledValue && readDomProp(element, 'value') !== state.controlledValue) {
+    setPropertyReflection(element, 'value', state.controlledValue)
+  }
+  if (state.hasControlledChecked && readDomProp(element, 'checked') !== state.controlledChecked) {
+    setPropertyReflection(element, 'checked', state.controlledChecked)
+  }
+}
+
+function teardownControlledReflection(node: CommittedHostNode): void {
+  let state = node._controlledState as ControlledReflectionState | undefined
+  if (!state) return
+  state.disposed = true
+  state.pendingRestoreVersion++
+  if (state.listenersAttached) {
+    node._dom.removeEventListener('input', state.onInput)
+    node._dom.removeEventListener('change', state.onChange)
+    state.listenersAttached = false
+  }
+}
+
+function canManageValue(type: string, element: Element): boolean {
+  if (type === 'progress') return false
+  return canReflectProperty(element, 'value')
+}
+
+function hasControlledValueProp(props: ElementProps): boolean {
+  return 'value' in props && props.value !== undefined
+}
+
+function hasControlledCheckedProp(props: ElementProps): boolean {
+  return 'checked' in props && props.checked !== undefined
+}
+
+function canReflectProperty(element: Element, key: string): element is Element & Record<string, unknown> {
+  return key in element && !key.includes('-')
+}
+
+function readDomProp(element: Element, key: string): unknown {
+  if (!canReflectProperty(element, key)) return undefined
+  return element[key]
+}
+
+function setPropertyReflection(element: Element, key: string, value: unknown): void {
+  if (!canReflectProperty(element, key)) return
+  element[key] = value == null ? '' : value
+}
+
 function resolveNodeMixProps(
   node: HostNode,
   frame: FrameHandle,
@@ -303,6 +423,7 @@ function diffHost(
   next._dom = curr._dom
   next._parent = vParent
   next._controller = curr._controller
+  next._controlledState = curr._controlledState
 
   let nextOn = nextProps.on
   if (nextOn) {
@@ -333,6 +454,9 @@ function diffHost(
     unregisterLayoutElement(curr._dom)
   }
 
+  ensureControlledReflection(next as CommittedHostNode, scheduler)
+  syncControlledReflection(next as CommittedHostNode, nextProps)
+
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
 
   return
@@ -341,6 +465,7 @@ function diffHost(
 function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void {
   node._dom = dom
   let props = getHostProps(node)
+  let committedNode = node as CommittedHostNode
 
   let on = props.on
   if (on) {
@@ -392,6 +517,9 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
       },
     ])
   }
+
+  ensureControlledReflection(committedNode, scheduler)
+  syncControlledReflection(committedNode, props)
 }
 
 function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
@@ -1132,6 +1260,7 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
 
     cleanupCssProps(getHostProps(node), styles)
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
+    teardownControlledReflection(node)
 
     // Unregister from layout animations
     let presenceConfig = getPresenceConfig(node)
@@ -1263,6 +1392,7 @@ function performHostNodeRemoval(
 
   cleanupCssProps(getHostProps(node), styles)
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
+  teardownControlledReflection(node)
 
   // Unregister from layout animations
   let presenceConfig = getPresenceConfig(node)
@@ -1629,6 +1759,7 @@ function reclaimExitingNode(
   newNode._events = exitingNode._events
   newNode._animation = exitingNode._animation
   newNode._mixState = exitingNode._mixState
+  newNode._controlledState = exitingNode._controlledState
 
   // Diff props on the existing DOM element
   let prevProps = getHostProps(exitingNode)
@@ -1639,6 +1770,8 @@ function reclaimExitingNode(
     newNode._mixState as MixinRuntimeState | undefined,
   )
   diffHostProps(prevProps, nextProps, exitingNode._dom, styles)
+  ensureControlledReflection(newNode as CommittedHostNode, scheduler)
+  syncControlledReflection(newNode as CommittedHostNode, nextProps)
 
   // Diff children
   diffChildren(
