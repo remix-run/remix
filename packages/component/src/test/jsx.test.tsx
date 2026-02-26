@@ -272,6 +272,17 @@ describe('jsx', () => {
       let bad = <button mix={[inputOnly()]} />
     })
 
+    it('infers insert event node type from createMixin node generic', () => {
+      let inputOnly = createMixin<HTMLInputElement>((handle) => {
+        handle.addEventListener('insert', (event) => {
+          type inferredInsertNode = Assert<Equal<typeof event.node, HTMLInputElement>>
+        })
+        return (props: Props<'input'>) => <handle.element {...props} />
+      })
+
+      let good = <input mix={[inputOnly()]} />
+    })
+
     it('infers on mixin event/currentTarget types from host context', () => {
       let direct = (
         <button

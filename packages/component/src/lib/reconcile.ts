@@ -225,6 +225,7 @@ function bindNodeMixRuntime(
 ) {
   let state = node._mixState as MixinRuntimeState | undefined
   bindMixinRuntime(state, {
+    node: node._dom,
     enqueueUpdate(done) {
       scheduler.enqueueTasks([
         () => {

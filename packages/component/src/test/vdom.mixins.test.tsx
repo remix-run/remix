@@ -69,6 +69,31 @@ describe('vnode mixins', () => {
     expect(removedB).toBe(1)
   })
 
+  it('runs insert lifecycle with the bound host node', () => {
+    let insertedNode: Element | null = null
+    let insertCount = 0
+
+    let withInsert = createMixin((handle) => {
+      handle.addEventListener('insert', (event) => {
+        insertedNode = event.node
+        insertCount++
+      })
+      return (props: { id?: string }) => <handle.element {...props} id="inserted" />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withInsert()]} />)
+    root.flush()
+    root.render(<div mix={[withInsert()]} />)
+    root.flush()
+
+    let div = container.querySelector('#inserted')
+    invariant(div)
+    expect(insertedNode).toBe(div)
+    expect(insertCount).toBe(1)
+  })
+
   it('composes connect callbacks across mixins and base props', () => {
     let calls: string[] = []
 

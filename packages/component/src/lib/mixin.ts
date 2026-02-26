@@ -33,14 +33,19 @@ export type MixinElement<
   __rmxMixinElementType: string
 }
 
-type MixinHandleEventMap = {
+export type MixinInsertEvent<node extends EventTarget = Element> = Event & {
+  node: node
+}
+
+type MixinHandleEventMap<node extends EventTarget = Element> = {
   remove: Event
+  insert: MixinInsertEvent<node>
 }
 
 export type MixinHandle<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = TypedEventTarget<MixinHandleEventMap> & {
+> = TypedEventTarget<MixinHandleEventMap<node>> & {
   id: string
   frame: FrameHandle
   signal: AbortSignal
@@ -97,6 +102,7 @@ type RunnerEntry = {
 }
 
 export type MixinRuntimeBinding = {
+  node: Element
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 
@@ -168,6 +174,10 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
         handle,
       }
       state.runners[index] = entry
+      let boundNode = state.binding?.node
+      if (boundNode) {
+        dispatchMixinInsert(entry.handle, boundNode)
+      }
     }
 
     let result = entry.runner(...descriptor.args, composedProps)
@@ -229,7 +239,13 @@ export function teardownMixins(state?: MixinRuntimeState) {
 
 export function bindMixinRuntime(state: MixinRuntimeState | undefined, binding?: MixinRuntimeBinding) {
   if (!state) return
+  let previousNode = state.binding?.node
   state.binding = binding
+  let nextNode = binding?.node
+  if (!nextNode || previousNode === nextNode) return
+  for (let entry of state.runners) {
+    dispatchMixinInsert(entry.handle, nextNode)
+  }
 }
 
 function createMixinRuntimeState(): MixinRuntimeState {
@@ -248,7 +264,7 @@ function createMixinHandle(options: {
   controller: AbortController
   getBinding: () => MixinRuntimeBinding | undefined
 }): AnyMixinHandle {
-  let handle = new TypedEventTarget<MixinHandleEventMap>() as AnyMixinHandle
+  let handle = new TypedEventTarget<MixinHandleEventMap<Element>>() as AnyMixinHandle
   let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
     $rmx: true as const,
     type: options.hostType,
@@ -282,6 +298,12 @@ function createMixinHandle(options: {
     container.set(listeners)
   }
   return handle
+}
+
+function dispatchMixinInsert(handle: AnyMixinHandle, node: Element) {
+  let event = new Event('insert') as MixinInsertEvent<Element>
+  event.node = node
+  handle.dispatchEvent(event)
 }
 
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
