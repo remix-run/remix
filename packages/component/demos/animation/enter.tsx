@@ -1,4 +1,4 @@
-import { spring } from 'remix/component'
+import { animateEntrance, spring } from 'remix/component'
 
 export function EnterAnimation() {
   return () => (
@@ -9,13 +9,13 @@ export function EnterAnimation() {
         backgroundColor: '#dd00ee',
         borderRadius: '50%',
       }}
-      animate={{
-        enter: {
+      mix={[
+        animateEntrance({
           opacity: 0,
           transform: 'scale(0)',
           ...spring({ duration: 400, bounce: 0.5 }),
-        },
-      }}
+        }),
+      ]}
     />
   )
 }

@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { spring } from 'remix/component'
+import { animateEntrance, animateExit, spring } from 'remix/component'
 
 export function ExitAnimation(handle: Handle) {
   let isVisible = true
@@ -28,18 +28,20 @@ export function ExitAnimation(handle: Handle) {
             backgroundColor: '#0cdcf7',
             borderRadius: '10px',
           }}
-          animate={{
-            enter: shouldAnimate && {
-              opacity: 0,
-              transform: 'scale(0)',
-              ...spring('snappy'),
-            },
-            exit: {
+          mix={[
+            animateEntrance(
+              shouldAnimate && {
+                opacity: 0,
+                transform: 'scale(0)',
+                ...spring('snappy'),
+              },
+            ),
+            animateExit({
               opacity: 0,
               transform: 'scale(0)',
               ...spring(),
-            },
-          }}
+            }),
+          ]}
         />
       )}
       <button

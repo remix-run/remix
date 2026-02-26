@@ -19,6 +19,8 @@ import { Reordering } from './reordering.tsx'
 import { MultiStateBadge } from './multi-state-badge.tsx'
 import { HoldToConfirm } from './hold-to-confirm.tsx'
 import { MaterialRipple } from './material-ripple.tsx'
+import { MixinPresenceList } from './mixin-presence-list.tsx'
+import { MixinReclaim } from './mixin-reclaim.tsx'
 
 function Tile(handle: Handle) {
   let remountKey = 0
@@ -170,6 +172,12 @@ createRoot(document.body).render(
       </Tile>
       <Tile title="Material Ripple" notes="Pointer-tracked ripples with enter/exit animations">
         <MaterialRipple />
+      </Tile>
+      <Tile title="Mixin Presence List" notes="animateEntrance/animateExit on keyed list items">
+        <MixinPresenceList />
+      </Tile>
+      <Tile title="Mixin Reclaim" notes="Reinsert during exit to reverse current animation">
+        <MixinReclaim />
       </Tile>
     </div>
   </>,
