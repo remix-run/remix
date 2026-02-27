@@ -325,8 +325,8 @@ describe('type safety', () => {
       limit: 1,
     })
 
-    assert.equal(updated?.id, 1)
-    assert.equal(updated?.projects.length, 1)
+    assert.equal(updated.id, 1)
+    assert.equal(updated.projects.length, 1)
     assert.equal(updateManyResult.affectedRows, 1)
     assert.equal(deleted, true)
     assert.equal(deleteManyResult.affectedRows, 1)

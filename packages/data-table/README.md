@@ -211,13 +211,15 @@ let deleteManyResult = await db.deleteMany(orders, {
 })
 ```
 
+`db.update(...)` throws when the target row cannot be found.
+
 Return behavior:
 
 - `find`/`findOne` -> row or `null`
 - `findMany` -> rows
 - `create` -> `WriteResult` by default, row when `returnRow: true`
 - `createMany` -> `WriteResult` by default, rows when `returnRows: true` (not supported in MySQL because it doesn't support `RETURNING`)
-- `update` -> updated row or `null`
+- `update` -> updated row (throws when target row is missing)
 - `updateMany`/`deleteMany` -> `WriteResult`
 - `delete` -> `boolean`
 

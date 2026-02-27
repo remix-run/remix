@@ -394,12 +394,129 @@ describe('query builder', () => {
       },
       { with: { projects: openProjects } },
     )
-    let missing = await db.update(accounts, 999, { status: 'active' })
 
-    assert.equal(updated?.status, 'inactive')
-    assert.equal(updated?.projects.length, 1)
-    assert.equal(updated?.projects[0].id, 100)
-    assert.equal(missing, null)
+    assert.equal(updated.status, 'inactive')
+    assert.equal(updated.projects.length, 1)
+    assert.equal(updated.projects[0].id, 100)
+  })
+
+  it('throws from database-level update helper when row is missing', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.update(accounts, 999, { status: 'active' })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'update() failed to find row for table "accounts"'
+        )
+      },
+    )
+  })
+
+  it('does not pre-read when update helper uses RETURNING', async () => {
+    let statementKinds: string[] = []
+
+    let adapter: DatabaseAdapter = {
+      dialect: 'fake',
+      capabilities: {
+        returning: true,
+        savepoints: true,
+        upsert: true,
+      },
+      async execute(request) {
+        statementKinds.push(request.statement.kind)
+
+        if (request.statement.kind === 'update') {
+          return {
+            rows: [
+              {
+                id: 1,
+                email: 'amy@studio.test',
+                status: 'inactive',
+              },
+            ],
+            affectedRows: 1,
+          }
+        }
+
+        throw new Error('unexpected statement kind: ' + request.statement.kind)
+      },
+      async beginTransaction() {
+        return { id: 'tx_1' }
+      },
+      async commitTransaction() {},
+      async rollbackTransaction() {},
+      async createSavepoint() {},
+      async rollbackToSavepoint() {},
+      async releaseSavepoint() {},
+    }
+
+    let db = createTestDatabase(adapter)
+    let updated = await db.update(accounts, 1, { status: 'inactive' })
+
+    assert.equal(updated.id, 1)
+    assert.deepEqual(statementKinds, ['update'])
+  })
+
+  it('does not throw on no-op updates for non-RETURNING adapters when row still exists', async () => {
+    let statementKinds: string[] = []
+
+    let adapter: DatabaseAdapter = {
+      dialect: 'fake',
+      capabilities: {
+        returning: false,
+        savepoints: true,
+        upsert: true,
+      },
+      async execute(request) {
+        statementKinds.push(request.statement.kind)
+
+        if (request.statement.kind === 'update') {
+          return {
+            affectedRows: 0,
+          }
+        }
+
+        if (request.statement.kind === 'select') {
+          return {
+            rows: [
+              {
+                id: 1,
+                email: 'amy@studio.test',
+                status: 'active',
+              },
+            ],
+          }
+        }
+
+        throw new Error('unexpected statement kind: ' + request.statement.kind)
+      },
+      async beginTransaction() {
+        return { id: 'tx_1' }
+      },
+      async commitTransaction() {},
+      async rollbackTransaction() {},
+      async createSavepoint() {},
+      async rollbackToSavepoint() {},
+      async releaseSavepoint() {},
+    }
+
+    let db = createTestDatabase(adapter)
+    let updated = await db.update(accounts, 1, { status: 'active' })
+
+    assert.equal(updated.id, 1)
+    assert.equal(updated.status, 'active')
+    assert.deepEqual(statementKinds, ['update', 'select'])
   })
 
   it('supports database-level updateMany helper', async () => {

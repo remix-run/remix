@@ -344,7 +344,7 @@ export type Database = {
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
   updateMany<table extends AnyTable>(
     table: table,
     changes: Partial<TableRow<table>>,
@@ -613,18 +613,53 @@ class DatabaseRuntime implements Database {
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let existing = await this.find(table, value)
-    if (!existing) {
-      return null
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
+    let where = getPrimaryKeyWhere(table, value)
+
+    if (this.#adapter.capabilities.returning) {
+      let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
+        touch: options?.touch,
+        returning: '*',
+      })) as WriteRowsResult<TableRow<table>>
+      let updatedRow = updateResult.rows[0]
+
+      if (!updatedRow) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      if (!options?.with) {
+        return updatedRow as TableRowWith<table, LoadedRelationMap<relations>>
+      }
+
+      let loaded = await this.findOne(table, {
+        where: getPrimaryKeyWhereFromRow(table, updatedRow),
+        with: options.with,
+      })
+
+      if (!loaded) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      return loaded
     }
 
-    let where = getPrimaryKeyWhere(table, value)
     await this.query(asQueryTableInput(table)).where(where).update(changes, {
       touch: options?.touch,
     })
 
-    return this.find(table, value, { with: options?.with })
+    let loaded = await this.find(table, value, { with: options?.with })
+
+    if (!loaded) {
+      throw new DataTableQueryError(
+        'update() failed to find row for table "' + getTableName(table) + '"',
+      )
+    }
+
+    return loaded
   }
 
   async updateMany<table extends AnyTable>(
