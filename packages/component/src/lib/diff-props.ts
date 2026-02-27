@@ -121,6 +121,12 @@ function normalizePropName(name: string, isSvg: boolean): { ns?: string; attr: s
   return normalizeSvgAttribute(name)
 }
 
+function toLocalName(attrName: string): string {
+  let separatorIndex = attrName.indexOf(':')
+  if (separatorIndex === -1) return attrName
+  return attrName.slice(separatorIndex + 1)
+}
+
 function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
   try {
     if (name === 'value' || name === 'defaultValue') {
@@ -159,7 +165,7 @@ export function diffHostProps(
       }
 
       let { ns, attr } = normalizePropName(name, isSvg)
-      if (ns) dom.removeAttributeNS(ns, attr)
+      if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
       else dom.removeAttribute(attr)
     }
   }
@@ -205,7 +211,7 @@ export function diffHostProps(
         if (ns) dom.setAttributeNS(ns, attr, attrValue)
         else dom.setAttribute(attr, attrValue)
       } else {
-        if (ns) dom.removeAttributeNS(ns, attr)
+        if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
         else dom.removeAttribute(attr)
       }
     }

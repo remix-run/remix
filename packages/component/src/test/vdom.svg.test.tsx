@@ -45,6 +45,66 @@ describe('vnode rendering', () => {
       expect(useEl.getAttribute('xlink:href')).toBe('#my-id')
     })
 
+    it('updates and removes namespaced SVG attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <svg>
+          <use id="u" xlinkHref="#one" />
+          <text id="t" xmlLang="en">
+            Hi
+          </text>
+        </svg>,
+      )
+
+      let useEl = container.querySelector('#u')
+      invariant(useEl instanceof SVGUseElement)
+      expect(useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#one')
+
+      let textEl = container.querySelector('#t')
+      invariant(textEl instanceof SVGTextElement)
+      expect(textEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe('en')
+
+      root.render(
+        <svg>
+          <use id="u" xlinkHref="#two" />
+          <text id="t" xmlLang="fr">
+            Hi
+          </text>
+        </svg>,
+      )
+
+      let updatedUseEl = container.querySelector('#u')
+      invariant(updatedUseEl instanceof SVGUseElement)
+      expect(updatedUseEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#two')
+
+      let updatedTextEl = container.querySelector('#t')
+      invariant(updatedTextEl instanceof SVGTextElement)
+      expect(updatedTextEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe(
+        'fr',
+      )
+
+      root.render(
+        <svg>
+          <use id="u" />
+          <text id="t">Hi</text>
+        </svg>,
+      )
+
+      let removedUseEl = container.querySelector('#u')
+      invariant(removedUseEl instanceof SVGUseElement)
+      expect(removedUseEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe(null)
+      expect(removedUseEl.getAttribute('xlink:href')).toBe(null)
+
+      let removedTextEl = container.querySelector('#t')
+      invariant(removedTextEl instanceof SVGTextElement)
+      expect(removedTextEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe(
+        null,
+      )
+      expect(removedTextEl.getAttribute('xml:lang')).toBe(null)
+    })
+
     it('renders HTML subtree inside foreignObject with HTML namespace', () => {
       let container = document.createElement('div')
       let { render } = createRoot(container)
