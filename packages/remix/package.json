@@ -39,6 +39,7 @@
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
     "./file-storage": "./src/file-storage.ts",
+    "./file-storage-s3": "./src/file-storage-s3.ts",
     "./file-storage/fs": "./src/file-storage/fs.ts",
     "./file-storage/memory": "./src/file-storage/memory.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
@@ -160,6 +161,10 @@
       "./file-storage": {
         "types": "./dist/file-storage.d.ts",
         "default": "./dist/file-storage.js"
+      },
+      "./file-storage-s3": {
+        "types": "./dist/file-storage-s3.d.ts",
+        "default": "./dist/file-storage-s3.js"
       },
       "./file-storage/fs": {
         "types": "./dist/file-storage/fs.d.ts",
@@ -336,7 +341,8 @@
     "@remix-run/data-table-postgres": "workspace:^",
     "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
-    "@remix-run/session-storage-redis": "workspace:^"
+    "@remix-run/session-storage-redis": "workspace:^",
+    "@remix-run/file-storage-s3": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -982,6 +982,9 @@ importers:
       '@remix-run/file-storage':
         specifier: workspace:^
         version: link:../file-storage
+      '@remix-run/file-storage-s3':
+        specifier: workspace:^
+        version: link:../file-storage-s3
       '@remix-run/form-data-middleware':
         specifier: workspace:^
         version: link:../form-data-middleware
