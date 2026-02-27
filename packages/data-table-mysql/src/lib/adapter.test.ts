@@ -179,6 +179,26 @@ describe('mysql adapter', () => {
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`billing`\.`invoices`\.`account_id`/)
   })
 
+  it('treats dotted select aliases as single identifiers', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+
+    await db.query(accounts).select({ 'account.email': accounts.email }).all()
+
+    assert.match(statements[0].text, /as `account\.email`/)
+  })
+
   it('does not create dangling bind parameters for inList predicates', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 

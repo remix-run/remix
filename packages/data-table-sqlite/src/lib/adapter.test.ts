@@ -141,6 +141,23 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     assert.equal(count, 1)
     sqlite.close()
   })
+
+  it('treats dotted select aliases as single identifiers', async () => {
+    let sqlite = new Database(':memory:')
+    sqlite.exec(
+      'create table accounts (id integer primary key, email text not null, status text not null)',
+    )
+
+    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+
+    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+
+    let rows = await db.query(accounts).select({ 'account.email': accounts.email }).all()
+
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0]['account.email'], 'a@example.com')
+    sqlite.close()
+  })
 })
 
 function canOpenSqliteDatabase(): boolean {

@@ -90,7 +90,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
     return {
       text:
         'update ' +
-        quoteIdentifier(getTableName(statement.table)) +
+        quotePath(getTableName(statement.table)) +
         ' set ' +
         assignments +
         compileWhereClause(statement.where, context) +
@@ -103,7 +103,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
     return {
       text:
         'delete from ' +
-        quoteIdentifier(getTableName(statement.table)) +
+        quotePath(getTableName(statement.table)) +
         compileWhereClause(statement.where, context) +
         compileReturningClause(statement.returning),
       values: context.values,
@@ -129,7 +129,7 @@ function compileInsertStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(getTableName(table)) +
+        quotePath(getTableName(table)) +
         ' default values' +
         compileReturningClause(returning),
       values: context.values,
@@ -142,7 +142,7 @@ function compileInsertStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(getTableName(table)) +
+      quotePath(getTableName(table)) +
       ' (' +
       quotedColumns.join(', ') +
       ') values (' +
@@ -172,7 +172,7 @@ function compileInsertManyStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(getTableName(table)) +
+        quotePath(getTableName(table)) +
         ' default values' +
         compileReturningClause(returning),
       values: context.values,
@@ -193,7 +193,7 @@ function compileInsertManyStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(getTableName(table)) +
+      quotePath(getTableName(table)) +
       ' (' +
       quotedColumns.join(', ') +
       ') values ' +
@@ -238,7 +238,7 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
   return {
     text:
       'insert into ' +
-      quoteIdentifier(getTableName(statement.table)) +
+      quotePath(getTableName(statement.table)) +
       ' (' +
       quotedInsertColumns.join(', ') +
       ') values (' +
@@ -276,14 +276,14 @@ function compileFromClause(
   joins: JoinClause[],
   context: CompileContext,
 ): string {
-  let output = ' from ' + quoteIdentifier(getTableName(table))
+  let output = ' from ' + quotePath(getTableName(table))
 
   for (let join of joins) {
     output +=
       ' ' +
       normalizeJoinType(join.type) +
       ' join ' +
-      quoteIdentifier(getTableName(join.table)) +
+      quotePath(getTableName(join.table)) +
       ' on ' +
       compilePredicate(join.on, context)
   }
@@ -492,10 +492,7 @@ function normalizeJoinType(type: string): string {
 }
 
 function quoteIdentifier(value: string): string {
-  return value
-    .split('.')
-    .map((segment) => '"' + segment.replace(/"/g, '""') + '"')
-    .join('.')
+  return '"' + value.replace(/"/g, '""') + '"'
 }
 
 function quotePath(path: string): string {
