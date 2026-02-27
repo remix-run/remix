@@ -1014,6 +1014,9 @@ importers:
       '@remix-run/session-middleware':
         specifier: workspace:^
         version: link:../session-middleware
+      '@remix-run/session-storage-memcache':
+        specifier: workspace:^
+        version: link:../session-storage-memcache
       '@remix-run/static-middleware':
         specifier: workspace:^
         version: link:../static-middleware

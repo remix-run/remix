@@ -66,6 +66,7 @@
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
+    "./session-storage-memcache": "./src/session-storage-memcache.ts",
     "./session/cookie-storage": "./src/session/cookie-storage.ts",
     "./session/fs-storage": "./src/session/fs-storage.ts",
     "./session/memory-storage": "./src/session/memory-storage.ts",
@@ -267,6 +268,10 @@
         "types": "./dist/session-middleware.d.ts",
         "default": "./dist/session-middleware.js"
       },
+      "./session-storage-memcache": {
+        "types": "./dist/session-storage-memcache.d.ts",
+        "default": "./dist/session-storage-memcache.js"
+      },
       "./session/cookie-storage": {
         "types": "./dist/session/cookie-storage.d.ts",
         "default": "./dist/session/cookie-storage.js"
@@ -324,7 +329,8 @@
     "@remix-run/data-table": "workspace:^",
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",
-    "@remix-run/data-table-sqlite": "workspace:^"
+    "@remix-run/data-table-sqlite": "workspace:^",
+    "@remix-run/session-storage-memcache": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
