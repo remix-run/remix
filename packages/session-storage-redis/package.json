@@ -1,0 +1,63 @@
+{
+  "name": "@remix-run/session-storage-redis",
+  "version": "0.0.0",
+  "description": "Redis session storage for @remix-run/session",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/session-storage-redis"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/session-storage-redis#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "redis": "^5.10.0"
+  },
+  "dependencies": {
+    "@remix-run/session": "workspace:^"
+  },
+  "peerDependencies": {
+    "redis": "^5.10.0"
+  },
+  "peerDependenciesMeta": {
+    "redis": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "session",
+    "session-storage",
+    "redis",
+    "storage"
+  ]
+}

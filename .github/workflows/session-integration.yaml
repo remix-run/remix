@@ -8,6 +8,7 @@ on:
       - '.github/workflows/session-integration.yaml'
       - 'packages/session/**'
       - 'packages/session-storage-memcache/**'
+      - 'packages/session-storage-redis/**'
       - 'packages/remix/**'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -16,6 +17,7 @@ on:
       - '.github/workflows/session-integration.yaml'
       - 'packages/session/**'
       - 'packages/session-storage-memcache/**'
+      - 'packages/session-storage-redis/**'
       - 'packages/remix/**'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -52,3 +54,40 @@ jobs:
           SESSION_MEMCACHE_INTEGRATION: '1'
           SESSION_MEMCACHE_SERVER: 127.0.0.1:11211
         run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-memcache/src/lib/memcache-storage.integration.test.ts'
+
+  redis-integration:
+    name: Redis Integration
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run redis integration tests
+        env:
+          SESSION_REDIS_INTEGRATION: '1'
+          SESSION_REDIS_URL: redis://127.0.0.1:6379
+        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-redis/src/lib/redis-storage.integration.test.ts'
