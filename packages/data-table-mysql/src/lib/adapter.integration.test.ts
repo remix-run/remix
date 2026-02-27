@@ -2,6 +2,11 @@ import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
 import { createPool, type Pool } from 'mysql2/promise'
 
+import {
+  resetAdapterIntegrationSchema,
+  setupAdapterIntegrationSchema,
+  teardownAdapterIntegrationSchema,
+} from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
@@ -18,38 +23,11 @@ describe('mysql adapter integration', () => {
     }
 
     pool = createPool(process.env.DATA_TABLE_MYSQL_URL as string)
-    await pool.query('drop table if exists tasks')
-    await pool.query('drop table if exists projects')
-    await pool.query('drop table if exists accounts')
-    await pool.query(
-      [
-        'create table accounts (',
-        '  id int primary key,',
-        '  email varchar(255) not null,',
-        '  status varchar(32) not null,',
-        '  nickname varchar(255) null',
-        ')',
-      ].join('\n'),
-    )
-    await pool.query(
-      [
-        'create table projects (',
-        '  id int primary key,',
-        '  account_id int not null,',
-        '  name varchar(255) not null,',
-        '  archived boolean not null',
-        ')',
-      ].join('\n'),
-    )
-    await pool.query(
-      [
-        'create table tasks (',
-        '  id int primary key,',
-        '  project_id int not null,',
-        '  title varchar(255) not null,',
-        '  state varchar(32) not null',
-        ')',
-      ].join('\n'),
+    await setupAdapterIntegrationSchema(
+      async (statement) => {
+        await pool.query(statement)
+      },
+      'mysql',
     )
   })
 
@@ -58,9 +36,12 @@ describe('mysql adapter integration', () => {
       return
     }
 
-    await pool.query('drop table if exists tasks')
-    await pool.query('drop table if exists projects')
-    await pool.query('drop table if exists accounts')
+    await teardownAdapterIntegrationSchema(
+      async (statement) => {
+        await pool.query(statement)
+      },
+      'mysql',
+    )
     await pool.end()
   })
 
@@ -68,9 +49,12 @@ describe('mysql adapter integration', () => {
     integrationEnabled,
     createDatabase: () => createDatabase(createMysqlDatabaseAdapter(pool)),
     resetDatabase: async () => {
-      await pool.query('delete from tasks')
-      await pool.query('delete from projects')
-      await pool.query('delete from accounts')
+      await resetAdapterIntegrationSchema(
+        async (statement) => {
+          await pool.query(statement)
+        },
+        'mysql',
+      )
     },
   })
 })
