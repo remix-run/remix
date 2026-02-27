@@ -273,10 +273,12 @@ describe('mysql sql-compiler', () => {
       })
     })
 
-    it('compile for many with default values', async () => {
-      await db.createMany(accounts, [{}, {}])
-
-      let compiled = compileMysqlStatement(statements[0])
+    it('compile for many with default values', () => {
+      let compiled = compileMysqlStatement({
+        kind: 'insertMany',
+        table: accounts,
+        values: [{}, {}],
+      })
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` () values ()',
         values: [],

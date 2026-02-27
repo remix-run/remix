@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
-import type { DatabaseAdapter } from './adapter.ts'
+import type { AdapterStatement, DatabaseAdapter } from './adapter.ts'
 import { createDatabase } from './database.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { belongsTo, createTable, hasMany, hasManyThrough, hasOne, timestamps } from './table.ts'
@@ -675,6 +675,91 @@ describe('query builder', () => {
     assert.equal(rows.length, 1)
     assert.equal(rows[0].id, 4)
     assert.equal(rows[0].email, 'c@studio.test')
+  })
+
+  it('throws for createMany() batches with only empty rows', async () => {
+    let adapter = createAdapter({
+      accounts: [],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.createMany(tasks, [{}, {}])
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'insertMany() requires at least one explicit value across the batch'
+        )
+      },
+    )
+  })
+
+  it('throws for insertMany() batches with only empty rows', async () => {
+    let adapter = createAdapter({
+      accounts: [],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.query(tasks).insertMany([{}])
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'insertMany() requires at least one explicit value across the batch'
+        )
+      },
+    )
+  })
+
+  it('supports insertMany() batches that include at least one explicit value', async () => {
+    let statements: AdapterStatement[] = []
+
+    let adapter: DatabaseAdapter = {
+      dialect: 'fake',
+      capabilities: {
+        returning: true,
+        savepoints: true,
+        upsert: true,
+      },
+      async execute(request) {
+        statements.push(request.statement)
+
+        if (request.statement.kind === 'insertMany') {
+          return {
+            affectedRows: request.statement.values.length,
+          }
+        }
+
+        return {}
+      },
+      async beginTransaction() {
+        return { id: 'tx_1' }
+      },
+      async commitTransaction() {},
+      async rollbackTransaction() {},
+      async createSavepoint() {},
+      async rollbackToSavepoint() {},
+      async releaseSavepoint() {},
+    }
+
+    let db = createTestDatabase(adapter)
+    let result = await db.query(tasks).insertMany([{}, { title: 'hello world' }])
+
+    assert.equal(result.affectedRows, 2)
+    assert.equal(statements.length, 1)
+    assert.equal(statements[0].kind, 'insertMany')
   })
 
   it('throws for createMany({ returnRows: true }) when adapter has no RETURNING support', async () => {

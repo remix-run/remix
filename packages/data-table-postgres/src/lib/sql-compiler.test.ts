@@ -290,10 +290,12 @@ describe('postgres sql-compiler', () => {
       })
     })
 
-    it('compile for many with default values', async () => {
-      await db.createMany(accounts, [{}, {}])
-
-      let compiled = compilePostgresStatement(statements[0])
+    it('compile for many with default values', () => {
+      let compiled = compilePostgresStatement({
+        kind: 'insertMany',
+        table: accounts,
+        values: [{}, {}],
+      })
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" default values',
         values: [],

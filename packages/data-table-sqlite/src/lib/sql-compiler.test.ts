@@ -486,9 +486,12 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
-    it('compile for many with default values', async () => {
-      await db.createMany(accounts, [{}, {}])
-      let compiled = compileSqliteStatement(statements[0])
+    it('compile for many with default values', () => {
+      let compiled = compileSqliteStatement({
+        kind: 'insertMany',
+        table: accounts,
+        values: [{}, {}],
+      })
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" default values',
         values: [],

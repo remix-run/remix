@@ -1255,6 +1255,14 @@ export class QueryBuilder<
     let preparedValues = values.map((value) =>
       prepareInsertValues(this.#table, value, this.#database.now(), options?.touch ?? true),
     )
+
+    if (
+      preparedValues.length > 0 &&
+      preparedValues.every((preparedValue) => Object.keys(preparedValue).length === 0)
+    ) {
+      throw new DataTableQueryError('insertMany() requires at least one explicit value across the batch')
+    }
+
     let returning = options?.returning
 
     assertReturningCapability(this.#database.adapter, 'insertMany', returning)

@@ -187,6 +187,8 @@ let insertedRows = await db.createMany(
 )
 ```
 
+`createMany`/`insertMany` throw when every row in the batch is empty (no explicit values).
+
 ### Update and delete helpers
 
 ```ts
