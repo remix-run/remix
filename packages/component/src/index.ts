@@ -55,6 +55,7 @@ export type { Dispatched } from './lib/mixins/on-mixin.tsx'
 export { ref } from './lib/mixins/ref-mixin.tsx'
 export type { RefCallback } from './lib/mixins/ref-mixin.tsx'
 export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
+export { animateLayout } from './lib/mixins/animate-layout-mixin.tsx'
 
 // -- Animation --
 export { spring } from './lib/spring.ts'

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
 import type { Handle } from '../lib/component'
-import { createMixin, on, ref } from '../index.ts'
+import { animateLayout, createMixin, on, ref } from '../index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
 describe('jsx', () => {
@@ -327,6 +327,10 @@ describe('jsx', () => {
           ]}
         />
       )
+    })
+
+    it('accepts animateLayout mixin usage', () => {
+      let element = <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
     })
   })
 })
