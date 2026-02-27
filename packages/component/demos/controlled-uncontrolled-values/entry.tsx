@@ -1,4 +1,4 @@
-import { createRoot, type Handle } from 'remix/component'
+import { createRoot, on, type Handle } from 'remix/component'
 
 function App(handle: Handle) {
   let controlledText = 'hello'
@@ -43,9 +43,9 @@ function App(handle: Handle) {
       </p>
 
       <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
-        <button on={{ click: rerender }}>Force Re-render</button>
-        <button on={{ click: resetControlled }}>Reset Controlled</button>
-        <button on={{ click: remountUncontrolled }}>Remount Uncontrolled</button>
+        <button mix={[on('click', rerender)]}>Force Re-render</button>
+        <button mix={[on('click', resetControlled)]}>Reset Controlled</button>
+        <button mix={[on('click', remountUncontrolled)]}>Remount Uncontrolled</button>
       </div>
 
       <section
@@ -67,16 +67,16 @@ function App(handle: Handle) {
           <input
             style={{ marginLeft: '8px' }}
             value={controlledText}
-            on={{
-              input(event) {
+            mix={[
+              on('input', (event) => {
                 let nextValue = event.currentTarget.value
                 if (/\d/.test(nextValue)) {
                   return
                 }
                 controlledText = nextValue
                 rerender()
-              },
-            }}
+              }),
+            ]}
           />
         </label>
 
@@ -84,12 +84,12 @@ function App(handle: Handle) {
           <input
             type="checkbox"
             checked={controlledChecked}
-            on={{
-              change(event) {
+            mix={[
+              on('change', (event) => {
                 controlledChecked = event.currentTarget.checked
                 rerender()
-              },
-            }}
+              }),
+            ]}
           />{' '}
           Checked
         </label>
@@ -119,12 +119,12 @@ function App(handle: Handle) {
           <input
             style={{ marginLeft: '8px' }}
             defaultValue="type to update this"
-            on={{
-              input(event) {
+            mix={[
+              on('input', (event) => {
                 uncontrolledTextSnapshot = event.currentTarget.value
                 rerender()
-              },
-            }}
+              }),
+            ]}
           />
         </label>
 
@@ -132,12 +132,12 @@ function App(handle: Handle) {
           <input
             type="checkbox"
             defaultChecked={true}
-            on={{
-              change(event) {
+            mix={[
+              on('change', (event) => {
                 uncontrolledCheckedSnapshot = event.currentTarget.checked
                 rerender()
-              },
-            }}
+              }),
+            ]}
           />{' '}
           Checked
         </label>

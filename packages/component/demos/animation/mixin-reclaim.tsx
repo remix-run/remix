@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css } from 'remix/component'
+import { animateEntrance, animateExit, css, on } from 'remix/component'
 
 export function MixinReclaim(handle: Handle) {
   let visible = true
@@ -37,14 +37,12 @@ export function MixinReclaim(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#059669' },
             }),
-          ]}
-          on={{
-            click() {
+            on('click', () => {
               clearInterruptTimer()
               visible = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           Show
         </button>
@@ -60,10 +58,8 @@ export function MixinReclaim(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#d97706' },
             }),
+            on('click', scheduleInterrupt),
           ]}
-          on={{
-            click: scheduleInterrupt,
-          }}
         >
           Interrupt
         </button>
@@ -80,14 +76,12 @@ export function MixinReclaim(handle: Handle) {
             cursor: 'pointer',
             '&:hover': { backgroundColor: '#dc2626' },
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             clearInterruptTimer()
             visible = false
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Hide
       </button>

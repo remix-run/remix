@@ -1,6 +1,6 @@
 import { defineInteraction, type Interaction } from 'remix/interaction'
 import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
-import { animateEntrance, animateExit, css, spring, type Handle } from 'remix/component'
+import { animateEntrance, animateExit, css, on, spring, type Handle } from 'remix/component'
 
 // Demo
 let buttonExitAnimation = {
@@ -83,20 +83,18 @@ function HoldButton(handle: Handle) {
             transform: 'scale(0.98)',
           },
         }),
-      ]}
-      on={{
-        [pressConfirmStart]() {
+        on(pressConfirmStart, () => {
           confirming = true
           handle.update()
-        },
-        [pressConfirmCancel]() {
+        }),
+        on(pressConfirmCancel, () => {
           confirming = false
           handle.update()
-        },
-        [pressConfirmEnd]() {
+        }),
+        on(pressConfirmEnd, () => {
           props.onConfirm()
-        },
-      }}
+        }),
+      ]}
     >
       <div
         mix={[
@@ -179,8 +177,8 @@ function Confirmation() {
               borderColor: '#cbd5e1',
             },
           }),
+          on('click', props.onReset),
         ]}
-        on={{ click: props.onReset }}
       >
         Reset Demo
       </button>

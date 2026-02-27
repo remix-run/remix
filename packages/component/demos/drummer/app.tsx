@@ -128,14 +128,14 @@ function DrumControls(handle: Handle) {
       <Button
         disabled={drummer.isPlaying}
         connect={(node: HTMLButtonElement) => (play = node)}
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             drummer.play()
             handle.queueTask(() => {
               stop.focus()
             })
-          },
-        }}
+          }),
+        ]}
       >
         PLAY
       </Button>
@@ -143,14 +143,14 @@ function DrumControls(handle: Handle) {
       <Button
         disabled={!drummer.isPlaying}
         connect={(node: HTMLButtonElement) => (stop = node)}
-        on={{
-          [press]: () => {
+        mix={[
+          on(press, () => {
             drummer.stop()
             handle.queueTask(() => {
               play.focus()
             })
-          },
-        }}
+          }),
+        ]}
       >
         STOP
       </Button>
@@ -165,22 +165,22 @@ function TempoDisplay(handle: Handle) {
       <BPMDisplay bpm={drummer.bpm} />
       <TempoButtons>
         <TempoButton
-          mix={[css({ borderTopRightRadius: '18px' })]}
           orientation="up"
-          on={{
-            [press]: () => {
+          mix={[
+            css({ borderTopRightRadius: '18px' }),
+            on(press, () => {
               drummer.setTempo(drummer.bpm + 1)
-            },
-          }}
+            }),
+          ]}
         />
         <TempoButton
-          mix={[css({ borderBottomRightRadius: '18px' })]}
-          orientation="down"
-          on={{
-            [press]: () => {
+          mix={[
+            css({ borderBottomRightRadius: '18px' }),
+            on(press, () => {
               drummer.setTempo(drummer.bpm - 1)
-            },
-          }}
+            }),
+          ]}
+          orientation="down"
         />
       </TempoButtons>
     </TempoLayout>

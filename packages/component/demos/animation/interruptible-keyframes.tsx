@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { css } from 'remix/component'
+import { css, on } from 'remix/component'
 
 export function InterruptibleKeyframes(handle: Handle) {
   let box: HTMLDivElement
@@ -28,9 +28,7 @@ export function InterruptibleKeyframes(handle: Handle) {
           backgroundColor: '#0cdcf7',
           borderRadius: 5,
         }),
-      ]}
-      on={{
-        pointerenter() {
+        on('pointerenter', () => {
           interruptAnimation()
           let startScale = getCurrentScale()
 
@@ -45,8 +43,8 @@ export function InterruptibleKeyframes(handle: Handle) {
               fill: 'forwards',
             },
           )
-        },
-        pointerleave() {
+        }),
+        on('pointerleave', () => {
           interruptAnimation()
           let startScale = getCurrentScale()
 
@@ -58,8 +56,8 @@ export function InterruptibleKeyframes(handle: Handle) {
               fill: 'forwards',
             },
           )
-        },
-      }}
+        }),
+      ]}
     />
   )
 }

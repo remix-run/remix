@@ -1,4 +1,4 @@
-import { createRoot, type Handle } from 'remix/component'
+import { createRoot, on, type Handle } from 'remix/component'
 
 type ListItem = {
   id: string
@@ -62,23 +62,17 @@ function App(handle: Handle) {
     <div>
       <div className="controls">
         <button
-          on={{
-            click: reverse,
-          }}
+          mix={[on('click', reverse)]}
         >
           Reverse List
         </button>
         <button
-          on={{
-            click: shuffle,
-          }}
+          mix={[on('click', shuffle)]}
         >
           Shuffle List
         </button>
         <button
-          on={{
-            click: toggleAutoShuffle,
-          }}
+          mix={[on('click', toggleAutoShuffle)]}
         >
           {shuffleInterval !== null ? 'Stop Auto-Shuffle' : 'Start Auto-Shuffle'}
         </button>
@@ -89,17 +83,13 @@ function App(handle: Handle) {
           <input type="text" placeholder={item.label} defaultValue={item.label} />
           <button
             // disabled={index === 0}
-            on={{
-              click: () => moveUp(index),
-            }}
+            mix={[on('click', () => moveUp(index))]}
           >
             ↑
           </button>
           <button
             // disabled={index === items.length - 1}
-            on={{
-              click: () => moveDown(index),
-            }}
+            mix={[on('click', () => moveDown(index))]}
           >
             ↓
           </button>

@@ -1,5 +1,5 @@
 import { type Handle } from 'remix/component'
-import { css, spring } from 'remix/component'
+import { css, on, spring } from 'remix/component'
 
 export function RollingSquare(handle: Handle) {
   let toggled = false
@@ -42,13 +42,11 @@ export function RollingSquare(handle: Handle) {
             border: 'none',
             cursor: 'pointer',
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             toggled = !toggled
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Toggle position
       </button>

@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css, spring } from 'remix/component'
+import { animateEntrance, animateExit, css, on, spring } from 'remix/component'
 
 export function ExitAnimation(handle: Handle) {
   let isVisible = true
@@ -64,13 +64,11 @@ export function ExitAnimation(handle: Handle) {
               transform: 'translateY(1px)',
             },
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             isVisible = !isVisible
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         {isVisible ? 'Hide' : 'Show'}
       </button>

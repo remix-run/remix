@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css } from 'remix/component'
+import { animateEntrance, animateExit, css, on } from 'remix/component'
 
 let nextId = 1
 function createItem() {
@@ -33,13 +33,11 @@ export function MixinPresenceList(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#0284c7' },
             }),
-          ]}
-          on={{
-            click() {
+            on('click', () => {
               items.unshift(createItem())
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           Add
         </button>
@@ -55,13 +53,11 @@ export function MixinPresenceList(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#dc2626' },
             }),
-          ]}
-          on={{
-            click() {
+            on('click', () => {
               items = items.slice(0, Math.max(0, items.length - 1))
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           Remove
         </button>
@@ -108,13 +104,11 @@ export function MixinPresenceList(handle: Handle) {
                 cursor: 'pointer',
                 '&:hover': { backgroundColor: '#e2e8f0' },
               }),
-            ]}
-            on={{
-              click() {
+              on('click', () => {
                 items = items.filter((entry) => entry.id !== item.id)
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             ×
           </button>

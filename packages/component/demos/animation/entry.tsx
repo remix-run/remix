@@ -1,4 +1,4 @@
-import { createRoot, css, type Handle, type RemixNode } from 'remix/component'
+import { createRoot, css, on, type Handle, type RemixNode } from 'remix/component'
 import { DefaultAnimate } from './default-animate.tsx'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
@@ -56,13 +56,11 @@ function Tile(handle: Handle) {
               opacity: 1,
             },
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             remountKey++
             handle.update()
-          },
-        }}
+          }),
+        ]}
         title="Replay animation"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

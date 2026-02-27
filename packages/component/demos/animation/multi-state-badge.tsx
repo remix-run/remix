@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css } from 'remix/component'
+import { animateEntrance, animateExit, css, on } from 'remix/component'
 import { spring } from '../../src/lib/spring.ts'
 
 const STATES = {
@@ -59,13 +59,11 @@ export function MultiStateBadge(handle: Handle) {
             cursor: 'pointer',
             padding: 0,
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             state = getNextState(state)
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         <Badge state={state} />
       </button>

@@ -2,6 +2,7 @@ import {
   animateEntrance,
   animateExit,
   css,
+  on,
   type Handle,
   type Props,
   type RemixNode,
@@ -146,13 +147,11 @@ export function SharedLayout(handle: Handle) {
               transform: 'scale(0.95)',
             },
           }),
-        ]}
-        on={{
-          click() {
+          on('click', () => {
             state = !state
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Switch
       </button>

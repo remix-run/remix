@@ -1,4 +1,4 @@
-import { createRoot, css, type Handle } from 'remix/component'
+import { createRoot, css, on, type Handle } from 'remix/component'
 
 import { dragRelease } from './drag-release.ts'
 import { spring, type SpringPreset } from 'remix/component'
@@ -228,34 +228,23 @@ function SpringDemo(handle: Handle) {
             touchAction: 'none',
             zIndex: 10,
           }),
-        ]}
-        style={{
-          left: `${dragX}px`,
-          top: `${dragY}px`,
-          cursor: isDragging ? 'grabbing' : 'grab',
-          transition: isAnimating ? `left ${transitionX}, top ${transitionY}` : 'none',
-        }}
-        on={{
-          transitionend() {
+          on('transitionend', () => {
             isAnimating = false
             handle.update()
-          },
-
-          pointerdown(event) {
+          }),
+          on('pointerdown', (event) => {
             event.preventDefault()
             isDragging = true
             isAnimating = false
             handle.update()
-          },
-
-          pointermove(event) {
+          }),
+          on('pointermove', (event) => {
             if (!isDragging) return
             dragX = event.clientX
             dragY = event.clientY
             handle.update()
-          },
-
-          [dragRelease](event) {
+          }),
+          on(dragRelease, (event) => {
             isDragging = false
 
             // Calculate distance to target on each axis
@@ -291,7 +280,13 @@ function SpringDemo(handle: Handle) {
             dragX = targetX
             dragY = targetY
             handle.update()
-          },
+          }),
+        ]}
+        style={{
+          left: `${dragX}px`,
+          top: `${dragY}px`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isAnimating ? `left ${transitionX}, top ${transitionY}` : 'none',
         }}
       />
 
@@ -342,14 +337,14 @@ function SpringDemo(handle: Handle) {
               name="spring-preset"
               value={preset}
               checked={selectedPreset === preset}
-              mix={[css({ accentColor: '#0ea5e9' })]}
-              on={{
-                change() {
+              mix={[
+                css({ accentColor: '#0ea5e9' }),
+                on('change', () => {
                   selectedPreset = preset
                   springValue = spring(selectedPreset)
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             />
             {preset}
           </label>

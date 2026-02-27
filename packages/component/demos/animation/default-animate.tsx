@@ -1,4 +1,4 @@
-import { animateEntrance, animateLayout, css, type Handle } from 'remix/component'
+import { animateEntrance, animateLayout, css, on, type Handle } from 'remix/component'
 
 let nextId = 1
 function createItem() {
@@ -34,13 +34,11 @@ export function DefaultAnimate(handle: Handle) {
               fontWeight: 500,
               '&:hover': { backgroundColor: '#059669' },
             }),
-          ]}
-          on={{
-            click() {
+            on('click', () => {
               items.unshift(createItem())
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           Add
         </button>
@@ -57,17 +55,15 @@ export function DefaultAnimate(handle: Handle) {
               fontWeight: 500,
               '&:hover': { backgroundColor: '#4f46e5' },
             }),
-          ]}
-          on={{
-            click() {
+            on('click', () => {
               // Shuffle the array
               for (let i = items.length - 1; i > 0; i--) {
                 let j = Math.floor(Math.random() * (i + 1))
                 ;[items[i], items[j]] = [items[j], items[i]]
               }
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           Shuffle
         </button>
@@ -108,13 +104,11 @@ export function DefaultAnimate(handle: Handle) {
                 justifyContent: 'center',
                 '&:hover': { backgroundColor: '#e2e8f0', color: '#64748b' },
               }),
-            ]}
-            on={{
-              click() {
+              on('click', () => {
                 items = items.filter((i) => i.id !== item.id)
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             <svg
               width="12"

@@ -1,5 +1,5 @@
 import { type Handle } from 'remix/component'
-import { css, spring } from 'remix/component'
+import { css, on, spring } from 'remix/component'
 
 export function AspectRatio(handle: Handle) {
   let aspectRatio = 1
@@ -60,9 +60,9 @@ export function AspectRatio(handle: Handle) {
             min={0.2}
             max={3}
             step={0.1}
-            mix={[css(rangeInputCss)]}
-            on={{
-              input(event, signal) {
+            mix={[
+              css(rangeInputCss),
+              on('input', (event, signal) => {
                 let value = event.currentTarget.value
 
                 setTimeout(() => {
@@ -70,8 +70,8 @@ export function AspectRatio(handle: Handle) {
                   aspectRatio = parseFloat(value)
                   handle.update()
                 }, 200)
-              },
-            }}
+              }),
+            ]}
           />
           <span mix={[css({ width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' })]}>
             {aspectRatio.toFixed(1)}
@@ -95,9 +95,9 @@ export function AspectRatio(handle: Handle) {
             min={20}
             max={160}
             step={5}
-            mix={[css(rangeInputCss)]}
-            on={{
-              input(event, signal) {
+            mix={[
+              css(rangeInputCss),
+              on('input', (event, signal) => {
                 let value = event.currentTarget.value
 
                 setTimeout(() => {
@@ -105,8 +105,8 @@ export function AspectRatio(handle: Handle) {
                   width = parseFloat(value)
                   handle.update()
                 }, 200)
-              },
-            }}
+              }),
+            ]}
           />
           <span mix={[css({ width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' })]}>
             {width}

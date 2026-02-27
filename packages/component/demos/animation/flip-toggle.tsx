@@ -1,4 +1,4 @@
-import { animateLayout, css, type Handle } from 'remix/component'
+import { animateLayout, css, on, type Handle } from 'remix/component'
 
 export function FlipToggle(handle: Handle) {
   let isOn = false
@@ -16,16 +16,14 @@ export function FlipToggle(handle: Handle) {
           padding: 10,
           border: 'none',
         }),
+        on('click', () => {
+          isOn = !isOn
+          handle.update()
+        }),
       ]}
       style={{
         // The actual layout property that changes
         justifyContent: isOn ? 'flex-start' : 'flex-end',
-      }}
-      on={{
-        click() {
-          isOn = !isOn
-          handle.update()
-        },
       }}
     >
       <div

@@ -1,4 +1,4 @@
-import { css, spring, type Handle } from 'remix/component'
+import { css, on, spring, type Handle } from 'remix/component'
 import { pressDown, pressUp } from 'remix/interaction/press'
 
 export function Press(handle: Handle) {
@@ -25,17 +25,15 @@ export function Press(handle: Handle) {
           //   transform: 'scale(0.8)',
           // },
         }),
-      ]}
-      on={{
-        [pressDown]() {
+        on(pressDown, () => {
           pressed = true
           handle.update()
-        },
-        [pressUp]() {
+        }),
+        on(pressUp, () => {
           pressed = false
           handle.update()
-        },
-      }}
+        }),
+      ]}
     />
   )
 }

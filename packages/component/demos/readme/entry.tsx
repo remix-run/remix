@@ -1,4 +1,4 @@
-import { createRoot, css, type Handle, type RemixNode } from 'remix/component'
+import { createRoot, css, on, type Handle, type RemixNode } from 'remix/component'
 import { TypedEventTarget } from 'remix/interaction'
 
 // ============================================================================
@@ -8,12 +8,12 @@ function App(handle: Handle) {
   let count = 0
   return () => (
     <button
-      on={{
-        click: () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -30,12 +30,12 @@ function Counter(handle: Handle) {
     <div>
       <span>Count: {count}</span>
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -62,12 +62,12 @@ function CounterWithSetup(handle: Handle, setup: number) {
     <div>
       {props.label || 'Count'}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -86,12 +86,12 @@ function CounterWithLabel(handle: Handle, setup: number) {
     <div>
       {props.label}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         +
       </button>
@@ -113,8 +113,8 @@ function SearchInput(handle: Handle) {
         type="text"
         value={query}
         placeholder="Type to search..."
-        on={{
-          input: (event, signal) => {
+        mix={[
+          on('input', (event, signal) => {
             query = event.currentTarget.value
             loading = true
             handle.update()
@@ -126,8 +126,8 @@ function SearchInput(handle: Handle) {
               loading = false
               handle.update()
             }, 300)
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (
@@ -153,16 +153,16 @@ function SlugForm(handle: Handle) {
       <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px' })]}>
         <input
           type="checkbox"
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               if (event.currentTarget.checked) {
                 generatedSlug = crypto.randomUUID().slice(0, 8)
               } else {
                 generatedSlug = ''
               }
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
         Auto-generate slug
       </label>
@@ -172,12 +172,12 @@ function SlugForm(handle: Handle) {
           type="text"
           value={generatedSlug || slug}
           disabled={!!generatedSlug}
-          on={{
-            input: (event) => {
+          mix={[
+            on('input', (event) => {
               slug = event.currentTarget.value
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
       </label>
     </form>
@@ -292,13 +292,13 @@ function FormBasic(handle: Handle) {
         mix={[css({ marginRight: '8px', padding: '4px 8px' })]}
       />
       <button
-        on={{
-          click: () => {
+        mix={[
+          css({ padding: '4px 12px' }),
+          on('click', () => {
             // Select it from other parts of the form
             inputRef.select()
-          },
-        }}
-        mix={[css({ padding: '4px 12px' })]}
+          }),
+        ]}
       >
         Select Input
       </button>
@@ -362,18 +362,16 @@ function Player(handle: Handle) {
       <button
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
-        on={{
-          async click() {
-            isPlaying = true
-            await handle.update()
-            // Focus the enabled button after update completes
-            stopButton.focus()
-          },
-        }}
         mix={[
           css({
             padding: '8px 16px',
             opacity: isPlaying ? 0.5 : 1,
+          }),
+          on('click', async () => {
+            isPlaying = true
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
           }),
         ]}
       >
@@ -382,18 +380,16 @@ function Player(handle: Handle) {
       <button
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
-        on={{
-          async click() {
-            isPlaying = false
-            await handle.update()
-            // Focus the enabled button after update completes
-            playButton.focus()
-          },
-        }}
         mix={[
           css({
             padding: '8px 16px',
             opacity: !isPlaying ? 0.5 : 1,
+          }),
+          on('click', async () => {
+            isPlaying = false
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
           }),
         ]}
       >
@@ -416,8 +412,8 @@ function FormWithScroll(handle: Handle) {
         <input
           type="checkbox"
           checked={showDetails}
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               showDetails = event.currentTarget.checked
               handle.update()
               if (showDetails) {
@@ -426,8 +422,8 @@ function FormWithScroll(handle: Handle) {
                   detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 })
               }
-            },
-          }}
+            }),
+          ]}
         />
         Show additional details
       </label>
@@ -543,13 +539,13 @@ function ThemeProviderAdvanced(handle: Handle<Theme>) {
   return () => (
     <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <button
-        on={{
-          click: () => {
+        mix={[
+          css({ padding: '8px 16px', alignSelf: 'flex-start' }),
+          on('click', () => {
             // no updates in the parent component
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
-        mix={[css({ padding: '8px 16px', alignSelf: 'flex-start' })]}
+          }),
+        ]}
       >
         Toggle Theme (EventTarget)
       </button>

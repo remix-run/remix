@@ -1,15 +1,15 @@
-import { createRoot, type Handle } from 'remix/component'
+import { createRoot, on, type Handle } from 'remix/component'
 
 function App(handle: Handle) {
   let count = 0
   return () => (
     <button
-      on={{
-        click: () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Ye ol' counter: {count}
     </button>
