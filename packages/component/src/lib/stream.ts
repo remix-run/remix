@@ -107,7 +107,7 @@ const NUMERIC_CSS_PROPS = new Set([
   'column-count',
 ])
 
-const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'css'])
+const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'css', 'mix'])
 
 export function renderToStream(
   node: RemixNode,
@@ -358,7 +358,8 @@ function buildElementSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let processedProps = processStyleProps(props, context)
+  let mixedProps = resolveSsrMixedProps(tag, props)
+  let processedProps = processStyleProps(mixedProps, context)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
   let attrs = renderAttributes(processedProps, currentIsSvg)
@@ -421,6 +422,170 @@ function renderAttributes(props: any, isSvg: boolean): string {
   }
 
   return attrs
+}
+
+function resolveSsrMixedProps(hostType: string, initialProps: ElementProps): ElementProps {
+  let descriptors = resolveSsrMixDescriptors(initialProps)
+  if (descriptors.length === 0) return initialProps
+
+  let composedProps = withoutSsrMix(initialProps)
+  let maxDescriptors = 1024
+
+  for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
+    let descriptor = descriptors[index]
+    let runner = resolveSsrMixinRunner(hostType, descriptor)
+    if (!runner) continue
+
+    let result: unknown
+    try {
+      result = runner(...descriptor.args, composedProps)
+    } catch (error) {
+      console.error(error)
+      continue
+    }
+
+    if (!result) continue
+    if (isSsrMixinElement(result)) continue
+
+    if (!isRemixElement(result)) {
+      console.error(new Error('mixins must return a remix element'))
+      continue
+    }
+    let remixResult = result
+
+    let resultType =
+      typeof remixResult.type === 'string'
+        ? remixResult.type
+        : isSsrMixinElement(remixResult.type)
+          ? remixResult.type.__rmxMixinElementType
+          : null
+
+    if (resultType !== hostType) {
+      console.error(new Error('mixins must return an element with the same host type'))
+      continue
+    }
+
+    if (remixResult.type !== resultType) {
+      remixResult = { ...remixResult, type: resultType }
+    }
+
+    let nextProps = remixResult.props as ElementProps
+    let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
+    for (let nested of nestedDescriptors) descriptors.push(nested)
+    composedProps = composeSsrMixinProps(composedProps, withoutSsrMix(nextProps))
+  }
+
+  let nextMix = initialProps.mix
+  return {
+    ...composedProps,
+    ...(nextMix === undefined ? {} : { mix: nextMix }),
+  }
+}
+
+function resolveSsrMixinRunner(
+  hostType: string,
+  descriptor: { type?: unknown; args?: unknown[] },
+): ((...args: unknown[]) => unknown) | null {
+  if (typeof descriptor.type !== 'function') return null
+  try {
+    let handle = createSsrMixinHandle(hostType)
+    let runner = descriptor.type(handle, hostType)
+    if (typeof runner !== 'function') return null
+    return runner
+  } catch (error) {
+    console.error(error)
+    return null
+  }
+}
+
+function createSsrMixinHandle(hostType: string) {
+  let signal = new AbortController().signal
+  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
+    $rmx: true as const,
+    type: hostType,
+    key: null,
+    props,
+  })) as ((
+    handle: { update(): Promise<AbortSignal> },
+    setup: unknown,
+  ) => (props: ElementProps) => RemixElement) & {
+    __rmxMixinElementType: string
+  }
+  element.__rmxMixinElementType = hostType
+
+  return {
+    id: 'ssr-mixin',
+    frame: createFrameHandle({ src: '' }),
+    element,
+    update: () => Promise.resolve(signal),
+    queueTask: () => {},
+    on: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => true,
+  }
+}
+
+function resolveSsrMixDescriptors(props: ElementProps): Array<{ type: any; args: unknown[] }> {
+  let mix = props.mix
+  if (mix == null || !Array.isArray(mix) || mix.length === 0) return []
+  return [...mix] as Array<{ type: any; args: unknown[] }>
+}
+
+function withoutSsrMix(props: ElementProps): ElementProps {
+  if (!('mix' in props)) return props
+  let output = { ...props }
+  delete output.mix
+  return output
+}
+
+function composeSsrMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
+  let composed = { ...previous, ...next }
+  let previousConnect = previous.connect
+  let nextConnect = next.connect
+  let previousOn = previous.on
+  let nextOn = next.on
+
+  if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
+    composed.connect = (node: Element, signal: AbortSignal) => {
+      nextConnect(node, signal)
+      previousConnect(node, signal)
+    }
+  }
+
+  if (isRecord(previousOn) && isRecord(nextOn)) {
+    composed.on = composeSsrOnListeners(previousOn, nextOn)
+  }
+
+  return composed
+}
+
+function composeSsrOnListeners(previous: Record<string, unknown>, next: Record<string, unknown>) {
+  let merged: Record<string, unknown> = { ...previous, ...next }
+  for (let key in previous) {
+    if (!(key in next)) continue
+    merged[key] = composeSsrListenerValue(next[key], previous[key])
+  }
+  return merged
+}
+
+function composeSsrListenerValue(next: unknown, previous: unknown) {
+  if (next == null) return previous
+  if (previous == null) return next
+  let nextValues = Array.isArray(next) ? next : [next]
+  let previousValues = Array.isArray(previous) ? previous : [previous]
+  return [...nextValues, ...previousValues]
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isSsrMixinElement(
+  value: unknown,
+): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
+  if (typeof value !== 'function') return false
+  return '__rmxMixinElementType' in value
 }
 
 function buildComponentSegment(

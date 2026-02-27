@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
+import { createMixin } from '../index.ts'
 
 import { renderToStream, renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
@@ -369,6 +370,57 @@ describe('stream', () => {
       expect(html).toContain('type="button"')
       expect(html).toContain('<li>First</li>')
       expect(html).toContain('<li>Second</li>')
+    })
+
+    it('resolves mixins for host prop composition', async () => {
+      let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+        <handle.element {...props} title={title} />
+      ))
+      let appendTitle = createMixin((handle) => (suffix: string, props: { title?: string }) => (
+        <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
+      ))
+
+      let stream = renderToStream(<div mix={[withTitle('hello'), appendTitle('-world')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="hello-world"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('supports nested mix descriptors via handle.element', async () => {
+      let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) => (
+        <handle.element {...props} data-mixed={value} />
+      ))
+      let withNested = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} mix={[withData(value)]} />
+        ),
+      )
+
+      let stream = renderToStream(<div mix={[withNested('nested')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="nested"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('ignores lifecycle-only mixin side effects during SSR', async () => {
+      let lifecycleOnly = createMixin((handle) => {
+        handle.addEventListener('insert', () => {
+          throw new Error('should not run in SSR')
+        })
+        handle.queueTask(() => {
+          throw new Error('should not run in SSR')
+        })
+        void handle.update()
+
+        return (props: { title?: string }) => <handle.element {...props} title="ok" />
+      })
+
+      let stream = renderToStream(<div mix={[lifecycleOnly()]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="ok"></div>')
     })
   })
 
