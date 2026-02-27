@@ -6,16 +6,26 @@ import {
 } from './layout-animation.ts'
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
-import { findNextSiblingDomAnchor, renderComponent } from './reconcile.ts'
+import {
+  findNextSiblingDomAnchor,
+  renderComponent,
+  setActiveSchedulerUpdateParents,
+} from './reconcile.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 
 type EmptyFn = () => void
+type SchedulerPhaseType = 'beforeUpdate' | 'commit'
+type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
 
 export type Scheduler = ReturnType<typeof createScheduler>
 
 // Protect against infinite cascading updates (e.g. handle.update() during render)
 const MAX_CASCADING_UPDATES = 50
+
+export type SchedulerPhaseEvent = Event & {
+  parents: ParentNode[]
+}
 
 export function createScheduler(
   doc: Document,
@@ -24,13 +34,24 @@ export function createScheduler(
 ) {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
-  let tasks: EmptyFn[] = []
+  let commitTasks: EmptyFn[] = []
   let flushScheduled = false
   let cascadingUpdateCount = 0
   let resetScheduled = false
+  let phaseEvents = new EventTarget()
   let scheduler: {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
     enqueueTasks(newTasks: EmptyFn[]): void
+    addEventListener(
+      type: SchedulerPhaseType,
+      listener: SchedulerPhaseListener,
+      options?: AddEventListenerOptions | boolean,
+    ): void
+    removeEventListener(
+      type: SchedulerPhaseType,
+      listener: SchedulerPhaseListener,
+      options?: EventListenerOptions | boolean,
+    ): void
     dequeue(): void
   }
 
@@ -56,7 +77,7 @@ export function createScheduler(
     let batch = new Map(scheduled)
     scheduled.clear()
 
-    let hasWork = batch.size > 0 || tasks.length > 0
+    let hasWork = batch.size > 0 || commitTasks.length > 0
     if (!hasWork) return
 
     cascadingUpdateCount++
@@ -80,6 +101,10 @@ export function createScheduler(
     captureLayoutSnapshots()
 
     documentState.capture()
+
+    let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
+    setActiveSchedulerUpdateParents(updateParents)
+    dispatchPhaseEvent('beforeUpdate', updateParents)
 
     if (batch.size > 0) {
       let vnodes = Array.from(batch)
@@ -113,6 +138,7 @@ export function createScheduler(
         }
       }
     }
+    setActiveSchedulerUpdateParents(undefined)
 
     // restore before user tasks so users can move focus/selection etc.
     documentState.restore()
@@ -120,15 +146,26 @@ export function createScheduler(
     // Apply FLIP layout animations AFTER DOM work, BEFORE user tasks
     applyLayoutAnimations()
 
-    if (tasks.length > 0) {
-      for (let task of tasks) {
-        try {
-          task()
-        } catch (error) {
-          dispatchError(error)
-        }
+    dispatchPhaseEvent('commit', updateParents)
+
+    flushTaskQueue(commitTasks)
+  }
+
+  function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
+    let event = new Event(type) as SchedulerPhaseEvent
+    event.parents = parents
+    phaseEvents.dispatchEvent(event)
+  }
+
+  function flushTaskQueue(queue: EmptyFn[]) {
+    while (queue.length > 0) {
+      let task = queue.shift()
+      if (!task) continue
+      try {
+        task()
+      } catch (error) {
+        dispatchError(error)
       }
-      tasks = []
     }
   }
 
@@ -174,8 +211,16 @@ export function createScheduler(
     },
 
     enqueueTasks(newTasks: EmptyFn[]): void {
-      tasks.push(...newTasks)
+      commitTasks.push(...newTasks)
       scheduleFlush()
+    },
+
+    addEventListener(type, listener, options) {
+      phaseEvents.addEventListener(type, listener, options)
+    },
+
+    removeEventListener(type, listener, options) {
+      phaseEvents.removeEventListener(type, listener, options)
     },
 
     dequeue() {

@@ -49,6 +49,8 @@ import {
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
+  dispatchMixinBeforeUpdate,
+  dispatchMixinCommit,
   getMixinRuntimeSignal,
   prepareMixinRemoval,
   resolveMixedProps,
@@ -65,6 +67,7 @@ const MATCHED = 1 << 1
 let idCounter = 0
 let persistedRemovalToken = 0
 let persistedMixinNodes = new Set<CommittedHostNode>()
+let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 // Compute SVG context for a node based on its parent and type.
 // Returns true if the node is within an SVG subtree, false otherwise.
@@ -287,6 +290,7 @@ function bindNodeMixRuntime(
               return
             }
 
+            dispatchMixinBeforeUpdate(state)
             let prevProps = getHostProps(node)
             let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
             diffHostProps(prevProps, nextProps, node._dom, styles)
@@ -305,6 +309,7 @@ function bindNodeMixRuntime(
               node._events = undefined
             }
 
+            dispatchMixinCommit(state)
             done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
           },
         ])
@@ -445,13 +450,12 @@ function diffHost(
   vParent: VNode,
   rootTarget: EventTarget,
 ) {
+  let mixState = curr._mixState as MixinRuntimeState | undefined
   let currProps = getHostProps(curr)
-  let nextProps = resolveNodeMixProps(
-    next,
-    frame,
-    scheduler,
-    curr._mixState as MixinRuntimeState | undefined,
-  )
+  let nextProps = resolveNodeMixProps(next, frame, scheduler, mixState)
+  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
+    dispatchMixinBeforeUpdate(next._mixState as MixinRuntimeState | undefined)
+  }
 
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
   if (nextProps.innerHTML != null) {
@@ -514,6 +518,9 @@ function diffHost(
   syncControlledReflection(next as CommittedHostNode, nextProps)
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
+    scheduler.enqueueTasks([() => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined)])
+  }
 
   return
 }
@@ -1797,6 +1804,21 @@ function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: No
   }
 }
 
+export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {
+  activeSchedulerUpdateParents = parents
+}
+
+function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
+  let parents = activeSchedulerUpdateParents
+  if (!parents?.length) return true
+  for (let parent of parents) {
+    let parentNode = parent as Node
+    if (parentNode === node) return false
+    if (parentNode.contains(node)) return false
+  }
+  return true
+}
+
 export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | null {
   if (!vParent || !Array.isArray(vParent._children)) return null
   let children = vParent._children
@@ -1848,6 +1870,9 @@ function reclaimExitingNode(
     scheduler,
     newNode._mixState as MixinRuntimeState | undefined,
   )
+  if (shouldDispatchInlineMixinLifecycle(exitingNode._dom)) {
+    dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
+  }
   diffHostProps(prevProps, nextProps, exitingNode._dom, styles)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
@@ -1882,6 +1907,9 @@ function reclaimExitingNode(
   }
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles)
+  if (shouldDispatchInlineMixinLifecycle(exitingNode._dom)) {
+    scheduler.enqueueTasks([() => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined)])
+  }
 }
 
 function reclaimPersistedMixinNode(
@@ -1911,6 +1939,9 @@ function reclaimPersistedMixinNode(
     scheduler,
     newNode._mixState as MixinRuntimeState | undefined,
   )
+  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
+    dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
+  }
   diffHostProps(prevProps, nextProps, persistedNode._dom, styles)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
@@ -1943,4 +1974,7 @@ function reclaimPersistedMixinNode(
   }
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
+  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
+    scheduler.enqueueTasks([() => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined)])
+  }
 }

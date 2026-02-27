@@ -112,6 +112,30 @@ describe('vnode mixins', () => {
     expect(insertCount).toBe(1)
   })
 
+  it('runs beforeUpdate and commit lifecycle events in update order', () => {
+    let calls: string[] = []
+    let withUpdateLifecycle = createMixin((handle) => {
+      handle.addEventListener('beforeUpdate', (event) => {
+        calls.push(`before:${(event.node as HTMLElement).dataset.step}`)
+      })
+      handle.addEventListener('commit', (event) => {
+        calls.push(`commit:${(event.node as HTMLElement).dataset.step}`)
+      })
+      return (step: string, props: { ['data-step']?: string }) => (
+        <handle.element {...props} data-step={step} />
+      )
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withUpdateLifecycle('0')]} />)
+    root.flush()
+    root.render(<div mix={[withUpdateLifecycle('1')]} />)
+    root.flush()
+
+    expect(calls).toEqual(['before:0', 'commit:1'])
+  })
+
   it('composes connect callbacks across mixins and base props', () => {
     let calls: string[] = []
 

@@ -3,6 +3,7 @@ import type { EventListeners } from '@remix-run/interaction'
 import type { FrameHandle } from './component.ts'
 import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
+import type { SchedulerPhaseEvent } from './scheduler.ts'
 import { invariant } from './invariant.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
@@ -43,6 +44,10 @@ export type MixinInsertEvent<node extends EventTarget = Element> = Event & {
   key?: string
 }
 
+export type MixinUpdateEvent<node extends EventTarget = Element> = Event & {
+  node: node
+}
+
 export type MixinRemoveEvent = Event & {
   persistNode(teardown: (signal: AbortSignal) => void | Promise<void>): void
 }
@@ -50,6 +55,8 @@ export type MixinRemoveEvent = Event & {
 type MixinHandleEventMap<node extends EventTarget = Element> = {
   remove: MixinRemoveEvent
   insert: MixinInsertEvent<node>
+  beforeUpdate: MixinUpdateEvent<node>
+  commit: MixinUpdateEvent<node>
 }
 
 export type MixinHandle<
@@ -108,6 +115,15 @@ type RunnerEntry = {
   type: AnyMixinType
   runner: AnyMixinRunner
   handle: AnyMixinHandle
+}
+
+type MixinHandleFactoryOptions = {
+  id: string
+  hostType: string
+  frame: FrameHandle
+  scheduler: Scheduler
+  getSignal: () => AbortSignal
+  getBinding: () => MixinRuntimeBinding | undefined
 }
 
 export type MixinRuntimeBinding = {
@@ -328,46 +344,123 @@ function createMixinHandle(options: {
   getSignal: () => AbortSignal
   getBinding: () => MixinRuntimeBinding | undefined
 }): AnyMixinHandle {
-  let handle = new TypedEventTarget<MixinHandleEventMap<Element>>() as AnyMixinHandle
-  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
-    $rmx: true as const,
-    type: options.hostType,
-    key: null,
-    props,
-  })) as unknown as MixinElement<Element, ElementProps>
+  return new MixinHandleImpl(options)
+}
 
-  element.__rmxMixinElementType = options.hostType
-  handle.id = options.id
-  handle.frame = options.frame
-  handle.element = element
-  handle.update = () =>
-    new Promise((resolve) => {
-      let signal = options.getSignal()
+class MixinHandleImpl
+  extends TypedEventTarget<MixinHandleEventMap<Element>>
+  implements AnyMixinHandle
+{
+  id: string
+  frame: FrameHandle
+  element: MixinElement<Element, ElementProps>
+  #options: MixinHandleFactoryOptions
+  #phaseListenerCounts: Record<'beforeUpdate' | 'commit', number> = {
+    beforeUpdate: 0,
+    commit: 0,
+  }
+  #onSchedulerBeforeUpdate = (event: Event) => {
+    this.#dispatchSchedulerPhaseToHandle('beforeUpdate', event as SchedulerPhaseEvent)
+  }
+  #onSchedulerCommit = (event: Event) => {
+    this.#dispatchSchedulerPhaseToHandle('commit', event as SchedulerPhaseEvent)
+  }
+
+  constructor(options: MixinHandleFactoryOptions) {
+    super()
+    this.#options = options
+    this.id = options.id
+    this.frame = options.frame
+
+    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
+      $rmx: true as const,
+      type: options.hostType,
+      key: null,
+      props,
+    })) as unknown as MixinElement<Element, ElementProps>
+    element.__rmxMixinElementType = options.hostType
+    this.element = element
+  }
+
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: AddEventListenerOptions | boolean,
+  ): void {
+    super.addEventListener(
+      type as keyof MixinHandleEventMap<Element>,
+      listener as EventListener,
+      options,
+    )
+    if (!listener || !isSchedulerPhaseType(type)) return
+    this.#phaseListenerCounts[type] += 1
+    if (this.#phaseListenerCounts[type] !== 1) return
+    if (type === 'beforeUpdate') {
+      this.#options.scheduler.addEventListener('beforeUpdate', this.#onSchedulerBeforeUpdate)
+    } else {
+      this.#options.scheduler.addEventListener('commit', this.#onSchedulerCommit)
+    }
+  }
+
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: EventListenerOptions | boolean,
+  ): void {
+    super.removeEventListener(
+      type as keyof MixinHandleEventMap<Element>,
+      listener as EventListener,
+      typeof options === 'boolean' ? { capture: options } : options,
+    )
+    if (!listener || !isSchedulerPhaseType(type)) return
+    this.#phaseListenerCounts[type] = Math.max(0, this.#phaseListenerCounts[type] - 1)
+    if (this.#phaseListenerCounts[type] !== 0) return
+    if (type === 'beforeUpdate') {
+      this.#options.scheduler.removeEventListener('beforeUpdate', this.#onSchedulerBeforeUpdate)
+    } else {
+      this.#options.scheduler.removeEventListener('commit', this.#onSchedulerCommit)
+    }
+  }
+
+  update(): Promise<AbortSignal> {
+    return new Promise((resolve) => {
+      let signal = this.#options.getSignal()
       if (signal.aborted) {
         resolve(signal)
         return
       }
-      let binding = options.getBinding()
+      let binding = this.#options.getBinding()
       if (!binding) {
         resolve(signal)
         return
       }
       binding.enqueueUpdate(resolve)
     })
-  handle.queueTask = (task) => {
-    options.scheduler.enqueueTasks([
+  }
+
+  queueTask(task: (node: Element, signal: AbortSignal) => void): void {
+    this.#options.scheduler.enqueueTasks([
       () => {
-        let binding = options.getBinding()
+        let binding = this.#options.getBinding()
         invariant(binding)
-        task(binding.node, options.getSignal())
+        task(binding.node, this.#options.getSignal())
       },
     ])
   }
-  handle.on = <target extends EventTarget>(target: target, listeners: EventListeners<target>) => {
-    let container = createContainer(target, { signal: options.getSignal() })
+
+  on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void {
+    let container = createContainer(target, { signal: this.#options.getSignal() })
     container.set(listeners)
   }
-  return handle
+
+  #dispatchSchedulerPhaseToHandle(type: 'beforeUpdate' | 'commit', event: SchedulerPhaseEvent) {
+    let binding = this.#options.getBinding()
+    if (!binding) return
+    if (!isBindingInUpdateScope(binding, event.parents)) return
+    let updateEvent = new Event(type) as MixinUpdateEvent<Element>
+    updateEvent.node = binding.node
+    this.dispatchEvent(updateEvent)
+  }
 }
 
 export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
@@ -380,6 +473,14 @@ export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
     state.controller = controller
   }
   return controller.signal
+}
+
+export function dispatchMixinBeforeUpdate(state?: MixinRuntimeState) {
+  dispatchMixinUpdateEvent(state, 'beforeUpdate')
+}
+
+export function dispatchMixinCommit(state?: MixinRuntimeState) {
+  dispatchMixinUpdateEvent(state, 'commit')
 }
 
 function dispatchMixinInsert(
@@ -404,6 +505,36 @@ function dispatchMixinRemove(
   let event = new Event('remove') as MixinRemoveEvent
   event.persistNode = persistNode
   handle.dispatchEvent(event)
+}
+
+function dispatchMixinUpdateEvent(
+  state: MixinRuntimeState | undefined,
+  type: 'beforeUpdate' | 'commit',
+) {
+  let node = state?.binding?.node
+  if (!node) return
+  let runners = state?.runners
+  if (!runners?.length) return
+  for (let entry of runners) {
+    let event = new Event(type) as MixinUpdateEvent<Element>
+    event.node = node
+    entry.handle.dispatchEvent(event)
+  }
+}
+
+function isSchedulerPhaseType(type: string): type is 'beforeUpdate' | 'commit' {
+  return type === 'beforeUpdate' || type === 'commit'
+}
+
+function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNode[]): boolean {
+  if (parents.length === 0) return false
+  let node = binding.node as Node
+  for (let parent of parents) {
+    let parentNode = parent as Node
+    if (parentNode === node) return true
+    if (parentNode.contains(node)) return true
+  }
+  return false
 }
 
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
