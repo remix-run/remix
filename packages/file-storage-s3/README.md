@@ -1,6 +1,6 @@
 # file-storage-s3
 
-S3 backend for [`@remix-run/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage).
+S3 backend for [`remix/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage).
 Use this package when you want the `FileStorage` API backed by AWS S3 or an S3-compatible provider.
 
 ## Features
@@ -12,13 +12,13 @@ Use this package when you want the `FileStorage` API backed by AWS S3 or an S3-c
 ## Installation
 
 ```sh
-npm i @remix-run/file-storage @remix-run/file-storage-s3
+npm i remix
 ```
 
 ## Usage
 
 ```ts
-import { createS3FileStorage } from '@remix-run/file-storage-s3'
+import { createS3FileStorage } from 'remix/file-storage-s3'
 
 let storage = createS3FileStorage({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
