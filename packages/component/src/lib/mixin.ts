@@ -78,7 +78,9 @@ type MixinRuntimeType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (...args: [...args, currentProps: props]) => void | null | RemixElement | MixinElement<node, props>
+) => (
+  ...args: [...args, currentProps: props]
+) => void | null | RemixElement | MixinElement<node, props>
 
 export type MixinType<
   node extends EventTarget = Element,
@@ -87,7 +89,9 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (...args: [...args, currentProps: props]) => void | null | RemixElement | MixinElement<node, props>
+) => (
+  ...args: [...args, currentProps: props]
+) => void | null | RemixElement | MixinElement<node, props>
 
 export type MixinDescriptor<
   node extends EventTarget = Element,
@@ -372,12 +376,13 @@ class MixinHandleImpl
     this.id = options.id
     this.frame = options.frame
 
-    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
-      $rmx: true as const,
-      type: options.hostType,
-      key: null,
-      props,
-    })) as unknown as MixinElement<Element, ElementProps>
+    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) =>
+      (props: ElementProps) => ({
+        $rmx: true as const,
+        type: options.hostType,
+        key: null,
+        props,
+      })) as unknown as MixinElement<Element, ElementProps>
     element.__rmxMixinElementType = options.hostType
     this.element = element
   }
@@ -556,6 +561,8 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   let nextConnect = next.connect
   let previousOn = previous.on
   let nextOn = next.on
+  let previousClassName = readClassName(previous)
+  let nextClassName = readClassName(next)
 
   if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
     composed.connect = (node: Element, signal: AbortSignal) => {
@@ -566,6 +573,13 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
 
   if (isRecord(previousOn) && isRecord(nextOn)) {
     composed.on = composeOnListeners(previousOn, nextOn)
+  }
+
+  if (previousClassName || nextClassName) {
+    composed.className = joinClassNames(nextClassName, previousClassName)
+    if ('class' in composed) {
+      delete (composed as { class?: unknown }).class
+    }
   }
 
   return composed
@@ -592,6 +606,29 @@ function composeListenerValue(next: unknown, previous: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readClassName(props: ElementProps): string {
+  let className = typeof props.className === 'string' ? props.className : ''
+  let classAttr =
+    'class' in (props as object) && typeof (props as { class?: unknown }).class === 'string'
+      ? ((props as { class?: string }).class ?? '')
+      : ''
+  return joinClassNames(className, classAttr)
+}
+
+function joinClassNames(...values: string[]): string {
+  let seen = new Set<string>()
+  let parts: string[] = []
+  for (let value of values) {
+    if (!value) continue
+    for (let token of value.split(/\s+/)) {
+      if (!token || seen.has(token)) continue
+      seen.add(token)
+      parts.push(token)
+    }
+  }
+  return parts.join(' ')
 }
 
 function isRemixElement(value: unknown): value is RemixElement {

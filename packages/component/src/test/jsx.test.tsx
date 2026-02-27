@@ -180,7 +180,9 @@ describe('jsx', () => {
     })
 
     it('accepts animateLayout mixin usage', () => {
-      let element = <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
+      let element = (
+        <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
+      )
     })
   })
 })

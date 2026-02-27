@@ -1,5 +1,5 @@
 // .rmx-23ace { color: red; }
-// <ul>{item.map(() => <li css={{ color: 'red' }}>)}
+// <ul>{item.map(() => <li className="rmxc-123">)}
 
 type RuleEntry = { count: number; index: number }
 type ActiveManager = { layer: string; ruleMap: Map<string, RuleEntry> }
@@ -46,9 +46,9 @@ function walkRulesForSelectors(
 
     if (isCssStyleRule(rule)) {
       if (!nextLayerName) continue
-      // Extract selectors like [data-css="rmx-abc123"] (supports multiple selectors)
-      let matches = rule.selectorText.matchAll(/\[data-css="([^"]+)"\]/g)
-      for (let match of matches) {
+      // Extract class-based css mixin selectors (.rmxc-*).
+      let classMatches = rule.selectorText.matchAll(/\.((?:rmxc-[a-z0-9]+))/g)
+      for (let match of classMatches) {
         let selector = match[1]
         if (selector) addSelector(nextLayerName, selector)
       }

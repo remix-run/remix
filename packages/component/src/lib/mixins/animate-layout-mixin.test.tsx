@@ -15,7 +15,10 @@ let originalAnimate: typeof Element.prototype.animate
 let originalRaf: typeof globalThis.requestAnimationFrame
 let mockAnimations: MockAnimation[] = []
 
-function createMockAnimation(keyframes: Keyframe[], options: KeyframeAnimationOptions): MockAnimation {
+function createMockAnimation(
+  keyframes: Keyframe[],
+  options: KeyframeAnimationOptions,
+): MockAnimation {
   let resolveFinished!: () => void
   let finished = new Promise<Animation>((_resolve) => {
     resolveFinished = () => _resolve({} as Animation)

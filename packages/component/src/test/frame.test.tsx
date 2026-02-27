@@ -6,6 +6,7 @@ import { run } from '../lib/run.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
+import { css } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -915,7 +916,7 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('reloads a frame region when the response uses css props', async () => {
+  it('reloads a frame region when the response uses css mixins', async () => {
     let renderCount = 0
 
     let reload: undefined | (() => Promise<AbortSignal>)
@@ -924,15 +925,15 @@ describe('run', () => {
       '/assets/reload-css.js#ReloadCss',
       function ReloadCss(handle: Handle) {
         reload = () => handle.frame.reload()
-        return () => <button css={{ color: '#fff' }}>Reload</button>
+        return () => <button mix={[css({ color: '#fff' })]}>Reload</button>
       },
     )
 
     async function renderTimeFragmentWithCss() {
       renderCount++
       let stream = renderToStream(
-        <section css={{ padding: 8 }}>
-          <p css={{ margin: 0 }}>Server: {renderCount}</p>
+        <section mix={[css({ padding: 8 })]}>
+          <p mix={[css({ margin: 0 })]}>Server: {renderCount}</p>
           <ReloadButton />
         </section>,
         {
@@ -945,7 +946,7 @@ describe('run', () => {
     }
 
     let stream = renderToStream(
-      <main>
+      <main mix={[css({ color: '#0bf' })]}>
         <Frame src="/time-css" fallback={<div>Loading…</div>} />
       </main>,
       { resolveFrame: renderTimeFragmentWithCss },
@@ -1925,7 +1926,7 @@ describe('run', () => {
       let mounted = true
 
       return () => (
-        <main css={{ color: '#0bf' }}>
+        <main mix={[css({ color: '#0bf' })]}>
           <button
             id="toggle-frame"
             type="button"
@@ -1941,7 +1942,7 @@ describe('run', () => {
           {mounted ? (
             <Frame
               src="/style-frame"
-              fallback={<div css={{ color: '#f0b' }}>Loading style frame…</div>}
+              fallback={<div mix={[css({ color: '#f0b' })]}>Loading style frame…</div>}
             />
           ) : null}
         </main>
@@ -1950,7 +1951,7 @@ describe('run', () => {
 
     let root = createRoot(rootContainer, {
       frameInit: {
-        resolveFrame: async () => '<section data-css="rmx-manual">Frame loaded</section>',
+        resolveFrame: async () => '<section class="frame-loaded">Frame loaded</section>',
       },
     })
 

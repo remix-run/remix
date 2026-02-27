@@ -26,7 +26,7 @@ import {
   findContextFromAncestry,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
-import { diffHostProps, cleanupCssProps } from './diff-props.ts'
+import { diffHostProps } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
@@ -279,7 +279,7 @@ function bindNodeMixRuntime(
             dispatchMixinBeforeUpdate(state)
             let prevProps = getHostProps(node)
             let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
-            diffHostProps(prevProps, nextProps, node._dom, styles)
+            diffHostProps(prevProps, nextProps, node._dom)
 
             let nextOn = nextProps.on
             if (nextOn) {
@@ -464,7 +464,7 @@ function diffHost(
     next,
     rootTarget,
   )
-  diffHostProps(currProps, nextProps, curr._dom, styles)
+  diffHostProps(currProps, nextProps, curr._dom)
 
   next._dom = curr._dom
   next._parent = vParent
@@ -496,7 +496,9 @@ function diffHost(
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    scheduler.enqueueTasks([() => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined)])
+    scheduler.enqueueTasks([
+      () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
+    ])
   }
 
   return
@@ -638,7 +640,7 @@ function insert(
           rootTarget,
           childCursor,
         )
-        diffHostProps({}, hostProps, targetHead, styles)
+        diffHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         return cursor
@@ -658,7 +660,7 @@ function insert(
       let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
       if (cursorTag === node.type) {
         let nextCursor = cursor.nextSibling
-        diffHostProps({}, hostProps, cursor, styles)
+        diffHostProps({}, hostProps, cursor)
 
         // Handle innerHTML prop
         if (hostProps.innerHTML != null) {
@@ -697,7 +699,7 @@ function insert(
           if (nextTag === node.type) {
             let nextCursor = nextSibling.nextSibling
             // Found a match after skipping - adopt it and leave skipped node in place
-            diffHostProps({}, hostProps, nextSibling, styles)
+            diffHostProps({}, hostProps, nextSibling)
 
             if (hostProps.innerHTML != null) {
               nextSibling.innerHTML = hostProps.innerHTML as string
@@ -735,7 +737,7 @@ function insert(
     let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
-    diffHostProps({}, hostProps, dom, styles)
+    diffHostProps({}, hostProps, dom)
 
     // Handle innerHTML prop
     if (hostProps.innerHTML != null) {
@@ -1265,7 +1267,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
       cleanupDescendants(child, scheduler, styles)
     }
 
-    cleanupCssProps(getHostProps(node), styles)
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
     teardownControlledReflection(node)
     if (node._controller) node._controller.abort()
@@ -1367,7 +1368,6 @@ function performHostNodeRemoval(
     }
   }
 
-  cleanupCssProps(getHostProps(node), styles)
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
   teardownControlledReflection(node)
   // Never remove the real document.head node when reconciling a <head> vnode.
@@ -1745,7 +1745,7 @@ function reclaimPersistedMixinNode(
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
   }
-  diffHostProps(prevProps, nextProps, persistedNode._dom, styles)
+  diffHostProps(prevProps, nextProps, persistedNode._dom)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
 
@@ -1778,6 +1778,8 @@ function reclaimPersistedMixinNode(
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    scheduler.enqueueTasks([() => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined)])
+    scheduler.enqueueTasks([
+      () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
+    ])
   }
 }

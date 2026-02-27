@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import { css } from '../index.ts'
 
 describe('vnode rendering', () => {
   describe('special attributes', () => {
@@ -27,7 +28,7 @@ describe('vnode rendering', () => {
   describe('framework props', () => {
     it.todo('does not render key')
     it.todo('does not render on')
-    it.todo('does not render css')
+    it.todo('does not render mix')
     it.todo('does not render children')
     it.todo('does not render tabIndex')
     it.todo('does not render acceptCharset')
@@ -105,68 +106,67 @@ describe('vnode rendering', () => {
     })
   })
 
-  describe('css props', () => {
-    it('adds data-css attribute and styles', async () => {
+  describe('css mixin', () => {
+    it('adds className-based styles', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      root.render(<div css={{ color: 'rgb(255, 0, 0)' }}>Hello</div>)
+      root.render(<div mix={[css({ color: 'rgb(255, 0, 0)' })]}>Hello</div>)
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+      expect(div.className).toMatch(/rmxc-/)
       document.body.appendChild(container)
       expect(getComputedStyle(div).color).toBe('rgb(255, 0, 0)')
     })
 
-    it('css prop is isolated from className', async () => {
+    it('composes with className without overriding it', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(
-        <div css={{ color: 'rgb(255, 0, 0)' }} className="custom-class">
+        <div mix={[css({ color: 'rgb(255, 0, 0)' })]} className="custom-class">
           Hello
         </div>,
       )
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      // className is completely separate from css prop
-      expect(div.className).toBe('custom-class')
-      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+      expect(div.className).toContain('custom-class')
+      expect(div.className).toMatch(/rmxc-/)
     })
 
-    it('css prop is isolated from class', async () => {
+    it('composes with class without overriding it', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(
-        <div css={{ color: 'rgb(0, 255, 0)' }} class="another-class">
+        <div mix={[css({ color: 'rgb(0, 255, 0)' })]} class="another-class">
           Hello
         </div>,
       )
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      // class is completely separate from css prop
-      expect(div.className).toBe('another-class')
-      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+      expect(div.className).toContain('another-class')
+      expect(div.className).toMatch(/rmxc-/)
     })
 
-    it('className updates independently of css prop', async () => {
+    it('className updates independently of css mixin output', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(
-        <div css={{ color: 'rgb(255, 0, 0)' }} className="first">
+        <div mix={[css({ color: 'rgb(255, 0, 0)' })]} className="first">
           Hello
         </div>,
       )
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      expect(div.className).toBe('first')
-      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+      expect(div.className).toContain('first')
+      let generated = div.className.split(/\s+/).find((token) => token.startsWith('rmxc-'))
+      invariant(generated)
 
       root.render(
-        <div css={{ color: 'rgb(255, 0, 0)' }} className="second">
+        <div mix={[css({ color: 'rgb(255, 0, 0)' })]} className="second">
           Hello
         </div>,
       )
-      expect(div.className).toBe('second')
-      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+      expect(div.className).toContain('second')
+      expect(div.className).toContain(generated)
     })
 
     it('removes nested selector rules when they become undefined', async () => {
@@ -176,12 +176,14 @@ describe('vnode rendering', () => {
 
       root.render(
         <div
-          css={{
-            // Base styling for the child comes from the parent.
-            '& span': { color: 'rgb(0, 0, 255)' },
-            // More-specific nested selector is conditionally removed.
-            '& span.special': { color: 'rgb(255, 0, 0)' },
-          }}
+          mix={[
+            css({
+              // Base styling for the child comes from the parent.
+              '& span': { color: 'rgb(0, 0, 255)' },
+              // More-specific nested selector is conditionally removed.
+              '& span.special': { color: 'rgb(255, 0, 0)' },
+            }),
+          ]}
         >
           <span className="special">Test</span>
         </div>,
@@ -195,10 +197,12 @@ describe('vnode rendering', () => {
 
       root.render(
         <div
-          css={{
-            '& span': { color: 'rgb(0, 0, 255)' },
-            '& span.special': undefined,
-          }}
+          mix={[
+            css({
+              '& span': { color: 'rgb(0, 0, 255)' },
+              '& span.special': undefined,
+            }),
+          ]}
         >
           <span className="special">Test</span>
         </div>,

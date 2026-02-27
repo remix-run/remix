@@ -188,7 +188,7 @@ describe('createStyleManager', () => {
     // Simulate server-rendered style tag
     let serverStyle = document.createElement('style')
     serverStyle.setAttribute('data-rmx-styles', '')
-    serverStyle.textContent = '@layer rmx { [data-css="rmx-server1"] { color: blue; } }'
+    serverStyle.textContent = '@layer rmx { .rmxc-server1 { color: blue; } }'
     document.head.appendChild(serverStyle)
     expect(document.querySelector('style[data-rmx-styles]')).not.toBeNull()
 
@@ -199,29 +199,29 @@ describe('createStyleManager', () => {
     expect(document.querySelector('style[data-rmx-styles]')).toBeNull()
 
     // Server-rendered selector should be recognized as existing (count: 1)
-    expect(mgr.has('rmx-server1')).toBe(true)
+    expect(mgr.has('rmxc-server1')).toBe(true)
 
     // Inserting the same selector should increment count from 1 to 2
-    mgr.insert('rmx-server1', '[data-css="rmx-server1"] { color: blue; }')
-    expect(mgr.has('rmx-server1')).toBe(true)
+    mgr.insert('rmxc-server1', '.rmxc-server1 { color: blue; }')
+    expect(mgr.has('rmxc-server1')).toBe(true)
 
     // Ensure the adopted stylesheet content exists in constructed sheets
     let hasAdoptedRule = Array.from(document.adoptedStyleSheets).some((sheet) => {
       let text = Array.from(sheet.cssRules)
         .map((r) => (r as any).cssText || '')
         .join('\n')
-      return text.includes('rmx-server1')
+      return text.includes('rmxc-server1')
     })
     expect(hasAdoptedRule).toBe(true)
 
     // First remove decrements count from 2 to 1, still exists
-    mgr.remove('rmx-server1')
-    expect(mgr.has('rmx-server1')).toBe(true)
+    mgr.remove('rmxc-server1')
+    expect(mgr.has('rmxc-server1')).toBe(true)
 
     // Second remove decrements count from 1 to 0, no longer tracked
     // (rule stays in the shared server stylesheet, but ruleMap entry is removed)
-    mgr.remove('rmx-server1')
-    expect(mgr.has('rmx-server1')).toBe(false)
+    mgr.remove('rmxc-server1')
+    expect(mgr.has('rmxc-server1')).toBe(false)
 
     // cleanup
     mgr.dispose()
@@ -232,14 +232,14 @@ describe('createStyleManager', () => {
 
     let streamedStyle = document.createElement('style')
     streamedStyle.setAttribute('data-rmx-styles', '')
-    streamedStyle.textContent = '@layer rmx { [data-css="rmx-stream1"] { color: green; } }'
+    streamedStyle.textContent = '@layer rmx { .rmxc-stream1 { color: green; } }'
     document.head.appendChild(streamedStyle)
 
     // MutationObserver runs on a microtask; wait a tick
     await new Promise((r) => setTimeout(r, 0))
 
     expect(document.querySelector('style[data-rmx-styles]')).toBeNull()
-    expect(mgr.has('rmx-stream1')).toBe(true)
+    expect(mgr.has('rmxc-stream1')).toBe(true)
 
     mgr.dispose()
   })

@@ -275,8 +275,7 @@ function atRuleBodyToCss(styles: StyleObject): string {
   return body
 }
 
-// Process style prop and return selector value and CSS
-export function processStyle(
+export function processStyleClass(
   styleObj: CSSProps,
   styleCache: Map<string, { selector: string; css: string }>,
 ): {
@@ -290,7 +289,7 @@ export function processStyle(
 
   // Generate a hash for the style object
   let hash = hashStyle(styleObj)
-  let selector = `rmx-${hash}`
+  let selector = `rmxc-${hash}`
 
   // Check cache first
   let cached = styleCache.get(hash)
@@ -298,8 +297,7 @@ export function processStyle(
     return cached
   }
 
-  // Generate CSS using attribute selector [data-css="..."]
-  let css = styleToCss(styleObj, `[data-css="${selector}"]`)
+  let css = styleToCss(styleObj, `.${selector}`)
   let result = { selector, css }
 
   // Store in cache

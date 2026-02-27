@@ -1,4 +1,3 @@
-import { processStyle } from './style/lib/style.ts'
 import type { ComponentHandle, Key, RemixNode } from './component.ts'
 import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
@@ -107,7 +106,7 @@ const NUMERIC_CSS_PROPS = new Set([
   'column-count',
 ])
 
-const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'css', 'mix'])
+const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
 
 export function renderToStream(
   node: RemixNode,
@@ -358,8 +357,8 @@ function buildElementSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let mixedProps = resolveSsrMixedProps(tag, props)
-  let processedProps = processStyleProps(mixedProps, context)
+  let mixedProps = resolveSsrMixedProps(tag, props, context)
+  let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
   let attrs = renderAttributes(processedProps, currentIsSvg)
@@ -389,7 +388,7 @@ function buildHeadElementSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let processedProps = processStyleProps(props, context)
+  let processedProps = processStyleProps(props)
   let attrs = renderAttributes(processedProps, false)
   let previousInsideHead = context.insideHead
   context.insideHead = true
@@ -424,7 +423,11 @@ function renderAttributes(props: any, isSvg: boolean): string {
   return attrs
 }
 
-function resolveSsrMixedProps(hostType: string, initialProps: ElementProps): ElementProps {
+function resolveSsrMixedProps(
+  hostType: string,
+  initialProps: ElementProps,
+  context: RenderContext,
+): ElementProps {
   let descriptors = resolveSsrMixDescriptors(initialProps)
   if (descriptors.length === 0) return initialProps
 
@@ -433,7 +436,7 @@ function resolveSsrMixedProps(hostType: string, initialProps: ElementProps): Ele
 
   for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
     let descriptor = descriptors[index]
-    let runner = resolveSsrMixinRunner(hostType, descriptor)
+    let runner = resolveSsrMixinRunner(hostType, descriptor, context)
     if (!runner) continue
 
     let result: unknown
@@ -485,10 +488,11 @@ function resolveSsrMixedProps(hostType: string, initialProps: ElementProps): Ele
 function resolveSsrMixinRunner(
   hostType: string,
   descriptor: { type?: unknown; args?: unknown[] },
+  context: RenderContext,
 ): ((...args: unknown[]) => unknown) | null {
   if (typeof descriptor.type !== 'function') return null
   try {
-    let handle = createSsrMixinHandle(hostType)
+    let handle = createSsrMixinHandle(hostType, context)
     let runner = descriptor.type(handle, hostType)
     if (typeof runner !== 'function') return null
     return runner
@@ -498,7 +502,7 @@ function resolveSsrMixinRunner(
   }
 }
 
-function createSsrMixinHandle(hostType: string) {
+function createSsrMixinHandle(hostType: string, context: RenderContext) {
   let signal = new AbortController().signal
   let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
     $rmx: true as const,
@@ -515,7 +519,12 @@ function createSsrMixinHandle(hostType: string) {
 
   return {
     id: 'ssr-mixin',
-    frame: createFrameHandle({ src: '' }),
+    frame: createFrameHandle({
+      src: '',
+      $runtime: {
+        styleCache: context.styleCache,
+      },
+    }),
     element,
     update: () => Promise.resolve(signal),
     queueTask: () => {},
@@ -545,6 +554,8 @@ function composeSsrMixinProps(previous: ElementProps, next: ElementProps): Eleme
   let nextConnect = next.connect
   let previousOn = previous.on
   let nextOn = next.on
+  let previousClassName = readClassName(previous)
+  let nextClassName = readClassName(next)
 
   if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
     composed.connect = (node: Element, signal: AbortSignal) => {
@@ -555,6 +566,13 @@ function composeSsrMixinProps(previous: ElementProps, next: ElementProps): Eleme
 
   if (isRecord(previousOn) && isRecord(nextOn)) {
     composed.on = composeSsrOnListeners(previousOn, nextOn)
+  }
+
+  if (previousClassName || nextClassName) {
+    composed.className = joinClassNames(nextClassName, previousClassName)
+    if ('class' in composed) {
+      delete (composed as { class?: unknown }).class
+    }
   }
 
   return composed
@@ -579,6 +597,29 @@ function composeSsrListenerValue(next: unknown, previous: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readClassName(props: ElementProps): string {
+  let className = typeof props.className === 'string' ? props.className : ''
+  let classAttr =
+    'class' in (props as object) && typeof (props as { class?: unknown }).class === 'string'
+      ? ((props as { class?: string }).class ?? '')
+      : ''
+  return joinClassNames(className, classAttr)
+}
+
+function joinClassNames(...values: string[]): string {
+  let seen = new Set<string>()
+  let parts: string[] = []
+  for (let value of values) {
+    if (!value) continue
+    for (let token of value.split(/\s+/)) {
+      if (!token || seen.has(token)) continue
+      seen.add(token)
+      parts.push(token)
+    }
+  }
+  return parts.join(' ')
 }
 
 function isSsrMixinElement(
@@ -871,19 +912,8 @@ function finalizeHtml(html: string, context: RenderContext): string {
   return html
 }
 
-function processStyleProps(props: any, context: RenderContext): any {
+function processStyleProps(props: any): any {
   let processedProps = { ...props }
-
-  if (props.css) {
-    if (typeof props.css === 'object') {
-      let { selector } = processStyle(props.css, context.styleCache)
-      if (selector) {
-        // Style system uses data-css attribute for CSS selectors
-        processedProps['data-css'] = selector
-      }
-    }
-    delete processedProps.css
-  }
 
   if (typeof props.style === 'object') {
     processedProps.style = serializeStyleObject(props.style)
