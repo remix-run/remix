@@ -41,247 +41,289 @@ export function createDataTableJobBackend(options: DataTableJobBackendOptions): 
     dedupe: `${prefix}dedupe`,
     schedules: `${prefix}schedules`,
   }
+  let runOperation = createOperationRunner(options.dialect)
 
   return {
     enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }> {
-      return options.db.transaction(async (database) => {
-        await cleanupExpiredDedupe(database, tables, input.createdAt)
+      return runOperation(() =>
+        options.db.transaction(async (database) => {
+          await cleanupExpiredDedupe(database, tables, input.createdAt)
 
-        if (input.dedupeKey != null) {
-          let dedupeRows = await database.exec(
-            rawSql(
-              `select job_id from ${tables.dedupe} where dedupe_key = ? and expires_at > ? limit 1`,
-              [input.dedupeKey, input.createdAt],
-            ),
-          )
-          let dedupeRow = dedupeRows.rows?.[0]
+          if (input.dedupeKey != null) {
+            let dedupeRows = await database.exec(
+              rawSql(
+                `select job_id from ${tables.dedupe} where dedupe_key = ? and expires_at > ? limit 1`,
+                [input.dedupeKey, input.createdAt],
+              ),
+            )
+            let dedupeRow = dedupeRows.rows?.[0]
 
-          if (dedupeRow != null && typeof dedupeRow.job_id === 'string') {
-            return {
-              jobId: dedupeRow.job_id,
-              deduped: true,
+            if (dedupeRow != null && typeof dedupeRow.job_id === 'string') {
+              return {
+                jobId: dedupeRow.job_id,
+                deduped: true,
+              }
             }
           }
+
+          let jobId = crypto.randomUUID()
+
+          await database.exec(
+            rawSql(
+              [
+                `insert into ${tables.jobs} (`,
+                'id, name, queue, payload_json, status, attempts, max_attempts, ',
+                'run_at, priority, retry_json, created_at, updated_at',
+                ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+              ].join(''),
+              [
+                jobId,
+                input.name,
+                input.queue,
+                JSON.stringify(input.payload),
+                'queued',
+                0,
+                input.retry.maxAttempts,
+                input.runAt,
+                input.priority,
+                JSON.stringify(input.retry),
+                input.createdAt,
+                input.createdAt,
+              ],
+            ),
+          )
+
+          if (input.dedupeKey != null && input.dedupeTtlMs != null && input.dedupeTtlMs > 0) {
+            await database.exec(
+              rawSql(
+                `insert into ${tables.dedupe} (dedupe_key, job_id, expires_at) values (?, ?, ?)`,
+                [input.dedupeKey, jobId, input.createdAt + input.dedupeTtlMs],
+              ),
+            )
+          }
+
+          return {
+            jobId,
+            deduped: false,
+          }
+        }),
+      )
+    },
+    get(jobId: string): Promise<JobRecord | null> {
+      return runOperation(async () => {
+        let rows = await options.db.exec(
+          rawSql(`select * from ${tables.jobs} where id = ? limit 1`, [jobId]),
+        )
+        let row = rows.rows?.[0]
+
+        if (row == null) {
+          return null
         }
 
-        let jobId = crypto.randomUUID()
-
-        await database.exec(
+        return toJobRecord(row)
+      })
+    },
+    cancel(jobId: string): Promise<boolean> {
+      return runOperation(async () => {
+        let result = await options.db.exec(
           rawSql(
-            [
-              `insert into ${tables.jobs} (`,
-              'id, name, queue, payload_json, status, attempts, max_attempts, ',
-              'run_at, priority, retry_json, created_at, updated_at',
-              ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            ].join(''),
-            [
-              jobId,
-              input.name,
-              input.queue,
-              JSON.stringify(input.payload),
-              'queued',
-              0,
-              input.retry.maxAttempts,
-              input.runAt,
-              input.priority,
-              JSON.stringify(input.retry),
-              input.createdAt,
-              input.createdAt,
-            ],
+            `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, updated_at = ? where id = ? and status = ?`,
+            ['canceled', Date.now(), jobId, 'queued'],
           ),
         )
 
-        if (input.dedupeKey != null && input.dedupeTtlMs != null && input.dedupeTtlMs > 0) {
-          await database.exec(
-            rawSql(
-              `insert into ${tables.dedupe} (dedupe_key, job_id, expires_at) values (?, ?, ?)`,
-              [input.dedupeKey, jobId, input.createdAt + input.dedupeTtlMs],
-            ),
-          )
-        }
-
-        return {
-          jobId,
-          deduped: false,
-        }
+        return (result.affectedRows ?? 0) > 0
       })
-    },
-    async get(jobId: string): Promise<JobRecord | null> {
-      let rows = await options.db.exec(
-        rawSql(`select * from ${tables.jobs} where id = ? limit 1`, [jobId]),
-      )
-      let row = rows.rows?.[0]
-
-      if (row == null) {
-        return null
-      }
-
-      return toJobRecord(row)
-    },
-    async cancel(jobId: string): Promise<boolean> {
-      let result = await options.db.exec(
-        rawSql(
-          `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, updated_at = ? where id = ? and status = ?`,
-          ['canceled', Date.now(), jobId, 'queued'],
-        ),
-      )
-
-      return (result.affectedRows ?? 0) > 0
     },
     claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]> {
       if (input.queues.length === 0 || input.limit <= 0) {
         return Promise.resolve([])
       }
 
-      return options.db.transaction(async (database) => {
-        await cleanupExpiredDedupe(database, tables, input.now)
+      return runOperation(() =>
+        options.db.transaction(async (database) => {
+          await cleanupExpiredDedupe(database, tables, input.now)
 
-        let queueClause = createInClause(input.queues.length)
-        let dueRows = await database.exec(
-          rawSql(
-            [
-              `select id from ${tables.jobs} `,
-              'where status in (?, ?) and run_at <= ? and queue in ',
-              queueClause,
-              ' and (locked_until is null or locked_until <= ?) ',
-              'order by priority desc, run_at asc, created_at asc limit ?',
-            ].join(''),
-            ['queued', 'running', input.now, ...input.queues, input.now, input.limit],
-          ),
-        )
-
-        let claimed: JobRecord[] = []
-
-        for (let row of dueRows.rows ?? []) {
-          if (typeof row.id !== 'string') {
-            continue
-          }
-
-          let lockResult = await database.exec(
+          let queueClause = createInClause(input.queues.length)
+          let dueRows = await database.exec(
             rawSql(
               [
-                `update ${tables.jobs} set status = ?, locked_by = ?, locked_until = ?, `,
-                'attempts = attempts + 1, updated_at = ? ',
-                'where id = ? and run_at <= ? and (',
-                '(status = ?)',
-                ' or ',
-                '(status = ? and locked_until is not null and locked_until <= ?)',
-                ')',
+                `select id from ${tables.jobs} `,
+                'where status in (?, ?) and run_at <= ? and queue in ',
+                queueClause,
+                ' and (locked_until is null or locked_until <= ?) ',
+                'order by priority desc, run_at asc, created_at asc limit ?',
               ].join(''),
-              [
-                'running',
-                input.workerId,
-                input.now + input.leaseMs,
-                input.now,
-                row.id,
-                input.now,
-                'queued',
-                'running',
-                input.now,
-              ],
+              ['queued', 'running', input.now, ...input.queues, input.now, input.limit],
             ),
           )
 
-          if ((lockResult.affectedRows ?? 0) === 0) {
-            continue
+          let claimed: JobRecord[] = []
+
+          for (let row of dueRows.rows ?? []) {
+            if (typeof row.id !== 'string') {
+              continue
+            }
+
+            let lockResult = await database.exec(
+              rawSql(
+                [
+                  `update ${tables.jobs} set status = ?, locked_by = ?, locked_until = ?, `,
+                  'attempts = attempts + 1, updated_at = ? ',
+                  'where id = ? and run_at <= ? and (',
+                  '(status = ?)',
+                  ' or ',
+                  '(status = ? and locked_until is not null and locked_until <= ?)',
+                  ')',
+                ].join(''),
+                [
+                  'running',
+                  input.workerId,
+                  input.now + input.leaseMs,
+                  input.now,
+                  row.id,
+                  input.now,
+                  'queued',
+                  'running',
+                  input.now,
+                ],
+              ),
+            )
+
+            if ((lockResult.affectedRows ?? 0) === 0) {
+              continue
+            }
+
+            let claimedRows = await database.exec(
+              rawSql(`select * from ${tables.jobs} where id = ? limit 1`, [row.id]),
+            )
+            let claimedRow = claimedRows.rows?.[0]
+
+            if (claimedRow != null) {
+              claimed.push(toJobRecord(claimedRow))
+            }
           }
 
-          let claimedRows = await database.exec(
-            rawSql(`select * from ${tables.jobs} where id = ? limit 1`, [row.id]),
-          )
-          let claimedRow = claimedRows.rows?.[0]
-
-          if (claimedRow != null) {
-            claimed.push(toJobRecord(claimedRow))
-          }
-        }
-
-        return claimed
-      })
+          return claimed
+        }),
+      )
     },
-    async heartbeat(input: {
+    heartbeat(input: {
       jobId: string
       workerId: string
       leaseMs: number
       now: number
     }): Promise<boolean> {
-      let result = await options.db.exec(
-        rawSql(
-          [
-            `update ${tables.jobs} set locked_until = ?, updated_at = ? `,
-            'where id = ? and status = ? and locked_by = ? and (locked_until is null or locked_until > ?)',
-          ].join(''),
-          [input.now + input.leaseMs, input.now, input.jobId, 'running', input.workerId, input.now],
-        ),
-      )
+      return runOperation(async () => {
+        let result = await options.db.exec(
+          rawSql(
+            [
+              `update ${tables.jobs} set locked_until = ?, updated_at = ? `,
+              'where id = ? and status = ? and locked_by = ? and (locked_until is null or locked_until > ?)',
+            ].join(''),
+            [input.now + input.leaseMs, input.now, input.jobId, 'running', input.workerId, input.now],
+          ),
+        )
 
-      return (result.affectedRows ?? 0) > 0
+        return (result.affectedRows ?? 0) > 0
+      })
     },
-    async complete(input: { jobId: string; workerId: string; now: number }): Promise<void> {
-      await options.db.exec(
-        rawSql(
-          [
-            `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, `,
-            'completed_at = ?, updated_at = ? where id = ? and status = ? and locked_by = ?',
-          ].join(''),
-          ['completed', input.now, input.now, input.jobId, 'running', input.workerId],
-        ),
-      )
-    },
-    async fail(input: JobFailureInput): Promise<void> {
-      if (input.terminal) {
+    complete(input: { jobId: string; workerId: string; now: number }): Promise<void> {
+      return runOperation(async () => {
         await options.db.exec(
           rawSql(
             [
               `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, `,
-              'failed_at = ?, last_error = ?, updated_at = ? ',
-              'where id = ? and status = ? and locked_by = ?',
+              'completed_at = ?, updated_at = ? where id = ? and status = ? and locked_by = ?',
             ].join(''),
-            ['failed', input.now, input.error, input.now, input.jobId, 'running', input.workerId],
+            ['completed', input.now, input.now, input.jobId, 'running', input.workerId],
           ),
         )
-        return
-      }
+      })
+    },
+    fail(input: JobFailureInput): Promise<void> {
+      return runOperation(async () => {
+        if (input.terminal) {
+          await options.db.exec(
+            rawSql(
+              [
+                `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, `,
+                'failed_at = ?, last_error = ?, updated_at = ? ',
+                'where id = ? and status = ? and locked_by = ?',
+              ].join(''),
+              ['failed', input.now, input.error, input.now, input.jobId, 'running', input.workerId],
+            ),
+          )
+          return
+        }
 
-      await options.db.exec(
-        rawSql(
-          [
-            `update ${tables.jobs} set status = ?, run_at = ?, locked_by = null, locked_until = null, `,
-            'last_error = ?, updated_at = ? where id = ? and status = ? and locked_by = ?',
-          ].join(''),
-          [
-            'queued',
-            input.retryAt ?? input.now,
-            input.error,
-            input.now,
-            input.jobId,
-            'running',
-            input.workerId,
-          ],
-        ),
-      )
+        await options.db.exec(
+          rawSql(
+            [
+              `update ${tables.jobs} set status = ?, run_at = ?, locked_by = null, locked_until = null, `,
+              'last_error = ?, updated_at = ? where id = ? and status = ? and locked_by = ?',
+            ].join(''),
+            [
+              'queued',
+              input.retryAt ?? input.now,
+              input.error,
+              input.now,
+              input.jobId,
+              'running',
+              input.workerId,
+            ],
+          ),
+        )
+      })
     },
     upsertSchedules(input: PersistedCronSchedule[]): Promise<void> {
-      return options.db.transaction(async (database) => {
-        for (let schedule of input) {
-          let existingRows = await database.exec(
-            rawSql(`select next_run_at from ${tables.schedules} where id = ? limit 1`, [schedule.id]),
-          )
-          let existing = existingRows.rows?.[0]
+      return runOperation(() =>
+        options.db.transaction(async (database) => {
+          for (let schedule of input) {
+            let existingRows = await database.exec(
+              rawSql(`select next_run_at from ${tables.schedules} where id = ? limit 1`, [schedule.id]),
+            )
+            let existing = existingRows.rows?.[0]
 
-          if (existing != null) {
-            let existingNextRunAt = parseInteger(existing.next_run_at, schedule.nextRunAt)
-            let nextRunAt = Math.min(existingNextRunAt, schedule.nextRunAt)
+            if (existing != null) {
+              let existingNextRunAt = parseInteger(existing.next_run_at, schedule.nextRunAt)
+              let nextRunAt = Math.min(existingNextRunAt, schedule.nextRunAt)
+
+              await database.exec(
+                rawSql(
+                  [
+                    `update ${tables.schedules} set `,
+                    'cron = ?, timezone = ?, queue = ?, name = ?, payload_json = ?, retry_json = ?, ',
+                    'catch_up = ?, next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? ',
+                    'where id = ?',
+                  ].join(''),
+                  [
+                    schedule.cron,
+                    schedule.timezone,
+                    schedule.queue,
+                    schedule.name,
+                    JSON.stringify(schedule.payload),
+                    JSON.stringify(schedule.retry),
+                    schedule.catchUp,
+                    nextRunAt,
+                    Date.now(),
+                    schedule.id,
+                  ],
+                ),
+              )
+              continue
+            }
 
             await database.exec(
               rawSql(
                 [
-                  `update ${tables.schedules} set `,
-                  'cron = ?, timezone = ?, queue = ?, name = ?, payload_json = ?, retry_json = ?, ',
-                  'catch_up = ?, next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? ',
-                  'where id = ?',
+                  `insert into ${tables.schedules} (`,
+                  'id, cron, timezone, queue, name, payload_json, retry_json, catch_up, ',
+                  'next_run_at, updated_at',
+                  ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 ].join(''),
                 [
+                  schedule.id,
                   schedule.cron,
                   schedule.timezone,
                   schedule.queue,
@@ -289,102 +331,81 @@ export function createDataTableJobBackend(options: DataTableJobBackendOptions): 
                   JSON.stringify(schedule.payload),
                   JSON.stringify(schedule.retry),
                   schedule.catchUp,
-                  nextRunAt,
+                  schedule.nextRunAt,
                   Date.now(),
-                  schedule.id,
                 ],
               ),
             )
-            continue
           }
-
-          await database.exec(
-            rawSql(
-              [
-                `insert into ${tables.schedules} (`,
-                'id, cron, timezone, queue, name, payload_json, retry_json, catch_up, ',
-                'next_run_at, updated_at',
-                ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-              ].join(''),
-              [
-                schedule.id,
-                schedule.cron,
-                schedule.timezone,
-                schedule.queue,
-                schedule.name,
-                JSON.stringify(schedule.payload),
-                JSON.stringify(schedule.retry),
-                schedule.catchUp,
-                schedule.nextRunAt,
-                Date.now(),
-              ],
-            ),
-          )
-        }
-      })
+        }),
+      )
     },
     claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]> {
-      return options.db.transaction(async (database) => {
-        let dueIds = await database.exec(
-          rawSql(
-            [
-              `select id from ${tables.schedules} where next_run_at <= ? `,
-              'and (locked_until is null or locked_until <= ?) ',
-              'order by next_run_at asc limit ?',
-            ].join(''),
-            [input.now, input.now, input.limit],
-          ),
-        )
-
-        let dueSchedules: DueSchedule[] = []
-
-        for (let row of dueIds.rows ?? []) {
-          if (typeof row.id !== 'string') {
-            continue
-          }
-
-          let update = await database.exec(
+      return runOperation(() =>
+        options.db.transaction(async (database) => {
+          let dueIds = await database.exec(
             rawSql(
               [
-                `update ${tables.schedules} set locked_by = ?, locked_until = ?, updated_at = ? `,
-                'where id = ? and next_run_at <= ? and (locked_until is null or locked_until <= ?)',
+                `select id from ${tables.schedules} where next_run_at <= ? `,
+                'and (locked_until is null or locked_until <= ?) ',
+                'order by next_run_at asc limit ?',
               ].join(''),
-              [input.workerId, input.now + input.leaseMs, input.now, row.id, input.now, input.now],
+              [input.now, input.now, input.limit],
             ),
           )
 
-          if ((update.affectedRows ?? 0) === 0) {
-            continue
+          let dueSchedules: DueSchedule[] = []
+
+          for (let row of dueIds.rows ?? []) {
+            if (typeof row.id !== 'string') {
+              continue
+            }
+
+            let update = await database.exec(
+              rawSql(
+                [
+                  `update ${tables.schedules} set locked_by = ?, locked_until = ?, updated_at = ? `,
+                  'where id = ? and next_run_at <= ? and (locked_until is null or locked_until <= ?)',
+                ].join(''),
+                [input.workerId, input.now + input.leaseMs, input.now, row.id, input.now, input.now],
+              ),
+            )
+
+            if ((update.affectedRows ?? 0) === 0) {
+              continue
+            }
+
+            let scheduleRows = await database.exec(
+              rawSql(`select * from ${tables.schedules} where id = ? limit 1`, [row.id]),
+            )
+            let scheduleRow = scheduleRows.rows?.[0]
+
+            if (scheduleRow != null) {
+              dueSchedules.push(toDueSchedule(scheduleRow))
+            }
           }
 
-          let scheduleRows = await database.exec(
-            rawSql(`select * from ${tables.schedules} where id = ? limit 1`, [row.id]),
-          )
-          let scheduleRow = scheduleRows.rows?.[0]
-
-          if (scheduleRow != null) {
-            dueSchedules.push(toDueSchedule(scheduleRow))
-          }
-        }
-
-        return dueSchedules
-      })
+          return dueSchedules
+        }),
+      )
     },
-    async advanceSchedule(input: {
+    advanceSchedule(input: {
       scheduleId: string
       nextRunAt: number
       now: number
       workerId: string
     }): Promise<void> {
-      await options.db.exec(
-        rawSql(
-          [
-            `update ${tables.schedules} set next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? `,
-            'where id = ? and locked_by = ?',
-          ].join(''),
-          [input.nextRunAt, input.now, input.scheduleId, input.workerId],
-        ),
-      )
+      return runOperation(async () => {
+        await options.db.exec(
+          rawSql(
+            [
+              `update ${tables.schedules} set next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? `,
+              'where id = ? and locked_by = ?',
+            ].join(''),
+            [input.nextRunAt, input.now, input.scheduleId, input.workerId],
+          ),
+        )
+      })
     },
   }
 }
@@ -402,6 +423,9 @@ export function getJobSchemaSql(dialect: DataTableDialect, tablePrefix?: string)
   }
 
   let prefix = normalizeTablePrefix(tablePrefix)
+  let keyTextType = dialect === 'mysql' ? 'varchar(191)' : 'text'
+  let indexedTextType = dialect === 'mysql' ? 'varchar(191)' : 'text'
+  let statusTextType = dialect === 'mysql' ? 'varchar(32)' : 'text'
   let tables: BackendTables = {
     jobs: `${prefix}jobs`,
     dedupe: `${prefix}dedupe`,
@@ -411,11 +435,11 @@ export function getJobSchemaSql(dialect: DataTableDialect, tablePrefix?: string)
   return [
     [
       `create table ${tables.jobs} (`,
-      'id text primary key,',
+      `id ${keyTextType} primary key,`,
       'name text not null,',
-      'queue text not null,',
+      `queue ${indexedTextType} not null,`,
       'payload_json text not null,',
-      'status text not null,',
+      `status ${statusTextType} not null,`,
       'attempts integer not null,',
       'max_attempts integer not null,',
       'run_at bigint not null,',
@@ -432,14 +456,14 @@ export function getJobSchemaSql(dialect: DataTableDialect, tablePrefix?: string)
     ].join(' '),
     [
       `create table ${tables.dedupe} (`,
-      'dedupe_key text primary key,',
+      `dedupe_key ${keyTextType} primary key,`,
       'job_id text not null,',
       'expires_at bigint not null',
       ')',
     ].join(' '),
     [
       `create table ${tables.schedules} (`,
-      'id text primary key,',
+      `id ${keyTextType} primary key,`,
       'cron text not null,',
       'timezone text not null,',
       'queue text not null,',
@@ -458,6 +482,25 @@ export function getJobSchemaSql(dialect: DataTableDialect, tablePrefix?: string)
     `create index ${tables.dedupe}_expires_idx on ${tables.dedupe} (expires_at)`,
     `create index ${tables.schedules}_due_idx on ${tables.schedules} (next_run_at, locked_until)`,
   ]
+}
+
+function createOperationRunner(
+  dialect: DataTableDialect,
+): <result>(operation: () => Promise<result>) => Promise<result> {
+  if (dialect !== 'sqlite') {
+    return (operation) => operation()
+  }
+
+  let queue = Promise.resolve()
+
+  return (operation) => {
+    let queued = queue.then(operation, operation)
+    queue = queued.then(
+      () => undefined,
+      () => undefined,
+    )
+    return queued
+  }
 }
 
 async function cleanupExpiredDedupe(db: Database, tables: BackendTables, now: number): Promise<void> {
