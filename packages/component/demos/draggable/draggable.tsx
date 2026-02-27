@@ -23,6 +23,10 @@ let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle)
   let startClientX = 0
   let startClientY = 0
 
+  handle.addEventListener('insert', (event) => {
+    node = event.node
+  })
+
   handle.addEventListener('remove', stopDrag)
 
   return (nextEnabled: boolean = true, props) => {
@@ -31,25 +35,7 @@ let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle)
       stopDrag()
     }
 
-    return (
-      <handle.element
-        {...props}
-        connect={(nextNode, signal) => {
-          node = nextNode
-          signal.addEventListener(
-            'abort',
-            () => {
-              stopDrag()
-              if (node === nextNode) {
-                node = null
-              }
-            },
-            { once: true },
-          )
-        }}
-        mix={[on('pointerdown', (event) => onPointerDown(event))]}
-      />
-    )
+    return <handle.element {...props} mix={[on('pointerdown', (event) => onPointerDown(event))]} />
   }
 
   function onPointerDown(event: PointerEvent) {
