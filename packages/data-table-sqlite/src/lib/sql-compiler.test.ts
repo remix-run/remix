@@ -507,13 +507,12 @@ describe('sqlite sql-compiler', () => {
 
   describe('update statement', () => {
     it('compile for one', async () => {
-      await db.update(accounts, 1, {
+      await db.query(accounts).where({ id: 1 }).update({
         email: 'info@remix.run',
         status: 'enabled',
       })
 
-      // is QueryBuilder's responsability to ensure entry exists in db ?
-      let compiled = compileSqliteStatement(statements[1]) // statements[0] is for the initial select
+      let compiled = compileSqliteStatement(statements[0])
       assert.deepEqual(compiled, {
         text: 'update "accounts" set "email" = ?, "status" = ? where (("id" = ?))',
         values: ['info@remix.run', 'enabled', 1],
