@@ -4,8 +4,6 @@ This is the changelog for [`job-data-table`](https://github.com/remix-run/remix/
 
 ## Unreleased
 
-## v0.1.0
-
 ### Minor Changes
 
 - Initial release.
