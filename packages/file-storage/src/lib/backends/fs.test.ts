@@ -150,14 +150,14 @@ describe('fs file storage', () => {
       lastModified,
     })
 
-    let setPromise = storage.set('one', file1)
-    await storage.set('two', file2)
+    let setOnePromise = storage.set('one', file1)
+    let setTwoPromise = storage.set('two', file2)
+    await Promise.all([setOnePromise, setTwoPromise])
 
     let retrieved1 = await storage.get('one')
     assert.ok(retrieved1)
     assert.equal(await retrieved1.text(), 'Hello, world!')
 
-    await setPromise
     let retrieved2 = await storage.get('two')
     assert.ok(retrieved2)
     assert.equal(await retrieved2.text(), 'Hello, universe!')
