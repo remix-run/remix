@@ -58,6 +58,32 @@ describe('vnode mixins', () => {
     expect(div.getAttribute('title')).toBe('ok')
   })
 
+  it('does not duplicate on handlers for passthrough mixins', () => {
+    let clicks = 0
+    let passthrough = createMixin((handle) => (_props: { on?: { click?: () => void } }) => handle.element)
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(
+      <button
+        mix={[passthrough()]}
+        on={{
+          click() {
+            clicks++
+          },
+        }}
+      />,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    root.flush()
+
+    expect(clicks).toBe(1)
+  })
+
   it('runs remove lifecycle when descriptor type changes and on unmount', () => {
     let removedA = 0
     let removedB = 0

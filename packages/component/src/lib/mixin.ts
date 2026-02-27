@@ -566,14 +566,18 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   let previousClassName = readClassName(previous)
   let nextClassName = readClassName(next)
 
-  if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
+  if (
+    typeof previousConnect === 'function' &&
+    typeof nextConnect === 'function' &&
+    previousConnect !== nextConnect
+  ) {
     composed.connect = (node: Element, signal: AbortSignal) => {
       nextConnect(node, signal)
       previousConnect(node, signal)
     }
   }
 
-  if (isRecord(previousOn) && isRecord(nextOn)) {
+  if (isRecord(previousOn) && isRecord(nextOn) && previousOn !== nextOn) {
     composed.on = composeOnListeners(previousOn, nextOn)
   }
 
@@ -601,6 +605,7 @@ function composeOnListeners(previous: Record<string, unknown>, next: Record<stri
 function composeListenerValue(next: unknown, previous: unknown) {
   if (next == null) return previous
   if (previous == null) return next
+  if (next === previous) return next
   let nextValues = Array.isArray(next) ? next : [next]
   let previousValues = Array.isArray(previous) ? previous : [previous]
   return [...nextValues, ...previousValues]
