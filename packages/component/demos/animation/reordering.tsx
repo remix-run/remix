@@ -1,5 +1,4 @@
-import { type Handle } from 'remix/component'
-import { spring } from 'remix/component'
+import { animateLayout, type Handle, spring } from 'remix/component'
 
 let initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
 
@@ -51,9 +50,11 @@ export function Reordering(handle: Handle) {
             borderRadius: 10,
           }}
           style={{ backgroundColor }}
-          animate={{
-            layout: spring({ duration: 600, bounce: 0.2 }),
-          }}
+          mix={[
+            animateLayout({
+              ...spring({ duration: 600, bounce: 0.2 }),
+            }),
+          ]}
         />
       ))}
     </ul>

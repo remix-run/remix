@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import { animateEntrance, animateLayout, type Handle } from 'remix/component'
 
 let nextId = 1
 function createItem() {
@@ -69,7 +69,7 @@ export function DefaultAnimate(handle: Handle) {
       {items.map((item) => (
         <div
           key={item.id}
-          animate={{ enter: true, exit: false, layout: true }}
+          mix={[animateEntrance(), animateLayout()]}
           css={{
             display: 'flex',
             alignItems: 'center',

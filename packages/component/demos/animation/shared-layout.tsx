@@ -1,4 +1,4 @@
-import type { Handle, Props, RemixNode } from 'remix/component'
+import { animateEntrance, animateExit, type Handle, type Props, type RemixNode } from 'remix/component'
 
 let ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 
@@ -9,19 +9,23 @@ function OverlapExample(handle: Handle) {
   })
 
   return ({ state }: { state: boolean }) => {
-    let animation = {
-      enter: shouldAnimate && {
-        opacity: 0,
-        transform: 'scale(0.6)',
-        duration: 300,
-        easing: ease,
-      },
-      exit: {
+    let animationMix = [
+      animateExit({
         opacity: 0,
         transform: 'scale(0.8)',
         duration: 300,
         easing: ease,
-      },
+      }),
+    ]
+    if (shouldAnimate) {
+      animationMix.unshift(
+        animateEntrance({
+          opacity: 0,
+          transform: 'scale(0.6)',
+          duration: 300,
+          easing: ease,
+        }),
+      )
     }
 
     return (
@@ -30,13 +34,13 @@ function OverlapExample(handle: Handle) {
         css={{ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } }}
       >
         {state ? (
-          <div key="filled" animate={animation}>
+          <div key="filled" mix={animationMix}>
             <Circle filled>
               <FilledIcon />
             </Circle>
           </div>
         ) : (
-          <div key="outline" animate={animation}>
+          <div key="outline" mix={animationMix}>
             <Circle>
               <OutlineIcon />
             </Circle>
@@ -54,20 +58,24 @@ function WaitExample(handle: Handle) {
   })
 
   return ({ state }: { state: boolean }) => {
-    let animation = {
-      enter: shouldAnimate && {
-        opacity: 0,
-        transform: 'scale(0.6)',
-        duration: 300,
-        easing: ease,
-        delay: 300,
-      },
-      exit: {
+    let animationMix = [
+      animateExit({
         opacity: 0,
         transform: 'scale(0.8)',
         duration: 300,
         easing: ease,
-      },
+      }),
+    ]
+    if (shouldAnimate) {
+      animationMix.unshift(
+        animateEntrance({
+          opacity: 0,
+          transform: 'scale(0.6)',
+          duration: 300,
+          easing: ease,
+          delay: 300,
+        }),
+      )
     }
 
     return (
@@ -76,13 +84,13 @@ function WaitExample(handle: Handle) {
         css={{ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } }}
       >
         {state ? (
-          <div key="filled" animate={animation}>
+          <div key="filled" mix={animationMix}>
             <Circle filled>
               <FilledIcon />
             </Circle>
           </div>
         ) : (
-          <div key="outline" animate={animation}>
+          <div key="outline" mix={animationMix}>
             <Circle>
               <OutlineIcon />
             </Circle>

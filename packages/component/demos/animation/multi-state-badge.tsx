@@ -1,4 +1,5 @@
 import type { Handle } from 'remix/component'
+import { animateEntrance, animateExit } from 'remix/component'
 import { spring } from '../../src/lib/spring.ts'
 
 const STATES = {
@@ -20,19 +21,18 @@ const ICON_SIZE = 20
 const STROKE_WIDTH = 1.5
 const VIEW_BOX_SIZE = 24
 
-let iconAnimation = {
-  enter: {
-    transform: 'translateY(-40px) scale(0.5)',
-    filter: 'blur(6px)',
-    duration: 150,
-    easing: 'ease-out',
-  },
-  exit: {
-    transform: 'translateY(40px) scale(0.5)',
-    filter: 'blur(6px)',
-    duration: 150,
-    easing: 'ease-in',
-  },
+let iconEnterAnimation = {
+  transform: 'translateY(-40px) scale(0.5)',
+  filter: 'blur(6px)',
+  duration: 150,
+  easing: 'ease-out',
+}
+
+let iconExitAnimation = {
+  transform: 'translateY(40px) scale(0.5)',
+  filter: 'blur(6px)',
+  duration: 150,
+  easing: 'ease-in',
 }
 
 export function MultiStateBadge(handle: Handle) {
@@ -140,17 +140,29 @@ function Icon() {
       style={{ width: props.state === 'idle' ? 0 : ICON_SIZE }}
     >
       {props.state === 'processing' && (
-        <span key="loader" css={{ position: 'absolute', left: 0, top: 0 }} animate={iconAnimation}>
+        <span
+          key="loader"
+          css={{ position: 'absolute', left: 0, top: 0 }}
+          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+        >
           <Loader />
         </span>
       )}
       {props.state === 'success' && (
-        <span key="check" css={{ position: 'absolute', left: 0, top: 0 }} animate={iconAnimation}>
+        <span
+          key="check"
+          css={{ position: 'absolute', left: 0, top: 0 }}
+          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+        >
           <Check />
         </span>
       )}
       {props.state === 'error' && (
-        <span key="x" css={{ position: 'absolute', left: 0, top: 0 }} animate={iconAnimation}>
+        <span
+          key="x"
+          css={{ position: 'absolute', left: 0, top: 0 }}
+          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+        >
           <X />
         </span>
       )}
@@ -289,21 +301,26 @@ function Label(handle: Handle) {
       }
     })
 
-    let labelAnimation = {
-      enter: !isFirstRender && {
-        transform: 'translateY(-20px)',
-        opacity: 0,
-        filter: 'blur(10px)',
-        duration: 200,
-        easing: 'ease-in-out',
-      },
-      exit: {
+    let labelMix = [
+      animateExit({
         transform: 'translateY(20px)',
         opacity: 0,
         filter: 'blur(10px)',
         duration: 200,
         easing: 'ease-in-out',
-      },
+      }),
+    ]
+
+    if (!isFirstRender) {
+      labelMix.unshift(
+        animateEntrance({
+          transform: 'translateY(-20px)',
+          opacity: 0,
+          filter: 'blur(10px)',
+          duration: 200,
+          easing: 'ease-in-out',
+        }),
+      )
     }
 
     return (
@@ -330,7 +347,7 @@ function Label(handle: Handle) {
           <span
             key="idle"
             css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            animate={labelAnimation}
+            mix={labelMix}
           >
             {STATES.idle}
           </span>
@@ -339,7 +356,7 @@ function Label(handle: Handle) {
           <span
             key="processing"
             css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            animate={labelAnimation}
+            mix={labelMix}
           >
             {STATES.processing}
           </span>
@@ -348,7 +365,7 @@ function Label(handle: Handle) {
           <span
             key="success"
             css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            animate={labelAnimation}
+            mix={labelMix}
           >
             {STATES.success}
           </span>
@@ -357,7 +374,7 @@ function Label(handle: Handle) {
           <span
             key="error"
             css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            animate={labelAnimation}
+            mix={labelMix}
           >
             {STATES.error}
           </span>

@@ -1,4 +1,5 @@
 import type { Handle } from 'remix/component'
+import { animateEntrance, animateExit } from 'remix/component'
 import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
 
 type Ripple = {
@@ -104,13 +105,13 @@ export function MaterialRipple(handle: Handle) {
               left: ripple.x - ripple.size / 2,
               top: ripple.y - ripple.size / 2,
             }}
-            animate={{
-              exit: {
+            mix={[
+              animateExit({
                 opacity: 0,
                 duration: 550,
                 easing: 'ease-out',
-              },
-            }}
+              }),
+            ]}
           >
             {/* Inner span: handles enter (scale) so it doesn't get reversed when removed */}
             <span
@@ -122,14 +123,14 @@ export function MaterialRipple(handle: Handle) {
                 backgroundColor: 'currentColor',
                 opacity: 0.4,
               }}
-              animate={{
-                enter: {
+              mix={[
+                animateEntrance({
                   opacity: 0,
                   transform: 'scale(0)',
                   duration: 300,
                   easing: 'ease-out',
-                },
-              }}
+                }),
+              ]}
             />
           </span>
         ))}

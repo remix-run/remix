@@ -1,24 +1,20 @@
 import { defineInteraction, type Interaction } from 'remix/interaction'
 import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
-import { spring, type Handle } from 'remix/component'
+import { animateEntrance, animateExit, spring, type Handle } from 'remix/component'
 
 // Demo
-let buttonAnimation = {
-  exit: {
-    opacity: 0,
-    transform: 'scale(1.15)',
-    duration: 100,
-    easing: 'ease-in',
-  },
+let buttonExitAnimation = {
+  opacity: 0,
+  transform: 'scale(1.15)',
+  duration: 100,
+  easing: 'ease-in',
 }
 
-let confirmationAnimation = {
-  enter: {
-    opacity: 0,
-    transform: 'scale(0.9)',
-    duration: 200,
-    easing: 'ease-out',
-  },
+let confirmationEnterAnimation = {
+  opacity: 0,
+  transform: 'scale(0.9)',
+  duration: 200,
+  easing: 'ease-out',
 }
 
 export function HoldToConfirm(handle: Handle) {
@@ -61,7 +57,7 @@ function HoldButton(handle: Handle) {
 
   return (props: { onConfirm: () => void }) => (
     <button
-      animate={buttonAnimation}
+      mix={[animateExit(buttonExitAnimation)]}
       css={{
         position: 'relative',
         overflow: 'hidden',
@@ -133,7 +129,7 @@ function HoldButton(handle: Handle) {
 function Confirmation() {
   return (props: { onReset: () => void }) => (
     <div
-      animate={confirmationAnimation}
+      mix={[animateEntrance(confirmationEnterAnimation)]}
       css={{
         display: 'flex',
         flexDirection: 'column',

@@ -1,4 +1,4 @@
-import { type Handle } from 'remix/component'
+import { animateLayout, type Handle } from 'remix/component'
 
 export function FlipToggle(handle: Handle) {
   let isOn = false
@@ -33,12 +33,12 @@ export function FlipToggle(handle: Handle) {
           backgroundColor: '#9911ff',
           borderRadius: '50%',
         }}
-        animate={{
-          layout: {
+        mix={[
+          animateLayout({
             duration: 200,
             easing: 'ease-in-out',
-          },
-        }}
+          }),
+        ]}
       />
     </button>
   )
