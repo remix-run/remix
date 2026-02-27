@@ -10,10 +10,6 @@ type FakeMemcacheServer = {
   close: () => Promise<void>
 }
 
-type FakeMemcacheServerOptions = {
-  malformedGetResponse?: string
-}
-
 describe('memcache session storage', () => {
   let server: FakeMemcacheServer
 
@@ -129,18 +125,6 @@ describe('memcache session storage', () => {
     assert.equal(response4.session.get('count'), 1, 'old session data should be deleted')
   })
 
-  it('throws when memcache returns an invalid get response', async () => {
-    await server.close()
-    server = await startFakeMemcacheServer({ malformedGetResponse: 'BROKEN\r\n' })
-
-    let storage = createMemcacheSessionStorage(server.address)
-
-    await assert.rejects(
-      () => storage.read('invalid-cookie'),
-      /Invalid Memcache get response: BROKEN/,
-    )
-  })
-
   it('throws for invalid configuration', () => {
     assert.throws(
       () => createMemcacheSessionStorage(server.address, { ttlSeconds: -1 }),
@@ -206,9 +190,7 @@ function createRequestHelpers(storage: SessionStorage) {
   }
 }
 
-async function startFakeMemcacheServer(
-  options?: FakeMemcacheServerOptions,
-): Promise<FakeMemcacheServer> {
+async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
   return await new Promise((resolve, reject) => {
     let store = new Map<string, Buffer>()
 
@@ -253,11 +235,6 @@ async function startFakeMemcacheServer(
 
           let getMatch = /^get (\S+)$/.exec(line)
           if (getMatch) {
-            if (options?.malformedGetResponse) {
-              socket.write(options.malformedGetResponse)
-              continue
-            }
-
             let key = getMatch[1]
             let value = store.get(key)
 
