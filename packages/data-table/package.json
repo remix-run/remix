@@ -57,6 +57,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-test-coverage --test-coverage-include='src/lib/operators.ts' --test-coverage-include='src/lib/references.ts' --test-coverage-include='src/lib/inflection.ts' --test-coverage-include='src/lib/sql.ts' --test-coverage-include='src/lib/errors.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/operators.test.ts ./src/lib/references.test.ts ./src/lib/inflection.test.ts ./src/lib/sql.test.ts ./src/lib/errors.test.ts",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

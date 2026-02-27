@@ -47,6 +47,7 @@ jobs:
         run: |
           pnpm --filter @remix-run/data-table run typecheck
           pnpm --filter @remix-run/data-table run test
+          pnpm --filter @remix-run/data-table run test:coverage
           pnpm --filter @remix-run/data-table run build
           pnpm --filter @remix-run/data-table-postgres run typecheck
           pnpm --filter @remix-run/data-table-postgres run test

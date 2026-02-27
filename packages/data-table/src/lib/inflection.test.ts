@@ -12,7 +12,10 @@ describe('singularize', () => {
 
   it('applies suffix rules', () => {
     assert.equal(singularize('categories'), 'category')
+    assert.equal(singularize('parties'), 'party')
     assert.equal(singularize('addresses'), 'address')
+    assert.equal(singularize('brushes'), 'brush')
+    assert.equal(singularize('matches'), 'match')
     assert.equal(singularize('boxes'), 'box')
     assert.equal(singularize('statuses'), 'status')
     assert.equal(singularize('projects'), 'project')
@@ -22,6 +25,10 @@ describe('singularize', () => {
   it('preserves leading capitalization', () => {
     assert.equal(singularize('People'), 'Person')
     assert.equal(singularize('Categories'), 'Category')
+  })
+
+  it('preserves empty words', () => {
+    assert.equal(singularize(''), '')
   })
 })
 
