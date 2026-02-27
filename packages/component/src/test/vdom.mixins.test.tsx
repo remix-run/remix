@@ -61,17 +61,21 @@ describe('vnode mixins', () => {
   it('runs remove lifecycle when descriptor type changes and on unmount', () => {
     let removedA = 0
     let removedB = 0
+    let persistApiSeenA = false
+    let persistApiSeenB = false
 
     let a = createMixin((handle) => {
-      handle.addEventListener('remove', () => {
+      handle.addEventListener('remove', (event) => {
         removedA++
+        persistApiSeenA = typeof event.persistNode === 'function'
       })
       return (props: { id?: string }) => <handle.element {...props} id="a" />
     })
 
     let b = createMixin((handle) => {
-      handle.addEventListener('remove', () => {
+      handle.addEventListener('remove', (event) => {
         removedB++
+        persistApiSeenB = typeof event.persistNode === 'function'
       })
       return (props: { id?: string }) => <handle.element {...props} id="b" />
     })
@@ -85,6 +89,8 @@ describe('vnode mixins', () => {
 
     expect(removedA).toBe(1)
     expect(removedB).toBe(1)
+    expect(persistApiSeenA).toBe(true)
+    expect(persistApiSeenB).toBe(true)
   })
 
   it('runs insert lifecycle with the bound host node', () => {

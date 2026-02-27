@@ -192,7 +192,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
-        entry.handle.dispatchEvent(new Event('remove'))
+        dispatchMixinRemove(entry.handle, () => {})
       }
       let handle = createMixinHandle({
         id: state.id,
@@ -245,7 +245,9 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 
   for (let index = descriptors.length; index < state.runners.length; index++) {
     let entry = state.runners[index]
-    entry?.handle.dispatchEvent(new Event('remove'))
+    if (entry) {
+      dispatchMixinRemove(entry.handle, () => {})
+    }
   }
 
   if (state.runners.length > descriptors.length) {
