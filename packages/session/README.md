@@ -4,7 +4,7 @@ A session management library for JavaScript. This package provides a flexible an
 
 ## Features
 
-- **Multiple Storage Strategies:** Includes memory, cookie, and file-based [session storage strategies](#storage-strategies) for different use cases
+- **Multiple Storage Strategies:** Includes memory, cookie, file, and Memcache-based [session storage strategies](#storage-strategies) for different use cases
 - **Flash Messages:** Support for [flash data](#flash-messages) that persists only for the next request
 - **Session Security:** Built-in protection against [session fixation attacks](#regenerating-session-ids)
 
@@ -159,6 +159,27 @@ import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
 let sessionStorage = createMemorySessionStorage()
 ```
+
+#### Memcache Storage
+
+Memcache storage is useful for distributed server environments where multiple app instances need shared session state.
+
+```ts
+import { createMemcacheSessionStorage } from 'remix/session/memcache-storage'
+
+let sessionStorage = createMemcacheSessionStorage('127.0.0.1:11211', {
+  keyPrefix: 'my-app:session:',
+  ttlSeconds: 60 * 60 * 24 * 7,
+})
+```
+
+Available options:
+
+- `useUnknownIds` (default: `false`) - reuse unknown session IDs sent by the client
+- `keyPrefix` (default: `'remix:session:'`) - prefix for all Memcache keys
+- `ttlSeconds` (default: `0`) - session expiration in seconds (`0` means no expiration)
+
+Note: Memcache storage uses TCP sockets and requires a Node.js runtime.
 
 ## Related Packages
 

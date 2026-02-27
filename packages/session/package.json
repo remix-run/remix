@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./cookie-storage": "./src/cookie-storage.ts",
     "./fs-storage": "./src/fs-storage.ts",
+    "./memcache-storage": "./src/memcache-storage.ts",
     "./memory-storage": "./src/memory-storage.ts",
     "./package.json": "./package.json"
   },
@@ -38,6 +39,10 @@
       "./fs-storage": {
         "types": "./dist/fs-storage.d.ts",
         "default": "./dist/fs-storage.js"
+      },
+      "./memcache-storage": {
+        "types": "./dist/memcache-storage.d.ts",
+        "default": "./dist/memcache-storage.js"
       },
       "./memory-storage": {
         "types": "./dist/memory-storage.d.ts",
