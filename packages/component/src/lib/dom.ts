@@ -1,5 +1,4 @@
 import type { StyleProps } from './style/lib/style.ts'
-import type { EventListeners } from '@remix-run/interaction'
 import type { RemixNode } from './jsx.ts'
 import type { MixValue } from './mixin.ts'
 
@@ -26,7 +25,6 @@ export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode
   mix?: MixValue<eventTarget>
-  on?: EventListeners<eventTarget> | undefined
   connect?: (node: eventTarget, signal: AbortSignal) => void
   /**
    * Set the innerHTML of the element directly.

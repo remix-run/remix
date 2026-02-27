@@ -6,7 +6,7 @@ import { run } from '../lib/run.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
-import { css } from '../index.ts'
+import { css, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -51,12 +51,12 @@ describe('run', () => {
         let count = setup
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -92,12 +92,12 @@ describe('run', () => {
       let clicked = false
       return ({ text }: { text: string }) => (
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? `${text} clicked!` : text}
         </button>
@@ -142,12 +142,12 @@ describe('run', () => {
       return () => (
         <button
           id="fast"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Fast!' : 'Fast'}
         </button>
@@ -159,12 +159,12 @@ describe('run', () => {
       return () => (
         <button
           id="slow"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Slow!' : 'Slow'}
         </button>
@@ -264,12 +264,12 @@ describe('run', () => {
       return () => (
         <button
           id="initial"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Initial!' : 'Initial'}
         </button>
@@ -281,12 +281,12 @@ describe('run', () => {
       return () => (
         <button
           id="late"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Late!' : 'Late'}
         </button>
@@ -447,12 +447,12 @@ describe('run', () => {
       return () => (
         <button
           id="a"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'A!' : 'A'}
         </button>
@@ -464,12 +464,12 @@ describe('run', () => {
       return () => (
         <button
           id="b"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'B!' : 'B'}
         </button>
@@ -1221,12 +1221,12 @@ describe('run', () => {
         return () => (
           <button
             id="counter"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -1407,12 +1407,12 @@ describe('run', () => {
         return () => (
           <button
             id="nested-counter"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -1930,12 +1930,12 @@ describe('run', () => {
           <button
             id="toggle-frame"
             type="button"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 mounted = !mounted
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Toggle
           </button>
@@ -2078,12 +2078,12 @@ describe('run', () => {
           <button
             id="switch-src"
             type="button"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 src = '/fast'
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Switch
           </button>

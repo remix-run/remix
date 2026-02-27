@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { createRoot } from '../lib/vdom.ts'
+import { on } from '../index.ts'
 
 describe('vdom controlled props', () => {
   it('restores controlled value on native input when no update happens', async () => {
@@ -37,12 +38,12 @@ describe('vdom controlled props', () => {
       return () => (
         <input
           value={value}
-          on={{
-            input(event) {
+          mix={[
+            on('input', (event) => {
               value = event.currentTarget.value
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
       )
     }

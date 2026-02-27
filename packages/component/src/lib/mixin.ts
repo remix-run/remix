@@ -561,8 +561,6 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   let composed = { ...previous, ...next }
   let previousConnect = previous.connect
   let nextConnect = next.connect
-  let previousOn = previous.on
-  let nextOn = next.on
   let previousClassName = readClassName(previous)
   let nextClassName = readClassName(next)
 
@@ -577,10 +575,6 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
     }
   }
 
-  if (isRecord(previousOn) && isRecord(nextOn) && previousOn !== nextOn) {
-    composed.on = composeOnListeners(previousOn, nextOn)
-  }
-
   if (previousClassName || nextClassName) {
     composed.className = joinClassNames(nextClassName, previousClassName)
     if ('class' in composed) {
@@ -589,30 +583,6 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   }
 
   return composed
-}
-
-function composeOnListeners(previous: Record<string, unknown>, next: Record<string, unknown>) {
-  let merged: Record<string, unknown> = { ...previous, ...next }
-
-  for (let key in previous) {
-    if (!(key in next)) continue
-    merged[key] = composeListenerValue(next[key], previous[key])
-  }
-
-  return merged
-}
-
-function composeListenerValue(next: unknown, previous: unknown) {
-  if (next == null) return previous
-  if (previous == null) return next
-  if (next === previous) return next
-  let nextValues = Array.isArray(next) ? next : [next]
-  let previousValues = Array.isArray(previous) ? previous : [previous]
-  return [...nextValues, ...previousValues]
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function readClassName(props: ElementProps): string {

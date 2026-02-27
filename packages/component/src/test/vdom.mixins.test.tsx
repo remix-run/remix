@@ -60,18 +60,18 @@ describe('vnode mixins', () => {
 
   it('does not duplicate on handlers for passthrough mixins', () => {
     let clicks = 0
-    let passthrough = createMixin((handle) => (_props: { on?: { click?: () => void } }) => handle.element)
+    let passthrough = createMixin((handle) => (_props: {}) => handle.element)
 
     let container = document.createElement('div')
     let root = createRoot(container)
     root.render(
       <button
-        mix={[passthrough()]}
-        on={{
-          click() {
+        mix={[
+          passthrough(),
+          on('click', () => {
             clicks++
-          },
-        }}
+          }),
+        ]}
       />,
     )
     root.flush()
@@ -218,28 +218,28 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['b', 'a', 'base'])
   })
 
-  it('composes on listeners across mixins and base props', () => {
+  it('composes on mixins across nested mixins', () => {
     let calls: string[] = []
 
-    let withOnA = createMixin((handle) => (props: { on?: { click?: () => void } }) => (
+    let withOnA = createMixin<HTMLElement>((handle) => (props: {}) => (
       <handle.element
         {...props}
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             calls.push('a')
-          },
-        }}
+          }),
+        ]}
       />
     ))
 
-    let withOnB = createMixin((handle) => (props: { on?: { click?: () => void } }) => (
+    let withOnB = createMixin<HTMLElement>((handle) => (props: {}) => (
       <handle.element
         {...props}
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             calls.push('b')
-          },
-        }}
+          }),
+        ]}
       />
     ))
 
@@ -247,12 +247,13 @@ describe('vnode mixins', () => {
     let root = createRoot(container)
     root.render(
       <button
-        on={{
-          click() {
+        mix={[
+          withOnA(),
+          withOnB(),
+          on('click', () => {
             calls.push('base')
-          },
-        }}
-        mix={[withOnA(), withOnB()]}
+          }),
+        ]}
       >
         click
       </button>,
@@ -263,7 +264,7 @@ describe('vnode mixins', () => {
     invariant(button)
     button.click()
     root.flush()
-    expect(calls).toEqual(['b', 'a', 'base'])
+    expect(calls).toEqual(['base', 'a', 'b'])
   })
 
   it('supports on mixin helper composition standalone', () => {
@@ -297,19 +298,18 @@ describe('vnode mixins', () => {
   it('updates only host props when mixin calls handle.update', () => {
     let appRenderCount = 0
 
-    let withCounter = createMixin((handle) => {
+    let withCounter = createMixin<HTMLButtonElement>((handle) => {
       let count = 0
-      return (props: { ['data-count']?: string; on?: { click?: () => void } }) => (
+      return (props: { ['data-count']?: string }) => (
         <handle.element
           {...props}
           data-count={String(count)}
-          on={{
-            ...props.on,
-            click() {
+          mix={[
+            on('click', () => {
               count++
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
       )
     })

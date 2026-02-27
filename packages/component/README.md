@@ -60,7 +60,7 @@ return new Response(stream, {
 Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
 
 ```tsx
-import { clientEntry, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from '@remix-run/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -73,12 +73,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               count++
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           +
         </button>
@@ -125,11 +125,11 @@ Client entries inside a frame can trigger a reload:
 function RefreshButton(handle: Handle) {
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Refresh
     </button>
@@ -150,12 +150,12 @@ You can also name frames and reload adjacent ones:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Save
     </button>
@@ -179,12 +179,12 @@ function Counter(handle: Handle, setup: number) {
     <div>
       {props.label || 'Count'}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -228,7 +228,7 @@ function Counter(
 
 ## Events
 
-Events use the `on` prop and are handled by [`@remix-run/interaction`](../interaction). Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
+Events use the `on()` mixin and are handled by [`@remix-run/interaction`](../interaction). Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
 
 ```tsx
 function SearchInput(handle: Handle) {
@@ -238,8 +238,8 @@ function SearchInput(handle: Handle) {
     <input
       type="text"
       value={query}
-      on={{
-        input: (event, signal) => {
+      mix={[
+        on('input', (event, signal) => {
           query = event.currentTarget.value
           handle.update()
 
@@ -251,8 +251,8 @@ function SearchInput(handle: Handle) {
               if (signal.aborted) return
               // Update results
             })
-        },
-      }}
+        }),
+      ]}
     />
   )
 }
@@ -380,12 +380,12 @@ function Form(handle: Handle) {
         connect={(node) => (inputRef = node)}
       />
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             // Select it from other parts of the form
             inputRef.select()
-          },
-        }}
+          }),
+        ]}
       >
         Focus Input
       </button>
@@ -442,12 +442,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click: () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -468,28 +468,28 @@ function Player(handle: Handle) {
       <button
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
-        on={{
-          async click() {
+        mix={[
+          on('click', async () => {
             isPlaying = true
             await handle.update()
             // Focus the enabled button after update completes
             stopButton.focus()
-          },
-        }}
+          }),
+        ]}
       >
         Play
       </button>
       <button
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
-        on={{
-          async click() {
+        mix={[
+          on('click', async () => {
             isPlaying = false
             await handle.update()
             // Focus the enabled button after update completes
             playButton.focus()
-          },
-        }}
+          }),
+        ]}
       >
         Stop
       </button>
@@ -513,8 +513,8 @@ function Form(handle: Handle) {
         <input
           type="checkbox"
           checked={showDetails}
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               showDetails = event.currentTarget.checked
               handle.update()
               if (showDetails) {
@@ -523,8 +523,8 @@ function Form(handle: Handle) {
                   detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 })
               }
-            },
-          }}
+            }),
+          ]}
         />
         Show additional details
       </label>
@@ -656,12 +656,12 @@ function App(handle: Handle<Theme>) {
   return () => (
     <div>
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             // no updates in the parent component
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
+          }),
+        ]}
       >
         Toggle Theme
       </button>

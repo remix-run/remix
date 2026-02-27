@@ -1,4 +1,3 @@
-import { createContainer } from '@remix-run/interaction'
 import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
 import { createComponent, Frame } from './component.ts'
 import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
@@ -281,20 +280,6 @@ function bindNodeMixRuntime(
             let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
             diffHostProps(prevProps, nextProps, node._dom)
 
-            let nextOn = nextProps.on
-            if (nextOn) {
-              if (node._events) {
-                node._events.set(nextOn)
-              } else {
-                let eventsContainer = createContainer(node._dom)
-                eventsContainer.set(nextOn)
-                node._events = eventsContainer
-              }
-            } else if (node._events) {
-              node._events.dispose()
-              node._events = undefined
-            }
-
             dispatchMixinCommit(state)
             done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
           },
@@ -471,26 +456,6 @@ function diffHost(
   next._controller = curr._controller
   next._controlledState = curr._controlledState
 
-  let nextOn = nextProps.on
-  if (nextOn) {
-    if (curr._events) {
-      // Update existing container
-      next._events = curr._events
-      let eventsContainer = curr._events
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-    } else {
-      // Create new container
-      let eventsContainer = createContainer(curr._dom)
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-      next._events = eventsContainer
-    }
-  } else if (curr._events) {
-    // Dispose old container since next has no on prop
-    let eventsContainer = curr._events
-    scheduler.enqueueTasks([() => eventsContainer.dispose()])
-  }
-  // If neither has on, do nothing - no _events to set
-
   ensureControlledReflection(next as CommittedHostNode, scheduler)
   syncControlledReflection(next as CommittedHostNode, nextProps)
 
@@ -508,13 +473,6 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   node._dom = dom
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
-
-  let on = props.on
-  if (on) {
-    let eventsContainer = createContainer(dom)
-    scheduler.enqueueTasks([() => eventsContainer.set(on)])
-    node._events = eventsContainer
-  }
 
   let connect = props.connect
   if (connect) {
@@ -1270,10 +1228,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
     teardownControlledReflection(node)
     if (node._controller) node._controller.abort()
-    let _events = node._events
-    if (_events) {
-      scheduler.enqueueTasks([() => _events.dispose()])
-    }
     return
   }
 
@@ -1375,10 +1329,6 @@ function performHostNodeRemoval(
     node._dom.parentNode?.removeChild(node._dom)
   }
   if (node._controller) node._controller.abort()
-  let _events = node._events
-  if (_events) {
-    scheduler.enqueueTasks([() => _events.dispose()])
-  }
 }
 
 function diffChildren(
@@ -1731,7 +1681,6 @@ function reclaimPersistedMixinNode(
   newNode._dom = persistedNode._dom
   newNode._parent = vParent
   newNode._controller = persistedNode._controller
-  newNode._events = persistedNode._events
   newNode._mixState = persistedNode._mixState
   newNode._controlledState = persistedNode._controlledState
 
@@ -1759,22 +1708,6 @@ function reclaimPersistedMixinNode(
     newNode,
     rootTarget,
   )
-
-  let nextOn = nextProps.on
-  if (nextOn) {
-    if (newNode._events) {
-      let eventsContainer = newNode._events
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-    } else {
-      let eventsContainer = createContainer(persistedNode._dom)
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-      newNode._events = eventsContainer
-    }
-  } else if (newNode._events) {
-    let eventsContainer = newNode._events
-    scheduler.enqueueTasks([() => eventsContainer.dispose()])
-    newNode._events = undefined
-  }
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {

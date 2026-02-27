@@ -45,7 +45,6 @@ function isFrameworkProp(name: string): boolean {
     name === 'children' ||
     name === 'mix' ||
     name === 'key' ||
-    name === 'on' ||
     name === 'setup' ||
     name === 'connect' ||
     name === 'animate' ||

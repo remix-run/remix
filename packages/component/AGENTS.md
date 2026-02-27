@@ -2,6 +2,8 @@
 
 This guide provides a comprehensive overview of the Remix Component API, its runtime behavior, and practical use cases for building interactive UIs.
 
+> Note: Host-element `on` props were removed. Use `mix={[on('event', handler)]}` for DOM event listeners.
+
 ## Getting Started
 
 ### Creating a Root
@@ -9,7 +11,7 @@ This guide provides a comprehensive overview of the Remix Component API, its run
 To start using Remix Component, create a root and render your top-level component:
 
 ```tsx
-import { createRoot } from 'remix/component'
+import { createRoot, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
@@ -38,12 +40,12 @@ function App(handle: Handle) {
     <div>
       <h1>Count: {count}</h1>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -162,12 +164,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -185,13 +187,13 @@ function Player(handle: Handle) {
   return () => (
     <button
       disabled={isPlaying}
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           isPlaying = true
           await handle.update()
           stopButton.focus()
-        },
-      }}
+        }),
+      ]}
     >
       Play
     </button>
@@ -218,8 +220,8 @@ function Form(handle: Handle) {
       <input
         type="checkbox"
         checked={showDetails}
-        on={{
-          change(event) {
+        mix={[
+          on('change', (event) => {
             showDetails = event.currentTarget.checked
             handle.update()
             if (showDetails) {
@@ -228,8 +230,8 @@ function Form(handle: Handle) {
                 detailsSection.scrollIntoView({ behavior: 'smooth' })
               })
             }
-          },
-        }}
+          }),
+        ]}
       />
       {showDetails && (
         <section connect={(node) => (detailsSection = node)}>Details content</section>

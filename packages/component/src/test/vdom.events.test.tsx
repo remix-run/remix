@@ -1,31 +1,32 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import { on } from '../index.ts'
 import type { Dispatched } from '@remix-run/interaction'
 import type { Assert, Equal } from './utils.ts'
 import type { Handle } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
   describe('events integration', () => {
-    it('attaches events', () => {
+    it('attaches events via on() mixin', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       let clicked = false
       root.render(
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clicked = true
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>,
       )
 
       expect(container.innerHTML).toBe('<button>Click me</button>')
-      root.flush() // events attachment happens after rendering
+      root.flush()
 
       let button = container.querySelector('button')
       invariant(button)
@@ -33,7 +34,7 @@ describe('vnode rendering', () => {
       expect(clicked).toBe(true)
     })
 
-    it('reuses the event container', () => {
+    it('updates on() mixin listeners across rerenders', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
@@ -41,11 +42,11 @@ describe('vnode rendering', () => {
       function App() {
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 clickCount++
-              },
-            }}
+              }),
+            ]}
           >
             Click me
           </button>
@@ -67,18 +68,18 @@ describe('vnode rendering', () => {
       expect(clickCount).toBe(2)
     })
 
-    it('cleans up the event container', () => {
+    it('cleans up mixin listeners when removed', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       let clickCount = 0
       root.render(
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clickCount++
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>,
@@ -90,7 +91,7 @@ describe('vnode rendering', () => {
       button.click()
       expect(clickCount).toBe(1)
 
-      // remove on prop
+      // remove event mixin
       root.render(<button>Click me</button>)
       root.flush()
 

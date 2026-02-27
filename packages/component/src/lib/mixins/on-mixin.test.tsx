@@ -94,6 +94,103 @@ describe('on mixin', () => {
     expect(receivedSignal).toBeInstanceOf(AbortSignal)
     expect(receivedSignal.aborted).toBe(false)
   })
+
+  it('supports multiple event types on the same element', () => {
+    let calls: string[] = []
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls.push('click')
+          }),
+          on('focus', () => {
+            calls.push('focus')
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.dispatchEvent(new FocusEvent('focus', { bubbles: true }))
+    button.click()
+    root.flush()
+
+    expect(calls).toEqual(['focus', 'click'])
+  })
+
+  it('removes listeners when on() mixin is removed', () => {
+    let calls = 0
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls++
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.click()
+    root.flush()
+    expect(calls).toBe(1)
+
+    root.render(<button>click</button>)
+    root.flush()
+    button.click()
+    root.flush()
+    expect(calls).toBe(1)
+  })
+
+  it('aborts previous handler signal on reentry', async () => {
+    let signals: AbortSignal[] = []
+    let pendingResolvers: Array<() => void> = []
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          on('click', async (_event, signal) => {
+            signals.push(signal)
+            await new Promise<void>((resolve) => {
+              pendingResolvers.push(resolve)
+            })
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.click()
+    button.click()
+    root.flush()
+
+    expect(signals).toHaveLength(2)
+    expect(signals[0]!.aborted).toBe(true)
+    expect(signals[1]!.aborted).toBe(false)
+
+    for (let resolve of pendingResolvers) resolve()
+    await Promise.resolve()
+  })
 })
 
 let infersNodeType = (

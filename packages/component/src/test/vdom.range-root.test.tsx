@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { createRangeRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
   describe('basic rendering', () => {
@@ -258,11 +259,11 @@ describe('createRangeRoot', () => {
       let root = createRangeRoot([start, end])
       root.render(
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clicked = true
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>,
@@ -430,12 +431,12 @@ describe('createRangeRoot', () => {
         let count = setup
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             {count}
           </button>

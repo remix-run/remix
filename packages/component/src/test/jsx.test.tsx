@@ -28,14 +28,14 @@ describe('jsx', () => {
     it('infers the event target type from the element type', () => {
       let element = (
         <button
-          on={{
-            pointerdown: (event) => {
+          mix={[
+            on('pointerdown', (event) => {
               type dispatchedEvent = Assert<
                 Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
               >
               type eventTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>
@@ -53,12 +53,12 @@ describe('jsx', () => {
           type componentProps = Assert<Equal<typeof props, { label: string }>>
           return (
             <button
-              on={{
-                click: () => {
+              mix={[
+                on('click', () => {
                   count++
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             >
               {props.label} {count}
             </button>
@@ -81,12 +81,12 @@ describe('jsx', () => {
           type componentProps = Assert<Equal<typeof props, { label: string }>>
           return (
             <button
-              on={{
-                click: () => {
+              mix={[
+                on('click', () => {
                   count++
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             >
               {props.label} {count}
             </button>

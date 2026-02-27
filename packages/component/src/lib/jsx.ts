@@ -45,16 +45,11 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
 export type RemixNode = Renderable | RemixNode[]
 
 /**
- * Get the props for a specific element type with normalized `on` prop.
+ * Get the props for a specific element type.
  *
  * @example
  * interface MyButtonProps extends Props<"button"> {
  *   size: "sm" | "md" | "lg"
- * }
- *
- * @example
- * function Button({ on, ...rest }: Props<"button">) {
- *   return () => <button {...rest} on={{ ...on, click: handler }} />
  * }
  */
 export type Props<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T]

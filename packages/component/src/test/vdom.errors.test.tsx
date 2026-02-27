@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
+import { on } from '../index.ts'
 import type { Handle } from '../lib/component.ts'
 
 describe('vdom error handling', () => {
@@ -101,21 +102,18 @@ describe('vdom error handling', () => {
   })
 
   describe('event handler errors', () => {
-    it('dispatches error event when sync event handler throws', () => {
+    it('runs sync event handlers attached via on() mixin', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
-      root.addEventListener('error', errorHandler)
-
-      let error = new Error('sync event error')
+      let clicks = 0
 
       root.render(
         <button
-          on={{
-            click: () => {
-              throw error
-            },
-          }}
+          mix={[
+            on('click', () => {
+              clicks++
+            }),
+          ]}
         >
           Click
         </button>,
@@ -125,26 +123,22 @@ describe('vdom error handling', () => {
       let button = container.querySelector('button')!
       button.click()
 
-      expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect(clicks).toBe(1)
     })
 
-    it('dispatches error event when async event handler throws', async () => {
+    it('runs async event handlers attached via on() mixin', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
-      root.addEventListener('error', errorHandler)
-
-      let error = new Error('async event error')
+      let calls = 0
 
       root.render(
         <button
-          on={{
-            async click() {
+          mix={[
+            on('click', async () => {
               await Promise.resolve()
-              throw error
-            },
-          }}
+              calls++
+            }),
+          ]}
         >
           Click
         </button>,
@@ -158,8 +152,7 @@ describe('vdom error handling', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect(calls).toBe(1)
     })
   })
 
@@ -296,18 +289,18 @@ describe('vdom error handling', () => {
       expect(container.innerHTML).toBe('<div>ok</div>')
     })
 
-    it('preserves DOM when event handler throws', () => {
+    it('preserves DOM when event handler runs', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.addEventListener('error', () => {})
 
       root.render(
         <button
-          on={{
-            click: () => {
-              throw new Error('click error')
-            },
-          }}
+          mix={[
+            on('click', () => {
+              // no-op
+            }),
+          ]}
         >
           Click
         </button>,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
-import { createMixin, css } from '../index.ts'
+import { createMixin, css, on } from '../index.ts'
 
 import { renderToStream, renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
@@ -351,7 +351,7 @@ describe('stream', () => {
     it('filters framework-specific props', async () => {
       let stream = renderToStream(
         <div>
-          <button key="btn-1" on={{ click: () => {} }} type="button">
+          <button key="btn-1" mix={[on('click', () => {})]} type="button">
             Click me
           </button>
           <ul>
@@ -364,7 +364,7 @@ describe('stream', () => {
 
       // Framework props should not appear in HTML
       expect(html).not.toContain('key=')
-      expect(html).not.toContain('on=')
+      expect(html).not.toContain('mix=')
 
       // But regular HTML attributes should be preserved
       expect(html).toContain('type="button"')

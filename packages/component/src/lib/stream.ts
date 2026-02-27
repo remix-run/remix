@@ -552,8 +552,6 @@ function composeSsrMixinProps(previous: ElementProps, next: ElementProps): Eleme
   let composed = { ...previous, ...next }
   let previousConnect = previous.connect
   let nextConnect = next.connect
-  let previousOn = previous.on
-  let nextOn = next.on
   let previousClassName = readClassName(previous)
   let nextClassName = readClassName(next)
 
@@ -564,10 +562,6 @@ function composeSsrMixinProps(previous: ElementProps, next: ElementProps): Eleme
     }
   }
 
-  if (isRecord(previousOn) && isRecord(nextOn)) {
-    composed.on = composeSsrOnListeners(previousOn, nextOn)
-  }
-
   if (previousClassName || nextClassName) {
     composed.className = joinClassNames(nextClassName, previousClassName)
     if ('class' in composed) {
@@ -576,27 +570,6 @@ function composeSsrMixinProps(previous: ElementProps, next: ElementProps): Eleme
   }
 
   return composed
-}
-
-function composeSsrOnListeners(previous: Record<string, unknown>, next: Record<string, unknown>) {
-  let merged: Record<string, unknown> = { ...previous, ...next }
-  for (let key in previous) {
-    if (!(key in next)) continue
-    merged[key] = composeSsrListenerValue(next[key], previous[key])
-  }
-  return merged
-}
-
-function composeSsrListenerValue(next: unknown, previous: unknown) {
-  if (next == null) return previous
-  if (previous == null) return next
-  let nextValues = Array.isArray(next) ? next : [next]
-  let previousValues = Array.isArray(previous) ? previous : [previous]
-  return [...nextValues, ...previousValues]
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function readClassName(props: ElementProps): string {

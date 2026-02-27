@@ -4,6 +4,7 @@ import { createRoot } from '../lib/vdom.ts'
 import { renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
 import { invariant } from '../lib/invariant.ts'
+import { on } from '../index.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -126,12 +127,12 @@ describe('hydration', () => {
         let count = setup
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -307,11 +308,11 @@ describe('hydration', () => {
       function Clickable() {
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 clicked = true
-              },
-            }}
+              }),
+            ]}
           >
             Click me
           </button>

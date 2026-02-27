@@ -1,4 +1,3 @@
-import type { EventsContainer } from '@remix-run/interaction'
 import type { ComponentHandle, Component } from './component.ts'
 import { Fragment, Frame } from './component.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
@@ -24,7 +23,6 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _parent?: VNode
   _children?: VNode[]
   _dom?: unknown
-  _events?: EventsContainer<EventTarget>
   _controller?: AbortController
   _mixState?: unknown
   _controlledState?: unknown
@@ -80,7 +78,6 @@ export type HostNode = VNode & {
 export type CommittedHostNode = HostNode & {
   _dom: Element
   _controller?: AbortController
-  _events?: EventsContainer<EventTarget>
 }
 
 export type ComponentNode = VNode & {
