@@ -111,16 +111,16 @@ createRoot(document.body).render(
         marginTop: 40,
       }}
     >
-      <Tile title="Default Animate" notes="animate prop with enter, exit, and layout">
+      <Tile title="Default Animate" notes="animateEntrance + animateLayout defaults">
         <DefaultAnimate />
       </Tile>
       <Tile title="Rolling Square" notes="CSS transition with spring() timing function">
         <RollingSquare />
       </Tile>
-      <Tile title="Enter Animation" notes="animate.enter prop with spring physics">
+      <Tile title="Enter Animation" notes="animateEntrance() with spring physics">
         <EnterAnimation />
       </Tile>
-      <Tile title="Exit Animation" notes="animate.enter and animate.exit props">
+      <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
         <ExitAnimation />
       </Tile>
       <Tile title="Press Interaction" notes="CSS transition + pressDown/pressUp events">
@@ -138,7 +138,7 @@ createRoot(document.body).render(
       <Tile title="Rotate" notes="CSS @keyframes (one-shot)">
         <Rotate />
       </Tile>
-      <Tile title="Transition Options" notes="animate.enter with cubic-bezier + delay">
+      <Tile title="Transition Options" notes="animateEntrance() with cubic-bezier + delay">
         <TransitionOptions />
       </Tile>
       <Tile title="3D Cube" notes="rAF loop with direct style manipulation">
@@ -153,10 +153,10 @@ createRoot(document.body).render(
       <Tile title="Bouncy Switch" notes="Spring up, bounce down with CSS linear()">
         <BouncySwitch />
       </Tile>
-      <Tile title="FLIP Toggle" notes="animate.layout prop with interruptible WAAPI">
+      <Tile title="FLIP Toggle" notes="animateLayout() with interruptible WAAPI">
         <FlipToggle />
       </Tile>
-      <Tile title="Reordering" notes="animate.layout with auto-shuffling list">
+      <Tile title="Reordering" notes="animateLayout() with auto-shuffling list">
         <Reordering />
       </Tile>
       <Tile title="Color Interpolation" notes="sRGB vs OKLCH color space">

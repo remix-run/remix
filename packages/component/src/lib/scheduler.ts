@@ -1,9 +1,4 @@
 import { createDocumentState } from './document-state.ts'
-import {
-  applyLayoutAnimations,
-  captureLayoutSnapshots,
-  markLayoutSubtreePending,
-} from './layout-animation.ts'
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import {
@@ -89,17 +84,6 @@ export function createScheduler(
       return
     }
 
-    // Mark layout elements within updating components as pending BEFORE capture
-    // This ensures we only capture/apply for elements whose components are updating
-    if (batch.size > 0) {
-      for (let [, domParent] of batch) {
-        markLayoutSubtreePending(domParent)
-      }
-    }
-
-    // Capture layout snapshots BEFORE any DOM work (for FLIP animations)
-    captureLayoutSnapshots()
-
     documentState.capture()
 
     let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
@@ -142,9 +126,6 @@ export function createScheduler(
 
     // restore before user tasks so users can move focus/selection etc.
     documentState.restore()
-
-    // Apply FLIP layout animations AFTER DOM work, BEFORE user tasks
-    applyLayoutAnimations()
 
     dispatchPhaseEvent('commit', updateParents)
 

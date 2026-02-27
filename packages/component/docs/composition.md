@@ -191,4 +191,3 @@ Keys can be any type (string, number, bigint, object, symbol), but should be sta
 ## See Also
 
 - [Context](./context.md) - Indirect composition without prop drilling
-- [Animate API](./animate.md) - Keys are required for animation reclamation

@@ -488,4 +488,3 @@ This example demonstrates:
 ## See Also
 
 - [Spring API](./spring.md) - Physics-based animation easing
-- [Animate API](./animate.md) - Declarative enter/exit/layout animations

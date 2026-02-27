@@ -41,12 +41,6 @@ export type {
 export type {
   HostProps,
   LayoutAnimationConfig,
-  PresenceStyleProperties,
-  PresenceKeyframe,
-  PresenceOptions,
-  PresenceConfig,
-  PresenceKeyframeConfig,
-  AnimateProp,
 } from './lib/dom.ts'
 export { createMixin } from './lib/mixin.ts'
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'

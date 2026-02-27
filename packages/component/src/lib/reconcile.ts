@@ -33,20 +33,6 @@ import { skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'
 import { toVNode } from './to-vnode.ts'
 import {
-  findMatchingExitingNode,
-  getPresenceConfig,
-  markNodeExiting,
-  playEnterAnimation,
-  playExitAnimation,
-  shouldPlayEnterAnimation,
-  unmarkNodeExiting,
-} from './presence.ts'
-import {
-  registerLayoutElement,
-  unregisterLayoutElement,
-  updateLayoutElement,
-} from './layout-animation.ts'
-import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
   dispatchMixinBeforeUpdate,
@@ -505,15 +491,6 @@ function diffHost(
   }
   // If neither has on, do nothing - no _events to set
 
-  // Update layout animation registration
-  let nextPresenceConfig = getPresenceConfig(next)
-  let currPresenceConfig = getPresenceConfig(curr)
-  if (nextPresenceConfig?.layout) {
-    updateLayoutElement(curr._dom, nextPresenceConfig.layout)
-  } else if (currPresenceConfig?.layout) {
-    unregisterLayoutElement(curr._dom)
-  }
-
   ensureControlledReflection(next as CommittedHostNode, scheduler)
   syncControlledReflection(next as CommittedHostNode, nextProps)
 
@@ -538,15 +515,6 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   }
 
   let connect = props.connect
-  let presenceConfig = getPresenceConfig(node)
-  let playEnter = shouldPlayEnterAnimation(presenceConfig?.enter)
-
-  // Register for layout animations if configured
-  if (presenceConfig?.layout) {
-    registerLayoutElement(dom, presenceConfig.layout)
-  }
-
-  // Schedule connect callback first, then enter animation plays after
   if (connect) {
     // Only create controller if connect callback expects a signal (length >= 2)
     if (connect.length >= 2) {
@@ -555,30 +523,15 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
       scheduler.enqueueTasks([
         () => {
           connect(dom, controller.signal)
-          // Play enter animation after connect
-          if (playEnter) {
-            playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
-          }
         },
       ])
     } else {
       scheduler.enqueueTasks([
         () => {
           connect(dom)
-          // Play enter animation after connect
-          if (playEnter) {
-            playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
-          }
         },
       ])
     }
-  } else if (playEnter) {
-    // No connect, but has animate - play enter animation
-    scheduler.enqueueTasks([
-      () => {
-        playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
-      },
-    ])
   }
 
   ensureControlledReflection(committedNode, scheduler)
@@ -696,22 +649,6 @@ function insert(
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
       reclaimPersistedMixinNode(persistedNode, node, frame, scheduler, styles, vParent, rootTarget)
-      return cursor
-    }
-
-    // Check for matching animate-exiting node that can be reclaimed
-    let exitingNode = findMatchingExitingNode(node.type, node.key, domParent)
-    if (exitingNode) {
-      reclaimExitingNode(
-        exitingNode,
-        node,
-        domParent,
-        frame,
-        scheduler,
-        styles,
-        vParent,
-        rootTarget,
-      )
       return cursor
     }
 
@@ -1331,12 +1268,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
     cleanupCssProps(getHostProps(node), styles)
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
     teardownControlledReflection(node)
-
-    // Unregister from layout animations
-    let presenceConfig = getPresenceConfig(node)
-    if (presenceConfig?.layout) {
-      unregisterLayoutElement(node._dom)
-    }
     if (node._controller) node._controller.abort()
     let _events = node._events
     if (_events) {
@@ -1377,10 +1308,6 @@ export function remove(
   }
 
   if (isCommittedHostNode(node)) {
-    // Check if already exiting - do nothing
-    if (node._exiting) {
-      return
-    }
     if (node._persistedByMixins) return
 
     let persistedRemoval = prepareMixinRemoval(node._mixState as MixinRuntimeState | undefined)
@@ -1396,42 +1323,6 @@ export function remove(
           performHostNodeRemoval(node, domParent, scheduler, styles)
         })
       return
-    }
-
-    let presenceConfig = getPresenceConfig(node)
-
-    // Only animate exit if there's an exit config defined
-    if (presenceConfig?.exit) {
-      let animation = node._animation
-
-      // Check if enter animation is still running - reverse it instead of playing exit
-      if (animation && animation.playState === 'running') {
-        // Reverse the enter animation
-        animation.reverse()
-        markNodeExiting(node, domParent)
-
-        // Use finished promise for more reliable completion handling
-        animation.finished.then(() => {
-          // Check if node was reclaimed while animating
-          if (!node._exiting) return
-          unmarkNodeExiting(node)
-          node._animation = undefined
-          performHostNodeRemoval(node, domParent, scheduler, styles)
-        })
-        return
-      }
-
-      // Enter animation finished or doesn't exist - play exit animation
-      playExitAnimation(node, presenceConfig.exit, domParent, () => {
-        performHostNodeRemoval(node, domParent, scheduler, styles)
-      })
-      return
-    }
-
-    // No exit animation config - remove immediately (cancel any running enter animation)
-    if (node._animation) {
-      node._animation.cancel()
-      node._animation = undefined
     }
     performHostNodeRemoval(node, domParent, scheduler, styles)
     return
@@ -1479,12 +1370,6 @@ function performHostNodeRemoval(
   cleanupCssProps(getHostProps(node), styles)
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
   teardownControlledReflection(node)
-
-  // Unregister from layout animations
-  let presenceConfig = getPresenceConfig(node)
-  if (presenceConfig?.layout) {
-    unregisterLayoutElement(node._dom)
-  }
   // Never remove the real document.head node when reconciling a <head> vnode.
   if (!isHeadHostNode(node)) {
     node._dom.parentNode?.removeChild(node._dom)
@@ -1831,87 +1716,6 @@ export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | n
   return null
 }
 
-function reclaimExitingNode(
-  exitingNode: CommittedHostNode,
-  newNode: HostNode,
-  domParent: ParentNode,
-  frame: FrameHandle,
-  scheduler: Scheduler,
-  styles: StyleManager,
-  vParent: VNode,
-  rootTarget: EventTarget,
-): void {
-  // Reverse the exit animation if it's still running
-  let animation = exitingNode._animation
-  if (animation && animation.playState === 'running') {
-    animation.reverse()
-    animation.finished.then(() => {
-      exitingNode._animation = undefined
-    })
-  }
-
-  // Clear exiting state
-  unmarkNodeExiting(exitingNode)
-
-  // Transfer exiting node's DOM and state to new node
-  newNode._dom = exitingNode._dom
-  newNode._parent = vParent
-  newNode._controller = exitingNode._controller
-  newNode._events = exitingNode._events
-  newNode._animation = exitingNode._animation
-  newNode._mixState = exitingNode._mixState
-  newNode._controlledState = exitingNode._controlledState
-
-  // Diff props on the existing DOM element
-  let prevProps = getHostProps(exitingNode)
-  let nextProps = resolveNodeMixProps(
-    newNode,
-    frame,
-    scheduler,
-    newNode._mixState as MixinRuntimeState | undefined,
-  )
-  if (shouldDispatchInlineMixinLifecycle(exitingNode._dom)) {
-    dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
-  }
-  diffHostProps(prevProps, nextProps, exitingNode._dom, styles)
-  ensureControlledReflection(newNode as CommittedHostNode, scheduler)
-  syncControlledReflection(newNode as CommittedHostNode, nextProps)
-
-  // Diff children
-  diffChildren(
-    exitingNode._children,
-    newNode._children,
-    exitingNode._dom,
-    frame,
-    scheduler,
-    styles,
-    newNode,
-    rootTarget,
-  )
-
-  // Update event listeners if needed
-  let nextOn = nextProps.on
-  if (nextOn) {
-    if (newNode._events) {
-      let eventsContainer = newNode._events
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-    } else {
-      let eventsContainer = createContainer(exitingNode._dom)
-      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
-      newNode._events = eventsContainer
-    }
-  } else if (newNode._events) {
-    let eventsContainer = newNode._events
-    scheduler.enqueueTasks([() => eventsContainer.dispose()])
-    newNode._events = undefined
-  }
-
-  bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles)
-  if (shouldDispatchInlineMixinLifecycle(exitingNode._dom)) {
-    scheduler.enqueueTasks([() => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined)])
-  }
-}
-
 function reclaimPersistedMixinNode(
   persistedNode: CommittedHostNode,
   newNode: HostNode,
@@ -1928,7 +1732,6 @@ function reclaimPersistedMixinNode(
   newNode._parent = vParent
   newNode._controller = persistedNode._controller
   newNode._events = persistedNode._events
-  newNode._animation = persistedNode._animation
   newNode._mixState = persistedNode._mixState
   newNode._controlledState = persistedNode._controlledState
 

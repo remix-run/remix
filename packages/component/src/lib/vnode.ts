@@ -51,10 +51,7 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _id?: string
   _content?: VNode
 
-  // Presence animation
-  _animation?: Animation
-  _exiting?: boolean
-  _exitingParent?: ParentNode
+  // Mixin-persisted node removal state
   _persistedByMixins?: boolean
   _persistedParentByMixins?: ParentNode
   _persistedRemovalToken?: number
