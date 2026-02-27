@@ -1,3 +1,5 @@
+import { css } from 'remix/component'
+
 /*
  * A comparison of color interpolation methods.
  *
@@ -9,7 +11,7 @@
  */
 export function ColorInterpolation() {
   return () => (
-    <div css={{ display: 'flex', gap: 30, alignItems: 'center', justifyContent: 'center' }}>
+    <div mix={[css({ display: 'flex', gap: 30, alignItems: 'center', justifyContent: 'center' })]}>
       <style>
         {`
           @property --color-t {
@@ -34,33 +36,37 @@ export function ColorInterpolation() {
         `}
       </style>
 
-      <div css={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div mix={[css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })]}>
         <div
-          css={{
-            width: 100,
-            height: 100,
-            borderRadius: 8,
-            backgroundColor: '#ff0088',
-            '@keyframes srgb-color': {
-              '0%, 100%': { backgroundColor: '#ff0088' },
-              '50%': { backgroundColor: '#0d63f8' },
-            },
-            animation: 'srgb-color 4s linear infinite',
-          }}
+          mix={[
+            css({
+              width: 100,
+              height: 100,
+              borderRadius: 8,
+              backgroundColor: '#ff0088',
+              '@keyframes srgb-color': {
+                '0%, 100%': { backgroundColor: '#ff0088' },
+                '50%': { backgroundColor: '#0d63f8' },
+              },
+              animation: 'srgb-color 4s linear infinite',
+            }),
+          ]}
         />
-        <div css={{ fontSize: 14, color: '#666' }}>sRGB</div>
+        <div mix={[css({ fontSize: 14, color: '#666' })]}>sRGB</div>
       </div>
 
-      <div css={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div mix={[css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })]}>
         <div
           className="oklch-box"
-          css={{
-            width: 100,
-            height: 100,
-            borderRadius: 8,
-          }}
+          mix={[
+            css({
+              width: 100,
+              height: 100,
+              borderRadius: 8,
+            }),
+          ]}
         />
-        <div css={{ fontSize: 14, color: '#666' }}>OKLCH</div>
+        <div mix={[css({ fontSize: 14, color: '#666' })]}>OKLCH</div>
       </div>
     </div>
   )

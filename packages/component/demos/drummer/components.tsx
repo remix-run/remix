@@ -1,46 +1,53 @@
 import type { Handle, RemixNode, Props } from 'remix/component'
+import { css } from 'remix/component'
 
 export function Layout() {
   return ({ children }: { children: RemixNode }) => (
     <div
-      css={{
-        boxSizing: 'border-box',
-        '& *': {
+      mix={[
+        css({
           boxSizing: 'border-box',
-        },
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '44px',
-        width: 735,
-        margin: '4.5rem auto',
-        background: '#2D2D2D',
-        color: 'white',
-        borderRadius: '54px',
-        padding: '44px 48px 54px 48px',
-        '@media (prefers-color-scheme: light)': {
-          background: '#F5F5F5',
-          color: 'black',
-        },
-      }}
+          '& *': {
+            boxSizing: 'border-box',
+          },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '44px',
+          width: 735,
+          margin: '4.5rem auto',
+          background: '#2D2D2D',
+          color: 'white',
+          borderRadius: '54px',
+          padding: '44px 48px 54px 48px',
+          '@media (prefers-color-scheme: light)': {
+            background: '#F5F5F5',
+            color: 'black',
+          },
+        }),
+      ]}
     >
       <header
-        css={{
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
+        mix={[
+          css({
+            display: 'flex',
+            justifyContent: 'space-between',
+          }),
+        ]}
       >
         <Logo />
         <div
-          css={{
-            display: 'flex',
-            alignItems: 'end',
-            lineHeight: '0.88',
-            textAlign: 'right',
-            fontSize: '30px',
-            fontWeight: 700,
-            position: 'relative',
-            top: '1px',
-          }}
+          mix={[
+            css({
+              display: 'flex',
+              alignItems: 'end',
+              lineHeight: '0.88',
+              textAlign: 'right',
+              fontSize: '30px',
+              fontWeight: 700,
+              position: 'relative',
+              top: '1px',
+            }),
+          ]}
         >
           REMIX 3<br />
           DRUM MACHINE
@@ -55,17 +62,19 @@ export function Layout() {
 export function EqualizerLayout() {
   return ({ children }: { children: RemixNode }) => (
     <div
-      css={{
-        display: 'flex',
-        background: 'black',
-        borderRadius: '18px',
-        padding: '18px',
-        height: 339,
-        gap: '3px',
-        '@media (prefers-color-scheme: light)': {
-          background: '#FFFFFF',
-        },
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          background: 'black',
+          borderRadius: '18px',
+          padding: '18px',
+          height: 339,
+          gap: '3px',
+          '@media (prefers-color-scheme: light)': {
+            background: '#FFFFFF',
+          },
+        }),
+      ]}
     >
       {children}
     </div>
@@ -75,13 +84,15 @@ export function EqualizerLayout() {
 export function TempoLayout() {
   return ({ children }: { children: RemixNode }) => (
     <div
-      css={{
-        display: 'flex',
-        flexDirection: 'row',
-        gap: '8px',
-        alignItems: 'flex-end',
-        height: 120,
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '8px',
+          alignItems: 'flex-end',
+          height: 120,
+        }),
+      ]}
     >
       {children}
     </div>
@@ -91,14 +102,16 @@ export function TempoLayout() {
 export function TempoButtons() {
   return ({ children }: { children: RemixNode }) => (
     <div
-      css={{
-        width: 56,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '9px',
-        height: '100%',
-        justifyContent: 'space-between',
-      }}
+      mix={[
+        css({
+          width: 56,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '9px',
+          height: '100%',
+          justifyContent: 'space-between',
+        }),
+      ]}
     >
       {children}
     </div>
@@ -108,40 +121,46 @@ export function TempoButtons() {
 export function BPMDisplay() {
   return ({ bpm }: { bpm: number }) => (
     <div
-      css={{
-        height: '100%',
-        display: 'flex',
-        flex: 1,
-        background: '#0B1B05',
-        color: '#64C146',
-        padding: '32px',
-        borderTopLeftRadius: '18px',
-        borderBottomLeftRadius: '18px',
-        alignItems: 'end',
-        '@media (prefers-color-scheme: light)': {
-          background: '#EAF7E6',
-        },
-      }}
+      mix={[
+        css({
+          height: '100%',
+          display: 'flex',
+          flex: 1,
+          background: '#0B1B05',
+          color: '#64C146',
+          padding: '32px',
+          borderTopLeftRadius: '18px',
+          borderBottomLeftRadius: '18px',
+          alignItems: 'end',
+          '@media (prefers-color-scheme: light)': {
+            background: '#EAF7E6',
+          },
+        }),
+      ]}
     >
       <div
-        css={{
-          fontSize: '18px',
-          fontWeight: 700,
-          width: '33%',
-        }}
+        mix={[
+          css({
+            fontSize: '18px',
+            fontWeight: 700,
+            width: '33%',
+          }),
+        ]}
       >
         BPM
       </div>
       <div
-        css={{
-          flex: 1,
-          fontSize: '69px',
-          fontWeight: 700,
-          position: 'relative',
-          top: 17,
-          textAlign: 'right',
-          fontFamily: 'JetBrains Mono, monospace',
-        }}
+        mix={[
+          css({
+            flex: 1,
+            fontSize: '69px',
+            fontWeight: 700,
+            position: 'relative',
+            top: 17,
+            textAlign: 'right',
+            fontFamily: 'JetBrains Mono, monospace',
+          }),
+        ]}
       >
         {bpm}
       </div>
@@ -167,21 +186,25 @@ export function EqualizerBar(handle: Handle) {
     let startIndexToShow = 10 - Math.round(volume * 10)
     return (
       <div
-        css={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-        }}
+        mix={[
+          css({
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+          }),
+        ]}
       >
         {Array.from({ length: 10 }).map((_, index) => (
           <div
-            css={{
-              flex: 1,
-              width: '100%',
-              borderRadius: '3px',
-              background: colors[index],
-            }}
+            mix={[
+              css({
+                flex: 1,
+                width: '100%',
+                borderRadius: '3px',
+                background: colors[index],
+              }),
+            ]}
             style={{
               opacity: index >= startIndexToShow ? 1 : 0.25,
             }}
@@ -193,22 +216,24 @@ export function EqualizerBar(handle: Handle) {
 }
 
 export function ControlGroup() {
-  return ({ children, css, ...rest }: Props<'div'>) => (
+  return ({ children, mix: mixOverride, ...rest }: Props<'div'>) => (
     <div
       {...rest}
-      css={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: '18px',
-        alignItems: 'center',
-        justifyContent: 'center',
-        '& button:focus-visible': {
-          outline: '2px solid #2684FF',
-          outlineOffset: '2px',
-        },
-        ...css,
-      }}
+      mix={[
+        css({
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: '1fr 1fr',
+          gap: '18px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          '& button:focus-visible': {
+            outline: '2px solid #2684FF',
+            outlineOffset: '2px',
+          },
+        }),
+        ...(Array.isArray(mixOverride) ? mixOverride : []),
+      ]}
     >
       {children}
     </div>
@@ -216,33 +241,36 @@ export function ControlGroup() {
 }
 
 export function Button() {
-  return ({ children, ...rest }: Props<'button'>) => (
+  return ({ children, mix, ...rest }: Props<'button'>) => (
     <button
       {...rest}
-      css={{
-        all: 'unset',
-        letterSpacing: 0.9,
-        height: 120,
-        display: 'flex',
-        alignItems: 'end',
-        background: '#666',
-        borderRadius: '18px',
-        padding: '32px',
-        fontSize: '18px',
-        fontWeight: 700,
-        '&:disabled': {
-          opacity: 0.25,
-        },
-        '&:active': {
-          background: '#555',
-        },
-        '@media (prefers-color-scheme: light)': {
-          background: '#E0E0E0',
-          '&:active': {
-            background: '#D0D0D0',
+      mix={[
+        css({
+          all: 'unset',
+          letterSpacing: 0.9,
+          height: 120,
+          display: 'flex',
+          alignItems: 'end',
+          background: '#666',
+          borderRadius: '18px',
+          padding: '32px',
+          fontSize: '18px',
+          fontWeight: 700,
+          '&:disabled': {
+            opacity: 0.25,
           },
-        },
-      }}
+          '&:active': {
+            background: '#555',
+          },
+          '@media (prefers-color-scheme: light)': {
+            background: '#E0E0E0',
+            '&:active': {
+              background: '#D0D0D0',
+            },
+          },
+        }),
+        ...(mix ?? []),
+      ]}
     >
       {children}
     </button>
@@ -273,33 +301,35 @@ interface TempoButtonProps extends Props<'button'> {
 }
 
 export function TempoButton() {
-  return ({ orientation, css, ...rest }: TempoButtonProps) => (
+  return ({ orientation, mix: mixOverride, ...rest }: TempoButtonProps) => (
     <button
       {...rest}
-      css={{
-        all: 'unset',
-        flex: 1,
-        background: '#666',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        '&:active': {
-          background: '#555',
-        },
-        '@media (prefers-color-scheme: light)': {
-          background: '#E0E0E0',
+      mix={[
+        css({
+          all: 'unset',
+          flex: 1,
+          background: '#666',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           '&:active': {
-            background: '#D0D0D0',
+            background: '#555',
           },
-        },
-        '&:first-child': {
-          borderTopRightRadius: '18px',
-        },
-        '&:last-child': {
-          borderBottomRightRadius: '18px',
-        },
-        ...css,
-      }}
+          '@media (prefers-color-scheme: light)': {
+            background: '#E0E0E0',
+            '&:active': {
+              background: '#D0D0D0',
+            },
+          },
+          '&:first-child': {
+            borderTopRightRadius: '18px',
+          },
+          '&:last-child': {
+            borderBottomRightRadius: '18px',
+          },
+        }),
+        ...(Array.isArray(mixOverride) ? mixOverride : []),
+      ]}
     >
       <Triangle label={orientation} orientation={orientation} />
     </button>
@@ -313,11 +343,13 @@ export function Logo() {
       viewBox="0 0 400 143"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      css={{
-        '@media (prefers-color-scheme: light)': {
-          "& [fill='white']": { fill: 'black' },
-        },
-      }}
+      mix={[
+        css({
+          '@media (prefers-color-scheme: light)': {
+            "& [fill='white']": { fill: 'black' },
+          },
+        }),
+      ]}
     >
       <g clip-path="url(#clip0_836_2441)">
         <path d="M82.8363 111.891H58.0045L49.7144 142.85H74.5342L82.8363 111.891Z" fill="#FFD400" />

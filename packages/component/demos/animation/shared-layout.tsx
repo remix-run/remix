@@ -1,4 +1,11 @@
-import { animateEntrance, animateExit, type Handle, type Props, type RemixNode } from 'remix/component'
+import {
+  animateEntrance,
+  animateExit,
+  css,
+  type Handle,
+  type Props,
+  type RemixNode,
+} from 'remix/component'
 
 let ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 
@@ -31,7 +38,7 @@ function OverlapExample(handle: Handle) {
     return (
       <div
         // grid layout so children render in the same position
-        css={{ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } }}
+        mix={[css({ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } })]}
       >
         {state ? (
           <div key="filled" mix={animationMix}>
@@ -81,7 +88,7 @@ function WaitExample(handle: Handle) {
     return (
       <div
         // grid layout so children render in the same position
-        css={{ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } }}
+        mix={[css({ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } })]}
       >
         {state ? (
           <div key="filled" mix={animationMix}>
@@ -110,32 +117,36 @@ export function SharedLayout(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 16,
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+        }),
+      ]}
     >
-      <div css={{ display: 'flex', gap: 16 }}>
+      <div mix={[css({ display: 'flex', gap: 16 })]}>
         <OverlapExample state={state} />
         <WaitExample state={state} />
       </div>
       <button
-        css={{
-          backgroundColor: '#0f1115',
-          color: '#f5f5f5',
-          border: 'none',
-          borderRadius: 8,
-          padding: '12px 32px',
-          fontSize: 14,
-          fontWeight: 500,
-          cursor: 'pointer',
-          transition: 'transform 100ms ease-in-out',
-          '&:active': {
-            transform: 'scale(0.95)',
-          },
-        }}
+        mix={[
+          css({
+            backgroundColor: '#0f1115',
+            color: '#f5f5f5',
+            border: 'none',
+            borderRadius: 8,
+            padding: '12px 32px',
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'transform 100ms ease-in-out',
+            '&:active': {
+              transform: 'scale(0.95)',
+            },
+          }),
+        ]}
         on={{
           click() {
             state = !state
@@ -152,18 +163,20 @@ export function SharedLayout(handle: Handle) {
 function Circle() {
   return (props: { filled?: boolean; children: RemixNode }) => (
     <div
-      css={{
-        width: 80,
-        height: 80,
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxSizing: 'border-box',
-        backgroundColor: props.filled ? '#0f1115' : 'transparent',
-        color: props.filled ? '#f5f5f5' : '#0f1115',
-        border: props.filled ? '2px solid #0f1115' : '2px solid #0f1115',
-      }}
+      mix={[
+        css({
+          width: 80,
+          height: 80,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxSizing: 'border-box',
+          backgroundColor: props.filled ? '#0f1115' : 'transparent',
+          color: props.filled ? '#f5f5f5' : '#0f1115',
+          border: props.filled ? '2px solid #0f1115' : '2px solid #0f1115',
+        }),
+      ]}
     >
       {props.children}
     </div>

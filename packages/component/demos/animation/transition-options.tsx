@@ -1,15 +1,15 @@
-import { animateEntrance } from 'remix/component'
+import { animateEntrance, css } from 'remix/component'
 
 export function TransitionOptions() {
   return () => (
     <div
-      css={{
-        width: 100,
-        height: 100,
-        borderRadius: '50%',
-        backgroundColor: '#9911ff',
-      }}
       mix={[
+        css({
+          width: 100,
+          height: 100,
+          borderRadius: '50%',
+          backgroundColor: '#9911ff',
+        }),
         animateEntrance({
           opacity: 0,
           transform: 'scale(0.5)',

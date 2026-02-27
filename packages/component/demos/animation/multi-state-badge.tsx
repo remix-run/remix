@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit } from 'remix/component'
+import { animateEntrance, animateExit, css } from 'remix/component'
 import { spring } from '../../src/lib/spring.ts'
 
 const STATES = {
@@ -40,22 +40,26 @@ export function MultiStateBadge(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        minHeight: 80,
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: 16,
+          minHeight: 80,
+        }),
+      ]}
     >
       <button
-        css={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-        }}
+        mix={[
+          css({
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }),
+        ]}
         on={{
           click() {
             state = getNextState(state)
@@ -103,19 +107,21 @@ function Badge(handle: Handle) {
     return (
       <div
         connect={(node) => (badgeEl = node)}
-        css={{
-          backgroundColor: '#e2e8f0',
-          color: '#0f1115',
-          display: 'flex',
-          overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '12px 20px',
-          fontSize: 16,
-          borderRadius: 999,
-          willChange: 'transform, filter',
-          transition: `gap ${spring('snappy')}`,
-        }}
+        mix={[
+          css({
+            backgroundColor: '#e2e8f0',
+            color: '#0f1115',
+            display: 'flex',
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px 20px',
+            fontSize: 16,
+            borderRadius: 999,
+            willChange: 'transform, filter',
+            transition: `gap ${spring('snappy')}`,
+          }),
+        ]}
         style={{ gap: props.state === 'idle' ? '0px' : '8px' }}
       >
         <Icon state={props.state} />
@@ -128,22 +134,27 @@ function Badge(handle: Handle) {
 function Icon() {
   return (props: { state: State }) => (
     <span
-      css={{
-        height: ICON_SIZE,
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        transition: `width ${spring({ duration: 200, bounce: 0.2 })}`,
-      }}
+      mix={[
+        css({
+          height: ICON_SIZE,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          transition: `width ${spring({ duration: 200, bounce: 0.2 })}`,
+        }),
+      ]}
       style={{ width: props.state === 'idle' ? 0 : ICON_SIZE }}
     >
       {props.state === 'processing' && (
         <span
           key="loader"
-          css={{ position: 'absolute', left: 0, top: 0 }}
-          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+          mix={[
+            css({ position: 'absolute', left: 0, top: 0 }),
+            animateEntrance(iconEnterAnimation),
+            animateExit(iconExitAnimation),
+          ]}
         >
           <Loader />
         </span>
@@ -151,8 +162,11 @@ function Icon() {
       {props.state === 'success' && (
         <span
           key="check"
-          css={{ position: 'absolute', left: 0, top: 0 }}
-          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+          mix={[
+            css({ position: 'absolute', left: 0, top: 0 }),
+            animateEntrance(iconEnterAnimation),
+            animateExit(iconExitAnimation),
+          ]}
         >
           <Check />
         </span>
@@ -160,8 +174,11 @@ function Icon() {
       {props.state === 'error' && (
         <span
           key="x"
-          css={{ position: 'absolute', left: 0, top: 0 }}
-          mix={[animateEntrance(iconEnterAnimation), animateExit(iconExitAnimation)]}
+          mix={[
+            css({ position: 'absolute', left: 0, top: 0 }),
+            animateEntrance(iconEnterAnimation),
+            animateExit(iconExitAnimation),
+          ]}
         >
           <X />
         </span>
@@ -179,13 +196,15 @@ function Loader() {
           { duration: 1000, iterations: Infinity },
         )
       }}
-      css={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: ICON_SIZE,
-        height: ICON_SIZE,
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: ICON_SIZE,
+          height: ICON_SIZE,
+        }),
+      ]}
     >
       <svg
         width={ICON_SIZE}
@@ -325,11 +344,13 @@ function Label(handle: Handle) {
 
     return (
       <span
-        css={{
-          position: 'relative',
-          display: 'inline-block',
-          transition: `width ${spring({ duration: 200, bounce: 0.1 })}`,
-        }}
+        mix={[
+          css({
+            position: 'relative',
+            display: 'inline-block',
+            transition: `width ${spring({ duration: 200, bounce: 0.1 })}`,
+          }),
+        ]}
         style={{
           width: labelWidth || 'auto',
           height: labelHeight || 'auto',
@@ -338,7 +359,7 @@ function Label(handle: Handle) {
         {/* Hidden measurement element */}
         <span
           connect={(node) => (measureEl = node)}
-          css={{ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap' }}
+          mix={[css({ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap' })]}
         >
           {STATES[props.state]}
         </span>
@@ -346,8 +367,10 @@ function Label(handle: Handle) {
         {props.state === 'idle' && (
           <span
             key="idle"
-            css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            mix={labelMix}
+            mix={[
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
+              ...labelMix,
+            ]}
           >
             {STATES.idle}
           </span>
@@ -355,8 +378,10 @@ function Label(handle: Handle) {
         {props.state === 'processing' && (
           <span
             key="processing"
-            css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            mix={labelMix}
+            mix={[
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
+              ...labelMix,
+            ]}
           >
             {STATES.processing}
           </span>
@@ -364,8 +389,10 @@ function Label(handle: Handle) {
         {props.state === 'success' && (
           <span
             key="success"
-            css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            mix={labelMix}
+            mix={[
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
+              ...labelMix,
+            ]}
           >
             {STATES.success}
           </span>
@@ -373,8 +400,10 @@ function Label(handle: Handle) {
         {props.state === 'error' && (
           <span
             key="error"
-            css={{ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }}
-            mix={labelMix}
+            mix={[
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
+              ...labelMix,
+            ]}
           >
             {STATES.error}
           </span>

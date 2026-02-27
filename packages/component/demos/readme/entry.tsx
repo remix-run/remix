@@ -1,4 +1,4 @@
-import { createRoot, type Handle, type RemixNode } from 'remix/component'
+import { createRoot, css, type Handle, type RemixNode } from 'remix/component'
 import { TypedEventTarget } from 'remix/interaction'
 
 // ============================================================================
@@ -150,7 +150,7 @@ function SlugForm(handle: Handle) {
 
   return () => (
     <form>
-      <label css={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px' })]}>
         <input
           type="checkbox"
           on={{
@@ -166,7 +166,7 @@ function SlugForm(handle: Handle) {
         />
         Auto-generate slug
       </label>
-      <label css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <label mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
         Slug
         <input
           type="text"
@@ -207,20 +207,22 @@ function KeyboardTracker(handle: Handle) {
 function ButtonBasic(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'rgb(54, 113, 246)',
-        border: 'none',
-        padding: '8px 16px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        '&:hover': {
-          backgroundColor: 'rgb(37, 90, 210)',
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'rgb(54, 113, 246)',
+          border: 'none',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgb(37, 90, 210)',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -233,38 +235,40 @@ function ButtonBasic(handle: Handle) {
 function ButtonAdvanced(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'rgb(54, 113, 246)',
-        border: 'none',
-        padding: '10px 20px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        '&:hover': {
-          backgroundColor: 'rgb(37, 90, 210)',
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: '-2px',
-          borderRadius: '8px',
-          background: 'linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))',
-          zIndex: -1,
-          opacity: 0,
-          transition: 'opacity 0.2s',
-        },
-        '&:hover::before': {
-          opacity: 1,
-        },
-        '.icon': {
-          width: '16px',
-          height: '16px',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'rgb(54, 113, 246)',
+          border: 'none',
+          padding: '10px 20px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          '&:hover': {
+            backgroundColor: 'rgb(37, 90, 210)',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: '-2px',
+            borderRadius: '8px',
+            background: 'linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))',
+            zIndex: -1,
+            opacity: 0,
+            transition: 'opacity 0.2s',
+          },
+          '&:hover::before': {
+            opacity: 1,
+          },
+          '.icon': {
+            width: '16px',
+            height: '16px',
+          },
+        }),
+      ]}
     >
       <span className="icon">★</span>
       Click me
@@ -285,7 +289,7 @@ function FormBasic(handle: Handle) {
         placeholder="Click the button to select this"
         // get the input node
         connect={(node) => (inputRef = node)}
-        css={{ marginRight: '8px', padding: '4px 8px' }}
+        mix={[css({ marginRight: '8px', padding: '4px 8px' })]}
       />
       <button
         on={{
@@ -294,7 +298,7 @@ function FormBasic(handle: Handle) {
             inputRef.select()
           },
         }}
-        css={{ padding: '4px 12px' }}
+        mix={[css({ padding: '4px 12px' })]}
       >
         Select Input
       </button>
@@ -327,16 +331,18 @@ function ResizeComponent(handle: Handle) {
           observer.disconnect()
         })
       }}
-      css={{
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '8px',
-        resize: 'both',
-        overflow: 'auto',
-        minWidth: '100px',
-        minHeight: '60px',
-        border: '1px solid rgb(209, 213, 219)',
-      }}
+      mix={[
+        css({
+          padding: '20px',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          resize: 'both',
+          overflow: 'auto',
+          minWidth: '100px',
+          minHeight: '60px',
+          border: '1px solid rgb(209, 213, 219)',
+        }),
+      ]}
     >
       Resize me! ({dimensions.width} × {dimensions.height})
     </div>
@@ -352,7 +358,7 @@ function Player(handle: Handle) {
   let stopButton: HTMLButtonElement
 
   return () => (
-    <div css={{ display: 'flex', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', gap: '8px' })]}>
       <button
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
@@ -364,10 +370,12 @@ function Player(handle: Handle) {
             stopButton.focus()
           },
         }}
-        css={{
-          padding: '8px 16px',
-          opacity: isPlaying ? 0.5 : 1,
-        }}
+        mix={[
+          css({
+            padding: '8px 16px',
+            opacity: isPlaying ? 0.5 : 1,
+          }),
+        ]}
       >
         ▶ Play
       </button>
@@ -382,10 +390,12 @@ function Player(handle: Handle) {
             playButton.focus()
           },
         }}
-        css={{
-          padding: '8px 16px',
-          opacity: !isPlaying ? 0.5 : 1,
-        }}
+        mix={[
+          css({
+            padding: '8px 16px',
+            opacity: !isPlaying ? 0.5 : 1,
+          }),
+        ]}
       >
         ⏹ Stop
       </button>
@@ -402,7 +412,7 @@ function FormWithScroll(handle: Handle) {
 
   return () => (
     <div>
-      <label css={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' })]}>
         <input
           type="checkbox"
           checked={showDetails}
@@ -424,16 +434,18 @@ function FormWithScroll(handle: Handle) {
       {showDetails && (
         <section
           connect={(node) => (detailsSection = node)}
-          css={{
-            marginTop: '1rem',
-            padding: '1rem',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          }}
+          mix={[
+            css({
+              marginTop: '1rem',
+              padding: '1rem',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            }),
+          ]}
         >
-          <h3 css={{ margin: '0 0 0.5rem 0' }}>Additional Details</h3>
-          <p css={{ margin: 0 }}>This section appears when the checkbox is checked.</p>
+          <h3 mix={[css({ margin: '0 0 0.5rem 0' })]}>Additional Details</h3>
+          <p mix={[css({ margin: 0 })]}>This section appears when the checkbox is checked.</p>
         </section>
       )}
     </div>
@@ -460,12 +472,18 @@ function Clock(handle: Handle) {
 // ============================================================================
 function LabeledInput(handle: Handle) {
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
       <label htmlFor={handle.id}>Name</label>
       <input
         id={handle.id}
         type="text"
-        css={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.3)' }}
+        mix={[
+          css({
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid rgba(255,255,255,0.3)',
+          }),
+        ]}
       />
     </div>
   )
@@ -478,7 +496,7 @@ function ThemeProvider(handle: Handle<{ theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <ThemedHeader />
     </div>
   )
@@ -490,10 +508,12 @@ function ThemedHeader(handle: Handle) {
 
   return () => (
     <header
-      css={{
-        backgroundColor: theme === 'dark' ? '#000' : '#fff',
-        color: theme === 'dark' ? '#fff' : '#000',
-      }}
+      mix={[
+        css({
+          backgroundColor: theme === 'dark' ? '#000' : '#fff',
+          color: theme === 'dark' ? '#fff' : '#000',
+        }),
+      ]}
     >
       Header
     </header>
@@ -521,7 +541,7 @@ function ThemeProviderAdvanced(handle: Handle<Theme>) {
   handle.context.set(theme)
 
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <button
         on={{
           click: () => {
@@ -529,7 +549,7 @@ function ThemeProviderAdvanced(handle: Handle<Theme>) {
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
           },
         }}
-        css={{ padding: '8px 16px', alignSelf: 'flex-start' }}
+        mix={[css({ padding: '8px 16px', alignSelf: 'flex-start' })]}
       >
         Toggle Theme (EventTarget)
       </button>
@@ -550,12 +570,14 @@ function ThemedContent(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        padding: '12px',
-        borderRadius: '6px',
-        backgroundColor: theme.value === 'dark' ? '#1a1a1a' : '#f0f0f0',
-        color: theme.value === 'dark' ? '#fff' : '#000',
-      }}
+      mix={[
+        css({
+          padding: '12px',
+          borderRadius: '6px',
+          backgroundColor: theme.value === 'dark' ? '#1a1a1a' : '#f0f0f0',
+          color: theme.value === 'dark' ? '#fff' : '#000',
+        }),
+      ]}
     >
       Current theme: {theme.value}
     </div>
@@ -567,7 +589,7 @@ function ThemedContent(handle: Handle) {
 // ============================================================================
 function ListWithFragment(handle: Handle) {
   return () => (
-    <ul css={{ margin: 0, paddingLeft: '20px' }}>
+    <ul mix={[css({ margin: 0, paddingLeft: '20px' })]}>
       <>
         <li>Item 1</li>
         <li>Item 2</li>

@@ -1,20 +1,22 @@
-import { animateLayout, type Handle } from 'remix/component'
+import { animateLayout, css, type Handle } from 'remix/component'
 
 export function FlipToggle(handle: Handle) {
   let isOn = false
 
   return () => (
     <button
-      css={{
-        width: 90,
-        height: 50,
-        backgroundColor: 'rgba(153, 17, 255, 0.2)',
-        borderRadius: 50,
-        cursor: 'pointer',
-        display: 'flex',
-        padding: 10,
-        border: 'none',
-      }}
+      mix={[
+        css({
+          width: 90,
+          height: 50,
+          backgroundColor: 'rgba(153, 17, 255, 0.2)',
+          borderRadius: 50,
+          cursor: 'pointer',
+          display: 'flex',
+          padding: 10,
+          border: 'none',
+        }),
+      ]}
       style={{
         // The actual layout property that changes
         justifyContent: isOn ? 'flex-start' : 'flex-end',
@@ -27,13 +29,13 @@ export function FlipToggle(handle: Handle) {
       }}
     >
       <div
-        css={{
-          width: 30,
-          height: 30,
-          backgroundColor: '#9911ff',
-          borderRadius: '50%',
-        }}
         mix={[
+          css({
+            width: 30,
+            height: 30,
+            backgroundColor: '#9911ff',
+            borderRadius: '50%',
+          }),
           animateLayout({
             duration: 200,
             easing: 'ease-in-out',

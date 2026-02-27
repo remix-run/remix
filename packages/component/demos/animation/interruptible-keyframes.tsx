@@ -1,4 +1,5 @@
 import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 export function InterruptibleKeyframes(handle: Handle) {
   let box: HTMLDivElement
@@ -20,12 +21,14 @@ export function InterruptibleKeyframes(handle: Handle) {
   return () => (
     <div
       connect={(node) => (box = node)}
-      css={{
-        width: 100,
-        height: 100,
-        backgroundColor: '#0cdcf7',
-        borderRadius: 5,
-      }}
+      mix={[
+        css({
+          width: 100,
+          height: 100,
+          backgroundColor: '#0cdcf7',
+          borderRadius: 5,
+        }),
+      ]}
       on={{
         pointerenter() {
           interruptAnimation()

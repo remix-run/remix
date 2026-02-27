@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit } from 'remix/component'
+import { animateEntrance, animateExit, css } from 'remix/component'
 import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
 
 type Ripple = {
@@ -42,32 +42,34 @@ export function MaterialRipple(handle: Handle) {
       connect={(el) => {
         buttonEl = el
       }}
-      css={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px 20px',
-        borderRadius: 4,
-        textTransform: 'uppercase',
-        backgroundColor: 'transparent',
-        color: '#7c3aed',
-        border: '1px solid #7c3aed',
-        userSelect: 'none',
-        cursor: 'pointer',
-        overflow: 'hidden',
-        letterSpacing: '0.2px',
-        WebkitTapHighlightColor: 'transparent',
-        transition: 'border-color 200ms linear, background-color 200ms linear',
-        '&:hover': {
-          borderColor: '#6d28d9',
-          backgroundColor: '#7c3aed20',
-        },
-        '&:focus-visible': {
-          outline: '2px solid #7c3aed80',
-          outlineOffset: 2,
-        },
-      }}
+      mix={[
+        css({
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '10px 20px',
+          borderRadius: 4,
+          textTransform: 'uppercase',
+          backgroundColor: 'transparent',
+          color: '#7c3aed',
+          border: '1px solid #7c3aed',
+          userSelect: 'none',
+          cursor: 'pointer',
+          overflow: 'hidden',
+          letterSpacing: '0.2px',
+          WebkitTapHighlightColor: 'transparent',
+          transition: 'border-color 200ms linear, background-color 200ms linear',
+          '&:hover': {
+            borderColor: '#6d28d9',
+            backgroundColor: '#7c3aed20',
+          },
+          '&:focus-visible': {
+            outline: '2px solid #7c3aed80',
+            outlineOffset: 2,
+          },
+        }),
+      ]}
       on={{
         [pressDown](event) {
           if (!buttonEl) return
@@ -83,47 +85,49 @@ export function MaterialRipple(handle: Handle) {
       Click me
       <span
         aria-hidden="true"
-        css={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          borderRadius: 'inherit',
-          pointerEvents: 'none',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            inset: 0,
+            overflow: 'hidden',
+            borderRadius: 'inherit',
+            pointerEvents: 'none',
+          }),
+        ]}
       >
         {ripples.map((ripple) => (
           // Outer span: handles exit (fade out)
           <span
             key={ripple.id}
-            css={{
-              position: 'absolute',
-              borderRadius: '50%',
-            }}
-            style={{
-              width: ripple.size,
-              height: ripple.size,
-              left: ripple.x - ripple.size / 2,
-              top: ripple.y - ripple.size / 2,
-            }}
             mix={[
+              css({
+                position: 'absolute',
+                borderRadius: '50%',
+              }),
               animateExit({
                 opacity: 0,
                 duration: 550,
                 easing: 'ease-out',
               }),
             ]}
+            style={{
+              width: ripple.size,
+              height: ripple.size,
+              left: ripple.x - ripple.size / 2,
+              top: ripple.y - ripple.size / 2,
+            }}
           >
             {/* Inner span: handles enter (scale) so it doesn't get reversed when removed */}
             <span
-              css={{
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                borderRadius: 'inherit',
-                backgroundColor: 'currentColor',
-                opacity: 0.4,
-              }}
               mix={[
+                css({
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: 'inherit',
+                  backgroundColor: 'currentColor',
+                  opacity: 0.4,
+                }),
                 animateEntrance({
                   opacity: 0,
                   transform: 'scale(0)',

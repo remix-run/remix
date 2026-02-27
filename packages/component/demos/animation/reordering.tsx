@@ -1,4 +1,4 @@
-import { animateLayout, type Handle, spring } from 'remix/component'
+import { animateLayout, css, type Handle, spring } from 'remix/component'
 
 let initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
 
@@ -27,34 +27,36 @@ export function Reordering(handle: Handle) {
 
   return () => (
     <ul
-      css={{
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
-        position: 'relative',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 10,
-        width: 220,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
+      mix={[
+        css({
+          listStyle: 'none',
+          padding: 0,
+          margin: 0,
+          position: 'relative',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 10,
+          width: 220,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }),
+      ]}
     >
       {order.map((backgroundColor) => (
         <li
           key={backgroundColor}
-          css={{
-            width: 100,
-            height: 100,
-            borderRadius: 10,
-          }}
-          style={{ backgroundColor }}
           mix={[
+            css({
+              width: 100,
+              height: 100,
+              borderRadius: 10,
+            }),
             animateLayout({
               ...spring({ duration: 600, bounce: 0.2 }),
             }),
           ]}
+          style={{ backgroundColor }}
         />
       ))}
     </ul>

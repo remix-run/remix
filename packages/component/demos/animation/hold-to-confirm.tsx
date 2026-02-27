@@ -1,6 +1,6 @@
 import { defineInteraction, type Interaction } from 'remix/interaction'
 import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
-import { animateEntrance, animateExit, spring, type Handle } from 'remix/component'
+import { animateEntrance, animateExit, css, spring, type Handle } from 'remix/component'
 
 // Demo
 let buttonExitAnimation = {
@@ -22,13 +22,15 @@ export function HoldToConfirm(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        display: 'grid',
-        placeItems: 'center',
-        minHeight: 140,
-        // so children can animate in the same position
-        '& > *': { gridArea: '1 / 1' },
-      }}
+      mix={[
+        css({
+          display: 'grid',
+          placeItems: 'center',
+          minHeight: 140,
+          // so children can animate in the same position
+          '& > *': { gridArea: '1 / 1' },
+        }),
+      ]}
     >
       {!confirmed && (
         <HoldButton
@@ -57,29 +59,31 @@ function HoldButton(handle: Handle) {
 
   return (props: { onConfirm: () => void }) => (
     <button
-      mix={[animateExit(buttonExitAnimation)]}
-      css={{
-        position: 'relative',
-        overflow: 'hidden',
-        width: 200,
-        height: 56,
-        border: 'none',
-        borderRadius: 12,
-        backgroundColor: '#dc2626',
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 600,
-        cursor: 'pointer',
-        userSelect: 'none',
-        transition: 'transform 150ms ease',
-        '&:focus': {
-          outline: '3px solid rgba(220, 38, 38, 0.4)',
-          outlineOffset: 2,
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
+      mix={[
+        animateExit(buttonExitAnimation),
+        css({
+          position: 'relative',
+          overflow: 'hidden',
+          width: 200,
+          height: 56,
+          border: 'none',
+          borderRadius: 12,
+          backgroundColor: '#dc2626',
+          color: 'white',
+          fontSize: 16,
+          fontWeight: 600,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: 'transform 150ms ease',
+          '&:focus': {
+            outline: '3px solid rgba(220, 38, 38, 0.4)',
+            outlineOffset: 2,
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
       on={{
         [pressConfirmStart]() {
           confirming = true
@@ -95,12 +99,14 @@ function HoldButton(handle: Handle) {
       }}
     >
       <div
-        css={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          transformOrigin: 'left',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            transformOrigin: 'left',
+          }),
+        ]}
         style={{
           transform: confirming ? 'scaleX(1)' : 'scaleX(0)',
           transition: confirming
@@ -110,14 +116,16 @@ function HoldButton(handle: Handle) {
       />
 
       <span
-        css={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-        }}
+        mix={[
+          css({
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }),
+        ]}
       >
         <TrashIcon />
         Hold to Delete
@@ -129,43 +137,49 @@ function HoldButton(handle: Handle) {
 function Confirmation() {
   return (props: { onReset: () => void }) => (
     <div
-      mix={[animateEntrance(confirmationEnterAnimation)]}
-      css={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 16,
-      }}
+      mix={[
+        animateEntrance(confirmationEnterAnimation),
+        css({
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+        }),
+      ]}
     >
       <div
-        css={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          color: '#22c55e',
-          fontSize: 18,
-          fontWeight: 600,
-        }}
+        mix={[
+          css({
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: '#22c55e',
+            fontSize: 18,
+            fontWeight: 600,
+          }),
+        ]}
       >
         <CheckIcon />
         Deleted
       </div>
 
       <button
-        css={{
-          padding: '8px 16px',
-          border: '1px solid #e2e8f0',
-          borderRadius: 8,
-          backgroundColor: 'white',
-          color: '#64748b',
-          fontSize: 14,
-          cursor: 'pointer',
-          transition: 'all 150ms ease',
-          '&:hover': {
-            backgroundColor: '#f8fafc',
-            borderColor: '#cbd5e1',
-          },
-        }}
+        mix={[
+          css({
+            padding: '8px 16px',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            backgroundColor: 'white',
+            color: '#64748b',
+            fontSize: 14,
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            '&:hover': {
+              backgroundColor: '#f8fafc',
+              borderColor: '#cbd5e1',
+            },
+          }),
+        ]}
         on={{ click: props.onReset }}
       >
         Reset Demo

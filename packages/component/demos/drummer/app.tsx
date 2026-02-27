@@ -1,8 +1,8 @@
 import { arrowDown, arrowUp, space } from 'remix/interaction/keys'
 import { press } from 'remix/interaction/press'
-import { type Handle } from 'remix/component'
+import { css, on, type Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
-import { tempo } from './tempo-interaction.ts'
+import { tempoEvents } from './tempo-interaction.tsx'
 import {
   BPMDisplay,
   Button,
@@ -112,11 +112,13 @@ function DrumControls(handle: Handle) {
   return () => (
     <ControlGroup>
       <Button
-        on={{
-          [tempo]: (event: any) => {
+        mix={[
+          tempoEvents(),
+          on(tempoEvents.type, (event) => {
+            console.log('tempo event', event)
             drummer.play(event.bpm)
-          },
-        }}
+          }),
+        ]}
       >
         SET TEMPO
       </Button>
@@ -163,7 +165,7 @@ function TempoDisplay(handle: Handle) {
       <BPMDisplay bpm={drummer.bpm} />
       <TempoButtons>
         <TempoButton
-          css={{ borderTopRightRadius: '18px' }}
+          mix={[css({ borderTopRightRadius: '18px' })]}
           orientation="up"
           on={{
             [press]: () => {
@@ -172,7 +174,7 @@ function TempoDisplay(handle: Handle) {
           }}
         />
         <TempoButton
-          css={{ borderBottomRightRadius: '18px' }}
+          mix={[css({ borderBottomRightRadius: '18px' })]}
           orientation="down"
           on={{
             [press]: () => {

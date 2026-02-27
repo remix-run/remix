@@ -1,4 +1,4 @@
-import { createRoot, type Handle, type RemixNode } from 'remix/component'
+import { createRoot, css, type Handle, type RemixNode } from 'remix/component'
 import { DefaultAnimate } from './default-animate.tsx'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
@@ -25,34 +25,38 @@ function Tile(handle: Handle) {
 
   return ({ title, children, notes }: { title: string; children: RemixNode; notes?: string }) => (
     <div
-      css={{
-        backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: 12,
-        boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        flexDirection: 'column',
-        gap: 12,
-        position: 'relative',
-      }}
+      mix={[
+        css({
+          backgroundColor: 'white',
+          padding: '40px',
+          borderRadius: 12,
+          boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          flexDirection: 'column',
+          gap: 12,
+          position: 'relative',
+        }),
+      ]}
     >
       <button
-        css={{
-          position: 'absolute',
-          bottom: 8,
-          right: 8,
-          width: 18,
-          height: 18,
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-          opacity: 0.4,
-          '&:hover': {
-            opacity: 1,
-          },
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            width: 18,
+            height: 18,
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            opacity: 0.4,
+            '&:hover': {
+              opacity: 1,
+            },
+          }),
+        ]}
         on={{
           click() {
             remountKey++
@@ -66,28 +70,32 @@ function Tile(handle: Handle) {
           <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
         </svg>
       </button>
-      <h3 css={{ margin: 0 }}>{title}</h3>
+      <h3 mix={[css({ margin: 0 })]}>{title}</h3>
       <div
         key={remountKey}
-        css={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 280,
-        }}
+        mix={[
+          css({
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 280,
+          }),
+        ]}
       >
         {children}
       </div>
       {notes && (
         <p
-          css={{
-            margin: 0,
-            fontSize: 12,
-            color: '#666',
-            textAlign: 'center',
-            maxWidth: '200px',
-          }}
+          mix={[
+            css({
+              margin: 0,
+              fontSize: 12,
+              color: '#666',
+              textAlign: 'center',
+              maxWidth: '200px',
+            }),
+          ]}
         >
           {notes}
         </p>
@@ -98,18 +106,20 @@ function Tile(handle: Handle) {
 
 createRoot(document.body).render(
   <>
-    <h1 css={{ marginBottom: 0, '& + p': { marginTop: 0 } }}>Animations</h1>
+    <h1 mix={[css({ marginBottom: 0, '& + p': { marginTop: 0 } })]}>Animations</h1>
     <p>
       Most animations are adapted from <a href="https://www.motion.dev">Motion</a>. Thank you for
       your work <a href="https://motion.dev/@matt">Matt Perry</a>!
     </p>
     <div
-      css={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-        gap: 24,
-        marginTop: 40,
-      }}
+      mix={[
+        css({
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: 24,
+          marginTop: 40,
+        }),
+      ]}
     >
       <Tile title="Default Animate" notes="animateEntrance + animateLayout defaults">
         <DefaultAnimate />

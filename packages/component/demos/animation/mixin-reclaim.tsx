@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit } from 'remix/component'
+import { animateEntrance, animateExit, css } from 'remix/component'
 
 export function MixinReclaim(handle: Handle) {
   let visible = true
@@ -23,19 +23,21 @@ export function MixinReclaim(handle: Handle) {
   }
 
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: 12, width: 240 }}>
-      <div css={{ display: 'flex', gap: 8 }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: 12, width: 240 })]}>
+      <div mix={[css({ display: 'flex', gap: 8 })]}>
         <button
-          css={{
-            flex: 1,
-            padding: '8px 10px',
-            border: 'none',
-            borderRadius: 6,
-            backgroundColor: '#10b981',
-            color: 'white',
-            cursor: 'pointer',
-            '&:hover': { backgroundColor: '#059669' },
-          }}
+          mix={[
+            css({
+              flex: 1,
+              padding: '8px 10px',
+              border: 'none',
+              borderRadius: 6,
+              backgroundColor: '#10b981',
+              color: 'white',
+              cursor: 'pointer',
+              '&:hover': { backgroundColor: '#059669' },
+            }),
+          ]}
           on={{
             click() {
               clearInterruptTimer()
@@ -47,16 +49,18 @@ export function MixinReclaim(handle: Handle) {
           Show
         </button>
         <button
-          css={{
-            flex: 1,
-            padding: '8px 10px',
-            border: 'none',
-            borderRadius: 6,
-            backgroundColor: '#f59e0b',
-            color: 'white',
-            cursor: 'pointer',
-            '&:hover': { backgroundColor: '#d97706' },
-          }}
+          mix={[
+            css({
+              flex: 1,
+              padding: '8px 10px',
+              border: 'none',
+              borderRadius: 6,
+              backgroundColor: '#f59e0b',
+              color: 'white',
+              cursor: 'pointer',
+              '&:hover': { backgroundColor: '#d97706' },
+            }),
+          ]}
           on={{
             click: scheduleInterrupt,
           }}
@@ -66,15 +70,17 @@ export function MixinReclaim(handle: Handle) {
       </div>
 
       <button
-        css={{
-          padding: '8px 10px',
-          border: 'none',
-          borderRadius: 6,
-          backgroundColor: '#ef4444',
-          color: 'white',
-          cursor: 'pointer',
-          '&:hover': { backgroundColor: '#dc2626' },
-        }}
+        mix={[
+          css({
+            padding: '8px 10px',
+            border: 'none',
+            borderRadius: 6,
+            backgroundColor: '#ef4444',
+            color: 'white',
+            cursor: 'pointer',
+            '&:hover': { backgroundColor: '#dc2626' },
+          }),
+        ]}
         on={{
           click() {
             clearInterruptTimer()
@@ -86,7 +92,7 @@ export function MixinReclaim(handle: Handle) {
         Hide
       </button>
 
-      <div css={{ minHeight: 100, display: 'grid', placeItems: 'center' }}>
+      <div mix={[css({ minHeight: 100, display: 'grid', placeItems: 'center' })]}>
         {visible && (
           <div
             key="reclaim-card"
@@ -103,16 +109,16 @@ export function MixinReclaim(handle: Handle) {
                 duration: 260,
                 easing: 'ease-in',
               }),
+              css({
+                width: 200,
+                padding: '14px 16px',
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
+                color: 'white',
+                textAlign: 'center',
+                fontWeight: 600,
+              }),
             ]}
-            css={{
-              width: 200,
-              padding: '14px 16px',
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
-              color: 'white',
-              textAlign: 'center',
-              fontWeight: 600,
-            }}
           >
             Reclaim Me Mid-Exit
           </div>

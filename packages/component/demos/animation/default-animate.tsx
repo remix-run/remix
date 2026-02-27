@@ -1,4 +1,4 @@
-import { animateEntrance, animateLayout, type Handle } from 'remix/component'
+import { animateEntrance, animateLayout, css, type Handle } from 'remix/component'
 
 let nextId = 1
 function createItem() {
@@ -10,27 +10,31 @@ export function DefaultAnimate(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        width: 200,
-        alignSelf: 'flex-start',
-      }}
+      mix={[
+        css({
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          width: 200,
+          alignSelf: 'flex-start',
+        }),
+      ]}
     >
-      <div css={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div mix={[css({ display: 'flex', gap: 8, marginBottom: 8 })]}>
         <button
-          css={{
-            flex: 1,
-            padding: '8px 12px',
-            border: 'none',
-            borderRadius: 6,
-            backgroundColor: '#10b981',
-            color: 'white',
-            cursor: 'pointer',
-            fontWeight: 500,
-            '&:hover': { backgroundColor: '#059669' },
-          }}
+          mix={[
+            css({
+              flex: 1,
+              padding: '8px 12px',
+              border: 'none',
+              borderRadius: 6,
+              backgroundColor: '#10b981',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 500,
+              '&:hover': { backgroundColor: '#059669' },
+            }),
+          ]}
           on={{
             click() {
               items.unshift(createItem())
@@ -41,17 +45,19 @@ export function DefaultAnimate(handle: Handle) {
           Add
         </button>
         <button
-          css={{
-            flex: 1,
-            padding: '8px 12px',
-            border: 'none',
-            borderRadius: 6,
-            backgroundColor: '#6366f1',
-            color: 'white',
-            cursor: 'pointer',
-            fontWeight: 500,
-            '&:hover': { backgroundColor: '#4f46e5' },
-          }}
+          mix={[
+            css({
+              flex: 1,
+              padding: '8px 12px',
+              border: 'none',
+              borderRadius: 6,
+              backgroundColor: '#6366f1',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 500,
+              '&:hover': { backgroundColor: '#4f46e5' },
+            }),
+          ]}
           on={{
             click() {
               // Shuffle the array
@@ -69,35 +75,40 @@ export function DefaultAnimate(handle: Handle) {
       {items.map((item) => (
         <div
           key={item.id}
-          mix={[animateEntrance(), animateLayout()]}
-          css={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 16px',
-            backgroundColor: '#f1f5f9',
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 500,
-            color: '#334155',
-          }}
+          mix={[
+            animateEntrance(),
+            animateLayout(),
+            css({
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              backgroundColor: '#f1f5f9',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 500,
+              color: '#334155',
+            }),
+          ]}
         >
           <span>{item.label}</span>
           <button
-            css={{
-              width: 20,
-              height: 20,
-              padding: 0,
-              border: 'none',
-              borderRadius: 4,
-              backgroundColor: 'transparent',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              '&:hover': { backgroundColor: '#e2e8f0', color: '#64748b' },
-            }}
+            mix={[
+              css({
+                width: 20,
+                height: 20,
+                padding: 0,
+                border: 'none',
+                borderRadius: 4,
+                backgroundColor: 'transparent',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&:hover': { backgroundColor: '#e2e8f0', color: '#64748b' },
+              }),
+            ]}
             on={{
               click() {
                 items = items.filter((i) => i.id !== item.id)
