@@ -3,14 +3,21 @@ import { beforeEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 import {
   and,
+  between,
   createDatabase,
   createTable,
   eq,
   gt,
+  gte,
+  ilike,
   inList,
   isNull,
+  like,
+  lt,
+  lte,
   ne,
   notInList,
+  notNull,
   type AdapterStatement,
   type DatabaseAdapter,
   or,
@@ -94,6 +101,26 @@ describe('postgres sql-compiler', () => {
       })
     })
 
+    it('compile left join', async () => {
+      await db.query(accounts).leftJoin(tasks, eq(accounts.id, tasks.account_id)).all()
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" left join "tasks" on "accounts"."id" = "tasks"."account_id"',
+        values: [],
+      })
+    })
+
+    it('compile right join', async () => {
+      await db.query(accounts).rightJoin(tasks, eq(accounts.id, tasks.account_id)).all()
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" right join "tasks" on "accounts"."id" = "tasks"."account_id"',
+        values: [],
+      })
+    })
+
     it('compile object where filters', async () => {
       await db.query(accounts).where({ status: 'enabled' }).all()
 
@@ -121,6 +148,24 @@ describe('postgres sql-compiler', () => {
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" <> $1) and ("id" > $2)',
         values: ['disabled', 10],
+      })
+    })
+
+    it('compile gte/lt/lte/between/like/ilike predicates', async () => {
+      await db
+        .query(accounts)
+        .where(gte('id', 1))
+        .where(lt('id', 20))
+        .where(lte('id', 30))
+        .where(between('id', 2, 9))
+        .where(like('email', '%@example.com'))
+        .where(ilike('email', '%@example.com'))
+        .all()
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where ("id" >= $1) and ("id" < $2) and ("id" <= $3) and ("id" between $4 and $5) and ("email" like $6) and ("email" ilike $7)',
+        values: [1, 20, 30, 2, 9, '%@example.com', '%@example.com'],
       })
     })
 
@@ -178,6 +223,16 @@ describe('postgres sql-compiler', () => {
       })
     })
 
+    it('compile empty logical combinators', async () => {
+      await db.query(accounts).where(and()).where(or()).all()
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (1 = 1) and (1 = 0)',
+        values: [],
+      })
+    })
+
     it('compile group by and having', async () => {
       await db.query(tasks).groupBy(tasks.account_id).having({ account_id: 20 }).all()
 
@@ -198,6 +253,16 @@ describe('postgres sql-compiler', () => {
       })
     })
 
+    it('compile distinct selection with order by', async () => {
+      await db.query(accounts).distinct().orderBy('id', 'desc').all()
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select distinct * from "accounts" order by "id" DESC',
+        values: [],
+      })
+    })
+
     it('compile boolean bindings', async () => {
       await db.query(accounts).where({ deleted: true }).all()
 
@@ -209,11 +274,32 @@ describe('postgres sql-compiler', () => {
     })
 
     it('compile boolean predicates', async () => {
-      await db.query(accounts).where(isNull(accounts.status)).all()
+      await db.query(accounts).where(isNull(accounts.status)).where(notNull(accounts.email)).all()
 
       let compiled = compilePostgresStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from "accounts" where ("accounts"."status" is null)',
+        text: 'select * from "accounts" where ("accounts"."status" is null) and ("accounts"."email" is not null)',
+        values: [],
+      })
+    })
+
+    it('compile wildcard segment path', () => {
+      let compiled = compilePostgresStatement({
+        kind: 'select',
+        table: accounts,
+        select: [{ column: 'accounts.*', alias: 'allColumns' }],
+        joins: [],
+        where: [],
+        groupBy: [],
+        having: [],
+        orderBy: [],
+        limit: undefined,
+        offset: undefined,
+        distinct: false,
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select "accounts".* as "allColumns" from "accounts"',
         values: [],
       })
     })
@@ -270,6 +356,23 @@ describe('postgres sql-compiler', () => {
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3) returning *',
         values: [1, 'info@remix.run', 'enabled'],
+      })
+    })
+
+    it('compile for one and return selected columns', async () => {
+      await db.query(accounts).insert(
+        {
+          id: 2,
+          email: 'contact@remix.run',
+          status: 'active',
+        },
+        { returning: ['id', 'email'] },
+      )
+
+      let compiled = compilePostgresStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3) returning "id", "email"',
+        values: [2, 'contact@remix.run', 'active'],
       })
     })
 
@@ -448,6 +551,50 @@ describe('postgres sql-compiler', () => {
         text: 'select * from accounts where id = $1 and status = $2',
         values: [10, 'active'],
       })
+    })
+
+    it('compile without placeholders', () => {
+      let compiled = compilePostgresStatement({
+        kind: 'raw',
+        sql: {
+          text: 'select 1',
+          values: [],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select 1',
+        values: [],
+      })
+    })
+  })
+
+  describe('error handling', () => {
+    it('throws for unsupported statements', () => {
+      assert.throws(
+        () => compilePostgresStatement({ kind: 'unknown' } as never),
+        /Unsupported statement kind/,
+      )
+    })
+
+    it('throws for unsupported predicates', () => {
+      assert.throws(
+        () =>
+          compilePostgresStatement({
+            kind: 'select',
+            table: accounts,
+            select: '*',
+            joins: [],
+            where: [{ type: 'unknown' } as never],
+            groupBy: [],
+            having: [],
+            orderBy: [],
+            limit: undefined,
+            offset: undefined,
+            distinct: false,
+          }),
+        /Unsupported predicate/,
+      )
     })
   })
 })
