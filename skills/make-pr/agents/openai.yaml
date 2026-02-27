@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make PR"
+  short_description: "Create high-quality GitHub pull requests"
+  default_prompt: "Use $make-pr to draft and create a GitHub pull request with clear context and examples."
