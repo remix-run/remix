@@ -4,8 +4,6 @@ This is the changelog for [`job-redis`](https://github.com/remix-run/remix/tree/
 
 ## Unreleased
 
-## v0.1.0
-
 ### Minor Changes
 
 - Initial release.
