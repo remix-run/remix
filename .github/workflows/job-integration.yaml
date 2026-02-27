@@ -1,0 +1,208 @@
+name: Job Scheduler Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/job-integration.yaml'
+      - 'packages/job/**'
+      - 'packages/job-data-table/**'
+      - 'packages/job-redis/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/job.ts'
+      - 'packages/remix/src/job-data-table.ts'
+      - 'packages/remix/src/job-redis.ts'
+      - 'packages/remix/src/job/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '.github/workflows/job-integration.yaml'
+      - 'packages/job/**'
+      - 'packages/job-data-table/**'
+      - 'packages/job-redis/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/job.ts'
+      - 'packages/remix/src/job-data-table.ts'
+      - 'packages/remix/src/job-redis.ts'
+      - 'packages/remix/src/job/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+
+jobs:
+  unit:
+    name: Unit and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run job package checks
+        run: |
+          pnpm --filter @remix-run/job run typecheck
+          pnpm --filter @remix-run/job run test
+          pnpm --filter @remix-run/job run build
+          pnpm --filter @remix-run/job-data-table run typecheck
+          pnpm --filter @remix-run/job-data-table run test
+          pnpm --filter @remix-run/job-data-table run build
+          pnpm --filter @remix-run/job-redis run typecheck
+          pnpm --filter @remix-run/job-redis run test
+          pnpm --filter @remix-run/job-redis run build
+
+  redis-integration:
+    name: Redis Integration
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run redis integration tests
+        env:
+          JOB_REDIS_INTEGRATION: '1'
+          JOB_REDIS_URL: redis://127.0.0.1:6379
+        run: node --disable-warning=ExperimentalWarning --test './packages/job-redis/src/lib/backend.integration.test.ts'
+
+  postgres-integration:
+    name: Postgres Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: remix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run postgres integration tests
+        env:
+          JOB_DATA_TABLE_INTEGRATION: '1'
+          JOB_DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
+        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/backend.postgres.integration.test.ts'
+
+  mysql-integration:
+    name: MySQL Integration
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: remix
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mysql integration tests
+        env:
+          JOB_DATA_TABLE_INTEGRATION: '1'
+          JOB_DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
+        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/backend.mysql.integration.test.ts'
+
+  sqlite-integration:
+    name: SQLite Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build sqlite native module
+        run: pnpm rebuild better-sqlite3
+
+      - name: Run sqlite integration tests
+        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/backend.sqlite.test.ts'

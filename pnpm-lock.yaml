@@ -1097,6 +1097,75 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/job:
+    dependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/job-data-table:
+    dependencies:
+      '@remix-run/data-table':
+        specifier: workspace:^
+        version: link:../data-table
+      '@remix-run/job':
+        specifier: workspace:^
+        version: link:../job
+    devDependencies:
+      '@remix-run/data-table-mysql':
+        specifier: workspace:*
+        version: link:../data-table-mysql
+      '@remix-run/data-table-postgres':
+        specifier: workspace:*
+        version: link:../data-table-postgres
+      '@remix-run/data-table-sqlite':
+        specifier: workspace:*
+        version: link:../data-table-sqlite
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@types/pg':
+        specifier: ^8.15.6
+        version: 8.16.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      better-sqlite3:
+        specifier: ^12.4.1
+        version: 12.6.2
+      mysql2:
+        specifier: ^3.15.2
+        version: 3.16.3
+      pg:
+        specifier: ^8.16.3
+        version: 8.18.0
+
+  packages/job-redis:
+    dependencies:
+      '@remix-run/job':
+        specifier: workspace:^
+        version: link:../job
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      redis:
+        specifier: ^5.9.0
+        version: 5.11.0
+
   packages/lazy-file:
     dependencies:
       '@remix-run/mime':
