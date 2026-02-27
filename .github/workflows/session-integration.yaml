@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/session-integration.yaml'
       - 'packages/session/**'
+      - 'packages/session-storage-memcache/**'
       - 'packages/remix/**'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -14,6 +15,7 @@ on:
     paths:
       - '.github/workflows/session-integration.yaml'
       - 'packages/session/**'
+      - 'packages/session-storage-memcache/**'
       - 'packages/remix/**'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -49,4 +51,4 @@ jobs:
         env:
           SESSION_MEMCACHE_INTEGRATION: '1'
           SESSION_MEMCACHE_SERVER: 127.0.0.1:11211
-        run: node --disable-warning=ExperimentalWarning --test './packages/session/src/lib/session-storage/memcache.integration.test.ts'
+        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-memcache/src/lib/memcache-storage.integration.test.ts'

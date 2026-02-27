@@ -1,10 +1,11 @@
+import { createSession } from '@remix-run/session'
+import type { SessionStorage } from '@remix-run/session'
 import { createMemcacheClient } from './memcache-client.ts'
-import { createSession, type SessionData } from '../session.ts'
-import type { SessionStorage } from '../session-storage.ts'
 
 const DEFAULT_KEY_PREFIX = 'remix:session:'
 const MAX_MEMCACHE_KEY_LENGTH = 250
 const HASH_LENGTH = 64
+type SessionData = ReturnType<typeof createSession>['data']
 
 export interface MemcacheSessionStorageOptions {
   /**

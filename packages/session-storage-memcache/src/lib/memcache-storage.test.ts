@@ -2,8 +2,8 @@ import * as assert from 'node:assert/strict'
 import * as net from 'node:net'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
-import { createMemcacheSessionStorage } from './memcache.ts'
-import type { SessionStorage } from '../session-storage.ts'
+import type { SessionStorage } from '@remix-run/session'
+import { createMemcacheSessionStorage } from './memcache-storage.ts'
 
 type FakeMemcacheServer = {
   address: string

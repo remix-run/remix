@@ -1014,6 +1014,9 @@ importers:
       '@remix-run/session-middleware':
         specifier: workspace:^
         version: link:../session-middleware
+      '@remix-run/session-storage-memcache':
+        specifier: workspace:^
+        version: link:../session-storage-memcache
       '@remix-run/static-middleware':
         specifier: workspace:^
         version: link:../static-middleware
@@ -1105,6 +1108,19 @@ importers:
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/session-storage-memcache:
+    dependencies:
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

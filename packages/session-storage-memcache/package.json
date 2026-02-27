@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/session",
-  "version": "0.4.1",
-  "description": "Session management for JavaScript",
+  "name": "@remix-run/session-storage-memcache",
+  "version": "0.1.0",
+  "description": "Memcache session storage for @remix-run/session",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/session"
+    "directory": "packages/session-storage-memcache"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/session#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -20,9 +20,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cookie-storage": "./src/cookie-storage.ts",
-    "./fs-storage": "./src/fs-storage.ts",
-    "./memory-storage": "./src/memory-storage.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -31,20 +28,11 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./cookie-storage": {
-        "types": "./dist/cookie-storage.d.ts",
-        "default": "./dist/cookie-storage.js"
-      },
-      "./fs-storage": {
-        "types": "./dist/fs-storage.d.ts",
-        "default": "./dist/fs-storage.js"
-      },
-      "./memory-storage": {
-        "types": "./dist/memory-storage.d.ts",
-        "default": "./dist/memory-storage.js"
-      },
       "./package.json": "./package.json"
     }
+  },
+  "dependencies": {
+    "@remix-run/session": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -61,8 +49,6 @@
     "session",
     "session-management",
     "session-storage",
-    "fetch",
-    "cookie",
-    "storage"
+    "memcache"
   ]
 }
