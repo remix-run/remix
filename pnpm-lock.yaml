@@ -360,6 +360,31 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/csrf-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/data-schema:
     dependencies:
       '@standard-schema/spec':
@@ -904,6 +929,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/csrf-middleware':
+        specifier: workspace:^
+        version: link:../csrf-middleware
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema
