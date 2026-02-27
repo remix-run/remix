@@ -44,7 +44,8 @@
   },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",
-    "@remix-run/session": "workspace:^"
+    "@remix-run/session": "workspace:^",
+    "node-html-parser": "^7.0.2"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

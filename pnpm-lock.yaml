@@ -477,6 +477,9 @@ importers:
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.0.2
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

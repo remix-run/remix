@@ -108,8 +108,7 @@ function Layout() {
 }
 
 export function VersionDropdown(handle: Handle) {
-  let { versions, activeVersion } = handle.context.get(ServerPage)
-  let latestVersion = versions[0]?.version
+  let { versions, activeVersion, slug } = handle.context.get(ServerPage)
 
   // When we're displaying an active version, only include versions up until
   // that version in the nav
@@ -128,7 +127,11 @@ export function VersionDropdown(handle: Handle) {
           {...navVersions.map((version) => (
             <VersionLink
               version={version}
-              latest={versions.length === 0 || version.version === latestVersion}
+              latest={
+                (versions.length === 0 || version.version === versions[0]?.version) &&
+                !activeVersion
+              }
+              active={!slug && version.version === activeVersion}
             />
           ))}
         </li>
@@ -137,37 +140,24 @@ export function VersionDropdown(handle: Handle) {
   )
 }
 
-function VersionLink(handle: Handle) {
-  let { activeVersion, slug } = handle.context.get(ServerPage)
+function VersionLink() {
   return ({
     version,
     latest,
+    active,
   }: {
     version: { version: string; crawl: boolean }
     latest: boolean
+    active: boolean
   }) => {
-    let isRootDocsLink = latest && !activeVersion
+    let href = routes.home.href({ version: !latest ? version.version : undefined })
     return (
       <>
-        <a
-          href={routes.home.href({
-            version: !isRootDocsLink ? version.version : undefined,
-          })}
-          rel={!version.crawl ? 'nofollow' : undefined}
-          class={!slug && version.version === activeVersion ? 'active' : undefined}
-        >
+        <a href={href} class={active ? 'active' : undefined}>
           {version.version}
         </a>
-
-        {/* Indicate latest only on root (latest) sites */}
-        {isRootDocsLink ? <span> (latest)</span> : null}
-
-        {/* Hidden link to allow crawling for the latest version */}
-        {isRootDocsLink && version.crawl ? (
-          <a href={routes.home.href({ version: version.version })} style={{ display: 'none' }}>
-            {version.version}
-          </a>
-        ) : null}
+        {latest ? <span> (latest)</span> : null}
+        <br />
       </>
     )
   }
