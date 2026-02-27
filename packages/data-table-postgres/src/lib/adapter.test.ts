@@ -22,6 +22,14 @@ let projects = createTable({
   },
 })
 
+let invoices = createTable({
+  name: 'billing.invoices',
+  columns: {
+    id: number(),
+    account_id: number(),
+  },
+})
+
 describe('postgres adapter', () => {
   it('converts raw sql placeholders and normalizes count rows', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
@@ -155,6 +163,35 @@ describe('postgres adapter', () => {
     assert.match(statements[0].text, /"accounts"\."id"\s*=\s*"projects"\."account_id"/)
     assert.match(statements[0].text, /"accounts"\."email"\s*=\s*\$1/)
     assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+
+  it('compiles cross-schema table references in joins', async () => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+
+        return {
+          rows: [{ count: '0' }],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    await db
+      .query(invoices)
+      .join(accounts, eq(accounts.id, invoices.account_id))
+      .count()
+
+    assert.match(statements[0].text, /from "billing"\."invoices"/)
+    assert.match(statements[0].text, /join "accounts"/)
+    assert.match(statements[0].text, /"accounts"\."id"\s*=\s*"billing"\."invoices"\."account_id"/)
   })
 
   it('does not create dangling bind parameters for inList predicates', async () => {

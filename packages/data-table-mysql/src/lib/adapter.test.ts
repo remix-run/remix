@@ -22,6 +22,14 @@ let projects = createTable({
   },
 })
 
+let invoices = createTable({
+  name: 'billing.invoices',
+  columns: {
+    id: number(),
+    account_id: number(),
+  },
+})
+
 describe('mysql adapter', () => {
   it('compiles ilike() with lower() and parses count results', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
@@ -144,6 +152,31 @@ describe('mysql adapter', () => {
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
     assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
     assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+
+  it('compiles cross-schema table references in joins', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[{ count: '0' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+
+    await db
+      .query(invoices)
+      .join(accounts, eq(accounts.id, invoices.account_id))
+      .count()
+
+    assert.match(statements[0].text, /from `billing`\.`invoices`/)
+    assert.match(statements[0].text, /join `accounts`/)
+    assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`billing`\.`invoices`\.`account_id`/)
   })
 
   it('does not create dangling bind parameters for inList predicates', async () => {

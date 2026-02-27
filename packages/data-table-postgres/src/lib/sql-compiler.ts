@@ -492,7 +492,10 @@ function normalizeJoinType(type: string): string {
 }
 
 function quoteIdentifier(value: string): string {
-  return '"' + value.replace(/"/g, '""') + '"'
+  return value
+    .split('.')
+    .map((segment) => '"' + segment.replace(/"/g, '""') + '"')
+    .join('.')
 }
 
 function quotePath(path: string): string {
