@@ -1,0 +1,55 @@
+{
+  "name": "@remix-run/file-storage-s3",
+  "version": "0.0.0",
+  "description": "S3 backend for @remix-run/file-storage",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/file-storage-s3"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/file-storage-s3#readme",
+  "license": "MIT",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/file-storage": "workspace:^",
+    "aws4fetch": "^1.0.20"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "file",
+    "storage",
+    "s3",
+    "aws"
+  ]
+}

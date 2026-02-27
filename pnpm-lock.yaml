@@ -612,6 +612,22 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/file-storage-s3:
+    dependencies:
+      '@remix-run/file-storage':
+        specifier: workspace:^
+        version: link:../file-storage
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/form-data-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -2798,6 +2814,9 @@ packages:
   aws-ssl-profiles@1.1.2:
     resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
     engines: {node: '>= 6.0.0'}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   b4a@1.6.7:
     resolution: {integrity: sha512-OnAYlL5b7LEkALw87fUVafQw5rVR9RjwGd4KUwNQ6DrrNmaVaUCgLipfVlzrPQ4tWOR9P0IXGNOx50jYCCdSJg==}
@@ -6648,6 +6667,8 @@ snapshots:
       possible-typed-array-names: 1.1.0
 
   aws-ssl-profiles@1.1.2: {}
+
+  aws4fetch@1.0.20: {}
 
   b4a@1.6.7: {}
 

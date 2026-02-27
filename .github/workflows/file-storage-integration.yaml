@@ -1,0 +1,103 @@
+name: File Storage Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/file-storage-integration.yaml'
+      - 'packages/file-storage/**'
+      - 'packages/file-storage-s3/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/file-storage/s3.ts'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '.github/workflows/file-storage-integration.yaml'
+      - 'packages/file-storage/**'
+      - 'packages/file-storage-s3/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/file-storage/s3.ts'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+
+jobs:
+  unit:
+    name: Unit and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run file-storage-s3 package checks
+        run: |
+          pnpm --filter @remix-run/file-storage-s3 run typecheck
+          pnpm --filter @remix-run/file-storage-s3 run test
+          pnpm --filter @remix-run/file-storage-s3 run build
+
+  s3-integration:
+    name: S3 Integration
+    runs-on: ubuntu-latest
+
+    services:
+      localstack:
+        image: localstack/localstack:4.4.0
+        env:
+          SERVICES: s3
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          DEFAULT_REGION: us-east-1
+        ports:
+          - 4566:4566
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for LocalStack
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4566/_localstack/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "LocalStack did not become ready in time"
+          exit 1
+
+      - name: Run S3 integration tests
+        env:
+          FILE_STORAGE_S3_INTEGRATION: '1'
+          FILE_STORAGE_S3_ENDPOINT: http://127.0.0.1:4566
+          FILE_STORAGE_S3_BUCKET: remix-file-storage-integration
+          FILE_STORAGE_S3_REGION: us-east-1
+          FILE_STORAGE_S3_ACCESS_KEY_ID: test
+          FILE_STORAGE_S3_SECRET_ACCESS_KEY: test
+          FILE_STORAGE_S3_FORCE_PATH_STYLE: '1'
+        run: node --disable-warning=ExperimentalWarning --test './packages/file-storage-s3/src/lib/s3.integration.test.ts'
