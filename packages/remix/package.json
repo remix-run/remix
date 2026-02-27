@@ -24,6 +24,7 @@
     "./component/jsx-runtime": "./src/component/jsx-runtime.ts",
     "./component/server": "./src/component/server.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
+    "./cors-middleware": "./src/cors-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
     "./csrf-middleware": "./src/csrf-middleware.ts",
@@ -101,6 +102,10 @@
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
         "default": "./dist/compression-middleware.js"
+      },
+      "./cors-middleware": {
+        "types": "./dist/cors-middleware.d.ts",
+        "default": "./dist/cors-middleware.js"
       },
       "./cookie": {
         "types": "./dist/cookie.d.ts",
@@ -313,6 +318,7 @@
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
+    "@remix-run/cors-middleware": "workspace:^",
     "@remix-run/csrf-middleware": "workspace:^",
     "@remix-run/cookie": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
