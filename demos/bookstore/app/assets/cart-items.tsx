@@ -109,7 +109,7 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                       <input
                         type="number"
                         name="quantity"
-                        value={item.quantity}
+                        defaultValue={item.quantity}
                         min="1"
                         disabled={isPending}
                         mix={[css({ width: '70px' })]}
@@ -119,12 +119,14 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                         type="submit"
                         disabled={isPending}
                         class="btn btn-secondary"
-                        mix={[css({
-                          fontSize: '0.875rem',
-                          padding: '0.25rem 0.5rem',
-                          minWidth: '6.25rem',
-                          textAlign: 'center',
-                        })]}
+                        mix={[
+                          css({
+                            fontSize: '0.875rem',
+                            padding: '0.25rem 0.5rem',
+                            minWidth: '6.25rem',
+                            textAlign: 'center',
+                          }),
+                        ]}
                       >
                         {isUpdating ? 'Saving...' : 'Update'}
                       </button>
@@ -155,12 +157,14 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                         type="submit"
                         disabled={isPending}
                         class="btn btn-danger"
-                        mix={[css({
-                          fontSize: '0.875rem',
-                          padding: '0.25rem 0.5rem',
-                          minWidth: '7rem',
-                          textAlign: 'center',
-                        })]}
+                        mix={[
+                          css({
+                            fontSize: '0.875rem',
+                            padding: '0.25rem 0.5rem',
+                            minWidth: '7rem',
+                            textAlign: 'center',
+                          }),
+                        ]}
                       >
                         {isRemoving ? 'Removing...' : 'Remove'}
                       </button>
@@ -173,7 +177,9 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
         </table>
 
         <div mix={[css({ marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' })]}>
-          <p mix={[css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })]}>
+          <p
+            mix={[css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })]}
+          >
             Total: {totalLabel}
           </p>
 
