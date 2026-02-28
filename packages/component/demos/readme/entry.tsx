@@ -1,4 +1,5 @@
 import {
+  addEventListeners,
   createRoot,
   css,
   on,
@@ -197,7 +198,7 @@ function SlugForm(handle: Handle) {
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown: (event) => {
       keys.push(event.key)
       if (keys.length > 10) keys.shift()
@@ -564,8 +565,8 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProviderAdvanced)
 
   // Subscribe to theme changes and update when it changes
-  handle.on(theme, {
-    change: () => {
+  addEventListeners(theme, handle.signal, {
+    change() {
       handle.update()
     },
   })
