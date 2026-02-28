@@ -54,10 +54,12 @@ export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle)
       return handle.element
     }
 
-    return jsx(handle.element, {
-      ...props,
-      className: props.className ? `${props.className} ${selector}` : selector,
-    })
+    return (
+      <handle.element
+        {...props}
+        className={props.className ? `${props.className} ${selector}` : selector}
+      />
+    )
   }
 })
 
