@@ -1,22 +1,7 @@
 import { type Handle, addEventListeners, clientEntry } from 'remix/component'
 import { routes } from '../server/routes'
 
-declare global {
-  const navigation: Navigation
-
-  interface Navigation {
-    __eventMap?: NavigationEventMap
-  }
-
-  interface NavigationInterceptOptions {
-    precommitHandler?: () => Promise<void>
-  }
-
-  interface NavigateEvent {
-    readonly cancelable: boolean
-  }
-}
-
+// moo
 const $ = (s: string) => document.querySelector(s)
 const $$ = (s: string) => Array.from(document.querySelectorAll(s))
 

@@ -31,6 +31,6 @@
     "prerender": "tsx src/server/prerender.ts",
     "prerender:serve": "npx http-server -p 3000 build/site",
     "serve": "tsx src/server/index.ts",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }
