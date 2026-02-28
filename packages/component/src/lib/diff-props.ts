@@ -110,8 +110,29 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
   } catch {}
 }
 
+function normalizeClassProps(props: ElementProps): ElementProps {
+  if (!('class' in props) && !('className' in props)) return props
+
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  let mergedClassName =
+    classAttr && className ? `${classAttr} ${className}` : classAttr || className
+  let normalizedProps = { ...props }
+
+  delete normalizedProps.class
+  if (mergedClassName) {
+    normalizedProps.className = mergedClassName
+  } else {
+    delete normalizedProps.className
+  }
+
+  return normalizedProps
+}
+
 export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Element) {
   let isSvg = dom.namespaceURI === SVG_NS
+  curr = normalizeClassProps(curr)
+  next = normalizeClassProps(next)
 
   // Removals
   for (let name in curr) {
