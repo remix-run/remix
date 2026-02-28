@@ -1,3 +1,5 @@
+// @jsxRuntime classic
+// @jsx jsx
 import { createMixin } from '../mixin.ts'
 import { jsx } from '../jsx.ts'
 import type { ElementProps } from '../jsx.ts'

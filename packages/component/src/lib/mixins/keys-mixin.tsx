@@ -1,5 +1,8 @@
+// @jsxRuntime classic
+// @jsx jsx
 import { on } from './on-mixin.tsx'
 import { createMixin } from '../mixin.ts'
+import { jsx } from '../jsx.ts'
 
 export let escapeEventType = 'keydown:Escape' as const
 export let enterEventType = 'keydown:Enter' as const
