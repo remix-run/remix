@@ -39,7 +39,12 @@ export type MixinElement<
 
 export type MixinInsertEvent<node extends EventTarget = Element> = Event & {
   node: node
-  reclaimed: boolean
+  parent: ParentNode
+  key?: string
+}
+
+export type MixinReclaimedEvent<node extends EventTarget = Element> = Event & {
+  node: node
   parent: ParentNode
   key?: string
 }
@@ -48,12 +53,14 @@ export type MixinUpdateEvent<node extends EventTarget = Element> = Event & {
   node: node
 }
 
-export type MixinRemoveEvent = Event & {
+export type MixinBeforeRemoveEvent = Event & {
   persistNode(teardown: (signal: AbortSignal) => void | Promise<void>): void
 }
 
 type MixinHandleEventMap<node extends EventTarget = Element> = {
-  remove: MixinRemoveEvent
+  beforeRemove: MixinBeforeRemoveEvent
+  reclaimed: MixinReclaimedEvent<node>
+  remove: Event
   insert: MixinInsertEvent<node>
   beforeUpdate: MixinUpdateEvent<node>
   commit: MixinUpdateEvent<node>
@@ -114,11 +121,16 @@ type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
 ) => void | null | RemixElement | MixinElement<Element, ElementProps>
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
+type ScopedAnyMixinHandle = AnyMixinHandle & {
+  setActiveScope(scope?: symbol): void
+  dispatchScopedEvent(scope: symbol, event: Event): void
+  releaseScope(scope: symbol): void
+}
 
 type RunnerEntry = {
   type: AnyMixinType
   runner: AnyMixinRunner
-  handle: AnyMixinHandle
+  scope: symbol
 }
 
 type MixinHandleFactoryOptions = {
@@ -154,6 +166,7 @@ export type MixinRuntimeState = {
   id: string
   controller?: AbortController
   aborted: boolean
+  handle?: AnyMixinHandle
   runners: RunnerEntry[]
   binding?: MixinRuntimeBinding
   removePrepared?: boolean
@@ -181,6 +194,18 @@ export function createMixin<
 
 export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
   let state = input.state ?? createMixinRuntimeState()
+  let handle = state.handle as ScopedAnyMixinHandle | undefined
+  if (!handle) {
+    handle = createMixinHandle({
+      id: state.id,
+      hostType: input.hostType,
+      frame: input.frame,
+      scheduler: input.scheduler,
+      getSignal: () => getMixinRuntimeSignal(state),
+      getBinding: () => state.binding,
+    }) as ScopedAnyMixinHandle
+    state.handle = handle
+  }
   let hostType = input.hostType
   let scheduler = input.scheduler
   let descriptors = resolveMixDescriptors(input.props)
@@ -192,29 +217,27 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
-        dispatchMixinRemove(entry.handle, () => {})
+        handle.dispatchScopedEvent(entry.scope, new Event('remove'))
+        handle.releaseScope(entry.scope)
       }
-      let handle = createMixinHandle({
-        id: state.id,
-        hostType,
-        frame: input.frame,
-        scheduler,
-        getSignal: () => getMixinRuntimeSignal(state),
-        getBinding: () => state.binding,
-      })
+      let scope = Symbol('mixin-scope')
+      handle.setActiveScope(scope)
       entry = {
+        scope,
         type: descriptor.type as AnyMixinType,
         runner: descriptor.type(handle, hostType) as AnyMixinRunner,
-        handle,
       }
+      handle.setActiveScope(undefined)
       state.runners[index] = entry
       let binding = state.binding
       if (binding?.node) {
-        dispatchMixinInsert(entry.handle, binding.node, false, binding.parent, binding.key)
+        dispatchMixinInsert(handle, entry.scope, binding.node, binding.parent, binding.key)
       }
     }
 
+    handle.setActiveScope(entry.scope)
     let result = entry.runner(...descriptor.args, composedProps)
+    handle.setActiveScope(undefined)
     if (!result) continue
     if (isMixinElement(result)) continue
 
@@ -246,7 +269,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
   for (let index = descriptors.length; index < state.runners.length; index++) {
     let entry = state.runners[index]
     if (entry) {
-      dispatchMixinRemove(entry.handle, () => {})
+      handle.dispatchScopedEvent(entry.scope, new Event('remove'))
+      handle.releaseScope(entry.scope)
     }
   }
 
@@ -269,17 +293,25 @@ export function teardownMixins(state?: MixinRuntimeState) {
   state.binding = undefined
   prepareMixinRemoval(state)
   cancelPendingMixinRemoval(state)
+  dispatchMixinRemoveEvent(state)
+  let handle = state.handle as ScopedAnyMixinHandle | undefined
+  if (handle) {
+    for (let entry of state.runners) {
+      handle.releaseScope(entry.scope)
+    }
+  }
   state.runners.length = 0
   state.aborted = true
   state.controller?.abort()
   state.pendingRemoval = undefined
   state.removePrepared = true
+  state.handle = undefined
 }
 
 export function bindMixinRuntime(
   state: MixinRuntimeState | undefined,
   binding?: MixinRuntimeBinding,
-  options?: { reclaimed?: boolean },
+  options?: { dispatchReclaimed?: boolean },
 ) {
   if (!state) return
   let previousNode = state.binding?.node
@@ -287,14 +319,14 @@ export function bindMixinRuntime(
   state.binding = nextBinding
   if (!nextBinding?.node || previousNode === nextBinding.node) return
   let nextNode = nextBinding.node
+  let handle = state.handle as ScopedAnyMixinHandle | undefined
+  if (!handle) return
   for (let entry of state.runners) {
-    dispatchMixinInsert(
-      entry.handle,
-      nextNode,
-      options?.reclaimed === true,
-      nextBinding.parent,
-      nextBinding.key,
-    )
+    if (options?.dispatchReclaimed) {
+      dispatchMixinReclaimed(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
+    } else {
+      dispatchMixinInsert(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
+    }
   }
 }
 
@@ -303,10 +335,22 @@ export function prepareMixinRemoval(state?: MixinRuntimeState) {
   state.removePrepared = true
 
   let pendingRemoval: MixinRuntimeState['pendingRemoval']
+  let persistTeardowns: Array<(signal: AbortSignal) => void | Promise<void>> = []
   let registerPersistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
-    if (pendingRemoval) return
+    persistTeardowns.push(teardown)
+  }
+
+  let handle = state.handle as ScopedAnyMixinHandle | undefined
+  if (!handle) return
+  for (let entry of state.runners) {
+    dispatchMixinBeforeRemove(handle, entry.scope, registerPersistNode)
+  }
+
+  if (persistTeardowns.length > 0) {
     let controller = new AbortController()
-    let done = Promise.resolve().then(() => teardown(controller.signal))
+    let done = Promise.allSettled(
+      persistTeardowns.map((teardown) => Promise.resolve().then(() => teardown(controller.signal))),
+    ).then(() => {})
     pendingRemoval = {
       signal: controller.signal,
       cancel(reason) {
@@ -314,10 +358,6 @@ export function prepareMixinRemoval(state?: MixinRuntimeState) {
       },
       done,
     }
-  }
-
-  for (let entry of state.runners) {
-    dispatchMixinRemove(entry.handle, registerPersistNode)
   }
 
   state.pendingRemoval = pendingRemoval
@@ -355,7 +395,7 @@ function createMixinHandle(options: {
 
 class MixinHandleImpl
   extends TypedEventTarget<MixinHandleEventMap<Element>>
-  implements AnyMixinHandle
+  implements ScopedAnyMixinHandle
 {
   id: string
   frame: FrameHandle
@@ -365,6 +405,9 @@ class MixinHandleImpl
     beforeUpdate: 0,
     commit: 0,
   }
+  #activeScope?: symbol
+  #scopeTargets = new Map<symbol, TypedEventTarget<MixinHandleEventMap<Element>>>()
+  #scopePhaseCounts = new Map<symbol, Record<'beforeUpdate' | 'commit', number>>()
   #onSchedulerBeforeUpdate = (event: Event) => {
     this.#dispatchSchedulerPhaseToHandle('beforeUpdate', event as SchedulerPhaseEvent)
   }
@@ -394,12 +437,14 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void {
-    super.addEventListener(
-      type as keyof MixinHandleEventMap<Element>,
-      listener as EventListener,
-      options,
-    )
+    let target = this.#getActiveScopeTarget()
+    target.addEventListener(type as keyof MixinHandleEventMap<Element>, listener as EventListener, options)
     if (!listener || !isSchedulerPhaseType(type)) return
+    let scope = this.#activeScope
+    invariant(scope)
+    let scopePhaseCounts = this.#scopePhaseCounts.get(scope)
+    invariant(scopePhaseCounts)
+    scopePhaseCounts[type] += 1
     this.#phaseListenerCounts[type] += 1
     if (this.#phaseListenerCounts[type] !== 1) return
     if (type === 'beforeUpdate') {
@@ -414,12 +459,18 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
   ): void {
-    super.removeEventListener(
+    let target = this.#getActiveScopeTarget()
+    target.removeEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       typeof options === 'boolean' ? { capture: options } : options,
     )
     if (!listener || !isSchedulerPhaseType(type)) return
+    let scope = this.#activeScope
+    invariant(scope)
+    let scopePhaseCounts = this.#scopePhaseCounts.get(scope)
+    invariant(scopePhaseCounts)
+    scopePhaseCounts[type] = Math.max(0, scopePhaseCounts[type] - 1)
     this.#phaseListenerCounts[type] = Math.max(0, this.#phaseListenerCounts[type] - 1)
     if (this.#phaseListenerCounts[type] !== 0) return
     if (type === 'beforeUpdate') {
@@ -460,13 +511,62 @@ class MixinHandleImpl
     container.set(listeners)
   }
 
+  setActiveScope(scope?: symbol): void {
+    this.#activeScope = scope
+    if (!scope) return
+    if (this.#scopeTargets.has(scope)) return
+    this.#scopeTargets.set(scope, new TypedEventTarget<MixinHandleEventMap<Element>>())
+    this.#scopePhaseCounts.set(scope, { beforeUpdate: 0, commit: 0 })
+  }
+
+  dispatchScopedEvent(scope: symbol, event: Event): void {
+    let previousScope = this.#activeScope
+    this.#activeScope = scope
+    this.#scopeTargets.get(scope)?.dispatchEvent(event)
+    this.#activeScope = previousScope
+  }
+
+  releaseScope(scope: symbol): void {
+    let scopePhaseCounts = this.#scopePhaseCounts.get(scope)
+    if (scopePhaseCounts) {
+      this.#decrementGlobalPhaseCount('beforeUpdate', scopePhaseCounts.beforeUpdate)
+      this.#decrementGlobalPhaseCount('commit', scopePhaseCounts.commit)
+    }
+    this.#scopePhaseCounts.delete(scope)
+    this.#scopeTargets.delete(scope)
+    if (this.#activeScope === scope) {
+      this.#activeScope = undefined
+    }
+  }
+
   #dispatchSchedulerPhaseToHandle(type: 'beforeUpdate' | 'commit', event: SchedulerPhaseEvent) {
     let binding = this.#options.getBinding()
     if (!binding) return
     if (!isBindingInUpdateScope(binding, event.parents)) return
-    let updateEvent = new Event(type) as MixinUpdateEvent<Element>
-    updateEvent.node = binding.node
-    this.dispatchEvent(updateEvent)
+    for (let [, target] of this.#scopeTargets) {
+      let updateEvent = new Event(type) as MixinUpdateEvent<Element>
+      updateEvent.node = binding.node
+      target.dispatchEvent(updateEvent)
+    }
+  }
+
+  #getActiveScopeTarget(): TypedEventTarget<MixinHandleEventMap<Element>> {
+    let scope = this.#activeScope
+    invariant(scope)
+    let target = this.#scopeTargets.get(scope)
+    invariant(target)
+    return target
+  }
+
+  #decrementGlobalPhaseCount(type: 'beforeUpdate' | 'commit', amount: number) {
+    if (amount <= 0) return
+    this.#phaseListenerCounts[type] = Math.max(0, this.#phaseListenerCounts[type] - amount)
+    if (this.#phaseListenerCounts[type] !== 0) return
+    if (type === 'beforeUpdate') {
+      this.#options.scheduler.removeEventListener('beforeUpdate', this.#onSchedulerBeforeUpdate)
+    } else {
+      this.#options.scheduler.removeEventListener('commit', this.#onSchedulerCommit)
+    }
   }
 }
 
@@ -491,27 +591,51 @@ export function dispatchMixinCommit(state?: MixinRuntimeState) {
 }
 
 function dispatchMixinInsert(
-  handle: AnyMixinHandle,
+  handle: ScopedAnyMixinHandle,
+  scope: symbol,
   node: Element,
-  reclaimed: boolean,
   parent: ParentNode,
   key?: string,
 ) {
   let event = new Event('insert') as MixinInsertEvent<Element>
   event.node = node
-  event.reclaimed = reclaimed
   event.parent = parent
   event.key = key
-  handle.dispatchEvent(event)
+  handle.dispatchScopedEvent(scope, event)
 }
 
-function dispatchMixinRemove(
-  handle: AnyMixinHandle,
+function dispatchMixinReclaimed(
+  handle: ScopedAnyMixinHandle,
+  scope: symbol,
+  node: Element,
+  parent: ParentNode,
+  key?: string,
+) {
+  let event = new Event('reclaimed') as MixinReclaimedEvent<Element>
+  event.node = node
+  event.parent = parent
+  event.key = key
+  handle.dispatchScopedEvent(scope, event)
+}
+
+function dispatchMixinBeforeRemove(
+  handle: ScopedAnyMixinHandle,
+  scope: symbol,
   persistNode: (teardown: (signal: AbortSignal) => void | Promise<void>) => void,
 ) {
-  let event = new Event('remove') as MixinRemoveEvent
+  let event = new Event('beforeRemove') as MixinBeforeRemoveEvent
   event.persistNode = persistNode
-  handle.dispatchEvent(event)
+  handle.dispatchScopedEvent(scope, event)
+}
+
+function dispatchMixinRemoveEvent(state?: MixinRuntimeState) {
+  let runners = state?.runners
+  if (!runners?.length) return
+  let handle = state?.handle as ScopedAnyMixinHandle | undefined
+  if (!handle) return
+  for (let entry of runners) {
+    handle.dispatchScopedEvent(entry.scope, new Event('remove'))
+  }
 }
 
 function dispatchMixinUpdateEvent(
@@ -522,10 +646,12 @@ function dispatchMixinUpdateEvent(
   if (!node) return
   let runners = state?.runners
   if (!runners?.length) return
+  let handle = state?.handle as ScopedAnyMixinHandle | undefined
+  if (!handle) return
   for (let entry of runners) {
     let event = new Event(type) as MixinUpdateEvent<Element>
     event.node = node
-    entry.handle.dispatchEvent(event)
+    handle.dispatchScopedEvent(entry.scope, event)
   }
 }
 

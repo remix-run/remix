@@ -286,7 +286,7 @@ function bindNodeMixRuntime(
         ])
       },
     },
-    { reclaimed },
+    { dispatchReclaimed: reclaimed },
   )
 }
 

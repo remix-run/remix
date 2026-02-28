@@ -152,11 +152,10 @@ function waitForAnimationOrAbort(animation: Animation, signal: AbortSignal): Pro
 }
 
 function shouldSkipInitialEntrance(
-  event: { reclaimed: boolean; key?: string; parent: ParentNode },
+  event: { key?: string; parent: ParentNode },
   config: AnimateMixinConfig,
 ): boolean {
   if (config.initial !== false) return false
-  if (event.reclaimed) return false
   if (event.key == null) return false
   let seenForParent = initialEntranceSeenByParent.get(event.parent)
   if (!seenForParent) {
@@ -201,7 +200,10 @@ let animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementPr
 
   handle.addEventListener('insert', (event) => {
     node = event.node
-    if (!event.reclaimed) return
+  })
+
+  handle.addEventListener('reclaimed', (event) => {
+    node = event.node
     let current = animatingNodes.get(event.node)
     if (current && current.animation.playState === 'running') {
       // WAAPI can throw InvalidStateError here if the target is transiently non-rendered
@@ -231,7 +233,7 @@ let animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementPr
     }
   })
 
-  handle.addEventListener('remove', (event) => {
+  handle.addEventListener('beforeRemove', (event) => {
     let config = resolveExitConfig(currentConfig)
     if (!config) return
     event.persistNode(async (signal) => {

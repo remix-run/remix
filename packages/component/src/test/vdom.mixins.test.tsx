@@ -42,6 +42,31 @@ describe('vnode mixins', () => {
     expect(div.getAttribute('data-mixed')).toBe('nested')
   })
 
+  it('shares one handle instance across mixins on the same host node', () => {
+    let handles: unknown[] = []
+    let one = createMixin((handle) => {
+      handles.push(handle)
+      return (props: {}) => <handle.element {...props} />
+    })
+    let two = createMixin((handle) => {
+      handles.push(handle)
+      return (props: {}) => <handle.element {...props} />
+    })
+    let three = createMixin((handle) => {
+      handles.push(handle)
+      return (props: {}) => <handle.element {...props} />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[one(), two(), three()]} />)
+    root.flush()
+
+    expect(handles.length).toBe(3)
+    expect(handles[0]).toBe(handles[1])
+    expect(handles[1]).toBe(handles[2])
+  })
+
   it('supports raw handle.element passthrough returns', () => {
     let withPassthrough = createMixin((handle) => (_props: { title?: string }) => handle.element)
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
@@ -87,13 +112,13 @@ describe('vnode mixins', () => {
   it('runs remove lifecycle when descriptor type changes and on unmount', () => {
     let removedA = 0
     let removedB = 0
-    let persistApiSeenA = false
-    let persistApiSeenB = false
+    let persistApiSeenOnRemoveA = false
+    let persistApiSeenOnRemoveB = false
 
     let a = createMixin((handle) => {
       handle.addEventListener('remove', (event) => {
         removedA++
-        persistApiSeenA = typeof event.persistNode === 'function'
+        persistApiSeenOnRemoveA = 'persistNode' in event
       })
       return (props: { id?: string }) => <handle.element {...props} id="a" />
     })
@@ -101,7 +126,7 @@ describe('vnode mixins', () => {
     let b = createMixin((handle) => {
       handle.addEventListener('remove', (event) => {
         removedB++
-        persistApiSeenB = typeof event.persistNode === 'function'
+        persistApiSeenOnRemoveB = 'persistNode' in event
       })
       return (props: { id?: string }) => <handle.element {...props} id="b" />
     })
@@ -115,8 +140,31 @@ describe('vnode mixins', () => {
 
     expect(removedA).toBe(1)
     expect(removedB).toBe(1)
-    expect(persistApiSeenA).toBe(true)
-    expect(persistApiSeenB).toBe(true)
+    expect(persistApiSeenOnRemoveA).toBe(false)
+    expect(persistApiSeenOnRemoveB).toBe(false)
+  })
+
+  it('exposes persistNode in beforeRemove lifecycle', () => {
+    let beforeRemoveCalls = 0
+    let persistApiSeen = false
+
+    let withBeforeRemove = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        beforeRemoveCalls++
+        persistApiSeen = typeof event.persistNode === 'function'
+      })
+      return (props: { id?: string }) => <handle.element {...props} id="before-remove" />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withBeforeRemove()]} />)
+    root.flush()
+    root.render(null)
+    root.flush()
+
+    expect(beforeRemoveCalls).toBe(1)
+    expect(persistApiSeen).toBe(true)
   })
 
   it('runs insert lifecycle with the bound host node', () => {
@@ -336,18 +384,80 @@ describe('vnode mixins', () => {
     expect(appRenderCount).toBe(1)
   })
 
-  it('defers host removal when remove.persistNode is used', async () => {
+  it('dispatches reclaimed on persisted reuse without rerunning insert or remove', async () => {
+    let insertCalls = 0
+    let reclaimedCalls = 0
+    let removeCalls = 0
+    let beforeRemoveCalls = 0
+    let resolvePending: (() => void) | null = null
+
+    let withReclaimLifecycle = createMixin((handle) => {
+      handle.addEventListener('insert', () => {
+        insertCalls++
+      })
+      handle.addEventListener('reclaimed', () => {
+        reclaimedCalls++
+      })
+      handle.addEventListener('beforeRemove', (event) => {
+        beforeRemoveCalls++
+        event.persistNode(
+          (signal) =>
+            new Promise<void>((resolve) => {
+              let done = () => resolve()
+              resolvePending = done
+              signal.addEventListener('abort', done, { once: true })
+            }),
+        )
+      })
+      handle.addEventListener('remove', () => {
+        removeCalls++
+      })
+      return (props: { id?: string }) => <handle.element {...props} id="reclaimed-target" />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div key="reclaimed" mix={[withReclaimLifecycle()]} />)
+    root.flush()
+    expect(insertCalls).toBe(1)
+    expect(reclaimedCalls).toBe(0)
+    expect(removeCalls).toBe(0)
+
+    root.render(null)
+    root.flush()
+    await Promise.resolve()
+    expect(beforeRemoveCalls).toBe(1)
+    expect(removeCalls).toBe(0)
+
+    root.render(<div key="reclaimed" mix={[withReclaimLifecycle()]} />)
+    root.flush()
+    await Promise.resolve()
+
+    expect(insertCalls).toBe(1)
+    expect(reclaimedCalls).toBe(1)
+    expect(removeCalls).toBe(0)
+
+    if (resolvePending !== null) {
+      ;(resolvePending as () => void)()
+    }
+  })
+
+  it('defers host removal when beforeRemove.persistNode is used', async () => {
     let releaseRemoval: (() => void) | null = null
+    let beforeRemoveCalls = 0
     let removeCalls = 0
     let withDeferredRemove = createMixin((handle) => {
-      handle.addEventListener('remove', (event) => {
-        removeCalls++
+      handle.addEventListener('beforeRemove', (event) => {
+        beforeRemoveCalls++
         event.persistNode(
           () =>
             new Promise<void>((resolve) => {
               releaseRemoval = () => resolve()
             }),
         )
+      })
+      handle.addEventListener('remove', () => {
+        removeCalls++
       })
       return (props: { id?: string }) => <handle.element {...props} id="deferred-remove" />
     })
@@ -363,7 +473,8 @@ describe('vnode mixins', () => {
     root.render(null)
     root.flush()
     await Promise.resolve()
-    expect(removeCalls).toBe(1)
+    expect(beforeRemoveCalls).toBe(1)
+    expect(removeCalls).toBe(0)
     expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)
 
     let release =
@@ -373,6 +484,7 @@ describe('vnode mixins', () => {
       })
     release()
     await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(removeCalls).toBe(1)
     expect(container.querySelector('#deferred-remove')).toBe(null)
   })
 })
