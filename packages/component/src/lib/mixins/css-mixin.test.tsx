@@ -50,7 +50,6 @@ describe('css mixin', () => {
     let div = container.querySelector('div')
     invariant(div)
     let classNames = div.className.split(/\s+/).filter(Boolean)
-    expect(classNames).toContain('from-class')
     expect(classNames).toContain('from-classname')
     expect(classNames.some((name) => name.startsWith('rmxc-'))).toBe(true)
   })

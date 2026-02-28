@@ -188,20 +188,25 @@ function createRootFrameHandle(init: {
   scheduler: Scheduler
   styleManager: StyleManager
 }): FrameHandle {
-  if (!init.resolveFrame) {
-    return createFrameHandle({ src: init.src ?? '/' })
-  }
+  let resolveFrame =
+    init.resolveFrame ??
+    (() => {
+      throw new Error(
+        'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
+      )
+    })
 
   let frame = createFrameHandle({
     src: init.src ?? '/',
     $runtime: {
+      canResolveFrames: !!init.resolveFrame,
       topFrame: undefined,
       loadModule:
         init.loadModule ??
         (() => {
           throw new Error('loadModule is required to hydrate client entries inside <Frame />')
         }),
-      resolveFrame: init.resolveFrame,
+      resolveFrame,
       pendingClientEntries: new Map(),
       scheduler: init.scheduler,
       styleManager: init.styleManager,

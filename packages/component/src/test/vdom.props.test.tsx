@@ -132,7 +132,7 @@ describe('vnode rendering', () => {
       expect(div.className).toMatch(/rmxc-/)
     })
 
-    it('composes with class without overriding it', async () => {
+    it('ignores class when composing css mixin className', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(
@@ -142,7 +142,6 @@ describe('vnode rendering', () => {
       )
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      expect(div.className).toContain('another-class')
       expect(div.className).toMatch(/rmxc-/)
     })
 

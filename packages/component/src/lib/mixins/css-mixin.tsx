@@ -1,6 +1,6 @@
 import { createMixin } from '../mixin.ts'
 import type { ElementProps } from '../jsx.ts'
-import { defaultStyleManager } from '../diff-props.ts'
+import { invariant } from '../invariant.ts'
 import { processStyleClass } from '../style/index.ts'
 import type { CSSProps } from '../style/lib/style.ts'
 
@@ -19,79 +19,55 @@ export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle)
 
   handle.addEventListener('remove', () => {
     if (!activeSelector) return
-    let styleManager = resolveStyleManager(handle)
-    styleManager?.remove(activeSelector)
+    let runtime = handle.frame.$runtime as {
+      styleCache?: StyleCache
+      styleManager?: StyleManagerLike
+    }
+    invariant(runtime, 'css mixin requires frame runtime')
+    let styleTarget = resolveStyleTarget(runtime)
+    styleTarget.styleManager?.remove(activeSelector)
     activeSelector = ''
   })
 
   return (styles, props) => {
     currentStyles = styles
-    let styleTarget = resolveStyleTarget(handle)
-    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.cache)
+    let runtime = handle.frame.$runtime as {
+      styleCache?: StyleCache
+      styleManager?: StyleManagerLike
+    }
+    invariant(runtime, 'css mixin requires frame runtime')
+    let styleTarget = resolveStyleTarget(runtime)
+    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
 
-    if (styleTarget.kind === 'manager') {
+    if (styleTarget.styleManager) {
       if (activeSelector && activeSelector !== selector) {
-        styleTarget.value.remove(activeSelector)
+        styleTarget.styleManager.remove(activeSelector)
       }
       if (selector && activeSelector !== selector) {
-        styleTarget.value.insert(selector, cssText)
+        styleTarget.styleManager.insert(selector, cssText)
       }
       activeSelector = selector
     }
 
-    let nextProps = { ...props } as ElementProps & { class?: string }
-    let existingClassName = joinClassNames(
-      typeof props.className === 'string' ? props.className : '',
-      typeof props.class === 'string' ? props.class : '',
-    )
-    let className = joinClassNames(existingClassName, selector)
-    if (className) {
-      nextProps.className = className
-    } else {
-      delete nextProps.className
+    if (!selector) {
+      return handle.element
     }
-    delete nextProps.class
-    return <handle.element {...nextProps} />
+
+    return (
+      <handle.element
+        {...props}
+        className={props.className ? `${props.className} ${selector}` : selector}
+      />
+    )
   }
 })
 
-function resolveStyleTarget(handle: {
-  frame: { $runtime?: unknown }
-}):
-  | { kind: 'manager'; value: StyleManagerLike; cache: StyleCache }
-  | { kind: 'cache'; value: StyleCache; cache: StyleCache } {
-  let runtime = handle.frame.$runtime as
-    | { styleCache?: StyleCache; styleManager?: StyleManagerLike }
-    | undefined
-  if (runtime?.styleCache) {
-    return { kind: 'cache', value: runtime.styleCache, cache: runtime.styleCache }
+function resolveStyleTarget(runtime: {
+  styleCache?: StyleCache
+  styleManager?: StyleManagerLike
+}): { styleCache: StyleCache; styleManager?: StyleManagerLike } {
+  return {
+    styleCache: runtime.styleCache ?? clientStyleCache,
+    styleManager: runtime.styleManager,
   }
-  let styleManager = runtime?.styleManager ?? resolveStyleManager(handle)
-  if (styleManager) {
-    return { kind: 'manager', value: styleManager, cache: clientStyleCache }
-  }
-  return { kind: 'cache', value: clientStyleCache, cache: clientStyleCache }
-}
-
-function resolveStyleManager(handle: {
-  frame: { $runtime?: unknown }
-}): StyleManagerLike | undefined {
-  let runtime = handle.frame.$runtime as { styleManager?: StyleManagerLike } | undefined
-  if (runtime?.styleManager) return runtime.styleManager
-  if (typeof window === 'undefined') return undefined
-  return defaultStyleManager
-}
-
-function joinClassNames(...values: string[]): string {
-  let seen = new Set<string>()
-  let parts: string[] = []
-  for (let value of values) {
-    if (!value) continue
-    for (let entry of value.split(/\s+/)) {
-      if (!entry || seen.has(entry)) continue
-      seen.add(entry)
-      parts.push(entry)
-    }
-  }
-  return parts.join(' ')
 }

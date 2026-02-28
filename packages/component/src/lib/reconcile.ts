@@ -818,7 +818,7 @@ function insertFrame(
   cursor?: Node | null,
 ): Node | null | undefined {
   let runtime = getFrameRuntime(frame)
-  if (!runtime) {
+  if (!runtime || (runtime as { canResolveFrames?: boolean }).canResolveFrames === false) {
     throw new Error(
       'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
     )
