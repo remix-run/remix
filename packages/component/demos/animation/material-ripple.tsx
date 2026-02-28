@@ -1,6 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css, on } from 'remix/component'
-import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
+import { animateEntrance, animateExit, css, on, pressEvents } from 'remix/component'
 
 type Ripple = {
   id: number
@@ -69,15 +68,16 @@ export function MaterialRipple(handle: Handle) {
             outlineOffset: 2,
           },
         }),
-        on(pressDown, (event) => {
+        pressEvents(),
+        on(pressEvents.down, (event) => {
           if (!buttonEl) return
           let rect = buttonEl.getBoundingClientRect()
           let x = event.clientX || rect.left + rect.width / 2
           let y = event.clientY || rect.top + rect.height / 2
           createRipple(x, y)
         }),
-        on(pressUp, removeAllRipples),
-        on(pressCancel, removeAllRipples),
+        on(pressEvents.up, removeAllRipples),
+        on(pressEvents.cancel, removeAllRipples),
       ]}
     >
       Click me

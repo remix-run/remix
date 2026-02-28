@@ -131,7 +131,7 @@ createRoot(document.body).render(
       <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
         <ExitAnimation />
       </Tile>
-      <Tile title="Press Interaction" notes="CSS transition + pressDown/pressUp events">
+      <Tile title="Press Interaction" notes="CSS transition + pressEvents.down/up events">
         <Press />
       </Tile>
       <Tile title="HTML Content" notes="rAF loop with spring iterator for text">
