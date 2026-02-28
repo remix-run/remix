@@ -1,4 +1,4 @@
-import { clientEntry, type Handle } from 'remix/component'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 export let ReloadTime = clientEntry(
   '/assets/reload-time.js#ReloadTime',
@@ -8,7 +8,8 @@ export let ReloadTime = clientEntry(
     return () => (
       <button
         type="button"
-        css={{
+        mix={[
+          css({
           padding: '6px 10px',
           borderRadius: 10,
           border: '1px solid rgba(255,255,255,0.18)',
@@ -16,19 +17,18 @@ export let ReloadTime = clientEntry(
           color: '#e9eefc',
           cursor: pending ? 'default' : 'pointer',
           '&:hover': { background: 'var(--bg)' },
-        }}
-        style={{
-          '--bg': pending ? undefined : 'rgba(255,255,255,0.1)',
-        }}
-        on={{
-          async click() {
+          }),
+          on('click', async () => {
             pending = true
             handle.update()
             let reloadSignal = await handle.frame.reload()
             if (reloadSignal.aborted) return
             pending = false
             handle.update()
-          },
+          }),
+        ]}
+        style={{
+          '--bg': pending ? undefined : 'rgba(255,255,255,0.1)',
         }}
       >
         {pending ? 'Refreshing…' : 'Refresh'}

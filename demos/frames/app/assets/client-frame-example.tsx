@@ -1,4 +1,4 @@
-import { clientEntry, Frame, type Handle } from 'remix/component'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 
 export let ClientFrameExample = clientEntry(
   '/assets/client-frame-example.js#ClientFrameExample',
@@ -7,26 +7,27 @@ export let ClientFrameExample = clientEntry(
 
     return () => (
       <section
-        css={{
+        mix={[css({
           marginTop: 16,
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 10,
           padding: 12,
           background: 'rgba(255,255,255,0.03)',
-        }}
+        })]}
       >
         <div
-          css={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+          mix={[css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 })]}
         >
           <div>
-            <div css={{ fontSize: 13, color: '#b9c6ff' }}>Client-rendered Frame</div>
-            <div css={{ fontSize: 12, color: '#9aa8e8' }}>
+            <div mix={[css({ fontSize: 13, color: '#b9c6ff' })]}>Client-rendered Frame</div>
+            <div mix={[css({ fontSize: 12, color: '#9aa8e8' })]}>
               Added after hydration via a client entry component.
             </div>
           </div>
           <button
             type="button"
-            css={{
+            mix={[
+              css({
               padding: '6px 10px',
               borderRadius: 10,
               border: '1px solid rgba(255,255,255,0.18)',
@@ -34,23 +35,22 @@ export let ClientFrameExample = clientEntry(
               color: '#e9eefc',
               cursor: 'pointer',
               '&:hover': { background: 'rgba(255,255,255,0.10)' },
-            }}
-            on={{
-              click() {
+              }),
+              on('click', () => {
                 mounted = !mounted
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             {mounted ? 'Remove Frame' : 'Mount Frame'}
           </button>
         </div>
 
         {mounted ? (
-          <div css={{ marginTop: 10 }}>
+          <div mix={[css({ marginTop: 10 })]}>
             <Frame
               src="/frames/client-frame-example"
-              fallback={<div css={{ color: '#9aa8e8' }}>Loading client frame content…</div>}
+              fallback={<div mix={[css({ color: '#9aa8e8' })]}>Loading client frame content…</div>}
             />
           </div>
         ) : null}
