@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
+import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
@@ -22,7 +23,7 @@ export default {
             <div class="card">
               <h1>Checkout</h1>
               <p>Your cart is empty. Add some books before checking out.</p>
-              <p css={{ marginTop: '1rem' }}>
+              <p mix={[css({ marginTop: '1rem' })]}>
                 <a href={routes.books.index.href()} class="btn">
                   Browse Books
                 </a>
@@ -38,7 +39,7 @@ export default {
 
           <div class="card">
             <h2>Order Summary</h2>
-            <table css={{ marginTop: '1rem' }}>
+            <table mix={[css({ marginTop: '1rem' })]}>
               <thead>
                 <tr>
                   <th>Book</th>
@@ -59,16 +60,16 @@ export default {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
+                  <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
                     Total:
                   </td>
-                  <td css={{ fontWeight: 'bold' }}>${total.toFixed(2)}</td>
+                  <td mix={[css({ fontWeight: 'bold' })]}>${total.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          <div class="card" css={{ marginTop: '1.5rem' }}>
+          <div class="card" mix={[css({ marginTop: '1.5rem' })]}>
             <h2>Shipping Information</h2>
             <form method="POST" action={routes.checkout.action.href()}>
               <div class="form-group">
@@ -97,7 +98,7 @@ export default {
               <a
                 href={routes.cart.index.href()}
                 class="btn btn-secondary"
-                css={{ marginLeft: '0.5rem' }}
+                mix={[css({ marginLeft: '0.5rem' })]}
               >
                 Back to Cart
               </a>
@@ -189,7 +190,7 @@ export default {
       return render(
         <Layout>
           <div class="alert alert-success">
-            <h1 css={{ marginBottom: '0.5rem' }}>Order Confirmed!</h1>
+            <h1 mix={[css({ marginBottom: '0.5rem' })]}>Order Confirmed!</h1>
             <p>Thank you for your purchase. Your order has been placed successfully.</p>
           </div>
 
@@ -205,19 +206,19 @@ export default {
               <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
             </p>
 
-            <p css={{ marginTop: '2rem' }}>
+            <p mix={[css({ marginTop: '2rem' })]}>
               We'll send you a confirmation email shortly. You can track your order status in your
               account.
             </p>
 
-            <div css={{ marginTop: '2rem' }}>
+            <div mix={[css({ marginTop: '2rem' })]}>
               <a href={routes.account.orders.show.href({ orderId: order.id })} class="btn">
                 View Order Details
               </a>
               <a
                 href={routes.books.index.href()}
                 class="btn btn-secondary"
-                css={{ marginLeft: '0.5rem' }}
+                mix={[css({ marginLeft: '0.5rem' })]}
               >
                 Continue Shopping
               </a>

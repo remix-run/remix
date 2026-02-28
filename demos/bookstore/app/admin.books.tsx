@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
+import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { books } from './data/schema.ts'
@@ -15,14 +16,14 @@ export default {
       <Layout>
         <h1>Manage Books</h1>
 
-        <p css={{ marginBottom: '1rem' }}>
+        <p mix={[css({ marginBottom: '1rem' })]}>
           <a href={routes.admin.books.new.href()} class="btn">
             Add New Book
           </a>
           <a
             href={routes.admin.index.href()}
             class="btn btn-secondary"
-            css={{ marginLeft: '0.5rem' }}
+            mix={[css({ marginLeft: '0.5rem' })]}
           >
             Back to Dashboard
           </a>
@@ -56,19 +57,19 @@ export default {
                     <a
                       href={routes.admin.books.edit.href({ bookId: book.id })}
                       class="btn btn-secondary"
-                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                      mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
                     >
                       Edit
                     </a>
                     <RestfulForm
                       method="DELETE"
                       action={routes.admin.books.destroy.href({ bookId: book.id })}
-                      css={{ display: 'inline' }}
+                      mix={[css({ display: 'inline' })]}
                     >
                       <button
                         type="submit"
                         class="btn btn-danger"
-                        css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                        mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
                       >
                         Delete
                       </button>
@@ -133,14 +134,14 @@ export default {
             </span>
           </p>
 
-          <div css={{ marginTop: '2rem' }}>
+          <div mix={[css({ marginTop: '2rem' })]}>
             <a href={routes.admin.books.edit.href({ bookId: book.id })} class="btn">
               Edit
             </a>
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              css={{ marginLeft: '0.5rem' }}
+              mix={[css({ marginLeft: '0.5rem' })]}
             >
               Back to List
             </a>
@@ -212,7 +213,9 @@ export default {
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
               <input type="file" id="cover" name="cover" accept="image/*" />
-              <small css={{ color: '#666' }}>Optional. Upload a cover image for this book.</small>
+              <small mix={[css({ color: '#666' })]}>
+                Optional. Upload a cover image for this book.
+              </small>
             </div>
 
             <button type="submit" class="btn">
@@ -221,7 +224,7 @@ export default {
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              css={{ marginLeft: '0.5rem' }}
+              mix={[css({ marginLeft: '0.5rem' })]}
             >
               Cancel
             </a>
@@ -343,17 +346,17 @@ export default {
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
               {book.cover_url !== '/images/placeholder.jpg' && (
-                <div css={{ marginBottom: '0.5rem' }}>
+                <div mix={[css({ marginBottom: '0.5rem' })]}>
                   <img
                     src={book.cover_url}
                     alt={book.title}
-                    css={{ maxWidth: '200px', height: 'auto', borderRadius: '4px' }}
+                    mix={[css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })]}
                   />
-                  <p css={{ fontSize: '0.875rem', color: '#666' }}>Current cover image</p>
+                  <p mix={[css({ fontSize: '0.875rem', color: '#666' })]}>Current cover image</p>
                 </div>
               )}
               <input type="file" id="cover" name="cover" accept="image/*" />
-              <small css={{ color: '#666' }}>
+              <small mix={[css({ color: '#666' })]}>
                 Optional. Upload a new cover image to replace the current one.
               </small>
             </div>
@@ -364,7 +367,7 @@ export default {
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              css={{ marginLeft: '0.5rem' }}
+              mix={[css({ marginLeft: '0.5rem' })]}
             >
               Cancel
             </a>

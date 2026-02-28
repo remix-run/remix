@@ -1,4 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
+import { css } from 'remix/component'
 import type { routes } from './routes.ts'
 import { CartButton } from './assets/cart-button.tsx'
 import { CartItems } from './assets/cart-items.tsx'
@@ -32,9 +33,9 @@ export default {
 
       if (cart.items.length === 0) {
         return renderFragment(
-          <div css={{ marginTop: '2rem' }}>
+          <div mix={[css({ marginTop: '2rem' })]}>
             <p>Your cart is empty.</p>
-            <p css={{ marginTop: '1rem' }}>
+            <p mix={[css({ marginTop: '1rem' })]}>
               <a href={appRoutes.books.index.href()} class="btn">
                 Browse Books
               </a>

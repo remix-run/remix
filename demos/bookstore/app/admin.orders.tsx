@@ -1,4 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
+import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { orders, orderItemsWithBook } from './data/schema.ts'
@@ -16,7 +17,7 @@ export default {
       <Layout>
         <h1>Manage Orders</h1>
 
-        <p css={{ marginBottom: '1rem' }}>
+        <p mix={[css({ marginBottom: '1rem' })]}>
           <a href={routes.admin.index.href()} class="btn btn-secondary">
             Back to Dashboard
           </a>
@@ -48,7 +49,7 @@ export default {
                     <a
                       href={routes.admin.orders.show.href({ orderId: order.id })}
                       class="btn btn-secondary"
-                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                      mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
                     >
                       View
                     </a>
@@ -100,8 +101,8 @@ export default {
             <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
           </p>
 
-          <h2 css={{ marginTop: '2rem' }}>Items</h2>
-          <table css={{ marginTop: '1rem' }}>
+          <h2 mix={[css({ marginTop: '2rem' })]}>Items</h2>
+          <table mix={[css({ marginTop: '1rem' })]}>
             <thead>
               <tr>
                 <th>Book</th>
@@ -122,22 +123,22 @@ export default {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
+                <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
                   Total:
                 </td>
-                <td css={{ fontWeight: 'bold' }}>${order.total.toFixed(2)}</td>
+                <td mix={[css({ fontWeight: 'bold' })]}>${order.total.toFixed(2)}</td>
               </tr>
             </tfoot>
           </table>
 
-          <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
+          <h2 mix={[css({ marginTop: '2rem' })]}>Shipping Address</h2>
           <p>{shippingAddress.street}</p>
           <p>
             {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
           </p>
         </div>
 
-        <p css={{ marginTop: '1.5rem' }}>
+        <p mix={[css({ marginTop: '1.5rem' })]}>
           <a href={routes.admin.orders.index.href()} class="btn btn-secondary">
             Back to Orders
           </a>

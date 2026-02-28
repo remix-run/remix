@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
+import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
@@ -34,14 +35,14 @@ export default {
               <strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}
             </p>
 
-            <p css={{ marginTop: '1.5rem' }}>
+            <p mix={[css({ marginTop: '1.5rem' })]}>
               <a href={routes.account.settings.index.href()} class="btn">
                 Edit Settings
               </a>
             </p>
           </div>
 
-          <div class="card" css={{ marginTop: '1.5rem' }}>
+          <div class="card" mix={[css({ marginTop: '1.5rem' })]}>
             <h2>Quick Links</h2>
             <p>
               <a href={routes.account.orders.index.href()} class="btn btn-secondary">
@@ -50,7 +51,7 @@ export default {
               <a
                 href={routes.books.index.href()}
                 class="btn btn-secondary"
-                css={{ marginLeft: '0.5rem' }}
+                mix={[css({ marginLeft: '0.5rem' })]}
               >
                 Browse Books
               </a>
@@ -96,7 +97,7 @@ export default {
                 <a
                   href={routes.account.index.href()}
                   class="btn btn-secondary"
-                  css={{ marginLeft: '0.5rem' }}
+                  mix={[css({ marginLeft: '0.5rem' })]}
                 >
                   Cancel
                 </a>
@@ -164,7 +165,7 @@ export default {
                           <a
                             href={routes.account.orders.show.href({ orderId: order.id })}
                             class="btn btn-secondary"
-                            css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                            mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
                           >
                             View
                           </a>
@@ -178,7 +179,7 @@ export default {
               )}
             </div>
 
-            <p css={{ marginTop: '1.5rem' }}>
+            <p mix={[css({ marginTop: '1.5rem' })]}>
               <a href={routes.account.index.href()} class="btn btn-secondary">
                 Back to Account
               </a>
@@ -228,8 +229,8 @@ export default {
                 <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
               </p>
 
-              <h2 css={{ marginTop: '2rem' }}>Items</h2>
-              <table css={{ marginTop: '1rem' }}>
+              <h2 mix={[css({ marginTop: '2rem' })]}>Items</h2>
+              <table mix={[css({ marginTop: '1rem' })]}>
                 <thead>
                   <tr>
                     <th>Book</th>
@@ -250,22 +251,22 @@ export default {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
+                    <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
                       Total:
                     </td>
-                    <td css={{ fontWeight: 'bold' }}>${order.total.toFixed(2)}</td>
+                    <td mix={[css({ fontWeight: 'bold' })]}>${order.total.toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>
 
-              <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
+              <h2 mix={[css({ marginTop: '2rem' })]}>Shipping Address</h2>
               <p>{shippingAddress.street}</p>
               <p>
                 {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
               </p>
             </div>
 
-            <p css={{ marginTop: '1.5rem' }}>
+            <p mix={[css({ marginTop: '1.5rem' })]}>
               <a href={routes.account.orders.index.href()} class="btn btn-secondary">
                 Back to Orders
               </a>
