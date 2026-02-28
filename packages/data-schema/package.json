@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/data-schema",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tiny, standards-aligned schema validation",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

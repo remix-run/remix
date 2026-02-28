@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage-s3",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "S3 backend for @remix-run/file-storage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {

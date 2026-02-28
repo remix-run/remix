@@ -2,6 +2,67 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `handle.update()` now returns `Promise<AbortSignal>` instead of accepting an optional task callback.
+
+  - The promise is resolved when the update is complete (DOM is updated, tasks have run)
+  - The signal is aborted when the component updates again or is removed.
+
+  ```tsx
+  let signal = await handle.update()
+  // dom is updated
+  // focus/scroll elements
+  // do fetches, etc.
+  ```
+
+  Note that `await handle.update()` resumes on a microtask after the flush completes, so the browser may paint before your code runs. For work that must happen synchronously during the flush (e.g. measuring elements and triggering another update without flicker), continue to use `handle.queueTask()` instead.
+
+  ```tsx
+  handle.update()
+  handle.queueTask(() => {
+    let rect = widthReferenceNode.getBoundingClientRect()
+    if (rect.width !== width) {
+      width = rect.width
+      handle.update()
+    }
+  })
+  ```
+
+- BREAKING CHANGE: rename virtual root teardown from `remove()` to `dispose()`.
+
+  Old -> new:
+
+  - `root.remove()` -> `root.dispose()` (for both `createRoot()` and `createRangeRoot()` roots)
+  - `app.remove()` -> `app.dispose()` when using `run(...)`
+
+  This aligns virtual root teardown with `run(...).dispose()` for full-app cleanup.
+
+- Add SSR with out-of-order streaming, selective hydration, async frames, and granular ui refresh
+
+  ADDITIONS:
+
+  - `<Frame>`
+  - `renderToStream(node, { resolveFrame })`
+  - `clientEntry`
+  - `run(document, { loadModule, resolveFrame })`
+  - `handle.frame`
+  - `handle.frames`
+
+### Patch Changes
+
+- Fix host prop removal to fully remove reflected attributes while still resetting runtime form control state.
+
+  Adds regression coverage for attribute removal/update behavior to prevent empty-attribute regressions.
+
+- Fix updates for nested component-to-element replacements
+
+- Harden SVG attribute normalization so canonical SVG attribute names are preserved consistently across server rendering, hydration, and client DOM updates.
+
+  This fixes rendering/behavior regressions caused by incorrect attribute casing (including filter and other SVG effect/geometry attributes) and improves parity with standard React/browser SVG behavior.
+
 ## v0.4.0
 
 ### Minor Changes
