@@ -475,7 +475,7 @@ function resolveSsrMixedProps(
     let nextProps = remixResult.props as ElementProps
     let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
     for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = composeSsrMixinProps(composedProps, withoutSsrMix(nextProps))
+    composedProps = { ...composedProps, ...withoutSsrMix(nextProps) }
   }
 
   let nextMix = initialProps.mix
@@ -546,44 +546,6 @@ function withoutSsrMix(props: ElementProps): ElementProps {
   let output = { ...props }
   delete output.mix
   return output
-}
-
-function composeSsrMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
-  let composed = { ...previous, ...next }
-  let previousClassName = readClassName(previous)
-  let nextClassName = readClassName(next)
-
-  if (previousClassName || nextClassName) {
-    composed.className = joinClassNames(nextClassName, previousClassName)
-    if ('class' in composed) {
-      delete (composed as { class?: unknown }).class
-    }
-  }
-
-  return composed
-}
-
-function readClassName(props: ElementProps): string {
-  let className = typeof props.className === 'string' ? props.className : ''
-  let classAttr =
-    'class' in (props as object) && typeof (props as { class?: unknown }).class === 'string'
-      ? ((props as { class?: string }).class ?? '')
-      : ''
-  return joinClassNames(className, classAttr)
-}
-
-function joinClassNames(...values: string[]): string {
-  let seen = new Set<string>()
-  let parts: string[] = []
-  for (let value of values) {
-    if (!value) continue
-    for (let token of value.split(/\s+/)) {
-      if (!token || seen.has(token)) continue
-      seen.add(token)
-      parts.push(token)
-    }
-  }
-  return parts.join(' ')
 }
 
 function isSsrMixinElement(
@@ -878,6 +840,14 @@ function finalizeHtml(html: string, context: RenderContext): string {
 
 function processStyleProps(props: any): any {
   let processedProps = { ...props }
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  let mergedClassName = [classAttr, className].filter(Boolean).join(' ')
+
+  if (mergedClassName) {
+    processedProps.className = mergedClassName
+    delete processedProps.class
+  }
 
   if (typeof props.style === 'object') {
     processedProps.style = serializeStyleObject(props.style)

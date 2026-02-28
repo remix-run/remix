@@ -696,41 +696,7 @@ function withoutMix(props: ElementProps): ElementProps {
 }
 
 function composeMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
-  let composed = { ...previous, ...next }
-  let previousClassName = readClassName(previous)
-  let nextClassName = readClassName(next)
-
-  if (previousClassName || nextClassName) {
-    composed.className = joinClassNames(nextClassName, previousClassName)
-    if ('class' in composed) {
-      delete (composed as { class?: unknown }).class
-    }
-  }
-
-  return composed
-}
-
-function readClassName(props: ElementProps): string {
-  let className = typeof props.className === 'string' ? props.className : ''
-  let classAttr =
-    'class' in (props as object) && typeof (props as { class?: unknown }).class === 'string'
-      ? ((props as { class?: string }).class ?? '')
-      : ''
-  return joinClassNames(className, classAttr)
-}
-
-function joinClassNames(...values: string[]): string {
-  let seen = new Set<string>()
-  let parts: string[] = []
-  for (let value of values) {
-    if (!value) continue
-    for (let token of value.split(/\s+/)) {
-      if (!token || seen.has(token)) continue
-      seen.add(token)
-      parts.push(token)
-    }
-  }
-  return parts.join(' ')
+  return { ...previous, ...next }
 }
 
 function isRemixElement(value: unknown): value is RemixElement {
