@@ -72,6 +72,7 @@ export type MixinHandle<
   id: string
   frame: FrameHandle
   element: MixinElement<node, props>
+  signal: AbortSignal
   update(): Promise<AbortSignal>
   queueTask(task: (node: node, signal: AbortSignal) => void): void
 }
@@ -436,6 +437,10 @@ class MixinHandleImpl
       })) as unknown as MixinElement<Element, ElementProps>
     element.__rmxMixinElementType = options.hostType
     this.element = element
+  }
+
+  get signal() {
+    return this.#options.getSignal()
   }
 
   addEventListener(

@@ -64,6 +64,23 @@ describe('vnode mixins', () => {
     expect(handles[1]).toBe(handles[2])
   })
 
+  it('aborts handle.signal when the host node is removed', () => {
+    let signal = AbortSignal.abort()
+    let withSignal = createMixin((handle) => {
+      signal = handle.signal
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withSignal()]} />)
+    root.flush()
+    expect(signal.aborted).toBe(false)
+
+    root.render(null)
+    root.flush()
+    expect(signal.aborted).toBe(true)
+  })
+
   it('supports setup-only passthrough mixins', () => {
     let withPassthrough = createMixin((_handle) => {})
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (

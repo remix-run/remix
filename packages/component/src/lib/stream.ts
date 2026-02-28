@@ -107,6 +107,25 @@ const NUMERIC_CSS_PROPS = new Set([
 ])
 
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
+const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
+
+function createSsrThrowingSignal(): AbortSignal {
+  let error = new Error(
+    'handle.signal is not available during SSR. It should only be used in client-side lifecycles.',
+  )
+  let throwAccess = () => {
+    throw error
+  }
+  return new Proxy({} as AbortSignal, {
+    get: throwAccess,
+    set: throwAccess,
+    has: throwAccess,
+    ownKeys: throwAccess,
+    getOwnPropertyDescriptor: throwAccess,
+    defineProperty: throwAccess,
+    getPrototypeOf: throwAccess,
+  })
+}
 
 export function renderToStream(
   node: RemixNode,
@@ -503,7 +522,7 @@ function resolveSsrMixinRunner(
 }
 
 function createSsrMixinHandle(hostType: string, context: RenderContext) {
-  let signal = new AbortController().signal
+  let signal = SSR_MIXIN_SIGNAL
   let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
     $rmx: true as const,
     type: hostType,
@@ -526,6 +545,7 @@ function createSsrMixinHandle(hostType: string, context: RenderContext) {
       },
     }),
     element,
+    signal,
     update: () => Promise.resolve(signal),
     queueTask: () => {},
     on: () => {},
