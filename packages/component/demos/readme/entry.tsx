@@ -1,4 +1,4 @@
-import { createRoot, css, on, type Handle, type RemixNode } from 'remix/component'
+import { createRoot, css, on, ref, type Handle, type RemixNode } from 'remix/component'
 import { TypedEventTarget } from 'remix/interaction'
 
 // ============================================================================
@@ -277,7 +277,7 @@ function ButtonAdvanced(handle: Handle) {
 }
 
 // ============================================================================
-// Connect Prop - Form (Basic)
+// Ref Mixin - Form (Basic)
 // ============================================================================
 function FormBasic(handle: Handle) {
   let inputRef: HTMLInputElement
@@ -287,9 +287,8 @@ function FormBasic(handle: Handle) {
       <input
         type="text"
         placeholder="Click the button to select this"
-        // get the input node
-        connect={(node) => (inputRef = node)}
-        mix={[css({ marginRight: '8px', padding: '4px 8px' })]}
+        // capture the input node
+        mix={[ref((node) => (inputRef = node)), css({ marginRight: '8px', padding: '4px 8px' })]}
       />
       <button
         mix={[
@@ -307,31 +306,31 @@ function FormBasic(handle: Handle) {
 }
 
 // ============================================================================
-// Connect Prop with AbortSignal - ResizeObserver Component
+// Ref Mixin with AbortSignal - ResizeObserver Component
 // ============================================================================
 function ResizeComponent(handle: Handle) {
   let dimensions = { width: 0, height: 0 }
 
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up something that needs cleanup
-        let observer = new ResizeObserver((entries) => {
-          let entry = entries[0]
-          if (entry) {
-            dimensions.width = Math.round(entry.contentRect.width)
-            dimensions.height = Math.round(entry.contentRect.height)
-            handle.update()
-          }
-        })
-        observer.observe(node)
-
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
       mix={[
+        ref((node, signal) => {
+          // Set up something that needs cleanup
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
+
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
         css({
           padding: '20px',
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -361,8 +360,8 @@ function Player(handle: Handle) {
     <div mix={[css({ display: 'flex', gap: '8px' })]}>
       <button
         disabled={isPlaying}
-        connect={(node) => (playButton = node)}
         mix={[
+          ref((node) => (playButton = node)),
           css({
             padding: '8px 16px',
             opacity: isPlaying ? 0.5 : 1,
@@ -379,8 +378,8 @@ function Player(handle: Handle) {
       </button>
       <button
         disabled={!isPlaying}
-        connect={(node) => (stopButton = node)}
         mix={[
+          ref((node) => (stopButton = node)),
           css({
             padding: '8px 16px',
             opacity: !isPlaying ? 0.5 : 1,
@@ -429,8 +428,8 @@ function FormWithScroll(handle: Handle) {
       </label>
       {showDetails && (
         <section
-          connect={(node) => (detailsSection = node)}
           mix={[
+            ref((node) => (detailsSection = node)),
             css({
               marginTop: '1rem',
               padding: '1rem',
@@ -653,11 +652,11 @@ function DemoApp(handle: Handle) {
         <ButtonAdvanced />
       </Example>
 
-      <Example title="Connect Prop - Form">
+      <Example title="Ref Mixin - Form">
         <FormBasic />
       </Example>
 
-      <Example title="Connect with AbortSignal - Resize Observer">
+      <Example title="Ref with AbortSignal - Resize Observer">
         <ResizeComponent />
       </Example>
 

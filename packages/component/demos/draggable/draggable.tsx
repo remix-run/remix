@@ -11,7 +11,6 @@ export let dragEndEvent = 'rmx:dragend' as const
 
 type DraggableProps = {
   on?: EventListeners<HTMLElement>
-  connect?: (node: HTMLElement, signal: AbortSignal) => void
 }
 
 let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle) => {

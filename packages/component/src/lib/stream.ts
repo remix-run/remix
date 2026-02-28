@@ -550,17 +550,8 @@ function withoutSsrMix(props: ElementProps): ElementProps {
 
 function composeSsrMixinProps(previous: ElementProps, next: ElementProps): ElementProps {
   let composed = { ...previous, ...next }
-  let previousConnect = previous.connect
-  let nextConnect = next.connect
   let previousClassName = readClassName(previous)
   let nextClassName = readClassName(next)
-
-  if (typeof previousConnect === 'function' && typeof nextConnect === 'function') {
-    composed.connect = (node: Element, signal: AbortSignal) => {
-      nextConnect(node, signal)
-      previousConnect(node, signal)
-    }
-  }
 
   if (previousClassName || nextClassName) {
     composed.className = joinClassNames(nextClassName, previousClassName)

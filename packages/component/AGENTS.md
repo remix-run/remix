@@ -234,7 +234,7 @@ function Form(handle: Handle) {
         ]}
       />
       {showDetails && (
-        <section connect={(node) => (detailsSection = node)}>Details content</section>
+        <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
       )}
     </form>
   )
@@ -1182,9 +1182,9 @@ This example demonstrates:
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements that need them
 
-### Connect Prop
+### Ref Mixin
 
-Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
+Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
 
 ```tsx
 function Form(handle: Handle) {
@@ -1192,7 +1192,7 @@ function Form(handle: Handle) {
 
   return () => (
     <form>
-      <input type="text" connect={(node) => (inputRef = node)} />
+      <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
         on={{
           click() {
@@ -1208,7 +1208,7 @@ function Form(handle: Handle) {
 }
 ```
 
-The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
+The `ref` callback receives an `AbortSignal` as its second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
 
 ```tsx
 function ResizeTracker(handle: Handle) {
@@ -1216,23 +1216,25 @@ function ResizeTracker(handle: Handle) {
 
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up ResizeObserver
-        let observer = new ResizeObserver((entries) => {
-          let entry = entries[0]
-          if (entry) {
-            dimensions.width = Math.round(entry.contentRect.width)
-            dimensions.height = Math.round(entry.contentRect.height)
-            handle.update()
-          }
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up ResizeObserver
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
     >
       Size: {dimensions.width} × {dimensions.height}
     </div>
@@ -1240,7 +1242,7 @@ function ResizeTracker(handle: Handle) {
 }
 ```
 
-The `connect` callback is called only once when the element is first rendered, not on every update.
+The `ref` callback is called only once when the element is first rendered, not on every update.
 
 ### Key Prop
 
@@ -1607,7 +1609,7 @@ function Modal(handle: Handle) {
   return () => (
     <div>
       <button
-        connect={(node) => (openButton = node)}
+        mix={[ref((node) => (openButton = node))]}
         on={{
           click() {
             isOpen = true
@@ -1625,7 +1627,7 @@ function Modal(handle: Handle) {
       {isOpen && (
         <div role="dialog">
           <button
-            connect={(node) => (closeButton = node)}
+            mix={[ref((node) => (closeButton = node))]}
             on={{
               click() {
                 isOpen = false
@@ -1657,7 +1659,7 @@ function ScrollableList(handle: Handle) {
   return () => (
     <div>
       <input
-        connect={(node) => (newItemInput = node)}
+        mix={[ref((node) => (newItemInput = node))]}
         on={{
           keydown(event) {
             if (event.key === 'Enter') {
@@ -1676,7 +1678,7 @@ function ScrollableList(handle: Handle) {
         }}
       />
       <div
-        connect={(node) => (listContainer = node)}
+        mix={[ref((node) => (listContainer = node))]}
         css={{
           maxHeight: '300px',
           overflowY: 'auto',

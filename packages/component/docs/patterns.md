@@ -273,7 +273,7 @@ function Modal(handle: Handle) {
   return () => (
     <div>
       <button
-        connect={(node) => (openButton = node)}
+        mix={[ref((node) => (openButton = node))]}
         on={{
           click() {
             isOpen = true
@@ -291,7 +291,7 @@ function Modal(handle: Handle) {
       {isOpen && (
         <div role="dialog">
           <button
-            connect={(node) => (closeButton = node)}
+            mix={[ref((node) => (closeButton = node))]}
             on={{
               click() {
                 isOpen = false
@@ -323,7 +323,7 @@ function ScrollableList(handle: Handle) {
   return () => (
     <div>
       <input
-        connect={(node) => (newItemInput = node)}
+        mix={[ref((node) => (newItemInput = node))]}
         on={{
           keydown(event) {
             if (event.key === 'Enter') {
@@ -342,7 +342,7 @@ function ScrollableList(handle: Handle) {
         }}
       />
       <div
-        connect={(node) => (listContainer = node)}
+        mix={[ref((node) => (listContainer = node))]}
         css={{
           maxHeight: '300px',
           overflowY: 'auto',

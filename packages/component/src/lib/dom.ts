@@ -25,7 +25,6 @@ export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode
   mix?: MixValue<eventTarget>
-  connect?: (node: eventTarget, signal: AbortSignal) => void
   /**
    * Set the innerHTML of the element directly.
    * When provided, children are ignored.

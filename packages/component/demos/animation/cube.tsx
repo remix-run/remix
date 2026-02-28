@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { css } from 'remix/component'
+import { css, ref } from 'remix/component'
 
 export function Cube(handle: Handle) {
   let cube: HTMLDivElement
@@ -25,11 +25,11 @@ export function Cube(handle: Handle) {
       ]}
     >
       <div
-        connect={(node) => {
-          cube = node
-          requestAnimationFrame(animate)
-        }}
         mix={[
+          ref((node) => {
+            cube = node
+            requestAnimationFrame(animate)
+          }),
           css({
             width: '100px',
             height: '100px',

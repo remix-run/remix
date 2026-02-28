@@ -4,7 +4,7 @@ import { createRoot } from '../lib/vdom.ts'
 import { renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
 import { invariant } from '../lib/invariant.ts'
-import { on } from '../index.ts'
+import { on, ref } from '../index.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -273,15 +273,17 @@ describe('hydration', () => {
       expect(existingDiv.style.backgroundColor).toBe('blue')
     })
 
-    it('calls connect callback after hydration', async () => {
+    it('calls ref callback after hydration', async () => {
       let connectedNode: HTMLDivElement | null = null
 
       function WithConnect() {
         return () => (
           <div
-            connect={(node) => {
-              connectedNode = node as HTMLDivElement
-            }}
+            mix={[
+              ref((node) => {
+                connectedNode = node as HTMLDivElement
+              }),
+            ]}
           >
             Connected
           </div>
@@ -298,7 +300,7 @@ describe('hydration', () => {
       root.render(<WithConnect />)
       root.flush()
 
-      // Connect should be called with the adopted node
+      // Ref should be called with the adopted node
       expect(connectedNode).toBe(existingDiv)
     })
 

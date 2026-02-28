@@ -1,4 +1,4 @@
-import { css, keysEvents, on, pressEvents, type Handle } from 'remix/component'
+import { css, keysEvents, on, pressEvents, ref, type Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {
@@ -67,7 +67,7 @@ export function Equalizer(handle: Handle) {
     },
   })
 
-  // initial animation on connect
+  // initial animation on mount
   handle.queueTask(() => {
     handle.update()
   })
@@ -127,8 +127,8 @@ function DrumControls(handle: Handle) {
 
       <Button
         disabled={drummer.isPlaying}
-        connect={(node: HTMLButtonElement) => (play = node)}
         mix={[
+          ref((node: HTMLButtonElement) => (play = node)),
           on('click', () => {
             drummer.play()
             handle.queueTask(() => {
@@ -142,8 +142,8 @@ function DrumControls(handle: Handle) {
 
       <Button
         disabled={!drummer.isPlaying}
-        connect={(node: HTMLButtonElement) => (stop = node)}
         mix={[
+          ref((node: HTMLButtonElement) => (stop = node)),
           pressEvents(),
           on(pressEvents.down, () => {
             drummer.stop()

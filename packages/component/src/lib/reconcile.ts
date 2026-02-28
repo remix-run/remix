@@ -474,26 +474,6 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
-  let connect = props.connect
-  if (connect) {
-    // Only create controller if connect callback expects a signal (length >= 2)
-    if (connect.length >= 2) {
-      let controller = new AbortController()
-      node._controller = controller
-      scheduler.enqueueTasks([
-        () => {
-          connect(dom, controller.signal)
-        },
-      ])
-    } else {
-      scheduler.enqueueTasks([
-        () => {
-          connect(dom)
-        },
-      ])
-    }
-  }
-
   ensureControlledReflection(committedNode, scheduler)
   syncControlledReflection(committedNode, props)
 }

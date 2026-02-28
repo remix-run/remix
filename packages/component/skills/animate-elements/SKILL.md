@@ -97,7 +97,7 @@ let el = (
   - exit ends at a defined final style
 - For spring-style timing, spread `spring(...)` into the mixin config.
 - Default to `...spring()` for duration/easing in most cases.
-- Keep effectful DOM work (WAAPI shake, measurements) in `handle.queueTask(...)` or `connect`, not in pure render math.
+- Keep effectful DOM work (WAAPI shake, measurements) in `handle.queueTask(...)` or `ref(...)`, not in pure render math.
 
 ## Animation Checklist
 

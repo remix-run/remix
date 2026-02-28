@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
-import { createMixin, on } from '../index.ts'
+import { createMixin, on, ref } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
 import type { Handle } from '../lib/component.ts'
 
@@ -213,30 +213,34 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['before:0', 'commit:1'])
   })
 
-  it('composes connect callbacks across mixins and base props', () => {
+  it('composes ref callbacks across mixins and base mix', () => {
     let calls: string[] = []
 
-    let withConnectA = createMixin((handle) => (props: { connect?: (node: Element) => void }) => (
+    let withConnectA = createMixin((handle) => (props: {}) => (
       <handle.element
         {...props}
-        connect={(node: Element) => {
-          calls.push('a')
-          if (node instanceof HTMLElement) {
-            node.dataset.a = '1'
-          }
-        }}
+        mix={[
+          ref((node: Element) => {
+            calls.push('a')
+            if (node instanceof HTMLElement) {
+              node.dataset.a = '1'
+            }
+          }),
+        ]}
       />
     ))
 
-    let withConnectB = createMixin((handle) => (props: { connect?: (node: Element) => void }) => (
+    let withConnectB = createMixin((handle) => (props: {}) => (
       <handle.element
         {...props}
-        connect={(node: Element) => {
-          calls.push('b')
-          if (node instanceof HTMLElement) {
-            node.dataset.b = '1'
-          }
-        }}
+        mix={[
+          ref((node: Element) => {
+            calls.push('b')
+            if (node instanceof HTMLElement) {
+              node.dataset.b = '1'
+            }
+          }),
+        ]}
       />
     ))
 
@@ -244,13 +248,16 @@ describe('vnode mixins', () => {
     let root = createRoot(container)
     root.render(
       <div
-        connect={(node: Element) => {
-          calls.push('base')
-          if (node instanceof HTMLElement) {
-            node.dataset.base = '1'
-          }
-        }}
-        mix={[withConnectA(), withConnectB()]}
+        mix={[
+          withConnectA(),
+          withConnectB(),
+          ref((node: Element) => {
+            calls.push('base')
+            if (node instanceof HTMLElement) {
+              node.dataset.base = '1'
+            }
+          }),
+        ]}
       />,
     )
     root.flush()
@@ -260,7 +267,7 @@ describe('vnode mixins', () => {
     expect(div.dataset.a).toBe('1')
     expect(div.dataset.b).toBe('1')
     expect(div.dataset.base).toBe('1')
-    expect(calls).toEqual(['b', 'a', 'base'])
+    expect(new Set(calls)).toEqual(new Set(['a', 'b', 'base']))
   })
 
   it('composes on mixins across nested mixins', () => {

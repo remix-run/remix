@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css, on, pressEvents } from 'remix/component'
+import { animateEntrance, animateExit, css, on, pressEvents, ref } from 'remix/component'
 
 type Ripple = {
   id: number
@@ -38,10 +38,10 @@ export function MaterialRipple(handle: Handle) {
 
   return () => (
     <button
-      connect={(el) => {
-        buttonEl = el
-      }}
       mix={[
+        ref((el) => {
+          buttonEl = el
+        }),
         css({
           position: 'relative',
           display: 'inline-flex',

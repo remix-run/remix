@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { css, on } from 'remix/component'
+import { css, on, ref } from 'remix/component'
 
 export function InterruptibleKeyframes(handle: Handle) {
   let box: HTMLDivElement
@@ -20,8 +20,8 @@ export function InterruptibleKeyframes(handle: Handle) {
 
   return () => (
     <div
-      connect={(node) => (box = node)}
       mix={[
+        ref((node) => (box = node)),
         css({
           width: 100,
           height: 100,

@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css, on } from 'remix/component'
+import { animateEntrance, animateExit, css, on, ref } from 'remix/component'
 import { spring } from '../../src/lib/spring.ts'
 
 const STATES = {
@@ -104,8 +104,8 @@ function Badge(handle: Handle) {
 
     return (
       <div
-        connect={(node) => (badgeEl = node)}
         mix={[
+          ref((node) => (badgeEl = node)),
           css({
             backgroundColor: '#e2e8f0',
             color: '#0f1115',
@@ -188,13 +188,13 @@ function Icon() {
 function Loader() {
   return () => (
     <div
-      connect={(node) => {
-        node.animate(
-          { transform: ['rotate(0deg)', 'rotate(360deg)'] },
-          { duration: 1000, iterations: Infinity },
-        )
-      }}
       mix={[
+        ref((node) => {
+          node.animate(
+            { transform: ['rotate(0deg)', 'rotate(360deg)'] },
+            { duration: 1000, iterations: Infinity },
+          )
+        }),
         css({
           display: 'flex',
           alignItems: 'center',
@@ -234,15 +234,17 @@ function Check() {
     >
       <polyline
         points="4 12 9 17 20 6"
-        connect={(node) => {
-          let length = node.getTotalLength()
-          node.style.strokeDasharray = `${length}`
-          node.style.strokeDashoffset = `${length}`
-          node.animate(
-            { strokeDashoffset: [length, 0] },
-            { ...spring({ duration: 300, bounce: 0.1 }), fill: 'forwards' },
-          )
-        }}
+        mix={[
+          ref((node) => {
+            let length = node.getTotalLength()
+            node.style.strokeDasharray = `${length}`
+            node.style.strokeDashoffset = `${length}`
+            node.animate(
+              { strokeDashoffset: [length, 0] },
+              { ...spring({ duration: 300, bounce: 0.1 }), fill: 'forwards' },
+            )
+          }),
+        ]}
       />
     </svg>
   )
@@ -265,30 +267,34 @@ function X() {
         y1="6"
         x2="18"
         y2="18"
-        connect={(node) => {
-          let length = node.getTotalLength()
-          node.style.strokeDasharray = `${length}`
-          node.style.strokeDashoffset = `${length}`
-          node.animate(
-            { strokeDashoffset: [length, 0] },
-            { ...spring({ duration: 300, bounce: 0.1 }), fill: 'forwards' },
-          )
-        }}
+        mix={[
+          ref((node) => {
+            let length = node.getTotalLength()
+            node.style.strokeDasharray = `${length}`
+            node.style.strokeDashoffset = `${length}`
+            node.animate(
+              { strokeDashoffset: [length, 0] },
+              { ...spring({ duration: 300, bounce: 0.1 }), fill: 'forwards' },
+            )
+          }),
+        ]}
       />
       <line
         x1="18"
         y1="6"
         x2="6"
         y2="18"
-        connect={(node) => {
-          let length = node.getTotalLength()
-          node.style.strokeDasharray = `${length}`
-          node.style.strokeDashoffset = `${length}`
-          node.animate(
-            { strokeDashoffset: [length, 0] },
-            { ...spring({ duration: 300, bounce: 0.1 }), delay: 100, fill: 'forwards' },
-          )
-        }}
+        mix={[
+          ref((node) => {
+            let length = node.getTotalLength()
+            node.style.strokeDasharray = `${length}`
+            node.style.strokeDashoffset = `${length}`
+            node.animate(
+              { strokeDashoffset: [length, 0] },
+              { ...spring({ duration: 300, bounce: 0.1 }), delay: 100, fill: 'forwards' },
+            )
+          }),
+        ]}
       />
     </svg>
   )
@@ -356,8 +362,10 @@ function Label(handle: Handle) {
       >
         {/* Hidden measurement element */}
         <span
-          connect={(node) => (measureEl = node)}
-          mix={[css({ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap' })]}
+          mix={[
+            ref((node) => (measureEl = node)),
+            css({ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap' }),
+          ]}
         >
           {STATES[props.state]}
         </span>

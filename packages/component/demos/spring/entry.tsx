@@ -1,4 +1,4 @@
-import { createRoot, css, on, type Handle } from 'remix/component'
+import { createRoot, css, on, ref, type Handle } from 'remix/component'
 
 import { dragRelease } from './drag-release.ts'
 import { spring, type SpringPreset } from 'remix/component'
@@ -127,12 +127,12 @@ function PointerTrail(handle: Handle) {
 
   return () => (
     <canvas
-      connect={(node) => {
-        canvas = node
-        canvas.width = window.innerWidth
-        canvas.height = window.innerHeight
-      }}
       mix={[
+        ref((node) => {
+          canvas = node
+          canvas.width = window.innerWidth
+          canvas.height = window.innerHeight
+        }),
         css({
           position: 'absolute',
           inset: 0,

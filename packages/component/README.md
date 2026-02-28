@@ -364,9 +364,9 @@ function Button(handle: Handle) {
 }
 ```
 
-## Connect Prop
+## Ref Mixin
 
-Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, or measuring dimensions.
+Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, or measuring dimensions.
 
 ```tsx
 function Form(handle: Handle) {
@@ -377,7 +377,7 @@ function Form(handle: Handle) {
       <input
         type="text"
         // get the input node
-        connect={(node) => (inputRef = node)}
+        mix={[ref((node) => (inputRef = node))]}
       />
       <button
         mix={[
@@ -394,24 +394,26 @@ function Form(handle: Handle) {
 }
 ```
 
-The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM:
+The `ref` callback receives an `AbortSignal` as its second parameter, which is aborted when the element is removed from the DOM:
 
 ```tsx
 function Component(handle: Handle) {
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up something that needs cleanup
-        let observer = new ResizeObserver(() => {
-          // handle resize
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up something that needs cleanup
+          let observer = new ResizeObserver(() => {
+            // handle resize
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
     >
       Content
     </div>
@@ -467,8 +469,8 @@ function Player(handle: Handle) {
     <div>
       <button
         disabled={isPlaying}
-        connect={(node) => (playButton = node)}
         mix={[
+          ref((node) => (playButton = node)),
           on('click', async () => {
             isPlaying = true
             await handle.update()
@@ -481,8 +483,8 @@ function Player(handle: Handle) {
       </button>
       <button
         disabled={!isPlaying}
-        connect={(node) => (stopButton = node)}
         mix={[
+          ref((node) => (stopButton = node)),
           on('click', async () => {
             isPlaying = false
             await handle.update()
@@ -530,12 +532,12 @@ function Form(handle: Handle) {
       </label>
       {showDetails && (
         <section
-          connect={(node) => (detailsSection = node)}
           css={{
             marginTop: '2rem',
             padding: '1rem',
             border: '1px solid #ccc',
           }}
+          mix={[ref((node) => (detailsSection = node))]}
         >
           <h2>Additional Details</h2>
           <p>This section appears when the checkbox is checked.</p>
