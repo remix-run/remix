@@ -46,7 +46,6 @@ export type MssqlDatabaseTransaction = MssqlDatabaseClient & {
  * Mssql pool-like client contract used by this adapter.
  */
 export type MssqlDatabasePool = MssqlDatabaseClient & {
-  query(command: string): Promise<MssqlQueryResult>
   transaction(): MssqlDatabaseTransaction
 }
 
@@ -66,6 +65,7 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
 
   #client: MssqlDatabasePool
   #transactions = new Map<string, MssqlDatabaseTransaction>()
+  #isolatedTransactions = new Set<string>()
   #transactionCounter = 0
 
   constructor(client: MssqlDatabasePool, options?: MssqlDatabaseAdapterOptions) {
@@ -115,6 +115,10 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
 
     this.#transactions.set(token.id, transaction)
 
+    if (options?.isolationLevel) {
+      this.#isolatedTransactions.add(token.id)
+    }
+
     return token
   }
 
@@ -122,9 +126,13 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
     let transaction = this.#transactionClient(token)
 
     try {
+      if (this.#isolatedTransactions.has(token.id)) {
+        await runMssqlQuery(transaction, 'set transaction isolation level read committed')
+      }
       await transaction.commit()
     } finally {
       this.#transactions.delete(token.id)
+      this.#isolatedTransactions.delete(token.id)
     }
   }
 
@@ -132,9 +140,17 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
     let transaction = this.#transactionClient(token)
 
     try {
+      if (this.#isolatedTransactions.has(token.id)) {
+        try {
+          await runMssqlQuery(transaction, 'set transaction isolation level read committed')
+        } catch {
+          // Best-effort: transaction may be in a failed state
+        }
+      }
       await transaction.rollback()
     } finally {
       this.#transactions.delete(token.id)
+      this.#isolatedTransactions.delete(token.id)
     }
   }
 
@@ -193,7 +209,7 @@ async function runMssqlQuery(
   let request = client.request()
 
   for (let index = 0; index < values.length; index += 1) {
-    request.input('p' + String(index + 1), values[index])
+    request.input('dt_p' + String(index + 1), values[index])
   }
 
   return request.query(text)

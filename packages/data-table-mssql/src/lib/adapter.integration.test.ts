@@ -1,6 +1,6 @@
 import { after, before, beforeEach, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { nullable, number, string } from '@remix-run/data-schema'
+import { any, nullable, number, string } from '@remix-run/data-schema'
 import { createDatabase, createTable, eq } from '@remix-run/data-table'
 import sql, { type ConnectionPool } from 'mssql'
 
@@ -492,6 +492,321 @@ describe('mssql adapter integration', () => {
 
         let result = await pool.request().query('select [id] from [accounts]')
         assert.equal(result.recordset.length, 0)
+      },
+    )
+  })
+
+  // ── Data type output ─────────────────────────────────────────────────
+
+  describe('data type output', () => {
+    before(async () => {
+      if (!integrationEnabled) return
+      await pool
+        .request()
+        .query("if object_id('data_types', 'U') is not null drop table [data_types]")
+      await pool.request().query(
+        [
+          'create table [data_types] (',
+          '  [id] int primary key,',
+          '  [col_tinyint] tinyint null,',
+          '  [col_smallint] smallint null,',
+          '  [col_int] int null,',
+          '  [col_bigint] bigint null,',
+          '  [col_decimal] decimal(10,2) null,',
+          '  [col_numeric] numeric(18,4) null,',
+          '  [col_float] float null,',
+          '  [col_real] real null,',
+          '  [col_money] money null,',
+          '  [col_smallmoney] smallmoney null,',
+          '  [col_bit] bit null,',
+          '  [col_char] char(10) null,',
+          '  [col_varchar] varchar(50) null,',
+          '  [col_nchar] nchar(10) null,',
+          '  [col_nvarchar] nvarchar(50) null,',
+          '  [col_date] date null,',
+          '  [col_datetime] datetime null,',
+          '  [col_datetime2] datetime2 null,',
+          '  [col_uniqueidentifier] uniqueidentifier null',
+          ')',
+        ].join('\n'),
+      )
+    })
+
+    after(async () => {
+      if (!integrationEnabled) return
+      await pool
+        .request()
+        .query("if object_id('data_types', 'U') is not null drop table [data_types]")
+    })
+
+    beforeEach(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query('delete from [data_types]')
+    })
+
+    let dataTypes = createTable({
+      name: 'data_types',
+      columns: {
+        id: number(),
+        col_tinyint: any(),
+        col_smallint: any(),
+        col_int: any(),
+        col_bigint: any(),
+        col_decimal: any(),
+        col_numeric: any(),
+        col_float: any(),
+        col_real: any(),
+        col_money: any(),
+        col_smallmoney: any(),
+        col_bit: any(),
+        col_char: any(),
+        col_varchar: any(),
+        col_nchar: any(),
+        col_nvarchar: any(),
+        col_date: any(),
+        col_datetime: any(),
+        col_datetime2: any(),
+        col_uniqueidentifier: any(),
+      },
+    })
+
+    it(
+      'returns correct JS types for all common SQL Server column types',
+      { skip: !integrationEnabled },
+      async () => {
+        await pool.request().query(
+          [
+            'insert into [data_types] values (',
+            '  1,',
+            '  255, -32768, 2147483647, 9223372036854775807,',
+            '  12345.67, 1234567890.1234, 3.141592653589793, 1.5,',
+            '  12345.6789, 1234.5678,',
+            '  1,',
+            "  'hello', 'world', N'日本語', N'unicode test',",
+            "  '2025-06-15', '2025-06-15 10:30:00', '2025-06-15T10:30:00.1234567',",
+            "  'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11'",
+            ')',
+          ].join('\n'),
+        )
+
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+        let rows = await db.query(dataTypes).all()
+        assert.equal(rows.length, 1)
+        let row = rows[0]
+
+        // Integer types → number
+        assert.equal(typeof row.col_tinyint, 'number')
+        assert.equal(row.col_tinyint, 255)
+
+        assert.equal(typeof row.col_smallint, 'number')
+        assert.equal(row.col_smallint, -32768)
+
+        assert.equal(typeof row.col_int, 'number')
+        assert.equal(row.col_int, 2147483647)
+
+        // bigint → string (mssql driver default for 64-bit integers)
+        assert.equal(String(row.col_bigint), '9223372036854775807')
+
+        // Decimal/numeric → number
+        assert.equal(typeof row.col_decimal, 'number')
+        assert.equal(row.col_decimal, 12345.67)
+
+        assert.equal(typeof row.col_numeric, 'number')
+        assert.equal(row.col_numeric, 1234567890.1234)
+
+        // Float/real → number
+        assert.equal(typeof row.col_float, 'number')
+        assert.ok(Math.abs((row.col_float as number) - 3.141592653589793) < 1e-10)
+
+        assert.equal(typeof row.col_real, 'number')
+        assert.ok(Math.abs((row.col_real as number) - 1.5) < 1e-5)
+
+        // Money → number
+        assert.equal(typeof row.col_money, 'number')
+        assert.equal(row.col_money, 12345.6789)
+
+        assert.equal(typeof row.col_smallmoney, 'number')
+        assert.equal(row.col_smallmoney, 1234.5678)
+
+        // Bit → boolean
+        assert.equal(typeof row.col_bit, 'boolean')
+        assert.equal(row.col_bit, true)
+
+        // Character types → string
+        assert.equal(typeof row.col_char, 'string')
+        assert.equal((row.col_char as string).trimEnd(), 'hello')
+
+        assert.equal(typeof row.col_varchar, 'string')
+        assert.equal(row.col_varchar, 'world')
+
+        assert.equal(typeof row.col_nchar, 'string')
+        assert.equal((row.col_nchar as string).trimEnd(), '日本語')
+
+        assert.equal(typeof row.col_nvarchar, 'string')
+        assert.equal(row.col_nvarchar, 'unicode test')
+
+        // Date/time types → Date
+        assert.ok(row.col_date instanceof Date)
+        assert.ok(row.col_datetime instanceof Date)
+        assert.ok(row.col_datetime2 instanceof Date)
+
+        // Uniqueidentifier → string (GUID format)
+        assert.equal(typeof row.col_uniqueidentifier, 'string')
+        assert.match(
+          (row.col_uniqueidentifier as string).toLowerCase(),
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        )
+      },
+    )
+
+    it(
+      'returns null for all nullable column types',
+      { skip: !integrationEnabled },
+      async () => {
+        await pool.request().query('insert into [data_types] ([id]) values (1)')
+
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+        let rows = await db.query(dataTypes).where(eq('id', 1)).all()
+        assert.equal(rows.length, 1)
+        let row = rows[0]
+
+        assert.equal(row.col_tinyint, null)
+        assert.equal(row.col_smallint, null)
+        assert.equal(row.col_int, null)
+        assert.equal(row.col_bigint, null)
+        assert.equal(row.col_decimal, null)
+        assert.equal(row.col_numeric, null)
+        assert.equal(row.col_float, null)
+        assert.equal(row.col_real, null)
+        assert.equal(row.col_money, null)
+        assert.equal(row.col_smallmoney, null)
+        assert.equal(row.col_bit, null)
+        assert.equal(row.col_char, null)
+        assert.equal(row.col_varchar, null)
+        assert.equal(row.col_nchar, null)
+        assert.equal(row.col_nvarchar, null)
+        assert.equal(row.col_date, null)
+        assert.equal(row.col_datetime, null)
+        assert.equal(row.col_datetime2, null)
+        assert.equal(row.col_uniqueidentifier, null)
+      },
+    )
+  })
+
+  // ── Data type parameter inference ────────────────────────────────────
+
+  describe('data type parameter inference', () => {
+    before(async () => {
+      if (!integrationEnabled) return
+      await pool
+        .request()
+        .query("if object_id('type_params', 'U') is not null drop table [type_params]")
+      await pool.request().query(
+        [
+          'create table [type_params] (',
+          '  [id] int primary key,',
+          '  [int_val] int null,',
+          '  [float_val] float null,',
+          '  [decimal_val] decimal(10,2) null,',
+          '  [bit_val] bit null,',
+          '  [varchar_val] varchar(50) null,',
+          '  [nvarchar_val] nvarchar(50) null,',
+          '  [datetime2_val] datetime2 null',
+          ')',
+        ].join('\n'),
+      )
+    })
+
+    after(async () => {
+      if (!integrationEnabled) return
+      await pool
+        .request()
+        .query("if object_id('type_params', 'U') is not null drop table [type_params]")
+    })
+
+    beforeEach(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query('delete from [type_params]')
+    })
+
+    let typeParams = createTable({
+      name: 'type_params',
+      columns: {
+        id: number(),
+        int_val: nullable(any()),
+        float_val: nullable(any()),
+        decimal_val: nullable(any()),
+        bit_val: nullable(any()),
+        varchar_val: nullable(any()),
+        nvarchar_val: nullable(any()),
+        datetime2_val: nullable(any()),
+      },
+    })
+
+    it(
+      'roundtrips JS values through adapter insert and select',
+      { skip: !integrationEnabled },
+      async () => {
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+        let testDate = new Date('2025-06-15T10:30:00.000Z')
+
+        await db.query(typeParams).insert({
+          id: 1,
+          int_val: 42,
+          float_val: 3.14,
+          decimal_val: 99.95,
+          bit_val: true,
+          varchar_val: 'hello world',
+          nvarchar_val: '日本語テスト',
+          datetime2_val: testDate,
+        })
+
+        let rows = await db.query(typeParams).all()
+        assert.equal(rows.length, 1)
+        let row = rows[0]
+
+        assert.equal(row.int_val, 42)
+        assert.ok(Math.abs((row.float_val as number) - 3.14) < 1e-10)
+        assert.equal(row.decimal_val, 99.95)
+        assert.equal(row.bit_val, true)
+        assert.equal(row.varchar_val, 'hello world')
+        assert.equal(row.nvarchar_val, '日本語テスト')
+        assert.ok(row.datetime2_val instanceof Date)
+        assert.equal(
+          (row.datetime2_val as Date).toISOString(),
+          testDate.toISOString(),
+        )
+      },
+    )
+
+    it(
+      'roundtrips null values through adapter insert and select',
+      { skip: !integrationEnabled },
+      async () => {
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+
+        await db.query(typeParams).insert({
+          id: 1,
+          int_val: null,
+          float_val: null,
+          decimal_val: null,
+          bit_val: null,
+          varchar_val: null,
+          nvarchar_val: null,
+          datetime2_val: null,
+        })
+
+        let rows = await db.query(typeParams).where(eq('id', 1)).all()
+        assert.equal(rows.length, 1)
+        let row = rows[0]
+
+        assert.equal(row.int_val, null)
+        assert.equal(row.float_val, null)
+        assert.equal(row.decimal_val, null)
+        assert.equal(row.bit_val, null)
+        assert.equal(row.varchar_val, null)
+        assert.equal(row.nvarchar_val, null)
+        assert.equal(row.datetime2_val, null)
       },
     )
   })

@@ -40,23 +40,6 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 - `savepoints: true`
 - `upsert: true`
 
-### `returning` On MSSQL
-
-MSSQL does not support the `RETURNING` clause used by Postgres and SQLite.
-When `returning` is `false` (the default), operations like
-`db.create(table, values, { returnRow: true })` issue a follow-up `SELECT` to
-fetch the created row.
-
-MSSQL _does_ support the `OUTPUT` clause which can serve a similar role. If you
-enable the capability override the adapter will use `OUTPUT inserted.*` /
-`OUTPUT deleted.*` instead of a follow-up query:
-
-```ts
-let adapter = createMssqlDatabaseAdapter(pool, {
-  capabilities: { returning: true },
-})
-```
-
 ## Advanced Usage
 
 ### Transaction Options
@@ -70,12 +53,27 @@ await db.transaction(async (txDb) => txDb.exec('select 1'), {
 })
 ```
 
-### Savepoints
+> **Note:** SQL Server does not support `SET TRANSACTION READ ONLY`. The
+> `readOnly` option is silently ignored.
 
-MSSQL uses `SAVE TRANSACTION` / `ROLLBACK TRANSACTION` instead of the standard
-`SAVEPOINT` / `ROLLBACK TO SAVEPOINT` syntax. Additionally, MSSQL does not
-support `RELEASE SAVEPOINT`, so `releaseSavepoint` is a no-op in this adapter.
-All other savepoint operations work as expected.
+### `returning` On MSSQL
+
+MSSQL does not support the `RETURNING` clause used by Postgres and SQLite.
+When `returning` is `false` (the default), operations like
+`db.create(table, values, { returnRow: true })` issue a follow-up `SELECT` to
+fetch the created row.
+
+You can enable `OUTPUT` clause support via a capability override:
+
+```ts
+let adapter = createMssqlDatabaseAdapter(pool, {
+  capabilities: { returning: true },
+})
+```
+
+> **Note:** SQL Server does not allow `OUTPUT` without `INTO` on tables that
+> have triggers. If your tables use triggers, keep `returning: false` (the
+> default).
 
 ### Capability Overrides For Testing
 

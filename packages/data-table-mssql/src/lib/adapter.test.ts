@@ -22,6 +22,14 @@ let projects = createTable({
   },
 })
 
+let invoices = createTable({
+  name: 'billing.invoices',
+  columns: {
+    id: number(),
+    account_id: number(),
+  },
+})
+
 describe('mssql adapter', () => {
   /**
    * Creates a mock pool whose transaction records lifecycle events (begin, commit,
@@ -96,7 +104,7 @@ describe('mssql adapter', () => {
     let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
     assert.equal(count, 3)
-    assert.match(statements[0].text, /lower\(\[email\]\) like lower\(@p1\)/)
+    assert.match(statements[0].text, /lower\(\[email\]\) like lower\(@dt_p1\)/)
     assert.deepEqual(statements[0].values, ['%EXAMPLE%'])
   })
 
@@ -154,7 +162,12 @@ describe('mssql adapter', () => {
 
     await db.transaction(async () => undefined, { isolationLevel: 'serializable' })
 
-    assert.deepEqual(lifecycle, ['begin', 'set transaction isolation level serializable', 'commit'])
+    assert.deepEqual(lifecycle, [
+      'begin',
+      'set transaction isolation level serializable',
+      'set transaction isolation level read committed',
+      'commit',
+    ])
   })
 
   it('ignores readOnly true and does not emit any SQL for it', async () => {
@@ -163,7 +176,7 @@ describe('mssql adapter', () => {
 
     await db.transaction(async () => undefined, { readOnly: true })
 
-    // No SET TRANSACTION READ ONLY should appear — MSSQL does not support it.
+    // No SET TRANSACTION READ ONLY should appear - MSSQL does not support it.
     assert.deepEqual(lifecycle, ['begin', 'commit'])
   })
 
@@ -176,8 +189,14 @@ describe('mssql adapter', () => {
       readOnly: true,
     })
 
-    // Only the isolation level SQL is emitted; readOnly is silently ignored.
-    assert.deepEqual(lifecycle, ['begin', 'set transaction isolation level serializable', 'commit'])
+    // Only the isolation level is applied; readOnly is silently ignored.
+    // Isolation level is reset to read committed before commit.
+    assert.deepEqual(lifecycle, [
+      'begin',
+      'set transaction isolation level serializable',
+      'set transaction isolation level read committed',
+      'commit',
+    ])
   })
 
   it('compiles column-to-column comparisons from string references', async () => {
@@ -216,7 +235,7 @@ describe('mssql adapter', () => {
       .count()
 
     assert.match(statements[0].text, /\[accounts\]\.\[id\]\s*=\s*\[projects\]\.\[account_id\]/)
-    assert.match(statements[0].text, /\[accounts\]\.\[email\]\s*=\s*@p1/)
+    assert.match(statements[0].text, /\[accounts\]\.\[email\]\s*=\s*@dt_p1/)
     assert.deepEqual(statements[0].values, ['ops@example.com'])
   })
 
@@ -254,7 +273,7 @@ describe('mssql adapter', () => {
       .where(inList('id', [1, 3]))
       .count()
 
-    assert.match(statements[0].text, /\[id\]\s+in\s+\(@p1,\s*@p2\)/)
+    assert.match(statements[0].text, /\[id\]\s+in\s+\(@dt_p1,\s*@dt_p2\)/)
     assert.deepEqual(statements[0].values, [1, 3])
   })
 
@@ -314,7 +333,7 @@ describe('mssql adapter', () => {
     assert.equal(statements.length, 2)
     assert.match(statements[0].text, /^insert into \[accounts\]/)
     assert.match(statements[1].text, /^select top \(1\) \* from \[accounts\]/)
-    assert.match(statements[1].text, /where \(\(\[id\] = @p1\)\)/)
+    assert.match(statements[1].text, /where \(\(\[id\] = @dt_p1\)\)/)
     assert.deepEqual(statements[1].values, [2])
   })
 
@@ -357,14 +376,23 @@ describe('mssql adapter', () => {
       },
     )
 
-    assert.match(statements[0].text, /^merge \[accounts\] with \(holdlock\) as target using \(values \(@p1, @p2\)\)/)
+    assert.match(
+      statements[0].text,
+      /^merge \[accounts\] with \(holdlock\) as target using \(values \(@dt_p1, @dt_p2\)\)/,
+    )
     assert.match(statements[0].text, /on target\.\[id\] = source\.\[id\]/)
-    assert.match(statements[0].text, /when matched then update set target\.\[id\] = @p3, target\.\[email\] = @p4/)
-    assert.match(statements[0].text, /when not matched then insert \(\[id\], \[email\]\) values \(source\.\[id\], source\.\[email\]\)/)
+    assert.match(
+      statements[0].text,
+      /when matched then update set target\.\[id\] = @dt_p3, target\.\[email\] = @dt_p4/,
+    )
+    assert.match(
+      statements[0].text,
+      /when not matched then insert \(\[id\], \[email\]\) values \(source\.\[id\], source\.\[email\]\)/,
+    )
     assert.deepEqual(statements[0].values, [7, 'upsert@example.com', 7, 'upsert@example.com'])
   })
 
-  it('rewrites raw sql ? placeholders to named @p1, @p2, … parameters', async () => {
+  it('rewrites raw sql ? placeholders to named @dt_p1, @dt_p2, ... parameters', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
     let pool = {
@@ -394,7 +422,7 @@ describe('mssql adapter', () => {
 
     await db.exec(sql`select * from accounts where id = ${42} and email = ${'a@example.com'}`)
 
-    assert.equal(statements[0].text, 'select * from accounts where id = @p1 and email = @p2')
+    assert.equal(statements[0].text, 'select * from accounts where id = @dt_p1 and email = @dt_p2')
     assert.deepEqual(statements[0].values, [42, 'a@example.com'])
   })
 
@@ -452,7 +480,7 @@ describe('mssql adapter', () => {
       'begin',
       'save transaction [sp_0]',
       'rollback transaction [sp_0]',
-      // releaseSavepoint is a no-op for MSSQL — no RELEASE SAVEPOINT SQL
+      // releaseSavepoint is a no-op for MSSQL - no RELEASE SAVEPOINT SQL
       'commit',
     ])
   })
@@ -488,7 +516,7 @@ describe('mssql adapter', () => {
     assert.doesNotMatch(statements[0].text, /offset/)
   })
 
-  it('emits OFFSET…FETCH NEXT for limit + offset selects and omits TOP', async () => {
+  it('emits OFFSET...FETCH NEXT for limit + offset selects and omits TOP', async () => {
     let statements: Array<{ text: string }> = []
 
     let pool = {
@@ -590,9 +618,111 @@ describe('mssql adapter', () => {
 
     assert.equal(created.id, 3)
     assert.equal(created.email, 'output@example.com')
-    // With returning enabled, a single INSERT…OUTPUT statement is issued (no fallback SELECT)
+    // With returning enabled, a single INSERT...OUTPUT statement is issued (no fallback SELECT)
     assert.equal(calls, 1)
     assert.match(statements[0].text, /^insert into \[accounts\]/)
     assert.match(statements[0].text, / output inserted\.\*/)
+  })
+
+  it('compiles cross-schema table references in joins', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let pool = {
+      request() {
+        let values: unknown[] = []
+
+        return {
+          input(_name: string, value: unknown) {
+            values.push(value)
+            return this
+          },
+          async query(text: string) {
+            statements.push({ text, values: [...values] })
+            return {
+              recordset: [{ count: '0' }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(createMssqlDatabaseAdapter(pool as never))
+
+    await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
+
+    assert.match(statements[0].text, /from \[billing\]\.\[invoices\]/)
+    assert.match(statements[0].text, /join \[accounts\]/)
+    assert.match(
+      statements[0].text,
+      /\[accounts\]\.\[id\]\s*=\s*\[billing\]\.\[invoices\]\.\[account_id\]/,
+    )
+  })
+
+  it('does not reset isolation level on commit when none was set', async () => {
+    let { pool, lifecycle } = createLifecyclePool()
+    let db = createDatabase(createMssqlDatabaseAdapter(pool))
+
+    await db.transaction(async () => undefined)
+
+    // No SET TRANSACTION ISOLATION LEVEL should appear.
+    assert.deepEqual(lifecycle, ['begin', 'commit'])
+  })
+
+  it('attempts best-effort isolation level reset on rollback', async () => {
+    let { pool, lifecycle } = createLifecyclePool()
+    let db = createDatabase(createMssqlDatabaseAdapter(pool))
+
+    await assert.rejects(() =>
+      db.transaction(
+        async () => {
+          throw new Error('forced rollback')
+        },
+        { isolationLevel: 'repeatable read' },
+      ),
+    )
+
+    assert.deepEqual(lifecycle, [
+      'begin',
+      'set transaction isolation level repeatable read',
+      'set transaction isolation level read committed',
+      'rollback',
+    ])
+  })
+
+  it('treats dotted select aliases as single identifiers', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let pool = {
+      request() {
+        let values: unknown[] = []
+
+        return {
+          input(_name: string, value: unknown) {
+            values.push(value)
+            return this
+          },
+          async query(text: string) {
+            statements.push({ text, values: [...values] })
+            return {
+              recordset: [],
+              rowsAffected: [0],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(createMssqlDatabaseAdapter(pool as never))
+
+    await db.query(accounts).select({ 'account.email': accounts.email }).all()
+
+    assert.match(statements[0].text, /as \[account\.email\]/)
   })
 })

@@ -119,7 +119,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where (([status] = @p1))',
+        text: 'select * from [accounts] where (([status] = @dt_p1))',
         values: ['enabled'],
       })
     })
@@ -139,7 +139,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where ([status] <> @p1) and ([id] > @p2)',
+        text: 'select * from [accounts] where ([status] <> @dt_p1) and ([id] > @dt_p2)',
         values: ['disabled', 10],
       })
     })
@@ -149,7 +149,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where ([id] in (@p1, @p2))',
+        text: 'select * from [accounts] where ([id] in (@dt_p1, @dt_p2))',
         values: [1, 2],
       })
     })
@@ -169,7 +169,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where ([id] not in (@p1, @p2))',
+        text: 'select * from [accounts] where ([id] not in (@dt_p1, @dt_p2))',
         values: [1, 2],
       })
     })
@@ -197,7 +197,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where (([accounts].[id] = @p1) and (([accounts].[status] = @p2) or ([accounts].[status] = @p3)))',
+        text: 'select * from [accounts] where (([accounts].[id] = @dt_p1) and (([accounts].[status] = @dt_p2) or ([accounts].[status] = @dt_p3)))',
         values: [1, 'enabled', 'disabled'],
       })
     })
@@ -207,7 +207,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [tasks] group by [tasks].[account_id] having (([account_id] = @p1))',
+        text: 'select * from [tasks] group by [tasks].[account_id] having (([account_id] = @dt_p1))',
         values: [20],
       })
     })
@@ -217,7 +217,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select * from [accounts] where (lower([status]) like lower(@p1))',
+        text: 'select * from [accounts] where (lower([status]) like lower(@dt_p1))',
         values: ['EnA'],
       })
     })
@@ -269,7 +269,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select count(*) as [count] from (select 1 as [__dt_col] from [tasks] where (([account_id] = @p1))) as [__dt_count]',
+        text: 'select count(*) as [count] from (select 1 as [__dt_col] from [tasks] where (([account_id] = @dt_p1))) as [__dt_count]',
         values: [1],
       })
     })
@@ -279,7 +279,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'select count(*) as [count] from (select 1 as [__dt_col] from [tasks] where (([account_id] = @p1))) as [__dt_count]',
+        text: 'select count(*) as [count] from (select 1 as [__dt_col] from [tasks] where (([account_id] = @dt_p1))) as [__dt_count]',
         values: [1],
       })
     })
@@ -295,7 +295,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'insert into [accounts] ([id], [email], [status]) values (@p1, @p2, @p3)',
+        text: 'insert into [accounts] ([id], [email], [status]) values (@dt_p1, @dt_p2, @dt_p3)',
         values: [1, 'info@remix.run', 'enabled'],
       })
     })
@@ -312,7 +312,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'insert into [accounts] ([id], [email], [status]) output inserted.* values (@p1, @p2, @p3)',
+        text: 'insert into [accounts] ([id], [email], [status]) output inserted.* values (@dt_p1, @dt_p2, @dt_p3)',
         values: [1, 'info@remix.run', 'enabled'],
       })
     })
@@ -335,7 +335,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'insert into [accounts] ([id], [email], [status]) values (@p1, @p2, @p3), (@p4, @p5, @p6)',
+        text: 'insert into [accounts] ([id], [email], [status]) values (@dt_p1, @dt_p2, @dt_p3), (@dt_p4, @dt_p5, @dt_p6)',
         values: [1, 'info@remix.run', 'enabled', 2, 'contact@remix.run', 'draft'],
       })
     })
@@ -351,7 +351,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'insert into [accounts] ([id], [email], [status]) output inserted.* values (@p1, @p2, @p3), (@p4, @p5, @p6)',
+        text: 'insert into [accounts] ([id], [email], [status]) output inserted.* values (@dt_p1, @dt_p2, @dt_p3), (@dt_p4, @dt_p5, @dt_p6)',
         values: [1, 'info@remix.run', 'enabled', 2, 'contact@remix.run', 'draft'],
       })
     })
@@ -388,7 +388,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'update [accounts] set [email] = @p1, [status] = @p2 where (([id] = @p3))',
+        text: 'update [accounts] set [email] = @dt_p1, [status] = @dt_p2 where (([id] = @dt_p3))',
         values: ['info@remix.run', 'enabled', 1],
       })
     })
@@ -403,8 +403,29 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'update [accounts] set [email] = @p1 output inserted.* where (([id] = @p2))',
+        text: 'update [accounts] set [email] = @dt_p1 output inserted.* where (([id] = @dt_p2))',
         values: ['info@remix.run', 1],
+      })
+    })
+
+    it('compile for many', async () => {
+      await db.updateMany(
+        accounts,
+        {
+          email: 'info@remix.run',
+          status: 'enabled',
+        },
+        {
+          where: {
+            status: 'disabled',
+          },
+        },
+      )
+
+      let compiled = compileMssqlStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'update [accounts] set [email] = @dt_p1, [status] = @dt_p2 where (([status] = @dt_p3))',
+        values: ['info@remix.run', 'enabled', 'disabled'],
       })
     })
   })
@@ -437,7 +458,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'merge [accounts] with (holdlock) as target using (values (@p1, @p2)) as source ([status], [email]) on target.[id] = source.[id] when matched then update set target.[email] = @p3 when not matched then insert ([status], [email]) values (source.[status], source.[email]);',
+        text: 'merge [accounts] with (holdlock) as target using (values (@dt_p1, @dt_p2)) as source ([status], [email]) on target.[id] = source.[id] when matched then update set target.[email] = @dt_p3 when not matched then insert ([status], [email]) values (source.[status], source.[email]);',
         values: ['enabled', 'info@remix.run', 'contact@remix.run'],
       })
     })
@@ -456,7 +477,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'merge [accounts] with (holdlock) as target using (values (@p1, @p2)) as source ([status], [email]) on target.[id] = source.[id] when not matched then insert ([status], [email]) values (source.[status], source.[email]);',
+        text: 'merge [accounts] with (holdlock) as target using (values (@dt_p1, @dt_p2)) as source ([status], [email]) on target.[id] = source.[id] when not matched then insert ([status], [email]) values (source.[status], source.[email]);',
         values: ['enabled', 'info@remix.run'],
       })
     })
@@ -479,7 +500,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'merge [accounts] with (holdlock) as target using (values (@p1, @p2, @p3)) as source ([id], [status], [email]) on target.[id] = source.[id] when matched then update set target.[status] = @p4 when not matched then insert ([id], [status], [email]) values (source.[id], source.[status], source.[email]) output inserted.*;',
+        text: 'merge [accounts] with (holdlock) as target using (values (@dt_p1, @dt_p2, @dt_p3)) as source ([id], [status], [email]) on target.[id] = source.[id] when matched then update set target.[status] = @dt_p4 when not matched then insert ([id], [status], [email]) values (source.[id], source.[status], source.[email]) output inserted.*;',
         values: [1, 'enabled', 'info@remix.run', 'disabled'],
       })
     })
@@ -491,7 +512,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'delete from [accounts] where (([id] = @p1))',
+        text: 'delete from [accounts] where (([id] = @dt_p1))',
         values: [10],
       })
     })
@@ -505,7 +526,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'delete from [accounts] where (([status] = @p1))',
+        text: 'delete from [accounts] where (([status] = @dt_p1))',
         values: ['enabled'],
       })
     })
@@ -515,7 +536,7 @@ describe('mssql sql-compiler', () => {
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
-        text: 'delete from [accounts] output deleted.* where (([id] = @p1))',
+        text: 'delete from [accounts] output deleted.* where (([id] = @dt_p1))',
         values: [10],
       })
     })
@@ -532,7 +553,7 @@ describe('mssql sql-compiler', () => {
       })
 
       assert.deepEqual(compiled, {
-        text: 'select * from accounts where id = @p1 and status = @p2',
+        text: 'select * from accounts where id = @dt_p1 and status = @dt_p2',
         values: [10, 'active'],
       })
     })

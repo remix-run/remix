@@ -81,7 +81,7 @@ export function compileMssqlStatement(statement: AdapterStatement): CompiledSql 
     return {
       text:
         'update ' +
-        quoteIdentifier(getTableName(statement.table)) +
+        quotePath(getTableName(statement.table)) +
         ' set ' +
         columns
           .map((column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]))
@@ -96,7 +96,7 @@ export function compileMssqlStatement(statement: AdapterStatement): CompiledSql 
     return {
       text:
         'delete from ' +
-        quoteIdentifier(getTableName(statement.table)) +
+        quotePath(getTableName(statement.table)) +
         compileOutputClause(statement.returning, 'deleted') +
         compileWhereClause(statement.where, context),
       values: context.values,
@@ -122,7 +122,7 @@ function compileInsertStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(getTableName(table)) +
+        quotePath(getTableName(table)) +
         compileOutputClause(returning, 'inserted') +
         ' default values',
       values: context.values,
@@ -132,7 +132,7 @@ function compileInsertStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(getTableName(table)) +
+      quotePath(getTableName(table)) +
       ' (' +
       columns.map((column) => quotePath(column)).join(', ') +
       ')' +
@@ -163,7 +163,7 @@ function compileInsertManyStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(getTableName(table)) +
+        quotePath(getTableName(table)) +
         compileOutputClause(returning, 'inserted') +
         ' default values',
       values: context.values,
@@ -173,7 +173,7 @@ function compileInsertManyStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(getTableName(table)) +
+      quotePath(getTableName(table)) +
       ' (' +
       columns.map((column) => quotePath(column)).join(', ') +
       ')' +
@@ -226,7 +226,7 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
   return {
     text:
       'merge ' +
-      quoteIdentifier(getTableName(statement.table)) +
+      quotePath(getTableName(statement.table)) +
       ' with (holdlock) as target using (values (' +
       sourceValues.join(', ') +
       ')) as source (' +
@@ -257,7 +257,7 @@ function compileRawStatement(statement: SqlStatement): CompiledSql {
 
   let index = 1
   let text = statement.text.replace(/\?/g, function replaceParameter() {
-    let placeholder = '@p' + String(index)
+    let placeholder = '@dt_p' + String(index)
     index += 1
     return placeholder
   })
@@ -273,14 +273,14 @@ function compileFromClause(
   joins: JoinClause[],
   context: CompileContext,
 ): string {
-  let output = ' from ' + quoteIdentifier(getTableName(table))
+  let output = ' from ' + quotePath(getTableName(table))
 
   for (let join of joins) {
     output +=
       ' ' +
       normalizeJoinType(join.type) +
       ' join ' +
-      quoteIdentifier(getTableName(join.table)) +
+      quotePath(getTableName(join.table)) +
       ' on ' +
       compilePredicate(join.on, context)
   }
@@ -544,7 +544,7 @@ function quotePath(path: string): string {
 
 function pushValue(context: CompileContext, value: unknown): string {
   context.values.push(value)
-  return '@p' + String(context.values.length)
+  return '@dt_p' + String(context.values.length)
 }
 
 function collectColumns(rows: Record<string, unknown>[]): string[] {
