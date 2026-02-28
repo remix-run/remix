@@ -46,15 +46,15 @@ describe('vnode mixins', () => {
     let handles: unknown[] = []
     let one = createMixin((handle) => {
       handles.push(handle)
-      return (props: {}) => <handle.element {...props} />
+      return () => handle.element
     })
     let two = createMixin((handle) => {
       handles.push(handle)
-      return (props: {}) => <handle.element {...props} />
+      return () => handle.element
     })
     let three = createMixin((handle) => {
       handles.push(handle)
-      return (props: {}) => <handle.element {...props} />
+      return () => handle.element
     })
 
     let container = document.createElement('div')

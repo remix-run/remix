@@ -47,7 +47,7 @@ let onMixin = createMixin<
     })
   })
 
-  return (type, handler, captureBoolean = false, props) => {
+  return (type, handler, captureBoolean = false) => {
     let previousType = currentType
     let previousCapture = currentCapture
     let needsRebind = currentType !== type || currentCapture !== captureBoolean
@@ -62,7 +62,7 @@ let onMixin = createMixin<
       })
     }
 
-    return <handle.element {...props} />
+    return handle.element
   }
 })
 

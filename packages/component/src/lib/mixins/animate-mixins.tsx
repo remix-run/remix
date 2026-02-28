@@ -187,9 +187,9 @@ let animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Eleme
       trackAnimation(node, animation, keyframes)
     })
 
-    return (config, props) => {
+    return (config) => {
       currentConfig = config
-      return <handle.element {...props} />
+      return handle.element
     }
   },
 )
@@ -253,9 +253,9 @@ let animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementPr
     })
   })
 
-  return (config, props) => {
+  return (config) => {
     currentConfig = config
-    return <handle.element {...props} />
+    return handle.element
   }
 })
 

@@ -113,9 +113,7 @@ describe('jsx', () => {
     })
 
     it('allows optional explicit narrowing for specific element kinds', () => {
-      let inputOnly = createMixin<HTMLInputElement>((handle) => (props: Props<'input'>) => (
-        <handle.element {...props} />
-      ))
+      let inputOnly = createMixin<HTMLInputElement>((handle) => () => handle.element)
 
       let good = <input mix={[inputOnly()]} />
       // @ts-expect-error input-only mixin should not apply to button
@@ -127,7 +125,7 @@ describe('jsx', () => {
         handle.addEventListener('insert', (event) => {
           type inferredInsertNode = Assert<Equal<typeof event.node, HTMLInputElement>>
         })
-        return (props: Props<'input'>) => <handle.element {...props} />
+        return () => handle.element
       })
 
       let good = <input mix={[inputOnly()]} />
