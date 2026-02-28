@@ -1,4 +1,4 @@
-export { createJobScheduler, defineJobs } from './lib/scheduler.ts'
+export { createJobScheduler, createJobs } from './lib/scheduler.ts'
 export type {
   CatchUpPolicy,
   CronSchedule,
