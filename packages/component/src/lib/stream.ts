@@ -109,10 +109,12 @@ const NUMERIC_CSS_PROPS = new Set([
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
 const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
 
+function createSsrSignalError() {
+  return new Error('handle.signal is not available during SSR.')
+}
+
 function createSsrThrowingSignal(): AbortSignal {
-  let error = new Error(
-    'handle.signal is not available during SSR. It should only be used in client-side lifecycles.',
-  )
+  let error = createSsrSignalError()
   let throwAccess = () => {
     throw error
   }
@@ -546,7 +548,9 @@ function createSsrMixinHandle(hostType: string, context: RenderContext) {
     }),
     element,
     signal,
-    update: () => Promise.resolve(signal),
+    update: () => {
+      throw new Error('handle.update() is not available during SSR.')
+    },
     queueTask: () => {},
     on: () => {},
     addEventListener: () => {},

@@ -407,6 +407,7 @@ describe('stream', () => {
     })
 
     it('ignores lifecycle-only mixin side effects during SSR', async () => {
+      let updateError: unknown
       let lifecycleOnly = createMixin((handle) => {
         handle.addEventListener('insert', () => {
           throw new Error('should not run in SSR')
@@ -414,7 +415,11 @@ describe('stream', () => {
         handle.queueTask(() => {
           throw new Error('should not run in SSR')
         })
-        void handle.update()
+        try {
+          void handle.update()
+        } catch (error) {
+          updateError = error
+        }
 
         return (props: { title?: string }) => <handle.element {...props} title="ok" />
       })
@@ -423,6 +428,10 @@ describe('stream', () => {
       let html = await drain(stream)
 
       expect(html).toBe('<div title="ok"></div>')
+      expect(updateError).toBeInstanceOf(Error)
+      expect((updateError as Error).message).toBe(
+        'handle.update() is not available during SSR. It should only be used in client-side lifecycles.',
+      )
     })
 
     it('serializes css mixin styles into style tags and class names', async () => {
