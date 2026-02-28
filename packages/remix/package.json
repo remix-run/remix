@@ -33,8 +33,6 @@
     "./data-table-mysql": "./src/data-table-mysql.ts",
     "./data-table-postgres": "./src/data-table-postgres.ts",
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
-    "./data-table/operators": "./src/data-table/operators.ts",
-    "./data-table/sql": "./src/data-table/sql.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
@@ -137,14 +135,6 @@
       "./data-table-sqlite": {
         "types": "./dist/data-table-sqlite.d.ts",
         "default": "./dist/data-table-sqlite.js"
-      },
-      "./data-table/operators": {
-        "types": "./dist/data-table/operators.d.ts",
-        "default": "./dist/data-table/operators.js"
-      },
-      "./data-table/sql": {
-        "types": "./dist/data-table/sql.d.ts",
-        "default": "./dist/data-table/sql.js"
       },
       "./fetch-proxy": {
         "types": "./dist/fetch-proxy.d.ts",

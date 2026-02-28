@@ -21,8 +21,6 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./operators": "./src/operators.ts",
-    "./sql": "./src/sql.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -30,14 +28,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./operators": {
-        "types": "./dist/operators.d.ts",
-        "default": "./dist/operators.js"
-      },
-      "./sql": {
-        "types": "./dist/sql.d.ts",
-        "default": "./dist/sql.js"
       },
       "./package.json": "./package.json"
     }
