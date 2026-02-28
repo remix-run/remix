@@ -1,6 +1,6 @@
-import { createRoot, css, on, ref, type Handle } from 'remix/component'
+import { addEventListeners, createRoot, css, on, ref, type Handle } from 'remix/component'
 
-import { dragRelease } from './drag-release.ts'
+import { dragVelocityEvents } from './drag-release.ts'
 import { spring, type SpringPreset } from 'remix/component'
 
 interface TrailPoint {
@@ -99,7 +99,7 @@ function PointerTrail(handle: Handle) {
     }
   }
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     pointerdown(event) {
       if (!(event.target as HTMLElement).closest('.draggable')) return
       isDown = true
@@ -164,7 +164,7 @@ function SpringDemo(handle: Handle) {
   // Get default spring transition for target circle
   let springValue = spring(selectedPreset)
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     click(event) {
       // Ignore clicks on controls or when dragging
       if ((event.target as HTMLElement).closest('.controls')) return
@@ -244,7 +244,8 @@ function SpringDemo(handle: Handle) {
             dragY = event.clientY
             handle.update()
           }),
-          on(dragRelease, (event) => {
+          dragVelocityEvents(),
+          on(dragVelocityEvents.release, (event) => {
             isDragging = false
 
             // Calculate distance to target on each axis
