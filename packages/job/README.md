@@ -20,10 +20,10 @@ npm i remix
 
 ```ts
 import * as s from 'remix/data-schema'
-import { defineJobs, createJobScheduler } from 'remix/job'
+import { createJobs, createJobScheduler } from 'remix/job'
 import { createDataTableJobBackend } from 'remix/job/data-table'
 
-let jobs = defineJobs({
+let jobs = createJobs({
   sendEmail: {
     schema: s.object({ to: s.string(), subject: s.string() }),
     async handle(payload) {

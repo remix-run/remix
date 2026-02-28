@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
-import { createJobScheduler, defineJobs } from './scheduler.ts'
+import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobBackend } from './test/memory-backend.ts'
 import { createJobWorker } from './worker.ts'
 
@@ -10,7 +10,7 @@ describe('createJobWorker', () => {
   it('processes delayed jobs', async () => {
     let executed: string[] = []
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       delayed: {
         schema: s.object({ id: s.string() }),
         async handle(payload) {
@@ -41,7 +41,7 @@ describe('createJobWorker', () => {
   it('retries failed jobs', async () => {
     let attempts = 0
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       flaky: {
         schema: s.object({ value: s.string() }),
         async handle() {
@@ -88,7 +88,7 @@ describe('createJobWorker', () => {
   it('enqueues cron schedules', async () => {
     let executed = 0
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       heartbeat: {
         schema: s.object({ name: s.string() }),
         async handle() {
