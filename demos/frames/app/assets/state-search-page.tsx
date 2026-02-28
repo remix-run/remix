@@ -38,16 +38,18 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
         </label>
         <button
           type="submit"
-          mix={[css({
-            padding: '8px 12px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: 'pointer',
-            marginTop: 20,
-            '&:hover': { background: 'rgba(255,255,255,0.1)' },
-          })]}
+          mix={[
+            css({
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: 'pointer',
+              marginTop: 20,
+              '&:hover': { background: 'rgba(255,255,255,0.1)' },
+            }),
+          ]}
         >
           Search
         </button>
@@ -55,12 +57,14 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
 
       {query.trim() ? (
         <div
-          mix={[css({
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 12,
-            padding: 12,
-            background: 'rgba(255,255,255,0.03)',
-          })]}
+          mix={[
+            css({
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              padding: 12,
+              background: 'rgba(255,255,255,0.03)',
+            }),
+          ]}
         >
           <Frame
             src={routes.frames.stateSearchResults.href(undefined, { query })}
@@ -68,7 +72,9 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
           />
         </div>
       ) : (
-        <p mix={[css({ margin: 0, color: '#9aa8e8' })]}>Enter a state name to run the frame search.</p>
+        <p mix={[css({ margin: 0, color: '#9aa8e8' })]}>
+          Enter a state name to run the frame search.
+        </p>
       )}
     </section>
   )

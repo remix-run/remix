@@ -8,16 +8,25 @@ export let ClientMountedPageExample = clientEntry(
 
     return () => (
       <section
-        mix={[css({
-          marginTop: 16,
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 10,
-          padding: 12,
-          background: 'rgba(255,255,255,0.03)',
-        })]}
+        mix={[
+          css({
+            marginTop: 16,
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 10,
+            padding: 12,
+            background: 'rgba(255,255,255,0.03)',
+          }),
+        ]}
       >
         <div
-          mix={[css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 })]}
+          mix={[
+            css({
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }),
+          ]}
         >
           <div>
             <div mix={[css({ fontSize: 13, color: '#b9c6ff' })]}>Client-mounted frame test</div>
@@ -29,13 +38,13 @@ export let ClientMountedPageExample = clientEntry(
             type="button"
             mix={[
               css({
-              padding: '6px 10px',
-              borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.18)',
-              background: 'rgba(255,255,255,0.06)',
-              color: '#e9eefc',
-              cursor: 'pointer',
-              '&:hover': { background: 'rgba(255,255,255,0.10)' },
+                padding: '6px 10px',
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.18)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#e9eefc',
+                cursor: 'pointer',
+                '&:hover': { background: 'rgba(255,255,255,0.10)' },
               }),
               on('click', () => {
                 showFrame = !showFrame

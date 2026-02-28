@@ -44,7 +44,9 @@ export default {
 
           <div class="card" mix={[css({ marginBottom: '2rem' })]}>
             <h3>Browse by Genre</h3>
-            <div mix={[css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })]}>
+            <div
+              mix={[css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })]}
+            >
               {genres.map((genreRow) => (
                 <a
                   href={routes.books.genre.href({ genre: genreRow.genre })}
@@ -131,12 +133,14 @@ export default {
         <Layout>
           <div mix={[css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })]}>
             <div
-              mix={[css({
-                height: '400px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                overflow: 'hidden',
-              })]}
+              mix={[
+                css({
+                  height: '400px',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                  overflow: 'hidden',
+                }),
+              ]}
             >
               <ImageCarousel images={imageUrls} />
             </div>
@@ -164,12 +168,14 @@ export default {
               <p mix={[css({ margin: '1.5rem 0', lineHeight: 1.8 })]}>{book.description}</p>
 
               <div
-                mix={[css({
-                  margin: '1.5rem 0',
-                  padding: '1rem',
-                  background: '#f8f9fa',
-                  borderRadius: '4px',
-                })]}
+                mix={[
+                  css({
+                    margin: '1.5rem 0',
+                    padding: '1rem',
+                    background: '#f8f9fa',
+                    borderRadius: '4px',
+                  }),
+                ]}
               >
                 <p>
                   <strong>ISBN:</strong> {book.isbn}

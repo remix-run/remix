@@ -12,13 +12,13 @@ export let ReloadScope = clientEntry(
           type="button"
           mix={[
             css({
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: framePending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: framePending ? 'default' : 'pointer',
-            '&:hover': { background: 'var(--frame-bg)' },
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: framePending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: framePending ? 'default' : 'pointer',
+              '&:hover': { background: 'var(--frame-bg)' },
             }),
             on('click', async () => {
               if (framePending || topPending) return
@@ -40,13 +40,13 @@ export let ReloadScope = clientEntry(
           type="button"
           mix={[
             css({
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: topPending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: topPending ? 'default' : 'pointer',
-            '&:hover': { background: 'var(--top-bg)' },
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: topPending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: topPending ? 'default' : 'pointer',
+              '&:hover': { background: 'var(--top-bg)' },
             }),
             on('click', async () => {
               if (topPending || framePending) return

@@ -12,13 +12,13 @@ export let Counter = clientEntry(
           type="button"
           mix={[
             css({
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: 'pointer',
-            '&:hover': { background: 'rgba(255,255,255,0.10)' },
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: 'pointer',
+              '&:hover': { background: 'rgba(255,255,255,0.10)' },
             }),
             on('click', () => {
               count--
@@ -28,20 +28,22 @@ export let Counter = clientEntry(
         >
           −
         </button>
-        <span mix={[css({ minWidth: 48, textAlign: 'center', fontVariantNumeric: 'tabular-nums' })]}>
+        <span
+          mix={[css({ minWidth: 48, textAlign: 'center', fontVariantNumeric: 'tabular-nums' })]}
+        >
           {count}
         </span>
         <button
           type="button"
           mix={[
             css({
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: 'pointer',
-            '&:hover': { background: 'rgba(255,255,255,0.10)' },
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: 'pointer',
+              '&:hover': { background: 'rgba(255,255,255,0.10)' },
             }),
             on('click', () => {
               count++
