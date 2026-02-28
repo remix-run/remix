@@ -7,7 +7,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 - **JSX Runtime** - Convenient JSX syntax
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
-- **Real DOM Events** - Events are real DOM events using [`@remix-run/interaction`](../interaction)
+- **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
 - **Inline CSS** - CSS prop with pseudo-selectors and nested rules
 - **Server Rendering** - Stream full pages or fragments with `renderToStream`
 - **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
@@ -228,7 +228,7 @@ function Counter(
 
 ## Events
 
-Events use the `on()` mixin and are handled by [`@remix-run/interaction`](../interaction). Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
+Events use the `on()` mixin. Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
 
 ```tsx
 function SearchInput(handle: Handle) {

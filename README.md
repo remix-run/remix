@@ -54,7 +54,6 @@ We currently publish the following packages:
 - [fs](packages/fs): Filesystem utilities using the Web File API
 - [headers](packages/headers): A toolkit for working with HTTP headers in JavaScript
 - [html-template](packages/html-template): HTML template tag with auto-escaping for JavaScript
-- [interaction](packages/interaction): Like components but for events
 - [lazy-file](packages/lazy-file): Lazy, streaming files for JavaScript
 - [logger-middleware](packages/logger-middleware): Middleware for logging HTTP requests and responses
 - [method-override-middleware](packages/method-override-middleware): Middleware for overriding HTTP request methods from form data

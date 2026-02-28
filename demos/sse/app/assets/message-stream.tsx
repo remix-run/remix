@@ -1,5 +1,6 @@
+// TODO: need to update this entire app
 import { hydrated } from '@remix-run/dom'
-import { on } from 'remix/interaction'
+import { addEventListeners } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
@@ -12,7 +13,7 @@ export const MessageStream = hydrated(
     this.queueTask(() => {
       let eventSource = new EventSource(routes.messages.href(null, limit ? { limit } : {}))
 
-      let dispose = on(eventSource, {
+      addEventListeners(eventSource, this.signal, {
         open: () => {
           connected = true
           this.update()
@@ -31,7 +32,6 @@ export const MessageStream = hydrated(
 
       this.signal.addEventListener('abort', () => {
         eventSource.close()
-        dispose()
       })
     })
 

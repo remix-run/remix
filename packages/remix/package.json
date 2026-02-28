@@ -45,11 +45,6 @@
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./html-template": "./src/html-template.ts",
-    "./interaction": "./src/interaction.ts",
-    "./interaction/form": "./src/interaction/form.ts",
-    "./interaction/keys": "./src/interaction/keys.ts",
-    "./interaction/popover": "./src/interaction/popover.ts",
-    "./interaction/press": "./src/interaction/press.ts",
     "./lazy-file": "./src/lazy-file.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
@@ -184,26 +179,6 @@
         "types": "./dist/html-template.d.ts",
         "default": "./dist/html-template.js"
       },
-      "./interaction": {
-        "types": "./dist/interaction.d.ts",
-        "default": "./dist/interaction.js"
-      },
-      "./interaction/form": {
-        "types": "./dist/interaction/form.d.ts",
-        "default": "./dist/interaction/form.js"
-      },
-      "./interaction/keys": {
-        "types": "./dist/interaction/keys.d.ts",
-        "default": "./dist/interaction/keys.js"
-      },
-      "./interaction/popover": {
-        "types": "./dist/interaction/popover.d.ts",
-        "default": "./dist/interaction/popover.js"
-      },
-      "./interaction/press": {
-        "types": "./dist/interaction/press.d.ts",
-        "default": "./dist/interaction/press.js"
-      },
       "./lazy-file": {
         "types": "./dist/lazy-file.d.ts",
         "default": "./dist/lazy-file.js"
@@ -312,7 +287,6 @@
     "@remix-run/fs": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
-    "@remix-run/interaction": "workspace:^",
     "@remix-run/lazy-file": "workspace:^",
     "@remix-run/logger-middleware": "workspace:^",
     "@remix-run/method-override-middleware": "workspace:^",
