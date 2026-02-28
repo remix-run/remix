@@ -4,9 +4,9 @@ import type { MixinDescriptor } from '../mixin.ts'
 import type {
   EventType as AddEventType,
   ListenerFor as AddEventListenerFor,
-} from '../add-event-listeners.ts'
+} from '../event-listeners.ts'
 
-export type { Dispatched } from '../add-event-listeners.ts'
+export type { Dispatched } from '../event-listeners.ts'
 
 type SignaledListener<event extends Event> = (
   event: event,
@@ -78,4 +78,3 @@ export function on<
     captureBoolean,
   ) as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
 }
-
