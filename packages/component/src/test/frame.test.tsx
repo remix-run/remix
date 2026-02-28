@@ -1705,7 +1705,9 @@ describe('run', () => {
       },
     })
 
-    root.render(<Frame src="/client-range-frame" fallback={<p id="fallback-range-frame">Loading…</p>} />)
+    root.render(
+      <Frame src="/client-range-frame" fallback={<p id="fallback-range-frame">Loading…</p>} />,
+    )
     root.flush()
 
     expect(host.querySelector('#fallback-range-frame')?.textContent).toBe('Loading…')
@@ -1771,10 +1773,13 @@ describe('run', () => {
   })
 
   it('logs a clear error when hydrating client entries without loadModule', async () => {
-    let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle, setup: number) {
-      let count = setup
-      return () => <button>{count}</button>
-    })
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle, setup: number) {
+        let count = setup
+        return () => <button>{count}</button>
+      },
+    )
 
     let html = await drain(renderToStream(<Counter setup={2} />))
     let container = document.createElement('div')
@@ -1792,13 +1797,15 @@ describe('run', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(consoleError).toHaveBeenCalled()
-      expect(consoleError.mock.calls.some((call) => String(call[0]).includes('Failed to load module'))).toBe(
-        true,
-      )
+      expect(
+        consoleError.mock.calls.some((call) => String(call[0]).includes('Failed to load module')),
+      ).toBe(true)
       expect(
         consoleError.mock.calls.some((call) =>
           call.some((value) =>
-            String(value).includes('loadModule is required to hydrate client entries inside <Frame />'),
+            String(value).includes(
+              'loadModule is required to hydrate client entries inside <Frame />',
+            ),
           ),
         ),
       ).toBe(true)
@@ -1808,10 +1815,13 @@ describe('run', () => {
   })
 
   it('logs a clear error when loadModule resolves to a non-function export', async () => {
-    let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle, setup: number) {
-      let count = setup
-      return () => <button>{count}</button>
-    })
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle, setup: number) {
+        let count = setup
+        return () => <button>{count}</button>
+      },
+    )
 
     let html = await drain(renderToStream(<Counter setup={3} />))
     let container = document.createElement('div')

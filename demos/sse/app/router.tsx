@@ -43,41 +43,49 @@ router.map(pageRoutes, {
         </p>
 
         <div
-          mix={[css({
-            background: 'white',
-            padding: '1.5rem',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            marginBottom: '1.5rem',
-          })]}
+          mix={[
+            css({
+              background: 'white',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              marginBottom: '1.5rem',
+            }),
+          ]}
         >
           <label
-            mix={[css({
-              display: 'block',
-              fontWeight: 600,
-              marginBottom: '0.5rem',
-              color: '#333',
-            })]}
+            mix={[
+              css({
+                display: 'block',
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                color: '#333',
+              }),
+            ]}
           >
             Compression:
           </label>
           <div
-            mix={[css({
-              padding: '0.5rem',
-              background: '#f8f9fa',
-              borderRadius: '4px',
-              color: '#666',
-            })]}
+            mix={[
+              css({
+                padding: '0.5rem',
+                background: '#f8f9fa',
+                borderRadius: '4px',
+                color: '#666',
+              }),
+            ]}
           >
             Encoding is negotiated automatically via{' '}
             <code
-              mix={[css({
-                background: '#f5f5f5',
-                padding: '0.2rem 0.4rem',
-                borderRadius: '3px',
-                fontFamily: "'Courier New', monospace",
-                fontSize: '0.9em',
-              })]}
+              mix={[
+                css({
+                  background: '#f5f5f5',
+                  padding: '0.2rem 0.4rem',
+                  borderRadius: '3px',
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: '0.9em',
+                }),
+              ]}
             >
               Accept-Encoding
             </code>{' '}
@@ -85,13 +93,15 @@ router.map(pageRoutes, {
             <br />
             Open DevTools Network tab to see{' '}
             <code
-              mix={[css({
-                background: '#f5f5f5',
-                padding: '0.2rem 0.4rem',
-                borderRadius: '3px',
-                fontFamily: "'Courier New', monospace",
-                fontSize: '0.9em',
-              })]}
+              mix={[
+                css({
+                  background: '#f5f5f5',
+                  padding: '0.2rem 0.4rem',
+                  borderRadius: '3px',
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: '0.9em',
+                }),
+              ]}
             >
               Content-Encoding
             </code>{' '}
@@ -100,31 +110,37 @@ router.map(pageRoutes, {
         </div>
 
         <div
-          mix={[css({
-            background: 'white',
-            padding: '1.5rem',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            marginBottom: '1.5rem',
-          })]}
+          mix={[
+            css({
+              background: 'white',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              marginBottom: '1.5rem',
+            }),
+          ]}
         >
           <label
-            mix={[css({
-              display: 'block',
-              fontWeight: 600,
-              marginBottom: '0.5rem',
-              color: '#333',
-            })]}
+            mix={[
+              css({
+                display: 'block',
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                color: '#333',
+              }),
+            ]}
           >
             Message Limit:
           </label>
           <div
-            mix={[css({
-              padding: '0.5rem',
-              background: '#f8f9fa',
-              borderRadius: '4px',
-              color: '#666',
-            })]}
+            mix={[
+              css({
+                padding: '0.5rem',
+                background: '#f8f9fa',
+                borderRadius: '4px',
+                color: '#666',
+              }),
+            ]}
           >
             {limit ? (
               <>
@@ -136,13 +152,15 @@ router.map(pageRoutes, {
                 <a href="?limit=10" mix={[css({ color: '#007bff', textDecoration: 'underline' })]}>
                   Add{' '}
                   <code
-                    mix={[css({
-                      background: '#f5f5f5',
-                      padding: '0.2rem 0.4rem',
-                      borderRadius: '3px',
-                      fontFamily: "'Courier New', monospace",
-                      fontSize: '0.9em',
-                    })]}
+                    mix={[
+                      css({
+                        background: '#f5f5f5',
+                        padding: '0.2rem 0.4rem',
+                        borderRadius: '3px',
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: '0.9em',
+                      }),
+                    ]}
                   >
                     ?limit=10
                   </code>{' '}
