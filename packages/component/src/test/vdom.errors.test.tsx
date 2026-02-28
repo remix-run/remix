@@ -4,6 +4,33 @@ import { on } from '../index.ts'
 import type { Handle } from '../lib/component.ts'
 
 describe('vdom error handling', () => {
+  describe('root event forwarding', () => {
+    it('forwards bubbling DOM error events to root listeners', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let forwarded: unknown
+
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      let expected = new Error('createRoot forwarded error')
+      container.dispatchEvent(new ErrorEvent('error', { bubbles: true, error: expected }))
+
+      expect(forwarded).toBe(expected)
+    })
+
+    it('dispose is a no-op before first render', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.dispose()
+      root.flush()
+
+      expect(container.innerHTML).toBe('')
+    })
+  })
+
   describe('setup errors', () => {
     it('dispatches error event when setup throws', () => {
       let container = document.createElement('div')

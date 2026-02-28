@@ -5,7 +5,41 @@ import { invariant } from '../lib/invariant.ts'
 import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
+  describe('event forwarding', () => {
+    it('forwards bubbling DOM error events to range root listeners', () => {
+      let host = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      host.append(start, end)
+
+      let root = createRangeRoot([start, end])
+      let forwarded: unknown
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      let expected = new Error('createRangeRoot forwarded error')
+      host.dispatchEvent(new ErrorEvent('error', { bubbles: true, error: expected }))
+
+      expect(forwarded).toBe(expected)
+    })
+  })
+
   describe('basic rendering', () => {
+    it('dispose is a no-op before first render', () => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      container.appendChild(start)
+      container.appendChild(end)
+
+      let root = createRangeRoot([start, end])
+      root.dispose()
+      root.flush()
+
+      expect(container.innerHTML).toBe('<!--start--><!--end-->')
+    })
+
     it('renders content between markers', () => {
       let container = document.createElement('div')
       let start = document.createComment('start')

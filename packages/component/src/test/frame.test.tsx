@@ -3,7 +3,7 @@ import type { Handle } from '../lib/component.ts'
 import { Frame } from '../lib/component.ts'
 import { clientEntry } from '../lib/client-entries.ts'
 import { run } from '../lib/run.ts'
-import { createRoot } from '../lib/vdom.ts'
+import { createRangeRoot, createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
 import { css, on } from '../index.ts'
@@ -1687,6 +1687,33 @@ describe('run', () => {
     root.dispose()
   })
 
+  it('renders a client-created Frame with createRangeRoot frameInit', async () => {
+    let host = document.createElement('div')
+    document.body.appendChild(host)
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end], {
+      frameInit: {
+        src: '/range-root',
+        resolveFrame: async () => '<p id="resolved-range-frame">Resolved range frame</p>',
+        loadModule: async () =>
+          function Module() {
+            return () => null
+          },
+      },
+    })
+
+    root.render(<Frame src="/client-range-frame" fallback={<p id="fallback-range-frame">Loading…</p>} />)
+    root.flush()
+
+    expect(host.querySelector('#fallback-range-frame')?.textContent).toBe('Loading…')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(host.querySelector('#resolved-range-frame')?.textContent).toBe('Resolved range frame')
+    root.dispose()
+  })
+
   it('dispatches a clear error for createRoot Frame without frameInit', () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)
@@ -1702,6 +1729,115 @@ describe('run', () => {
 
     expect(error).toBeInstanceOf(Error)
     expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('dispatches a clear error for createRangeRoot Frame without frameInit', () => {
+    let host = document.createElement('div')
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end])
+    let error: unknown
+    root.addEventListener('error', (event) => {
+      error = (event as ErrorEvent).error
+    })
+
+    root.render(<Frame src="/missing-range-runtime" fallback={<p>Loading…</p>} />)
+    root.flush()
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('throws from the root runtime resolveFrame fallback without frameInit', () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let runtime: { resolveFrame(src: string): unknown } | undefined
+    function CaptureRuntime(handle: Handle) {
+      runtime = handle.frame.$runtime as { resolveFrame(src: string): unknown }
+      return () => null
+    }
+
+    let root = createRoot(rootContainer)
+    root.render(<CaptureRuntime />)
+    root.flush()
+
+    expect(runtime).toBeDefined()
+    expect(() => runtime!.resolveFrame('/missing-runtime')).toThrow(
+      'Cannot render <Frame /> without frame runtime',
+    )
+  })
+
+  it('logs a clear error when hydrating client entries without loadModule', async () => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle, setup: number) {
+      let count = setup
+      return () => <button>{count}</button>
+    })
+
+    let html = await drain(renderToStream(<Counter setup={2} />))
+    let container = document.createElement('div')
+    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+        },
+      })
+
+      root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(consoleError.mock.calls.some((call) => String(call[0]).includes('Failed to load module'))).toBe(
+        true,
+      )
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.some((value) =>
+            String(value).includes('loadModule is required to hydrate client entries inside <Frame />'),
+          ),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('logs a clear error when loadModule resolves to a non-function export', async () => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle, setup: number) {
+      let count = setup
+      return () => <button>{count}</button>
+    })
+
+    let html = await drain(renderToStream(<Counter setup={3} />))
+    let container = document.createElement('div')
+    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+          loadModule: async () => ({ not: 'a function' }) as any,
+        },
+      })
+
+      root.render(<Frame src="/bad-export-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.some((value) => String(value).includes('is not a function')),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   it('reloads client-created Frame in place when src changes', async () => {
