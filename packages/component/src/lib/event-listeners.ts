@@ -15,6 +15,7 @@ export type EventType<target extends EventTarget> = target extends { __eventMap?
 
 export type ListenerFor<target extends EventTarget, type extends EventType<target>> = (
   event: EnsureEvent<EventMap<target>[type], target>,
+  signal: AbortSignal,
 ) => void
 
 export type EventListeners<target extends EventTarget> = Partial<{
@@ -102,9 +103,33 @@ export function addEventListeners<target extends EventTarget>(
   signal: AbortSignal,
   listeners: EventListeners<target>,
 ) {
+  type AnyEvent = EnsureEvent<EventMap<target>[EventType<target>], target>
+  type Listener = (event: AnyEvent, signal?: AbortSignal) => void
+
   for (let type in listeners) {
-    let listener = listeners[type as EventType<target>]
+    let listener = listeners[type as EventType<target>] as Listener
     if (!listener) continue
-    target.addEventListener(type, listener as EventListener, { signal })
+    let reentry: AbortController | null = null
+
+    signal.addEventListener('abort', () => {
+      reentry?.abort()
+    })
+
+    target.addEventListener(
+      type,
+      (event) => {
+        reentry?.abort()
+        let dispatchedEvent = event as AnyEvent
+
+        if (listener.length < 2) {
+          reentry = null
+          listener(dispatchedEvent)
+        } else {
+          reentry = new AbortController()
+          listener(dispatchedEvent, reentry.signal)
+        }
+      },
+      { signal },
+    )
   }
 }

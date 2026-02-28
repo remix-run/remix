@@ -67,12 +67,62 @@ describe('addEventListeners', () => {
     expect(clickCount).toBe(1)
   })
 
+  it('does not pass a re-entry signal to one-argument listeners', () => {
+    let controller = new AbortController()
+    let receivedSignal: AbortSignal | undefined
+
+    addEventListeners(document, controller.signal, {
+      click(event) {
+        void event
+        receivedSignal = arguments[1] as AbortSignal | undefined
+      },
+    })
+
+    document.dispatchEvent(new MouseEvent('click'))
+    expect(receivedSignal).toBeUndefined()
+  })
+
+  it('aborts re-entry signal for two-argument listeners', () => {
+    let controller = new AbortController()
+    let signals: AbortSignal[] = []
+
+    addEventListeners(document, controller.signal, {
+      click(_event, signal) {
+        signals.push(signal)
+      },
+    })
+
+    document.dispatchEvent(new MouseEvent('click'))
+    expect(signals).toHaveLength(1)
+    expect(signals[0]?.aborted).toBe(false)
+
+    document.dispatchEvent(new MouseEvent('click'))
+    expect(signals).toHaveLength(2)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(signals[1]?.aborted).toBe(false)
+
+    controller.abort()
+    expect(signals[1]?.aborted).toBe(true)
+  })
+
   describe('types', () => {
     it('provides literal event and target types for document', () => {
       function App(handle: Handle) {
         addEventListeners(document, handle.signal, {
           keydown: (event) => {
             type test = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
+          },
+        })
+        return () => <div>App</div>
+      }
+    })
+
+    it('provides abort signal as required second listener argument', () => {
+      function App(handle: Handle) {
+        addEventListeners(document, handle.signal, {
+          keydown: (event, signal) => {
+            type eventTest = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
+            type signalTest = Assert<Equal<typeof signal, AbortSignal>>
           },
         })
         return () => <div>App</div>

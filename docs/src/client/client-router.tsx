@@ -1,4 +1,4 @@
-import { type Handle, clientEntry } from 'remix/component'
+import { type Handle, addEventListeners, clientEntry } from 'remix/component'
 import { routes } from '../server/routes'
 
 declare global {
@@ -24,7 +24,7 @@ export const ClientRouter = clientEntry(
   `${routes.assets.href({ asset: 'client-router.js' })}#ClientRouter`,
   (handle: Handle) => {
     handle.queueTask(() => {
-      handle.on(window.navigation, {
+      addEventListeners(window.navigation, handle.signal, {
         navigate(event, signal) {
           let shouldNotIntercept =
             !event.canIntercept ||
