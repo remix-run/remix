@@ -21,10 +21,21 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/fetch-router/routes`, especially in a dedicated `routes.ts` file. Import runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
+
+```ts
+// routes.ts
+import { route, form, resources } from 'remix/fetch-router/routes'
+
+// router.ts
+import { createRouter } from 'remix/fetch-router'
+```
+
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
-import { createRouter, route } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { logger } from 'remix/logger-middleware'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
@@ -91,7 +102,8 @@ In addition to describing the structure of your routes, route maps also make it 
 Note: We're using the [`createHtmlResponse` helper from `@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#html-responses) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
-import { createRouter, route } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { html } from 'remix/html-template'
 import { createHtmlResponse } from 'remix/response/html'
 
@@ -180,7 +192,8 @@ However, we can also encode the request method into the route definition itself 
 
 ```ts
 import * as assert from 'node:assert/strict'
-import { createRouter, route } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
   home: { method: 'GET', pattern: '/' },
@@ -234,7 +247,8 @@ Continuing with [the example of the contact page](#routing-based-on-request-meth
 A `form()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter, route, form } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route, form } from 'remix/fetch-router/routes'
 import { createHtmlResponse } from 'remix/response/html'
 import { html } from 'remix/html-template'
 
@@ -312,7 +326,8 @@ router.map(routes, {
 The router provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([similar to Rails' `resources` helper](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
 
 ```ts
-import { createRouter, route, resources } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route, resources } from 'remix/fetch-router/routes'
 
 let routes = route({
   brands: {
@@ -362,7 +377,8 @@ router.map(routes.brands, {
 The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a singleton resource, like a user profile.
 
 ```tsx
-import { createRouter, route, resources, resource } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route, resources, resource } from 'remix/fetch-router/routes'
 
 let routes = route({
   user: {
@@ -419,7 +435,8 @@ type Routes = typeof routes
 Resource route names may be customized using the `names` option when you'd prefer not to use the default `index`/`new`/`show`/`create`/`edit`/`update`/`destroy` route names.
 
 ```tsx
-import { createRouter, route, resources } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route, resources } from 'remix/fetch-router/routes'
 
 let routes = route({
   users: resources('users', {
@@ -437,7 +454,8 @@ type Routes = typeof routes.users
 If you want to use a param name other than `id`, you can use the `param` option.
 
 ```tsx
-import { createRouter, route, resources } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route, resources } from 'remix/fetch-router/routes'
 
 let routes = route({
   users: resources('users', {
