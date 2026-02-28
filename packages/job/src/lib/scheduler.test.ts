@@ -2,13 +2,13 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
-import { createJobScheduler, defineJobs } from './scheduler.ts'
+import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobBackend } from './test/memory-backend.ts'
 
 describe('createJobScheduler', () => {
   it('enqueues and retrieves jobs', async () => {
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
@@ -30,7 +30,7 @@ describe('createJobScheduler', () => {
 
   it('supports dedupe keys', async () => {
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
@@ -54,7 +54,7 @@ describe('createJobScheduler', () => {
 
   it('validates payload with data-schema', async () => {
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
@@ -67,7 +67,7 @@ describe('createJobScheduler', () => {
 
   it('cancels queued jobs', async () => {
     let backend = createMemoryJobBackend()
-    let jobs = defineJobs({
+    let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},

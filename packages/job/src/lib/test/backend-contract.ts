@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
 import type { JobBackend } from '../backend.ts'
-import { createJobScheduler, defineJobs } from '../scheduler.ts'
+import { createJobScheduler, createJobs } from '../scheduler.ts'
 import { createJobWorker } from '../worker.ts'
 
 export interface BackendContractOptions {
@@ -28,7 +28,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
 
     it('processes queued jobs', { skip: !enabled }, async () => {
       let processed: string[] = []
-      let jobs = defineJobs({
+      let jobs = createJobs({
         email: {
           schema: s.object({ id: s.string() }),
           async handle(payload) {
@@ -57,7 +57,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
 
     it('retries jobs', { skip: !enabled }, async () => {
       let attempts = 0
-      let jobs = defineJobs({
+      let jobs = createJobs({
         flaky: {
           schema: s.object({ id: s.string() }),
           async handle() {
@@ -102,7 +102,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
 
     it('supports delayed jobs', { skip: !enabled }, async () => {
       let processed = 0
-      let jobs = defineJobs({
+      let jobs = createJobs({
         delayed: {
           schema: s.object({ id: s.string() }),
           async handle() {
@@ -130,7 +130,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
     })
 
     it('supports dedupe keys', { skip: !enabled }, async () => {
-      let jobs = defineJobs({
+      let jobs = createJobs({
         email: {
           schema: s.object({ id: s.string() }),
           async handle() {},
@@ -202,7 +202,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
 
     it('supports cron schedules', { skip: !enabled }, async () => {
       let processed = 0
-      let jobs = defineJobs({
+      let jobs = createJobs({
         cronJob: {
           schema: s.object({ id: s.string() }),
           async handle() {

@@ -11,12 +11,12 @@ import type {
 import { normalizeRetryPolicy } from './retry.ts'
 
 /**
- * Defines a typed map of job handlers.
+ * Creates a typed map of job handlers.
  *
  * @param jobs Job definitions keyed by name
  * @returns The same job definition object with preserved types
  */
-export function defineJobs<defs extends JobDefinitions>(jobs: defs): defs {
+export function createJobs<defs extends JobDefinitions>(jobs: defs): defs {
   return jobs
 }
 
