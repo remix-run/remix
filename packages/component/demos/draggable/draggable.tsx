@@ -1,5 +1,4 @@
 import { createMixin, on } from 'remix/component'
-import type { EventListeners } from '@remix-run/interaction'
 
 export type DragDetail = {
   left: number
@@ -10,7 +9,7 @@ export let dragStartEvent = 'rmx:dragstart' as const
 export let dragEndEvent = 'rmx:dragend' as const
 
 type DraggableProps = {
-  on?: EventListeners<HTMLElement>
+  on?: Record<string, (event: Event) => void>
 }
 
 let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle) => {

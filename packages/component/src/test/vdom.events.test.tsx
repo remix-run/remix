@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { on } from '../index.ts'
-import type { Dispatched } from '@remix-run/interaction'
+import type { Dispatched } from '../lib/mixins/on-mixin.tsx'
 import type { Assert, Equal } from './utils.ts'
 import type { Handle } from '../lib/component.ts'
 

@@ -1,9 +1,8 @@
-import { createContainer, TypedEventTarget } from '@remix-run/interaction'
-import type { EventListeners } from '@remix-run/interaction'
 import type { FrameHandle } from './component.ts'
 import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { SchedulerPhaseEvent } from './scheduler.ts'
+import { TypedEventTarget } from './typed-event-target.ts'
 import { invariant } from './invariant.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
@@ -75,7 +74,6 @@ export type MixinHandle<
   element: MixinElement<node, props>
   update(): Promise<AbortSignal>
   queueTask(task: (node: node, signal: AbortSignal) => void): void
-  on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => void
 }
 
 type MixinRuntimeType<
@@ -516,11 +514,6 @@ class MixinHandleImpl
         task(binding.node, this.#options.getSignal())
       },
     ])
-  }
-
-  on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void {
-    let container = createContainer(target, { signal: this.#options.getSignal() })
-    container.set(listeners)
   }
 
   setActiveScope(scope?: symbol): void {

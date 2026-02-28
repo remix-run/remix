@@ -1397,7 +1397,7 @@ function ThemedContent(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -1502,7 +1502,7 @@ function Analytics(handle: Handle, setup: { apiKey: string }) {
 #### EventEmitters
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class DataEvent extends Event {
   constructor(public value: string) {

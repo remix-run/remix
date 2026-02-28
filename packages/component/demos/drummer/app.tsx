@@ -1,4 +1,4 @@
-import { css, keysEvents, on, pressEvents, ref, type Handle } from 'remix/component'
+import { css, addEventListeners, on, pressEvents, ref, type Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {
@@ -19,26 +19,25 @@ export function App(handle: Handle<Drummer>) {
 
   handle.context.set(drummer)
 
+  handle.queueTask(() => {
+    document.addEventListener('keydown', (event) => {
+      if (event.key === ' ') {
+        drummer.toggle()
+      }
+      if (event.key === 'ArrowUp') {
+        drummer.setTempo(drummer.bpm + 1)
+      }
+      if (event.key === 'ArrowDown') {
+        drummer.setTempo(drummer.bpm - 1)
+      }
+    })
+  })
+
   return () => (
-    <div
-      mix={[
-        keysEvents(),
-        on(keysEvents.space, () => {
-          drummer.toggle()
-        }),
-        on(keysEvents.arrowUp, () => {
-          drummer.setTempo(drummer.bpm + 1)
-        }),
-        on(keysEvents.arrowDown, () => {
-          drummer.setTempo(drummer.bpm - 1)
-        }),
-      ]}
-    >
-      <Layout>
-        <Equalizer />
-        <DrumControls />
-      </Layout>
-    </div>
+    <Layout>
+      <Equalizer />
+      <DrumControls />
+    </Layout>
   )
 }
 
@@ -55,21 +54,10 @@ export function Equalizer(handle: Handle) {
   let snare = createVoice()
   let hat = createVoice()
 
-  handle.on(drummer, {
-    kick() {
-      kick.trigger(1)
-    },
-    snare() {
-      snare.trigger(1)
-    },
-    hat() {
-      hat.trigger(1)
-    },
-  })
-
-  // initial animation on mount
-  handle.queueTask(() => {
-    handle.update()
+  addEventListeners(drummer, handle.signal, {
+    kick: () => kick.trigger(1),
+    snare: () => snare.trigger(1),
+    hat: () => hat.trigger(1),
   })
 
   return () => {
@@ -104,7 +92,7 @@ function DrumControls(handle: Handle) {
   let stop: HTMLButtonElement
   let play: HTMLButtonElement
 
-  handle.on(drummer, {
+  addEventListeners(drummer, handle.signal, {
     change: () => {
       handle.update()
     },

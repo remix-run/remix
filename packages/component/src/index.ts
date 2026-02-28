@@ -41,6 +41,8 @@ export type {
 export type { HostProps, LayoutAnimationConfig } from './lib/dom.ts'
 export { createMixin } from './lib/mixin.ts'
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'
+export { TypedEventTarget } from './lib/typed-event-target.ts'
+export { addEventListeners } from './lib/add-event-listeners.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched } from './lib/mixins/on-mixin.tsx'
 export { keysEvents } from './lib/mixins/keys-mixin.tsx'

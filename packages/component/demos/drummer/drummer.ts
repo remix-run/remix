@@ -1,4 +1,4 @@
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 interface DrummerEventMap {
   kick: DrumEvent

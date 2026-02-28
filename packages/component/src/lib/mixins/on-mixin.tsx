@@ -1,25 +1,21 @@
 import { createMixin } from '../mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from '../mixin.ts'
+import type {
+  EventType as AddEventType,
+  ListenerFor as AddEventListenerFor,
+} from '../add-event-listeners.ts'
 
-export type Dispatched<event extends Event, target extends EventTarget> = Omit<
-  event,
-  'currentTarget'
-> & { currentTarget: target }
-
-type EnsureEvent<event, target extends EventTarget> = event extends Event
-  ? Dispatched<event, target>
-  : never
+export type { Dispatched } from '../add-event-listeners.ts'
 
 type SignaledListener<event extends Event> = (
   event: event,
   signal: AbortSignal,
 ) => void | Promise<void>
 
-type EventType<target extends Element> = keyof EventMap<target>
-
+type EventType<target extends Element> = Extract<AddEventType<target>, string>
 type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
-  EnsureEvent<EventMap<target>[type], target>
+  Parameters<AddEventListenerFor<target, type>>[0]
 >
 
 let onMixin = createMixin<
@@ -83,11 +79,3 @@ export function on<
   ) as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
 }
 
-// prettier-ignore
-type EventMap<target extends EventTarget> = (
-  target extends HTMLElement ? HTMLElementEventMap :
-  target extends SVGSVGElement ? SVGSVGElementEventMap :
-  target extends SVGElement ? SVGElementEventMap :
-  target extends Element ? ElementEventMap :
-  never
-)
