@@ -13,6 +13,16 @@ export type EventType<target extends EventTarget> = target extends { __eventMap?
   ? keyof eventMap
   : keyof EventMap<target>
 
+type NavigationTarget = Window extends { navigation: infer navigation } ? navigation : never
+type NavigationTargetEvent = NavigationTarget extends {
+  onnavigate: ((event: infer navigateEvent) => unknown) | null
+}
+  ? navigateEvent
+  : Event
+type NavigationTargetEventMap = {
+  navigate: NavigationTargetEvent
+}
+
 export type ListenerFor<target extends EventTarget, type extends EventType<target>> = (
   event: EnsureEvent<EventMap<target>[type], target>,
   signal: AbortSignal,
@@ -59,6 +69,7 @@ export type EventMap<target extends EventTarget> = (
   target extends MediaStream ? MediaStreamEventMap :
   target extends MediaStreamTrack ? MediaStreamTrackEventMap :
   target extends MessagePort ? MessagePortEventMap :
+  target extends NavigationTarget ? NavigationTargetEventMap :
   target extends Node ? GlobalEventHandlersEventMap :
   target extends Notification ? NotificationEventMap :
   target extends OffscreenCanvas ? OffscreenCanvasEventMap :
