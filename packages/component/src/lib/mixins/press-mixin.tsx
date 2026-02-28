@@ -175,7 +175,6 @@ let basePressEvents = createMixin<HTMLElement>((handle) => {
     suppressNextUp = false
   })
 
-  return () => handle.element
 })
 
 type PressEventsMixin = typeof basePressEvents & {

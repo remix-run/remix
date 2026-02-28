@@ -85,9 +85,11 @@ type MixinRuntimeType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (
-  ...args: [...args, currentProps: props]
-) => void | null | RemixElement | MixinElement<node, props>
+) =>
+  | ((
+      ...args: [...args, currentProps: props]
+    ) => void | null | RemixElement | MixinElement<node, props>)
+  | void
 
 export type MixinType<
   node extends EventTarget = Element,
@@ -96,9 +98,11 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) => (
-  ...args: [...args, currentProps: props]
-) => void | null | RemixElement | MixinElement<node, props>
+) =>
+  | ((
+      ...args: [...args, currentProps: props]
+    ) => void | null | RemixElement | MixinElement<node, props>)
+  | void
 
 export type MixinDescriptor<
   node extends EventTarget = Element,
@@ -120,6 +124,8 @@ type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
 ) => void | null | RemixElement | MixinElement<Element, ElementProps>
+type AnyMixinRunnerResult = ReturnType<AnyMixinRunner>
+type AnyMixinSetupResult = ReturnType<AnyMixinType> | AnyMixinRunnerResult
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
 type ScopedAnyMixinHandle = AnyMixinHandle & {
   setActiveScope(scope?: symbol): void
@@ -224,7 +230,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       entry = {
         scope,
         type: descriptor.type as AnyMixinType,
-        runner: descriptor.type(handle, hostType) as AnyMixinRunner,
+        runner: normalizeMixinRunner(descriptor.type(handle, hostType) as AnyMixinSetupResult, handle),
       }
       handle.setActiveScope(undefined)
       state.runners[index] = entry
@@ -745,4 +751,14 @@ function isRemixElement(value: unknown): value is RemixElement {
 function isMixinElement(value: unknown): value is MixinElement<Element, ElementProps> {
   if (typeof value !== 'function') return false
   return '__rmxMixinElementType' in value
+}
+
+function normalizeMixinRunner(result: AnyMixinSetupResult, handle: AnyMixinHandle): AnyMixinRunner {
+  if (typeof result === 'function' && !isMixinElement(result)) {
+    return result as AnyMixinRunner
+  }
+  if (result === undefined) {
+    return () => handle.element
+  }
+  return () => result as AnyMixinRunnerResult
 }

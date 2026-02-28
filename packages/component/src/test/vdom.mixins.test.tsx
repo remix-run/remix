@@ -46,15 +46,12 @@ describe('vnode mixins', () => {
     let handles: unknown[] = []
     let one = createMixin((handle) => {
       handles.push(handle)
-      return () => handle.element
     })
     let two = createMixin((handle) => {
       handles.push(handle)
-      return () => handle.element
     })
     let three = createMixin((handle) => {
       handles.push(handle)
-      return () => handle.element
     })
 
     let container = document.createElement('div')
@@ -67,8 +64,8 @@ describe('vnode mixins', () => {
     expect(handles[1]).toBe(handles[2])
   })
 
-  it('supports raw handle.element passthrough returns', () => {
-    let withPassthrough = createMixin((handle) => (_props: { title?: string }) => handle.element)
+  it('supports setup-only passthrough mixins', () => {
+    let withPassthrough = createMixin((_handle) => {})
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />
     ))
@@ -85,7 +82,7 @@ describe('vnode mixins', () => {
 
   it('does not duplicate on handlers for passthrough mixins', () => {
     let clicks = 0
-    let passthrough = createMixin((handle) => (_props: {}) => handle.element)
+    let passthrough = createMixin((_handle) => {})
 
     let container = document.createElement('div')
     let root = createRoot(container)
