@@ -72,7 +72,12 @@ export function compileMssqlStatement(statement: AdapterStatement): CompiledSql 
   }
 
   if (statement.kind === 'insertMany') {
-    return compileInsertManyStatement(statement.table, statement.values, statement.returning, context)
+    return compileInsertManyStatement(
+      statement.table,
+      statement.values,
+      statement.returning,
+      context,
+    )
   }
 
   if (statement.kind === 'update') {
@@ -84,7 +89,9 @@ export function compileMssqlStatement(statement: AdapterStatement): CompiledSql 
         quotePath(getTableName(statement.table)) +
         ' set ' +
         columns
-          .map((column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]))
+          .map(
+            (column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]),
+          )
           .join(', ') +
         compileOutputClause(statement.returning, 'inserted') +
         compileWhereClause(statement.where, context),
@@ -219,7 +226,10 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
     whenMatchedClause =
       ' when matched then update set ' +
       updateColumns
-        .map((column) => 'target.' + quotePath(column) + ' = ' + pushValue(context, updateValues[column]))
+        .map(
+          (column) =>
+            'target.' + quotePath(column) + ' = ' + pushValue(context, updateValues[column]),
+        )
         .join(', ')
   }
 

@@ -145,7 +145,10 @@ describe('mssql sql-compiler', () => {
     })
 
     it('compile in-list predicates', async () => {
-      await db.query(accounts).where(inList('id', [1, 2])).all()
+      await db
+        .query(accounts)
+        .where(inList('id', [1, 2]))
+        .all()
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {
@@ -165,7 +168,10 @@ describe('mssql sql-compiler', () => {
     })
 
     it('compile not-in predicates', async () => {
-      await db.query(accounts).where(notInList('id', [1, 2])).all()
+      await db
+        .query(accounts)
+        .where(notInList('id', [1, 2]))
+        .all()
 
       let compiled = compileMssqlStatement(statements[0])
       assert.deepEqual(compiled, {

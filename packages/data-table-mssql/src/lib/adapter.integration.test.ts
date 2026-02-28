@@ -21,42 +21,48 @@ describe('mssql adapter integration', () => {
 
     pool = await sql.connect(process.env.DATA_TABLE_MSSQL_URL as string)
 
-    await pool.request().query('if object_id(\'tasks\', \'U\') is not null drop table [tasks]')
-    await pool.request().query('if object_id(\'projects\', \'U\') is not null drop table [projects]')
-    await pool.request().query('if object_id(\'accounts\', \'U\') is not null drop table [accounts]')
+    await pool.request().query("if object_id('tasks', 'U') is not null drop table [tasks]")
+    await pool.request().query("if object_id('projects', 'U') is not null drop table [projects]")
+    await pool.request().query("if object_id('accounts', 'U') is not null drop table [accounts]")
 
-    await pool.request().query(
-      [
-        'create table [accounts] (',
-        '  [id] int primary key,',
-        '  [email] nvarchar(255) not null,',
-        '  [status] nvarchar(32) not null,',
-        '  [nickname] nvarchar(255) null',
-        ')',
-      ].join('\n'),
-    )
+    await pool
+      .request()
+      .query(
+        [
+          'create table [accounts] (',
+          '  [id] int primary key,',
+          '  [email] nvarchar(255) not null,',
+          '  [status] nvarchar(32) not null,',
+          '  [nickname] nvarchar(255) null',
+          ')',
+        ].join('\n'),
+      )
 
-    await pool.request().query(
-      [
-        'create table [projects] (',
-        '  [id] int primary key,',
-        '  [account_id] int not null,',
-        '  [name] nvarchar(255) not null,',
-        '  [archived] bit not null',
-        ')',
-      ].join('\n'),
-    )
+    await pool
+      .request()
+      .query(
+        [
+          'create table [projects] (',
+          '  [id] int primary key,',
+          '  [account_id] int not null,',
+          '  [name] nvarchar(255) not null,',
+          '  [archived] bit not null',
+          ')',
+        ].join('\n'),
+      )
 
-    await pool.request().query(
-      [
-        'create table [tasks] (',
-        '  [id] int primary key,',
-        '  [project_id] int not null,',
-        '  [title] nvarchar(255) not null,',
-        '  [state] nvarchar(32) not null',
-        ')',
-      ].join('\n'),
-    )
+    await pool
+      .request()
+      .query(
+        [
+          'create table [tasks] (',
+          '  [id] int primary key,',
+          '  [project_id] int not null,',
+          '  [title] nvarchar(255) not null,',
+          '  [state] nvarchar(32) not null',
+          ')',
+        ].join('\n'),
+      )
   })
 
   after(async () => {
@@ -64,9 +70,9 @@ describe('mssql adapter integration', () => {
       return
     }
 
-    await pool.request().query('if object_id(\'tasks\', \'U\') is not null drop table [tasks]')
-    await pool.request().query('if object_id(\'projects\', \'U\') is not null drop table [projects]')
-    await pool.request().query('if object_id(\'accounts\', \'U\') is not null drop table [accounts]')
+    await pool.request().query("if object_id('tasks', 'U') is not null drop table [tasks]")
+    await pool.request().query("if object_id('projects', 'U') is not null drop table [projects]")
+    await pool.request().query("if object_id('accounts', 'U') is not null drop table [accounts]")
     await pool.close()
   })
 
@@ -106,10 +112,10 @@ describe('mssql adapter integration', () => {
       async () => {
         let db = createDatabase(createMssqlDatabaseAdapter(pool))
 
-        await db.transaction(async tx => {
-          await tx.query(txAccounts).insertMany([
-            { id: 1, email: 'a@test.com', status: 'active', nickname: null },
-          ])
+        await db.transaction(async (tx) => {
+          await tx
+            .query(txAccounts)
+            .insertMany([{ id: 1, email: 'a@test.com', status: 'active', nickname: null }])
         })
 
         let result = await pool.request().query('select [id] from [accounts] order by [id]')
@@ -135,10 +141,10 @@ describe('mssql adapter integration', () => {
         let db = createDatabase(createMssqlDatabaseAdapter(pool))
 
         await assert.rejects(() =>
-          db.transaction(async tx => {
-            await tx.query(txAccounts).insertMany([
-              { id: 2, email: 'b@test.com', status: 'active', nickname: null },
-            ])
+          db.transaction(async (tx) => {
+            await tx
+              .query(txAccounts)
+              .insertMany([{ id: 2, email: 'b@test.com', status: 'active', nickname: null }])
             throw new Error('forced rollback')
           }),
         )
@@ -170,10 +176,9 @@ describe('mssql adapter integration', () => {
           { id: 2, email: 'b@test.com', status: 'active', nickname: null },
         ])
 
-        let count = await db.transaction(
-          async (tx) => tx.count(txAccounts),
-          { isolationLevel: 'serializable' },
-        )
+        let count = await db.transaction(async (tx) => tx.count(txAccounts), {
+          isolationLevel: 'serializable',
+        })
 
         assert.equal(count, 2)
       },
@@ -186,34 +191,30 @@ describe('mssql adapter integration', () => {
       await pool.request().query('delete from [accounts]')
     })
 
-    it(
-      'paginates results with limit and offset',
-      { skip: !integrationEnabled },
-      async () => {
-        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+    it('paginates results with limit and offset', { skip: !integrationEnabled }, async () => {
+      let db = createDatabase(createMssqlDatabaseAdapter(pool))
 
-        await db.query(txAccounts).insertMany([
-          { id: 1, email: 'a@test.com', status: 'active', nickname: null },
-          { id: 2, email: 'b@test.com', status: 'active', nickname: null },
-          { id: 3, email: 'c@test.com', status: 'active', nickname: null },
-          { id: 4, email: 'd@test.com', status: 'active', nickname: null },
-        ])
+      await db.query(txAccounts).insertMany([
+        { id: 1, email: 'a@test.com', status: 'active', nickname: null },
+        { id: 2, email: 'b@test.com', status: 'active', nickname: null },
+        { id: 3, email: 'c@test.com', status: 'active', nickname: null },
+        { id: 4, email: 'd@test.com', status: 'active', nickname: null },
+      ])
 
-        let page1 = await db.query(txAccounts).orderBy('id', 'asc').limit(2).offset(0).all()
+      let page1 = await db.query(txAccounts).orderBy('id', 'asc').limit(2).offset(0).all()
 
-        assert.deepEqual(
-          page1.map((r) => r.id),
-          [1, 2],
-        )
+      assert.deepEqual(
+        page1.map((r) => r.id),
+        [1, 2],
+      )
 
-        let page2 = await db.query(txAccounts).orderBy('id', 'asc').limit(2).offset(2).all()
+      let page2 = await db.query(txAccounts).orderBy('id', 'asc').limit(2).offset(2).all()
 
-        assert.deepEqual(
-          page2.map((r) => r.id),
-          [3, 4],
-        )
-      },
-    )
+      assert.deepEqual(
+        page2.map((r) => r.id),
+        [3, 4],
+      )
+    })
   })
 
   // ── Transaction option permutations ──────────────────────────────────
@@ -237,10 +238,7 @@ describe('mssql adapter integration', () => {
           nickname: null,
         })
 
-        let count = await db.transaction(
-          async (tx) => tx.count(txAccounts),
-          { readOnly: true },
-        )
+        let count = await db.transaction(async (tx) => tx.count(txAccounts), { readOnly: true })
 
         assert.equal(count, 1)
       },
@@ -266,10 +264,10 @@ describe('mssql adapter integration', () => {
           nickname: null,
         })
 
-        let count = await db.transaction(
-          async (tx) => tx.count(txAccounts),
-          { isolationLevel: 'serializable', readOnly: true },
-        )
+        let count = await db.transaction(async (tx) => tx.count(txAccounts), {
+          isolationLevel: 'serializable',
+          readOnly: true,
+        })
 
         assert.equal(count, 1)
       },
@@ -334,43 +332,37 @@ describe('mssql adapter integration', () => {
       await pool.request().query('delete from [accounts]')
     })
 
-    it(
-      'supports nested transactions via savepoints',
-      { skip: !integrationEnabled },
-      async () => {
-        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+    it('supports nested transactions via savepoints', { skip: !integrationEnabled }, async () => {
+      let db = createDatabase(createMssqlDatabaseAdapter(pool))
 
-        await db.transaction(async (outerTx) => {
-          await outerTx.query(txAccounts).insert({
-            id: 1,
-            email: 'outer@test.com',
-            status: 'active',
-            nickname: null,
-          })
-
-          await outerTx
-            .transaction(async (innerTx) => {
-              await innerTx.query(txAccounts).insert({
-                id: 2,
-                email: 'inner@test.com',
-                status: 'active',
-                nickname: null,
-              })
-              throw new Error('rollback inner savepoint')
-            })
-            .catch(() => undefined)
+      await db.transaction(async (outerTx) => {
+        await outerTx.query(txAccounts).insert({
+          id: 1,
+          email: 'outer@test.com',
+          status: 'active',
+          nickname: null,
         })
 
-        let result = await pool
-          .request()
-          .query('select [id] from [accounts] order by [id]')
-        assert.deepEqual(
-          result.recordset.map((r: { id: number }) => r.id),
-          [1],
-          'inner savepoint rollback should discard inner row but keep outer row',
-        )
-      },
-    )
+        await outerTx
+          .transaction(async (innerTx) => {
+            await innerTx.query(txAccounts).insert({
+              id: 2,
+              email: 'inner@test.com',
+              status: 'active',
+              nickname: null,
+            })
+            throw new Error('rollback inner savepoint')
+          })
+          .catch(() => undefined)
+      })
+
+      let result = await pool.request().query('select [id] from [accounts] order by [id]')
+      assert.deepEqual(
+        result.recordset.map((r: { id: number }) => r.id),
+        [1],
+        'inner savepoint rollback should discard inner row but keep outer row',
+      )
+    })
   })
 
   describe('capabilities savepoints: false', () => {
@@ -420,10 +412,12 @@ describe('mssql adapter integration', () => {
           nickname: null,
         })
 
-        await db.query(txAccounts).upsert(
-          { id: 1, email: 'after@test.com', status: 'active', nickname: null },
-          { conflictTarget: ['id'] },
-        )
+        await db
+          .query(txAccounts)
+          .upsert(
+            { id: 1, email: 'after@test.com', status: 'active', nickname: null },
+            { conflictTarget: ['id'] },
+          )
 
         let rows = await db.query(txAccounts).where(eq('id', 1)).all()
         assert.equal(rows.length, 1)
@@ -448,10 +442,12 @@ describe('mssql adapter integration', () => {
 
         await assert.rejects(
           () =>
-            db.query(txAccounts).upsert(
-              { id: 1, email: 'x@test.com', status: 'active', nickname: null },
-              { conflictTarget: ['id'] },
-            ),
+            db
+              .query(txAccounts)
+              .upsert(
+                { id: 1, email: 'x@test.com', status: 'active', nickname: null },
+                { conflictTarget: ['id'] },
+              ),
           (error: Error) => {
             assert.match(error.message, /upsert/i)
             return true
@@ -504,32 +500,34 @@ describe('mssql adapter integration', () => {
       await pool
         .request()
         .query("if object_id('data_types', 'U') is not null drop table [data_types]")
-      await pool.request().query(
-        [
-          'create table [data_types] (',
-          '  [id] int primary key,',
-          '  [col_tinyint] tinyint null,',
-          '  [col_smallint] smallint null,',
-          '  [col_int] int null,',
-          '  [col_bigint] bigint null,',
-          '  [col_decimal] decimal(10,2) null,',
-          '  [col_numeric] numeric(18,4) null,',
-          '  [col_float] float null,',
-          '  [col_real] real null,',
-          '  [col_money] money null,',
-          '  [col_smallmoney] smallmoney null,',
-          '  [col_bit] bit null,',
-          '  [col_char] char(10) null,',
-          '  [col_varchar] varchar(50) null,',
-          '  [col_nchar] nchar(10) null,',
-          '  [col_nvarchar] nvarchar(50) null,',
-          '  [col_date] date null,',
-          '  [col_datetime] datetime null,',
-          '  [col_datetime2] datetime2 null,',
-          '  [col_uniqueidentifier] uniqueidentifier null',
-          ')',
-        ].join('\n'),
-      )
+      await pool
+        .request()
+        .query(
+          [
+            'create table [data_types] (',
+            '  [id] int primary key,',
+            '  [col_tinyint] tinyint null,',
+            '  [col_smallint] smallint null,',
+            '  [col_int] int null,',
+            '  [col_bigint] bigint null,',
+            '  [col_decimal] decimal(10,2) null,',
+            '  [col_numeric] numeric(18,4) null,',
+            '  [col_float] float null,',
+            '  [col_real] real null,',
+            '  [col_money] money null,',
+            '  [col_smallmoney] smallmoney null,',
+            '  [col_bit] bit null,',
+            '  [col_char] char(10) null,',
+            '  [col_varchar] varchar(50) null,',
+            '  [col_nchar] nchar(10) null,',
+            '  [col_nvarchar] nvarchar(50) null,',
+            '  [col_date] date null,',
+            '  [col_datetime] datetime null,',
+            '  [col_datetime2] datetime2 null,',
+            '  [col_uniqueidentifier] uniqueidentifier null',
+            ')',
+          ].join('\n'),
+        )
     })
 
     after(async () => {
@@ -574,20 +572,22 @@ describe('mssql adapter integration', () => {
       'returns correct JS types for all common SQL Server column types',
       { skip: !integrationEnabled },
       async () => {
-        await pool.request().query(
-          [
-            'insert into [data_types] values (',
-            '  1,',
-            '  255, -32768, 2147483647, 9223372036854775807,',
-            '  12345.67, 1234567890.1234, 3.141592653589793, 1.5,',
-            '  12345.6789, 1234.5678,',
-            '  1,',
-            "  'hello', 'world', N'日本語', N'unicode test',",
-            "  '2025-06-15', '2025-06-15 10:30:00', '2025-06-15T10:30:00.1234567',",
-            "  'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11'",
-            ')',
-          ].join('\n'),
-        )
+        await pool
+          .request()
+          .query(
+            [
+              'insert into [data_types] values (',
+              '  1,',
+              '  255, -32768, 2147483647, 9223372036854775807,',
+              '  12345.67, 1234567890.1234, 3.141592653589793, 1.5,',
+              '  12345.6789, 1234.5678,',
+              '  1,',
+              "  'hello', 'world', N'日本語', N'unicode test',",
+              "  '2025-06-15', '2025-06-15 10:30:00', '2025-06-15T10:30:00.1234567',",
+              "  'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11'",
+              ')',
+            ].join('\n'),
+          )
 
         let db = createDatabase(createMssqlDatabaseAdapter(pool))
         let rows = await db.query(dataTypes).all()
@@ -659,38 +659,34 @@ describe('mssql adapter integration', () => {
       },
     )
 
-    it(
-      'returns null for all nullable column types',
-      { skip: !integrationEnabled },
-      async () => {
-        await pool.request().query('insert into [data_types] ([id]) values (1)')
+    it('returns null for all nullable column types', { skip: !integrationEnabled }, async () => {
+      await pool.request().query('insert into [data_types] ([id]) values (1)')
 
-        let db = createDatabase(createMssqlDatabaseAdapter(pool))
-        let rows = await db.query(dataTypes).where(eq('id', 1)).all()
-        assert.equal(rows.length, 1)
-        let row = rows[0]
+      let db = createDatabase(createMssqlDatabaseAdapter(pool))
+      let rows = await db.query(dataTypes).where(eq('id', 1)).all()
+      assert.equal(rows.length, 1)
+      let row = rows[0]
 
-        assert.equal(row.col_tinyint, null)
-        assert.equal(row.col_smallint, null)
-        assert.equal(row.col_int, null)
-        assert.equal(row.col_bigint, null)
-        assert.equal(row.col_decimal, null)
-        assert.equal(row.col_numeric, null)
-        assert.equal(row.col_float, null)
-        assert.equal(row.col_real, null)
-        assert.equal(row.col_money, null)
-        assert.equal(row.col_smallmoney, null)
-        assert.equal(row.col_bit, null)
-        assert.equal(row.col_char, null)
-        assert.equal(row.col_varchar, null)
-        assert.equal(row.col_nchar, null)
-        assert.equal(row.col_nvarchar, null)
-        assert.equal(row.col_date, null)
-        assert.equal(row.col_datetime, null)
-        assert.equal(row.col_datetime2, null)
-        assert.equal(row.col_uniqueidentifier, null)
-      },
-    )
+      assert.equal(row.col_tinyint, null)
+      assert.equal(row.col_smallint, null)
+      assert.equal(row.col_int, null)
+      assert.equal(row.col_bigint, null)
+      assert.equal(row.col_decimal, null)
+      assert.equal(row.col_numeric, null)
+      assert.equal(row.col_float, null)
+      assert.equal(row.col_real, null)
+      assert.equal(row.col_money, null)
+      assert.equal(row.col_smallmoney, null)
+      assert.equal(row.col_bit, null)
+      assert.equal(row.col_char, null)
+      assert.equal(row.col_varchar, null)
+      assert.equal(row.col_nchar, null)
+      assert.equal(row.col_nvarchar, null)
+      assert.equal(row.col_date, null)
+      assert.equal(row.col_datetime, null)
+      assert.equal(row.col_datetime2, null)
+      assert.equal(row.col_uniqueidentifier, null)
+    })
   })
 
   // ── Data type parameter inference ────────────────────────────────────
@@ -701,20 +697,22 @@ describe('mssql adapter integration', () => {
       await pool
         .request()
         .query("if object_id('type_params', 'U') is not null drop table [type_params]")
-      await pool.request().query(
-        [
-          'create table [type_params] (',
-          '  [id] int primary key,',
-          '  [int_val] int null,',
-          '  [float_val] float null,',
-          '  [decimal_val] decimal(10,2) null,',
-          '  [bit_val] bit null,',
-          '  [varchar_val] varchar(50) null,',
-          '  [nvarchar_val] nvarchar(50) null,',
-          '  [datetime2_val] datetime2 null',
-          ')',
-        ].join('\n'),
-      )
+      await pool
+        .request()
+        .query(
+          [
+            'create table [type_params] (',
+            '  [id] int primary key,',
+            '  [int_val] int null,',
+            '  [float_val] float null,',
+            '  [decimal_val] decimal(10,2) null,',
+            '  [bit_val] bit null,',
+            '  [varchar_val] varchar(50) null,',
+            '  [nvarchar_val] nvarchar(50) null,',
+            '  [datetime2_val] datetime2 null',
+            ')',
+          ].join('\n'),
+        )
     })
 
     after(async () => {
@@ -772,10 +770,7 @@ describe('mssql adapter integration', () => {
         assert.equal(row.varchar_val, 'hello world')
         assert.equal(row.nvarchar_val, '日本語テスト')
         assert.ok(row.datetime2_val instanceof Date)
-        assert.equal(
-          (row.datetime2_val as Date).toISOString(),
-          testDate.toISOString(),
-        )
+        assert.equal((row.datetime2_val as Date).toISOString(), testDate.toISOString())
       },
     )
 
@@ -807,6 +802,41 @@ describe('mssql adapter integration', () => {
         assert.equal(row.varchar_val, null)
         assert.equal(row.nvarchar_val, null)
         assert.equal(row.datetime2_val, null)
+      },
+    )
+  })
+
+  describe('raw sql', () => {
+    beforeEach(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query('delete from [accounts]')
+    })
+
+    it(
+      'returns affectedRows for raw update statements',
+      { skip: !integrationEnabled },
+      async () => {
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+
+        await db.exec('insert into [accounts] ([id], [email], [status]) values (1, ?, ?)', [
+          'a@test.com',
+          'active',
+        ])
+        await db.exec('insert into [accounts] ([id], [email], [status]) values (2, ?, ?)', [
+          'b@test.com',
+          'inactive',
+        ])
+        await db.exec('insert into [accounts] ([id], [email], [status]) values (3, ?, ?)', [
+          'c@test.com',
+          'active',
+        ])
+
+        let result = await db.exec('update [accounts] set [status] = ? where [status] = ?', [
+          'disabled',
+          'active',
+        ])
+
+        assert.equal(result.affectedRows, 2)
       },
     )
   })

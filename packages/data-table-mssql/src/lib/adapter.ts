@@ -255,7 +255,7 @@ function normalizeAffectedRows(
   kind: AdapterExecuteRequest['statement']['kind'],
   rowsAffected: number[] | undefined,
 ): number | undefined {
-  if (kind === 'select' || kind === 'count' || kind === 'exists' || kind === 'raw') {
+  if (kind === 'select' || kind === 'count' || kind === 'exists') {
     return undefined
   }
 
