@@ -230,7 +230,10 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       entry = {
         scope,
         type: descriptor.type as AnyMixinType,
-        runner: normalizeMixinRunner(descriptor.type(handle, hostType) as AnyMixinSetupResult, handle),
+        runner: normalizeMixinRunner(
+          descriptor.type(handle, hostType) as AnyMixinSetupResult,
+          handle,
+        ),
       }
       handle.setActiveScope(undefined)
       state.runners[index] = entry

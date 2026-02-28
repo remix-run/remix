@@ -49,25 +49,23 @@ let keyToEventType: Record<string, string> = {
   PageDown: pageDownEventType,
 }
 
-let baseKeysEvents = createMixin<HTMLElement>((handle) =>
-  (props) => (
-    <handle.element
-      {...props}
-      mix={[
-        on('keydown', (event) => {
-          let type = keyToEventType[event.key]
-          if (!type) return
-          event.preventDefault()
-          event.currentTarget.dispatchEvent(
-            new KeyboardEvent(type, {
-              key: event.key,
-            }),
-          )
-        }),
-      ]}
-    />
-  )
-)
+let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
+  <handle.element
+    {...props}
+    mix={[
+      on('keydown', (event) => {
+        let type = keyToEventType[event.key]
+        if (!type) return
+        event.preventDefault()
+        event.currentTarget.dispatchEvent(
+          new KeyboardEvent(type, {
+            key: event.key,
+          }),
+        )
+      }),
+    ]}
+  />
+))
 
 type KeysEventsMixin = typeof baseKeysEvents & {
   readonly escape: typeof escapeEventType

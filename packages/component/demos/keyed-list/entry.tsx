@@ -61,19 +61,9 @@ function App(handle: Handle) {
   return () => (
     <div>
       <div className="controls">
-        <button
-          mix={[on('click', reverse)]}
-        >
-          Reverse List
-        </button>
-        <button
-          mix={[on('click', shuffle)]}
-        >
-          Shuffle List
-        </button>
-        <button
-          mix={[on('click', toggleAutoShuffle)]}
-        >
+        <button mix={[on('click', reverse)]}>Reverse List</button>
+        <button mix={[on('click', shuffle)]}>Shuffle List</button>
+        <button mix={[on('click', toggleAutoShuffle)]}>
           {shuffleInterval !== null ? 'Stop Auto-Shuffle' : 'Start Auto-Shuffle'}
         </button>
       </div>
