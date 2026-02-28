@@ -429,9 +429,7 @@ describe('stream', () => {
 
       expect(html).toBe('<div title="ok"></div>')
       expect(updateError).toBeInstanceOf(Error)
-      expect((updateError as Error).message).toBe(
-        'handle.update() is not available during SSR. It should only be used in client-side lifecycles.',
-      )
+      expect((updateError as Error).message).toBe('handle.update() is not available during SSR.')
     })
 
     it('serializes css mixin styles into style tags and class names', async () => {
