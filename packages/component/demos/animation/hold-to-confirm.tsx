@@ -259,7 +259,6 @@ let baseConfirmPress = createMixin<HTMLElement>((handle) => {
     <handle.element
       {...props}
       mix={[
-        ...(Array.isArray(props.mix) ? props.mix : []),
         pressEvents(),
         on(pressEvents.down, (event) => {
           let target = event.currentTarget

@@ -46,7 +46,6 @@ let baseTempoEvents = createMixin<HTMLElement>((handle) => {
     <handle.element
       {...props}
       mix={[
-        ...(props.mix ?? []),
         on('pointerdown', (event) => {
           console.log('pointerdown', event)
           handleTap(event.currentTarget)

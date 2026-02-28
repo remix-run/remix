@@ -54,7 +54,6 @@ let baseKeysEvents = createMixin<HTMLElement>((handle) =>
     <handle.element
       {...props}
       mix={[
-        ...(Array.isArray(props.mix) ? props.mix : []),
         on('keydown', (event) => {
           let type = keyToEventType[event.key]
           if (!type) return

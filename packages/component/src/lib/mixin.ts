@@ -207,7 +207,6 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     state.handle = handle
   }
   let hostType = input.hostType
-  let scheduler = input.scheduler
   let descriptors = resolveMixDescriptors(input.props)
   let composedProps = withoutMix(input.props)
   let maxDescriptors = 1024
@@ -261,9 +260,9 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       result = { ...result, type: resultType }
     }
 
-    let nestedDescriptors = resolveMixDescriptors(result.props as ElementProps)
+    let nestedDescriptors = resolveMixDescriptors(result.props)
     for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = composeMixinProps(composedProps, withoutMix(result.props as ElementProps))
+    composedProps = composeMixinProps(composedProps, withoutMix(result.props))
   }
 
   for (let index = descriptors.length; index < state.runners.length; index++) {
@@ -438,7 +437,11 @@ class MixinHandleImpl
     options?: AddEventListenerOptions | boolean,
   ): void {
     let target = this.#getActiveScopeTarget()
-    target.addEventListener(type as keyof MixinHandleEventMap<Element>, listener as EventListener, options)
+    target.addEventListener(
+      type as keyof MixinHandleEventMap<Element>,
+      listener as EventListener,
+      options,
+    )
     if (!listener || !isSchedulerPhaseType(type)) return
     let scope = this.#activeScope
     invariant(scope)
