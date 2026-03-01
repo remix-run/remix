@@ -297,12 +297,9 @@ export type CreateJobSchedulerOptions<
   storage: JobStorage<transaction>
 } & SchedulerHooks<defs, transaction>
 
-export type CreateJobWorkerOptions<
-  defs extends JobDefinitions,
-  transaction = never,
-> = {
+export type CreateJobWorkerOptions<defs extends JobDefinitions> = {
   jobs: defs
-  storage: JobStorage<transaction>
+  storage: JobStorage
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
 } & WorkerHooks
