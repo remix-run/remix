@@ -461,7 +461,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
         )
       })
     },
-    upsertSchedules(input: PersistedCronSchedule[]): Promise<void> {
+    replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
       return runOperation(() =>
         options.db.transaction(async (database) => {
           for (let schedule of input) {

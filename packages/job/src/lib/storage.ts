@@ -106,7 +106,7 @@ export interface JobStorage<transaction = never> {
   heartbeat(input: { jobId: string; workerId: string; leaseMs: number; now: number }): Promise<boolean>
   complete(input: { jobId: string; workerId: string; now: number }): Promise<void>
   fail(input: JobFailureInput): Promise<void>
-  upsertSchedules(input: PersistedCronSchedule[]): Promise<void>
+  replaceSchedules(input: PersistedCronSchedule[]): Promise<void>
   claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]>
   advanceSchedule(input: {
     scheduleId: string

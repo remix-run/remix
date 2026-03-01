@@ -289,7 +289,7 @@ export function createMemoryJobStorage(): JobStorage {
       job.updatedAt = input.now
       jobs.set(job.id, job)
     },
-    async upsertSchedules(input: PersistedCronSchedule[]): Promise<void> {
+    async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
       for (let schedule of input) {
         let current = schedules.get(schedule.id)
 
