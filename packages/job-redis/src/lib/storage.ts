@@ -106,7 +106,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
     async listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]> {
       let result = await evalScript(
         redis,
-        LIST_DEAD_LETTERS_SCRIPT,
+        LIST_FAILED_JOBS_SCRIPT,
         [keys.jobsFailed, keys.jobPrefix],
         [String(input.limit ?? 50), input.queue ?? ''],
       )
@@ -131,7 +131,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
       let now = Date.now()
       let result = await evalScript(
         redis,
-        REPLAY_DEAD_LETTER_SCRIPT,
+        REPLAY_FAILED_JOB_SCRIPT,
         [
           keys.job(input.jobId),
           keys.job(replayedJobId),
@@ -882,7 +882,7 @@ end
 return 1
 `
 
-let LIST_DEAD_LETTERS_SCRIPT = `
+let LIST_FAILED_JOBS_SCRIPT = `
 local failedKey = KEYS[1]
 local jobPrefix = KEYS[2]
 local limit = tonumber(ARGV[1])
@@ -911,7 +911,7 @@ end
 return selected
 `
 
-let REPLAY_DEAD_LETTER_SCRIPT = `
+let REPLAY_FAILED_JOB_SCRIPT = `
 local sourceJobKey = KEYS[1]
 local replayJobKey = KEYS[2]
 local dueKey = KEYS[3]
