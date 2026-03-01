@@ -65,7 +65,7 @@ export function createJobWorker<
     running = true
 
     if (cronSchedules.length > 0) {
-      await storage.upsertSchedules(
+      await storage.replaceSchedules(
         cronSchedules.map((schedule) => toPersistedSchedule(schedule, Date.now(), jobNames)),
       )
       cronLoopPromise = runCronLoop()
