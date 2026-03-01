@@ -1,11 +1,11 @@
-export { createJobScheduler, createJobs } from './lib/scheduler.ts'
+export { createJobs } from './lib/scheduler.ts'
+export { createJobSystem } from './lib/system.ts'
 export type {
   CancelOptions,
   CatchUpPolicy,
   CronSchedule,
   CronScheduleOptions,
-  CreateJobSchedulerOptions,
-  CreateJobWorkerOptions,
+  CreateJobSystemOptions,
   FailedJobQueryOptions,
   EnqueueOptions,
   Infer,
@@ -16,6 +16,8 @@ export type {
   JobHandlerContext,
   JobRecord,
   JobScheduler,
+  JobSystem,
+  JobSystemWorkerOptions,
   JobStatus,
   JobWorker,
   JitterStrategy,
