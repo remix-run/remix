@@ -9,6 +9,7 @@ import type {
   DueSchedule,
   EnqueueJobInput,
   JobStorage,
+  JobWriteOptions,
   JobFailureInput,
   PersistedCronSchedule,
 } from '@remix-run/job/storage'
@@ -37,15 +38,21 @@ export interface DataTableJobStorageMigrationOptions {
  * @param options Storage configuration
  * @returns A data-table-backed `JobStorage`
  */
-export function createDataTableJobStorage(options: DataTableJobStorageOptions): JobStorage {
+export function createDataTableJobStorage(options: DataTableJobStorageOptions): JobStorage<Database> {
+  let baseDb = options.db
   let storageSchema = createJobStorageSchema(options.tablePrefix)
   let tables = storageSchema.tables
-  let runOperation = createOperationRunner(options.db.adapter.dialect)
+  let runOperation = createOperationRunner(baseDb.adapter.dialect)
 
   return {
-    enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }> {
+    enqueue(
+      input: EnqueueJobInput,
+      writeOptions?: JobWriteOptions<Database>,
+    ): Promise<{ jobId: string; deduped: boolean }> {
+      let db = writeOptions?.transaction ?? baseDb
+
       return runOperation(() =>
-        options.db.transaction(async (database) => {
+        db.transaction(async (database) => {
           await cleanupExpiredDedupe(database, tables, input.createdAt)
 
           if (input.dedupeKey != null) {
@@ -110,7 +117,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
     },
     get(jobId: string): Promise<JobRecord | null> {
       return runOperation(async () => {
-        let rows = await options.db.exec(
+        let rows = await baseDb.exec(
           rawSql(`select * from ${tables.jobs} where id = ? limit 1`, [jobId]),
         )
         let row = rows.rows?.[0]
@@ -122,17 +129,21 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
         return toJobRecord(row)
       })
     },
-    cancel(jobId: string): Promise<boolean> {
-      return runOperation(async () => {
-        let result = await options.db.exec(
-          rawSql(
-            `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, updated_at = ? where id = ? and status = ?`,
-            ['canceled', Date.now(), jobId, 'queued'],
-          ),
-        )
+    cancel(jobId: string, writeOptions?: JobWriteOptions<Database>): Promise<boolean> {
+      let db = writeOptions?.transaction ?? baseDb
 
-        return (result.affectedRows ?? 0) > 0
-      })
+      return runOperation(() =>
+        db.transaction(async (database) => {
+          let result = await database.exec(
+            rawSql(
+              `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, updated_at = ? where id = ? and status = ?`,
+              ['canceled', Date.now(), jobId, 'queued'],
+            ),
+          )
+
+          return (result.affectedRows ?? 0) > 0
+        }),
+      )
     },
     claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]> {
       if (input.queues.length === 0 || input.limit <= 0) {

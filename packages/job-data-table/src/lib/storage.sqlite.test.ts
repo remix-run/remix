@@ -1,4 +1,5 @@
-import { after, before, describe } from 'node:test'
+import * as assert from 'node:assert/strict'
+import { after, before, describe, it } from 'node:test'
 import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 import { createDatabase } from '@remix-run/data-table'
 import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
@@ -47,6 +48,84 @@ describe('data-table job storage (sqlite)', () => {
         db: database,
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),
+  })
+
+  it('rolls back enqueue when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let enqueuedJobId = ''
+
+    await assert.rejects(
+      () =>
+        database.transaction(async (transaction) => {
+          let enqueued = await storage.enqueue(
+            {
+              name: 'email',
+              queue: 'default',
+              payload: { to: 'rollback@example.com' },
+              runAt: Date.now(),
+              priority: 0,
+              retry: {
+                maxAttempts: 5,
+                strategy: 'exponential',
+                baseDelayMs: 1000,
+                maxDelayMs: 300000,
+                jitter: 'full',
+              },
+              createdAt: Date.now(),
+            },
+            { transaction },
+          )
+          enqueuedJobId = enqueued.jobId
+          throw new Error('rollback enqueue')
+        }),
+      /rollback enqueue/,
+    )
+
+    assert.notEqual(enqueuedJobId, '')
+    assert.equal(await storage.get(enqueuedJobId), null)
+  })
+
+  it('rolls back cancel when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let enqueued = await storage.enqueue({
+      name: 'email',
+      queue: 'default',
+      payload: { to: 'cancel@example.com' },
+      runAt: Date.now(),
+      priority: 0,
+      retry: {
+        maxAttempts: 5,
+        strategy: 'exponential',
+        baseDelayMs: 1000,
+        maxDelayMs: 300000,
+        jitter: 'full',
+      },
+      createdAt: Date.now(),
+    })
+
+    await assert.rejects(
+      () =>
+        database.transaction(async (transaction) => {
+          let canceled = await storage.cancel(enqueued.jobId, { transaction })
+          assert.equal(canceled, true)
+          throw new Error('rollback cancel')
+        }),
+      /rollback cancel/,
+    )
+
+    let job = await storage.get(enqueued.jobId)
+    assert.ok(job)
+    assert.equal(job.status, 'queued')
   })
 })
 

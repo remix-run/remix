@@ -1,6 +1,7 @@
 import { parse } from '@remix-run/data-schema'
 
 import type {
+  CancelOptions,
   CreateJobSchedulerOptions,
   EnqueueOptions,
   Infer,
@@ -28,9 +29,12 @@ export function createJobs<defs extends JobDefinitions>(jobs: defs): defs {
  * @param options Scheduler configuration
  * @returns A `JobScheduler` for enqueuing and querying jobs
  */
-export function createJobScheduler<defs extends JobDefinitions>(
-  options: CreateJobSchedulerOptions<defs>,
-): JobScheduler<defs> {
+export function createJobScheduler<
+  defs extends JobDefinitions,
+  transaction = never,
+>(
+  options: CreateJobSchedulerOptions<defs, transaction>,
+): JobScheduler<defs, transaction> {
   let jobs = options.jobs
   let storage = options.storage
   let jobNames = new WeakMap<object, string>()
@@ -47,7 +51,7 @@ export function createJobScheduler<defs extends JobDefinitions>(
     async enqueue<name extends JobName<defs>>(
       job: JobReference<defs, name>,
       payload: Infer<defs[name]['schema']>,
-      enqueueOptions?: EnqueueOptions,
+      enqueueOptions?: EnqueueOptions<transaction>,
     ): Promise<{ jobId: string; deduped: boolean }> {
       let name = resolveJobName(job, jobNames)
       let definition = jobs[name]
@@ -73,13 +77,17 @@ export function createJobScheduler<defs extends JobDefinitions>(
         dedupeKey: enqueueOptions?.dedupeKey,
         dedupeTtlMs: enqueueOptions?.dedupeTtlMs,
         createdAt: now,
+      }, {
+        transaction: enqueueOptions?.transaction,
       })
     },
     get(jobId: string): Promise<JobRecord | null> {
       return storage.get(jobId)
     },
-    cancel(jobId: string): Promise<boolean> {
-      return storage.cancel(jobId)
+    cancel(jobId: string, cancelOptions?: CancelOptions<transaction>): Promise<boolean> {
+      return storage.cancel(jobId, {
+        transaction: cancelOptions?.transaction,
+      })
     },
   }
 }
@@ -97,7 +105,10 @@ function resolveJobName(
   return name
 }
 
-function resolveRunAt(now: number, options: EnqueueOptions | undefined): number {
+function resolveRunAt<transaction>(
+  now: number,
+  options: EnqueueOptions<transaction> | undefined,
+): number {
   if (options?.runAt != null) {
     return options.runAt.getTime()
   }

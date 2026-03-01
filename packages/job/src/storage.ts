@@ -4,6 +4,7 @@ export type {
   DueSchedule,
   EnqueueJobInput,
   JobStorage,
+  JobWriteOptions,
   JobFailureInput,
   PersistedCronSchedule,
 } from './lib/storage.ts'

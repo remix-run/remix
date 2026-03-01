@@ -38,6 +38,25 @@ let scheduler = createJobScheduler({ jobs, storage })
 await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' })
 ```
 
+## Transactional Scheduler Writes
+
+When your storage supports transactions (e.g. `remix/job/data-table`), scheduler writes can
+participate in your application transaction.
+
+```ts
+await db.transaction(async (transaction) => {
+  await db.query(orders).insert({ id: 'order-1' })
+
+  let enqueued = await scheduler.enqueue(
+    jobs.sendEmail,
+    { to: 'a@example.com', subject: 'Order received' },
+    { transaction },
+  )
+
+  await scheduler.cancel(enqueued.jobId, { transaction })
+})
+```
+
 ## Production Deployment
 
 For reliable cron scheduling, run workers as a dedicated, always-on deployment.

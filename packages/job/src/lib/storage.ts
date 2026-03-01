@@ -53,13 +53,20 @@ export interface DueSchedule extends PersistedCronSchedule {
   lockedUntil: number
 }
 
+export interface JobWriteOptions<transaction = never> {
+  transaction?: transaction
+}
+
 /**
  * Storage contract for `@remix-run/job` scheduler storage adapters.
  */
-export interface JobStorage {
-  enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }>
+export interface JobStorage<transaction = never> {
+  enqueue(
+    input: EnqueueJobInput,
+    options?: JobWriteOptions<transaction>,
+  ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
-  cancel(jobId: string): Promise<boolean>
+  cancel(jobId: string, options?: JobWriteOptions<transaction>): Promise<boolean>
   claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]>
   heartbeat(input: { jobId: string; workerId: string; leaseMs: number; now: number }): Promise<boolean>
   complete(input: { jobId: string; workerId: string; now: number }): Promise<void>

@@ -28,7 +28,7 @@ export interface ResolvedRetryPolicy {
   jitter: JitterStrategy
 }
 
-export interface EnqueueOptions {
+export interface EnqueueOptions<transaction = never> {
   queue?: string
   delay?: number
   runAt?: Date
@@ -36,6 +36,11 @@ export interface EnqueueOptions {
   retry?: RetryPolicy
   dedupeKey?: string
   dedupeTtlMs?: number
+  transaction?: transaction
+}
+
+export interface CancelOptions<transaction = never> {
+  transaction?: transaction
 }
 
 export interface CronScheduleOptions {
@@ -94,14 +99,14 @@ export type CronSchedule<
   options: CronScheduleOptions
 }
 
-export interface JobScheduler<defs extends JobDefinitions> {
+export interface JobScheduler<defs extends JobDefinitions, transaction = never> {
   enqueue<name extends JobName<defs>>(
     job: JobReference<defs, name>,
     payload: Infer<defs[name]['schema']>,
-    options?: EnqueueOptions,
+    options?: EnqueueOptions<transaction>,
   ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
-  cancel(jobId: string): Promise<boolean>
+  cancel(jobId: string, options?: CancelOptions<transaction>): Promise<boolean>
 }
 
 export interface WorkerOptions {
@@ -120,15 +125,21 @@ export interface JobWorker {
   drain(timeoutMs?: number): Promise<void>
 }
 
-export interface CreateJobSchedulerOptions<defs extends JobDefinitions> {
+export interface CreateJobSchedulerOptions<
+  defs extends JobDefinitions,
+  transaction = never,
+> {
   jobs: defs
-  storage: JobStorage
+  storage: JobStorage<transaction>
 }
 
-export interface CreateJobWorkerOptions<defs extends JobDefinitions> {
-  scheduler: JobScheduler<defs>
+export interface CreateJobWorkerOptions<
+  defs extends JobDefinitions,
+  transaction = never,
+> {
+  scheduler: JobScheduler<defs, transaction>
   jobs: defs
-  storage: JobStorage
+  storage: JobStorage<transaction>
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
 }

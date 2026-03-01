@@ -4,6 +4,7 @@ import type {
   DueSchedule,
   EnqueueJobInput,
   JobStorage,
+  JobWriteOptions,
   JobFailureInput,
   PersistedCronSchedule,
 } from '@remix-run/job/storage'
@@ -39,7 +40,10 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
   let keys = createKeys(normalizePrefix(options.prefix))
 
   return {
-    async enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }> {
+    async enqueue(
+      input: EnqueueJobInput,
+      _options?: JobWriteOptions,
+    ): Promise<{ jobId: string; deduped: boolean }> {
       let jobId = crypto.randomUUID()
       let dedupeTtlMs = input.dedupeKey != null && input.dedupeTtlMs != null ? input.dedupeTtlMs : 0
       let dedupeKey =
@@ -84,7 +88,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
 
       return toJobRecord(hash)
     },
-    async cancel(jobId: string): Promise<boolean> {
+    async cancel(jobId: string, _options?: JobWriteOptions): Promise<boolean> {
       let result = await evalScript(redis, CANCEL_JOB_SCRIPT, [keys.job(jobId), keys.jobsDue], [
         jobId,
         String(Date.now()),
