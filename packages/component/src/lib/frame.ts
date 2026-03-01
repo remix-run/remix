@@ -173,6 +173,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
     if (options?.signal?.aborted) return
 
+    let isFullDocumentReload =
+      container.root instanceof Document &&
+      typeof content === 'string' &&
+      isFullDocumentHtml(content)
+
     if (content instanceof ReadableStream) {
       await renderFrameStream(content, container.doc, async (html) => {
         if (options?.signal?.aborted) return
@@ -181,11 +186,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    if (
-      container.root instanceof Document &&
-      typeof content === 'string' &&
-      isFullDocumentHtml(content)
-    ) {
+    if (isFullDocumentReload && typeof content === 'string') {
       // Full-document reload should tear down existing hydrated roots and subframes
       // before diffing fresh HTML, otherwise stale component instances can survive
       // on detached DOM nodes.

@@ -5,7 +5,7 @@ import { Frame } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 
 import { routes } from './routes.ts'
-import { NavLink, NavigateButton } from './assets/nav-controls.tsx'
+import { NavLink } from './nav-controls.tsx'
 
 let middleware = []
 
@@ -42,13 +42,10 @@ router.map(routes.main, {
     },
     dashboard(context: any) {
       let Dashboard = createDashboardShell(routes.dashboard.frames.content.home.href())
-      let stream = renderToStream(
-        <Dashboard />,
-        {
-          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-          onError: console.error,
-        },
-      )
+      let stream = renderToStream(<Dashboard />, {
+        resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+        onError: console.error,
+      })
       return htmlResponse(stream)
     },
   },
@@ -57,7 +54,11 @@ router.map(routes.main, {
 router.map(routes.dashboard, {
   pages: {
     home(context: any) {
-      return renderRootPage(context, routes.dashboard.frames.shell.home.href(), 'Dashboard Activity')
+      return renderRootPage(
+        context,
+        routes.dashboard.frames.shell.home.href(),
+        'Dashboard Activity',
+      )
     },
     customers(context: any) {
       return renderRootPage(
@@ -74,35 +75,26 @@ router.map(routes.dashboard, {
     shell: {
       home(context: any) {
         let Dashboard = createDashboardShell(routes.dashboard.frames.content.home.href())
-        let stream = renderToStream(
-          <Dashboard />,
-          {
-            resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-            onError: console.error,
-          },
-        )
+        let stream = renderToStream(<Dashboard />, {
+          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+          onError: console.error,
+        })
         return htmlResponse(stream)
       },
       customers(context: any) {
         let Dashboard = createDashboardShell(routes.dashboard.frames.content.customers.href())
-        let stream = renderToStream(
-          <Dashboard />,
-          {
-            resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-            onError: console.error,
-          },
-        )
+        let stream = renderToStream(<Dashboard />, {
+          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+          onError: console.error,
+        })
         return htmlResponse(stream)
       },
       sales(context: any) {
         let Dashboard = createDashboardShell(routes.dashboard.frames.content.sales.href())
-        let stream = renderToStream(
-          <Dashboard />,
-          {
-            resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-            onError: console.error,
-          },
-        )
+        let stream = renderToStream(<Dashboard />, {
+          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+          onError: console.error,
+        })
         return htmlResponse(stream)
       },
     },
@@ -148,23 +140,23 @@ function createRoot(frameHref: string, title: string) {
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
               <NavLink
-                href={routes.main.frames.home.href()}
+                href={routes.main.pages.home.href()}
                 target="main"
-                permalink={routes.main.pages.home.href()}
+                src={routes.main.frames.home.href()}
               >
                 Home
               </NavLink>
               <NavLink
-                href={routes.main.frames.settings.href()}
+                href={routes.main.pages.settings.href()}
                 target="main"
-                permalink={routes.main.pages.settings.href()}
+                src={routes.main.frames.settings.href()}
               >
                 Settings
               </NavLink>
               <NavLink
-                href={routes.main.frames.dashboard.href()}
+                href={routes.dashboard.pages.home.href()}
                 target="main"
-                permalink={routes.dashboard.pages.home.href()}
+                src={routes.main.frames.dashboard.href()}
               >
                 Dashboard
               </NavLink>
@@ -213,33 +205,26 @@ function createDashboardShell(frameHref: string) {
         <h2 style={{ marginTop: 0, marginBottom: 10 }}>Dashboard</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
           <NavLink
-            href={routes.dashboard.frames.content.home.href()}
+            href={routes.dashboard.pages.home.href()}
+            src={routes.dashboard.frames.content.home.href()}
             target="dashboard"
-            permalink={routes.dashboard.pages.home.href()}
           >
             Activity
           </NavLink>
           <NavLink
-            href={routes.dashboard.frames.content.customers.href()}
+            href={routes.dashboard.pages.customers.href()}
+            src={routes.dashboard.frames.content.customers.href()}
             target="dashboard"
-            permalink={routes.dashboard.pages.customers.href()}
           >
             Customers
           </NavLink>
           <NavLink
-            href={routes.dashboard.frames.content.sales.href()}
+            href={routes.dashboard.pages.sales.href()}
+            src={routes.dashboard.frames.content.sales.href()}
             target="dashboard"
-            permalink={routes.dashboard.pages.sales.href()}
           >
             Sales
           </NavLink>
-          <NavigateButton
-            href={routes.dashboard.frames.content.customers.href()}
-            target="dashboard"
-            permalink={routes.dashboard.pages.customers.href()}
-          >
-            Go Customers (imperative)
-          </NavigateButton>
         </div>
         <section
           style={{
@@ -260,7 +245,9 @@ function DashboardActivity() {
   return () => (
     <div>
       <h3 style={{ marginTop: 0, marginBottom: 8 }}>Activity</h3>
-      <p style={{ marginBottom: 0, color: '#b4c3ff' }}>Overview metrics load in this nested frame.</p>
+      <p style={{ marginBottom: 0, color: '#b4c3ff' }}>
+        Overview metrics load in this nested frame.
+      </p>
     </div>
   )
 }

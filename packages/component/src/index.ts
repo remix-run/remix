@@ -60,3 +60,6 @@ export type { SpringIterator, SpringPreset, SpringOptions } from './lib/spring.t
 
 export { tween, easings } from './lib/tween.ts'
 export type { TweenOptions, BezierCurve } from './lib/tween.ts'
+
+// -- Navigation --
+export { navigate } from './lib/navigate.ts'
