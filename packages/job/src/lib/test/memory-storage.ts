@@ -4,6 +4,7 @@ import type {
   DueSchedule,
   EnqueueJobInput,
   JobStorage,
+  JobWriteOptions,
   JobFailureInput,
   PersistedCronSchedule,
 } from '../storage.ts'
@@ -20,7 +21,10 @@ export function createMemoryJobStorage(): JobStorage {
   let schedules = new Map<string, PersistedCronSchedule & { lockedBy?: string; lockedUntil?: number }>()
 
   return {
-    async enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }> {
+    async enqueue(
+      input: EnqueueJobInput,
+      _options?: JobWriteOptions,
+    ): Promise<{ jobId: string; deduped: boolean }> {
       cleanupDedupe(Date.now())
 
       if (input.dedupeKey != null) {
@@ -67,7 +71,7 @@ export function createMemoryJobStorage(): JobStorage {
       let job = jobs.get(jobId)
       return job == null ? null : toPublicJob(job)
     },
-    async cancel(jobId: string): Promise<boolean> {
+    async cancel(jobId: string, _options?: JobWriteOptions): Promise<boolean> {
       let job = jobs.get(jobId)
 
       if (job == null || job.status !== 'queued') {

@@ -6,14 +6,17 @@ import type { JobStorage } from '../storage.ts'
 import { createJobScheduler, createJobs } from '../scheduler.ts'
 import { createJobWorker } from '../worker.ts'
 
-export interface StorageContractOptions {
+export interface StorageContractOptions<transaction = never> {
   integrationEnabled?: boolean
   setup?: () => Promise<void>
-  createStorage: () => Promise<JobStorage> | JobStorage
+  createStorage: () => Promise<JobStorage<transaction>> | JobStorage<transaction>
 }
 
-export function runJobStorageContract(name: string, options: StorageContractOptions): void {
-  let storage: JobStorage
+export function runJobStorageContract<transaction = never>(
+  name: string,
+  options: StorageContractOptions<transaction>,
+): void {
+  let storage: JobStorage<transaction>
   let enabled = options.integrationEnabled ?? true
 
   describe(name, () => {

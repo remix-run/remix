@@ -24,8 +24,11 @@ let DEFAULT_CRON_TICK_MS = 30000
  * @param options Worker configuration
  * @returns A `JobWorker` lifecycle controller
  */
-export function createJobWorker<defs extends JobDefinitions>(
-  options: CreateJobWorkerOptions<defs>,
+export function createJobWorker<
+  defs extends JobDefinitions,
+  transaction = never,
+>(
+  options: CreateJobWorkerOptions<defs, transaction>,
 ): JobWorker {
   let jobs = options.jobs
   let jobNames = createJobNameMap(jobs)
