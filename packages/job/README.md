@@ -73,6 +73,28 @@ let second = await scheduler.enqueue(
 // second.jobId === first.jobId
 ```
 
+## Retrying Jobs
+
+Use `priority` to run more important jobs first, and `retry` to control retry behavior after
+failures.
+
+```ts
+await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'vip@example.com', subject: 'Important update' },
+  {
+    priority: 10,
+    retry: {
+      maxAttempts: 5,
+      strategy: 'exponential',
+      baseDelayMs: 1000,
+      maxDelayMs: 60_000,
+      jitter: 'full',
+    },
+  },
+)
+```
+
 ## Transactional Scheduler Writes
 
 When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can
