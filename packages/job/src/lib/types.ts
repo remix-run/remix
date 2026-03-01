@@ -278,23 +278,21 @@ export interface JobWorker {
   drain(timeoutMs?: number): Promise<void>
 }
 
-export interface CreateJobSchedulerOptions<
+export type CreateJobSchedulerOptions<
   defs extends JobDefinitions,
   transaction = never,
-> {
+> = {
   jobs: defs
   storage: JobStorage<transaction>
-  hooks?: SchedulerHooks<defs, transaction>
-}
+} & SchedulerHooks<defs, transaction>
 
-export interface CreateJobWorkerOptions<
+export type CreateJobWorkerOptions<
   defs extends JobDefinitions,
   transaction = never,
-> {
+> = {
   scheduler: JobScheduler<defs, transaction>
   jobs: defs
   storage: JobStorage<transaction>
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
-  hooks?: WorkerHooks<defs>
-}
+} & WorkerHooks<defs>
