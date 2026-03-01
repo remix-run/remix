@@ -57,6 +57,11 @@
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./html-template": "./src/html-template.ts",
+    "./job": "./src/job.ts",
+    "./job-data-table": "./src/job-data-table.ts",
+    "./job-redis": "./src/job-redis.ts",
+    "./job/storage": "./src/job/storage.ts",
+    "./job/worker": "./src/job/worker.ts",
     "./lazy-file": "./src/lazy-file.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
@@ -239,6 +244,26 @@
       "./html-template": {
         "types": "./dist/html-template.d.ts",
         "default": "./dist/html-template.js"
+      },
+      "./job": {
+        "types": "./dist/job.d.ts",
+        "default": "./dist/job.js"
+      },
+      "./job-data-table": {
+        "types": "./dist/job-data-table.d.ts",
+        "default": "./dist/job-data-table.js"
+      },
+      "./job-redis": {
+        "types": "./dist/job-redis.d.ts",
+        "default": "./dist/job-redis.js"
+      },
+      "./job/storage": {
+        "types": "./dist/job/storage.d.ts",
+        "default": "./dist/job/storage.js"
+      },
+      "./job/worker": {
+        "types": "./dist/job/worker.d.ts",
+        "default": "./dist/job/worker.js"
       },
       "./lazy-file": {
         "types": "./dist/lazy-file.d.ts",
