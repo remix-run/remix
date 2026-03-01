@@ -198,7 +198,193 @@ describe('data-table job storage (sqlite)', () => {
     assert.ok(job)
     assert.equal(job.status, 'canceled')
   })
+
+  it('rolls back replayDeadLetter when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let failedJobId = await createFailedJob(storage)
+    let replayedJobId = ''
+
+    await assert.rejects(
+      () =>
+        database.transaction(async (transaction) => {
+          let replayed = await storage.replayDeadLetter(
+            {
+              jobId: failedJobId,
+              priority: 77,
+            },
+            { transaction },
+          )
+          assert.ok(replayed)
+          replayedJobId = replayed.jobId
+          throw new Error('rollback replay')
+        }),
+      /rollback replay/,
+    )
+
+    assert.notEqual(replayedJobId, '')
+    assert.equal(await storage.get(replayedJobId), null)
+    let failed = await storage.get(failedJobId)
+    assert.ok(failed)
+    assert.equal(failed.status, 'failed')
+  })
+
+  it('commits replayDeadLetter when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let failedJobId = await createFailedJob(storage)
+    let replayedJobId = ''
+
+    await database.transaction(async (transaction) => {
+      let replayed = await storage.replayDeadLetter(
+        {
+          jobId: failedJobId,
+          priority: 77,
+        },
+        { transaction },
+      )
+      assert.ok(replayed)
+      replayedJobId = replayed.jobId
+    })
+
+    assert.notEqual(replayedJobId, '')
+    let replayed = await storage.get(replayedJobId)
+    assert.ok(replayed)
+    assert.equal(replayed.status, 'queued')
+    assert.equal(replayed.priority, 77)
+  })
+
+  it('rolls back prune when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let completedJobId = await createCompletedJob(storage)
+
+    await assert.rejects(
+      () =>
+        database.transaction(async (transaction) => {
+          let pruned = await storage.prune(
+            {
+              completedBefore: Number.MAX_SAFE_INTEGER,
+              limit: 10,
+            },
+            { transaction },
+          )
+          assert.equal(pruned.deleted, 1)
+          throw new Error('rollback prune')
+        }),
+      /rollback prune/,
+    )
+
+    let stillPresent = await storage.get(completedJobId)
+    assert.ok(stillPresent)
+  })
+
+  it('commits prune when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let completedJobId = await createCompletedJob(storage)
+
+    await database.transaction(async (transaction) => {
+      let pruned = await storage.prune(
+        {
+          completedBefore: Number.MAX_SAFE_INTEGER,
+          limit: 10,
+        },
+        { transaction },
+      )
+      assert.equal(pruned.deleted, 1)
+      assert.equal(pruned.completed, 1)
+    })
+
+    assert.equal(await storage.get(completedJobId), null)
+  })
 })
+
+async function createFailedJob(storage: ReturnType<typeof createDataTableJobStorage>): Promise<string> {
+  let enqueued = await storage.enqueue({
+    name: 'email',
+    queue: 'default',
+    payload: { to: 'failed@example.com' },
+    runAt: 0,
+    priority: 0,
+    retry: {
+      maxAttempts: 1,
+      strategy: 'fixed',
+      baseDelayMs: 10,
+      maxDelayMs: 10,
+      jitter: 'none',
+    },
+    createdAt: 0,
+  })
+  let claimed = await storage.claimDueJobs({
+    now: 1,
+    workerId: 'w1',
+    queues: ['default'],
+    limit: 1,
+    leaseMs: 100,
+  })
+  assert.equal(claimed.length, 1)
+
+  await storage.fail({
+    jobId: enqueued.jobId,
+    workerId: 'w1',
+    now: 2,
+    error: 'failed',
+    terminal: true,
+  })
+
+  return enqueued.jobId
+}
+
+async function createCompletedJob(storage: ReturnType<typeof createDataTableJobStorage>): Promise<string> {
+  let enqueued = await storage.enqueue({
+    name: 'email',
+    queue: 'default',
+    payload: { to: 'completed@example.com' },
+    runAt: 0,
+    priority: 0,
+    retry: {
+      maxAttempts: 1,
+      strategy: 'fixed',
+      baseDelayMs: 10,
+      maxDelayMs: 10,
+      jitter: 'none',
+    },
+    createdAt: 0,
+  })
+  let claimed = await storage.claimDueJobs({
+    now: 1,
+    workerId: 'w1',
+    queues: ['default'],
+    limit: 1,
+    leaseMs: 100,
+  })
+  assert.equal(claimed.length, 1)
+
+  await storage.complete({
+    jobId: enqueued.jobId,
+    workerId: 'w1',
+    now: 2,
+  })
+
+  return enqueued.jobId
+}
 
 function canOpenSqliteDatabase(): boolean {
   try {

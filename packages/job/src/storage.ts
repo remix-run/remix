@@ -6,5 +6,9 @@ export type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
+  ListDeadLettersInput,
+  ReplayDeadLetterInput,
+  PruneJobsInput,
+  PruneJobsResult,
   PersistedCronSchedule,
 } from './lib/storage.ts'
