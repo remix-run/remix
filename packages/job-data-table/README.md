@@ -36,6 +36,17 @@ let storage = createDataTableJobStorage({
 })
 ```
 
+## Transaction-Aware Scheduler Writes
+
+`createDataTableJobStorage` enables typed transaction support in `createJobScheduler`.
+
+```ts
+await db.transaction(async (transaction) => {
+  await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' }, { transaction })
+  await scheduler.cancel('job-id', { transaction })
+})
+```
+
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

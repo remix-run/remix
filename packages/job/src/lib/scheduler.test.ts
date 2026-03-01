@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
+import type { JobStorage } from './storage.ts'
 import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobStorage } from './test/memory-storage.ts'
 
@@ -106,3 +107,50 @@ describe('createJobScheduler', () => {
     assert.equal(job.status, 'canceled')
   })
 })
+
+function createTransactionAwareTestStorage(): JobStorage<{ id: string }> {
+  let storage = createMemoryJobStorage()
+
+  return {
+    ...storage,
+    enqueue(input, _options) {
+      return storage.enqueue(input)
+    },
+    cancel(jobId, _options) {
+      return storage.cancel(jobId)
+    },
+  }
+}
+
+function assertTransactionOptionTyping(): void {
+  let jobs = createJobs({
+    email: {
+      schema: s.object({ to: s.string() }),
+      async handle() {},
+    },
+  })
+
+  let txScheduler = createJobScheduler({
+    jobs,
+    storage: createTransactionAwareTestStorage(),
+  })
+
+  void txScheduler.enqueue(jobs.email, { to: 'tx@example.com' }, {
+    transaction: { id: 'tx1' },
+  })
+  void txScheduler.cancel('job-id', {
+    transaction: { id: 'tx1' },
+  })
+
+  let memoryScheduler = createJobScheduler({
+    jobs,
+    storage: createMemoryJobStorage(),
+  })
+
+  // @ts-expect-error Memory storage does not declare transaction support.
+  void memoryScheduler.enqueue(jobs.email, { to: 'memory@example.com' }, { transaction: { id: 'tx1' } })
+  // @ts-expect-error Memory storage does not declare transaction support.
+  void memoryScheduler.cancel('job-id', { transaction: { id: 'tx1' } })
+}
+
+void assertTransactionOptionTyping
