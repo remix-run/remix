@@ -38,6 +38,40 @@ let scheduler = createJobScheduler({ jobs, backend })
 await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' })
 ```
 
+## Production Deployment
+
+For reliable cron scheduling, run workers as a dedicated, always-on deployment.
+
+- Run your web app and job workers as separate processes.
+- Keep worker replicas at `>= 1` (do not scale workers to zero).
+- Register cron schedules in worker startup so they continue running independently of web traffic.
+
+```ts
+import { createJobWorker } from 'remix/job/worker'
+import { backend, jobs, scheduler } from './jobs'
+
+let worker = createJobWorker({
+  scheduler,
+  jobs,
+  backend,
+  cron: [
+    {
+      cron: '*/5 * * * *',
+      name: 'sendEmail',
+      payload: { to: 'ops@example.com', subject: 'heartbeat' },
+      options: { id: 'heartbeat-email', catchUp: 'one' },
+    },
+  ],
+})
+
+await worker.start()
+```
+
+## Related Packages
+
+- [`remix/job/data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL backend for PostgreSQL, MySQL, and SQLite
+- [`remix/job/redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis backend
+
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
