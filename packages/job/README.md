@@ -216,7 +216,7 @@ For reliable cron scheduling, run workers as a dedicated, always-on deployment.
 
 ```ts
 import { createJobWorker } from 'remix/job/worker'
-import { storage, jobs, scheduler } from './jobs'
+import { storage, jobs } from './jobs'
 
 let worker = createJobWorker({
   jobs,
