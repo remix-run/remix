@@ -28,16 +28,27 @@ export interface ResolvedRetryPolicy {
   jitter: JitterStrategy
 }
 
-export interface EnqueueOptions<transaction = never> {
+type EnqueueOptionsBase<transaction> = {
   queue?: string
-  delay?: number
-  runAt?: Date
   priority?: number
   retry?: RetryPolicy
   dedupeKey?: string
   dedupeTtlMs?: number
   transaction?: transaction
 }
+
+type EnqueueDelayOptions = {
+  delay?: number
+  runAt?: never
+}
+
+type EnqueueRunAtOptions = {
+  delay?: never
+  runAt?: Date
+}
+
+export type EnqueueOptions<transaction = never> = EnqueueOptionsBase<transaction> &
+  (EnqueueDelayOptions | EnqueueRunAtOptions)
 
 export interface CancelOptions<transaction = never> {
   transaction?: transaction

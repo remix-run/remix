@@ -68,6 +68,10 @@ export function createJobScheduler<
         throw new Error(`Unknown job "${jobName}"`)
       }
 
+      if (enqueueOptions?.delay != null && enqueueOptions.runAt != null) {
+        throw new Error('enqueue options cannot include both "delay" and "runAt"')
+      }
+
       let parsedPayload = parse(definition.schema, payload)
       let now = Date.now()
       let queue = enqueueOptions?.queue ?? 'default'

@@ -66,6 +66,27 @@ describe('createJobScheduler', () => {
     await assert.rejects(() => scheduler.enqueue(jobs.email, { to: 123 } as any))
   })
 
+  it('rejects enqueue options that include both delay and runAt', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      email: {
+        schema: s.object({ to: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+
+    await assert.rejects(
+      () =>
+        scheduler.enqueue(
+          jobs.email,
+          { to: 'timing@example.com' },
+          { delay: 1_000, runAt: new Date(Date.now() + 2_000) } as any,
+        ),
+      /cannot include both "delay" and "runAt"/,
+    )
+  })
+
   it('rejects unknown job definitions passed to enqueue', async () => {
     let storage = createMemoryJobStorage()
     let jobs = createJobs({
@@ -385,6 +406,11 @@ function assertTransactionOptionTyping(): void {
 
   void txScheduler.enqueue(jobs.email, { to: 'tx@example.com' }, {
     transaction: { id: 'tx1' },
+  })
+  void txScheduler.enqueue(jobs.email, { to: 'tx@example.com' }, {
+    delay: 1_000,
+    // @ts-expect-error Enqueue options cannot include both delay and runAt.
+    runAt: new Date(),
   })
   void txScheduler.cancel('job-id', {
     transaction: { id: 'tx1' },
