@@ -21,7 +21,7 @@ npm i remix
 ```ts
 import * as s from 'remix/data-schema'
 import { createJobs, createJobScheduler } from 'remix/job'
-import { createDataTableJobStorage } from 'remix/job/data-table'
+import { createDataTableJobStorage } from 'remix/job-data-table'
 
 let jobs = createJobs({
   sendEmail: {
@@ -40,7 +40,7 @@ await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' 
 
 ## Transactional Scheduler Writes
 
-When your storage supports transactions (e.g. `remix/job/data-table`), scheduler writes can
+When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can
 participate in your application transaction.
 
 ```ts
@@ -88,8 +88,8 @@ await worker.start()
 
 ## Related Packages
 
-- [`remix/job/data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL storage for PostgreSQL, MySQL, and SQLite
-- [`remix/job/redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis storage
+- [`remix/job-data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL storage for PostgreSQL, MySQL, and SQLite
+- [`remix/job-redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis storage
 
 ## License
 

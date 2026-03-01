@@ -19,7 +19,7 @@ npm i remix
 
 ```ts
 import { createMigrationRunner } from 'remix/data-table/migrations'
-import { createDataTableJobStorage, createDataTableJobStorageMigration } from 'remix/job/data-table'
+import { createDataTableJobStorage, createDataTableJobStorageMigration } from 'remix/job-data-table'
 
 let migrationRunner = createMigrationRunner(db.adapter, [
   {
