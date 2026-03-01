@@ -15,7 +15,11 @@ import type {
   PruneResult,
   ReplayFailedJobOptions,
   ReplayFailedJobResult,
+  SchedulerCancelEvent,
+  SchedulerEnqueueEvent,
   SchedulerHookName,
+  SchedulerPruneEvent,
+  SchedulerReplayFailedJobEvent,
   SchedulerHooks,
 } from './types.ts'
 import { normalizeRetryPolicy } from './retry.ts'
@@ -93,12 +97,15 @@ export function createJobScheduler<
         transaction: enqueueOptions?.transaction,
       })
 
-      await runSchedulerHook(hooks, 'onEnqueue', {
-        job,
-        jobName,
-        payload: parsedPayload,
-        options: enqueueOptions,
-        result,
+      await runSchedulerHook(hooks, {
+        hook: 'onEnqueue',
+        event: {
+          job,
+          jobName,
+          payload: parsedPayload,
+          options: enqueueOptions,
+          result,
+        },
       })
 
       return result
@@ -111,10 +118,13 @@ export function createJobScheduler<
         transaction: cancelOptions?.transaction,
       })
 
-      await runSchedulerHook(hooks, 'onCancel', {
-        jobId,
-        options: cancelOptions,
-        canceled,
+      await runSchedulerHook(hooks, {
+        hook: 'onCancel',
+        event: {
+          jobId,
+          options: cancelOptions,
+          canceled,
+        },
       })
 
       return canceled
@@ -152,10 +162,13 @@ export function createJobScheduler<
         jobId: replayed.jobId,
       }
 
-      await runSchedulerHook(hooks, 'onReplayFailedJob', {
-        jobId,
-        options: replayOptions,
-        result,
+      await runSchedulerHook(hooks, {
+        hook: 'onReplayFailedJob',
+        event: {
+          jobId,
+          options: replayOptions,
+          result,
+        },
       })
 
       return result
@@ -174,9 +187,12 @@ export function createJobScheduler<
         },
       )
 
-      await runSchedulerHook(hooks, 'onPrune', {
-        options: pruneOptions,
-        result,
+      await runSchedulerHook(hooks, {
+        hook: 'onPrune',
+        event: {
+          options: pruneOptions,
+          result,
+        },
       })
 
       return result
@@ -237,21 +253,45 @@ async function runSchedulerHook<
   transaction,
 >(
   hooks: SchedulerHooks<defs, transaction> | undefined,
-  hook: SchedulerHookName,
-  event: unknown,
+  invocation: SchedulerHookInvocation<defs, transaction>,
 ): Promise<void> {
   if (hooks == null) {
     return
   }
 
-  let callback = hooks[hook]
-
-  if (callback == null) {
-    return
-  }
-
   try {
-    await callback(event as never)
+    if (invocation.hook === 'onEnqueue') {
+      if (hooks.onEnqueue == null) {
+        return
+      }
+
+      await hooks.onEnqueue(invocation.event)
+      return
+    }
+
+    if (invocation.hook === 'onCancel') {
+      if (hooks.onCancel == null) {
+        return
+      }
+
+      await hooks.onCancel(invocation.event)
+      return
+    }
+
+    if (invocation.hook === 'onReplayFailedJob') {
+      if (hooks.onReplayFailedJob == null) {
+        return
+      }
+
+      await hooks.onReplayFailedJob(invocation.event)
+      return
+    }
+
+    if (hooks.onPrune == null) {
+      return
+    }
+
+    await hooks.onPrune(invocation.event)
   } catch (error) {
     if (hooks.onHookError == null) {
       return
@@ -259,8 +299,8 @@ async function runSchedulerHook<
 
     try {
       await hooks.onHookError({
-        hook,
-        event,
+        hook: invocation.hook,
+        event: invocation.event,
         error,
       })
     } catch {
@@ -282,3 +322,23 @@ function normalizeWholeNumber(value: unknown, fallback: number, minValue: number
 
   return normalized
 }
+
+type SchedulerHookEventMap<
+  defs extends JobDefinitions,
+  transaction,
+> = {
+  onEnqueue: SchedulerEnqueueEvent<defs, transaction>
+  onCancel: SchedulerCancelEvent<transaction>
+  onReplayFailedJob: SchedulerReplayFailedJobEvent<transaction>
+  onPrune: SchedulerPruneEvent<transaction>
+}
+
+type SchedulerHookInvocation<
+  defs extends JobDefinitions,
+  transaction,
+> = {
+  [hookName in SchedulerHookName]: {
+    hook: hookName
+    event: SchedulerHookEventMap<defs, transaction>[hookName]
+  }
+}[SchedulerHookName]
