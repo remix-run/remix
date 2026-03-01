@@ -11,7 +11,12 @@ import type {
   RetryPolicy,
   WorkerHookName,
   WorkerHooks,
+  WorkerJobCompleteEvent,
+  WorkerJobFailedEvent,
+  WorkerJobRetryEvent,
+  WorkerJobStartEvent,
   WorkerOptions,
+  WorkerPruneEvent,
 } from './types.ts'
 import { getCronDispatchCount, getNextCronRunAt } from './cron.ts'
 import { computeRetryAt, normalizeRetryPolicy } from './retry.ts'
@@ -166,11 +171,14 @@ export function createJobWorker<
         limit: retention.limit,
       })
 
-      await runWorkerHook(hooks, 'onPrune', {
-        workerId: workerOptions.workerId,
-        policy: retention.policy,
-        limit: retention.limit,
-        result,
+      await runWorkerHook(hooks, {
+        hook: 'onPrune',
+        event: {
+          workerId: workerOptions.workerId,
+          policy: retention.policy,
+          limit: retention.limit,
+          result,
+        },
       })
 
       await sleep(retention.intervalMs, loopAbort.signal)
@@ -242,16 +250,19 @@ export function createJobWorker<
         error,
         terminal: true,
       })
-      await runWorkerHook(hooks, 'onJobFailed', {
-        job: {
-          ...job,
-          status: 'failed',
-          failedAt: now,
-          updatedAt: now,
-          lastError: error,
+      await runWorkerHook(hooks, {
+        hook: 'onJobFailed',
+        event: {
+          job: {
+            ...job,
+            status: 'failed',
+            failedAt: now,
+            updatedAt: now,
+            lastError: error,
+          },
+          workerId: workerOptions.workerId,
+          error,
         },
-        workerId: workerOptions.workerId,
-        error,
       })
       return
     }
@@ -269,9 +280,12 @@ export function createJobWorker<
     }, workerOptions.heartbeatMs)
 
     try {
-      await runWorkerHook(hooks, 'onJobStart', {
-        job,
-        workerId: workerOptions.workerId,
+      await runWorkerHook(hooks, {
+        hook: 'onJobStart',
+        event: {
+          job,
+          workerId: workerOptions.workerId,
+        },
       })
 
       let parsedPayload = parse(definition.schema, job.payload)
@@ -291,16 +305,19 @@ export function createJobWorker<
       })
       let completedAt = Date.now()
 
-      await runWorkerHook(hooks, 'onJobComplete', {
-        job: {
-          ...job,
-          status: 'completed',
-          completedAt,
-          updatedAt: completedAt,
-          lastError: undefined,
+      await runWorkerHook(hooks, {
+        hook: 'onJobComplete',
+        event: {
+          job: {
+            ...job,
+            status: 'completed',
+            completedAt,
+            updatedAt: completedAt,
+            lastError: undefined,
+          },
+          workerId: workerOptions.workerId,
+          durationMs: completedAt - startedAt,
         },
-        workerId: workerOptions.workerId,
-        durationMs: completedAt - startedAt,
       })
     } catch (error) {
       let now = Date.now()
@@ -314,16 +331,19 @@ export function createJobWorker<
           error: message,
           terminal: true,
         })
-        await runWorkerHook(hooks, 'onJobFailed', {
-          job: {
-            ...job,
-            status: 'failed',
-            failedAt: now,
-            updatedAt: now,
-            lastError: message,
+        await runWorkerHook(hooks, {
+          hook: 'onJobFailed',
+          event: {
+            job: {
+              ...job,
+              status: 'failed',
+              failedAt: now,
+              updatedAt: now,
+              lastError: message,
+            },
+            workerId: workerOptions.workerId,
+            error: message,
           },
-          workerId: workerOptions.workerId,
-          error: message,
         })
       } else {
         let retryAt = computeRetryAt(now, job.attempts, job.retry)
@@ -336,17 +356,20 @@ export function createJobWorker<
           retryAt,
           terminal: false,
         })
-        await runWorkerHook(hooks, 'onJobRetry', {
-          job: {
-            ...job,
-            status: 'queued',
-            runAt: retryAt,
-            updatedAt: now,
-            lastError: message,
+        await runWorkerHook(hooks, {
+          hook: 'onJobRetry',
+          event: {
+            job: {
+              ...job,
+              status: 'queued',
+              runAt: retryAt,
+              updatedAt: now,
+              lastError: message,
+            },
+            workerId: workerOptions.workerId,
+            retryAt,
+            error: message,
           },
-          workerId: workerOptions.workerId,
-          retryAt,
-          error: message,
         })
       }
     } finally {
@@ -484,21 +507,54 @@ function resolvePruneCutoff(now: number, olderThanMs: number | undefined): numbe
 
 async function runWorkerHook(
   hooks: WorkerHooks | undefined,
-  hook: WorkerHookName,
-  event: unknown,
+  invocation: WorkerHookInvocation,
 ): Promise<void> {
   if (hooks == null) {
     return
   }
 
-  let callback = hooks[hook]
-
-  if (callback == null) {
-    return
-  }
-
   try {
-    await callback(event as never)
+    if (invocation.hook === 'onJobStart') {
+      if (hooks.onJobStart == null) {
+        return
+      }
+
+      await hooks.onJobStart(invocation.event)
+      return
+    }
+
+    if (invocation.hook === 'onJobComplete') {
+      if (hooks.onJobComplete == null) {
+        return
+      }
+
+      await hooks.onJobComplete(invocation.event)
+      return
+    }
+
+    if (invocation.hook === 'onJobRetry') {
+      if (hooks.onJobRetry == null) {
+        return
+      }
+
+      await hooks.onJobRetry(invocation.event)
+      return
+    }
+
+    if (invocation.hook === 'onJobFailed') {
+      if (hooks.onJobFailed == null) {
+        return
+      }
+
+      await hooks.onJobFailed(invocation.event)
+      return
+    }
+
+    if (hooks.onPrune == null) {
+      return
+    }
+
+    await hooks.onPrune(invocation.event)
   } catch (error) {
     if (hooks.onHookError == null) {
       return
@@ -506,8 +562,8 @@ async function runWorkerHook(
 
     try {
       await hooks.onHookError({
-        hook,
-        event,
+        hook: invocation.hook,
+        event: invocation.event,
         error,
       })
     } catch {
@@ -515,6 +571,21 @@ async function runWorkerHook(
     }
   }
 }
+
+type WorkerHookEventMap = {
+  onJobStart: WorkerJobStartEvent
+  onJobComplete: WorkerJobCompleteEvent
+  onJobRetry: WorkerJobRetryEvent
+  onJobFailed: WorkerJobFailedEvent
+  onPrune: WorkerPruneEvent
+}
+
+type WorkerHookInvocation = {
+  [hookName in WorkerHookName]: {
+    hook: hookName
+    event: WorkerHookEventMap[hookName]
+  }
+}[WorkerHookName]
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
