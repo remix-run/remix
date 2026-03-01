@@ -222,7 +222,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
         },
         cron: [
           {
-            cron: '* * * * *',
+            schedule: '* * * * *',
             job: jobs.cronJob,
             payload: { id: 'run' },
             options: {

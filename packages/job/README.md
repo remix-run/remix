@@ -56,7 +56,7 @@ let worker = createJobWorker({
   backend,
   cron: [
     {
-      cron: '*/5 * * * *',
+      schedule: '*/5 * * * *',
       job: jobs.sendEmail,
       payload: { to: 'ops@example.com', subject: 'heartbeat' },
       options: { id: 'heartbeat-email', catchUp: 'one' },
