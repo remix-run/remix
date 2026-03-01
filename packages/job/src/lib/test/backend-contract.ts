@@ -47,7 +47,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
         },
       })
 
-      await scheduler.enqueue('email', { id: 'one' })
+      await scheduler.enqueue(jobs.email, { id: 'one' })
       await worker.start()
       await waitFor(() => processed.length === 1)
       await worker.stop()
@@ -80,7 +80,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
         },
       })
 
-      let result = await scheduler.enqueue('flaky', { id: 'one' }, {
+      let result = await scheduler.enqueue(jobs.flaky, { id: 'one' }, {
         retry: {
           maxAttempts: 2,
           strategy: 'fixed',
@@ -121,7 +121,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
         },
       })
 
-      await scheduler.enqueue('delayed', { id: 'd1' }, { delay: 35 })
+      await scheduler.enqueue(jobs.delayed, { id: 'd1' }, { delay: 35 })
       await worker.start()
       await waitFor(() => processed === 1)
       await worker.stop()
@@ -138,11 +138,11 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
       })
       let scheduler = createJobScheduler({ jobs, backend })
 
-      let first = await scheduler.enqueue('email', { id: 'a' }, {
+      let first = await scheduler.enqueue(jobs.email, { id: 'a' }, {
         dedupeKey: 'email:a',
         dedupeTtlMs: 1000,
       })
-      let second = await scheduler.enqueue('email', { id: 'a' }, {
+      let second = await scheduler.enqueue(jobs.email, { id: 'a' }, {
         dedupeKey: 'email:a',
         dedupeTtlMs: 1000,
       })

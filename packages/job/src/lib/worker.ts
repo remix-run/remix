@@ -27,7 +27,6 @@ let DEFAULT_CRON_TICK_MS = 30000
 export function createJobWorker<defs extends JobDefinitions>(
   options: CreateJobWorkerOptions<defs>,
 ): JobWorker {
-  let scheduler = options.scheduler
   let jobs = options.jobs
   let backend = options.backend
   let workerOptions = normalizeWorkerOptions(options.worker)
@@ -162,9 +161,17 @@ export function createJobWorker<defs extends JobDefinitions>(
     let dispatchIndex = 0
 
     while (dispatchIndex < dispatchCount) {
-      await scheduler.enqueue(schedule.name as any, payload, {
+      let now = Date.now()
+      let retry = normalizeRetryPolicy(definition.retry, schedule.retry)
+
+      await backend.enqueue({
+        name: schedule.name,
         queue: schedule.queue,
-        retry: schedule.retry,
+        payload,
+        runAt: now,
+        priority: 0,
+        retry,
+        createdAt: now,
       })
       dispatchIndex += 1
     }

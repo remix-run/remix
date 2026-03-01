@@ -85,13 +85,9 @@ export function createJobScheduler<defs extends JobDefinitions>(
 }
 
 function resolveJobName(
-  value: string | object,
+  value: object,
   names: WeakMap<object, string>,
 ): string {
-  if (typeof value === 'string') {
-    return value
-  }
-
   let name = names.get(value)
 
   if (name == null) {
