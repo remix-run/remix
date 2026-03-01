@@ -78,10 +78,15 @@ export interface JobDefinition<payloadSchema extends Schema<any, any>> {
 }
 
 export type JobDefinitions = Record<string, JobDefinition<Schema<any, any>>>
+export type JobName<defs extends JobDefinitions> = keyof defs & string
+export type JobReference<
+  defs extends JobDefinitions,
+  name extends JobName<defs> = JobName<defs>,
+> = name | defs[name]
 
 export type CronSchedule<
   defs extends JobDefinitions,
-  name extends keyof defs & string = keyof defs & string,
+  name extends JobName<defs> = JobName<defs>,
 > = {
   cron: string
   name: name
@@ -90,8 +95,8 @@ export type CronSchedule<
 }
 
 export interface JobScheduler<defs extends JobDefinitions> {
-  enqueue<name extends keyof defs & string>(
-    name: name,
+  enqueue<name extends JobName<defs>>(
+    job: JobReference<defs, name>,
     payload: Infer<defs[name]['schema']>,
     options?: EnqueueOptions,
   ): Promise<{ jobId: string; deduped: boolean }>
