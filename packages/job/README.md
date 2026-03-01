@@ -44,6 +44,35 @@ let enqueued = await scheduler.enqueue(jobs.sendEmail, {
 await scheduler.cancel(enqueued.jobId)
 ```
 
+## Avoiding Duplicate Jobs
+
+Use `dedupeKey` and `dedupeTtlMs` to prevent duplicate enqueues for the same logical work.
+
+```ts
+let dedupeKey = 'send-email:a@example.com:welcome'
+
+let first = await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'a@example.com', subject: 'Welcome' },
+  {
+    dedupeKey,
+    dedupeTtlMs: 5 * 60 * 1000, // 5 minutes
+  },
+)
+
+let second = await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'a@example.com', subject: 'Welcome' },
+  {
+    dedupeKey,
+    dedupeTtlMs: 5 * 60 * 1000,
+  },
+)
+
+// second.deduped === true
+// second.jobId === first.jobId
+```
+
 ## Transactional Scheduler Writes
 
 When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can
