@@ -31,9 +31,8 @@ let DEFAULT_RETENTION_LIMIT = 500
  */
 export function createJobWorker<
   defs extends JobDefinitions,
-  transaction = never,
 >(
-  options: CreateJobWorkerOptions<defs, transaction>,
+  options: CreateJobWorkerOptions<defs>,
 ): JobWorker {
   let jobs = options.jobs
   let jobNames = createJobNameMap(jobs)

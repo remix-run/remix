@@ -476,3 +476,21 @@ function assertWorkerHookOptionTyping(): void {
 }
 
 void assertWorkerHookOptionTyping
+
+function assertWorkerConstructorGenericTyping(): void {
+  let jobs = createJobs({
+    email: {
+      schema: s.object({ to: s.string() }),
+      async handle() {},
+    },
+  })
+  let storage = createMemoryJobStorage()
+
+  // @ts-expect-error createJobWorker no longer accepts a transaction type parameter.
+  void createJobWorker<typeof jobs, { id: string }>({
+    jobs,
+    storage,
+  })
+}
+
+void assertWorkerConstructorGenericTyping
