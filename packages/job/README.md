@@ -35,7 +35,13 @@ let jobs = createJobs({
 let storage = createDataTableJobStorage({ db })
 let scheduler = createJobScheduler({ jobs, storage })
 
-await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' })
+let enqueued = await scheduler.enqueue(jobs.sendEmail, {
+  to: 'a@example.com',
+  subject: 'Hello',
+})
+
+// enqueue returns { jobId, deduped } for follow-up operations like cancel
+await scheduler.cancel(enqueued.jobId)
 ```
 
 ## Transactional Scheduler Writes
