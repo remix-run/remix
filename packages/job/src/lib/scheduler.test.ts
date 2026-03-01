@@ -369,6 +369,33 @@ describe('createJobScheduler', () => {
     assert.ok(events.includes('cancel'))
     assert.ok(events.includes('prune'))
   })
+
+  it('swallows errors thrown from onHookError', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      email: {
+        schema: s.object({ to: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({
+      jobs,
+      storage,
+      onEnqueue() {
+        throw new Error('enqueue hook failed')
+      },
+      onHookError() {
+        throw new Error('onHookError failed')
+      },
+    })
+
+    let enqueued = await scheduler.enqueue(jobs.email, { to: 'fail-open@example.com' })
+    assert.equal(enqueued.deduped, false)
+
+    let job = await scheduler.get(enqueued.jobId)
+    assert.ok(job)
+    assert.equal(job.status, 'queued')
+  })
 })
 
 function createTransactionAwareTestStorage(): JobStorage<{ id: string }> {
@@ -436,6 +463,15 @@ function assertTransactionOptionTyping(): void {
   void memoryScheduler.replayFailedJob('job-id', { transaction: { id: 'tx1' } })
   // @ts-expect-error Memory storage does not declare transaction support.
   void memoryScheduler.prune({ policy: { failedOlderThanMs: 0 }, transaction: { id: 'tx1' } })
+
+  void createJobScheduler({
+    jobs,
+    storage: createMemoryJobStorage(),
+    // @ts-expect-error Scheduler hooks must be top-level config properties.
+    hooks: {
+      onEnqueue() {},
+    },
+  })
 }
 
 void assertTransactionOptionTyping

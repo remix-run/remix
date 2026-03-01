@@ -214,6 +214,43 @@ describe('createJobWorker', () => {
     assert.equal(hookErrors, 1)
   })
 
+  it('swallows errors thrown from worker onHookError', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      complete: {
+        schema: s.object({ id: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+      },
+      onJobComplete() {
+        throw new Error('onJobComplete failed')
+      },
+      onHookError() {
+        throw new Error('onHookError failed')
+      },
+    })
+
+    let enqueued = await scheduler.enqueue(jobs.complete, { id: 'done' })
+    await worker.start()
+    await waitFor(async () => {
+      let job = await scheduler.get(enqueued.jobId)
+      return job?.status === 'completed'
+    })
+    await worker.stop()
+
+    let job = await scheduler.get(enqueued.jobId)
+    assert.ok(job)
+    assert.equal(job.status, 'completed')
+  })
+
   it('supports optional retention pruning loop', async () => {
     let storage = createMemoryJobStorage()
     let jobs = createJobs({
@@ -254,6 +291,48 @@ describe('createJobWorker', () => {
     await worker.stop()
     assert.ok(pruneEvents > 0)
   })
+
+  it('does not run retention pruning when retention is not configured', async () => {
+    let pruneCalls = 0
+    let pruneEvents = 0
+    let baseStorage = createMemoryJobStorage()
+    let storage = {
+      ...baseStorage,
+      prune(...args: Parameters<typeof baseStorage.prune>) {
+        pruneCalls += 1
+        return baseStorage.prune(...args)
+      },
+    }
+    let jobs = createJobs({
+      complete: {
+        schema: s.object({ id: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+      },
+      onPrune() {
+        pruneEvents += 1
+      },
+    })
+
+    let enqueued = await scheduler.enqueue(jobs.complete, { id: 'one' })
+    await worker.start()
+    await waitFor(async () => {
+      let job = await scheduler.get(enqueued.jobId)
+      return job?.status === 'completed'
+    })
+    await worker.stop()
+
+    assert.equal(pruneCalls, 0)
+    assert.equal(pruneEvents, 0)
+  })
 })
 
 async function waitFor(
@@ -281,3 +360,29 @@ function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms)
   })
 }
+
+function assertWorkerHookOptionTyping(): void {
+  let jobs = createJobs({
+    email: {
+      schema: s.object({ to: s.string() }),
+      async handle() {},
+    },
+  })
+  let storage = createMemoryJobStorage()
+
+  void createJobWorker({
+    jobs,
+    storage,
+    onJobComplete() {},
+  })
+  void createJobWorker({
+    jobs,
+    storage,
+    // @ts-expect-error Worker hooks must be top-level config properties.
+    hooks: {
+      onJobComplete() {},
+    },
+  })
+}
+
+void assertWorkerHookOptionTyping
