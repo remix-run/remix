@@ -6,7 +6,11 @@ import { createPool, type Pool } from 'mysql2/promise'
 import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
 
 import { createDataTableJobBackend } from './backend.ts'
-import { DEFAULT_TEST_TABLE_PREFIX, resetJobBackendSchema } from './test/schema.ts'
+import {
+  DEFAULT_TEST_TABLE_PREFIX,
+  resetJobBackendSchema,
+  setupJobBackendSchema,
+} from './test/schema.ts'
 
 let integrationEnabled =
   process.env.JOB_DATA_TABLE_INTEGRATION === '1' &&
@@ -23,9 +27,8 @@ describe('data-table job backend (mysql integration)', () => {
 
     pool = createPool(process.env.JOB_DATA_TABLE_MYSQL_URL as string)
     database = createDatabase(createMysqlDatabaseAdapter(pool))
-    await resetJobBackendSchema(async (statement) => {
-      await pool.query(statement)
-    }, 'mysql', DEFAULT_TEST_TABLE_PREFIX)
+    await setupJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
   })
 
   after(async () => {
@@ -39,14 +42,11 @@ describe('data-table job backend (mysql integration)', () => {
   runJobBackendContract('mysql contract', {
     integrationEnabled,
     setup: async () => {
-      await resetJobBackendSchema(async (statement) => {
-        await pool.query(statement)
-      }, 'mysql', DEFAULT_TEST_TABLE_PREFIX)
+      await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createBackend: async () =>
       createDataTableJobBackend({
         db: database,
-        dialect: 'mysql',
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),
   })

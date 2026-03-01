@@ -6,7 +6,11 @@ import { Pool } from 'pg'
 import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
 
 import { createDataTableJobBackend } from './backend.ts'
-import { DEFAULT_TEST_TABLE_PREFIX, resetJobBackendSchema } from './test/schema.ts'
+import {
+  DEFAULT_TEST_TABLE_PREFIX,
+  resetJobBackendSchema,
+  setupJobBackendSchema,
+} from './test/schema.ts'
 
 let integrationEnabled =
   process.env.JOB_DATA_TABLE_INTEGRATION === '1' &&
@@ -25,9 +29,8 @@ describe('data-table job backend (postgres integration)', () => {
       connectionString: process.env.JOB_DATA_TABLE_POSTGRES_URL,
     })
     database = createDatabase(createPostgresDatabaseAdapter(pool))
-    await resetJobBackendSchema(async (statement) => {
-      await pool.query(statement)
-    }, 'postgres', DEFAULT_TEST_TABLE_PREFIX)
+    await setupJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
   })
 
   after(async () => {
@@ -41,14 +44,11 @@ describe('data-table job backend (postgres integration)', () => {
   runJobBackendContract('postgres contract', {
     integrationEnabled,
     setup: async () => {
-      await resetJobBackendSchema(async (statement) => {
-        await pool.query(statement)
-      }, 'postgres', DEFAULT_TEST_TABLE_PREFIX)
+      await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createBackend: async () =>
       createDataTableJobBackend({
         db: database,
-        dialect: 'postgres',
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),
   })

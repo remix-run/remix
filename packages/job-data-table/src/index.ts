@@ -1,2 +1,5 @@
-export { createDataTableJobBackend, getJobSchemaSql } from './lib/backend.ts'
-export type { DataTableDialect, DataTableJobBackendOptions } from './lib/backend.ts'
+export { createDataTableJobBackend, createDataTableJobBackendMigration } from './lib/backend.ts'
+export type {
+  DataTableJobBackendMigrationOptions,
+  DataTableJobBackendOptions,
+} from './lib/backend.ts'
