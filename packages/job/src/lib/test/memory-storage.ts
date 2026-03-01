@@ -290,12 +290,21 @@ export function createMemoryJobStorage(): JobStorage {
       jobs.set(job.id, job)
     },
     async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
+      let desiredIds = new Set(input.map((schedule) => schedule.id))
+
+      for (let scheduleId of schedules.keys()) {
+        if (!desiredIds.has(scheduleId)) {
+          schedules.delete(scheduleId)
+        }
+      }
+
       for (let schedule of input) {
         let current = schedules.get(schedule.id)
 
         schedules.set(schedule.id, {
           ...schedule,
-          nextRunAt: current?.nextRunAt ?? schedule.nextRunAt,
+          nextRunAt:
+            current == null ? schedule.nextRunAt : Math.min(current.nextRunAt, schedule.nextRunAt),
           lockedBy: undefined,
           lockedUntil: undefined,
         })

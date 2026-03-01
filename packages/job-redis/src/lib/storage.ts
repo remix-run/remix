@@ -244,6 +244,18 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
       )
     },
     async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
+      let desiredScheduleIds = new Set(input.map((schedule) => schedule.id))
+      let existingScheduleIds = await zrange(redis, keys.schedulesDue, 0, -1)
+
+      for (let scheduleId of existingScheduleIds) {
+        if (desiredScheduleIds.has(scheduleId)) {
+          continue
+        }
+
+        await redis.sendCommand(['DEL', keys.schedule(scheduleId)])
+        await redis.sendCommand(['ZREM', keys.schedulesDue, scheduleId])
+      }
+
       for (let schedule of input) {
         await evalScript(
           redis,
@@ -369,6 +381,16 @@ async function getSchedule(
 async function hgetall(redis: RedisJobStorageClient, key: string): Promise<Record<string, string>> {
   let result = await redis.sendCommand(['HGETALL', key])
   return toHashRecord(result)
+}
+
+async function zrange(
+  redis: RedisJobStorageClient,
+  key: string,
+  start: number,
+  end: number,
+): Promise<string[]> {
+  let result = await redis.sendCommand(['ZRANGE', key, String(start), String(end)])
+  return readArray(result)
 }
 
 async function evalScript(
