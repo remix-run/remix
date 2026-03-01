@@ -89,7 +89,7 @@ export type CronSchedule<
   name extends JobName<defs> = JobName<defs>,
 > = {
   cron: string
-  name: name
+  job: JobReference<defs, name>
   payload: Infer<defs[name]['schema']>
   options: CronScheduleOptions
 }

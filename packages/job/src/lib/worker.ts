@@ -28,6 +28,7 @@ export function createJobWorker<defs extends JobDefinitions>(
   options: CreateJobWorkerOptions<defs>,
 ): JobWorker {
   let jobs = options.jobs
+  let jobNames = createJobNameMap(jobs)
   let backend = options.backend
   let workerOptions = normalizeWorkerOptions(options.worker)
 
@@ -55,7 +56,7 @@ export function createJobWorker<defs extends JobDefinitions>(
 
     if (cronSchedules.length > 0) {
       await backend.upsertSchedules(
-        cronSchedules.map((schedule) => toPersistedSchedule(schedule, Date.now())),
+        cronSchedules.map((schedule) => toPersistedSchedule(schedule, Date.now(), jobNames)),
       )
       cronLoopPromise = runCronLoop()
     }
@@ -286,21 +287,44 @@ function normalizeWorkerOptions(options?: WorkerOptions): Required<WorkerOptions
 function toPersistedSchedule<defs extends JobDefinitions>(
   schedule: CronSchedule<defs>,
   now: number,
+  jobNames: WeakMap<object, string>,
 ): PersistedCronSchedule {
   let timeZone = schedule.options.timezone ?? 'UTC'
   let retry = normalizeRetryPolicy(undefined, schedule.options.retry as RetryPolicy | undefined)
+  let jobName = resolveJobName(schedule.job, jobNames)
 
   return {
     id: schedule.options.id,
     cron: schedule.cron,
     timezone: timeZone,
     queue: schedule.options.queue ?? 'default',
-    name: schedule.name,
+    name: jobName,
     payload: schedule.payload,
     retry,
     catchUp: schedule.options.catchUp ?? 'one',
     nextRunAt: getNextCronRunAt(schedule.cron, now - 60000, timeZone),
   }
+}
+
+function createJobNameMap<defs extends JobDefinitions>(jobs: defs): WeakMap<object, string> {
+  let jobNames = new WeakMap<object, string>()
+
+  for (let name in jobs) {
+    let definition = jobs[name]
+    jobNames.set(definition, name)
+  }
+
+  return jobNames
+}
+
+function resolveJobName(value: object, jobNames: WeakMap<object, string>): string {
+  let jobName = jobNames.get(value)
+
+  if (jobName == null) {
+    throw new Error('Unknown job definition passed to cron schedule')
+  }
+
+  return jobName
 }
 
 function normalizeWholeNumber(value: unknown, fallback: number, minValue: number): number {
