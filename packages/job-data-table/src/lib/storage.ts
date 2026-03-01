@@ -308,7 +308,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
                     'where id = ?',
                   ].join(''),
                   [
-                    schedule.cron,
+                    schedule.schedule,
                     schedule.timezone,
                     schedule.queue,
                     schedule.name,
@@ -334,7 +334,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
                 ].join(''),
                 [
                   schedule.id,
-                  schedule.cron,
+                  schedule.schedule,
                   schedule.timezone,
                   schedule.queue,
                   schedule.name,
@@ -584,7 +584,7 @@ function toJobRecord(row: Record<string, unknown>): JobRecord {
 function toDueSchedule(row: Record<string, unknown>): DueSchedule {
   return {
     id: readString(row.id),
-    cron: readString(row.cron),
+    schedule: readString(row.cron),
     timezone: readString(row.timezone),
     queue: readString(row.queue),
     name: readString(row.name),

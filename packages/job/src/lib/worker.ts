@@ -147,7 +147,7 @@ export function createJobWorker<
     if (definition == null) {
       await storage.advanceSchedule({
         scheduleId: schedule.id,
-        nextRunAt: getNextCronRunAt(schedule.cron, now, schedule.timezone),
+        nextRunAt: getNextCronRunAt(schedule.schedule, now, schedule.timezone),
         now,
         workerId: workerOptions.workerId,
       })
@@ -156,7 +156,7 @@ export function createJobWorker<
 
     let payload = parse(definition.schema, schedule.payload)
     let dispatchCount = getCronDispatchCount(
-      schedule.cron,
+      schedule.schedule,
       schedule.timezone,
       schedule.catchUp,
       schedule.nextRunAt,
@@ -180,7 +180,7 @@ export function createJobWorker<
       dispatchIndex += 1
     }
 
-    let nextRunAt = getNextCronRunAt(schedule.cron, now, schedule.timezone)
+    let nextRunAt = getNextCronRunAt(schedule.schedule, now, schedule.timezone)
 
     await storage.advanceSchedule({
       scheduleId: schedule.id,
@@ -298,7 +298,7 @@ function toPersistedSchedule<defs extends JobDefinitions>(
 
   return {
     id: schedule.options.id,
-    cron: schedule.schedule,
+    schedule: schedule.schedule,
     timezone: timeZone,
     queue: schedule.options.queue ?? 'default',
     name: jobName,

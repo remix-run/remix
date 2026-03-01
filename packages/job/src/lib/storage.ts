@@ -31,7 +31,7 @@ export interface JobFailureInput {
 
 export interface PersistedCronSchedule {
   id: string
-  cron: string
+  schedule: string
   timezone: string
   queue: string
   name: string

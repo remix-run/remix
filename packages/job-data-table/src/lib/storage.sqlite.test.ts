@@ -127,6 +127,77 @@ describe('data-table job storage (sqlite)', () => {
     assert.ok(job)
     assert.equal(job.status, 'queued')
   })
+
+  it('commits enqueue when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let enqueuedJobId = ''
+
+    await database.transaction(async (transaction) => {
+      let enqueued = await storage.enqueue(
+        {
+          name: 'email',
+          queue: 'default',
+          payload: { to: 'commit@example.com' },
+          runAt: Date.now(),
+          priority: 0,
+          retry: {
+            maxAttempts: 5,
+            strategy: 'exponential',
+            baseDelayMs: 1000,
+            maxDelayMs: 300000,
+            jitter: 'full',
+          },
+          createdAt: Date.now(),
+        },
+        { transaction },
+      )
+
+      enqueuedJobId = enqueued.jobId
+    })
+
+    assert.notEqual(enqueuedJobId, '')
+    let job = await storage.get(enqueuedJobId)
+    assert.ok(job)
+    assert.equal(job.status, 'queued')
+  })
+
+  it('commits cancel when using a provided transaction', { skip: !integrationEnabled }, async () => {
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+
+    let storage = createDataTableJobStorage({
+      db: database,
+      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
+    })
+    let enqueued = await storage.enqueue({
+      name: 'email',
+      queue: 'default',
+      payload: { to: 'commit-cancel@example.com' },
+      runAt: Date.now(),
+      priority: 0,
+      retry: {
+        maxAttempts: 5,
+        strategy: 'exponential',
+        baseDelayMs: 1000,
+        maxDelayMs: 300000,
+        jitter: 'full',
+      },
+      createdAt: Date.now(),
+    })
+
+    await database.transaction(async (transaction) => {
+      let canceled = await storage.cancel(enqueued.jobId, { transaction })
+      assert.equal(canceled, true)
+    })
+
+    let job = await storage.get(enqueued.jobId)
+    assert.ok(job)
+    assert.equal(job.status, 'canceled')
+  })
 })
 
 function canOpenSqliteDatabase(): boolean {
