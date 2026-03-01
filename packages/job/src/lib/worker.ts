@@ -482,8 +482,8 @@ function resolvePruneCutoff(now: number, olderThanMs: number | undefined): numbe
   return now - normalizeWholeNumber(olderThanMs, 0, 0)
 }
 
-async function runWorkerHook<defs extends JobDefinitions>(
-  hooks: WorkerHooks<defs> | undefined,
+async function runWorkerHook(
+  hooks: WorkerHooks | undefined,
   hook: WorkerHookName,
   event: unknown,
 ): Promise<void> {
