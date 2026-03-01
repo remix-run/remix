@@ -43,19 +43,19 @@ export interface CancelOptions<transaction = never> {
   transaction?: transaction
 }
 
-export interface DeadLetterQueryOptions {
+export interface FailedJobQueryOptions {
   queue?: string
   limit?: number
 }
 
-export interface ReplayDeadLetterOptions<transaction = never> {
+export interface ReplayFailedJobOptions<transaction = never> {
   runAt?: Date
   priority?: number
   queue?: string
   transaction?: transaction
 }
 
-export interface ReplayDeadLetterResult {
+export interface ReplayFailedJobResult {
   jobId: string
 }
 
@@ -145,7 +145,7 @@ export type CronSchedule<
   options: CronScheduleOptions
 }
 
-export type SchedulerHookName = 'onEnqueue' | 'onCancel' | 'onReplayDeadLetter' | 'onPrune'
+export type SchedulerHookName = 'onEnqueue' | 'onCancel' | 'onReplayFailedJob' | 'onPrune'
 
 export interface SchedulerHookErrorEvent {
   hook: SchedulerHookName
@@ -167,10 +167,10 @@ export interface SchedulerCancelEvent<transaction = never> {
   canceled: boolean
 }
 
-export interface SchedulerReplayDeadLetterEvent<transaction = never> {
+export interface SchedulerReplayFailedJobEvent<transaction = never> {
   jobId: string
-  options?: ReplayDeadLetterOptions<transaction>
-  result: ReplayDeadLetterResult
+  options?: ReplayFailedJobOptions<transaction>
+  result: ReplayFailedJobResult
 }
 
 export interface SchedulerPruneEvent<transaction = never> {
@@ -181,7 +181,7 @@ export interface SchedulerPruneEvent<transaction = never> {
 export interface SchedulerHooks<defs extends JobDefinitions, transaction = never> {
   onEnqueue?(event: SchedulerEnqueueEvent<defs, transaction>): void | Promise<void>
   onCancel?(event: SchedulerCancelEvent<transaction>): void | Promise<void>
-  onReplayDeadLetter?(event: SchedulerReplayDeadLetterEvent<transaction>): void | Promise<void>
+  onReplayFailedJob?(event: SchedulerReplayFailedJobEvent<transaction>): void | Promise<void>
   onPrune?(event: SchedulerPruneEvent<transaction>): void | Promise<void>
   onHookError?(event: SchedulerHookErrorEvent): void | Promise<void>
 }
@@ -190,7 +190,7 @@ export type WorkerHookName =
   | 'onJobStart'
   | 'onJobComplete'
   | 'onJobRetry'
-  | 'onJobDeadLetter'
+  | 'onJobFailed'
   | 'onPrune'
 
 export interface WorkerHookErrorEvent {
@@ -217,7 +217,7 @@ export interface WorkerJobRetryEvent {
   error: string
 }
 
-export interface WorkerJobDeadLetterEvent {
+export interface WorkerJobFailedEvent {
   job: JobRecord
   workerId: string
   error: string
@@ -234,7 +234,7 @@ export interface WorkerHooks<defs extends JobDefinitions> {
   onJobStart?(event: WorkerJobStartEvent): void | Promise<void>
   onJobComplete?(event: WorkerJobCompleteEvent): void | Promise<void>
   onJobRetry?(event: WorkerJobRetryEvent): void | Promise<void>
-  onJobDeadLetter?(event: WorkerJobDeadLetterEvent): void | Promise<void>
+  onJobFailed?(event: WorkerJobFailedEvent): void | Promise<void>
   onPrune?(event: WorkerPruneEvent): void | Promise<void>
   onHookError?(event: WorkerHookErrorEvent): void | Promise<void>
 }
@@ -247,11 +247,11 @@ export interface JobScheduler<defs extends JobDefinitions, transaction = never> 
   ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
   cancel(jobId: string, options?: CancelOptions<transaction>): Promise<boolean>
-  listDeadLetters(options?: DeadLetterQueryOptions): Promise<JobRecord[]>
-  replayDeadLetter(
+  listFailedJobs(options?: FailedJobQueryOptions): Promise<JobRecord[]>
+  replayFailedJob(
     jobId: string,
-    options?: ReplayDeadLetterOptions<transaction>,
-  ): Promise<ReplayDeadLetterResult>
+    options?: ReplayFailedJobOptions<transaction>,
+  ): Promise<ReplayFailedJobResult>
   prune(options: PruneOptions<transaction>): Promise<PruneResult>
 }
 

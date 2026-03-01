@@ -175,8 +175,8 @@ describe('createJobWorker', () => {
         onJobComplete() {
           events.push('complete')
         },
-        onJobDeadLetter() {
-          events.push('dead-letter')
+        onJobFailed() {
+          events.push('failed-job')
         },
         onHookError() {
           hookErrors += 1
@@ -216,7 +216,7 @@ describe('createJobWorker', () => {
     assert.ok(events.includes('start'))
     assert.ok(events.includes('retry'))
     assert.ok(events.includes('complete'))
-    assert.ok(events.includes('dead-letter'))
+    assert.ok(events.includes('failed-job'))
     assert.equal(hookErrors, 1)
   })
 

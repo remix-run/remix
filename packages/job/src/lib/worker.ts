@@ -242,7 +242,7 @@ export function createJobWorker<
         error,
         terminal: true,
       })
-      await runWorkerHook(hooks, 'onJobDeadLetter', {
+      await runWorkerHook(hooks, 'onJobFailed', {
         job: {
           ...job,
           status: 'failed',
@@ -314,7 +314,7 @@ export function createJobWorker<
           error: message,
           terminal: true,
         })
-        await runWorkerHook(hooks, 'onJobDeadLetter', {
+        await runWorkerHook(hooks, 'onJobFailed', {
           job: {
             ...job,
             status: 'failed',

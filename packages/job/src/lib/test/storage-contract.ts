@@ -203,7 +203,7 @@ export function runJobStorageContract<transaction = never>(
       assert.equal(reclaimed[0].attempts, 2)
     })
 
-    it('lists dead letters and replays failed jobs', { skip: !enabled }, async () => {
+    it('lists failed jobs and replays failed jobs', { skip: !enabled }, async () => {
       let jobs = createJobs({
         alwaysFail: {
           schema: s.object({ id: s.string() }),
@@ -240,10 +240,10 @@ export function runJobStorageContract<transaction = never>(
       })
       await worker.stop()
 
-      let deadLetters = await storage.listDeadLetters({ limit: 10 })
+      let deadLetters = await storage.listFailedJobs({ limit: 10 })
       assert.ok(deadLetters.some((job) => job.id === enqueued.jobId))
 
-      let replayed = await storage.replayDeadLetter({
+      let replayed = await storage.replayFailedJob({
         jobId: enqueued.jobId,
         priority: 99,
       })
@@ -278,13 +278,13 @@ export function runJobStorageContract<transaction = never>(
       })
 
       assert.equal(
-        await storage.replayDeadLetter({
+        await storage.replayFailedJob({
           jobId: 'missing-job-id',
         }),
         null,
       )
       assert.equal(
-        await storage.replayDeadLetter({
+        await storage.replayFailedJob({
           jobId: queued.jobId,
         }),
         null,

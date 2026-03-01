@@ -48,12 +48,12 @@ export interface ClaimDueSchedulesInput {
   limit: number
 }
 
-export interface ListDeadLettersInput {
+export interface ListFailedJobsInput {
   queue?: string
   limit?: number
 }
 
-export interface ReplayDeadLetterInput {
+export interface ReplayFailedJobInput {
   jobId: string
   runAt?: number
   priority?: number
@@ -93,9 +93,9 @@ export interface JobStorage<transaction = never> {
   ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
   cancel(jobId: string, options?: JobWriteOptions<transaction>): Promise<boolean>
-  listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]>
-  replayDeadLetter(
-    input: ReplayDeadLetterInput,
+  listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]>
+  replayFailedJob(
+    input: ReplayFailedJobInput,
     options?: JobWriteOptions<transaction>,
   ): Promise<{ jobId: string } | null>
   prune(

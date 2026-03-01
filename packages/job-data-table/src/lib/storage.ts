@@ -11,8 +11,8 @@ import type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
-  ListDeadLettersInput,
-  ReplayDeadLetterInput,
+  ListFailedJobsInput,
+  ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
   PersistedCronSchedule,
@@ -154,7 +154,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
         }),
       )
     },
-    listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]> {
+    listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]> {
       if (input.limit != null && input.limit <= 0) {
         return Promise.resolve([])
       }
@@ -175,8 +175,8 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
         return (rows.rows ?? []).map(toJobRecord)
       })
     },
-    replayDeadLetter(
-      input: ReplayDeadLetterInput,
+    replayFailedJob(
+      input: ReplayFailedJobInput,
       writeOptions?: JobWriteOptions<Database>,
     ): Promise<{ jobId: string } | null> {
       let db = writeOptions?.transaction ?? baseDb
