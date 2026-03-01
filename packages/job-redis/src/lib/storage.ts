@@ -243,7 +243,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
         ],
       )
     },
-    async upsertSchedules(input: PersistedCronSchedule[]): Promise<void> {
+    async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
       for (let schedule of input) {
         await evalScript(
           redis,
