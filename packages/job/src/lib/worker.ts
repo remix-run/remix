@@ -38,7 +38,7 @@ export function createJobWorker<
   let jobs = options.jobs
   let jobNames = createJobNameMap(jobs)
   let storage = options.storage
-  let hooks = options.hooks
+  let hooks = options
   let workerOptions = normalizeWorkerOptions(options.worker)
 
   let running = false

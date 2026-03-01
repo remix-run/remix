@@ -299,23 +299,21 @@ describe('createJobScheduler', () => {
     let scheduler = createJobScheduler({
       jobs,
       storage,
-      hooks: {
-        onEnqueue() {
-          events.push('enqueue')
-          throw new Error('enqueue hook failed')
-        },
-        onCancel() {
-          events.push('cancel')
-        },
-        onReplayFailedJob() {
-          events.push('replay')
-        },
-        onPrune() {
-          events.push('prune')
-        },
-        onHookError() {
-          hookErrors += 1
-        },
+      onEnqueue() {
+        events.push('enqueue')
+        throw new Error('enqueue hook failed')
+      },
+      onCancel() {
+        events.push('cancel')
+      },
+      onReplayFailedJob() {
+        events.push('replay')
+      },
+      onPrune() {
+        events.push('prune')
+      },
+      onHookError() {
+        hookErrors += 1
       },
     })
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'hooks@example.com' })
