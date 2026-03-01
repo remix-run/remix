@@ -219,8 +219,8 @@ describe('createJobScheduler', () => {
       terminal: true,
     })
 
-    let deadLetters = await scheduler.listFailedJobs({ limit: 10 })
-    assert.ok(deadLetters.some((job) => job.id === enqueued.jobId))
+    let failedJobs = await scheduler.listFailedJobs({ limit: 10 })
+    assert.ok(failedJobs.some((job) => job.id === enqueued.jobId))
 
     let replayed = await scheduler.replayFailedJob(enqueued.jobId, { priority: 88 })
     assert.notEqual(replayed.jobId, enqueued.jobId)

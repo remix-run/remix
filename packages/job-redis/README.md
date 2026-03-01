@@ -27,10 +27,10 @@ await redis.connect()
 let storage = createRedisJobStorage({ redis })
 // ...create a scheduler with createJobScheduler({ jobs, storage })
 
-let deadLetters = await scheduler.listFailedJobs({ limit: 20 })
+let failedJobs = await scheduler.listFailedJobs({ limit: 20 })
 
-if (deadLetters.length > 0) {
-  await scheduler.replayFailedJob(deadLetters[0].id)
+if (failedJobs.length > 0) {
+  await scheduler.replayFailedJob(failedJobs[0].id)
 }
 
 await scheduler.prune({

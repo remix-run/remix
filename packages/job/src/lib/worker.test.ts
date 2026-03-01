@@ -140,7 +140,7 @@ describe('createJobWorker', () => {
           }
         },
       },
-      deadLetter: {
+      failedJob: {
         schema: s.object({ id: s.string() }),
         async handle() {
           throw new Error('terminal')
@@ -187,7 +187,7 @@ describe('createJobWorker', () => {
         jitter: 'none',
       },
     })
-    let deadLetterJob = await scheduler.enqueue(jobs.deadLetter, { id: 'dead' }, {
+    let failedJob = await scheduler.enqueue(jobs.failedJob, { id: 'dead' }, {
       retry: {
         maxAttempts: 1,
         strategy: 'fixed',
@@ -201,8 +201,8 @@ describe('createJobWorker', () => {
 
     await waitFor(async () => {
       let retryState = await scheduler.get(retryJob.jobId)
-      let deadLetterState = await scheduler.get(deadLetterJob.jobId)
-      return retryState?.status === 'completed' && deadLetterState?.status === 'failed'
+      let failedState = await scheduler.get(failedJob.jobId)
+      return retryState?.status === 'completed' && failedState?.status === 'failed'
     })
 
     await worker.stop()
