@@ -16,7 +16,7 @@ describe('createJobScheduler', () => {
     })
     let scheduler = createJobScheduler({ jobs, backend })
 
-    let enqueued = await scheduler.enqueue('email', { to: 'mjackson@example.com' }, { priority: 3 })
+    let enqueued = await scheduler.enqueue(jobs.email, { to: 'mjackson@example.com' }, { priority: 3 })
     assert.equal(enqueued.deduped, false)
 
     let job = await scheduler.get(enqueued.jobId)
@@ -38,11 +38,11 @@ describe('createJobScheduler', () => {
     })
     let scheduler = createJobScheduler({ jobs, backend })
 
-    let first = await scheduler.enqueue('email', { to: 'a@example.com' }, {
+    let first = await scheduler.enqueue(jobs.email, { to: 'a@example.com' }, {
       dedupeKey: 'email:a@example.com',
       dedupeTtlMs: 1000,
     })
-    let second = await scheduler.enqueue('email', { to: 'a@example.com' }, {
+    let second = await scheduler.enqueue(jobs.email, { to: 'a@example.com' }, {
       dedupeKey: 'email:a@example.com',
       dedupeTtlMs: 1000,
     })
@@ -62,7 +62,45 @@ describe('createJobScheduler', () => {
     })
     let scheduler = createJobScheduler({ jobs, backend })
 
-    await assert.rejects(() => scheduler.enqueue('email', { to: 123 } as any))
+    await assert.rejects(() => scheduler.enqueue(jobs.email, { to: 123 } as any))
+  })
+
+  it('accepts string job names', async () => {
+    let backend = createMemoryJobBackend()
+    let jobs = createJobs({
+      email: {
+        schema: s.object({ to: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, backend })
+
+    let enqueued = await scheduler.enqueue('email', { to: 'string@example.com' })
+    let job = await scheduler.get(enqueued.jobId)
+
+    assert.ok(job)
+    assert.equal(job.name, 'email')
+  })
+
+  it('rejects unknown job definitions passed to enqueue', async () => {
+    let backend = createMemoryJobBackend()
+    let jobs = createJobs({
+      email: {
+        schema: s.object({ to: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, backend })
+
+    let unknownJob = {
+      schema: s.object({ to: s.string() }),
+      async handle() {},
+    }
+
+    await assert.rejects(
+      () => scheduler.enqueue(unknownJob as any, { to: 'oops@example.com' }),
+      /Unknown job definition passed to enqueue/,
+    )
   })
 
   it('cancels queued jobs', async () => {
@@ -75,7 +113,7 @@ describe('createJobScheduler', () => {
     })
     let scheduler = createJobScheduler({ jobs, backend })
 
-    let enqueued = await scheduler.enqueue('email', { to: 'x@example.com' })
+    let enqueued = await scheduler.enqueue(jobs.email, { to: 'x@example.com' })
 
     assert.equal(await scheduler.cancel(enqueued.jobId), true)
     assert.equal(await scheduler.cancel(enqueued.jobId), false)

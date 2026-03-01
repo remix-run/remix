@@ -32,10 +32,10 @@ let jobs = createJobs({
   },
 })
 
-let backend = createDataTableJobBackend({ db, dialect: 'postgres' })
+let backend = createDataTableJobBackend({ db })
 let scheduler = createJobScheduler({ jobs, backend })
 
-await scheduler.enqueue('sendEmail', { to: 'a@example.com', subject: 'Hello' })
+await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' })
 ```
 
 ## License

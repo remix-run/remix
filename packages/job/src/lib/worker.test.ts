@@ -29,7 +29,7 @@ describe('createJobWorker', () => {
       },
     })
 
-    await scheduler.enqueue('delayed', { id: 'one' }, { delay: 40 })
+    await scheduler.enqueue(jobs.delayed, { id: 'one' }, { delay: 40 })
     await worker.start()
 
     await waitFor(() => executed.length === 1)
@@ -64,7 +64,7 @@ describe('createJobWorker', () => {
       },
     })
 
-    let enqueued = await scheduler.enqueue('flaky', { value: 'x' }, {
+    let enqueued = await scheduler.enqueue(jobs.flaky, { value: 'x' }, {
       retry: {
         maxAttempts: 2,
         strategy: 'fixed',

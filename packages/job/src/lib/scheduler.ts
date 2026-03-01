@@ -5,6 +5,8 @@ import type {
   EnqueueOptions,
   Infer,
   JobDefinitions,
+  JobName,
+  JobReference,
   JobRecord,
   JobScheduler,
 } from './types.ts'
@@ -14,7 +16,7 @@ import { normalizeRetryPolicy } from './retry.ts'
  * Creates a typed map of job handlers.
  *
  * @param jobs Job definitions keyed by name
- * @returns The same job definition object with preserved types
+ * @returns The same job definition object with preserved key/schema types
  */
 export function createJobs<defs extends JobDefinitions>(jobs: defs): defs {
   return jobs
@@ -31,13 +33,23 @@ export function createJobScheduler<defs extends JobDefinitions>(
 ): JobScheduler<defs> {
   let jobs = options.jobs
   let backend = options.backend
+  let jobNames = new WeakMap<object, string>()
+
+  for (let name in jobs) {
+    let definition = jobs[name]
+
+    if (definition != null && typeof definition === 'object') {
+      jobNames.set(definition, name)
+    }
+  }
 
   return {
-    async enqueue<name extends keyof defs & string>(
-      name: name,
+    async enqueue<name extends JobName<defs>>(
+      job: JobReference<defs, name>,
       payload: Infer<defs[name]['schema']>,
       enqueueOptions?: EnqueueOptions,
     ): Promise<{ jobId: string; deduped: boolean }> {
+      let name = resolveJobName(job, jobNames)
       let definition = jobs[name]
 
       if (definition == null) {
@@ -70,6 +82,23 @@ export function createJobScheduler<defs extends JobDefinitions>(
       return backend.cancel(jobId)
     },
   }
+}
+
+function resolveJobName(
+  value: string | object,
+  names: WeakMap<object, string>,
+): string {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  let name = names.get(value)
+
+  if (name == null) {
+    throw new Error('Unknown job definition passed to enqueue()')
+  }
+
+  return name
 }
 
 function resolveRunAt(now: number, options: EnqueueOptions | undefined): number {

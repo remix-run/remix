@@ -9,6 +9,8 @@ export type {
   Infer,
   JobDefinition,
   JobDefinitions,
+  JobName,
+  JobReference,
   JobHandlerContext,
   JobRecord,
   JobScheduler,
