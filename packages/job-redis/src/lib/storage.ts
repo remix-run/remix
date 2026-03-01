@@ -168,7 +168,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
           [keys.schedule(schedule.id), keys.schedulesDue],
           [
             schedule.id,
-            schedule.cron,
+            schedule.schedule,
             schedule.timezone,
             schedule.queue,
             schedule.name,
@@ -312,7 +312,7 @@ function toJobRecord(hash: Record<string, string>): JobRecord {
 function toDueSchedule(hash: Record<string, string>): DueSchedule {
   return {
     id: readRequiredString(hash.id, 'id'),
-    cron: readRequiredString(hash.cron, 'cron'),
+    schedule: readRequiredString(hash.schedule, 'schedule'),
     timezone: readRequiredString(hash.timezone, 'timezone'),
     queue: readRequiredString(hash.queue, 'queue'),
     name: readRequiredString(hash.name, 'name'),
@@ -730,7 +730,7 @@ redis.call(
   'HSET',
   scheduleKey,
   'id', ARGV[1],
-  'cron', ARGV[2],
+  'schedule', ARGV[2],
   'timezone', ARGV[3],
   'queue', ARGV[4],
   'name', ARGV[5],

@@ -106,6 +106,37 @@ describe('createJobScheduler', () => {
     assert.ok(job)
     assert.equal(job.status, 'canceled')
   })
+
+  it('forwards transaction options to storage writes', async () => {
+    let capturedEnqueueTransaction: { id: string } | undefined
+    let capturedCancelTransaction: { id: string } | undefined
+    let baseStorage = createMemoryJobStorage()
+    let storage: JobStorage<{ id: string }> = {
+      ...baseStorage,
+      enqueue(input, options) {
+        capturedEnqueueTransaction = options?.transaction
+        return baseStorage.enqueue(input)
+      },
+      cancel(jobId, options) {
+        capturedCancelTransaction = options?.transaction
+        return baseStorage.cancel(jobId)
+      },
+    }
+    let jobs = createJobs({
+      email: {
+        schema: s.object({ to: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+    let transaction = { id: 'tx1' }
+    let enqueued = await scheduler.enqueue(jobs.email, { to: 'tx@example.com' }, { transaction })
+
+    await scheduler.cancel(enqueued.jobId, { transaction })
+
+    assert.equal(capturedEnqueueTransaction, transaction)
+    assert.equal(capturedCancelTransaction, transaction)
+  })
 })
 
 function createTransactionAwareTestStorage(): JobStorage<{ id: string }> {
