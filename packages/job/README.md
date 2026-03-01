@@ -141,6 +141,9 @@ console.log('deleted jobs', pruned.deleted)
 ## Worker Retention Loop
 
 You can also run retention automatically from the worker process.
+This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs
+are cleaned up continuously without a separate maintenance task. Use this when you want predictable
+storage growth and simpler operations in production.
 
 ```ts
 let worker = createJobWorker({
