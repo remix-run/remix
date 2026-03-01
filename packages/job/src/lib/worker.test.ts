@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
+import type { PersistedCronSchedule } from './storage.ts'
 import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobStorage } from './test/memory-storage.ts'
 import { createJobWorker } from './worker.ts'
@@ -122,6 +123,73 @@ describe('createJobWorker', () => {
 
     await worker.stop()
     assert.ok(executed > 0)
+  })
+
+  it('clears persisted schedules when cron is omitted', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      heartbeat: {
+        schema: s.object({ name: s.string() }),
+        async handle() {},
+      },
+    })
+
+    await storage.replaceSchedules([createPersistedSchedule('stale-omitted', 10)])
+
+    let worker = createJobWorker({
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+      },
+    })
+
+    await worker.start()
+    await worker.stop()
+
+    let due = await storage.claimDueSchedules({
+      now: 1000,
+      workerId: 'verify-worker',
+      leaseMs: 100,
+      limit: 10,
+    })
+
+    assert.equal(due.length, 0)
+  })
+
+  it('clears persisted schedules when cron is empty', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      heartbeat: {
+        schema: s.object({ name: s.string() }),
+        async handle() {},
+      },
+    })
+
+    await storage.replaceSchedules([createPersistedSchedule('stale-empty', 10)])
+
+    let worker = createJobWorker({
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+      },
+      cron: [],
+    })
+
+    await worker.start()
+    await worker.stop()
+
+    let due = await storage.claimDueSchedules({
+      now: 1000,
+      workerId: 'verify-worker',
+      leaseMs: 100,
+      limit: 10,
+    })
+
+    assert.equal(due.length, 0)
   })
 
   it('emits lifecycle hooks and stays fail-open when hooks throw', async () => {
@@ -359,6 +427,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+function createPersistedSchedule(id: string, nextRunAt: number): PersistedCronSchedule {
+  return {
+    id,
+    schedule: '* * * * *',
+    timezone: 'UTC',
+    queue: 'default',
+    name: 'heartbeat',
+    payload: {
+      name: 'tick',
+    },
+    retry: {
+      maxAttempts: 2,
+      strategy: 'fixed',
+      baseDelayMs: 1000,
+      maxDelayMs: 1000,
+      jitter: 'none',
+    },
+    catchUp: 'one',
+    nextRunAt,
+  }
 }
 
 function assertWorkerHookOptionTyping(): void {
