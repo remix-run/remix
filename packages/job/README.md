@@ -77,14 +77,13 @@ let second = await scheduler.enqueue(
 
 Use `priority` to run more important jobs first, and `retry` to control retry behavior after
 failures.
-Higher `priority` numbers run first.
 
-- `priority`: Relative ordering for due jobs in the same queue (`10` runs before `1`).
-- `retry.maxAttempts`: Total attempts before marking the job as failed (includes the first attempt).
-- `retry.strategy`: Backoff strategy, either `'fixed'` or `'exponential'`.
-- `retry.baseDelayMs`: Base retry delay in milliseconds.
-- `retry.maxDelayMs`: Maximum retry delay cap in milliseconds.
-- `retry.jitter`: Delay randomization strategy (`'none'` or `'full'`).
+- `priority`: Relative ordering for due jobs in the same queue (`10` runs before `1`). Defaults to `0`.
+- `retry.maxAttempts`: Total attempts before marking the job as failed (includes the first attempt). Defaults to `5`.
+- `retry.strategy`: Backoff strategy, either `'fixed'` or `'exponential'`. Defaults to `'exponential'`.
+- `retry.baseDelayMs`: Base retry delay in milliseconds. Defaults to `1000`.
+- `retry.maxDelayMs`: Maximum retry delay cap in milliseconds. Defaults to `300000`.
+- `retry.jitter`: Delay randomization strategy (`'none'` or `'full'`). Defaults to `'full'`.
 
 ```ts
 await scheduler.enqueue(
