@@ -82,7 +82,7 @@ export type JobName<defs extends JobDefinitions> = keyof defs & string
 export type JobReference<
   defs extends JobDefinitions,
   name extends JobName<defs> = JobName<defs>,
-> = name | defs[name]
+> = defs[name]
 
 export type CronSchedule<
   defs extends JobDefinitions,

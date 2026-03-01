@@ -65,23 +65,6 @@ describe('createJobScheduler', () => {
     await assert.rejects(() => scheduler.enqueue(jobs.email, { to: 123 } as any))
   })
 
-  it('accepts string job names', async () => {
-    let backend = createMemoryJobBackend()
-    let jobs = createJobs({
-      email: {
-        schema: s.object({ to: s.string() }),
-        async handle() {},
-      },
-    })
-    let scheduler = createJobScheduler({ jobs, backend })
-
-    let enqueued = await scheduler.enqueue('email', { to: 'string@example.com' })
-    let job = await scheduler.get(enqueued.jobId)
-
-    assert.ok(job)
-    assert.equal(job.name, 'email')
-  })
-
   it('rejects unknown job definitions passed to enqueue', async () => {
     let backend = createMemoryJobBackend()
     let jobs = createJobs({
