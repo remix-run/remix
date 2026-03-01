@@ -212,7 +212,8 @@ For reliable cron scheduling, run workers as a dedicated, always-on deployment.
 
 - Run your web app and job workers as separate processes.
 - Keep worker replicas at `>= 1` (do not scale workers to zero).
-- Register cron schedules in worker startup so they continue running independently of web traffic.
+- Worker startup reconciles persisted schedules to match the `cron` list in code.
+- Omitting `cron` (or passing `cron: []`) clears persisted schedules.
 
 ```ts
 import { createJobWorker } from 'remix/job/worker'
