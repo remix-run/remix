@@ -140,10 +140,9 @@ console.log('deleted jobs', pruned.deleted)
 
 ## Worker Retention Loop
 
-You can also run retention automatically from the worker process.
-This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs
-are cleaned up continuously without a separate maintenance task. Use this when you want predictable
-storage growth and simpler operations in production.
+You can also run retention pruning automatically from the worker process.
+
+This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs are cleaned up continuously without a separate maintenance task. Use this when you want predictable storage growth and simpler operations in production.
 
 ```ts
 let worker = createJobWorker({
@@ -170,13 +169,11 @@ Scheduler and worker hooks let you emit logs/metrics without changing job logic.
 let scheduler = createJobScheduler({
   jobs,
   storage,
-  hooks: {
-    onEnqueue(event) {
-      metrics.count('job.enqueue', 1, { job: event.jobName })
-    },
-    onPrune(event) {
-      metrics.count('job.pruned', event.result.deleted)
-    },
+  onEnqueue(event) {
+    metrics.count('job.enqueue', 1, { job: event.jobName })
+  },
+  onPrune(event) {
+    metrics.count('job.pruned', event.result.deleted)
   },
 })
 
@@ -184,13 +181,11 @@ let worker = createJobWorker({
   scheduler,
   jobs,
   storage,
-  hooks: {
-    onJobComplete(event) {
-      metrics.timing('job.duration', event.durationMs, { job: event.job.name })
-    },
-    onJobFailed(event) {
-      logger.error('failed job', event.job.id, event.error)
-    },
+  onJobComplete(event) {
+    metrics.timing('job.duration', event.durationMs, { job: event.job.name })
+  },
+  onJobFailed(event) {
+    logger.error('failed job', event.job.id, event.error)
   },
 })
 ```

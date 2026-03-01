@@ -44,7 +44,7 @@ export function createJobScheduler<
 ): JobScheduler<defs, transaction> {
   let jobs = options.jobs
   let storage = options.storage
-  let hooks = options.hooks
+  let hooks = options
   let jobNames = new WeakMap<object, string>()
 
   for (let name in jobs) {
@@ -115,10 +115,10 @@ export function createJobScheduler<
 
       return canceled
     },
-    listFailedJobs(deadLetterOptions?: FailedJobQueryOptions): Promise<JobRecord[]> {
+    listFailedJobs(failedJobOptions?: FailedJobQueryOptions): Promise<JobRecord[]> {
       return storage.listFailedJobs({
-        queue: deadLetterOptions?.queue,
-        limit: normalizeOptionalWholeNumber(deadLetterOptions?.limit, 50, 1),
+        queue: failedJobOptions?.queue,
+        limit: normalizeOptionalWholeNumber(failedJobOptions?.limit, 50, 1),
       })
     },
     async replayFailedJob(

@@ -160,27 +160,25 @@ describe('createJobWorker', () => {
         pollIntervalMs: 10,
         leaseMs: 100,
       },
-      hooks: {
-        onJobStart() {
-          events.push('start')
+      onJobStart() {
+        events.push('start')
 
-          if (!threwStartHook) {
-            threwStartHook = true
-            throw new Error('start hook failure')
-          }
-        },
-        onJobRetry() {
-          events.push('retry')
-        },
-        onJobComplete() {
-          events.push('complete')
-        },
-        onJobFailed() {
-          events.push('failed-job')
-        },
-        onHookError() {
-          hookErrors += 1
-        },
+        if (!threwStartHook) {
+          threwStartHook = true
+          throw new Error('start hook failure')
+        }
+      },
+      onJobRetry() {
+        events.push('retry')
+      },
+      onJobComplete() {
+        events.push('complete')
+      },
+      onJobFailed() {
+        events.push('failed-job')
+      },
+      onHookError() {
+        hookErrors += 1
       },
     })
 
@@ -245,10 +243,8 @@ describe('createJobWorker', () => {
           limit: 10,
         },
       },
-      hooks: {
-        onPrune() {
-          pruneEvents += 1
-        },
+      onPrune() {
+        pruneEvents += 1
       },
     })
 
