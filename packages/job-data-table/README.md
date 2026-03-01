@@ -38,9 +38,12 @@ let storage = createDataTableJobStorage({
 
 ## Transaction-Aware Scheduler Writes
 
-`createDataTableJobStorage` enables typed transaction support in `createJobScheduler`.
+`createDataTableJobStorage` enables typed transaction support in `createJobSystem`.
 
 ```ts
+let system = createJobSystem({ jobs, storage })
+let scheduler = system.scheduler
+
 await db.transaction(async (transaction) => {
   await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' }, { transaction })
   await scheduler.cancel('job-id', { transaction })
