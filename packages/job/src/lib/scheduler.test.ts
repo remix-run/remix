@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
+import type * as JobPublicApi from '../index.ts'
 
 import type { JobStorage } from './storage.ts'
 import { createJobs } from './scheduler.ts'
@@ -478,7 +479,7 @@ function assertTransactionOptionTyping(): void {
 void assertTransactionOptionTyping
 
 function assertPublicConstructorTyping(): void {
-  let api = null as unknown as typeof import('../index.ts')
+  let api = null as unknown as typeof JobPublicApi
 
   // @ts-expect-error createJobScheduler is no longer part of the public API.
   void api.createJobScheduler
