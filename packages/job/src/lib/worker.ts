@@ -295,14 +295,14 @@ function toPersistedSchedule<defs extends JobDefinitions>(
 
   return {
     id: schedule.options.id,
-    cron: schedule.cron,
+    cron: schedule.schedule,
     timezone: timeZone,
     queue: schedule.options.queue ?? 'default',
     name: jobName,
     payload: schedule.payload,
     retry,
     catchUp: schedule.options.catchUp ?? 'one',
-    nextRunAt: getNextCronRunAt(schedule.cron, now - 60000, timeZone),
+    nextRunAt: getNextCronRunAt(schedule.schedule, now - 60000, timeZone),
   }
 }
 

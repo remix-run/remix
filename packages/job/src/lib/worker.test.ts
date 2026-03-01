@@ -108,7 +108,7 @@ describe('createJobWorker', () => {
       },
       cron: [
         {
-          cron: '* * * * *',
+          schedule: '* * * * *',
           job: jobs.heartbeat,
           payload: { name: 'tick' },
           options: {
