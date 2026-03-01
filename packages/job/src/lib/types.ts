@@ -43,6 +43,41 @@ export interface CancelOptions<transaction = never> {
   transaction?: transaction
 }
 
+export interface DeadLetterQueryOptions {
+  queue?: string
+  limit?: number
+}
+
+export interface ReplayDeadLetterOptions<transaction = never> {
+  runAt?: Date
+  priority?: number
+  queue?: string
+  transaction?: transaction
+}
+
+export interface ReplayDeadLetterResult {
+  jobId: string
+}
+
+export interface PrunePolicy {
+  completedOlderThanMs?: number
+  failedOlderThanMs?: number
+  canceledOlderThanMs?: number
+}
+
+export interface PruneOptions<transaction = never> {
+  policy: PrunePolicy
+  limit?: number
+  transaction?: transaction
+}
+
+export interface PruneResult {
+  deleted: number
+  completed: number
+  failed: number
+  canceled: number
+}
+
 export interface CronScheduleOptions {
   id: string
   queue?: string
@@ -65,6 +100,9 @@ export interface JobRecord {
   createdAt: number
   updatedAt: number
   lastError?: string
+  completedAt?: number
+  failedAt?: number
+  canceledAt?: number
 }
 
 export interface JobHandlerContext {
@@ -89,6 +127,14 @@ export type JobReference<
   name extends JobName<defs> = JobName<defs>,
 > = defs[name]
 
+export type SchedulerEnqueueInput<defs extends JobDefinitions> = {
+  [name in JobName<defs>]: {
+    job: JobReference<defs, name>
+    jobName: name
+    payload: Infer<defs[name]['schema']>
+  }
+}[JobName<defs>]
+
 export type CronSchedule<
   defs extends JobDefinitions,
   name extends JobName<defs> = JobName<defs>,
@@ -99,6 +145,100 @@ export type CronSchedule<
   options: CronScheduleOptions
 }
 
+export type SchedulerHookName = 'onEnqueue' | 'onCancel' | 'onReplayDeadLetter' | 'onPrune'
+
+export interface SchedulerHookErrorEvent {
+  hook: SchedulerHookName
+  event: unknown
+  error: unknown
+}
+
+export type SchedulerEnqueueEvent<
+  defs extends JobDefinitions,
+  transaction = never,
+> = SchedulerEnqueueInput<defs> & {
+  options?: EnqueueOptions<transaction>
+  result: { jobId: string; deduped: boolean }
+}
+
+export interface SchedulerCancelEvent<transaction = never> {
+  jobId: string
+  options?: CancelOptions<transaction>
+  canceled: boolean
+}
+
+export interface SchedulerReplayDeadLetterEvent<transaction = never> {
+  jobId: string
+  options?: ReplayDeadLetterOptions<transaction>
+  result: ReplayDeadLetterResult
+}
+
+export interface SchedulerPruneEvent<transaction = never> {
+  options: PruneOptions<transaction>
+  result: PruneResult
+}
+
+export interface SchedulerHooks<defs extends JobDefinitions, transaction = never> {
+  onEnqueue?(event: SchedulerEnqueueEvent<defs, transaction>): void | Promise<void>
+  onCancel?(event: SchedulerCancelEvent<transaction>): void | Promise<void>
+  onReplayDeadLetter?(event: SchedulerReplayDeadLetterEvent<transaction>): void | Promise<void>
+  onPrune?(event: SchedulerPruneEvent<transaction>): void | Promise<void>
+  onHookError?(event: SchedulerHookErrorEvent): void | Promise<void>
+}
+
+export type WorkerHookName =
+  | 'onJobStart'
+  | 'onJobComplete'
+  | 'onJobRetry'
+  | 'onJobDeadLetter'
+  | 'onPrune'
+
+export interface WorkerHookErrorEvent {
+  hook: WorkerHookName
+  event: unknown
+  error: unknown
+}
+
+export interface WorkerJobStartEvent {
+  job: JobRecord
+  workerId: string
+}
+
+export interface WorkerJobCompleteEvent {
+  job: JobRecord
+  workerId: string
+  durationMs: number
+}
+
+export interface WorkerJobRetryEvent {
+  job: JobRecord
+  workerId: string
+  retryAt: number
+  error: string
+}
+
+export interface WorkerJobDeadLetterEvent {
+  job: JobRecord
+  workerId: string
+  error: string
+}
+
+export interface WorkerPruneEvent {
+  workerId: string
+  policy: PrunePolicy
+  limit: number
+  result: PruneResult
+}
+
+export interface WorkerHooks<defs extends JobDefinitions> {
+  onJobStart?(event: WorkerJobStartEvent): void | Promise<void>
+  onJobComplete?(event: WorkerJobCompleteEvent): void | Promise<void>
+  onJobRetry?(event: WorkerJobRetryEvent): void | Promise<void>
+  onJobDeadLetter?(event: WorkerJobDeadLetterEvent): void | Promise<void>
+  onPrune?(event: WorkerPruneEvent): void | Promise<void>
+  onHookError?(event: WorkerHookErrorEvent): void | Promise<void>
+}
+
 export interface JobScheduler<defs extends JobDefinitions, transaction = never> {
   enqueue<name extends JobName<defs>>(
     job: JobReference<defs, name>,
@@ -107,6 +247,18 @@ export interface JobScheduler<defs extends JobDefinitions, transaction = never> 
   ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
   cancel(jobId: string, options?: CancelOptions<transaction>): Promise<boolean>
+  listDeadLetters(options?: DeadLetterQueryOptions): Promise<JobRecord[]>
+  replayDeadLetter(
+    jobId: string,
+    options?: ReplayDeadLetterOptions<transaction>,
+  ): Promise<ReplayDeadLetterResult>
+  prune(options: PruneOptions<transaction>): Promise<PruneResult>
+}
+
+export interface WorkerRetentionOptions {
+  policy: PrunePolicy
+  intervalMs?: number
+  limit?: number
 }
 
 export interface WorkerOptions {
@@ -117,6 +269,7 @@ export interface WorkerOptions {
   leaseMs?: number
   heartbeatMs?: number
   cronTickMs?: number
+  retention?: WorkerRetentionOptions
 }
 
 export interface JobWorker {
@@ -131,6 +284,7 @@ export interface CreateJobSchedulerOptions<
 > {
   jobs: defs
   storage: JobStorage<transaction>
+  hooks?: SchedulerHooks<defs, transaction>
 }
 
 export interface CreateJobWorkerOptions<
@@ -142,4 +296,5 @@ export interface CreateJobWorkerOptions<
   storage: JobStorage<transaction>
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
+  hooks?: WorkerHooks<defs>
 }

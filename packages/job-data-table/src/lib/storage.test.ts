@@ -32,6 +32,9 @@ describe('createDataTableJobStorageMigration', () => {
       'createTable:custom_schedules',
       'createIndex:custom_jobs:status,queue,run_at,priority,created_at:custom_jobs_due_idx',
       'createIndex:custom_jobs:status,locked_until:custom_jobs_lock_idx',
+      'createIndex:custom_jobs:status,completed_at:custom_jobs_completed_idx',
+      'createIndex:custom_jobs:status,failed_at:custom_jobs_failed_idx',
+      'createIndex:custom_jobs:status,canceled_at:custom_jobs_canceled_idx',
       'createIndex:custom_dedupe:expires_at:custom_dedupe_expires_idx',
       'createIndex:custom_schedules:next_run_at,locked_until:custom_schedules_due_idx',
     ])

@@ -48,6 +48,32 @@ export interface ClaimDueSchedulesInput {
   limit: number
 }
 
+export interface ListDeadLettersInput {
+  queue?: string
+  limit?: number
+}
+
+export interface ReplayDeadLetterInput {
+  jobId: string
+  runAt?: number
+  priority?: number
+  queue?: string
+}
+
+export interface PruneJobsInput {
+  completedBefore?: number
+  failedBefore?: number
+  canceledBefore?: number
+  limit: number
+}
+
+export interface PruneJobsResult {
+  deleted: number
+  completed: number
+  failed: number
+  canceled: number
+}
+
 export interface DueSchedule extends PersistedCronSchedule {
   lockedBy: string
   lockedUntil: number
@@ -67,6 +93,15 @@ export interface JobStorage<transaction = never> {
   ): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
   cancel(jobId: string, options?: JobWriteOptions<transaction>): Promise<boolean>
+  listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]>
+  replayDeadLetter(
+    input: ReplayDeadLetterInput,
+    options?: JobWriteOptions<transaction>,
+  ): Promise<{ jobId: string } | null>
+  prune(
+    input: PruneJobsInput,
+    options?: JobWriteOptions<transaction>,
+  ): Promise<PruneJobsResult>
   claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]>
   heartbeat(input: { jobId: string; workerId: string; leaseMs: number; now: number }): Promise<boolean>
   complete(input: { jobId: string; workerId: string; now: number }): Promise<void>

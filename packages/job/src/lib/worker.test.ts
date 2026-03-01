@@ -126,6 +126,143 @@ describe('createJobWorker', () => {
     await worker.stop()
     assert.ok(executed > 0)
   })
+
+  it('emits lifecycle hooks and stays fail-open when hooks throw', async () => {
+    let attempts = 0
+    let hookErrors = 0
+    let events: string[] = []
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      flaky: {
+        schema: s.object({ id: s.string() }),
+        async handle() {
+          attempts += 1
+
+          if (attempts < 2) {
+            throw new Error('retry me')
+          }
+        },
+      },
+      deadLetter: {
+        schema: s.object({ id: s.string() }),
+        async handle() {
+          throw new Error('terminal')
+        },
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+    let threwStartHook = false
+    let worker = createJobWorker({
+      scheduler,
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+      },
+      hooks: {
+        onJobStart() {
+          events.push('start')
+
+          if (!threwStartHook) {
+            threwStartHook = true
+            throw new Error('start hook failure')
+          }
+        },
+        onJobRetry() {
+          events.push('retry')
+        },
+        onJobComplete() {
+          events.push('complete')
+        },
+        onJobDeadLetter() {
+          events.push('dead-letter')
+        },
+        onHookError() {
+          hookErrors += 1
+        },
+      },
+    })
+
+    let retryJob = await scheduler.enqueue(jobs.flaky, { id: 'retry' }, {
+      retry: {
+        maxAttempts: 2,
+        strategy: 'fixed',
+        baseDelayMs: 10,
+        maxDelayMs: 10,
+        jitter: 'none',
+      },
+    })
+    let deadLetterJob = await scheduler.enqueue(jobs.deadLetter, { id: 'dead' }, {
+      retry: {
+        maxAttempts: 1,
+        strategy: 'fixed',
+        baseDelayMs: 10,
+        maxDelayMs: 10,
+        jitter: 'none',
+      },
+    })
+
+    await worker.start()
+
+    await waitFor(async () => {
+      let retryState = await scheduler.get(retryJob.jobId)
+      let deadLetterState = await scheduler.get(deadLetterJob.jobId)
+      return retryState?.status === 'completed' && deadLetterState?.status === 'failed'
+    })
+
+    await worker.stop()
+
+    assert.ok(events.includes('start'))
+    assert.ok(events.includes('retry'))
+    assert.ok(events.includes('complete'))
+    assert.ok(events.includes('dead-letter'))
+    assert.equal(hookErrors, 1)
+  })
+
+  it('supports optional retention pruning loop', async () => {
+    let storage = createMemoryJobStorage()
+    let jobs = createJobs({
+      cleanup: {
+        schema: s.object({ id: s.string() }),
+        async handle() {},
+      },
+    })
+    let scheduler = createJobScheduler({ jobs, storage })
+    let pruneEvents = 0
+    let worker = createJobWorker({
+      scheduler,
+      jobs,
+      storage,
+      worker: {
+        pollIntervalMs: 10,
+        leaseMs: 100,
+        retention: {
+          policy: {
+            completedOlderThanMs: 0,
+          },
+          intervalMs: 10,
+          limit: 10,
+        },
+      },
+      hooks: {
+        onPrune() {
+          pruneEvents += 1
+        },
+      },
+    })
+
+    let enqueued = await scheduler.enqueue(jobs.cleanup, { id: 'cleanup' })
+    await worker.start()
+
+    await waitFor(async () => {
+      let job = await scheduler.get(enqueued.jobId)
+      return job == null
+    })
+
+    await worker.stop()
+    assert.ok(pruneEvents > 0)
+  })
 })
 
 async function waitFor(

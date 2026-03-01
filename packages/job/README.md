@@ -75,8 +75,7 @@ let second = await scheduler.enqueue(
 
 ## Retrying Jobs
 
-Use `priority` to run more important jobs first, and `retry` to control retry behavior after
-failures.
+Use `priority` to run more important jobs first, and `retry` to control retry behavior after failures.
 
 - `priority`: Relative ordering for due jobs in the same queue (`10` runs before `1`). Defaults to `0`.
 - `retry.maxAttempts`: Total attempts before marking the job as failed (includes the first attempt). Defaults to `5`.
@@ -104,10 +103,98 @@ await scheduler.enqueue(
 )
 ```
 
+## Dead Letters and Replay
+
+When a job exhausts retries, it remains in storage with `status: 'failed'` and can be inspected or replayed.
+
+```ts
+let deadLetters = await scheduler.listDeadLetters({
+  queue: 'default',
+  limit: 20,
+})
+
+for (let job of deadLetters) {
+  console.error('dead letter', job.id, job.lastError)
+}
+
+let replayed = await scheduler.replayDeadLetter(deadLetters[0].id, {
+  priority: 10,
+})
+```
+
+## Retention and Pruning
+
+Use `scheduler.prune(...)` to delete old terminal jobs (`completed`, `failed`, `canceled`).
+
+```ts
+let pruned = await scheduler.prune({
+  policy: {
+    completedOlderThanMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+    failedOlderThanMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+  },
+  limit: 500,
+})
+
+console.log('deleted jobs', pruned.deleted)
+```
+
+## Worker Retention Loop
+
+You can also run retention automatically from the worker process.
+
+```ts
+let worker = createJobWorker({
+  scheduler,
+  jobs,
+  storage,
+  worker: {
+    retention: {
+      policy: {
+        completedOlderThanMs: 7 * 24 * 60 * 60 * 1000,
+      },
+      intervalMs: 60_000,
+      limit: 500,
+    },
+  },
+})
+```
+
+## Observability Hooks
+
+Scheduler and worker hooks let you emit logs/metrics without changing job logic.
+
+```ts
+let scheduler = createJobScheduler({
+  jobs,
+  storage,
+  hooks: {
+    onEnqueue(event) {
+      metrics.count('job.enqueue', 1, { job: event.jobName })
+    },
+    onPrune(event) {
+      metrics.count('job.pruned', event.result.deleted)
+    },
+  },
+})
+
+let worker = createJobWorker({
+  scheduler,
+  jobs,
+  storage,
+  hooks: {
+    onJobComplete(event) {
+      metrics.timing('job.duration', event.durationMs, { job: event.job.name })
+    },
+    onJobDeadLetter(event) {
+      logger.error('dead letter', event.job.id, event.error)
+    },
+  },
+})
+```
+
 ## Transactional Scheduler Writes
 
-When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can
-participate in your application transaction.
+When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can participate in your application transaction.
 
 ```ts
 await db.transaction(async (transaction) => {

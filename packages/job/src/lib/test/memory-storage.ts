@@ -6,6 +6,10 @@ import type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
+  ListDeadLettersInput,
+  ReplayDeadLetterInput,
+  PruneJobsInput,
+  PruneJobsResult,
   PersistedCronSchedule,
 } from '../storage.ts'
 import type { JobRecord } from '../types.ts'
@@ -80,9 +84,100 @@ export function createMemoryJobStorage(): JobStorage {
 
       job.status = 'canceled'
       job.updatedAt = Date.now()
+      job.canceledAt = job.updatedAt
+      job.completedAt = undefined
+      job.failedAt = undefined
       jobs.set(jobId, job)
 
       return true
+    },
+    async listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]> {
+      let limit = normalizeOptionalWholeNumber(input.limit, 50, 1) ?? 50
+
+      return Array.from(jobs.values())
+        .filter((job) => job.status === 'failed')
+        .filter((job) => input.queue == null || job.queue === input.queue)
+        .sort((a, b) => (b.failedAt ?? b.updatedAt) - (a.failedAt ?? a.updatedAt))
+        .slice(0, limit)
+        .map(toPublicJob)
+    },
+    async replayDeadLetter(
+      input: ReplayDeadLetterInput,
+      _options?: JobWriteOptions,
+    ): Promise<{ jobId: string } | null> {
+      let source = jobs.get(input.jobId)
+
+      if (source == null || source.status !== 'failed') {
+        return null
+      }
+
+      let now = Date.now()
+      let replayedJobId = crypto.randomUUID()
+
+      jobs.set(replayedJobId, {
+        id: replayedJobId,
+        name: source.name,
+        queue: input.queue ?? source.queue,
+        payload: source.payload,
+        status: 'queued',
+        attempts: 0,
+        maxAttempts: source.maxAttempts,
+        runAt: input.runAt ?? now,
+        priority: input.priority ?? source.priority,
+        retry: source.retry,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      return {
+        jobId: replayedJobId,
+      }
+    },
+    async prune(input: PruneJobsInput, _options?: JobWriteOptions): Promise<PruneJobsResult> {
+      if (
+        input.completedBefore == null &&
+        input.failedBefore == null &&
+        input.canceledBefore == null
+      ) {
+        return {
+          deleted: 0,
+          completed: 0,
+          failed: 0,
+          canceled: 0,
+        }
+      }
+
+      let candidates = Array.from(jobs.values())
+        .filter((job) => isPruneCandidate(job, input))
+        .sort((a, b) => getTerminalTimestamp(a) - getTerminalTimestamp(b))
+      let deleted = 0
+      let completed = 0
+      let failed = 0
+      let canceled = 0
+
+      for (let job of candidates) {
+        if (deleted >= input.limit) {
+          break
+        }
+
+        jobs.delete(job.id)
+        deleted += 1
+
+        if (job.status === 'completed') {
+          completed += 1
+        } else if (job.status === 'failed') {
+          failed += 1
+        } else if (job.status === 'canceled') {
+          canceled += 1
+        }
+      }
+
+      return {
+        deleted,
+        completed,
+        failed,
+        canceled,
+      }
     },
     async claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]> {
       cleanupDedupe(input.now)
@@ -162,6 +257,10 @@ export function createMemoryJobStorage(): JobStorage {
       job.lockedBy = undefined
       job.lockedUntil = undefined
       job.updatedAt = input.now
+      job.completedAt = input.now
+      job.failedAt = undefined
+      job.canceledAt = undefined
+      job.lastError = undefined
       jobs.set(job.id, job)
     },
     async fail(input: JobFailureInput): Promise<void> {
@@ -173,9 +272,15 @@ export function createMemoryJobStorage(): JobStorage {
 
       if (input.terminal) {
         job.status = 'failed'
+        job.failedAt = input.now
+        job.completedAt = undefined
+        job.canceledAt = undefined
       } else {
         job.status = 'queued'
         job.runAt = input.retryAt ?? input.now
+        job.failedAt = undefined
+        job.completedAt = undefined
+        job.canceledAt = undefined
       }
 
       job.lockedBy = undefined
@@ -271,6 +376,9 @@ function toPublicJob(job: JobRecord & { lockedBy?: string; lockedUntil?: number 
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
     lastError: job.lastError,
+    completedAt: job.completedAt,
+    failedAt: job.failedAt,
+    canceledAt: job.canceledAt,
   }
 }
 
@@ -284,4 +392,62 @@ function sortJobs(a: JobRecord, b: JobRecord): number {
   }
 
   return a.createdAt - b.createdAt
+}
+
+function normalizeOptionalWholeNumber(
+  value: unknown,
+  fallback: number,
+  minValue: number,
+): number | undefined {
+  if (value == null) {
+    return undefined
+  }
+
+  return normalizeWholeNumber(value, fallback, minValue)
+}
+
+function normalizeWholeNumber(value: unknown, fallback: number, minValue: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  let normalized = Math.floor(value)
+
+  if (normalized < minValue) {
+    return minValue
+  }
+
+  return normalized
+}
+
+function isPruneCandidate(job: JobRecord, input: PruneJobsInput): boolean {
+  if (job.status === 'completed' && input.completedBefore != null && job.completedAt != null) {
+    return job.completedAt <= input.completedBefore
+  }
+
+  if (job.status === 'failed' && input.failedBefore != null && job.failedAt != null) {
+    return job.failedAt <= input.failedBefore
+  }
+
+  if (job.status === 'canceled' && input.canceledBefore != null && job.canceledAt != null) {
+    return job.canceledAt <= input.canceledBefore
+  }
+
+  return false
+}
+
+function getTerminalTimestamp(job: JobRecord): number {
+  if (job.status === 'completed') {
+    return job.completedAt ?? Number.MAX_SAFE_INTEGER
+  }
+
+  if (job.status === 'failed') {
+    return job.failedAt ?? Number.MAX_SAFE_INTEGER
+  }
+
+  if (job.status === 'canceled') {
+    return job.canceledAt ?? Number.MAX_SAFE_INTEGER
+  }
+
+  return Number.MAX_SAFE_INTEGER
 }

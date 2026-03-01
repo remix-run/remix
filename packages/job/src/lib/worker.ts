@@ -7,7 +7,10 @@ import type {
   JobDefinitions,
   JobRecord,
   JobWorker,
+  PrunePolicy,
   RetryPolicy,
+  WorkerHookName,
+  WorkerHooks,
   WorkerOptions,
 } from './types.ts'
 import { getCronDispatchCount, getNextCronRunAt } from './cron.ts'
@@ -17,6 +20,8 @@ let DEFAULT_CONCURRENCY = 10
 let DEFAULT_POLL_INTERVAL_MS = 1000
 let DEFAULT_LEASE_MS = 30000
 let DEFAULT_CRON_TICK_MS = 30000
+let DEFAULT_RETENTION_INTERVAL_MS = 60000
+let DEFAULT_RETENTION_LIMIT = 500
 
 /**
  * Creates a worker loop that claims and executes jobs from a scheduler storage.
@@ -33,6 +38,7 @@ export function createJobWorker<
   let jobs = options.jobs
   let jobNames = createJobNameMap(jobs)
   let storage = options.storage
+  let hooks = options.hooks
   let workerOptions = normalizeWorkerOptions(options.worker)
 
   let running = false
@@ -43,6 +49,7 @@ export function createJobWorker<
   let loopAbort = new AbortController()
   let workLoopPromise: Promise<void> | undefined
   let cronLoopPromise: Promise<void> | undefined
+  let retentionLoopPromise: Promise<void> | undefined
 
   let cronSchedules = options.cron ?? []
 
@@ -64,6 +71,10 @@ export function createJobWorker<
       cronLoopPromise = runCronLoop()
     }
 
+    if (workerOptions.retention != null) {
+      retentionLoopPromise = runRetentionLoop()
+    }
+
     workLoopPromise = runWorkLoop()
   }
 
@@ -81,7 +92,7 @@ export function createJobWorker<
       controller.abort(new Error('Worker stopped'))
     }
 
-    await Promise.all([workLoopPromise, cronLoopPromise])
+    await Promise.all([workLoopPromise, cronLoopPromise, retentionLoopPromise])
   }
 
   async function drain(timeoutMs = 30000): Promise<void> {
@@ -140,6 +151,32 @@ export function createJobWorker<
     }
   }
 
+  async function runRetentionLoop(): Promise<void> {
+    if (workerOptions.retention == null) {
+      return
+    }
+
+    while (running) {
+      let now = Date.now()
+      let retention = workerOptions.retention
+      let result = await storage.prune({
+        completedBefore: resolvePruneCutoff(now, retention.policy.completedOlderThanMs),
+        failedBefore: resolvePruneCutoff(now, retention.policy.failedOlderThanMs),
+        canceledBefore: resolvePruneCutoff(now, retention.policy.canceledOlderThanMs),
+        limit: retention.limit,
+      })
+
+      await runWorkerHook(hooks, 'onPrune', {
+        workerId: workerOptions.workerId,
+        policy: retention.policy,
+        limit: retention.limit,
+        result,
+      })
+
+      await sleep(retention.intervalMs, loopAbort.signal)
+    }
+  }
+
   async function processSchedule(schedule: DueSchedule): Promise<void> {
     let now = Date.now()
     let definition = jobs[schedule.name]
@@ -192,14 +229,29 @@ export function createJobWorker<
 
   async function processJob(job: JobRecord): Promise<void> {
     let definition = jobs[job.name]
+    let startedAt = Date.now()
 
     if (definition == null) {
+      let error = `Unknown job "${job.name}"`
+      let now = Date.now()
+
       await storage.fail({
         jobId: job.id,
         workerId: workerOptions.workerId,
-        now: Date.now(),
-        error: `Unknown job "${job.name}"`,
+        now,
+        error,
         terminal: true,
+      })
+      await runWorkerHook(hooks, 'onJobDeadLetter', {
+        job: {
+          ...job,
+          status: 'failed',
+          failedAt: now,
+          updatedAt: now,
+          lastError: error,
+        },
+        workerId: workerOptions.workerId,
+        error,
       })
       return
     }
@@ -217,6 +269,11 @@ export function createJobWorker<
     }, workerOptions.heartbeatMs)
 
     try {
+      await runWorkerHook(hooks, 'onJobStart', {
+        job,
+        workerId: workerOptions.workerId,
+      })
+
       let parsedPayload = parse(definition.schema, job.payload)
       await definition.handle(parsedPayload, {
         signal: controller.signal,
@@ -232,6 +289,19 @@ export function createJobWorker<
         workerId: workerOptions.workerId,
         now: Date.now(),
       })
+      let completedAt = Date.now()
+
+      await runWorkerHook(hooks, 'onJobComplete', {
+        job: {
+          ...job,
+          status: 'completed',
+          completedAt,
+          updatedAt: completedAt,
+          lastError: undefined,
+        },
+        workerId: workerOptions.workerId,
+        durationMs: completedAt - startedAt,
+      })
     } catch (error) {
       let now = Date.now()
       let message = normalizeErrorMessage(error)
@@ -244,6 +314,17 @@ export function createJobWorker<
           error: message,
           terminal: true,
         })
+        await runWorkerHook(hooks, 'onJobDeadLetter', {
+          job: {
+            ...job,
+            status: 'failed',
+            failedAt: now,
+            updatedAt: now,
+            lastError: message,
+          },
+          workerId: workerOptions.workerId,
+          error: message,
+        })
       } else {
         let retryAt = computeRetryAt(now, job.attempts, job.retry)
 
@@ -254,6 +335,18 @@ export function createJobWorker<
           error: message,
           retryAt,
           terminal: false,
+        })
+        await runWorkerHook(hooks, 'onJobRetry', {
+          job: {
+            ...job,
+            status: 'queued',
+            runAt: retryAt,
+            updatedAt: now,
+            lastError: message,
+          },
+          workerId: workerOptions.workerId,
+          retryAt,
+          error: message,
         })
       }
     } finally {
@@ -269,8 +362,24 @@ export function createJobWorker<
   }
 }
 
-function normalizeWorkerOptions(options?: WorkerOptions): Required<WorkerOptions> {
+type NormalizedWorkerOptions = {
+  workerId: string
+  queues: string[]
+  concurrency: number
+  pollIntervalMs: number
+  leaseMs: number
+  heartbeatMs: number
+  cronTickMs: number
+  retention?: {
+    policy: PrunePolicy
+    intervalMs: number
+    limit: number
+  }
+}
+
+function normalizeWorkerOptions(options?: WorkerOptions): NormalizedWorkerOptions {
   let leaseMs = normalizeWholeNumber(options?.leaseMs, DEFAULT_LEASE_MS, 1)
+  let retention = normalizeRetentionOptions(options?.retention)
 
   return {
     workerId: options?.workerId ?? crypto.randomUUID(),
@@ -284,6 +393,19 @@ function normalizeWorkerOptions(options?: WorkerOptions): Required<WorkerOptions
       1,
     ),
     cronTickMs: normalizeWholeNumber(options?.cronTickMs, DEFAULT_CRON_TICK_MS, 1),
+    retention,
+  }
+}
+
+function normalizeRetentionOptions(options: WorkerOptions['retention']): NormalizedWorkerOptions['retention'] {
+  if (options == null) {
+    return undefined
+  }
+
+  return {
+    policy: options.policy,
+    intervalMs: normalizeWholeNumber(options.intervalMs, DEFAULT_RETENTION_INTERVAL_MS, 1),
+    limit: normalizeWholeNumber(options.limit, DEFAULT_RETENTION_LIMIT, 1),
   }
 }
 
@@ -350,6 +472,48 @@ function normalizeErrorMessage(error: unknown): string {
   }
 
   return String(error)
+}
+
+function resolvePruneCutoff(now: number, olderThanMs: number | undefined): number | undefined {
+  if (olderThanMs == null) {
+    return undefined
+  }
+
+  return now - normalizeWholeNumber(olderThanMs, 0, 0)
+}
+
+async function runWorkerHook<defs extends JobDefinitions>(
+  hooks: WorkerHooks<defs> | undefined,
+  hook: WorkerHookName,
+  event: unknown,
+): Promise<void> {
+  if (hooks == null) {
+    return
+  }
+
+  let callback = hooks[hook]
+
+  if (callback == null) {
+    return
+  }
+
+  try {
+    await callback(event as never)
+  } catch (error) {
+    if (hooks.onHookError == null) {
+      return
+    }
+
+    try {
+      await hooks.onHookError({
+        hook,
+        event,
+        error,
+      })
+    } catch {
+      // Hook errors are fail-open by design.
+    }
+  }
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
