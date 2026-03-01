@@ -6,6 +6,10 @@ import type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
+  ListDeadLettersInput,
+  ReplayDeadLetterInput,
+  PruneJobsInput,
+  PruneJobsResult,
   PersistedCronSchedule,
 } from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
@@ -89,12 +93,85 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
       return toJobRecord(hash)
     },
     async cancel(jobId: string, _options?: JobWriteOptions): Promise<boolean> {
-      let result = await evalScript(redis, CANCEL_JOB_SCRIPT, [keys.job(jobId), keys.jobsDue], [
-        jobId,
-        String(Date.now()),
-      ])
+      let now = Date.now()
+      let result = await evalScript(
+        redis,
+        CANCEL_JOB_SCRIPT,
+        [keys.job(jobId), keys.jobsDue, keys.jobsCompleted, keys.jobsFailed, keys.jobsCanceled],
+        [jobId, String(now)],
+      )
 
       return readNumber(result) === 1
+    },
+    async listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]> {
+      let result = await evalScript(
+        redis,
+        LIST_DEAD_LETTERS_SCRIPT,
+        [keys.jobsFailed, keys.jobPrefix],
+        [String(input.limit ?? 50), input.queue ?? ''],
+      )
+      let jobIds = readArray(result)
+      let jobs: JobRecord[] = []
+
+      for (let jobId of jobIds) {
+        let job = await getJobRecord(redis, keys, jobId)
+
+        if (job != null) {
+          jobs.push(job)
+        }
+      }
+
+      return jobs
+    },
+    async replayDeadLetter(
+      input: ReplayDeadLetterInput,
+      _options?: JobWriteOptions,
+    ): Promise<{ jobId: string } | null> {
+      let replayedJobId = crypto.randomUUID()
+      let now = Date.now()
+      let result = await evalScript(
+        redis,
+        REPLAY_DEAD_LETTER_SCRIPT,
+        [
+          keys.job(input.jobId),
+          keys.job(replayedJobId),
+          keys.jobsDue,
+          keys.jobsCompleted,
+          keys.jobsFailed,
+          keys.jobsCanceled,
+        ],
+        [
+          input.jobId,
+          replayedJobId,
+          String(now),
+          String(input.runAt ?? now),
+          input.priority == null ? '' : String(input.priority),
+          input.queue ?? '',
+        ],
+      )
+      let replayed = asString(result)
+
+      if (replayed === '') {
+        return null
+      }
+
+      return {
+        jobId: replayed,
+      }
+    },
+    async prune(input: PruneJobsInput, _options?: JobWriteOptions): Promise<PruneJobsResult> {
+      let result = await evalScript(
+        redis,
+        PRUNE_JOBS_SCRIPT,
+        [keys.jobPrefix, keys.jobsDue, keys.jobsCompleted, keys.jobsFailed, keys.jobsCanceled],
+        [
+          input.completedBefore == null ? '-1' : String(input.completedBefore),
+          input.failedBefore == null ? '-1' : String(input.failedBefore),
+          input.canceledBefore == null ? '-1' : String(input.canceledBefore),
+          String(input.limit),
+        ],
+      )
+      return readPruneJobsResult(result)
     },
     async claimDueJobs(input: ClaimDueJobsInput): Promise<JobRecord[]> {
       if (input.queues.length === 0 || input.limit <= 0) {
@@ -144,21 +221,27 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
       return readNumber(result) === 1
     },
     async complete(input: { jobId: string; workerId: string; now: number }): Promise<void> {
-      await evalScript(redis, COMPLETE_JOB_SCRIPT, [keys.job(input.jobId), keys.jobsDue], [
-        input.jobId,
-        input.workerId,
-        String(input.now),
-      ])
+      await evalScript(
+        redis,
+        COMPLETE_JOB_SCRIPT,
+        [keys.job(input.jobId), keys.jobsDue, keys.jobsCompleted, keys.jobsFailed, keys.jobsCanceled],
+        [input.jobId, input.workerId, String(input.now)],
+      )
     },
     async fail(input: JobFailureInput): Promise<void> {
-      await evalScript(redis, FAIL_JOB_SCRIPT, [keys.job(input.jobId), keys.jobsDue], [
-        input.jobId,
-        input.workerId,
-        String(input.now),
-        input.error,
-        input.terminal ? '1' : '0',
-        String(input.retryAt ?? input.now),
-      ])
+      await evalScript(
+        redis,
+        FAIL_JOB_SCRIPT,
+        [keys.job(input.jobId), keys.jobsDue, keys.jobsCompleted, keys.jobsFailed, keys.jobsCanceled],
+        [
+          input.jobId,
+          input.workerId,
+          String(input.now),
+          input.error,
+          input.terminal ? '1' : '0',
+          String(input.retryAt ?? input.now),
+        ],
+      )
     },
     async upsertSchedules(input: PersistedCronSchedule[]): Promise<void> {
       for (let schedule of input) {
@@ -223,6 +306,9 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
 
 type StorageKeys = {
   jobsDue: string
+  jobsCompleted: string
+  jobsFailed: string
+  jobsCanceled: string
   schedulesDue: string
   jobPrefix: string
   schedulePrefix: string
@@ -234,6 +320,9 @@ type StorageKeys = {
 function createKeys(prefix: string): StorageKeys {
   return {
     jobsDue: `${prefix}jobs:due`,
+    jobsCompleted: `${prefix}jobs:completed`,
+    jobsFailed: `${prefix}jobs:failed`,
+    jobsCanceled: `${prefix}jobs:canceled`,
     schedulesDue: `${prefix}schedules:due`,
     jobPrefix: `${prefix}job:`,
     schedulePrefix: `${prefix}schedule:`,
@@ -306,6 +395,9 @@ function toJobRecord(hash: Record<string, string>): JobRecord {
     createdAt: readNumber(hash.createdAt, 0),
     updatedAt: readNumber(hash.updatedAt, 0),
     lastError: hash.lastError === '' || hash.lastError == null ? undefined : hash.lastError,
+    completedAt: readOptionalNumber(hash.completedAt),
+    failedAt: readOptionalNumber(hash.failedAt),
+    canceledAt: readOptionalNumber(hash.canceledAt),
   }
 }
 
@@ -399,6 +491,25 @@ function readNumber(value: unknown, fallback = 0): number {
   }
 
   return fallback
+}
+
+function readOptionalNumber(value: unknown): number | undefined {
+  if (value == null || value === '') {
+    return undefined
+  }
+
+  return readNumber(value, 0)
+}
+
+function readPruneJobsResult(value: unknown): PruneJobsResult {
+  let values = readArray(value)
+
+  return {
+    deleted: readNumber(values[0], 0),
+    completed: readNumber(values[1], 0),
+    failed: readNumber(values[2], 0),
+    canceled: readNumber(values[3], 0),
+  }
 }
 
 function readTuple(value: unknown): [string, string] {
@@ -508,6 +619,9 @@ redis.call(
   'createdAt', ARGV[9],
   'updatedAt', ARGV[10],
   'lastError', '',
+  'completedAt', '',
+  'failedAt', '',
+  'canceledAt', '',
   'lockedBy', '',
   'lockedUntil', '0'
 )
@@ -524,6 +638,9 @@ return {'enqueued', ARGV[1]}
 let CANCEL_JOB_SCRIPT = `
 local jobKey = KEYS[1]
 local dueKey = KEYS[2]
+local completedKey = KEYS[3]
+local failedKey = KEYS[4]
+local canceledKey = KEYS[5]
 local jobId = ARGV[1]
 local now = ARGV[2]
 
@@ -536,11 +653,17 @@ redis.call(
   'HSET',
   jobKey,
   'status', 'canceled',
+  'canceledAt', now,
+  'completedAt', '',
+  'failedAt', '',
   'lockedBy', '',
   'lockedUntil', '0',
   'updatedAt', now
 )
 redis.call('ZREM', dueKey, jobId)
+redis.call('ZREM', completedKey, jobId)
+redis.call('ZREM', failedKey, jobId)
+redis.call('ZADD', canceledKey, now, jobId)
 
 return 1
 `
@@ -648,6 +771,9 @@ return 1
 let COMPLETE_JOB_SCRIPT = `
 local jobKey = KEYS[1]
 local dueKey = KEYS[2]
+local completedKey = KEYS[3]
+local failedKey = KEYS[4]
+local canceledKey = KEYS[5]
 local jobId = ARGV[1]
 local workerId = ARGV[2]
 local now = ARGV[3]
@@ -663,10 +789,15 @@ redis.call(
   'status', 'completed',
   'lockedBy', '',
   'lockedUntil', '0',
+  'failedAt', '',
+  'canceledAt', '',
   'updatedAt', now,
   'completedAt', now
 )
 redis.call('ZREM', dueKey, jobId)
+redis.call('ZADD', completedKey, now, jobId)
+redis.call('ZREM', failedKey, jobId)
+redis.call('ZREM', canceledKey, jobId)
 
 return 1
 `
@@ -674,6 +805,9 @@ return 1
 let FAIL_JOB_SCRIPT = `
 local jobKey = KEYS[1]
 local dueKey = KEYS[2]
+local completedKey = KEYS[3]
+local failedKey = KEYS[4]
+local canceledKey = KEYS[5]
 local jobId = ARGV[1]
 local workerId = ARGV[2]
 local now = ARGV[3]
@@ -693,11 +827,16 @@ if terminal == '1' then
     'status', 'failed',
     'lockedBy', '',
     'lockedUntil', '0',
+    'completedAt', '',
+    'canceledAt', '',
     'updatedAt', now,
     'failedAt', now,
     'lastError', error
   )
   redis.call('ZREM', dueKey, jobId)
+  redis.call('ZREM', completedKey, jobId)
+  redis.call('ZREM', canceledKey, jobId)
+  redis.call('ZADD', failedKey, now, jobId)
 else
   redis.call(
     'HSET',
@@ -706,13 +845,188 @@ else
     'runAt', retryAt,
     'lockedBy', '',
     'lockedUntil', '0',
+    'completedAt', '',
+    'failedAt', '',
+    'canceledAt', '',
     'updatedAt', now,
     'lastError', error
   )
   redis.call('ZADD', dueKey, retryAt, jobId)
+  redis.call('ZREM', completedKey, jobId)
+  redis.call('ZREM', failedKey, jobId)
+  redis.call('ZREM', canceledKey, jobId)
 end
 
 return 1
+`
+
+let LIST_DEAD_LETTERS_SCRIPT = `
+local failedKey = KEYS[1]
+local jobPrefix = KEYS[2]
+local limit = tonumber(ARGV[1])
+local queueFilter = ARGV[2]
+
+if limit == nil or limit <= 0 then
+  return {}
+end
+
+local scanLimit = math.max(limit * 8, limit)
+local failedIds = redis.call('ZREVRANGE', failedKey, 0, scanLimit - 1)
+local selected = {}
+
+for _, jobId in ipairs(failedIds) do
+  if #selected >= limit then
+    break
+  end
+
+  local queue = redis.call('HGET', jobPrefix .. jobId, 'queue')
+
+  if queue ~= false and (queueFilter == '' or queue == queueFilter) then
+    table.insert(selected, jobId)
+  end
+end
+
+return selected
+`
+
+let REPLAY_DEAD_LETTER_SCRIPT = `
+local sourceJobKey = KEYS[1]
+local replayJobKey = KEYS[2]
+local dueKey = KEYS[3]
+local completedKey = KEYS[4]
+local failedKey = KEYS[5]
+local canceledKey = KEYS[6]
+local sourceJobId = ARGV[1]
+local replayJobId = ARGV[2]
+local now = ARGV[3]
+local runAt = ARGV[4]
+local priorityOverride = ARGV[5]
+local queueOverride = ARGV[6]
+
+local sourceValues = redis.call(
+  'HMGET',
+  sourceJobKey,
+  'status',
+  'name',
+  'queue',
+  'payload',
+  'maxAttempts',
+  'priority',
+  'retry'
+)
+
+if sourceValues[1] ~= 'failed' then
+  return ''
+end
+
+local sourceName = sourceValues[2]
+local sourceQueue = sourceValues[3]
+local sourcePayload = sourceValues[4]
+local sourceMaxAttempts = sourceValues[5]
+local sourcePriority = sourceValues[6]
+local sourceRetry = sourceValues[7]
+
+if sourceName == false or sourceQueue == false or sourcePayload == false or sourceMaxAttempts == false or sourcePriority == false or sourceRetry == false then
+  return ''
+end
+
+local queue = sourceQueue
+if queueOverride ~= '' then
+  queue = queueOverride
+end
+
+local priority = sourcePriority
+if priorityOverride ~= '' then
+  priority = priorityOverride
+end
+
+redis.call(
+  'HSET',
+  replayJobKey,
+  'id', replayJobId,
+  'name', sourceName,
+  'queue', queue,
+  'payload', sourcePayload,
+  'status', 'queued',
+  'attempts', '0',
+  'maxAttempts', sourceMaxAttempts,
+  'runAt', runAt,
+  'priority', priority,
+  'retry', sourceRetry,
+  'createdAt', now,
+  'updatedAt', now,
+  'lastError', '',
+  'completedAt', '',
+  'failedAt', '',
+  'canceledAt', '',
+  'lockedBy', '',
+  'lockedUntil', '0'
+)
+
+redis.call('ZADD', dueKey, runAt, replayJobId)
+redis.call('ZREM', completedKey, replayJobId)
+redis.call('ZREM', failedKey, replayJobId)
+redis.call('ZREM', canceledKey, replayJobId)
+
+return replayJobId
+`
+
+let PRUNE_JOBS_SCRIPT = `
+local jobPrefix = KEYS[1]
+local dueKey = KEYS[2]
+local completedKey = KEYS[3]
+local failedKey = KEYS[4]
+local canceledKey = KEYS[5]
+local completedBefore = tonumber(ARGV[1])
+local failedBefore = tonumber(ARGV[2])
+local canceledBefore = tonumber(ARGV[3])
+local limit = tonumber(ARGV[4])
+
+if limit == nil or limit <= 0 then
+  return {0, 0, 0, 0}
+end
+
+local deleted = 0
+local completedDeleted = 0
+local failedDeleted = 0
+local canceledDeleted = 0
+
+local function pruneFromSet(setKey, cutoff, remaining)
+  if cutoff == nil or cutoff < 0 or remaining <= 0 then
+    return {}
+  end
+
+  return redis.call('ZRANGEBYSCORE', setKey, '-inf', cutoff, 'LIMIT', 0, remaining)
+end
+
+local function pruneIds(ids, setKey)
+  for _, jobId in ipairs(ids) do
+    redis.call('DEL', jobPrefix .. jobId)
+    redis.call('ZREM', dueKey, jobId)
+    redis.call('ZREM', completedKey, jobId)
+    redis.call('ZREM', failedKey, jobId)
+    redis.call('ZREM', canceledKey, jobId)
+  end
+
+  return #ids
+end
+
+local completedIds = pruneFromSet(completedKey, completedBefore, limit - deleted)
+local completedCount = pruneIds(completedIds, completedKey)
+deleted = deleted + completedCount
+completedDeleted = completedDeleted + completedCount
+
+local failedIds = pruneFromSet(failedKey, failedBefore, limit - deleted)
+local failedCount = pruneIds(failedIds, failedKey)
+deleted = deleted + failedCount
+failedDeleted = failedDeleted + failedCount
+
+local canceledIds = pruneFromSet(canceledKey, canceledBefore, limit - deleted)
+local canceledCount = pruneIds(canceledIds, canceledKey)
+deleted = deleted + canceledCount
+canceledDeleted = canceledDeleted + canceledCount
+
+return {deleted, completedDeleted, failedDeleted, canceledDeleted}
 `
 
 let UPSERT_SCHEDULE_SCRIPT = `

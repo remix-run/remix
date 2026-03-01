@@ -203,6 +203,219 @@ export function runJobStorageContract<transaction = never>(
       assert.equal(reclaimed[0].attempts, 2)
     })
 
+    it('lists dead letters and replays failed jobs', { skip: !enabled }, async () => {
+      let jobs = createJobs({
+        alwaysFail: {
+          schema: s.object({ id: s.string() }),
+          async handle() {
+            throw new Error('boom')
+          },
+        },
+      })
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        scheduler,
+        jobs,
+        storage,
+        worker: {
+          pollIntervalMs: 10,
+          leaseMs: 100,
+        },
+      })
+
+      let enqueued = await scheduler.enqueue(jobs.alwaysFail, { id: 'f1' }, {
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+      })
+
+      await worker.start()
+      await waitFor(async () => {
+        let job = await scheduler.get(enqueued.jobId)
+        return job?.status === 'failed'
+      })
+      await worker.stop()
+
+      let deadLetters = await storage.listDeadLetters({ limit: 10 })
+      assert.ok(deadLetters.some((job) => job.id === enqueued.jobId))
+
+      let replayed = await storage.replayDeadLetter({
+        jobId: enqueued.jobId,
+        priority: 99,
+      })
+      assert.ok(replayed)
+      assert.notEqual(replayed.jobId, enqueued.jobId)
+
+      let original = await scheduler.get(enqueued.jobId)
+      assert.ok(original)
+      assert.equal(original.status, 'failed')
+
+      let replayedJob = await scheduler.get(replayed.jobId)
+      assert.ok(replayedJob)
+      assert.equal(replayedJob.status, 'queued')
+      assert.equal(replayedJob.priority, 99)
+    })
+
+    it('returns null when replaying missing or non-failed jobs', { skip: !enabled }, async () => {
+      let queued = await storage.enqueue({
+        name: 'not-failed',
+        queue: 'default',
+        payload: { ok: true },
+        runAt: 0,
+        priority: 0,
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+        createdAt: 0,
+      })
+
+      assert.equal(
+        await storage.replayDeadLetter({
+          jobId: 'missing-job-id',
+        }),
+        null,
+      )
+      assert.equal(
+        await storage.replayDeadLetter({
+          jobId: queued.jobId,
+        }),
+        null,
+      )
+    })
+
+    it('prunes terminal jobs by status and respects limits', { skip: !enabled }, async () => {
+      let completedEnqueued = await storage.enqueue({
+        name: 'to-complete',
+        queue: 'default',
+        payload: { ok: true },
+        runAt: 1,
+        priority: 0,
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+        createdAt: 1,
+      })
+      let failedAEnqueued = await storage.enqueue({
+        name: 'to-fail-a',
+        queue: 'default',
+        payload: { ok: true },
+        runAt: 2,
+        priority: 0,
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+        createdAt: 2,
+      })
+      let failedBEnqueued = await storage.enqueue({
+        name: 'to-fail-b',
+        queue: 'default',
+        payload: { ok: true },
+        runAt: 3,
+        priority: 0,
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+        createdAt: 3,
+      })
+      let canceledEnqueued = await storage.enqueue({
+        name: 'to-cancel',
+        queue: 'default',
+        payload: { ok: true },
+        runAt: 1000,
+        priority: 0,
+        retry: {
+          maxAttempts: 1,
+          strategy: 'fixed',
+          baseDelayMs: 10,
+          maxDelayMs: 10,
+          jitter: 'none',
+        },
+        createdAt: 4,
+      })
+
+      let claimed = await storage.claimDueJobs({
+        now: 10,
+        workerId: 'w1',
+        queues: ['default'],
+        limit: 3,
+        leaseMs: 100,
+      })
+      assert.equal(claimed.length, 3)
+
+      await storage.complete({
+        jobId: completedEnqueued.jobId,
+        workerId: 'w1',
+        now: 20,
+      })
+      await storage.fail({
+        jobId: failedAEnqueued.jobId,
+        workerId: 'w1',
+        now: 21,
+        error: 'boom-a',
+        terminal: true,
+      })
+      await storage.fail({
+        jobId: failedBEnqueued.jobId,
+        workerId: 'w1',
+        now: 22,
+        error: 'boom-b',
+        terminal: true,
+      })
+      assert.equal(await storage.cancel(canceledEnqueued.jobId), true)
+
+      let pruneCompleted = await storage.prune({
+        completedBefore: Number.MAX_SAFE_INTEGER,
+        limit: 10,
+      })
+      assert.equal(pruneCompleted.deleted, 1)
+      assert.equal(pruneCompleted.completed, 1)
+      assert.equal(pruneCompleted.failed, 0)
+      assert.equal(pruneCompleted.canceled, 0)
+
+      assert.equal(await storage.get(completedEnqueued.jobId), null)
+      assert.ok(await storage.get(failedAEnqueued.jobId))
+      assert.ok(await storage.get(canceledEnqueued.jobId))
+
+      let pruneFailed = await storage.prune({
+        failedBefore: Number.MAX_SAFE_INTEGER,
+        limit: 1,
+      })
+      assert.equal(pruneFailed.deleted, 1)
+      assert.equal(pruneFailed.completed, 0)
+      assert.equal(pruneFailed.failed, 1)
+      assert.equal(pruneFailed.canceled, 0)
+
+      let pruneCanceled = await storage.prune({
+        canceledBefore: Number.MAX_SAFE_INTEGER,
+        limit: 10,
+      })
+      assert.equal(pruneCanceled.deleted, 1)
+      assert.equal(pruneCanceled.completed, 0)
+      assert.equal(pruneCanceled.failed, 0)
+      assert.equal(pruneCanceled.canceled, 1)
+      assert.equal(await storage.get(canceledEnqueued.jobId), null)
+    })
+
     it('supports cron schedules', { skip: !enabled }, async () => {
       let processed = 0
       let jobs = createJobs({

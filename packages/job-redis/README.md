@@ -25,7 +25,23 @@ let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()
 
 let storage = createRedisJobStorage({ redis })
+// ...create a scheduler with createJobScheduler({ jobs, storage })
+
+let deadLetters = await scheduler.listDeadLetters({ limit: 20 })
+
+if (deadLetters.length > 0) {
+  await scheduler.replayDeadLetter(deadLetters[0].id)
+}
+
+await scheduler.prune({
+  policy: {
+    failedOlderThanMs: 30 * 24 * 60 * 60 * 1000,
+  },
+  limit: 500,
+})
 ```
+
+Redis storage also works with scheduler/worker observability hooks in `remix/job`.
 
 ## License
 
