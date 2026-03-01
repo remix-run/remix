@@ -450,6 +450,92 @@ export function runJobStorageContract<transaction = never>(
 
       assert.ok(processed > 0)
     })
+
+    it('replaces cron schedules and preserves earlier nextRunAt', { skip: !enabled }, async () => {
+      await storage.replaceSchedules([
+        {
+          id: 'schedule-a',
+          schedule: '* * * * *',
+          timezone: 'UTC',
+          queue: 'default',
+          name: 'job-a',
+          payload: { id: 'a' },
+          retry: {
+            maxAttempts: 2,
+            strategy: 'fixed',
+            baseDelayMs: 1000,
+            maxDelayMs: 1000,
+            jitter: 'none',
+          },
+          catchUp: 'one',
+          nextRunAt: 100,
+        },
+        {
+          id: 'schedule-b',
+          schedule: '* * * * *',
+          timezone: 'UTC',
+          queue: 'default',
+          name: 'job-b',
+          payload: { id: 'b' },
+          retry: {
+            maxAttempts: 2,
+            strategy: 'fixed',
+            baseDelayMs: 1000,
+            maxDelayMs: 1000,
+            jitter: 'none',
+          },
+          catchUp: 'one',
+          nextRunAt: 100,
+        },
+      ])
+
+      await storage.replaceSchedules([
+        {
+          id: 'schedule-a',
+          schedule: '* * * * *',
+          timezone: 'UTC',
+          queue: 'default',
+          name: 'job-a',
+          payload: { id: 'a2' },
+          retry: {
+            maxAttempts: 2,
+            strategy: 'fixed',
+            baseDelayMs: 1000,
+            maxDelayMs: 1000,
+            jitter: 'none',
+          },
+          catchUp: 'one',
+          nextRunAt: 250,
+        },
+      ])
+
+      let due = await storage.claimDueSchedules({
+        now: 150,
+        workerId: 'schedule-worker-1',
+        leaseMs: 100,
+        limit: 10,
+      })
+
+      assert.equal(due.length, 1)
+      assert.equal(due[0].id, 'schedule-a')
+      assert.equal(due[0].nextRunAt, 100)
+
+      await storage.advanceSchedule({
+        scheduleId: 'schedule-a',
+        nextRunAt: 1000,
+        now: 150,
+        workerId: 'schedule-worker-1',
+      })
+
+      let noneDue = await storage.claimDueSchedules({
+        now: 500,
+        workerId: 'schedule-worker-2',
+        leaseMs: 100,
+        limit: 10,
+      })
+
+      assert.equal(noneDue.length, 0)
+    })
   })
 }
 

@@ -464,6 +464,8 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
     replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
       return runOperation(() =>
         options.db.transaction(async (database) => {
+          let desiredScheduleIds = Array.from(new Set(input.map((schedule) => schedule.id)))
+
           for (let schedule of input) {
             let existingRows = await database.exec(
               rawSql(`select next_run_at from ${tables.schedules} where id = ? limit 1`, [schedule.id]),
@@ -522,6 +524,19 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
               ),
             )
           }
+
+          if (desiredScheduleIds.length === 0) {
+            await database.exec(rawSql(`delete from ${tables.schedules}`))
+            return
+          }
+
+          let desiredScheduleInClause = createInClause(desiredScheduleIds.length)
+          await database.exec(
+            rawSql(
+              `delete from ${tables.schedules} where id not in ${desiredScheduleInClause}`,
+              desiredScheduleIds,
+            ),
+          )
         }),
       )
     },
