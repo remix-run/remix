@@ -103,21 +103,21 @@ await scheduler.enqueue(
 )
 ```
 
-## Dead Letters and Replay
+## failed jobs and Replay
 
 When a job exhausts retries, it remains in storage with `status: 'failed'` and can be inspected or replayed.
 
 ```ts
-let deadLetters = await scheduler.listDeadLetters({
+let deadLetters = await scheduler.listFailedJobs({
   queue: 'default',
   limit: 20,
 })
 
 for (let job of deadLetters) {
-  console.error('dead letter', job.id, job.lastError)
+  console.error('failed job', job.id, job.lastError)
 }
 
-let replayed = await scheduler.replayDeadLetter(deadLetters[0].id, {
+let replayed = await scheduler.replayFailedJob(deadLetters[0].id, {
   priority: 10,
 })
 ```
@@ -185,8 +185,8 @@ let worker = createJobWorker({
     onJobComplete(event) {
       metrics.timing('job.duration', event.durationMs, { job: event.job.name })
     },
-    onJobDeadLetter(event) {
-      logger.error('dead letter', event.job.id, event.error)
+    onJobFailed(event) {
+      logger.error('failed job', event.job.id, event.error)
     },
   },
 })

@@ -199,7 +199,7 @@ describe('data-table job storage (sqlite)', () => {
     assert.equal(job.status, 'canceled')
   })
 
-  it('rolls back replayDeadLetter when using a provided transaction', { skip: !integrationEnabled }, async () => {
+  it('rolls back replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
     let storage = createDataTableJobStorage({
@@ -212,7 +212,7 @@ describe('data-table job storage (sqlite)', () => {
     await assert.rejects(
       () =>
         database.transaction(async (transaction) => {
-          let replayed = await storage.replayDeadLetter(
+          let replayed = await storage.replayFailedJob(
             {
               jobId: failedJobId,
               priority: 77,
@@ -233,7 +233,7 @@ describe('data-table job storage (sqlite)', () => {
     assert.equal(failed.status, 'failed')
   })
 
-  it('commits replayDeadLetter when using a provided transaction', { skip: !integrationEnabled }, async () => {
+  it('commits replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
     let storage = createDataTableJobStorage({
@@ -244,7 +244,7 @@ describe('data-table job storage (sqlite)', () => {
     let replayedJobId = ''
 
     await database.transaction(async (transaction) => {
-      let replayed = await storage.replayDeadLetter(
+      let replayed = await storage.replayFailedJob(
         {
           jobId: failedJobId,
           priority: 77,

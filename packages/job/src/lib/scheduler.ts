@@ -3,7 +3,7 @@ import { parse } from '@remix-run/data-schema'
 import type {
   CancelOptions,
   CreateJobSchedulerOptions,
-  DeadLetterQueryOptions,
+  FailedJobQueryOptions,
   EnqueueOptions,
   Infer,
   JobDefinitions,
@@ -13,8 +13,8 @@ import type {
   JobScheduler,
   PruneOptions,
   PruneResult,
-  ReplayDeadLetterOptions,
-  ReplayDeadLetterResult,
+  ReplayFailedJobOptions,
+  ReplayFailedJobResult,
   SchedulerHookName,
   SchedulerHooks,
 } from './types.ts'
@@ -115,17 +115,17 @@ export function createJobScheduler<
 
       return canceled
     },
-    listDeadLetters(deadLetterOptions?: DeadLetterQueryOptions): Promise<JobRecord[]> {
-      return storage.listDeadLetters({
+    listFailedJobs(deadLetterOptions?: FailedJobQueryOptions): Promise<JobRecord[]> {
+      return storage.listFailedJobs({
         queue: deadLetterOptions?.queue,
         limit: normalizeOptionalWholeNumber(deadLetterOptions?.limit, 50, 1),
       })
     },
-    async replayDeadLetter(
+    async replayFailedJob(
       jobId: string,
-      replayOptions?: ReplayDeadLetterOptions<transaction>,
-    ): Promise<ReplayDeadLetterResult> {
-      let replayed = await storage.replayDeadLetter(
+      replayOptions?: ReplayFailedJobOptions<transaction>,
+    ): Promise<ReplayFailedJobResult> {
+      let replayed = await storage.replayFailedJob(
         {
           jobId,
           runAt: replayOptions?.runAt?.getTime(),
@@ -148,7 +148,7 @@ export function createJobScheduler<
         jobId: replayed.jobId,
       }
 
-      await runSchedulerHook(hooks, 'onReplayDeadLetter', {
+      await runSchedulerHook(hooks, 'onReplayFailedJob', {
         jobId,
         options: replayOptions,
         result,

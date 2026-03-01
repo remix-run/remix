@@ -123,9 +123,9 @@ describe('createJobScheduler', () => {
         capturedCancelTransaction = options?.transaction
         return baseStorage.cancel(jobId)
       },
-      replayDeadLetter(input, options) {
+      replayFailedJob(input, options) {
         capturedReplayTransaction = options?.transaction
-        return baseStorage.replayDeadLetter(input)
+        return baseStorage.replayFailedJob(input)
       },
       prune(input, options) {
         capturedPruneTransaction = options?.transaction
@@ -158,7 +158,7 @@ describe('createJobScheduler', () => {
       terminal: true,
     })
     await scheduler.cancel(enqueued.jobId, { transaction })
-    await scheduler.replayDeadLetter(enqueued.jobId, { transaction })
+    await scheduler.replayFailedJob(enqueued.jobId, { transaction })
     await scheduler.prune({
       policy: { failedOlderThanMs: 0 },
       transaction,
@@ -170,7 +170,7 @@ describe('createJobScheduler', () => {
     assert.equal(capturedPruneTransaction, transaction)
   })
 
-  it('lists dead letters and replays failed jobs', async () => {
+  it('lists failed jobs and replays failed jobs', async () => {
     let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
@@ -179,7 +179,7 @@ describe('createJobScheduler', () => {
       },
     })
     let scheduler = createJobScheduler({ jobs, storage })
-    let enqueued = await scheduler.enqueue(jobs.email, { to: 'dead-letter@example.com' })
+    let enqueued = await scheduler.enqueue(jobs.email, { to: 'failed-job@example.com' })
     let claimNow = Date.now() + 1000
     let claimed = await storage.claimDueJobs({
       now: claimNow,
@@ -198,10 +198,10 @@ describe('createJobScheduler', () => {
       terminal: true,
     })
 
-    let deadLetters = await scheduler.listDeadLetters({ limit: 10 })
+    let deadLetters = await scheduler.listFailedJobs({ limit: 10 })
     assert.ok(deadLetters.some((job) => job.id === enqueued.jobId))
 
-    let replayed = await scheduler.replayDeadLetter(enqueued.jobId, { priority: 88 })
+    let replayed = await scheduler.replayFailedJob(enqueued.jobId, { priority: 88 })
     assert.notEqual(replayed.jobId, enqueued.jobId)
 
     let original = await scheduler.get(enqueued.jobId)
@@ -226,11 +226,11 @@ describe('createJobScheduler', () => {
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'queued@example.com' })
 
     await assert.rejects(
-      () => scheduler.replayDeadLetter('missing'),
+      () => scheduler.replayFailedJob('missing'),
       /job not found or not failed/,
     )
     await assert.rejects(
-      () => scheduler.replayDeadLetter(enqueued.jobId),
+      () => scheduler.replayFailedJob(enqueued.jobId),
       /job not found or not failed/,
     )
   })
@@ -307,7 +307,7 @@ describe('createJobScheduler', () => {
         onCancel() {
           events.push('cancel')
         },
-        onReplayDeadLetter() {
+        onReplayFailedJob() {
           events.push('replay')
         },
         onPrune() {
@@ -335,7 +335,7 @@ describe('createJobScheduler', () => {
       error: 'failed',
       terminal: true,
     })
-    await scheduler.replayDeadLetter(enqueued.jobId)
+    await scheduler.replayFailedJob(enqueued.jobId)
     await scheduler.cancel(enqueued.jobId)
     await scheduler.prune({
       policy: {
@@ -363,8 +363,8 @@ function createTransactionAwareTestStorage(): JobStorage<{ id: string }> {
     cancel(jobId, _options) {
       return storage.cancel(jobId)
     },
-    replayDeadLetter(input, _options) {
-      return storage.replayDeadLetter(input)
+    replayFailedJob(input, _options) {
+      return storage.replayFailedJob(input)
     },
     prune(input, _options) {
       return storage.prune(input)
@@ -391,7 +391,7 @@ function assertTransactionOptionTyping(): void {
   void txScheduler.cancel('job-id', {
     transaction: { id: 'tx1' },
   })
-  void txScheduler.replayDeadLetter('job-id', {
+  void txScheduler.replayFailedJob('job-id', {
     transaction: { id: 'tx1' },
   })
   void txScheduler.prune({
@@ -409,7 +409,7 @@ function assertTransactionOptionTyping(): void {
   // @ts-expect-error Memory storage does not declare transaction support.
   void memoryScheduler.cancel('job-id', { transaction: { id: 'tx1' } })
   // @ts-expect-error Memory storage does not declare transaction support.
-  void memoryScheduler.replayDeadLetter('job-id', { transaction: { id: 'tx1' } })
+  void memoryScheduler.replayFailedJob('job-id', { transaction: { id: 'tx1' } })
   // @ts-expect-error Memory storage does not declare transaction support.
   void memoryScheduler.prune({ policy: { failedOlderThanMs: 0 }, transaction: { id: 'tx1' } })
 }
