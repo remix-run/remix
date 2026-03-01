@@ -24,7 +24,7 @@ let DEFAULT_RETENTION_INTERVAL_MS = 60000
 let DEFAULT_RETENTION_LIMIT = 500
 
 /**
- * Creates a worker loop that claims and executes jobs from a scheduler storage.
+ * Creates a worker loop that claims and executes jobs from storage.
  *
  * @param options Worker configuration
  * @returns A `JobWorker` lifecycle controller

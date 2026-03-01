@@ -290,7 +290,6 @@ export type CreateJobWorkerOptions<
   defs extends JobDefinitions,
   transaction = never,
 > = {
-  scheduler: JobScheduler<defs, transaction>
   jobs: defs
   storage: JobStorage<transaction>
   worker?: WorkerOptions

@@ -146,7 +146,6 @@ This runs periodic pruning in the same always-on process that executes jobs, so 
 
 ```ts
 let worker = createJobWorker({
-  scheduler,
   jobs,
   storage,
   worker: {
@@ -178,7 +177,6 @@ let scheduler = createJobScheduler({
 })
 
 let worker = createJobWorker({
-  scheduler,
   jobs,
   storage,
   onJobComplete(event) {
@@ -221,7 +219,6 @@ import { createJobWorker } from 'remix/job/worker'
 import { storage, jobs, scheduler } from './jobs'
 
 let worker = createJobWorker({
-  scheduler,
   jobs,
   storage,
   cron: [

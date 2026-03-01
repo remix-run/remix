@@ -41,7 +41,6 @@ export function runJobStorageContract<transaction = never>(
       })
       let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
-        scheduler,
         jobs,
         storage,
         worker: {
@@ -74,7 +73,6 @@ export function runJobStorageContract<transaction = never>(
       })
       let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
-        scheduler,
         jobs,
         storage,
         worker: {
@@ -115,7 +113,6 @@ export function runJobStorageContract<transaction = never>(
       })
       let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
-        scheduler,
         jobs,
         storage,
         worker: {
@@ -214,7 +211,6 @@ export function runJobStorageContract<transaction = never>(
       })
       let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
-        scheduler,
         jobs,
         storage,
         worker: {
@@ -428,7 +424,6 @@ export function runJobStorageContract<transaction = never>(
       })
       let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
-        scheduler,
         jobs,
         storage,
         worker: {
