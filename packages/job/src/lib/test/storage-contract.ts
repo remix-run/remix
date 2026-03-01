@@ -2,18 +2,18 @@ import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
-import type { JobBackend } from '../backend.ts'
+import type { JobStorage } from '../storage.ts'
 import { createJobScheduler, createJobs } from '../scheduler.ts'
 import { createJobWorker } from '../worker.ts'
 
-export interface BackendContractOptions {
+export interface StorageContractOptions {
   integrationEnabled?: boolean
   setup?: () => Promise<void>
-  createBackend: () => Promise<JobBackend> | JobBackend
+  createStorage: () => Promise<JobStorage> | JobStorage
 }
 
-export function runJobBackendContract(name: string, options: BackendContractOptions): void {
-  let backend: JobBackend
+export function runJobStorageContract(name: string, options: StorageContractOptions): void {
+  let storage: JobStorage
   let enabled = options.integrationEnabled ?? true
 
   describe(name, () => {
@@ -23,7 +23,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
       }
 
       await options.setup?.()
-      backend = await options.createBackend()
+      storage = await options.createStorage()
     })
 
     it('processes queued jobs', { skip: !enabled }, async () => {
@@ -36,11 +36,11 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, backend })
+      let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
         scheduler,
         jobs,
-        backend,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -69,11 +69,11 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, backend })
+      let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
         scheduler,
         jobs,
-        backend,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -110,11 +110,11 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, backend })
+      let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
         scheduler,
         jobs,
-        backend,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -136,7 +136,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
           async handle() {},
         },
       })
-      let scheduler = createJobScheduler({ jobs, backend })
+      let scheduler = createJobScheduler({ jobs, storage })
 
       let first = await scheduler.enqueue(jobs.email, { id: 'a' }, {
         dedupeKey: 'email:a',
@@ -153,7 +153,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
     })
 
     it('reclaims expired running jobs', { skip: !enabled }, async () => {
-      let enqueued = await backend.enqueue({
+      let enqueued = await storage.enqueue({
         name: 'lease-test',
         queue: 'default',
         payload: { ok: true },
@@ -169,7 +169,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
         createdAt: 10,
       })
 
-      let firstClaim = await backend.claimDueJobs({
+      let firstClaim = await storage.claimDueJobs({
         now: 10,
         workerId: 'w1',
         queues: ['default'],
@@ -179,7 +179,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
       assert.equal(firstClaim.length, 1)
       assert.equal(firstClaim[0].id, enqueued.jobId)
 
-      let noClaim = await backend.claimDueJobs({
+      let noClaim = await storage.claimDueJobs({
         now: 15,
         workerId: 'w2',
         queues: ['default'],
@@ -188,7 +188,7 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
       })
       assert.equal(noClaim.length, 0)
 
-      let reclaimed = await backend.claimDueJobs({
+      let reclaimed = await storage.claimDueJobs({
         now: 35,
         workerId: 'w2',
         queues: ['default'],
@@ -210,11 +210,11 @@ export function runJobBackendContract(name: string, options: BackendContractOpti
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, backend })
+      let scheduler = createJobScheduler({ jobs, storage })
       let worker = createJobWorker({
         scheduler,
         jobs,
-        backend,
+        storage,
         worker: {
           pollIntervalMs: 10,
           cronTickMs: 10,

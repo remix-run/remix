@@ -3,13 +3,13 @@ import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
 import { createJobScheduler, createJobs } from './scheduler.ts'
-import { createMemoryJobBackend } from './test/memory-backend.ts'
+import { createMemoryJobStorage } from './test/memory-storage.ts'
 import { createJobWorker } from './worker.ts'
 
 describe('createJobWorker', () => {
   it('processes delayed jobs', async () => {
     let executed: string[] = []
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       delayed: {
         schema: s.object({ id: s.string() }),
@@ -18,11 +18,11 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
     let worker = createJobWorker({
       scheduler,
       jobs,
-      backend,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 200,
@@ -40,7 +40,7 @@ describe('createJobWorker', () => {
 
   it('retries failed jobs', async () => {
     let attempts = 0
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       flaky: {
         schema: s.object({ value: s.string() }),
@@ -53,11 +53,11 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
     let worker = createJobWorker({
       scheduler,
       jobs,
-      backend,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 200,
@@ -87,7 +87,7 @@ describe('createJobWorker', () => {
 
   it('enqueues cron schedules', async () => {
     let executed = 0
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       heartbeat: {
         schema: s.object({ name: s.string() }),
@@ -96,11 +96,11 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
     let worker = createJobWorker({
       scheduler,
       jobs,
-      backend,
+      storage,
       worker: {
         pollIntervalMs: 10,
         cronTickMs: 10,

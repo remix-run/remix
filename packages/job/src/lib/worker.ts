@@ -1,6 +1,6 @@
 import { parse } from '@remix-run/data-schema'
 
-import type { DueSchedule, PersistedCronSchedule } from './backend.ts'
+import type { DueSchedule, PersistedCronSchedule } from './storage.ts'
 import type {
   CreateJobWorkerOptions,
   CronSchedule,
@@ -19,7 +19,7 @@ let DEFAULT_LEASE_MS = 30000
 let DEFAULT_CRON_TICK_MS = 30000
 
 /**
- * Creates a worker loop that claims and executes jobs from a scheduler backend.
+ * Creates a worker loop that claims and executes jobs from a scheduler storage.
  *
  * @param options Worker configuration
  * @returns A `JobWorker` lifecycle controller
@@ -29,7 +29,7 @@ export function createJobWorker<defs extends JobDefinitions>(
 ): JobWorker {
   let jobs = options.jobs
   let jobNames = createJobNameMap(jobs)
-  let backend = options.backend
+  let storage = options.storage
   let workerOptions = normalizeWorkerOptions(options.worker)
 
   let running = false
@@ -55,7 +55,7 @@ export function createJobWorker<defs extends JobDefinitions>(
     running = true
 
     if (cronSchedules.length > 0) {
-      await backend.upsertSchedules(
+      await storage.upsertSchedules(
         cronSchedules.map((schedule) => toPersistedSchedule(schedule, Date.now(), jobNames)),
       )
       cronLoopPromise = runCronLoop()
@@ -98,7 +98,7 @@ export function createJobWorker<defs extends JobDefinitions>(
       let available = workerOptions.concurrency - inFlight.size
 
       if (available > 0) {
-        let claimedJobs = await backend.claimDueJobs({
+        let claimedJobs = await storage.claimDueJobs({
           now: Date.now(),
           workerId: workerOptions.workerId,
           queues: workerOptions.queues,
@@ -122,7 +122,7 @@ export function createJobWorker<defs extends JobDefinitions>(
 
   async function runCronLoop(): Promise<void> {
     while (running) {
-      let dueSchedules = await backend.claimDueSchedules({
+      let dueSchedules = await storage.claimDueSchedules({
         now: Date.now(),
         workerId: workerOptions.workerId,
         leaseMs: workerOptions.leaseMs,
@@ -142,7 +142,7 @@ export function createJobWorker<defs extends JobDefinitions>(
     let definition = jobs[schedule.name]
 
     if (definition == null) {
-      await backend.advanceSchedule({
+      await storage.advanceSchedule({
         scheduleId: schedule.id,
         nextRunAt: getNextCronRunAt(schedule.cron, now, schedule.timezone),
         now,
@@ -165,7 +165,7 @@ export function createJobWorker<defs extends JobDefinitions>(
       let now = Date.now()
       let retry = normalizeRetryPolicy(definition.retry, schedule.retry)
 
-      await backend.enqueue({
+      await storage.enqueue({
         name: schedule.name,
         queue: schedule.queue,
         payload,
@@ -179,7 +179,7 @@ export function createJobWorker<defs extends JobDefinitions>(
 
     let nextRunAt = getNextCronRunAt(schedule.cron, now, schedule.timezone)
 
-    await backend.advanceSchedule({
+    await storage.advanceSchedule({
       scheduleId: schedule.id,
       nextRunAt,
       now,
@@ -191,7 +191,7 @@ export function createJobWorker<defs extends JobDefinitions>(
     let definition = jobs[job.name]
 
     if (definition == null) {
-      await backend.fail({
+      await storage.fail({
         jobId: job.id,
         workerId: workerOptions.workerId,
         now: Date.now(),
@@ -205,7 +205,7 @@ export function createJobWorker<defs extends JobDefinitions>(
     jobControllers.set(job.id, controller)
 
     let heartbeatTimer = setInterval(() => {
-      void backend.heartbeat({
+      void storage.heartbeat({
         jobId: job.id,
         workerId: workerOptions.workerId,
         leaseMs: workerOptions.leaseMs,
@@ -224,7 +224,7 @@ export function createJobWorker<defs extends JobDefinitions>(
         scheduledAt: job.runAt,
       })
 
-      await backend.complete({
+      await storage.complete({
         jobId: job.id,
         workerId: workerOptions.workerId,
         now: Date.now(),
@@ -234,7 +234,7 @@ export function createJobWorker<defs extends JobDefinitions>(
       let message = normalizeErrorMessage(error)
 
       if (job.attempts >= job.maxAttempts) {
-        await backend.fail({
+        await storage.fail({
           jobId: job.id,
           workerId: workerOptions.workerId,
           now,
@@ -244,7 +244,7 @@ export function createJobWorker<defs extends JobDefinitions>(
       } else {
         let retryAt = computeRetryAt(now, job.attempts, job.retry)
 
-        await backend.fail({
+        await storage.fail({
           jobId: job.id,
           workerId: workerOptions.workerId,
           now,

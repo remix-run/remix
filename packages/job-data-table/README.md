@@ -1,6 +1,6 @@
 # job-data-table
 
-Data Table-backed backend adapter for `@remix-run/job`.
+Data Table-backed storage adapter for `@remix-run/job`.
 
 ## Features
 
@@ -19,19 +19,19 @@ npm i remix
 
 ```ts
 import { createMigrationRunner } from 'remix/data-table/migrations'
-import { createDataTableJobBackend, createDataTableJobBackendMigration } from 'remix/job/data-table'
+import { createDataTableJobStorage, createDataTableJobStorageMigration } from 'remix/job/data-table'
 
 let migrationRunner = createMigrationRunner(db.adapter, [
   {
     id: '20260301000000',
-    name: 'create_job_backend_tables',
-    migration: createDataTableJobBackendMigration(),
+    name: 'create_job_storage_tables',
+    migration: createDataTableJobStorageMigration(),
   },
 ])
 
 await migrationRunner.up()
 
-let backend = createDataTableJobBackend({
+let storage = createDataTableJobStorage({
   db,
 })
 ```

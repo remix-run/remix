@@ -23,7 +23,7 @@ export function createJobs<defs extends JobDefinitions>(jobs: defs): defs {
 }
 
 /**
- * Creates a job scheduler backed by a `JobBackend` implementation.
+ * Creates a job scheduler backed by a `JobStorage` implementation.
  *
  * @param options Scheduler configuration
  * @returns A `JobScheduler` for enqueuing and querying jobs
@@ -32,7 +32,7 @@ export function createJobScheduler<defs extends JobDefinitions>(
   options: CreateJobSchedulerOptions<defs>,
 ): JobScheduler<defs> {
   let jobs = options.jobs
-  let backend = options.backend
+  let storage = options.storage
   let jobNames = new WeakMap<object, string>()
 
   for (let name in jobs) {
@@ -63,7 +63,7 @@ export function createJobScheduler<defs extends JobDefinitions>(
       let priority = normalizeWholeNumber(enqueueOptions?.priority, 0, Number.MIN_SAFE_INTEGER)
       let retry = normalizeRetryPolicy(definition.retry, enqueueOptions?.retry)
 
-      return backend.enqueue({
+      return storage.enqueue({
         name,
         queue,
         payload: parsedPayload,
@@ -76,10 +76,10 @@ export function createJobScheduler<defs extends JobDefinitions>(
       })
     },
     get(jobId: string): Promise<JobRecord | null> {
-      return backend.get(jobId)
+      return storage.get(jobId)
     },
     cancel(jobId: string): Promise<boolean> {
-      return backend.cancel(jobId)
+      return storage.cancel(jobId)
     },
   }
 }
