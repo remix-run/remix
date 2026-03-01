@@ -23,6 +23,7 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
         parent.appendChild(n)
       }
     } else if (c && !n) {
+      disposeRemovedSubFrames(c, context)
       parent.removeChild(c)
     } else if (c && n) {
       // Skip hydrated client-entry boundary ranges; hydration pass re-renders
@@ -228,6 +229,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
   // Remove any current children not used
   for (let i = 0; i < currentChildren.length; i++) {
     if (!used[i]) {
+      let nodeToRemove = currentChildren[i]
+      disposeRemovedSubFrames(nodeToRemove, context)
       current.removeChild(currentChildren[i])
     }
   }
@@ -281,6 +284,30 @@ function isElement(node: Node): node is Element {
 
 function isCommentNode(node: Node): node is Comment {
   return node.nodeType === Node.COMMENT_NODE
+}
+
+function isFrameStartMarker(node: Node): node is Comment {
+  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+}
+
+function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
+  let stack: Node[] = [node]
+  while (stack.length > 0) {
+    let next = stack.pop()
+    if (!next) continue
+
+    if (isFrameStartMarker(next)) {
+      let subFrame = context.frameInstances.get(next)
+      if (subFrame) {
+        subFrame.dispose()
+        context.frameInstances.delete(next)
+      }
+    }
+
+    for (let child of Array.from(next.childNodes)) {
+      stack.push(child)
+    }
+  }
 }
 
 function isVirtualRootStartMarker(node: Node): node is Comment {
