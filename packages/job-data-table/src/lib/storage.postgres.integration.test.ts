@@ -3,20 +3,20 @@ import { createDatabase } from '@remix-run/data-table'
 import { createPostgresDatabaseAdapter } from '@remix-run/data-table-postgres'
 import { Pool } from 'pg'
 
-import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
+import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'
 
-import { createDataTableJobBackend } from './backend.ts'
+import { createDataTableJobStorage } from './storage.ts'
 import {
   DEFAULT_TEST_TABLE_PREFIX,
-  resetJobBackendSchema,
-  setupJobBackendSchema,
+  resetJobStorageSchema,
+  setupJobStorageSchema,
 } from './test/schema.ts'
 
 let integrationEnabled =
   process.env.JOB_DATA_TABLE_INTEGRATION === '1' &&
   typeof process.env.JOB_DATA_TABLE_POSTGRES_URL === 'string'
 
-describe('data-table job backend (postgres integration)', () => {
+describe('data-table job storage (postgres integration)', () => {
   let pool: Pool
   let database: ReturnType<typeof createDatabase>
 
@@ -29,8 +29,8 @@ describe('data-table job backend (postgres integration)', () => {
       connectionString: process.env.JOB_DATA_TABLE_POSTGRES_URL,
     })
     database = createDatabase(createPostgresDatabaseAdapter(pool))
-    await setupJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
-    await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await setupJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
   })
 
   after(async () => {
@@ -41,13 +41,13 @@ describe('data-table job backend (postgres integration)', () => {
     await pool.end()
   })
 
-  runJobBackendContract('postgres contract', {
+  runJobStorageContract('postgres contract', {
     integrationEnabled,
     setup: async () => {
-      await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+      await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
-    createBackend: async () =>
-      createDataTableJobBackend({
+    createStorage: async () =>
+      createDataTableJobStorage({
         db: database,
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),

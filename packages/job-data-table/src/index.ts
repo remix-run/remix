@@ -1,5 +1,5 @@
-export { createDataTableJobBackend, createDataTableJobBackendMigration } from './lib/backend.ts'
+export { createDataTableJobStorage, createDataTableJobStorageMigration } from './lib/storage.ts'
 export type {
-  DataTableJobBackendMigrationOptions,
-  DataTableJobBackendOptions,
-} from './lib/backend.ts'
+  DataTableJobStorageMigrationOptions,
+  DataTableJobStorageOptions,
+} from './lib/storage.ts'

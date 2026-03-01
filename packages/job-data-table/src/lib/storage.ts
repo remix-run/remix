@@ -8,38 +8,38 @@ import type {
   ClaimDueSchedulesInput,
   DueSchedule,
   EnqueueJobInput,
-  JobBackend,
+  JobStorage,
   JobFailureInput,
   PersistedCronSchedule,
-} from '@remix-run/job/backend'
+} from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
 let DEFAULT_TABLE_PREFIX = 'job_'
 
-type BackendTables = {
+type StorageTables = {
   jobs: string
   dedupe: string
   schedules: string
 }
 
-export interface DataTableJobBackendOptions {
+export interface DataTableJobStorageOptions {
   db: Database
   tablePrefix?: string
 }
 
-export interface DataTableJobBackendMigrationOptions {
+export interface DataTableJobStorageMigrationOptions {
   tablePrefix?: string
 }
 
 /**
- * Creates a `JobBackend` implementation using `@remix-run/data-table`.
+ * Creates a `JobStorage` implementation using `@remix-run/data-table`.
  *
- * @param options Backend configuration
- * @returns A data-table-backed `JobBackend`
+ * @param options Storage configuration
+ * @returns A data-table-backed `JobStorage`
  */
-export function createDataTableJobBackend(options: DataTableJobBackendOptions): JobBackend {
-  let backendSchema = createJobBackendSchema(options.tablePrefix)
-  let tables = backendSchema.tables
+export function createDataTableJobStorage(options: DataTableJobStorageOptions): JobStorage {
+  let storageSchema = createJobStorageSchema(options.tablePrefix)
+  let tables = storageSchema.tables
   let runOperation = createOperationRunner(options.db.adapter.dialect)
 
   return {
@@ -409,16 +409,16 @@ export function createDataTableJobBackend(options: DataTableJobBackendOptions): 
   }
 }
 
-type JobBackendSchema = {
-  tables: BackendTables
+type JobStorageSchema = {
+  tables: StorageTables
   jobsTable: ReturnType<typeof table>
   dedupeTable: ReturnType<typeof table>
   schedulesTable: ReturnType<typeof table>
 }
 
-function createJobBackendSchema(tablePrefix?: string): JobBackendSchema {
+function createJobStorageSchema(tablePrefix?: string): JobStorageSchema {
   let prefix = normalizeTablePrefix(tablePrefix)
-  let tables: BackendTables = {
+  let tables: StorageTables = {
     jobs: `${prefix}jobs`,
     dedupe: `${prefix}dedupe`,
     schedules: `${prefix}schedules`,
@@ -488,43 +488,43 @@ function createJobBackendSchema(tablePrefix?: string): JobBackendSchema {
 /**
  * Creates the built-in migration used to provision `@remix-run/job-data-table` tables.
  *
- * This migration should run before creating a scheduler with `createDataTableJobBackend(...)`.
+ * This migration should run before creating a scheduler with `createDataTableJobStorage(...)`.
  *
  * @param options Migration configuration, including the optional table prefix.
- * @returns A data-table migration object that creates/drops backend tables and indexes.
+ * @returns A data-table migration object that creates/drops storage tables and indexes.
  */
-export function createDataTableJobBackendMigration(
-  options: DataTableJobBackendMigrationOptions = {},
+export function createDataTableJobStorageMigration(
+  options: DataTableJobStorageMigrationOptions = {},
 ): Migration {
-  let backendSchema = createJobBackendSchema(options.tablePrefix)
+  let storageSchema = createJobStorageSchema(options.tablePrefix)
 
   return createMigration({
     async up({ schema }) {
-      await schema.createTable(backendSchema.jobsTable, { ifNotExists: true })
-      await schema.createTable(backendSchema.dedupeTable, { ifNotExists: true })
-      await schema.createTable(backendSchema.schedulesTable, { ifNotExists: true })
+      await schema.createTable(storageSchema.jobsTable, { ifNotExists: true })
+      await schema.createTable(storageSchema.dedupeTable, { ifNotExists: true })
+      await schema.createTable(storageSchema.schedulesTable, { ifNotExists: true })
 
-      await schema.createIndex(backendSchema.jobsTable, ['status', 'queue', 'run_at', 'priority', 'created_at'], {
-        name: `${backendSchema.tables.jobs}_due_idx`,
+      await schema.createIndex(storageSchema.jobsTable, ['status', 'queue', 'run_at', 'priority', 'created_at'], {
+        name: `${storageSchema.tables.jobs}_due_idx`,
         ifNotExists: true,
       })
-      await schema.createIndex(backendSchema.jobsTable, ['status', 'locked_until'], {
-        name: `${backendSchema.tables.jobs}_lock_idx`,
+      await schema.createIndex(storageSchema.jobsTable, ['status', 'locked_until'], {
+        name: `${storageSchema.tables.jobs}_lock_idx`,
         ifNotExists: true,
       })
-      await schema.createIndex(backendSchema.dedupeTable, 'expires_at', {
-        name: `${backendSchema.tables.dedupe}_expires_idx`,
+      await schema.createIndex(storageSchema.dedupeTable, 'expires_at', {
+        name: `${storageSchema.tables.dedupe}_expires_idx`,
         ifNotExists: true,
       })
-      await schema.createIndex(backendSchema.schedulesTable, ['next_run_at', 'locked_until'], {
-        name: `${backendSchema.tables.schedules}_due_idx`,
+      await schema.createIndex(storageSchema.schedulesTable, ['next_run_at', 'locked_until'], {
+        name: `${storageSchema.tables.schedules}_due_idx`,
         ifNotExists: true,
       })
     },
     async down({ schema }) {
-      await schema.dropTable(backendSchema.schedulesTable, { ifExists: true })
-      await schema.dropTable(backendSchema.dedupeTable, { ifExists: true })
-      await schema.dropTable(backendSchema.jobsTable, { ifExists: true })
+      await schema.dropTable(storageSchema.schedulesTable, { ifExists: true })
+      await schema.dropTable(storageSchema.dedupeTable, { ifExists: true })
+      await schema.dropTable(storageSchema.jobsTable, { ifExists: true })
     },
   })
 }
@@ -548,7 +548,7 @@ function createOperationRunner(
   }
 }
 
-async function cleanupExpiredDedupe(db: Database, tables: BackendTables, now: number): Promise<void> {
+async function cleanupExpiredDedupe(db: Database, tables: StorageTables, now: number): Promise<void> {
   await db.exec(rawSql(`delete from ${tables.dedupe} where expires_at <= ?`, [now]))
 }
 

@@ -54,9 +54,9 @@ export interface DueSchedule extends PersistedCronSchedule {
 }
 
 /**
- * Storage contract for `@remix-run/job` scheduler backends.
+ * Storage contract for `@remix-run/job` scheduler storage adapters.
  */
-export interface JobBackend {
+export interface JobStorage {
   enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }>
   get(jobId: string): Promise<JobRecord | null>
   cancel(jobId: string): Promise<boolean>

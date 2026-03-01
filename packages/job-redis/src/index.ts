@@ -1,2 +1,2 @@
-export { createRedisJobBackend } from './lib/backend.ts'
-export type { RedisJobBackendClient, RedisJobBackendOptions } from './lib/backend.ts'
+export { createRedisJobStorage } from './lib/storage.ts'
+export type { RedisJobStorageClient, RedisJobStorageOptions } from './lib/storage.ts'

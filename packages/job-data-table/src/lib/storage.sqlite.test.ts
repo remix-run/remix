@@ -3,18 +3,18 @@ import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sql
 import { createDatabase } from '@remix-run/data-table'
 import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
 
-import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
+import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'
 
-import { createDataTableJobBackend } from './backend.ts'
+import { createDataTableJobStorage } from './storage.ts'
 import {
   DEFAULT_TEST_TABLE_PREFIX,
-  resetJobBackendSchema,
-  setupJobBackendSchema,
+  resetJobStorageSchema,
+  setupJobStorageSchema,
 } from './test/schema.ts'
 
 let integrationEnabled = canOpenSqliteDatabase()
 
-describe('data-table job backend (sqlite)', () => {
+describe('data-table job storage (sqlite)', () => {
   let sqlite: BetterSqliteDatabase
   let database: ReturnType<typeof createDatabase>
 
@@ -25,8 +25,8 @@ describe('data-table job backend (sqlite)', () => {
 
     sqlite = new BetterSqlite3(':memory:')
     database = createDatabase(createSqliteDatabaseAdapter(sqlite))
-    await setupJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
-    await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await setupJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
   })
 
   after(async () => {
@@ -37,13 +37,13 @@ describe('data-table job backend (sqlite)', () => {
     sqlite.close()
   })
 
-  runJobBackendContract('sqlite contract', {
+  runJobStorageContract('sqlite contract', {
     integrationEnabled,
     setup: async () => {
-      await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+      await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
-    createBackend: async () =>
-      createDataTableJobBackend({
+    createStorage: async () =>
+      createDataTableJobStorage({
         db: database,
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),

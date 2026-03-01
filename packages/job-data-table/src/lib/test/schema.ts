@@ -1,12 +1,12 @@
 import { rawSql } from '@remix-run/data-table'
 import { createMigrationRunner } from '@remix-run/data-table/migrations'
-import { createDataTableJobBackendMigration } from '../backend.ts'
+import { createDataTableJobStorageMigration } from '../storage.ts'
 
 import type { Database } from '@remix-run/data-table'
 
 export let DEFAULT_TEST_TABLE_PREFIX = 'job_test_'
 
-export async function setupJobBackendSchema(
+export async function setupJobStorageSchema(
   db: Database,
   tablePrefix = DEFAULT_TEST_TABLE_PREFIX,
 ): Promise<void> {
@@ -15,8 +15,8 @@ export async function setupJobBackendSchema(
     [
       {
         id: '0001',
-        name: 'create_job_backend_tables',
-        migration: createDataTableJobBackendMigration({ tablePrefix }),
+        name: 'create_job_storage_tables',
+        migration: createDataTableJobStorageMigration({ tablePrefix }),
       },
     ],
     {
@@ -27,11 +27,11 @@ export async function setupJobBackendSchema(
   await runner.up()
 }
 
-export async function resetJobBackendSchema(
+export async function resetJobStorageSchema(
   db: Database,
   tablePrefix = DEFAULT_TEST_TABLE_PREFIX,
 ): Promise<void> {
-  await setupJobBackendSchema(db, tablePrefix)
+  await setupJobStorageSchema(db, tablePrefix)
 
   let tables = getTables(tablePrefix)
 

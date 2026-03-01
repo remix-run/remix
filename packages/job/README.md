@@ -1,6 +1,6 @@
 # job
 
-Background job scheduler for Remix with retries, delayed jobs, cron schedules, and pluggable backends.
+Background job scheduler for Remix with retries, delayed jobs, cron schedules, and pluggable storage adapters.
 
 ## Features
 
@@ -8,7 +8,7 @@ Background job scheduler for Remix with retries, delayed jobs, cron schedules, a
 - **Retry support** - Fixed or exponential retry with optional jitter
 - **Delayed jobs** - Schedule work for later execution
 - **Cron schedules** - Register recurring jobs with 5-field cron expressions
-- **Backend agnostic** - Works with pluggable storage backends
+- **Storage agnostic** - Works with pluggable storage adapters
 
 ## Installation
 
@@ -21,7 +21,7 @@ npm i remix
 ```ts
 import * as s from 'remix/data-schema'
 import { createJobs, createJobScheduler } from 'remix/job'
-import { createDataTableJobBackend } from 'remix/job/data-table'
+import { createDataTableJobStorage } from 'remix/job/data-table'
 
 let jobs = createJobs({
   sendEmail: {
@@ -32,8 +32,8 @@ let jobs = createJobs({
   },
 })
 
-let backend = createDataTableJobBackend({ db })
-let scheduler = createJobScheduler({ jobs, backend })
+let storage = createDataTableJobStorage({ db })
+let scheduler = createJobScheduler({ jobs, storage })
 
 await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' })
 ```
@@ -48,12 +48,12 @@ For reliable cron scheduling, run workers as a dedicated, always-on deployment.
 
 ```ts
 import { createJobWorker } from 'remix/job/worker'
-import { backend, jobs, scheduler } from './jobs'
+import { storage, jobs, scheduler } from './jobs'
 
 let worker = createJobWorker({
   scheduler,
   jobs,
-  backend,
+  storage,
   cron: [
     {
       schedule: '*/5 * * * *',
@@ -69,8 +69,8 @@ await worker.start()
 
 ## Related Packages
 
-- [`remix/job/data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL backend for PostgreSQL, MySQL, and SQLite
-- [`remix/job/redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis backend
+- [`remix/job/data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL storage for PostgreSQL, MySQL, and SQLite
+- [`remix/job/redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis storage
 
 ## License
 

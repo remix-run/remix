@@ -3,10 +3,10 @@ import type {
   ClaimDueSchedulesInput,
   DueSchedule,
   EnqueueJobInput,
-  JobBackend,
+  JobStorage,
   JobFailureInput,
   PersistedCronSchedule,
-} from '@remix-run/job/backend'
+} from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
 let DEFAULT_PREFIX = 'job:'
@@ -19,22 +19,22 @@ let DEFAULT_RETRY: ResolvedRetryPolicy = {
   jitter: 'full',
 }
 
-export interface RedisJobBackendClient {
+export interface RedisJobStorageClient {
   sendCommand(command: string[]): Promise<unknown>
 }
 
-export interface RedisJobBackendOptions {
-  redis: RedisJobBackendClient
+export interface RedisJobStorageOptions {
+  redis: RedisJobStorageClient
   prefix?: string
 }
 
 /**
- * Creates a Redis-backed `JobBackend` implementation.
+ * Creates a Redis-backed `JobStorage` implementation.
  *
- * @param options Backend configuration
- * @returns A `JobBackend` that persists jobs and schedules in Redis
+ * @param options Storage configuration
+ * @returns A `JobStorage` that persists jobs and schedules in Redis
  */
-export function createRedisJobBackend(options: RedisJobBackendOptions): JobBackend {
+export function createRedisJobStorage(options: RedisJobStorageOptions): JobStorage {
   let redis = options.redis
   let keys = createKeys(normalizePrefix(options.prefix))
 
@@ -73,7 +73,7 @@ export function createRedisJobBackend(options: RedisJobBackendOptions): JobBacke
         }
       }
 
-      throw new Error('Invalid enqueue response from redis backend')
+      throw new Error('Invalid enqueue response from redis storage')
     },
     async get(jobId: string): Promise<JobRecord | null> {
       let hash = await hgetall(redis, keys.job(jobId))
@@ -217,7 +217,7 @@ export function createRedisJobBackend(options: RedisJobBackendOptions): JobBacke
   }
 }
 
-type BackendKeys = {
+type StorageKeys = {
   jobsDue: string
   schedulesDue: string
   jobPrefix: string
@@ -227,7 +227,7 @@ type BackendKeys = {
   dedupe: (key: string) => string
 }
 
-function createKeys(prefix: string): BackendKeys {
+function createKeys(prefix: string): StorageKeys {
   return {
     jobsDue: `${prefix}jobs:due`,
     schedulesDue: `${prefix}schedules:due`,
@@ -246,8 +246,8 @@ function createKeys(prefix: string): BackendKeys {
 }
 
 async function getJobRecord(
-  redis: RedisJobBackendClient,
-  keys: BackendKeys,
+  redis: RedisJobStorageClient,
+  keys: StorageKeys,
   jobId: string,
 ): Promise<JobRecord | null> {
   let hash = await hgetall(redis, keys.job(jobId))
@@ -260,8 +260,8 @@ async function getJobRecord(
 }
 
 async function getSchedule(
-  redis: RedisJobBackendClient,
-  keys: BackendKeys,
+  redis: RedisJobStorageClient,
+  keys: StorageKeys,
   scheduleId: string,
 ): Promise<DueSchedule | null> {
   let hash = await hgetall(redis, keys.schedule(scheduleId))
@@ -273,13 +273,13 @@ async function getSchedule(
   return toDueSchedule(hash)
 }
 
-async function hgetall(redis: RedisJobBackendClient, key: string): Promise<Record<string, string>> {
+async function hgetall(redis: RedisJobStorageClient, key: string): Promise<Record<string, string>> {
   let result = await redis.sendCommand(['HGETALL', key])
   return toHashRecord(result)
 }
 
 async function evalScript(
-  redis: RedisJobBackendClient,
+  redis: RedisJobStorageClient,
   script: string,
   keys: string[],
   args: string[],
