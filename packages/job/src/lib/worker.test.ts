@@ -2,11 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
-import { createJobs } from './scheduler.ts'
-import { createJobSystem } from './system.ts'
+import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobStorage } from './test/memory-storage.ts'
+import { createJobWorker } from './worker.ts'
 
-describe('createJobSystem.createWorker', () => {
+describe('createJobWorker', () => {
   it('processes delayed jobs', async () => {
     let executed: string[] = []
     let storage = createMemoryJobStorage()
@@ -18,9 +18,10 @@ describe('createJobSystem.createWorker', () => {
         },
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
-    let worker = system.createWorker({
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 200,
@@ -51,9 +52,10 @@ describe('createJobSystem.createWorker', () => {
         },
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
-    let worker = system.createWorker({
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 200,
@@ -92,9 +94,10 @@ describe('createJobSystem.createWorker', () => {
         },
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
-    let worker = system.createWorker({
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         cronTickMs: 10,
@@ -144,10 +147,11 @@ describe('createJobSystem.createWorker', () => {
         },
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let threwStartHook = false
-    let worker = system.createWorker({
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 100,
@@ -218,9 +222,10 @@ describe('createJobSystem.createWorker', () => {
         async handle() {},
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
-    let worker = system.createWorker({
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 100,
@@ -254,10 +259,11 @@ describe('createJobSystem.createWorker', () => {
         async handle() {},
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let pruneEvents = 0
-    let worker = system.createWorker({
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 100,
@@ -303,9 +309,10 @@ describe('createJobSystem.createWorker', () => {
         async handle() {},
       },
     })
-    let system = createJobSystem({ jobs, storage })
-    let scheduler = system.scheduler
-    let worker = system.createWorker({
+    let scheduler = createJobScheduler({ jobs, storage })
+    let worker = createJobWorker({
+      jobs,
+      storage,
       worker: {
         pollIntervalMs: 10,
         leaseMs: 100,
@@ -362,12 +369,15 @@ function assertWorkerHookOptionTyping(): void {
     },
   })
   let storage = createMemoryJobStorage()
-  let system = createJobSystem({ jobs, storage })
 
-  void system.createWorker({
+  void createJobWorker({
+    jobs,
+    storage,
     onJobComplete() {},
   })
-  void system.createWorker({
+  void createJobWorker({
+    jobs,
+    storage,
     // @ts-expect-error Worker hooks must be top-level config properties.
     hooks: {
       onJobComplete() {},

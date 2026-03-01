@@ -3,8 +3,8 @@ import { beforeEach, describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
 import type { JobStorage } from '../storage.ts'
-import { createJobs } from '../scheduler.ts'
-import { createJobSystem } from '../system.ts'
+import { createJobScheduler, createJobs } from '../scheduler.ts'
+import { createJobWorker } from '../worker.ts'
 
 export interface StorageContractOptions<transaction = never> {
   integrationEnabled?: boolean
@@ -39,9 +39,10 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
-      let worker = system.createWorker({
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        jobs,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -70,9 +71,10 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
-      let worker = system.createWorker({
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        jobs,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -109,9 +111,10 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
-      let worker = system.createWorker({
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        jobs,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -133,8 +136,7 @@ export function runJobStorageContract<transaction = never>(
           async handle() {},
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
+      let scheduler = createJobScheduler({ jobs, storage })
 
       let first = await scheduler.enqueue(jobs.email, { id: 'a' }, {
         dedupeKey: 'email:a',
@@ -207,9 +209,10 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
-      let worker = system.createWorker({
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        jobs,
+        storage,
         worker: {
           pollIntervalMs: 10,
           leaseMs: 100,
@@ -419,9 +422,10 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let system = createJobSystem({ jobs, storage })
-      let scheduler = system.scheduler
-      let worker = system.createWorker({
+      let scheduler = createJobScheduler({ jobs, storage })
+      let worker = createJobWorker({
+        jobs,
+        storage,
         worker: {
           pollIntervalMs: 10,
           cronTickMs: 10,

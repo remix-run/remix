@@ -20,7 +20,7 @@ npm i remix
 
 ```ts
 import * as s from 'remix/data-schema'
-import { createJobs, createJobSystem } from 'remix/job'
+import { createJobs, createJobScheduler } from 'remix/job'
 import { createDataTableJobStorage } from 'remix/job-data-table'
 
 let jobs = createJobs({
@@ -33,8 +33,7 @@ let jobs = createJobs({
 })
 
 let storage = createDataTableJobStorage({ db })
-let system = createJobSystem({ jobs, storage })
-let scheduler = system.scheduler
+let scheduler = createJobScheduler({ jobs, storage })
 
 let enqueued = await scheduler.enqueue(jobs.sendEmail, {
   to: 'a@example.com',
@@ -146,8 +145,9 @@ You can also run retention pruning automatically from the worker process.
 This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs are cleaned up continuously without a separate maintenance task. Use this when you want predictable storage growth and simpler operations in production.
 
 ```ts
-let system = createJobSystem({ jobs, storage })
-let worker = system.createWorker({
+let worker = createJobWorker({
+  jobs,
+  storage,
   worker: {
     retention: {
       policy: {
@@ -165,7 +165,7 @@ let worker = system.createWorker({
 Scheduler and worker hooks let you emit logs/metrics without changing job logic.
 
 ```ts
-let system = createJobSystem({
+let scheduler = createJobScheduler({
   jobs,
   storage,
   onEnqueue(event) {
@@ -175,9 +175,10 @@ let system = createJobSystem({
     metrics.count('job.pruned', event.result.deleted)
   },
 })
-let scheduler = system.scheduler
 
-let worker = system.createWorker({
+let worker = createJobWorker({
+  jobs,
+  storage,
   onJobComplete(event) {
     metrics.timing('job.duration', event.durationMs, { job: event.job.name })
   },
@@ -214,11 +215,12 @@ For reliable cron scheduling, run workers as a dedicated, always-on deployment.
 - Register cron schedules in worker startup so they continue running independently of web traffic.
 
 ```ts
-import { createJobSystem } from 'remix/job'
+import { createJobWorker } from 'remix/job/worker'
 import { storage, jobs } from './jobs'
 
-let system = createJobSystem({ jobs, storage })
-let worker = system.createWorker({
+let worker = createJobWorker({
+  jobs,
+  storage,
   cron: [
     {
       schedule: '*/5 * * * *',

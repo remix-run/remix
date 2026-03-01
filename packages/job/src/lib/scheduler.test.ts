@@ -1,14 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
-import type * as JobPublicApi from '../index.ts'
 
 import type { JobStorage } from './storage.ts'
-import { createJobs } from './scheduler.ts'
-import { createJobSystem } from './system.ts'
+import { createJobScheduler, createJobs } from './scheduler.ts'
 import { createMemoryJobStorage } from './test/memory-storage.ts'
 
-describe('createJobSystem.scheduler', () => {
+describe('createJobScheduler', () => {
   it('enqueues and retrieves jobs', async () => {
     let storage = createMemoryJobStorage()
     let jobs = createJobs({
@@ -17,7 +15,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'mjackson@example.com' }, { priority: 3 })
     assert.equal(enqueued.deduped, false)
@@ -39,7 +37,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let first = await scheduler.enqueue(jobs.email, { to: 'a@example.com' }, {
       dedupeKey: 'email:a@example.com',
@@ -63,7 +61,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     await assert.rejects(() => scheduler.enqueue(jobs.email, { to: 123 } as any))
   })
@@ -76,7 +74,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     await assert.rejects(
       () =>
@@ -97,7 +95,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let unknownJob = {
       schema: s.object({ to: s.string() }),
@@ -118,7 +116,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'x@example.com' })
 
@@ -161,7 +159,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let transaction = { id: 'tx1' }
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'tx@example.com' }, { transaction })
     let claimNow = Date.now() + 1000
@@ -201,7 +199,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'failed-job@example.com' })
     let claimNow = Date.now() + 1000
     let claimed = await storage.claimDueJobs({
@@ -245,7 +243,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'queued@example.com' })
 
     await assert.rejects(
@@ -266,7 +264,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({ jobs, storage }).scheduler
+    let scheduler = createJobScheduler({ jobs, storage })
     let completed = await scheduler.enqueue(jobs.email, { to: 'completed@example.com' }, { priority: 2 })
     let failed = await scheduler.enqueue(jobs.email, { to: 'failed@example.com' }, { priority: 1 })
     let canceled = await scheduler.enqueue(jobs.email, { to: 'canceled@example.com' }, { priority: 0 })
@@ -319,7 +317,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({
+    let scheduler = createJobScheduler({
       jobs,
       storage,
       onEnqueue() {
@@ -338,7 +336,7 @@ describe('createJobSystem.scheduler', () => {
       onHookError() {
         hookErrors += 1
       },
-    }).scheduler
+    })
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'hooks@example.com' })
     let claimNow = Date.now() + 1000
     let claimed = await storage.claimDueJobs({
@@ -380,7 +378,7 @@ describe('createJobSystem.scheduler', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobSystem({
+    let scheduler = createJobScheduler({
       jobs,
       storage,
       onEnqueue() {
@@ -389,7 +387,7 @@ describe('createJobSystem.scheduler', () => {
       onHookError() {
         throw new Error('onHookError failed')
       },
-    }).scheduler
+    })
 
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'fail-open@example.com' })
     assert.equal(enqueued.deduped, false)
@@ -428,10 +426,10 @@ function assertTransactionOptionTyping(): void {
     },
   })
 
-  let txScheduler = createJobSystem({
+  let txScheduler = createJobScheduler({
     jobs,
     storage: createTransactionAwareTestStorage(),
-  }).scheduler
+  })
 
   void txScheduler.enqueue(jobs.email, { to: 'tx@example.com' }, {
     transaction: { id: 'tx1' },
@@ -452,10 +450,10 @@ function assertTransactionOptionTyping(): void {
     transaction: { id: 'tx1' },
   })
 
-  let memoryScheduler = createJobSystem({
+  let memoryScheduler = createJobScheduler({
     jobs,
     storage: createMemoryJobStorage(),
-  }).scheduler
+  })
 
   // @ts-expect-error Memory storage does not declare transaction support.
   void memoryScheduler.enqueue(jobs.email, { to: 'memory@example.com' }, { transaction: { id: 'tx1' } })
@@ -466,7 +464,7 @@ function assertTransactionOptionTyping(): void {
   // @ts-expect-error Memory storage does not declare transaction support.
   void memoryScheduler.prune({ policy: { failedOlderThanMs: 0 }, transaction: { id: 'tx1' } })
 
-  void createJobSystem({
+  void createJobScheduler({
     jobs,
     storage: createMemoryJobStorage(),
     // @ts-expect-error Scheduler hooks must be top-level config properties.
@@ -477,14 +475,3 @@ function assertTransactionOptionTyping(): void {
 }
 
 void assertTransactionOptionTyping
-
-function assertPublicConstructorTyping(): void {
-  let api = null as unknown as typeof JobPublicApi
-
-  // @ts-expect-error createJobScheduler is no longer part of the public API.
-  void api.createJobScheduler
-  // @ts-expect-error createJobWorker is no longer part of the public API.
-  void api.createJobWorker
-}
-
-void assertPublicConstructorTyping
