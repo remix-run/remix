@@ -19,7 +19,7 @@ npm i remix redis
 
 ```ts
 import { createClient } from 'redis'
-import { createRedisJobStorage } from 'remix/job/redis'
+import { createRedisJobStorage } from 'remix/job-redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()
