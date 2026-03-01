@@ -77,6 +77,7 @@ let second = await scheduler.enqueue(
 
 Use `priority` to run more important jobs first, and `retry` to control retry behavior after
 failures.
+Higher `priority` numbers run first.
 
 ```ts
 await scheduler.enqueue(
