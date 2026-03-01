@@ -21,7 +21,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./storage": "./src/storage.ts",
-    "./worker": "./src/worker.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -33,10 +32,6 @@
       "./storage": {
         "types": "./dist/storage.d.ts",
         "default": "./dist/storage.js"
-      },
-      "./worker": {
-        "types": "./dist/worker.d.ts",
-        "default": "./dist/worker.js"
       },
       "./package.json": "./package.json"
     }
