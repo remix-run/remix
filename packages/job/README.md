@@ -77,9 +77,6 @@ let second = await scheduler.enqueue(
 
 Use `priority` to run more important jobs first, and `retry` to control retry behavior after
 failures.
-Jitter helps avoid synchronized retry bursts. If many jobs fail at the same time and all retry
-after the same delay, they can create a traffic spike against your database or third-party APIs.
-Randomizing retry delays spreads retries out and smooths load.
 
 - `priority`: Relative ordering for due jobs in the same queue (`10` runs before `1`). Defaults to `0`.
 - `retry.maxAttempts`: Total attempts before marking the job as failed (includes the first attempt). Defaults to `5`.
@@ -87,6 +84,8 @@ Randomizing retry delays spreads retries out and smooths load.
 - `retry.baseDelayMs`: Base retry delay in milliseconds. Defaults to `1000`.
 - `retry.maxDelayMs`: Maximum retry delay cap in milliseconds. Defaults to `300000`.
 - `retry.jitter`: Delay randomization strategy (`'none'` or `'full'`). Defaults to `'full'`.
+
+Jitter helps avoid synchronized retry bursts. If many jobs fail at the same time and all retry after the same delay, they can create a traffic spike against your database or third-party APIs. Randomizing retry delays spreads retries out and smooths load.
 
 ```ts
 await scheduler.enqueue(
