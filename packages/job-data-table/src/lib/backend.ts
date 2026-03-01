@@ -1,6 +1,8 @@
-import { rawSql } from '@remix-run/data-table'
+import { column, rawSql, table } from '@remix-run/data-table'
+import { createMigration } from '@remix-run/data-table/migrations'
 
 import type { Database } from '@remix-run/data-table'
+import type { Migration } from '@remix-run/data-table/migrations'
 import type {
   ClaimDueJobsInput,
   ClaimDueSchedulesInput,
@@ -14,8 +16,6 @@ import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
 let DEFAULT_TABLE_PREFIX = 'job_'
 
-export type DataTableDialect = 'postgres' | 'mysql' | 'sqlite'
-
 type BackendTables = {
   jobs: string
   dedupe: string
@@ -24,7 +24,10 @@ type BackendTables = {
 
 export interface DataTableJobBackendOptions {
   db: Database
-  dialect: DataTableDialect
+  tablePrefix?: string
+}
+
+export interface DataTableJobBackendMigrationOptions {
   tablePrefix?: string
 }
 
@@ -35,13 +38,9 @@ export interface DataTableJobBackendOptions {
  * @returns A data-table-backed `JobBackend`
  */
 export function createDataTableJobBackend(options: DataTableJobBackendOptions): JobBackend {
-  let prefix = normalizeTablePrefix(options.tablePrefix)
-  let tables: BackendTables = {
-    jobs: `${prefix}jobs`,
-    dedupe: `${prefix}dedupe`,
-    schedules: `${prefix}schedules`,
-  }
-  let runOperation = createOperationRunner(options.dialect)
+  let backendSchema = createJobBackendSchema(options.tablePrefix)
+  let tables = backendSchema.tables
+  let runOperation = createOperationRunner(options.db.adapter.dialect)
 
   return {
     enqueue(input: EnqueueJobInput): Promise<{ jobId: string; deduped: boolean }> {
@@ -410,82 +409,128 @@ export function createDataTableJobBackend(options: DataTableJobBackendOptions): 
   }
 }
 
-/**
- * Returns SQL statements for creating the scheduler tables in the configured dialect.
- *
- * @param dialect SQL dialect name
- * @param tablePrefix Optional table prefix
- * @returns Ordered SQL statements that create scheduler tables and indexes
- */
-export function getJobSchemaSql(dialect: DataTableDialect, tablePrefix?: string): string[] {
-  if (!['postgres', 'mysql', 'sqlite'].includes(dialect)) {
-    throw new Error(`Unsupported dialect "${dialect}"`)
-  }
+type JobBackendSchema = {
+  tables: BackendTables
+  jobsTable: ReturnType<typeof table>
+  dedupeTable: ReturnType<typeof table>
+  schedulesTable: ReturnType<typeof table>
+}
 
+function createJobBackendSchema(tablePrefix?: string): JobBackendSchema {
   let prefix = normalizeTablePrefix(tablePrefix)
-  let keyTextType = dialect === 'mysql' ? 'varchar(191)' : 'text'
-  let indexedTextType = dialect === 'mysql' ? 'varchar(191)' : 'text'
-  let statusTextType = dialect === 'mysql' ? 'varchar(32)' : 'text'
   let tables: BackendTables = {
     jobs: `${prefix}jobs`,
     dedupe: `${prefix}dedupe`,
     schedules: `${prefix}schedules`,
   }
 
-  return [
-    [
-      `create table ${tables.jobs} (`,
-      `id ${keyTextType} primary key,`,
-      'name text not null,',
-      `queue ${indexedTextType} not null,`,
-      'payload_json text not null,',
-      `status ${statusTextType} not null,`,
-      'attempts integer not null,',
-      'max_attempts integer not null,',
-      'run_at bigint not null,',
-      'priority integer not null,',
-      'retry_json text not null,',
-      'locked_by text,',
-      'locked_until bigint,',
-      'last_error text,',
-      'created_at bigint not null,',
-      'updated_at bigint not null,',
-      'completed_at bigint,',
-      'failed_at bigint',
-      ')',
-    ].join(' '),
-    [
-      `create table ${tables.dedupe} (`,
-      `dedupe_key ${keyTextType} primary key,`,
-      'job_id text not null,',
-      'expires_at bigint not null',
-      ')',
-    ].join(' '),
-    [
-      `create table ${tables.schedules} (`,
-      `id ${keyTextType} primary key,`,
-      'cron text not null,',
-      'timezone text not null,',
-      'queue text not null,',
-      'name text not null,',
-      'payload_json text not null,',
-      'retry_json text not null,',
-      'catch_up text not null,',
-      'next_run_at bigint not null,',
-      'locked_by text,',
-      'locked_until bigint,',
-      'updated_at bigint not null',
-      ')',
-    ].join(' '),
-    `create index ${tables.jobs}_due_idx on ${tables.jobs} (status, queue, run_at, priority, created_at)`,
-    `create index ${tables.jobs}_lock_idx on ${tables.jobs} (status, locked_until)`,
-    `create index ${tables.dedupe}_expires_idx on ${tables.dedupe} (expires_at)`,
-    `create index ${tables.schedules}_due_idx on ${tables.schedules} (next_run_at, locked_until)`,
-  ]
+  let jobsTable = table({
+    name: tables.jobs,
+    columns: {
+      id: column.varchar(191).notNull(),
+      name: column.text().notNull(),
+      queue: column.varchar(191).notNull(),
+      payload_json: column.text().notNull(),
+      status: column.varchar(32).notNull(),
+      attempts: column.integer().notNull(),
+      max_attempts: column.integer().notNull(),
+      run_at: column.bigint().notNull(),
+      priority: column.integer().notNull(),
+      retry_json: column.text().notNull(),
+      locked_by: column.text().nullable(),
+      locked_until: column.bigint().nullable(),
+      last_error: column.text().nullable(),
+      created_at: column.bigint().notNull(),
+      updated_at: column.bigint().notNull(),
+      completed_at: column.bigint().nullable(),
+      failed_at: column.bigint().nullable(),
+    },
+    primaryKey: 'id',
+  })
+
+  let dedupeTable = table({
+    name: tables.dedupe,
+    columns: {
+      dedupe_key: column.varchar(191).notNull(),
+      job_id: column.text().notNull(),
+      expires_at: column.bigint().notNull(),
+    },
+    primaryKey: 'dedupe_key',
+  })
+
+  let schedulesTable = table({
+    name: tables.schedules,
+    columns: {
+      id: column.varchar(191).notNull(),
+      cron: column.text().notNull(),
+      timezone: column.text().notNull(),
+      queue: column.varchar(191).notNull(),
+      name: column.text().notNull(),
+      payload_json: column.text().notNull(),
+      retry_json: column.text().notNull(),
+      catch_up: column.text().notNull(),
+      next_run_at: column.bigint().notNull(),
+      locked_by: column.text().nullable(),
+      locked_until: column.bigint().nullable(),
+      updated_at: column.bigint().notNull(),
+    },
+    primaryKey: 'id',
+  })
+
+  return {
+    tables,
+    jobsTable,
+    dedupeTable,
+    schedulesTable,
+  }
+}
+
+/**
+ * Creates the built-in migration used to provision `@remix-run/job-data-table` tables.
+ *
+ * This migration should run before creating a scheduler with `createDataTableJobBackend(...)`.
+ *
+ * @param options Migration configuration, including the optional table prefix.
+ * @returns A data-table migration object that creates/drops backend tables and indexes.
+ */
+export function createDataTableJobBackendMigration(
+  options: DataTableJobBackendMigrationOptions = {},
+): Migration {
+  let backendSchema = createJobBackendSchema(options.tablePrefix)
+
+  return createMigration({
+    async up({ schema }) {
+      await schema.createTable(backendSchema.jobsTable, { ifNotExists: true })
+      await schema.createTable(backendSchema.dedupeTable, { ifNotExists: true })
+      await schema.createTable(backendSchema.schedulesTable, { ifNotExists: true })
+
+      await schema.createIndex(backendSchema.jobsTable, ['status', 'queue', 'run_at', 'priority', 'created_at'], {
+        name: `${backendSchema.tables.jobs}_due_idx`,
+        ifNotExists: true,
+      })
+      await schema.createIndex(backendSchema.jobsTable, ['status', 'locked_until'], {
+        name: `${backendSchema.tables.jobs}_lock_idx`,
+        ifNotExists: true,
+      })
+      await schema.createIndex(backendSchema.dedupeTable, 'expires_at', {
+        name: `${backendSchema.tables.dedupe}_expires_idx`,
+        ifNotExists: true,
+      })
+      await schema.createIndex(backendSchema.schedulesTable, ['next_run_at', 'locked_until'], {
+        name: `${backendSchema.tables.schedules}_due_idx`,
+        ifNotExists: true,
+      })
+    },
+    async down({ schema }) {
+      await schema.dropTable(backendSchema.schedulesTable, { ifExists: true })
+      await schema.dropTable(backendSchema.dedupeTable, { ifExists: true })
+      await schema.dropTable(backendSchema.jobsTable, { ifExists: true })
+    },
+  })
 }
 
 function createOperationRunner(
-  dialect: DataTableDialect,
+  dialect: string,
 ): <result>(operation: () => Promise<result>) => Promise<result> {
   if (dialect !== 'sqlite') {
     return (operation) => operation()

@@ -1,29 +1,65 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { getTableName } from '@remix-run/data-table'
 
-import { getJobSchemaSql } from './backend.ts'
+import { createDataTableJobBackendMigration } from './backend.ts'
 
-describe('getJobSchemaSql', () => {
-  it('returns statements for supported dialects', () => {
-    let statements = getJobSchemaSql('sqlite', 'custom_')
+describe('createDataTableJobBackendMigration', () => {
+  it('creates prefixed tables and indexes', async () => {
+    let migration = createDataTableJobBackendMigration({ tablePrefix: 'custom_' })
+    let calls: string[] = []
 
-    assert.ok(statements.length > 0)
-    assert.ok(statements[0].includes('custom_jobs'))
+    let schema = {
+      async createTable(tableInput: Parameters<typeof getTableName>[0]) {
+        calls.push(`createTable:${getTableName(tableInput)}`)
+      },
+      async createIndex(
+        tableInput: Parameters<typeof getTableName>[0],
+        columns: string | string[],
+        options?: { name?: string },
+      ) {
+        let indexed = Array.isArray(columns) ? columns.join(',') : columns
+        calls.push(`createIndex:${getTableName(tableInput)}:${indexed}:${options?.name ?? ''}`)
+      },
+      async dropTable() {},
+    } as never
+
+    await migration.up({ db: {} as never, schema })
+
+    assert.deepEqual(calls, [
+      'createTable:custom_jobs',
+      'createTable:custom_dedupe',
+      'createTable:custom_schedules',
+      'createIndex:custom_jobs:status,queue,run_at,priority,created_at:custom_jobs_due_idx',
+      'createIndex:custom_jobs:status,locked_until:custom_jobs_lock_idx',
+      'createIndex:custom_dedupe:expires_at:custom_dedupe_expires_idx',
+      'createIndex:custom_schedules:next_run_at,locked_until:custom_schedules_due_idx',
+    ])
   })
 
-  it('uses mysql-safe key and indexed column types', () => {
-    let statements = getJobSchemaSql('mysql', 'custom_')
+  it('drops prefixed tables in reverse dependency order', async () => {
+    let migration = createDataTableJobBackendMigration({ tablePrefix: 'custom_' })
+    let calls: string[] = []
+    let schema = {
+      async createTable() {},
+      async createIndex() {},
+      async dropTable(tableInput: Parameters<typeof getTableName>[0]) {
+        calls.push(`dropTable:${getTableName(tableInput)}`)
+      },
+    } as never
 
-    assert.ok(statements[0].includes('id varchar(191) primary key'))
-    assert.ok(statements[0].includes('queue varchar(191) not null'))
-    assert.ok(statements[0].includes('status varchar(32) not null'))
-    assert.ok(statements[1].includes('dedupe_key varchar(191) primary key'))
-    assert.ok(statements[2].includes('id varchar(191) primary key'))
+    await migration.down({ db: {} as never, schema })
+
+    assert.deepEqual(calls, [
+      'dropTable:custom_schedules',
+      'dropTable:custom_dedupe',
+      'dropTable:custom_jobs',
+    ])
   })
 
-  it('throws for unsupported dialects', () => {
+  it('throws for invalid table prefixes', () => {
     assert.throws(() => {
-      getJobSchemaSql('mssql' as never)
-    }, /Unsupported dialect/)
+      createDataTableJobBackendMigration({ tablePrefix: 'job-test' })
+    }, /tablePrefix may only contain letters, numbers, and underscores/)
   })
 })

@@ -6,7 +6,11 @@ import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
 import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
 
 import { createDataTableJobBackend } from './backend.ts'
-import { DEFAULT_TEST_TABLE_PREFIX, resetJobBackendSchema } from './test/schema.ts'
+import {
+  DEFAULT_TEST_TABLE_PREFIX,
+  resetJobBackendSchema,
+  setupJobBackendSchema,
+} from './test/schema.ts'
 
 let integrationEnabled = canOpenSqliteDatabase()
 
@@ -21,9 +25,8 @@ describe('data-table job backend (sqlite)', () => {
 
     sqlite = new BetterSqlite3(':memory:')
     database = createDatabase(createSqliteDatabaseAdapter(sqlite))
-    await resetJobBackendSchema((statement) => {
-      sqlite.exec(statement)
-    }, 'sqlite', DEFAULT_TEST_TABLE_PREFIX)
+    await setupJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
+    await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
   })
 
   after(async () => {
@@ -37,14 +40,11 @@ describe('data-table job backend (sqlite)', () => {
   runJobBackendContract('sqlite contract', {
     integrationEnabled,
     setup: async () => {
-      await resetJobBackendSchema((statement) => {
-        sqlite.exec(statement)
-      }, 'sqlite', DEFAULT_TEST_TABLE_PREFIX)
+      await resetJobBackendSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createBackend: async () =>
       createDataTableJobBackend({
         db: database,
-        dialect: 'sqlite',
         tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
       }),
   })

@@ -7,7 +7,7 @@ Data Table-backed backend adapter for `@remix-run/job`.
 - **Durable SQL queue** - Store jobs in PostgreSQL, MySQL, or SQLite
 - **Lease-based processing** - Supports worker failover and retries
 - **Cron persistence** - Stores recurring schedule state
-- **Schema helper** - Generates SQL DDL for scheduler tables
+- **Built-in migration** - Provisions job tables/indexes through `data-table` migrations
 
 ## Installation
 
@@ -18,11 +18,21 @@ npm i remix
 ## Usage
 
 ```ts
-import { createDataTableJobBackend } from 'remix/job/data-table'
+import { createMigrationRunner } from 'remix/data-table/migrations'
+import { createDataTableJobBackend, createDataTableJobBackendMigration } from 'remix/job/data-table'
+
+let migrationRunner = createMigrationRunner(db.adapter, [
+  {
+    id: '20260301000000',
+    name: 'create_job_backend_tables',
+    migration: createDataTableJobBackendMigration(),
+  },
+])
+
+await migrationRunner.up()
 
 let backend = createDataTableJobBackend({
   db,
-  dialect: 'postgres',
 })
 ```
 
