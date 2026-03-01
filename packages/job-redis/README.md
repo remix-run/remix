@@ -1,6 +1,6 @@
 # job-redis
 
-Redis storage adapter for `@remix-run/job`.
+Redis storage adapter for `remix/job`.
 
 ## Features
 
