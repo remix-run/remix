@@ -1,6 +1,6 @@
 # job-data-table
 
-Data Table-backed storage adapter for `@remix-run/job`.
+Data Table-backed storage adapter for `remix/job`.
 
 ## Features
 
