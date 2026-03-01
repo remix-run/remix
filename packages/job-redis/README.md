@@ -18,14 +18,30 @@ npm i remix redis
 ## Usage
 
 ```ts
+import * as s from 'remix/data-schema'
 import { createClient } from 'redis'
+import { createJobs, createJobScheduler } from 'remix/job'
 import { createRedisJobStorage } from 'remix/job-redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()
 
+let jobs = createJobs({
+  sendEmail: {
+    schema: s.object({ to: s.string(), subject: s.string() }),
+    async handle(payload) {
+      await sendEmail(payload.to, payload.subject)
+    },
+  },
+})
+
 let storage = createRedisJobStorage({ redis })
-// ...create a scheduler with createJobScheduler({ jobs, storage })
+let scheduler = createJobScheduler({ jobs, storage })
+
+await scheduler.enqueue(jobs.sendEmail, {
+  to: 'a@example.com',
+  subject: 'Hello',
+})
 
 let failedJobs = await scheduler.listFailedJobs({ limit: 20 })
 
