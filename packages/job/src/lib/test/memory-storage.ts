@@ -3,18 +3,18 @@ import type {
   ClaimDueSchedulesInput,
   DueSchedule,
   EnqueueJobInput,
-  JobBackend,
+  JobStorage,
   JobFailureInput,
   PersistedCronSchedule,
-} from '../backend.ts'
+} from '../storage.ts'
 import type { JobRecord } from '../types.ts'
 
 /**
- * In-memory backend used for unit and contract tests.
+ * In-memory storage used for unit and contract tests.
  *
- * @returns A `JobBackend` implementation that stores state in memory
+ * @returns A `JobStorage` implementation that stores state in memory
  */
-export function createMemoryJobBackend(): JobBackend {
+export function createMemoryJobStorage(): JobStorage {
   let jobs = new Map<string, JobRecord & { lockedBy?: string; lockedUntil?: number }>()
   let dedupe = new Map<string, { jobId: string; expiresAt: number }>()
   let schedules = new Map<string, PersistedCronSchedule & { lockedBy?: string; lockedUntil?: number }>()

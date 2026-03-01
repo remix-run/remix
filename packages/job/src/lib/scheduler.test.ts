@@ -3,18 +3,18 @@ import { describe, it } from 'node:test'
 import * as s from '@remix-run/data-schema'
 
 import { createJobScheduler, createJobs } from './scheduler.ts'
-import { createMemoryJobBackend } from './test/memory-backend.ts'
+import { createMemoryJobStorage } from './test/memory-storage.ts'
 
 describe('createJobScheduler', () => {
   it('enqueues and retrieves jobs', async () => {
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'mjackson@example.com' }, { priority: 3 })
     assert.equal(enqueued.deduped, false)
@@ -29,14 +29,14 @@ describe('createJobScheduler', () => {
   })
 
   it('supports dedupe keys', async () => {
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let first = await scheduler.enqueue(jobs.email, { to: 'a@example.com' }, {
       dedupeKey: 'email:a@example.com',
@@ -53,27 +53,27 @@ describe('createJobScheduler', () => {
   })
 
   it('validates payload with data-schema', async () => {
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
 
     await assert.rejects(() => scheduler.enqueue(jobs.email, { to: 123 } as any))
   })
 
   it('rejects unknown job definitions passed to enqueue', async () => {
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let unknownJob = {
       schema: s.object({ to: s.string() }),
@@ -87,14 +87,14 @@ describe('createJobScheduler', () => {
   })
 
   it('cancels queued jobs', async () => {
-    let backend = createMemoryJobBackend()
+    let storage = createMemoryJobStorage()
     let jobs = createJobs({
       email: {
         schema: s.object({ to: s.string() }),
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, backend })
+    let scheduler = createJobScheduler({ jobs, storage })
 
     let enqueued = await scheduler.enqueue(jobs.email, { to: 'x@example.com' })
 

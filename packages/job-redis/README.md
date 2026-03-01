@@ -1,6 +1,6 @@
 # job-redis
 
-Redis backend adapter for `@remix-run/job`.
+Redis storage adapter for `@remix-run/job`.
 
 ## Features
 
@@ -19,12 +19,12 @@ npm i remix redis
 
 ```ts
 import { createClient } from 'redis'
-import { createRedisJobBackend } from 'remix/job/redis'
+import { createRedisJobStorage } from 'remix/job/redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()
 
-let backend = createRedisJobBackend({ redis })
+let storage = createRedisJobStorage({ redis })
 ```
 
 ## License

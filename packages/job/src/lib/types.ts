@@ -1,6 +1,6 @@
 import type { InferOutput, Schema } from '@remix-run/data-schema'
 
-import type { JobBackend } from './backend.ts'
+import type { JobStorage } from './storage.ts'
 
 export type Infer<schema extends Schema<any, any>> = InferOutput<schema>
 
@@ -122,13 +122,13 @@ export interface JobWorker {
 
 export interface CreateJobSchedulerOptions<defs extends JobDefinitions> {
   jobs: defs
-  backend: JobBackend
+  storage: JobStorage
 }
 
 export interface CreateJobWorkerOptions<defs extends JobDefinitions> {
   scheduler: JobScheduler<defs>
   jobs: defs
-  backend: JobBackend
+  storage: JobStorage
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
 }

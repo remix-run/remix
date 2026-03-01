@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/job-data-table",
   "version": "0.0.0",
-  "description": "Data Table backend for @remix-run/job",
+  "description": "Data Table storage for @remix-run/job",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

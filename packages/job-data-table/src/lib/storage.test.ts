@@ -2,11 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { getTableName } from '@remix-run/data-table'
 
-import { createDataTableJobBackendMigration } from './backend.ts'
+import { createDataTableJobStorageMigration } from './storage.ts'
 
-describe('createDataTableJobBackendMigration', () => {
+describe('createDataTableJobStorageMigration', () => {
   it('creates prefixed tables and indexes', async () => {
-    let migration = createDataTableJobBackendMigration({ tablePrefix: 'custom_' })
+    let migration = createDataTableJobStorageMigration({ tablePrefix: 'custom_' })
     let calls: string[] = []
 
     let schema = {
@@ -38,7 +38,7 @@ describe('createDataTableJobBackendMigration', () => {
   })
 
   it('drops prefixed tables in reverse dependency order', async () => {
-    let migration = createDataTableJobBackendMigration({ tablePrefix: 'custom_' })
+    let migration = createDataTableJobStorageMigration({ tablePrefix: 'custom_' })
     let calls: string[] = []
     let schema = {
       async createTable() {},
@@ -59,7 +59,7 @@ describe('createDataTableJobBackendMigration', () => {
 
   it('throws for invalid table prefixes', () => {
     assert.throws(() => {
-      createDataTableJobBackendMigration({ tablePrefix: 'job-test' })
+      createDataTableJobStorageMigration({ tablePrefix: 'job-test' })
     }, /tablePrefix may only contain letters, numbers, and underscores/)
   })
 })

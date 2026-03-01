@@ -1,15 +1,15 @@
 import { after, before, describe } from 'node:test'
 import { createClient, type RedisClientType } from 'redis'
 
-import { runJobBackendContract } from '../../../job/src/lib/test/backend-contract.ts'
+import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'
 
-import { createRedisJobBackend } from './backend.ts'
-import type { RedisJobBackendClient } from './backend.ts'
+import { createRedisJobStorage } from './storage.ts'
+import type { RedisJobStorageClient } from './storage.ts'
 
 let integrationEnabled =
   process.env.JOB_REDIS_INTEGRATION === '1' && typeof process.env.JOB_REDIS_URL === 'string'
 
-describe('redis job backend (integration)', () => {
+describe('redis job storage (integration)', () => {
   let redis: RedisClientType
 
   before(async () => {
@@ -37,14 +37,14 @@ describe('redis job backend (integration)', () => {
     await redis.quit()
   })
 
-  runJobBackendContract('redis contract', {
+  runJobStorageContract('redis contract', {
     integrationEnabled,
     setup: async () => {
       await redis.flushDb()
     },
-    createBackend: async () =>
-      createRedisJobBackend({
-        redis: redis as unknown as RedisJobBackendClient,
+    createStorage: async () =>
+      createRedisJobStorage({
+        redis: redis as unknown as RedisJobStorageClient,
         prefix: 'job_test:',
       }),
   })

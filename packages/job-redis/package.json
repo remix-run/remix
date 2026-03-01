@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/job-redis",
   "version": "0.0.0",
-  "description": "Redis backend for @remix-run/job",
+  "description": "Redis storage for @remix-run/job",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
