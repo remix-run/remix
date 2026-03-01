@@ -88,7 +88,7 @@ export type CronSchedule<
   defs extends JobDefinitions,
   name extends JobName<defs> = JobName<defs>,
 > = {
-  cron: string
+  schedule: string
   job: JobReference<defs, name>
   payload: Infer<defs[name]['schema']>
   options: CronScheduleOptions
