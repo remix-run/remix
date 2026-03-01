@@ -236,8 +236,8 @@ export function runJobStorageContract<transaction = never>(
       })
       await worker.stop()
 
-      let deadLetters = await storage.listFailedJobs({ limit: 10 })
-      assert.ok(deadLetters.some((job) => job.id === enqueued.jobId))
+      let failedJobs = await storage.listFailedJobs({ limit: 10 })
+      assert.ok(failedJobs.some((job) => job.id === enqueued.jobId))
 
       let replayed = await storage.replayFailedJob({
         jobId: enqueued.jobId,
