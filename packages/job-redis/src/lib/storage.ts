@@ -6,8 +6,8 @@ import type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
-  ListDeadLettersInput,
-  ReplayDeadLetterInput,
+  ListFailedJobsInput,
+  ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
   PersistedCronSchedule,
@@ -103,7 +103,7 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
 
       return readNumber(result) === 1
     },
-    async listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]> {
+    async listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]> {
       let result = await evalScript(
         redis,
         LIST_DEAD_LETTERS_SCRIPT,
@@ -123,8 +123,8 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
 
       return jobs
     },
-    async replayDeadLetter(
-      input: ReplayDeadLetterInput,
+    async replayFailedJob(
+      input: ReplayFailedJobInput,
       _options?: JobWriteOptions,
     ): Promise<{ jobId: string } | null> {
       let replayedJobId = crypto.randomUUID()

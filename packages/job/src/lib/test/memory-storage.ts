@@ -6,8 +6,8 @@ import type {
   JobStorage,
   JobWriteOptions,
   JobFailureInput,
-  ListDeadLettersInput,
-  ReplayDeadLetterInput,
+  ListFailedJobsInput,
+  ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
   PersistedCronSchedule,
@@ -91,7 +91,7 @@ export function createMemoryJobStorage(): JobStorage {
 
       return true
     },
-    async listDeadLetters(input: ListDeadLettersInput): Promise<JobRecord[]> {
+    async listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]> {
       let limit = normalizeOptionalWholeNumber(input.limit, 50, 1) ?? 50
 
       return Array.from(jobs.values())
@@ -101,8 +101,8 @@ export function createMemoryJobStorage(): JobStorage {
         .slice(0, limit)
         .map(toPublicJob)
     },
-    async replayDeadLetter(
-      input: ReplayDeadLetterInput,
+    async replayFailedJob(
+      input: ReplayFailedJobInput,
       _options?: JobWriteOptions,
     ): Promise<{ jobId: string } | null> {
       let source = jobs.get(input.jobId)
