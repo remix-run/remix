@@ -19,13 +19,15 @@ npm i remix redis
 
 ```ts
 import { createClient } from 'redis'
+import { createJobSystem } from 'remix/job'
 import { createRedisJobStorage } from 'remix/job-redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()
 
 let storage = createRedisJobStorage({ redis })
-// ...create a scheduler with createJobScheduler({ jobs, storage })
+let system = createJobSystem({ jobs, storage })
+let scheduler = system.scheduler
 
 let failedJobs = await scheduler.listFailedJobs({ limit: 20 })
 
