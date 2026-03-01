@@ -241,7 +241,7 @@ export interface WorkerPruneEvent {
   result: PruneResult
 }
 
-export interface WorkerHooks<defs extends JobDefinitions> {
+export interface WorkerHooks {
   onJobStart?(event: WorkerJobStartEvent): void | Promise<void>
   onJobComplete?(event: WorkerJobCompleteEvent): void | Promise<void>
   onJobRetry?(event: WorkerJobRetryEvent): void | Promise<void>
@@ -305,4 +305,4 @@ export type CreateJobWorkerOptions<
   storage: JobStorage<transaction>
   worker?: WorkerOptions
   cron?: Array<CronSchedule<defs>>
-} & WorkerHooks<defs>
+} & WorkerHooks
