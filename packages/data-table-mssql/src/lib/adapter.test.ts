@@ -1059,16 +1059,84 @@ describe('mssql adapter', () => {
     assert.equal(result.affectedOperations, 2)
     assert.deepEqual(lifecycle, [
       'begin',
-      "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Session'; select @dt_lock_result as [returnValue]",
+      'begin',
+      "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Transaction'; select @dt_lock_result as [returnValue]",
       'alter table [users] add [email] varchar(max) not null',
       'alter table [users] drop column if exists [legacy_email]',
-      "exec sp_releaseapplock @Resource = 'data_table_migrations', @LockOwner = 'Session'",
+      'commit',
+      'commit',
+    ])
+  })
+
+  it('routes migration operations through the migration lock transaction when no token is provided', async () => {
+    let lifecycle: string[] = []
+
+    let transaction = {
+      async begin() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query(text: string) {
+            lifecycle.push(text)
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+    }
+
+    let pool = {
+      request() {
+        throw new Error('migration queries should use the lock transaction client')
+      },
+      transaction() {
+        return transaction
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    await adapter.acquireMigrationLock()
+    let result = await adapter.migrate({
+      operation: {
+        kind: 'alterTable',
+        table: { name: 'users' },
+        changes: [{ kind: 'dropColumn', column: 'legacy_email', ifExists: true }],
+      },
+    })
+    await adapter.releaseMigrationLock()
+
+    assert.equal(result.affectedOperations, 1)
+    assert.deepEqual(lifecycle, [
+      'begin',
+      "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Transaction'; select @dt_lock_result as [returnValue]",
+      'alter table [users] drop column if exists [legacy_email]',
       'commit',
     ])
   })
 
   it('throws when migration lock acquisition fails', async () => {
-    let pool = {
+    let lifecycle: string[] = []
+
+    let transaction = {
+      async begin() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
       request() {
         return {
           input() {
@@ -1079,8 +1147,14 @@ describe('mssql adapter', () => {
           },
         }
       },
-      transaction() {
+    }
+
+    let pool = {
+      request() {
         throw new Error('not used')
+      },
+      transaction() {
+        return transaction
       },
     }
 
@@ -1089,6 +1163,38 @@ describe('mssql adapter', () => {
     await assert.rejects(() => adapter.acquireMigrationLock(), {
       message: /Failed to acquire migration lock/,
     })
+
+    assert.deepEqual(lifecycle, ['begin', 'rollback'])
+  })
+
+  it('treats migration lock hooks as no-ops when capabilities.migrationLock is false', async () => {
+    let lifecycle: string[] = []
+
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query(text: string) {
+            lifecycle.push(text)
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never, {
+      capabilities: { migrationLock: false },
+    })
+
+    await adapter.acquireMigrationLock()
+    await adapter.releaseMigrationLock()
+
+    assert.deepEqual(lifecycle, [])
   })
 
   it('compiles rich table migrations including literals, references, and comments', () => {

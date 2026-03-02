@@ -83,6 +83,7 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
   #client: MssqlDatabasePool
   #transactions = new Map<string, MssqlTransactionClient>()
   #isolatedTransactions = new Set<string>()
+  #migrationLockTransaction?: MssqlTransactionClient
   #transactionCounter = 0
 
   constructor(client: MssqlDatabasePool, options?: MssqlDatabaseAdapterOptions) {
@@ -238,34 +239,80 @@ export class MssqlDatabaseAdapter implements DatabaseAdapter {
   }
 
   async acquireMigrationLock(): Promise<void> {
-    let result = await runMssqlQuery(
-      this.#client,
-      "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Session'; select @dt_lock_result as [returnValue]",
-    )
+    if (!this.capabilities.migrationLock) {
+      return
+    }
 
-    let row = result.recordset?.[0] as Record<string, unknown> | undefined
-    let returnValue = row?.returnValue
+    if (this.#migrationLockTransaction) {
+      return
+    }
 
-    if (typeof returnValue === 'number' && returnValue < 0) {
-      throw new Error(
-        'Failed to acquire migration lock (sp_getapplock returned ' + returnValue + ')',
+    let transaction = this.#client.transaction()
+    await transaction.begin()
+
+    try {
+      let result = await runMssqlQuery(
+        transaction,
+        "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Transaction'; select @dt_lock_result as [returnValue]",
       )
+
+      let row = result.recordset?.[0] as Record<string, unknown> | undefined
+      let returnValue = row?.returnValue
+
+      if (typeof returnValue === 'number' && returnValue < 0) {
+        throw new Error(
+          'Failed to acquire migration lock (sp_getapplock returned ' + returnValue + ')',
+        )
+      }
+
+      this.#migrationLockTransaction = transaction
+    } catch (error) {
+      try {
+        await transaction.rollback()
+      } catch {
+        // Best-effort rollback in case lock acquisition leaves tx in a failed state.
+      }
+
+      throw error
     }
   }
 
   async releaseMigrationLock(): Promise<void> {
-    await runMssqlQuery(
-      this.#client,
-      "exec sp_releaseapplock @Resource = 'data_table_migrations', @LockOwner = 'Session'",
-    )
+    if (!this.capabilities.migrationLock) {
+      return
+    }
+
+    let transaction = this.#migrationLockTransaction
+
+    if (!transaction) {
+      return
+    }
+
+    this.#migrationLockTransaction = undefined
+
+    try {
+      await transaction.commit()
+    } catch (error) {
+      try {
+        await transaction.rollback()
+      } catch {
+        // Best-effort rollback if commit fails.
+      }
+
+      throw error
+    }
   }
 
   #resolveClient(token: TransactionToken | undefined): MssqlDatabaseClient {
-    if (!token) {
-      return this.#client
+    if (token) {
+      return this.#transactionClient(token)
     }
 
-    return this.#transactionClient(token)
+    if (this.#migrationLockTransaction) {
+      return this.#migrationLockTransaction
+    }
+
+    return this.#client
   }
 
   #transactionClient(token: TransactionToken): MssqlTransactionClient {
@@ -617,7 +664,9 @@ function compileMssqlMigrationOperations(operation: DataMigrationOperation): Sql
           quoteTableRef(change.constraint.references.table) +
           ' (' +
           change.constraint.references.columns.map((column) => quoteIdentifier(column)).join(', ') +
-          ')'
+          ')' +
+          (change.constraint.onDelete ? ' on delete ' + change.constraint.onDelete : '') +
+          (change.constraint.onUpdate ? ' on update ' + change.constraint.onUpdate : '')
       } else if (change.kind === 'dropForeignKey') {
         sql += 'drop constraint ' + quoteIdentifier(change.name)
       } else if (change.kind === 'addCheck') {
