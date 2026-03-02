@@ -1238,7 +1238,7 @@ export function remove(
   styles: StyleManager,
 ) {
   if (isCommittedTextNode(node)) {
-    domParent.removeChild(node._dom)
+    node._dom.parentNode?.removeChild(node._dom)
     return
   }
 

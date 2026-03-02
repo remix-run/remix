@@ -104,6 +104,22 @@ describe('vnode rendering', () => {
       root.render(<div innerHTML="<span>From innerHTML</span>" />)
       expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
     })
+
+    it('switches from text children to innerHTML without throwing', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let renderError: unknown
+      root.addEventListener('error', (event) => {
+        renderError = (event as ErrorEvent).error
+      })
+
+      root.render(<div>From text child</div>)
+      expect(container.innerHTML).toBe('<div>From text child</div>')
+
+      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+      expect(renderError).toBeUndefined()
+    })
   })
 
   describe('css mixin', () => {
