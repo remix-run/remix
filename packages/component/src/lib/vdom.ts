@@ -1,24 +1,11 @@
 import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
+import { defaultStyleManager, resetStyleState } from './diff-props.ts'
 import { invariant } from './invariant.ts'
-import type { RemixNode } from './jsx.ts'
-import { createScheduler, type Scheduler } from './scheduler.ts'
-import { diffVNodes, remove as removeVNode } from './reconcile.ts'
-import { toVNode } from './to-vnode.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
+import type { Scheduler } from './scheduler.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
-import { resetStyleState, defaultStyleManager } from './diff-props.ts'
+import { createVirtualRoot, type VirtualRoot, type VirtualRootEventMap } from './virtual-root.ts'
 import type { StyleManager } from './style/index.ts'
-
-export type VirtualRootEventMap = {
-  error: ErrorEvent
-}
-
-export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
-  render: (element: RemixNode) => void
-  dispose: () => void
-  flush: () => void
-}
 
 export type VirtualRootOptions = {
   frame?: FrameHandle
@@ -31,8 +18,10 @@ export type VirtualRootOptions = {
   }
 }
 
-export { createScheduler, type Scheduler }
-export { diffVNodes, toVNode }
+export { createScheduler, type Scheduler } from './scheduler.ts'
+export { diffVNodes } from './reconcile.ts'
+export { toVNode } from './to-vnode.ts'
+export type { VirtualRoot, VirtualRootEventMap } from './virtual-root.ts'
 export { resetStyleState }
 
 function getHydrationComponentIdFromRangeStart(start: Node): string | undefined {
@@ -47,167 +36,61 @@ export function createRangeRoot(
   [start, end]: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
-  let vroot: VNode | null = null
-  let styles = options.styleManager ?? defaultStyleManager
-
+  let styleManager = options.styleManager ?? defaultStyleManager
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
-  let parent = container
+  let parent = container as ParentNode
 
-  let hydrationCursor = start.nextSibling
-
-  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
-  let scheduler =
-    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
-  let frameStub =
-    options.frame ??
-    createRootFrameHandle({
-      src: options.frameInit?.src,
-      resolveFrame: options.frameInit?.resolveFrame,
-      loadModule: options.frameInit?.loadModule,
-      scheduler,
-      styleManager: styles,
-    })
-
-  let isErrorForwardingAttached = false
-  function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
-  }
-  function attachDomErrorForwarding() {
-    if (isErrorForwardingAttached) return
-    parent.addEventListener('error', forwardDomError)
-    isErrorForwardingAttached = true
-  }
-  function detachDomErrorForwarding() {
-    if (!isErrorForwardingAttached) return
-    parent.removeEventListener('error', forwardDomError)
-    isErrorForwardingAttached = false
-  }
-  attachDomErrorForwarding()
-
-  return Object.assign(eventTarget, {
-    render(element: RemixNode) {
-      attachDomErrorForwarding()
-
-      let vnode = toVNode(element)
-      let vParent: VNode = {
+  return createVirtualRoot({
+    container: parent,
+    frame: options.frame,
+    scheduler: options.scheduler,
+    styleManager,
+    anchor: end,
+    hydrationCursor: start.nextSibling,
+    nextHydrationCursor: null,
+    createFrame(scheduler, frameStyleManager) {
+      return createRootFrameHandle({
+        src: options.frameInit?.src,
+        resolveFrame: options.frameInit?.resolveFrame,
+        loadModule: options.frameInit?.loadModule,
+        scheduler,
+        styleManager: frameStyleManager,
+      })
+    },
+    createParentVNode() {
+      return {
         type: ROOT_VNODE,
         _svg: false,
         _rangeStart: start,
         _rangeEnd: end,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
       }
-      scheduler.enqueueTasks([
-        () => {
-          diffVNodes(
-            vroot,
-            vnode,
-            parent,
-            frameStub,
-            scheduler,
-            styles,
-            vParent,
-            eventTarget,
-            end,
-            hydrationCursor,
-          )
-          vroot = vnode
-          hydrationCursor = null
-        },
-      ])
-      scheduler.dequeue()
-    },
-
-    dispose() {
-      detachDomErrorForwarding()
-
-      if (!vroot) return
-      let current = vroot
-      vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, parent, scheduler, styles)])
-      scheduler.dequeue()
-    },
-
-    flush() {
-      scheduler.dequeue()
     },
   })
 }
 
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let vroot: VNode | null = null
-  let styles = options.styleManager ?? defaultStyleManager
-  let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
+  let styleManager = options.styleManager ?? defaultStyleManager
 
-  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
-  let scheduler =
-    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget, styles)
-  let frameStub =
-    options.frame ??
-    createRootFrameHandle({
-      src: options.frameInit?.src,
-      resolveFrame: options.frameInit?.resolveFrame,
-      loadModule: options.frameInit?.loadModule,
-      scheduler,
-      styleManager: styles,
-    })
-
-  let isErrorForwardingAttached = false
-  function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
-  }
-  function attachDomErrorForwarding() {
-    if (isErrorForwardingAttached) return
-    container.addEventListener('error', forwardDomError)
-    isErrorForwardingAttached = true
-  }
-  function detachDomErrorForwarding() {
-    if (!isErrorForwardingAttached) return
-    container.removeEventListener('error', forwardDomError)
-    isErrorForwardingAttached = false
-  }
-  attachDomErrorForwarding()
-
-  return Object.assign(eventTarget, {
-    render(element: RemixNode) {
-      attachDomErrorForwarding()
-
-      let vnode = toVNode(element)
-      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
-      scheduler.enqueueTasks([
-        () => {
-          diffVNodes(
-            vroot,
-            vnode,
-            container,
-            frameStub,
-            scheduler,
-            styles,
-            vParent,
-            eventTarget,
-            undefined,
-            hydrationCursor,
-          )
-          vroot = vnode
-          hydrationCursor = undefined
-        },
-      ])
-      scheduler.dequeue()
+  return createVirtualRoot({
+    container,
+    frame: options.frame,
+    scheduler: options.scheduler,
+    styleManager,
+    hydrationCursor: container.innerHTML.trim() !== '' ? container.firstChild : undefined,
+    createFrame(scheduler, frameStyleManager) {
+      return createRootFrameHandle({
+        src: options.frameInit?.src,
+        resolveFrame: options.frameInit?.resolveFrame,
+        loadModule: options.frameInit?.loadModule,
+        scheduler,
+        styleManager: frameStyleManager,
+      })
     },
-
-    dispose() {
-      detachDomErrorForwarding()
-
-      if (!vroot) return
-      let current = vroot
-      vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
-      scheduler.dequeue()
-    },
-
-    flush() {
-      scheduler.dequeue()
+    createParentVNode() {
+      return { type: ROOT_VNODE, _svg: false }
     },
   })
 }
