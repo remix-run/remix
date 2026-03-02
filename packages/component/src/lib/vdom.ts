@@ -53,12 +53,13 @@ export function createRangeRoot(
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
+  let parent = container
 
   let hydrationCursor = start.nextSibling
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
-    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget, styles)
+    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
   let frameStub =
     options.frame ??
     createRootFrameHandle({
@@ -75,12 +76,12 @@ export function createRangeRoot(
   }
   function attachDomErrorForwarding() {
     if (isErrorForwardingAttached) return
-    container.addEventListener('error', forwardDomError)
+    parent.addEventListener('error', forwardDomError)
     isErrorForwardingAttached = true
   }
   function detachDomErrorForwarding() {
     if (!isErrorForwardingAttached) return
-    container.removeEventListener('error', forwardDomError)
+    parent.removeEventListener('error', forwardDomError)
     isErrorForwardingAttached = false
   }
   attachDomErrorForwarding()
@@ -102,7 +103,7 @@ export function createRangeRoot(
           diffVNodes(
             vroot,
             vnode,
-            container,
+            parent,
             frameStub,
             scheduler,
             styles,
@@ -124,7 +125,7 @@ export function createRangeRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueTasks([() => removeVNode(current, parent, scheduler, styles)])
       scheduler.dequeue()
     },
 
