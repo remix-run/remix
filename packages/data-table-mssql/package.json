@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-mssql",
   "version": "0.0.0",
-  "description": "MSSQL adapter for @remix-run/data-table",
+  "description": "MSSQL adapter for remix/data-table",
   "author": "Isaac Cloos <cloosisaac@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,6 @@
     }
   },
   "devDependencies": {
-    "@remix-run/data-schema": "workspace:*",
     "@remix-run/data-table": "workspace:*",
     "@types/mssql": "^9.1.8",
     "@types/node": "catalog:",
@@ -56,6 +55,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/adapter.test.ts ./src/lib/sql-compiler.test.ts",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

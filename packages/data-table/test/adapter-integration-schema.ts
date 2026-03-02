@@ -1,4 +1,4 @@
-export type AdapterIntegrationDialect = 'mysql' | 'postgres' | 'sqlite'
+export type AdapterIntegrationDialect = 'mssql' | 'mysql' | 'postgres' | 'sqlite'
 
 export type AdapterIntegrationStatementRunner = (statement: string) => Promise<void>
 
@@ -78,6 +78,41 @@ let postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
+let mssqlSchemaStatements: AdapterIntegrationSchemaStatements = {
+  drop: [
+    "if object_id('tasks', 'U') is not null drop table [tasks]",
+    "if object_id('projects', 'U') is not null drop table [projects]",
+    "if object_id('accounts', 'U') is not null drop table [accounts]",
+  ],
+  create: [
+    [
+      'create table [accounts] (',
+      '  [id] int primary key,',
+      '  [email] nvarchar(255) not null,',
+      '  [status] nvarchar(32) not null,',
+      '  [nickname] nvarchar(255) null',
+      ')',
+    ].join('\n'),
+    [
+      'create table [projects] (',
+      '  [id] int primary key,',
+      '  [account_id] int not null,',
+      '  [name] nvarchar(255) not null,',
+      '  [archived] bit not null',
+      ')',
+    ].join('\n'),
+    [
+      'create table [tasks] (',
+      '  [id] int primary key,',
+      '  [project_id] int not null,',
+      '  [title] nvarchar(255) not null,',
+      '  [state] nvarchar(32) not null',
+      ')',
+    ].join('\n'),
+  ],
+  reset: ['delete from [tasks]', 'delete from [projects]', 'delete from [accounts]'],
+}
+
 let sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
@@ -140,6 +175,10 @@ export async function resetAdapterIntegrationSchema(
 function getAdapterIntegrationSchemaStatements(
   dialect: AdapterIntegrationDialect,
 ): AdapterIntegrationSchemaStatements {
+  if (dialect === 'mssql') {
+    return mssqlSchemaStatements
+  }
+
   if (dialect === 'mysql') {
     return mysqlSchemaStatements
   }

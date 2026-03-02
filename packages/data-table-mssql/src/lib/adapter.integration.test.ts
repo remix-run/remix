@@ -1,9 +1,13 @@
 import { after, before, beforeEach, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { any, nullable, number, string } from '@remix-run/data-schema'
-import { createDatabase, createTable, eq } from '@remix-run/data-table'
+import { column, createDatabase, table, eq } from '@remix-run/data-table'
 import sql, { type ConnectionPool } from 'mssql'
 
+import {
+  resetAdapterIntegrationSchema,
+  setupAdapterIntegrationSchema,
+  teardownAdapterIntegrationSchema,
+} from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
 import { createMssqlDatabaseAdapter } from './adapter.ts'
@@ -20,49 +24,9 @@ describe('mssql adapter integration', () => {
     }
 
     pool = await sql.connect(process.env.DATA_TABLE_MSSQL_URL as string)
-
-    await pool.request().query("if object_id('tasks', 'U') is not null drop table [tasks]")
-    await pool.request().query("if object_id('projects', 'U') is not null drop table [projects]")
-    await pool.request().query("if object_id('accounts', 'U') is not null drop table [accounts]")
-
-    await pool
-      .request()
-      .query(
-        [
-          'create table [accounts] (',
-          '  [id] int primary key,',
-          '  [email] nvarchar(255) not null,',
-          '  [status] nvarchar(32) not null,',
-          '  [nickname] nvarchar(255) null',
-          ')',
-        ].join('\n'),
-      )
-
-    await pool
-      .request()
-      .query(
-        [
-          'create table [projects] (',
-          '  [id] int primary key,',
-          '  [account_id] int not null,',
-          '  [name] nvarchar(255) not null,',
-          '  [archived] bit not null',
-          ')',
-        ].join('\n'),
-      )
-
-    await pool
-      .request()
-      .query(
-        [
-          'create table [tasks] (',
-          '  [id] int primary key,',
-          '  [project_id] int not null,',
-          '  [title] nvarchar(255) not null,',
-          '  [state] nvarchar(32) not null',
-          ')',
-        ].join('\n'),
-      )
+    await setupAdapterIntegrationSchema(async (statement) => {
+      await pool.request().query(statement)
+    }, 'mssql')
   })
 
   after(async () => {
@@ -70,9 +34,9 @@ describe('mssql adapter integration', () => {
       return
     }
 
-    await pool.request().query("if object_id('tasks', 'U') is not null drop table [tasks]")
-    await pool.request().query("if object_id('projects', 'U') is not null drop table [projects]")
-    await pool.request().query("if object_id('accounts', 'U') is not null drop table [accounts]")
+    await teardownAdapterIntegrationSchema(async (statement) => {
+      await pool.request().query(statement)
+    }, 'mssql')
     await pool.close()
   })
 
@@ -80,9 +44,9 @@ describe('mssql adapter integration', () => {
     integrationEnabled,
     createDatabase: () => createDatabase(createMssqlDatabaseAdapter(pool)),
     resetDatabase: async () => {
-      await pool.request().query('delete from [tasks]')
-      await pool.request().query('delete from [projects]')
-      await pool.request().query('delete from [accounts]')
+      await resetAdapterIntegrationSchema(async (statement) => {
+        await pool.request().query(statement)
+      }, 'mssql')
     },
   })
 
@@ -90,13 +54,13 @@ describe('mssql adapter integration', () => {
   // verify that committed rows are visible or that rolled-back rows are discarded
   // at the driver level, so these tests confirm the mssql driver's transaction
   // semantics directly.
-  let txAccounts = createTable({
+  let txAccounts = table({
     name: 'accounts',
     columns: {
-      id: number(),
-      email: string(),
-      status: string(),
-      nickname: nullable(string()),
+      id: column.integer(),
+      email: column.text(),
+      status: column.text(),
+      nickname: column.text().nullable(),
     },
   })
 
@@ -542,29 +506,29 @@ describe('mssql adapter integration', () => {
       await pool.request().query('delete from [data_types]')
     })
 
-    let dataTypes = createTable({
+    let dataTypes = table({
       name: 'data_types',
       columns: {
-        id: number(),
-        col_tinyint: any(),
-        col_smallint: any(),
-        col_int: any(),
-        col_bigint: any(),
-        col_decimal: any(),
-        col_numeric: any(),
-        col_float: any(),
-        col_real: any(),
-        col_money: any(),
-        col_smallmoney: any(),
-        col_bit: any(),
-        col_char: any(),
-        col_varchar: any(),
-        col_nchar: any(),
-        col_nvarchar: any(),
-        col_date: any(),
-        col_datetime: any(),
-        col_datetime2: any(),
-        col_uniqueidentifier: any(),
+        id: column.integer(),
+        col_tinyint: column.integer().nullable(),
+        col_smallint: column.integer().nullable(),
+        col_int: column.integer().nullable(),
+        col_bigint: column.bigint().nullable(),
+        col_decimal: column.decimal(10, 2).nullable(),
+        col_numeric: column.decimal(18, 4).nullable(),
+        col_float: column.decimal(15, 10).nullable(),
+        col_real: column.decimal(7, 5).nullable(),
+        col_money: column.decimal(19, 4).nullable(),
+        col_smallmoney: column.decimal(10, 4).nullable(),
+        col_bit: column.boolean().nullable(),
+        col_char: column.text().nullable(),
+        col_varchar: column.text().nullable(),
+        col_nchar: column.text().nullable(),
+        col_nvarchar: column.text().nullable(),
+        col_date: column.date().nullable(),
+        col_datetime: column.timestamp().nullable(),
+        col_datetime2: column.timestamp().nullable(),
+        col_uniqueidentifier: column.uuid().nullable(),
       },
     })
 
@@ -727,17 +691,17 @@ describe('mssql adapter integration', () => {
       await pool.request().query('delete from [type_params]')
     })
 
-    let typeParams = createTable({
+    let typeParams = table({
       name: 'type_params',
       columns: {
-        id: number(),
-        int_val: nullable(any()),
-        float_val: nullable(any()),
-        decimal_val: nullable(any()),
-        bit_val: nullable(any()),
-        varchar_val: nullable(any()),
-        nvarchar_val: nullable(any()),
-        datetime2_val: nullable(any()),
+        id: column.integer(),
+        int_val: column.integer().nullable(),
+        float_val: column.decimal(15, 10).nullable(),
+        decimal_val: column.decimal(10, 2).nullable(),
+        bit_val: column.boolean().nullable(),
+        varchar_val: column.text().nullable(),
+        nvarchar_val: column.text().nullable(),
+        datetime2_val: column.timestamp().nullable(),
       },
     })
 
@@ -839,5 +803,259 @@ describe('mssql adapter integration', () => {
         assert.equal(result.affectedRows, 2)
       },
     )
+  })
+
+  // ── DDL migration operations ─────────────────────────────────────────
+
+  describe('DDL migration operations', () => {
+    before(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query("if object_id('ddl_test', 'U') is not null drop table [ddl_test]")
+      await pool
+        .request()
+        .query("if object_id('ddl_renamed', 'U') is not null drop table [ddl_renamed]")
+    })
+
+    after(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query("if object_id('ddl_test', 'U') is not null drop table [ddl_test]")
+      await pool
+        .request()
+        .query("if object_id('ddl_renamed', 'U') is not null drop table [ddl_renamed]")
+    })
+
+    it(
+      'creates a table, alters columns, creates/drops indexes, and renames table via DDL ops',
+      { skip: !integrationEnabled },
+      async () => {
+        let adapter = createMssqlDatabaseAdapter(pool)
+
+        // createTable with ifNotExists
+        await adapter.migrate({
+          operation: {
+            kind: 'createTable',
+            table: { name: 'ddl_test' },
+            ifNotExists: true,
+            columns: {
+              id: { type: 'integer', nullable: false },
+              name: { type: 'varchar', length: 100, nullable: false },
+              email: { type: 'text' },
+            },
+            primaryKey: { name: 'ddl_test_pk', columns: ['id'] },
+          },
+          transaction: undefined,
+        })
+
+        let hasTable = await adapter.hasTable({ name: 'ddl_test' })
+        assert.equal(hasTable, true)
+
+        let hasIdColumn = await adapter.hasColumn({ name: 'ddl_test' }, 'id')
+        assert.equal(hasIdColumn, true)
+
+        // createIndex with ifNotExists
+        await adapter.migrate({
+          operation: {
+            kind: 'createIndex',
+            ifNotExists: true,
+            index: {
+              table: { name: 'ddl_test' },
+              name: 'ddl_test_name_idx',
+              columns: ['name'],
+            },
+          },
+          transaction: undefined,
+        })
+
+        // idempotent — running again should not throw
+        await adapter.migrate({
+          operation: {
+            kind: 'createIndex',
+            ifNotExists: true,
+            index: {
+              table: { name: 'ddl_test' },
+              name: 'ddl_test_name_idx',
+              columns: ['name'],
+            },
+          },
+          transaction: undefined,
+        })
+
+        // alterTable: addColumn, changeColumn with nullable: true, changeColumn with nullable: false
+        await adapter.migrate({
+          operation: {
+            kind: 'alterTable',
+            table: { name: 'ddl_test' },
+            changes: [
+              {
+                kind: 'addColumn',
+                column: 'status',
+                definition: { type: 'varchar', length: 32, nullable: true },
+              },
+              {
+                kind: 'changeColumn',
+                column: 'name',
+                definition: { type: 'varchar', length: 200 },
+              },
+              {
+                kind: 'changeColumn',
+                column: 'email',
+                definition: { type: 'varchar', length: 320, nullable: false },
+              },
+            ],
+          },
+          transaction: undefined,
+        })
+
+        let hasStatusColumn = await adapter.hasColumn({ name: 'ddl_test' }, 'status')
+        assert.equal(hasStatusColumn, true)
+
+        // Insert a row to verify the schema change actually worked
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+        let ddlTable = table({
+          name: 'ddl_test',
+          columns: {
+            id: column.integer(),
+            name: column.text(),
+            email: column.text(),
+            status: column.text().nullable(),
+          },
+        })
+
+        await db.query(ddlTable).insert({
+          id: 1,
+          name: 'a'.repeat(200),
+          email: 'test@example.com',
+          status: null,
+        })
+
+        let rows = await db.query(ddlTable).where(eq('id', 1)).all()
+        assert.equal(rows.length, 1)
+        assert.equal(rows[0].name.length, 200)
+        assert.equal(rows[0].status, null)
+
+        // dropIndex
+        await adapter.migrate({
+          operation: {
+            kind: 'dropIndex',
+            table: { name: 'ddl_test' },
+            name: 'ddl_test_name_idx',
+            ifExists: true,
+          },
+          transaction: undefined,
+        })
+
+        // dropTable with ifExists (idempotent)
+        await adapter.migrate({
+          operation: {
+            kind: 'dropTable',
+            table: { name: 'ddl_test' },
+            ifExists: true,
+          },
+          transaction: undefined,
+        })
+
+        let hasTableAfterDrop = await adapter.hasTable({ name: 'ddl_test' })
+        assert.equal(hasTableAfterDrop, false)
+
+        // idempotent — should not throw
+        await adapter.migrate({
+          operation: {
+            kind: 'dropTable',
+            table: { name: 'ddl_test' },
+            ifExists: true,
+          },
+          transaction: undefined,
+        })
+      },
+    )
+  })
+
+  // ── Offset without explicit orderBy ──────────────────────────────────
+
+  describe('offset without explicit orderBy', () => {
+    beforeEach(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query('delete from [accounts]')
+    })
+
+    it(
+      'returns results when offset is used without an explicit orderBy',
+      { skip: !integrationEnabled },
+      async () => {
+        let db = createDatabase(createMssqlDatabaseAdapter(pool))
+
+        await db.query(txAccounts).insertMany([
+          { id: 1, email: 'a@test.com', status: 'active', nickname: null },
+          { id: 2, email: 'b@test.com', status: 'active', nickname: null },
+          { id: 3, email: 'c@test.com', status: 'active', nickname: null },
+        ])
+
+        let rows = await db.query(txAccounts).offset(1).all()
+
+        assert.equal(rows.length, 2)
+      },
+    )
+  })
+
+  // ── Returning with update and delete ─────────────────────────────────
+
+  describe('returning with update and delete', () => {
+    beforeEach(async () => {
+      if (!integrationEnabled) return
+      await pool.request().query('delete from [accounts]')
+    })
+
+    it(
+      'returns affected rows for update with OUTPUT clause',
+      { skip: !integrationEnabled },
+      async () => {
+        let db = createDatabase(
+          createMssqlDatabaseAdapter(pool, { capabilities: { returning: true } }),
+        )
+
+        await db.query(txAccounts).insertMany([
+          { id: 1, email: 'a@test.com', status: 'active', nickname: null },
+          { id: 2, email: 'b@test.com', status: 'active', nickname: null },
+        ])
+
+        let result = await db
+          .query(txAccounts)
+          .where(eq('status', 'active'))
+          .update({ status: 'paused' }, { returning: '*' })
+
+        assert.equal(result.affectedRows, 2)
+        assert.ok('rows' in result)
+        if ('rows' in result) {
+          assert.equal(result.rows.length, 2)
+        }
+      },
+    )
+
+    it('returns deleted rows with OUTPUT clause', { skip: !integrationEnabled }, async () => {
+      let db = createDatabase(
+        createMssqlDatabaseAdapter(pool, { capabilities: { returning: true } }),
+      )
+
+      await db.query(txAccounts).insertMany([
+        { id: 1, email: 'a@test.com', status: 'active', nickname: null },
+        { id: 2, email: 'b@test.com', status: 'inactive', nickname: null },
+      ])
+
+      let result = await db
+        .query(txAccounts)
+        .where(eq('status', 'active'))
+        .delete({ returning: '*' })
+
+      assert.equal(result.affectedRows, 1)
+      assert.ok('rows' in result)
+      if ('rows' in result) {
+        assert.equal(result.rows.length, 1)
+        assert.equal(result.rows[0].id, 1)
+      }
+
+      let remaining = await db.query(txAccounts).all()
+      assert.equal(remaining.length, 1)
+      assert.equal(remaining[0].id, 2)
+    })
   })
 })

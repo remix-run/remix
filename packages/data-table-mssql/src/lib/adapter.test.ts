@@ -1,33 +1,43 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { number, string } from '@remix-run/data-schema'
-import { createDatabase, createTable, eq, ilike, inList, sql } from '@remix-run/data-table'
+import type { DataMigrationOperation } from '@remix-run/data-table'
+import { column, createDatabase, table, eq, ilike, inList, sql } from '@remix-run/data-table'
 
 import { createMssqlDatabaseAdapter } from './adapter.ts'
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
+    id: column.integer(),
+    email: column.text(),
   },
 })
 
-let projects = createTable({
+let projects = table({
   name: 'projects',
   columns: {
-    id: number(),
-    account_id: number(),
-    name: string(),
+    id: column.integer(),
+    account_id: column.integer(),
+    name: column.text(),
   },
 })
 
-let invoices = createTable({
+let invoices = table({
   name: 'billing.invoices',
   columns: {
-    id: number(),
-    account_id: number(),
+    id: column.integer(),
+    account_id: column.integer(),
   },
+})
+
+let accountProjects = table({
+  name: 'account_projects',
+  columns: {
+    account_id: column.integer(),
+    project_id: column.integer(),
+    email: column.text(),
+  },
+  primaryKey: ['account_id', 'project_id'],
 })
 
 describe('mssql adapter', () => {
@@ -624,6 +634,42 @@ describe('mssql adapter', () => {
     assert.match(statements[0].text, / output inserted\.\*/)
   })
 
+  it('does not expose insertId for composite primary keys', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return {
+              recordset: [{ account_id: 1, project_id: 2, email: 'team@example.com' }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(
+      createMssqlDatabaseAdapter(pool as never, { capabilities: { returning: true } }),
+    )
+    let result = await db.query(accountProjects).insert(
+      {
+        account_id: 1,
+        project_id: 2,
+        email: 'team@example.com',
+      },
+      { returning: '*' },
+    )
+
+    assert.equal(result.affectedRows, 1)
+    assert.equal(result.insertId, undefined)
+  })
+
   it('compiles cross-schema table references in joins', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
@@ -724,5 +770,796 @@ describe('mssql adapter', () => {
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
     assert.match(statements[0].text, /as \[account\.email\]/)
+  })
+
+  it('applies explicit capability overrides', () => {
+    let adapter = createMssqlDatabaseAdapter(
+      {
+        request() {
+          throw new Error('not used')
+        },
+        transaction() {
+          throw new Error('not used')
+        },
+      } as never,
+      {
+        capabilities: {
+          returning: false,
+          savepoints: false,
+          upsert: false,
+          transactionalDdl: false,
+          migrationLock: false,
+        },
+      },
+    )
+
+    assert.deepEqual(adapter.capabilities, {
+      returning: false,
+      savepoints: false,
+      upsert: false,
+      transactionalDdl: false,
+      migrationLock: false,
+    })
+  })
+
+  it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
+    let pool = {
+      request() {
+        throw new Error('should not be called')
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(
+      createMssqlDatabaseAdapter(pool as never, { capabilities: { returning: true } }),
+    )
+
+    let result = await db.query(accounts).insertMany([], { returning: '*' })
+
+    assert.deepEqual(result, {
+      affectedRows: 0,
+      insertId: undefined,
+      rows: [],
+    })
+  })
+
+  it('throws for unknown transaction tokens', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () => adapter.commitTransaction({ id: 'tx_unknown' }),
+      /Unknown transaction token/,
+    )
+
+    await assert.rejects(
+      () => adapter.rollbackTransaction({ id: 'tx_unknown' }),
+      /Unknown transaction token/,
+    )
+  })
+
+  it('checks table and column existence through adapter introspection hooks', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let pool = {
+      request() {
+        let values: unknown[] = []
+
+        return {
+          input(_name: string, value: unknown) {
+            values.push(value)
+            return this
+          },
+          async query(text: string) {
+            statements.push({ text, values: [...values] })
+
+            if (text.includes('information_schema')) {
+              return {
+                recordset: [{ exists: 1 }],
+                rowsAffected: [1],
+              }
+            }
+
+            return {
+              recordset: [{ exists: 1 }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+    let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
+    let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
+
+    assert.equal(hasTable, true)
+    assert.equal(hasColumn, true)
+    assert.match(statements[0].text, /object_id/)
+    assert.match(statements[1].text, /information_schema\.columns/)
+    assert.match(statements[1].text, /table_schema = @dt_p1/)
+    assert.deepEqual(statements[1].values, ['app', 'users', 'email'])
+  })
+
+  it('checks table and column existence without a schema qualifier', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let pool = {
+      request() {
+        let values: unknown[] = []
+
+        return {
+          input(_name: string, value: unknown) {
+            values.push(value)
+            return this
+          },
+          async query(text: string) {
+            statements.push({ text, values: [...values] })
+
+            return {
+              recordset: [{ exists: 0 }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+    let hasTable = await adapter.hasTable({ name: 'users' })
+    let hasColumn = await adapter.hasColumn({ name: 'users' }, 'email')
+
+    assert.equal(hasTable, false)
+    assert.equal(hasColumn, false)
+    assert.match(statements[0].text, /object_id/)
+    assert.deepEqual(statements[0].values, ['[users]'])
+    assert.match(statements[1].text, /information_schema\.columns/)
+    assert.doesNotMatch(statements[1].text, /table_schema/)
+    assert.deepEqual(statements[1].values, ['users', 'email'])
+  })
+
+  it('routes introspection through transaction clients when a token is provided', async () => {
+    let poolQueries = 0
+    let transactionStatements: string[] = []
+
+    let transaction = {
+      async begin() {},
+      async commit() {},
+      async rollback() {},
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query(text: string) {
+            transactionStatements.push(text)
+            return {
+              recordset: [{ exists: 1 }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+    }
+
+    let pool = {
+      request() {
+        poolQueries += 1
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+      transaction() {
+        return transaction
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+    let token = await adapter.beginTransaction()
+
+    await adapter.hasTable({ name: 'users' }, token)
+    await adapter.hasColumn({ name: 'users' }, 'email', token)
+    await adapter.commitTransaction(token)
+
+    assert.equal(poolQueries, 0)
+    assert.equal(transactionStatements.length, 2)
+    assert.match(transactionStatements[0], /object_id/)
+    assert.match(transactionStatements[1], /information_schema\.columns/)
+  })
+
+  it('executes migrate operations with transaction tokens and migration locks', async () => {
+    let lifecycle: string[] = []
+
+    let transaction = {
+      async begin() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query(text: string) {
+            lifecycle.push(text)
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+    }
+
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query(text: string) {
+            lifecycle.push(text)
+            return { recordset: [], rowsAffected: [0] }
+          },
+        }
+      },
+      transaction() {
+        return transaction
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+    let token = await adapter.beginTransaction()
+
+    await adapter.acquireMigrationLock()
+    let result = await adapter.migrate({
+      operation: {
+        kind: 'alterTable',
+        table: { name: 'users' },
+        changes: [
+          { kind: 'addColumn', column: 'email', definition: { type: 'text', nullable: false } },
+          { kind: 'dropColumn', column: 'legacy_email', ifExists: true },
+        ],
+      },
+      transaction: token,
+    })
+    await adapter.releaseMigrationLock()
+    await adapter.commitTransaction(token)
+
+    assert.equal(result.affectedOperations, 2)
+    assert.deepEqual(lifecycle, [
+      'begin',
+      "declare @dt_lock_result int; exec @dt_lock_result = sp_getapplock @Resource = 'data_table_migrations', @LockMode = 'Exclusive', @LockTimeout = 60000, @LockOwner = 'Session'; select @dt_lock_result as [returnValue]",
+      'alter table [users] add [email] varchar(max) not null',
+      'alter table [users] drop column if exists [legacy_email]',
+      "exec sp_releaseapplock @Resource = 'data_table_migrations', @LockOwner = 'Session'",
+      'commit',
+    ])
+  })
+
+  it('throws when migration lock acquisition fails', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return { recordset: [{ returnValue: -1 }], rowsAffected: [0] }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(() => adapter.acquireMigrationLock(), {
+      message: /Failed to acquire migration lock/,
+    })
+  })
+
+  it('compiles rich table migrations including literals, references, and comments', () => {
+    let pool = {
+      request() {
+        throw new Error('not used')
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    let compiled = adapter.compileSql({
+      kind: 'createTable',
+      table: { name: 'users' },
+      ifNotExists: true,
+      columns: {
+        id: { type: 'integer', nullable: false, primaryKey: true },
+        email: { type: 'varchar', length: 320, nullable: false, unique: true },
+        visits: { type: 'integer', default: { kind: 'literal', value: 0 } },
+        bigint_visits: { type: 'bigint', default: { kind: 'literal', value: 12n } },
+        is_admin: { type: 'boolean', default: { kind: 'literal', value: false } },
+        nickname: { type: 'text', default: { kind: 'literal', value: null } },
+        safe_slug: { type: 'text', default: { kind: 'sql', expression: 'md5(email)' } },
+        created_at: { type: 'timestamp', withTimezone: true, default: { kind: 'now' } },
+        birthday: {
+          type: 'date',
+          default: { kind: 'literal', value: new Date('2024-01-02T00:00:00.000Z') },
+        },
+        score: { type: 'decimal', precision: 10, scale: 2 },
+        ratio: { type: 'decimal', precision: 8 },
+        starts_at: { type: 'time' },
+        ends_at: { type: 'time', withTimezone: true },
+        metadata: { type: 'json' },
+        blob: { type: 'binary' },
+        role: { type: 'enum', enumValues: ['admin', 'user'] },
+        full_name: {
+          type: 'text',
+          computed: { expression: "first_name + ' ' + last_name", stored: true },
+        },
+        display_name: {
+          type: 'text',
+          computed: { expression: "first_name + ' ' + last_name", stored: false },
+        },
+        name: {
+          type: 'text',
+          checks: [{ expression: 'len(name) > 1', name: 'users_name_len_check' }],
+        },
+        manager_id: {
+          type: 'integer',
+          references: {
+            table: { schema: 'app', name: 'users' },
+            columns: ['id'],
+            name: 'users_manager_fk',
+            onDelete: 'set null',
+            onUpdate: 'cascade',
+          },
+        },
+        escaped: { type: 'text', default: { kind: 'literal', value: "O'Hare" } },
+      },
+      primaryKey: { name: 'users_pk', columns: ['id'] },
+      uniques: [{ name: 'users_email_unique', columns: ['email'] }],
+      checks: [{ name: 'users_name_check', expression: 'len(name) > 1' }],
+      foreignKeys: [
+        {
+          name: 'users_account_fk',
+          columns: ['id'],
+          references: { table: { schema: 'app', name: 'accounts' }, columns: ['id'] },
+          onDelete: 'cascade',
+          onUpdate: 'restrict',
+        },
+      ],
+      comment: "owner's table",
+    })
+
+    assert.equal(compiled.length, 2)
+    assert.match(
+      compiled[0].text,
+      /if object_id\(N'\[users\]', N'U'\) is null create table \[users\] \(/,
+    )
+    assert.match(compiled[0].text, /\[email\] varchar\(320\) not null unique/)
+    assert.match(compiled[0].text, /\[visits\] int default 0/)
+    assert.match(compiled[0].text, /\[bigint_visits\] bigint default 12/)
+    assert.match(compiled[0].text, /\[is_admin\] bit default 0/)
+    assert.match(compiled[0].text, /\[nickname\] varchar\(max\) default null/)
+    assert.match(compiled[0].text, /\[safe_slug\] varchar\(max\) default md5\(email\)/)
+    assert.match(compiled[0].text, /\[created_at\] datetimeoffset default getdate\(\)/)
+    assert.match(compiled[0].text, /\[birthday\] date default '2024-01-02T00:00:00.000Z'/)
+    assert.match(compiled[0].text, /\[score\] decimal\(10, 2\)/)
+    assert.match(compiled[0].text, /\[ratio\] decimal/)
+    assert.match(compiled[0].text, /\[starts_at\] time/)
+    assert.match(compiled[0].text, /\[ends_at\] time/)
+    assert.match(compiled[0].text, /\[metadata\] nvarchar\(max\)/)
+    assert.match(compiled[0].text, /\[blob\] varbinary\(max\)/)
+    assert.match(compiled[0].text, /\[role\] varchar\(255\)/)
+    assert.match(compiled[0].text, /\[full_name\] as \(first_name \+ ' ' \+ last_name\) persisted/)
+    assert.match(compiled[0].text, /\[display_name\] as \(first_name \+ ' ' \+ last_name\)/)
+    assert.doesNotMatch(compiled[0].text, /\[display_name\].*persisted/)
+    assert.match(compiled[0].text, /\[name\] varchar\(max\) check \(len\(name\) > 1\)/)
+    assert.match(
+      compiled[0].text,
+      /\[manager_id\] int references \[app\]\.\[users\] \(\[id\]\) on delete set null on update cascade/,
+    )
+    assert.match(compiled[0].text, /\[escaped\] varchar\(max\) default 'O''Hare'/)
+    assert.match(compiled[0].text, /constraint \[users_pk\] primary key \(\[id\]\)/)
+    assert.match(compiled[0].text, /constraint \[users_email_unique\] unique \(\[email\]\)/)
+    assert.match(compiled[0].text, /constraint \[users_name_check\] check \(len\(name\) > 1\)/)
+    assert.match(
+      compiled[0].text,
+      /constraint \[users_account_fk\] foreign key \(\[id\]\) references \[app\]\.\[accounts\] \(\[id\]\) on delete cascade on update restrict/,
+    )
+    assert.match(compiled[1].text, /sp_updateextendedproperty/)
+    assert.match(compiled[1].text, /sp_addextendedproperty/)
+    assert.match(compiled[1].text, /fn_listextendedproperty/)
+    assert.match(compiled[1].text, /owner''s table/)
+  })
+
+  it('compiles alterTable changes and standalone DDL operations', () => {
+    let pool = {
+      request() {
+        throw new Error('not used')
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    let alterStatements = adapter.compileSql({
+      kind: 'alterTable',
+      table: { schema: 'app', name: 'users' },
+      changes: [
+        { kind: 'addColumn', column: 'email', definition: { type: 'text', nullable: false } },
+        { kind: 'changeColumn', column: 'email', definition: { type: 'varchar', length: 255 } },
+        {
+          kind: 'changeColumn',
+          column: 'nickname',
+          definition: { type: 'varchar', length: 100, nullable: true },
+        },
+        {
+          kind: 'changeColumn',
+          column: 'status',
+          definition: { type: 'varchar', length: 32, nullable: false },
+        },
+        { kind: 'renameColumn', from: 'email', to: 'contact_email' },
+        { kind: 'dropColumn', column: 'legacy_email', ifExists: true },
+        { kind: 'addPrimaryKey', constraint: { name: 'users_pk', columns: ['id'] } },
+        { kind: 'dropPrimaryKey', name: 'users_pk' },
+        {
+          kind: 'addUnique',
+          constraint: { name: 'users_email_unique', columns: ['contact_email'] },
+        },
+        { kind: 'dropUnique', name: 'users_email_unique' },
+        {
+          kind: 'addForeignKey',
+          constraint: {
+            name: 'users_account_fk',
+            columns: ['account_id'],
+            references: { table: { name: 'accounts' }, columns: ['id'] },
+          },
+        },
+        { kind: 'dropForeignKey', name: 'users_account_fk' },
+        {
+          kind: 'addCheck',
+          constraint: { name: 'users_status_check', expression: "status <> 'deleted'" },
+        },
+        { kind: 'dropCheck', name: 'users_status_check' },
+        { kind: 'setTableComment', comment: 'Updated users table' },
+      ],
+    })
+
+    assert.equal(alterStatements.length, 15)
+    assert.equal(
+      alterStatements[0].text,
+      'alter table [app].[users] add [email] varchar(max) not null',
+    )
+    assert.match(
+      alterStatements[1].text,
+      /alter table \[app\]\.\[users\] alter column \[email\] varchar\(255\)/,
+    )
+    assert.equal(
+      alterStatements[2].text,
+      'alter table [app].[users] alter column [nickname] varchar(100) null',
+    )
+    assert.equal(
+      alterStatements[3].text,
+      'alter table [app].[users] alter column [status] varchar(32) not null',
+    )
+    assert.match(alterStatements[4].text, /sp_rename/)
+    assert.match(alterStatements[4].text, /\[app\]\.\[users\]\.email/)
+    assert.match(alterStatements[4].text, /contact_email/)
+    assert.equal(
+      alterStatements[5].text,
+      'alter table [app].[users] drop column if exists [legacy_email]',
+    )
+    assert.equal(
+      alterStatements[6].text,
+      'alter table [app].[users] add constraint [users_pk] primary key ([id])',
+    )
+    assert.equal(alterStatements[7].text, 'alter table [app].[users] drop constraint [users_pk]')
+    assert.equal(
+      alterStatements[8].text,
+      'alter table [app].[users] add constraint [users_email_unique] unique ([contact_email])',
+    )
+    assert.equal(
+      alterStatements[9].text,
+      'alter table [app].[users] drop constraint [users_email_unique]',
+    )
+    assert.equal(
+      alterStatements[10].text,
+      'alter table [app].[users] add constraint [users_account_fk] foreign key ([account_id]) references [accounts] ([id])',
+    )
+    assert.equal(
+      alterStatements[11].text,
+      'alter table [app].[users] drop constraint [users_account_fk]',
+    )
+    assert.equal(
+      alterStatements[12].text,
+      `alter table [app].[users] add constraint [users_status_check] check (status <> 'deleted')`,
+    )
+    assert.equal(
+      alterStatements[13].text,
+      'alter table [app].[users] drop constraint [users_status_check]',
+    )
+    assert.match(alterStatements[14].text, /sp_updateextendedproperty/)
+    assert.match(alterStatements[14].text, /sp_addextendedproperty/)
+    assert.match(alterStatements[14].text, /fn_listextendedproperty/)
+    assert.match(alterStatements[14].text, /Updated users table/)
+
+    let createIndex = adapter.compileSql({
+      kind: 'createIndex',
+      ifNotExists: true,
+      index: {
+        table: { name: 'users' },
+        name: 'email_idx',
+        columns: ['email'],
+        unique: true,
+        where: 'email is not null',
+      },
+    })
+    assert.match(
+      createIndex[0].text,
+      /if not exists \(select 1 from sys\.indexes where name = 'email_idx' and object_id = object_id\(N'\[users\]'\)\) create unique index \[email_idx\] on \[users\] \(\[email\]\) where email is not null/,
+    )
+
+    let dropIndex = adapter.compileSql({
+      kind: 'dropIndex',
+      table: { name: 'users' },
+      name: 'email_idx',
+      ifExists: true,
+    })
+    assert.equal(dropIndex[0].text, 'drop index if exists [email_idx] on [users]')
+
+    let renameIndex = adapter.compileSql({
+      kind: 'renameIndex',
+      table: { name: 'users' },
+      from: 'email_idx',
+      to: 'users_email_idx',
+    })
+    assert.match(renameIndex[0].text, /sp_rename/)
+    assert.match(renameIndex[0].text, /email_idx/)
+    assert.match(renameIndex[0].text, /users_email_idx/)
+
+    let renameTable = adapter.compileSql({
+      kind: 'renameTable',
+      from: { schema: 'app', name: 'users' },
+      to: { schema: 'app', name: 'members' },
+    })
+    assert.match(renameTable[0].text, /sp_rename/)
+    assert.match(renameTable[0].text, /\[app\]\.\[users\]/)
+    assert.match(renameTable[0].text, /members/)
+
+    let dropTable = adapter.compileSql({
+      kind: 'dropTable',
+      table: { name: 'users' },
+      ifExists: true,
+    })
+    assert.match(dropTable[0].text, /if object_id/)
+    assert.match(dropTable[0].text, /drop table \[users\]/)
+  })
+
+  it('throws for unsupported DDL kinds', () => {
+    let pool = {
+      request() {
+        throw new Error('not used')
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    assert.throws(
+      () => adapter.compileSql({ kind: 'unknown' } as never),
+      /Unsupported data migration operation kind/,
+    )
+  })
+
+  it('compiles every DDL operation kind through compileSql()', () => {
+    let pool = {
+      request() {
+        throw new Error('not used')
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let adapter = createMssqlDatabaseAdapter(pool as never)
+
+    let operations: DataMigrationOperation[] = [
+      {
+        kind: 'createTable',
+        table: { schema: 'app', name: 'users' },
+        ifNotExists: true,
+        columns: {
+          id: { type: 'integer', nullable: false, primaryKey: true },
+        },
+      },
+      {
+        kind: 'alterTable',
+        table: { schema: 'app', name: 'users' },
+        changes: [
+          { kind: 'addColumn', column: 'email', definition: { type: 'text', nullable: false } },
+        ],
+      },
+      {
+        kind: 'renameTable',
+        from: { schema: 'app', name: 'users' },
+        to: { schema: 'app', name: 'accounts' },
+      },
+      { kind: 'dropTable', table: { schema: 'app', name: 'accounts' }, ifExists: true },
+      {
+        kind: 'createIndex',
+        index: {
+          table: { schema: 'app', name: 'users' },
+          columns: ['email'],
+          name: 'users_email_idx',
+        },
+      },
+      { kind: 'dropIndex', table: { schema: 'app', name: 'users' }, name: 'users_email_idx' },
+      {
+        kind: 'renameIndex',
+        table: { schema: 'app', name: 'users' },
+        from: 'users_email_idx',
+        to: 'users_email_idx_new',
+      },
+      {
+        kind: 'addForeignKey',
+        table: { schema: 'app', name: 'projects' },
+        constraint: {
+          columns: ['account_id'],
+          references: {
+            table: { schema: 'app', name: 'accounts' },
+            columns: ['id'],
+          },
+          name: 'projects_account_id_fk',
+          onDelete: 'cascade',
+        },
+      },
+      {
+        kind: 'dropForeignKey',
+        table: { schema: 'app', name: 'projects' },
+        name: 'projects_account_id_fk',
+      },
+      {
+        kind: 'addCheck',
+        table: { schema: 'app', name: 'users' },
+        constraint: {
+          name: 'users_email_check',
+          expression: "charindex('@', email) > 1",
+        },
+      },
+      { kind: 'dropCheck', table: { schema: 'app', name: 'users' }, name: 'users_email_check' },
+      { kind: 'raw', sql: sql`select 1` },
+    ]
+
+    for (let operation of operations) {
+      let compiled = adapter.compileSql(operation)
+      assert.ok(compiled.length > 0, operation.kind)
+    }
+  })
+
+  it('normalizes bigint count rows', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return {
+              recordset: [{ count: 5n }],
+              rowsAffected: [1],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(createMssqlDatabaseAdapter(pool as never))
+    let count = await db.query(accounts).count()
+
+    assert.equal(count, 5)
+  })
+
+  it('normalizes non-object rows and falls back count to row length', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return {
+              recordset: [1, null, { count: 'oops' }],
+              rowsAffected: [3],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let db = createDatabase(createMssqlDatabaseAdapter(pool as never))
+    let count = await db.query(accounts).count()
+
+    assert.equal(count, 3)
+  })
+
+  it('returns undefined affectedRows for raw operations', async () => {
+    let pool = {
+      request() {
+        return {
+          input() {
+            return this
+          },
+          async query() {
+            return {
+              recordset: [{ ok: true }],
+              rowsAffected: [],
+            }
+          },
+        }
+      },
+      transaction() {
+        throw new Error('not used')
+      },
+    }
+
+    let result = await createMssqlDatabaseAdapter(pool as never).execute({
+      operation: {
+        kind: 'raw',
+        sql: {
+          text: 'select 1',
+          values: [],
+        },
+      },
+      transaction: undefined,
+    })
+
+    assert.equal(result.affectedRows, undefined)
+    assert.deepEqual(result.rows, [{ ok: true }])
   })
 })
