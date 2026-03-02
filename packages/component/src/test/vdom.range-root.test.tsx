@@ -23,6 +23,25 @@ describe('createRangeRoot', () => {
 
       expect(forwarded).toBe(expected)
     })
+
+    it('stops forwarding bubbling DOM error events after dispose', () => {
+      let host = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      host.append(start, end)
+
+      let root = createRangeRoot([start, end])
+      let forwarded: unknown
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      root.dispose()
+
+      host.dispatchEvent(new ErrorEvent('error', { bubbles: true, error: new Error('after dispose') }))
+
+      expect(forwarded).toBeUndefined()
+    })
   })
 
   describe('basic rendering', () => {
