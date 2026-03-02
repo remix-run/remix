@@ -1197,41 +1197,11 @@ function diffComponent(
   )
 }
 
+type TeardownMode = 'cleanup' | 'remove'
+
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
 function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleManager): void {
-  if (isCommittedTextNode(node)) {
-    return
-  }
-
-  if (isCommittedHostNode(node)) {
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
-    }
-
-    teardownMixins(node._mixState as MixinRuntimeState | undefined)
-    teardownControlledReflection(node)
-    if (node._controller) node._controller.abort()
-    return
-  }
-
-  if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
-    }
-    return
-  }
-
-  if (isCommittedComponentNode(node)) {
-    cleanupDescendants(node._content, scheduler, styles)
-    let tasks = node._handle.remove()
-    scheduler.enqueueTasks(tasks)
-    return
-  }
-
-  if (node.type === Frame) {
-    disposeFrameResources(node)
-    return
-  }
+  teardownNode(node, 'cleanup', document.body ?? document, scheduler, styles)
 }
 
 export function remove(
@@ -1240,12 +1210,59 @@ export function remove(
   scheduler: Scheduler,
   styles: StyleManager,
 ) {
+  teardownNode(node, 'remove', domParent, scheduler, styles)
+}
+
+function teardownNode(
+  node: VNode,
+  mode: TeardownMode,
+  domParent: ParentNode,
+  scheduler: Scheduler,
+  styles: StyleManager,
+) {
   if (isCommittedTextNode(node)) {
-    node._dom.parentNode?.removeChild(node._dom)
+    if (mode === 'remove') {
+      node._dom.parentNode?.removeChild(node._dom)
+    }
     return
   }
 
   if (isCommittedHostNode(node)) {
+    teardownHostNode(node, mode, domParent, scheduler, styles)
+    return
+  }
+
+  if (isFragmentNode(node)) {
+    for (let child of node._children) {
+      teardownNode(child, mode, domParent, scheduler, styles)
+    }
+    return
+  }
+
+  if (isCommittedComponentNode(node)) {
+    teardownNode(node._content, mode, domParent, scheduler, styles)
+    let tasks = node._handle.remove()
+    scheduler.enqueueTasks(tasks)
+    return
+  }
+
+  if (node.type === Frame) {
+    disposeFrameResources(node)
+    if (mode === 'remove') {
+      removeFrameDomRange(node, domParent)
+    }
+    return
+  }
+}
+
+function teardownHostNode(
+  node: CommittedHostNode,
+  mode: TeardownMode,
+  domParent: ParentNode,
+  scheduler: Scheduler,
+  styles: StyleManager,
+) {
+  if (mode === 'remove') {
     if (node._persistedByMixins) return
 
     let persistedRemoval = prepareMixinRemoval(node._mixState as MixinRuntimeState | undefined)
@@ -1258,57 +1275,35 @@ export function remove(
           if (!node._persistedByMixins) return
           if (node._persistedRemovalToken !== token) return
           unmarkNodePersistedByMixins(node)
-          performHostNodeRemoval(node, domParent, scheduler, styles)
+          finalizeHostNodeTeardown(node, 'remove', scheduler, styles)
         })
       return
     }
-    performHostNodeRemoval(node, domParent, scheduler, styles)
-    return
   }
 
-  if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      remove(child, domParent, scheduler, styles)
-    }
-    return
-  }
-
-  if (isCommittedComponentNode(node)) {
-    remove(node._content, domParent, scheduler, styles)
-    let tasks = node._handle.remove()
-    scheduler.enqueueTasks(tasks)
-    return
-  }
-
-  if (node.type === Frame) {
-    disposeFrameResources(node)
-    removeFrameDomRange(node, domParent)
-    return
-  }
+  finalizeHostNodeTeardown(node, mode, scheduler, styles)
 }
 
-// Actually remove a host node from DOM and clean up
-function performHostNodeRemoval(
+function finalizeHostNodeTeardown(
   node: CommittedHostNode,
-  domParent: ParentNode,
+  mode: TeardownMode,
   scheduler: Scheduler,
   styles: StyleManager,
 ) {
   if (isHeadHostNode(node)) {
+    let childMode: TeardownMode = mode === 'remove' ? 'remove' : 'cleanup'
     for (let child of node._children) {
-      remove(child, node._dom, scheduler, styles)
+      teardownNode(child, childMode, node._dom, scheduler, styles)
     }
   } else {
-    // Clean up all descendants first (before removing DOM subtree)
     for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
+      teardownNode(child, 'cleanup', node._dom, scheduler, styles)
     }
   }
 
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
   teardownControlledReflection(node)
-  // Never remove the real document.head node when reconciling a <head> vnode.
-  if (!isHeadHostNode(node)) {
+  if (mode === 'remove' && !isHeadHostNode(node)) {
     node._dom.parentNode?.removeChild(node._dom)
   }
   if (node._controller) node._controller.abort()
