@@ -26,6 +26,7 @@ import {
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { diffHostProps } from './diff-props.ts'
+import { getCanonicalHostChildren, getHostContentMode } from './host-content-mode.ts'
 import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
@@ -424,35 +425,33 @@ function diffHost(
   let mixState = curr._mixState as MixinRuntimeState | undefined
   let currProps = getHostProps(curr)
   let nextProps = resolveNodeMixProps(next, frame, scheduler, mixState)
+  let nextContentMode = getHostContentMode(nextProps)
+  let nextChildren = getCanonicalHostChildren(nextContentMode, next._children)
+  let currContentMode = getHostContentMode(currProps)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
     dispatchMixinBeforeUpdate(next._mixState as MixinRuntimeState | undefined)
   }
 
-  // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
-  if (nextProps.innerHTML != null) {
-    // innerHTML is set, update it if changed
+  if (nextContentMode === 'innerHTML') {
     if (currProps.innerHTML !== nextProps.innerHTML) {
       curr._dom.innerHTML = nextProps.innerHTML as string
     }
-  } else if (currProps.innerHTML != null) {
-    // innerHTML was removed, clear it before adding children
-    curr._dom.innerHTML = ''
+    if (curr._children.length > 0) {
+      for (let child of curr._children) {
+        cleanupDescendants(child, scheduler, styles)
+      }
+    }
+  } else {
+    if (currContentMode === 'innerHTML') {
+      curr._dom.innerHTML = ''
+    }
+    diffChildren(curr._children, nextChildren, curr._dom, frame, scheduler, styles, next, rootTarget)
   }
-
-  diffChildren(
-    curr._children,
-    next._children,
-    curr._dom,
-    frame,
-    scheduler,
-    styles,
-    next,
-    rootTarget,
-  )
   diffHostProps(currProps, nextProps, curr._dom)
 
   next._dom = curr._dom
   next._parent = vParent
+  next._children = nextChildren
   next._controller = curr._controller
   next._controlledState = curr._controlledState
 
@@ -549,6 +548,8 @@ function insert(
 
   if (isHostNode(node)) {
     let hostProps = resolveNodeMixProps(node, frame, scheduler)
+    let contentMode = getHostContentMode(hostProps)
+    let nextChildren = getCanonicalHostChildren(contentMode, node._children)
 
     if (isHeadHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
@@ -569,7 +570,7 @@ function insert(
         // Render explicit <head> children directly into document.head.
         diffChildren(
           null,
-          node._children,
+          nextChildren,
           targetHead,
           frame,
           scheduler,
@@ -580,6 +581,7 @@ function insert(
         )
         diffHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
+        node._children = nextChildren
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         return cursor
       }
@@ -600,15 +602,14 @@ function insert(
         let nextCursor = cursor.nextSibling
         diffHostProps({}, hostProps, cursor)
 
-        // Handle innerHTML prop
-        if (hostProps.innerHTML != null) {
+        if (contentMode === 'innerHTML') {
           cursor.innerHTML = hostProps.innerHTML as string
         } else {
           let childCursor = cursor.firstChild
           // Ignore excess nodes - browser extensions may inject content
           diffChildren(
             null,
-            node._children,
+            nextChildren,
             cursor,
             frame,
             scheduler,
@@ -620,6 +621,7 @@ function insert(
         }
 
         setupHostNode(node, cursor, scheduler)
+        node._children = nextChildren
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         if (isHeadManagedHostNode(node)) {
           let targetHead = getDocumentHead(domParent)
@@ -639,13 +641,13 @@ function insert(
             // Found a match after skipping - adopt it and leave skipped node in place
             diffHostProps({}, hostProps, nextSibling)
 
-            if (hostProps.innerHTML != null) {
+            if (contentMode === 'innerHTML') {
               nextSibling.innerHTML = hostProps.innerHTML as string
             } else {
               let childCursor = nextSibling.firstChild
               diffChildren(
                 null,
-                node._children,
+                nextChildren,
                 nextSibling,
                 frame,
                 scheduler,
@@ -657,6 +659,7 @@ function insert(
             }
 
             setupHostNode(node, nextSibling, scheduler)
+            node._children = nextChildren
             bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
             if (isHeadManagedHostNode(node)) {
               let targetHead = getDocumentHead(domParent)
@@ -677,14 +680,14 @@ function insert(
       : document.createElement(node.type)
     diffHostProps({}, hostProps, dom)
 
-    // Handle innerHTML prop
-    if (hostProps.innerHTML != null) {
+    if (contentMode === 'innerHTML') {
       dom.innerHTML = hostProps.innerHTML as string
     } else {
-      diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget)
+      diffChildren(null, nextChildren, dom, frame, scheduler, styles, node, rootTarget)
     }
 
     setupHostNode(node, dom, scheduler)
+    node._children = nextChildren
     bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
     if (isHeadManagedHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
@@ -1671,23 +1674,40 @@ function reclaimPersistedMixinNode(
     scheduler,
     newNode._mixState as MixinRuntimeState | undefined,
   )
+  let prevContentMode = getHostContentMode(prevProps)
+  let nextContentMode = getHostContentMode(nextProps)
+  let nextChildren = getCanonicalHostChildren(nextContentMode, newNode._children)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
+  }
+  if (nextContentMode === 'innerHTML') {
+    if (prevProps.innerHTML !== nextProps.innerHTML) {
+      persistedNode._dom.innerHTML = nextProps.innerHTML as string
+    }
+    if (persistedNode._children.length > 0) {
+      for (let child of persistedNode._children) {
+        cleanupDescendants(child, scheduler, styles)
+      }
+    }
+  } else {
+    if (prevContentMode === 'innerHTML') {
+      persistedNode._dom.innerHTML = ''
+    }
+    diffChildren(
+      persistedNode._children,
+      nextChildren,
+      persistedNode._dom,
+      frame,
+      scheduler,
+      styles,
+      newNode,
+      rootTarget,
+    )
   }
   diffHostProps(prevProps, nextProps, persistedNode._dom)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
-
-  diffChildren(
-    persistedNode._children,
-    newNode._children,
-    persistedNode._dom,
-    frame,
-    scheduler,
-    styles,
-    newNode,
-    rootTarget,
-  )
+  newNode._children = nextChildren
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
