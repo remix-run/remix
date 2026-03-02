@@ -1,11 +1,8 @@
 import { createDocumentState } from './document-state.ts'
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
-import {
-  findNextSiblingDomAnchor,
-  renderComponent,
-  setActiveSchedulerUpdateParents,
-} from './reconcile.ts'
+import { findNextSiblingDomAnchor, setActiveSchedulerUpdateParents } from './reconcile-anchors.ts'
+import { renderComponent } from './reconcile.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 

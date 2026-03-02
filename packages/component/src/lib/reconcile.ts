@@ -29,6 +29,13 @@ import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
 import {
+  domRangeContainsNode,
+  findFirstDomAnchor,
+  findLastDomAnchor,
+  moveDomRange,
+  shouldDispatchInlineMixinLifecycle,
+} from './reconcile-anchors.ts'
+import {
   disposeFrameResources,
   getFrameName,
   getFrameRuntime,
@@ -61,7 +68,6 @@ const MATCHED = 1 << 1
 let idCounter = 0
 let persistedRemovalToken = 0
 let persistedMixinNodes = new Set<CommittedHostNode>()
-let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 // Compute SVG context for a node based on its parent and type.
 // Returns true if the node is within an SVG subtree, false otherwise.
@@ -1291,83 +1297,6 @@ function diffChildren(
   }
 
   return
-}
-
-export function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
-  if (!node) return null
-  if (isCommittedTextNode(node)) return node._dom
-  if (isCommittedHostNode(node)) return node._dom
-  if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
-  if (node.type === Frame) return node._rangeStart ?? null
-  if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      let dom = findFirstDomAnchor(child)
-      if (dom) return dom
-    }
-  }
-  return null
-}
-
-export function findLastDomAnchor(node: VNode | null | undefined): Node | null {
-  if (!node) return null
-  if (isCommittedTextNode(node)) return node._dom
-  if (isCommittedHostNode(node)) return node._dom
-  if (isCommittedComponentNode(node)) return findLastDomAnchor(node._content)
-  if (node.type === Frame) return node._rangeEnd ?? null
-  if (isFragmentNode(node)) {
-    for (let i = node._children.length - 1; i >= 0; i--) {
-      let dom = findLastDomAnchor(node._children[i])
-      if (dom) return dom
-    }
-  }
-  return null
-}
-
-function domRangeContainsNode(first: Node, last: Node, node: Node): boolean {
-  let current: Node | null = first
-  while (current) {
-    if (current === node) return true
-    if (current === last) break
-    current = current.nextSibling
-  }
-  return false
-}
-
-function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
-  let current: Node | null = first
-  while (current) {
-    let next: Node | null = current === last ? null : current.nextSibling
-    domParent.insertBefore(current, before)
-    if (current === last) break
-    current = next
-  }
-}
-
-export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {
-  activeSchedulerUpdateParents = parents
-}
-
-function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
-  let parents = activeSchedulerUpdateParents
-  if (!parents?.length) return true
-  for (let parent of parents) {
-    let parentNode = parent as Node
-    if (parentNode === node) return false
-    if (parentNode.contains(node)) return false
-  }
-  return true
-}
-
-export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | null {
-  if (!vParent || !Array.isArray(vParent._children)) return null
-  let children = vParent._children
-  let idx = children.indexOf(curr)
-  if (idx === -1) return null
-  for (let i = idx + 1; i < children.length; i++) {
-    let dom = findFirstDomAnchor(children[i])
-    if (dom) return dom
-  }
-  return null
 }
 
 function reclaimPersistedMixinNode(
