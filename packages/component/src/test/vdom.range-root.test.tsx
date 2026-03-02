@@ -375,6 +375,17 @@ describe('createRangeRoot', () => {
   })
 
   describe('boundary handling', () => {
+    it('throws when start and end markers do not share a parent node', () => {
+      let containerA = document.createElement('div')
+      let containerB = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      containerA.appendChild(start)
+      containerB.appendChild(end)
+
+      expect(() => createRangeRoot([start, end])).toThrow('Boundaries must share parent')
+    })
+
     it('does not affect content before start marker', () => {
       let container = document.createElement('div')
       container.innerHTML = '<header>Before</header><!--start--><!--end-->'

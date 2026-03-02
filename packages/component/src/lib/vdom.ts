@@ -52,7 +52,7 @@ export function createRangeRoot(
 
   let container = end.parentNode
   invariant(container, 'Expected parent node')
-  invariant(end.parentNode === container, 'Boundaries must share parent')
+  invariant(start.parentNode === container, 'Boundaries must share parent')
 
   let hydrationCursor = start.nextSibling
 
