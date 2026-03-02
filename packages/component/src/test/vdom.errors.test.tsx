@@ -38,6 +38,31 @@ describe('vdom error handling', () => {
       expect(forwarded).toBeUndefined()
     })
 
+    it('resumes forwarding bubbling DOM error events after render following dispose', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let forwarded: unknown
+
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      root.dispose()
+      container.dispatchEvent(
+        new ErrorEvent('error', { bubbles: true, error: new Error('while disposed') }),
+      )
+
+      expect(forwarded).toBeUndefined()
+
+      root.render(<div>ready</div>)
+      root.flush()
+
+      let expected = new Error('after rerender')
+      container.dispatchEvent(new ErrorEvent('error', { bubbles: true, error: expected }))
+
+      expect(forwarded).toBe(expected)
+    })
+
     it('dispose is a no-op before first render', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

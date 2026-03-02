@@ -120,6 +120,25 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
       expect(renderError).toBeUndefined()
     })
+
+    it('keeps innerHTML authoritative when children change while innerHTML remains set', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <div innerHTML="<span>Authoritative</span>">
+          <p>Ignored child A</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><span>Authoritative</span></div>')
+
+      root.render(
+        <div innerHTML="<span>Authoritative</span>">
+          <p>Ignored child B</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><span>Authoritative</span></div>')
+    })
   })
 
   describe('css mixin', () => {
