@@ -45,6 +45,8 @@ for (let version of versions || getDefaultVersions()) {
 let crawlOpts: CrawlOptions = {
   // Crawl the root path and any requested version paths
   paths: ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])],
+  // Crawl outgoing links
+  spider: true,
   // Crawl fragment and markdown variants of docs pages
   variants(path) {
     let url = `http://localhost${path}`

@@ -1,0 +1,15 @@
+{
+  "name": "fetch-router-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench --run"
+  },
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:^",
+    "node-html-parser": "^7.1.0"
+  },
+  "devDependencies": {
+    "vitest": "4.0.15"
+  }
+}

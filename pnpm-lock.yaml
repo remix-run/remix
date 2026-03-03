@@ -477,9 +477,6 @@ importers:
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.0.2
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -487,6 +484,19 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+
+  packages/fetch-router/bench:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:..
+      node-html-parser:
+        specifier: ^7.1.0
+        version: 7.1.0
+    devDependencies:
+      vitest:
+        specifier: 4.0.15
+        version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/fetch-router/demos/bun:
     dependencies:
@@ -4065,6 +4075,9 @@ packages:
 
   node-html-parser@7.0.2:
     resolution: {integrity: sha512-DxodLVh7a6JMkYzWyc8nBX9MaF4M0lLFYkJHlWOiu7+9/I6mwNK9u5TbAMC7qfqDJEPX9OIoWA2A9t4C2l1mUQ==}
+
+  node-html-parser@7.1.0:
+    resolution: {integrity: sha512-iJo8b2uYGT40Y8BTyy5ufL6IVbN8rbm/1QK2xffXU/1a/v3AAa0d1YAoqBNYqaS4R/HajkWIpIfdE6KcyFh1AQ==}
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
@@ -8051,6 +8064,11 @@ snapshots:
       semver: 7.7.3
 
   node-html-parser@7.0.2:
+    dependencies:
+      css-select: 5.2.2
+      he: 1.2.0
+
+  node-html-parser@7.1.0:
     dependencies:
       css-select: 5.2.2
       he: 1.2.0

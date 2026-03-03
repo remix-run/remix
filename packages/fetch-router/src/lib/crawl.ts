@@ -1,4 +1,5 @@
-import { parse } from 'node-html-parser'
+import { parse } from './html-parser.ts'
+import type { HTMLElement } from './html-parser.ts'
 
 const BASE_URL = 'http://localhost'
 
@@ -16,7 +17,7 @@ export interface CrawlOptions {
   paths?: string[]
   /**
    * Whether to follow outbound links found in HTML documents.
-   * @default true
+   * @default false
    */
   spider?: boolean
   /**
@@ -46,7 +47,7 @@ export async function* runCrawl(
   fetchFn: (request: Request) => Promise<Response>,
   options: CrawlOptions,
 ): AsyncIterableIterator<CrawlResult> {
-  let { paths = ['/'], spider = true, filter = defaultFilter, variants } = options
+  let { paths = ['/'], spider = false, filter = defaultFilter, variants } = options
 
   let queue = new Set(paths)
   let visited = new Set<string>()
@@ -65,14 +66,14 @@ export async function* runCrawl(
       // Pass a clone so we can read the body for parsing
       yield { pathname: urlPath, filePath: getHtmlFilepath(urlPath), response: response.clone() }
 
-      let doc = parse(await response.text())
+      let elements = parse(await response.text())
 
       // Always queue referenced assets (CSS, JS, images)
-      toQueue.push(...extractAssetPaths(doc, urlPath, filter))
+      toQueue.push(...extractAssetPaths(elements, urlPath, filter))
 
       // Only follow navigation links when spider mode is enabled
       if (spider) {
-        toQueue.push(...extractLinkPaths(doc, urlPath, filter))
+        toQueue.push(...extractLinkPaths(elements, urlPath, filter))
       }
     } else {
       yield { pathname: urlPath, filePath: urlPath, response }
@@ -112,6 +113,10 @@ function isNonNavigable(href: string): boolean {
   )
 }
 
+function hasRelValue(el: HTMLElement, value: string): boolean {
+  return el.getAttribute('rel')?.split(/\s+/).includes(value) || false
+}
+
 function resolveHref(href: string, baseUrl: string): string | null {
   // Absolute URL — extract pathname
   if (/^https?:\/\//.test(href) || href.startsWith('//')) {
@@ -130,18 +135,26 @@ function resolveHref(href: string, baseUrl: string): string | null {
   }
 }
 
+const rel = (el: HTMLElement) => el.getAttribute('rel')?.split(/\s+/) || []
+
 function extractAssetPaths(
-  doc: ReturnType<typeof parse>,
+  elements: HTMLElement[],
   baseUrl: string,
   filter: (href: string) => boolean,
 ): string[] {
-  let linkAttrs = doc
-    .querySelectorAll(
-      'link:not([rel~="preload"]):not([rel~="prefetch"]):not([rel~="modulepreload"])',
+  let linkAttrs = elements
+    .filter(
+      (el) =>
+        el.name === 'link' &&
+        !rel(el).includes('preload') &&
+        !rel(el).includes('prefetch') &&
+        !rel(el).includes('modulepreload'),
     )
     .map((el) => el.getAttribute('href'))
 
-  let srcAttrs = doc.querySelectorAll('script[src], img[src]').map((el) => el.getAttribute('src'))
+  let srcAttrs = elements
+    .filter((el) => (el.name === 'script' || el.name === 'img') && el.getAttribute('src'))
+    .map((el) => el.getAttribute('src'))
 
   return [...linkAttrs, ...srcAttrs]
     .filter((href): href is string => href != null)
@@ -152,12 +165,12 @@ function extractAssetPaths(
 }
 
 function extractLinkPaths(
-  doc: ReturnType<typeof parse>,
+  elements: HTMLElement[],
   baseUrl: string,
   filter: (href: string) => boolean,
 ): string[] {
-  return doc
-    .querySelectorAll('a:not([rel~="nofollow"])')
+  return elements
+    .filter((el) => el.name === 'a' && !rel(el).includes('nofollow'))
     .map((el) => el.getAttribute('href'))
     .filter((href): href is string => href != null)
     .filter((href) => !isNonNavigable(href))
