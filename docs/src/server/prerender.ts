@@ -7,6 +7,7 @@ import * as semver from 'semver'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
 import { routes } from './routes.ts'
+import type { CrawlOptions } from 'remix/fetch-router'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -41,38 +42,27 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-await docsRouter.crawl({
+let crawlOpts: CrawlOptions = {
   // Crawl the root path and any requested version paths
-  paths: ['/', ...(versions?.map((v) => `/${v.version}/`) || [])],
-  // Traverse outbound links
-  spider: true,
-  // Only process non-absolute paths,
-  filter(href) {
-    // TODO: This matches the default implementation, only here for now to show the complete API
-    return !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
-  },
+  paths: ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])],
   // Crawl fragment and markdown variants of docs pages
   variants(path) {
     let url = `http://localhost${path}`
-
-    // Skip markdown paths because they will also match routes.docs
-    if (routes.markdown.match(url)) return
-
-    // Only process docs HTML pages
     let match = routes.docs.match(url)
-    if (!match) return
+    if (match && !routes.markdown.match(url)) {
+      return [routes.fragment.href(match.params), routes.markdown.href(match.params)]
+    }
+  },
+}
 
-    // Add markdown and fragment variants for docs pages
-    return [routes.fragment.href(match.params), routes.markdown.href(match.params)]
-  },
+for await (let result of docsRouter.crawl(crawlOpts)) {
   // Output files
-  async handleResponse(pathname, filePath, response) {
-    let outputPath = path.join(outputDir, filePath)
-    await fs.mkdir(path.dirname(outputPath), { recursive: true })
-    await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
-    console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
-  },
-})
+  let { pathname, filePath, response } = result
+  let outputPath = path.join(outputDir, filePath)
+  await fs.mkdir(path.dirname(outputPath), { recursive: true })
+  await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
+  console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
+}
 
 async function getVersionsToBuild(
   outputDir: string,

@@ -2,6 +2,12 @@ import { parse } from 'node-html-parser'
 
 const BASE_URL = 'http://localhost'
 
+export interface CrawlResult {
+  pathname: string
+  filePath: string
+  response: Response
+}
+
 export interface CrawlOptions {
   /**
    * Initial URL paths to put in the crawl queue.
@@ -10,7 +16,7 @@ export interface CrawlOptions {
   paths?: string[]
   /**
    * Whether to follow outbound links found in HTML documents.
-   * @default false
+   * @default true
    */
   spider?: boolean
   /**
@@ -31,22 +37,16 @@ export interface CrawlOptions {
    * e.g. returning `[pathname + '.md']` to also fetch the markdown source of each page.
    */
   variants?(pathname: string): string[] | undefined | Promise<string[] | undefined>
-  /**
-   * Called for each crawled URL. Receives the pathname, the computed output filepath, and the response.
-   * For HTML responses, filepath is the URL pathname + `/index.html`.
-   * For other assets, filepath is the URL pathname.
-   */
-  handleResponse(pathname: string, filePath: string, response: Response): Promise<void> | void
 }
 
 const defaultFilter = (href: string): boolean =>
   !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
 
-export async function runCrawl(
+export async function* runCrawl(
   fetchFn: (request: Request) => Promise<Response>,
   options: CrawlOptions,
-): Promise<void> {
-  let { paths = ['/'], spider = false, filter = defaultFilter, handleResponse, variants } = options
+): AsyncIterableIterator<CrawlResult> {
+  let { paths = ['/'], spider = true, filter = defaultFilter, variants } = options
 
   let queue = new Set(paths)
   let visited = new Set<string>()
@@ -63,7 +63,7 @@ export async function runCrawl(
 
     if (isHtml) {
       // Pass a clone so we can read the body for parsing
-      await handleResponse(urlPath, getHtmlFilepath(urlPath), response.clone())
+      yield { pathname: urlPath, filePath: getHtmlFilepath(urlPath), response: response.clone() }
 
       let doc = parse(await response.text())
 
@@ -75,7 +75,7 @@ export async function runCrawl(
         toQueue.push(...extractLinkPaths(doc, urlPath, filter))
       }
     } else {
-      await handleResponse(urlPath, urlPath, response)
+      yield { pathname: urlPath, filePath: urlPath, response }
     }
 
     // Queue any path variants returned by the variants callback

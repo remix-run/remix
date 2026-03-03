@@ -12,7 +12,7 @@ import {
   isActionWithMiddleware,
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
-import { type CrawlOptions, runCrawl } from './crawl.ts'
+import { type CrawlOptions, type CrawlResult, runCrawl } from './crawl.ts'
 
 export type MatchData = {
   handler: RequestHandler<any>
@@ -169,7 +169,7 @@ export interface Router {
    *
    * @param options Crawl configuration options
    */
-  crawl(options: CrawlOptions): Promise<void>
+  crawl(options?: CrawlOptions): AsyncIterableIterator<CrawlResult>
 }
 
 function noMatchHandler({ url }: RequestContext): Response {
@@ -364,8 +364,8 @@ export function createRouter(options?: RouterOptions): Router {
     ): void {
       addRoute('OPTIONS', route, action)
     },
-    async crawl(options: CrawlOptions): Promise<void> {
-      await runCrawl((request) => router.fetch(request), options)
+    crawl(options: CrawlOptions = {}): AsyncIterableIterator<CrawlResult> {
+      return runCrawl((request) => router.fetch(request), options)
     },
   }
 

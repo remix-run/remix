@@ -50,7 +50,13 @@ function Document(handle: Handle) {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        {activeVersion != null ? <meta name="robots" content="noindex"></meta> : null}
+        {activeVersion != null ? (
+          <>
+            <meta name="robots" content="noindex,nofollow" />
+            <meta name="googlebot" content="noindex,nofollow" />
+          </>
+        ) : null}
+
         <title>Remix API Documentation</title>
         <link
           href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
@@ -153,7 +159,11 @@ function VersionLink() {
     let href = routes.home.href({ version: !latest ? version.version : undefined })
     return (
       <>
-        <a href={href} class={active ? 'active' : undefined}>
+        <a
+          href={href}
+          class={active ? 'active' : undefined}
+          rel={!version.crawl ? 'nofollow' : undefined}
+        >
           {version.version}
         </a>
         {latest ? <span> (latest)</span> : null}

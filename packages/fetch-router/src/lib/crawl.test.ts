@@ -21,11 +21,9 @@ describe('router.crawl()', () => {
     router.get('/', () => html('hello'))
 
     let visited: [string, string, string][] = []
-    await router.crawl({
-      async handleResponse(pathname, filePath, response) {
-        visited.push([pathname, filePath, await response.text()])
-      },
-    })
+    for await (let { pathname, filePath, response } of router.crawl()) {
+      visited.push([pathname, filePath, await response.text()])
+    }
     assert.deepEqual(visited, [['/', '/index.html', 'hello']])
   })
 
@@ -35,12 +33,9 @@ describe('router.crawl()', () => {
     router.get('/b', () => html('B'))
 
     let visited: [string, string, string][] = []
-    await router.crawl({
-      paths: ['/a', '/b'],
-      async handleResponse(pathname, filePath, response) {
-        visited.push([pathname, filePath, await response.text()])
-      },
-    })
+    for await (let { pathname, filePath, response } of router.crawl({ paths: ['/a', '/b'] })) {
+      visited.push([pathname, filePath, await response.text()])
+    }
     assert.deepEqual(visited, [
       ['/a', '/a/index.html', 'A'],
       ['/b', '/b/index.html', 'B'],
@@ -56,12 +51,11 @@ describe('router.crawl()', () => {
     router.get('/app.js', () => js('console.log()'))
 
     let filePaths: string[] = []
-    await router.crawl({
+    for await (let { filePath } of router.crawl({
       paths: ['/', '/about', '/about/', '/style.css', '/app.js'],
-      handleResponse(_pathname, filePath) {
-        filePaths.push(filePath)
-      },
-    })
+    })) {
+      filePaths.push(filePath)
+    }
     assert.deepEqual(filePaths, [
       '/index.html',
       '/about/index.html',
@@ -77,11 +71,9 @@ describe('router.crawl()', () => {
     router.get('/about', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl()) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/'])
   })
 
@@ -91,12 +83,9 @@ describe('router.crawl()', () => {
     router.get('/about', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/about'])
   })
 
@@ -114,11 +103,9 @@ describe('router.crawl()', () => {
     router.get('/logo.png', () => new Response('', { headers: { 'Content-Type': 'image/png' } }))
 
     let visited: string[] = []
-    await router.crawl({
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl()) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/style.css', '/app.js', '/logo.png'])
   })
 
@@ -127,12 +114,9 @@ describe('router.crawl()', () => {
     router.get('/', () => html('<a href="https://example.com/page">External</a>'))
 
     let visited: string[] = []
-    await router.crawl({
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/'])
   })
 
@@ -141,12 +125,9 @@ describe('router.crawl()', () => {
     router.get('/', () => html('<a href="//example.com/page">External</a>'))
 
     let visited: string[] = []
-    await router.crawl({
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/'])
   })
 
@@ -156,13 +137,12 @@ describe('router.crawl()', () => {
     router.get('/allowed', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
+    for await (let { pathname } of router.crawl({
       spider: true,
       filter: (href) => href !== '/blocked',
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/allowed'])
   })
 
@@ -181,12 +161,9 @@ describe('router.crawl()', () => {
     router.get('/real', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/real'])
   })
 
@@ -198,12 +175,9 @@ describe('router.crawl()', () => {
     router.get('/follow', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/follow'])
   })
 
@@ -220,11 +194,9 @@ describe('router.crawl()', () => {
     router.get('/real.css', () => css())
 
     let visited: string[] = []
-    await router.crawl({
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl()) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/real.css'])
   })
 
@@ -234,13 +206,9 @@ describe('router.crawl()', () => {
     router.get('/blog/post-1', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      paths: ['/blog/'],
-      spider: true,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ paths: ['/blog/'], spider: true })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/blog/', '/blog/post-1'])
   })
 
@@ -251,13 +219,9 @@ describe('router.crawl()', () => {
     router.get('/shared', () => html('<html></html>'))
 
     let visitCount: Record<string, number> = {}
-    await router.crawl({
-      paths: ['/', '/about'],
-      spider: true,
-      handleResponse(pathname) {
-        visitCount[pathname] = (visitCount[pathname] ?? 0) + 1
-      },
-    })
+    for await (let { pathname } of router.crawl({ paths: ['/', '/about'], spider: true })) {
+      visitCount[pathname] = (visitCount[pathname] ?? 0) + 1
+    }
     assert.equal(visitCount['/shared'], 1)
   })
 
@@ -271,13 +235,12 @@ describe('router.crawl()', () => {
 
     debugger
     let visited: string[] = []
-    await router.crawl({
+    for await (let { pathname } of router.crawl({
       paths: ['/source'],
       variants: (pathname) => (!pathname.endsWith('.md') ? [`${pathname}.md`] : []),
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/source', '/source.md'])
   })
 
@@ -287,15 +250,14 @@ describe('router.crawl()', () => {
     router.get('/async-variant', () => new Response(''))
 
     let visited: string[] = []
-    await router.crawl({
+    for await (let { pathname } of router.crawl({
       variants: async (pathname) => {
         await Promise.resolve()
         return pathname === '/' ? ['/async-variant'] : undefined
       },
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/', '/async-variant'])
   })
 
@@ -304,12 +266,9 @@ describe('router.crawl()', () => {
     router.get('/', () => html('<html></html>'))
 
     let visited: string[] = []
-    await router.crawl({
-      variants: () => undefined,
-      handleResponse(pathname) {
-        visited.push(pathname)
-      },
-    })
+    for await (let { pathname } of router.crawl({ variants: () => undefined })) {
+      visited.push(pathname)
+    }
     assert.deepEqual(visited, ['/'])
   })
 })
