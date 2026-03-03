@@ -153,9 +153,6 @@ importers:
       marked:
         specifier: ^17.0.1
         version: 17.0.1
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.0.2
       prettier:
         specifier: ^3.5.3
         version: 3.7.4
@@ -4072,9 +4069,6 @@ packages:
   node-abi@3.87.0:
     resolution: {integrity: sha512-+CGM1L1CgmtheLcBuleyYOn7NWPVu0s0EJH2C4puxgEZb9h8QpR9G2dBfZJOAUhi7VQxuBPMd0hiISWcTyiYyQ==}
     engines: {node: '>=10'}
-
-  node-html-parser@7.0.2:
-    resolution: {integrity: sha512-DxodLVh7a6JMkYzWyc8nBX9MaF4M0lLFYkJHlWOiu7+9/I6mwNK9u5TbAMC7qfqDJEPX9OIoWA2A9t4C2l1mUQ==}
 
   node-html-parser@7.1.0:
     resolution: {integrity: sha512-iJo8b2uYGT40Y8BTyy5ufL6IVbN8rbm/1QK2xffXU/1a/v3AAa0d1YAoqBNYqaS4R/HajkWIpIfdE6KcyFh1AQ==}
@@ -8062,11 +8056,6 @@ snapshots:
   node-abi@3.87.0:
     dependencies:
       semver: 7.7.3
-
-  node-html-parser@7.0.2:
-    dependencies:
-      css-select: 5.2.2
-      he: 1.2.0
 
   node-html-parser@7.1.0:
     dependencies:
