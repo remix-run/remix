@@ -53,7 +53,8 @@ mkdir -p lib app/root
 
 ```sh
 npm i remix@3.0.0-alpha.3
-npm i -D tsx
+npm i tsx
+npm i -D @types/node
 ```
 
 4. Use JSX with Remix components.
@@ -64,7 +65,8 @@ Make sure your `tsconfig.json` enables JSX for `remix/component`:
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/component"
+    "jsxImportSource": "remix/component",
+    "types": ["node"]
   }
 }
 ```
@@ -250,9 +252,11 @@ Visit:
 ## Checklist
 
 - [ ] `package.json` has `remix` in `dependencies`
-- [ ] `package.json` has `tsx` in `devDependencies`
+- [ ] `package.json` has `tsx` in `dependencies`
+- [ ] `package.json` has `@types/node` in `devDependencies`
 - [ ] `package.json` has a `test` script that runs `./app/**/*.test.ts` via `tsx`
 - [ ] `package.json` has a `start` script that runs `tsx server.ts`
+- [ ] `tsconfig.json` includes `"types": ["node"]`
 - [ ] `routes.ts` and `router.ts` are in the project root
 - [ ] `app/root/` contains `controller.tsx`, `controller.test.ts`, `Layout.tsx`, and `HomePage.tsx`
 - [ ] `router.ts` maps root route definitions to feature controllers
