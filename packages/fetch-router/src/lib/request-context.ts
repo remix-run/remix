@@ -1,7 +1,7 @@
 import { createSession, type Session } from '@remix-run/session'
 import type { Router } from './router.ts'
 
-import type { StorageKey, StorageValue } from './app-storage.ts'
+import type { ContextKey, ContextValue } from './app-storage.ts'
 import {
   RequestBodyMethods,
   type RequestBodyMethod,
@@ -118,44 +118,42 @@ export class RequestContext<
 
   #session?: Session
 
-  #storage: Map<StorageKey<any>, StorageValue<any>> = new Map()
+  #contextMap: Map<ContextKey<any>, ContextValue<any>> = new Map()
 
   /**
-   * Get a value from request-scoped storage.
+   * Get a value from request context.
    *
    * @param key The key to read
    * @returns The value for the given key
    */
-  get<key extends StorageKey<any>>(key: key): StorageValue<key> {
-    if (!this.#storage.has(key)) {
+  get = <key extends ContextKey<any>>(key: key): ContextValue<key> => {
+    if (!this.#contextMap.has(key)) {
       if (key.defaultValue === undefined) {
-        throw new Error(`Missing default value in storage for key ${key}`)
+        throw new Error(`Missing default value in context for key ${key}`)
       }
 
       return key.defaultValue
     }
 
-    return this.#storage.get(key) as StorageValue<key>
+    return this.#contextMap.get(key) as ContextValue<key>
   }
 
   /**
-   * Check whether a value exists in request-scoped storage.
+   * Check whether a value exists in request context.
    *
    * @param key The key to check
    * @returns `true` if a value has been set for the key
    */
-  has<key extends StorageKey<any>>(key: key): boolean {
-    return this.#storage.has(key)
-  }
+  has = <key extends ContextKey<any>>(key: key): boolean => this.#contextMap.has(key)
 
   /**
-   * Set a value in request-scoped storage.
+   * Set a value in request context.
    *
    * @param key The key to write
    * @param value The value to write
    */
-  set<key extends StorageKey<any>>(key: key, value: StorageValue<key>): void {
-    this.#storage.set(key, value)
+  set = <key extends ContextKey<any>>(key: key, value: ContextValue<key>): void => {
+    this.#contextMap.set(key, value)
   }
 
   #router?: Router

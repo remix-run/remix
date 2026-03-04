@@ -601,7 +601,7 @@ router.get('/posts/:id', ({ request, url, params, set, get }) => {
   // params: Route parameters (fully typed!)
   console.log(params.id) // "123"
 
-  // set/get: type-safe request-scoped storage on the context object
+  // set/get: type-safe request-scoped context data on the context object
   set(userKey, currentUser)
   let user = get(userKey)
   console.log(user.id)

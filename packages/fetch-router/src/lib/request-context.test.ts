@@ -49,7 +49,7 @@ describe('new RequestContext()', () => {
     assert.ok(context.formData)
   })
 
-  it('sets and gets values in request-scoped storage', () => {
+  it('sets and gets values in request context', () => {
     let key = createContextKey('hello')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
@@ -58,14 +58,14 @@ describe('new RequestContext()', () => {
     assert.equal(context.get(key), 'world')
   })
 
-  it('gets a default value from request-scoped storage when one is available', () => {
+  it('gets a default value from request context when one is available', () => {
     let key = createContextKey('hello')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.equal(context.get(key), 'hello')
   })
 
-  it('allows `null` as a valid default value in request-scoped storage', () => {
+  it('allows `null` as a valid default value in request context', () => {
     let key = createContextKey(null)
     let context = new RequestContext(new Request('https://remix.run/test'))
 
@@ -86,5 +86,19 @@ describe('new RequestContext()', () => {
     assert.equal(context.has(key), false)
     context.set(key, 'value')
     assert.equal(context.has(key), true)
+  })
+
+  it('supports destructuring get/set/has from request context', () => {
+    let key = createContextKey('default')
+    let context = new RequestContext(new Request('https://remix.run/test'))
+    let { get, has, set } = context
+
+    assert.equal(has(key), false)
+    assert.equal(get(key), 'default')
+
+    set(key, 'value')
+
+    assert.equal(has(key), true)
+    assert.equal(get(key), 'value')
   })
 })
