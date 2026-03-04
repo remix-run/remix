@@ -56,6 +56,14 @@ pnpm test "**/*.test.ts"
 tsx cli.ts --no-headless "fixtures/**/*.test.ts"
 ```
 
+### Watch Mode
+
+```bash
+tsx cli.ts --watch "fixtures/**/*.test.ts"
+```
+
+Use `-w` as a shorthand for `--watch`.
+
 ### Custom Port
 
 ```bash
@@ -146,7 +154,6 @@ This is a proof-of-concept with intentional simplifications:
 - No nested `describe()` blocks
 - Sequential test execution only (no parallelization)
 - Basic deep equality implementation
-- No watch mode
 - No code coverage reporting
 - Chromium only (no Firefox/WebKit support)
 - No test filtering/grep functionality
