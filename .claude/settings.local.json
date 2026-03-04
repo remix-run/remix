@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pnpm run docs:*)",
       "Bash(tee:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

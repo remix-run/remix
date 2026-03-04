@@ -1,1 +1,1 @@
-export { compression, type CompressionOptions } from './lib/compression.ts'
+export { compression, type CompressionOptions, type Encoding } from './lib/compression.ts'

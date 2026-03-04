@@ -78,7 +78,7 @@ export type QueryState = {
 }
 
 type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
-export type QualifiedTableColumnName<table extends AnyTable> =
+type QualifiedTableColumnName<table extends AnyTable> =
   `${TableName<table>}.${TableColumnName<table>}`
 export type QueryColumnName<table extends AnyTable> =
   | TableColumnName<table>

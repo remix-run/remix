@@ -18,6 +18,7 @@ export type {
   ColumnComputed,
   ColumnDefault,
   ColumnDefinition,
+  ColumnReference,
   ColumnTypeName,
   CountOperation,
   CreateIndexOperation,
@@ -40,6 +41,7 @@ export type {
   ExistsOperation,
   ForeignKeyAction,
   ForeignKeyConstraint,
+  IdentityOptions,
   IndexDefinition,
   IndexMethod,
   InsertManyOperation,
@@ -76,19 +78,25 @@ export type {
   AnyColumn,
   AnyTable,
   BelongsToOptions,
+  ColumnNameFromColumns,
   ColumnReference,
   ColumnReferenceForQualifiedName,
+  CreateTableOptions,
   HasManyOptions,
   HasManyThroughOptions,
   HasOneOptions,
   KeySelector,
+  NormalizePrimaryKey,
   OrderByClause,
   OrderDirection,
   PrimaryKeyInput,
+  QualifiedTableColumnName,
   Relation,
   RelationCardinality,
   RelationKind,
   RelationMapForTable,
+  RelationModifiers,
+  RelationResult,
   Table,
   TableAfterDelete,
   TableAfterDeleteContext,
@@ -105,19 +113,24 @@ export type {
   TableBeforeWriteResult,
   TableColumnInput,
   TableColumnName,
+  TableColumnReferences,
   TableColumns,
+  TableColumnsDefinition,
   TableLifecycleOperation,
+  TableMetadata,
   TableName,
   TablePrimaryKey,
   TableReference,
   TableRow,
+  TableRowFromColumns,
   TableRowWith,
-  TableColumnsDefinition,
+  TableTimestamps,
   TableValidate,
   TableValidationContext,
-  TableWriteOperation,
   TableValidationOperation,
   TableValidationResult,
+  TableWriteOperation,
+  ThroughRelationMetadata,
   TimestampConfig,
   TimestampOptions,
   ValidationFailure,
@@ -146,10 +159,12 @@ export {
   tableMetadataKey,
   timestamps,
 } from './lib/table.ts'
-export type { ColumnNamespace } from './lib/column.ts'
+export type { ColumnInput, ColumnNamespace, ColumnOutput } from './lib/column.ts'
 export { ColumnBuilder, column } from './lib/column.ts'
 
-export type { Predicate, WhereInput, WhereObject } from './lib/operators.ts'
+export type { ColumnInput as ColumnInputRef, ColumnReferenceLike, NormalizeColumnInput, TableMetadataLike } from './lib/references.ts'
+
+export type { ComparisonOperator, Predicate, PredicateColumn, WhereInput, WhereObject } from './lib/operators.ts'
 export {
   and,
   between,
@@ -168,6 +183,8 @@ export {
   or,
 } from './lib/operators.ts'
 
+export type { Pretty } from './lib/types.ts'
+
 export type { SqlStatement } from './lib/sql.ts'
 export { rawSql, sql } from './lib/sql.ts'
 
@@ -178,16 +195,27 @@ export type {
   CreateResultOptions,
   CreateRowOptions,
   Database,
+  DatabaseRuntime,
   DeleteManyOptions,
   FindManyOptions,
   FindOneOptions,
   OrderByInput,
   OrderByTuple,
+  PrimaryKeyInputForRow,
   QueryBuilderFor,
+  QueryColumnInput,
+  QueryColumnName,
+  QueryColumnTypeMap,
+  QueryColumnTypeMapFromRow,
+  QueryColumns,
   QueryColumnTypesForTable,
   QueryForTable,
   QueryMethod,
+  QueryState,
   QueryTableInput,
+  RelationMapForSourceName,
+  ReturningInput,
+  RowColumnName,
   SingleTableColumn,
   SingleTableWhere,
   UpdateManyOptions,

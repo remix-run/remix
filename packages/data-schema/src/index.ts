@@ -35,8 +35,12 @@ export type {
   InferInput,
   InferOutput,
   Issue,
+  ObjectOptions,
+  ObjectShape,
   ParseOptions,
   Schema,
+  SyncStandardSchema,
+  ValidationContext,
   ValidationOptions,
   ValidationResult,
 } from './lib/schema.ts'
