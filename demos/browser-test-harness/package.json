@@ -1,0 +1,24 @@
+{
+  "name": "browser-test-harness",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "tsx cli.ts --headless",
+    "test:example": "tsx cli.ts \"fixtures/**/*.test.ts\"",
+    "dev": "tsx cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.10",
+    "glob": "^11.0.0",
+    "playwright": "catalog:",
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}
