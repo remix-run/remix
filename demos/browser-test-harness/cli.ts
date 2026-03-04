@@ -13,11 +13,11 @@ let __dirname = path.dirname(fileURLToPath(import.meta.url))
 let { values, positionals } = parseArgs({
   args: process.argv.slice(2),
   options: {
-    debug: { type: 'boolean' },
+    debug: { type: 'boolean', short: 'd' },
     devtools: { type: 'boolean' },
-    headless: { type: 'boolean' },
+    headless: { type: 'boolean', short: 'h' },
     watch: { type: 'boolean', short: 'w' },
-    port: { type: 'string', default: '44101' },
+    port: { type: 'string', short: 'p', default: '44101' },
   },
   allowPositionals: true,
 })
