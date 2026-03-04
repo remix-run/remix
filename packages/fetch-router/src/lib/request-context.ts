@@ -23,17 +23,17 @@ export interface ContextKey<value> {
 }
 
 export type ContextValue<key> =
-  key extends ContextKey<infer value> ? value :
-  key extends abstract new (...args: any[]) => infer instance ? instance :
-  never
+  key extends ContextKey<infer value>
+    ? value
+    : key extends abstract new (...args: any[]) => infer instance
+      ? instance
+      : never
 
 /**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
-export class RequestContext<
-  params extends Record<string, any> = {},
-> {
+export class RequestContext<params extends Record<string, any> = {}> {
   /**
    * @param request The incoming request
    */
