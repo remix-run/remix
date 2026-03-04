@@ -186,6 +186,9 @@ export function createRouter(options?: RouterOptions): Router {
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
+  function normalizeAction<method extends RequestMethod | 'ANY', pattern extends string>(
+    action: Action<method, pattern>,
+  ): NormalizedAction
   function normalizeAction(action: Action<any, any>): NormalizedAction {
     if (isActionWithMiddleware(action)) {
       return {
