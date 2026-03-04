@@ -3,7 +3,7 @@ import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from '../mixin.ts'
 import { invariant } from '../invariant.ts'
 
-type AnimateTiming = {
+export type AnimateTiming = {
   duration: number
   easing?: string
   delay?: number
@@ -11,7 +11,7 @@ type AnimateTiming = {
   initial?: boolean
 }
 
-type AnimateStyleProps = {
+export type AnimateStyleProps = {
   [property: string]: unknown
 }
 

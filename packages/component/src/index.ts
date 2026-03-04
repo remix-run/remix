@@ -9,7 +9,7 @@ export type { StyleManager } from './lib/style/index.ts'
 export type { CSSProps } from './lib/style/lib/style.ts'
 export { createStyleManager } from './lib/style/lib/stylesheet.ts'
 
-export type { CommittedComponentNode, VNode } from './lib/vnode.ts'
+export type { CommittedComponentNode, VNode, VNodeType } from './lib/vnode.ts'
 export type { EmptyFn, SchedulerPhaseType, SchedulerPhaseListener } from './lib/scheduler.ts'
 
 // -- Client Entries --
@@ -25,7 +25,7 @@ export type {
 } from './lib/client-entries.ts'
 
 // -- Components --
-export { Fragment, Frame } from './lib/component.ts'
+export { Fragment, Frame, createComponent } from './lib/component.ts'
 export type {
   Task,
   Handle,
@@ -72,7 +72,11 @@ export type {
 export { TypedEventTarget } from './lib/typed-event-target.ts'
 export type { TypedEventListener } from './lib/typed-event-target.ts'
 export { addEventListeners } from './lib/event-listeners.ts'
-export type { EventListeners } from './lib/event-listeners.ts'
+export type {
+  EventListeners,
+  EventType as EventTypeGeneric,
+  ListenerFor as ListenerForGeneric,
+} from './lib/event-listeners.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched, EventType, ListenerFor, SignaledListener } from './lib/mixins/on-mixin.tsx'
 export { keysEvents, baseKeysEvents } from './lib/mixins/keys-mixin.tsx'
@@ -105,7 +109,12 @@ export { ref } from './lib/mixins/ref-mixin.tsx'
 export type { RefCallback } from './lib/mixins/ref-mixin.tsx'
 export { css } from './lib/mixins/css-mixin.tsx'
 export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
-export type { AnimationConfig, AnimateMixinConfig } from './lib/mixins/animate-mixins.tsx'
+export type {
+  AnimationConfig,
+  AnimateMixinConfig,
+  AnimateTiming,
+  AnimateStyleProps,
+} from './lib/mixins/animate-mixins.tsx'
 export { animateLayout } from './lib/mixins/animate-layout-mixin.tsx'
 export type { LayoutConfig } from './lib/mixins/animate-layout-mixin.tsx'
 
