@@ -147,7 +147,10 @@ describe('createFileCache', () => {
     let storage = createMemoryFileStorage()
     let cache = createFileCache(storage, { version: 'v1', maxSize: 1024 })
 
-    let first = await cache.getOrSet('etag', () => new File(['hello'], 'hello.txt', { type: 'text/plain' }))
+    let first = await cache.getOrSet(
+      'etag',
+      () => new File(['hello'], 'hello.txt', { type: 'text/plain' }),
+    )
     let firstLastModified = first.lastModified
     await pause()
 

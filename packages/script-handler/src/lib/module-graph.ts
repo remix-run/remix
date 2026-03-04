@@ -1,4 +1,5 @@
 import * as path from 'node:path'
+import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as esbuild from 'esbuild'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
@@ -11,13 +12,25 @@ let lexerReady = lexerInit
 
 export interface ModuleCompileResult {
   compiledCode: string
-  // Hash of the source file content (used in `?v=` URLs for immutable caching).
-  // Stable across server restarts for the same source content.
-  hash: string
+  // URL token AND ETag fingerprint.
+  // For non-cycle modules: hash of compiled code.
+  // For cycle modules: shared cycleHash (hash of all cycle sources + external dep hashes).
+  compiledHash: string
   sourceStamp: string
   sourcemap: string | null
-  // Absolute paths of direct dependencies (for preload traversal)
   deps: string[]
+}
+
+// Pass 1 result: transpiled but not yet URL-rewritten.
+interface RawModule {
+  absolutePath: string
+  rawCode: string
+  sourcemap: string | null
+  sourceStamp: string
+  // Original source text, used when computing cycleHash for circular dep groups.
+  sourceText: string
+  deps: string[]
+  imports: Array<{ start: number; end: number; depPath: string }>
 }
 
 export interface ModuleGraphOptions {
@@ -28,63 +41,69 @@ export interface ModuleGraphOptions {
   sourceMaps: boolean
 }
 
-// Maps absolute file path → cached compile result.
-export type ModuleGraphStore = Map<string, ModuleCompileResult>
-
-export function createModuleGraphStore(): ModuleGraphStore {
-  return new Map()
+export interface ModuleGraphStore {
+  raw: Map<string, RawModule>
+  rawInFlight: Map<string, Promise<RawModule>>
+  compiled: Map<string, ModuleCompileResult>
+  clear(): void
+  get(p: string): ModuleCompileResult | undefined
 }
 
-// Compile a single module: transpile it with esbuild, resolve imports to URL paths
-// (embedding source-content hashes for immutable caching), and cache the result.
-//
-// The hash is computed from the SOURCE CONTENT of the file (not compiled output).
-// This allows the server to serve any module at `?v=hash` without needing to compile
-// transitive deps upfront — each dep is compiled lazily when it is actually requested.
-export async function buildModule(
-  absolutePath: string,
-  store: ModuleGraphStore,
-  opts: ModuleGraphOptions,
-  // Tracks in-progress builds to deduplicate concurrent requests for the same file
-  inFlight: Map<string, Promise<ModuleCompileResult>>,
-): Promise<ModuleCompileResult> {
-  let existing = inFlight.get(absolutePath)
-  if (existing) return existing
-
-  let promise = _buildModule(absolutePath, store, opts)
-  inFlight.set(absolutePath, promise)
-  try {
-    let result = await promise
-    return result
-  } finally {
-    inFlight.delete(absolutePath)
+export function createModuleGraphStore(): ModuleGraphStore {
+  let raw = new Map<string, RawModule>()
+  let rawInFlight = new Map<string, Promise<RawModule>>()
+  let compiled = new Map<string, ModuleCompileResult>()
+  return {
+    raw,
+    rawInFlight,
+    compiled,
+    clear() {
+      raw.clear()
+      rawInFlight.clear()
+      compiled.clear()
+    },
+    get(p) {
+      return compiled.get(p)
+    },
   }
 }
 
-async function _buildModule(
+// Pass 1: transpile a single module without URL rewriting.
+async function compileRaw(
   absolutePath: string,
   store: ModuleGraphStore,
   opts: ModuleGraphOptions,
-): Promise<ModuleCompileResult> {
+): Promise<RawModule> {
+  try {
+    absolutePath = fs.realpathSync(absolutePath)
+  } catch {}
+
+  let existing = store.rawInFlight.get(absolutePath)
+  if (existing) return existing
+
+  let promise = _compileRaw(absolutePath, store, opts)
+  store.rawInFlight.set(absolutePath, promise)
+  try {
+    return await promise
+  } finally {
+    store.rawInFlight.delete(absolutePath)
+  }
+}
+
+async function _compileRaw(
+  absolutePath: string,
+  store: ModuleGraphStore,
+  opts: ModuleGraphOptions,
+): Promise<RawModule> {
   let stat = await fsp.stat(absolutePath)
   let sourceStamp = `${stat.size}:${stat.mtimeMs}`
 
-  // Check in-memory cache first (fast path)
-  let cached = store.get(absolutePath)
-  if (cached && cached.sourceStamp === sourceStamp) {
-    return cached
-  }
+  let cachedRaw = store.raw.get(absolutePath)
+  if (cachedRaw?.sourceStamp === sourceStamp) return cachedRaw
 
   let sourceText = await fsp.readFile(absolutePath, 'utf-8')
+  if (isCommonJS(sourceText)) throw new CjsModuleError(absolutePath)
 
-  if (isCommonJS(sourceText)) {
-    throw new CjsModuleError(absolutePath)
-  }
-
-  // Hash the source content — this is the stable `?v=` token for this file.
-  let hash = await hashContent(sourceText)
-
-  // Compile with esbuild (no bundling — just transpile TSX/TS to JS)
   let esbuildResult = await esbuild.build({
     entryPoints: [absolutePath],
     bundle: false,
@@ -96,31 +115,27 @@ async function _buildModule(
 
   let outputFile = esbuildResult.outputFiles?.[0]
   if (!outputFile) throw new Error(`esbuild produced no output for ${absolutePath}`)
-  // Strip esbuild's sourceMappingURL — we re-add the correct URL at serve time
-  let compiledCode = outputFile.text.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
+  let rawCode = outputFile.text.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
   let sourcemapFile = opts.sourceMaps ? esbuildResult.outputFiles?.[1] : undefined
   let rawSourcemap = sourcemapFile ? sourcemapFile.text : null
 
-  // Extract import specifiers from the compiled output
   await lexerReady
-  let [imports] = parseImports(compiledCode)
+  let [imports] = parseImports(rawCode)
 
-  let specifiers: Array<{ specifier: string; start: number; end: number }> = []
+  let toResolve: Array<{ specifier: string; start: number; end: number }> = []
   for (let imp of imports) {
-    if (imp.n != null) {
-      specifiers.push({ specifier: imp.n, start: imp.s, end: imp.e })
-    }
+    if (imp.n == null) continue
+    let specifier = imp.n
+    if (opts.external.includes(specifier)) continue
+    if (
+      specifier.startsWith('data:') ||
+      specifier.startsWith('http://') ||
+      specifier.startsWith('https://')
+    )
+      continue
+    toResolve.push({ specifier, start: imp.s, end: imp.e })
   }
 
-  // Filter to only specifiers we need to resolve
-  let toResolve = specifiers.filter(({ specifier }) => {
-    if (opts.external.includes(specifier)) return false
-    if (specifier.startsWith('data:')) return false
-    if (specifier.startsWith('http://') || specifier.startsWith('https://')) return false
-    return true
-  })
-
-  // Batch-resolve all specifiers in a single esbuild call (no per-import processes)
   let importerDir = path.dirname(absolutePath)
   let resolvedPaths =
     toResolve.length > 0
@@ -130,61 +145,16 @@ async function _buildModule(
         )
       : new Map<string, string>()
 
-  // Compute source hashes for each dep (fast — just hash the file content).
-  // We do NOT compile deps here; they are compiled lazily on first request.
-  let depHashes = new Map<string, string>()
-  let deps: string[] = []
+  let rawImports: Array<{ start: number; end: number; depPath: string }> = []
+  let depsSet = new Set<string>()
 
-  await Promise.all(
-    toResolve
-      .filter(({ specifier }) => resolvedPaths.has(specifier))
-      .map(async ({ specifier }) => {
-        let depPath = resolvedPaths.get(specifier)!
-        deps.push(depPath)
-        // Use cached hash if available and source hasn't changed
-        let depCached = store.get(depPath)
-        if (depCached) {
-          let depStat = await fsp.stat(depPath).catch(() => null)
-          let depStamp = depStat ? `${depStat.size}:${depStat.mtimeMs}` : null
-          if (depStamp && depCached.sourceStamp === depStamp) {
-            depHashes.set(specifier, depCached.hash)
-            return
-          }
-        }
-        // Read and hash source file content
-        try {
-          let depSource = await fsp.readFile(depPath, 'utf-8')
-          depHashes.set(specifier, await hashContent(depSource))
-        } catch {
-          // If we can't read the dep, skip rewriting its import
-        }
-      }),
-  )
-
-  // Rewrite imports to URL paths with source-content hashes
-  let magicString = new MagicString(compiledCode)
   for (let { specifier, start, end } of toResolve) {
     let depPath = resolvedPaths.get(specifier)
     if (!depPath) continue
-    let depHash = depHashes.get(specifier)
-    if (!depHash) continue
-
-    let urlSegment = absolutePathToUrlSegment(depPath, opts.root, opts.workspaceRoot)
-    if (!urlSegment) continue
-
-    let urlPath =
-      urlSegment.namespace === 'workspace'
-        ? `${opts.base}/__@workspace/${urlSegment.segment}?v=${depHash}`
-        : `${opts.base}/${urlSegment.segment}?v=${depHash}`
-
-    if (specifier !== urlPath) {
-      magicString.overwrite(start, end, urlPath)
-    }
+    rawImports.push({ start, end, depPath })
+    depsSet.add(depPath)
   }
 
-  let rewrittenCode = magicString.toString()
-
-  // Update sourcemap sources to use absolute path for browser devtools
   let finalSourcemap: string | null = null
   if (opts.sourceMaps && rawSourcemap) {
     try {
@@ -196,22 +166,253 @@ async function _buildModule(
     }
   }
 
-  let result: ModuleCompileResult = {
-    compiledCode: rewrittenCode,
-    hash,
-    sourceStamp,
+  let rawModule: RawModule = {
+    absolutePath,
+    rawCode,
     sourcemap: finalSourcemap,
-    deps,
+    sourceStamp,
+    sourceText,
+    deps: [...depsSet],
+    imports: rawImports,
   }
 
-  store.set(absolutePath, result)
+  store.raw.set(absolutePath, rawModule)
+  return rawModule
+}
+
+// Build the full raw dep graph (Pass 1 for all transitive deps).
+async function buildRawGraph(
+  absolutePath: string,
+  store: ModuleGraphStore,
+  opts: ModuleGraphOptions,
+  visited = new Set<string>(),
+): Promise<void> {
+  try {
+    absolutePath = fs.realpathSync(absolutePath)
+  } catch {}
+  if (visited.has(absolutePath)) return
+  visited.add(absolutePath)
+
+  let raw = await compileRaw(absolutePath, store, opts)
+  await Promise.all(raw.deps.map((dep) => buildRawGraph(dep, store, opts, visited)))
+}
+
+function collectRawTransitiveDeps(
+  absolutePath: string,
+  store: ModuleGraphStore,
+): Array<[string, RawModule]> {
+  let visited = new Set<string>()
+  let result: Array<[string, RawModule]> = []
+  let queue = [absolutePath]
+
+  while (queue.length > 0) {
+    let current = queue.shift()!
+    if (visited.has(current)) continue
+    visited.add(current)
+
+    let raw = store.raw.get(current)
+    if (!raw) continue
+
+    result.push([current, raw])
+    for (let dep of raw.deps) {
+      if (!visited.has(dep)) queue.push(dep)
+    }
+  }
+
   return result
 }
 
-// Collect all transitive dependencies of a module in BFS order (shallowest first).
-// Returns array of [absolutePath, ModuleCompileResult] pairs.
-// Note: this only includes modules that have been compiled (are in `store`).
-// For preloads, we need to build all transitive deps first.
+// Tarjan's SCC algorithm. Returns SCCs in topological order: leaf dependencies come
+// first, the entry point SCC comes last. This lets us compute hashes bottom-up.
+function tarjanSCC(nodes: string[], edges: Map<string, string[]>): string[][] {
+  let index = 0
+  let stack: string[] = []
+  let onStack = new Set<string>()
+  let indices = new Map<string, number>()
+  let lowlink = new Map<string, number>()
+  let sccs: string[][] = []
+
+  function strongconnect(v: string) {
+    indices.set(v, index)
+    lowlink.set(v, index)
+    index++
+    stack.push(v)
+    onStack.add(v)
+
+    for (let w of edges.get(v) ?? []) {
+      if (!indices.has(w)) {
+        strongconnect(w)
+        lowlink.set(v, Math.min(lowlink.get(v)!, lowlink.get(w)!))
+      } else if (onStack.has(w)) {
+        lowlink.set(v, Math.min(lowlink.get(v)!, indices.get(w)!))
+      }
+    }
+
+    if (lowlink.get(v) === indices.get(v)) {
+      let scc: string[] = []
+      let w: string
+      do {
+        w = stack.pop()!
+        onStack.delete(w)
+        scc.push(w)
+      } while (w !== v)
+      sccs.push(scc)
+    }
+  }
+
+  for (let v of nodes) {
+    if (!indices.has(v)) strongconnect(v)
+  }
+
+  return sccs
+}
+
+// Pass 2 for a singleton (no cycle): rewrite imports with dep hashes, compute compiledHash.
+async function finalizeModule(
+  absolutePath: string,
+  store: ModuleGraphStore,
+  opts: ModuleGraphOptions,
+): Promise<void> {
+  let raw = store.raw.get(absolutePath)!
+
+  let cached = store.compiled.get(absolutePath)
+  if (cached?.sourceStamp === raw.sourceStamp) return
+
+  let ms = new MagicString(raw.rawCode)
+
+  for (let { start, end, depPath } of raw.imports) {
+    let depResult = store.compiled.get(depPath)
+    if (!depResult) continue
+
+    let urlSegment = absolutePathToUrlSegment(depPath, opts.root, opts.workspaceRoot)
+    if (!urlSegment) continue
+
+    let urlPath =
+      urlSegment.namespace === 'workspace'
+        ? `${opts.base}/__@workspace/${urlSegment.segment}.@${depResult.compiledHash}`
+        : `${opts.base}/${urlSegment.segment}.@${depResult.compiledHash}`
+
+    ms.overwrite(start, end, urlPath)
+  }
+
+  let compiledCode = ms.toString()
+  let compiledHash = await hashContent(compiledCode)
+
+  store.compiled.set(absolutePath, {
+    compiledCode,
+    compiledHash,
+    sourceStamp: raw.sourceStamp,
+    sourcemap: raw.sourcemap,
+    deps: raw.deps,
+  })
+}
+
+// Pass 2 for a cycle SCC: all modules share a deterministic cycleHash, computed from
+// their source texts + the compiled hashes of their external (non-cycle) dependencies.
+// This means: if any cycle source changes OR any external dep changes, cycleHash changes,
+// invalidating all URLs for modules in the cycle and all their importers.
+async function finalizeCycle(
+  scc: string[],
+  store: ModuleGraphStore,
+  opts: ModuleGraphOptions,
+): Promise<void> {
+  let sccSet = new Set(scc)
+
+  // Skip if all modules are already compiled and sources haven't changed.
+  if (scc.every((p) => store.compiled.get(p)?.sourceStamp === store.raw.get(p)?.sourceStamp)) return
+
+  // Compute cycleHash from:
+  // 1. Sorted source texts of all cycle modules (alphabetical by path for determinism)
+  // 2. Sorted compiled hashes of all external deps (already computed in topological order)
+  let sortedSources = scc
+    .slice()
+    .sort()
+    .map((p) => store.raw.get(p)!.sourceText)
+    .join('\0')
+
+  let externalDepHashes = new Set<string>()
+  for (let p of scc) {
+    for (let dep of store.raw.get(p)!.deps) {
+      if (!sccSet.has(dep)) {
+        let depResult = store.compiled.get(dep)
+        if (depResult) externalDepHashes.add(depResult.compiledHash)
+      }
+    }
+  }
+
+  let cycleHash = await hashContent(
+    sortedSources + '\0\0' + [...externalDepHashes].sort().join('\0'),
+  )
+
+  // Rewrite imports in each cycle module, then store with the shared cycleHash.
+  for (let absolutePath of scc) {
+    let raw = store.raw.get(absolutePath)!
+    let ms = new MagicString(raw.rawCode)
+
+    for (let { start, end, depPath } of raw.imports) {
+      let urlSegment = absolutePathToUrlSegment(depPath, opts.root, opts.workspaceRoot)
+      if (!urlSegment) continue
+
+      // Deps within the cycle share the cycleHash; external deps use their own hash.
+      let token = sccSet.has(depPath) ? cycleHash : store.compiled.get(depPath)?.compiledHash
+      if (!token) continue
+
+      let urlPath =
+        urlSegment.namespace === 'workspace'
+          ? `${opts.base}/__@workspace/${urlSegment.segment}.@${token}`
+          : `${opts.base}/${urlSegment.segment}.@${token}`
+
+      ms.overwrite(start, end, urlPath)
+    }
+
+    store.compiled.set(absolutePath, {
+      compiledCode: ms.toString(),
+      compiledHash: cycleHash,
+      sourceStamp: raw.sourceStamp,
+      sourcemap: raw.sourcemap,
+      deps: raw.deps,
+    })
+  }
+}
+
+// Two-pass build with SCC-aware content hashing.
+// Pass 1 transpiles all transitive deps; Tarjan's SCC detects cycles; Pass 2 assigns
+// content-addressed hashes — deterministic regardless of entry point or traversal order.
+export async function buildGraph(
+  absolutePath: string,
+  store: ModuleGraphStore,
+  opts: ModuleGraphOptions,
+): Promise<ModuleCompileResult> {
+  try {
+    absolutePath = fs.realpathSync(absolutePath)
+  } catch {}
+
+  // Pass 1: transpile the full transitive closure.
+  await buildRawGraph(absolutePath, store, opts)
+
+  // Build the dep graph from raw results.
+  let rawDeps = collectRawTransitiveDeps(absolutePath, store)
+  let nodes = rawDeps.map(([p]) => p)
+  let edges = new Map(rawDeps.map(([p, raw]) => [p, raw.deps]))
+
+  // Find SCCs in topological order (Tarjan's: leaves first, entry point last).
+  let sccs = tarjanSCC(nodes, edges)
+
+  // Pass 2: finalize each SCC bottom-up so dep hashes are always available when needed.
+  for (let scc of sccs) {
+    // A cycle is an SCC with 2+ modules, or a singleton with a self-loop.
+    let isCycle = scc.length > 1 || (scc.length === 1 && (edges.get(scc[0]) ?? []).includes(scc[0]))
+    if (isCycle) {
+      await finalizeCycle(scc, store, opts)
+    } else {
+      await finalizeModule(scc[0], store, opts)
+    }
+  }
+
+  return store.compiled.get(absolutePath)!
+}
+
+// BFS traversal of compiled results, entry point first.
 export function collectTransitiveDeps(
   absolutePath: string,
   store: ModuleGraphStore,
@@ -225,37 +426,16 @@ export function collectTransitiveDeps(
     if (visited.has(current)) continue
     visited.add(current)
 
-    let node = store.get(current)
+    let node = store.compiled.get(current)
     if (!node) continue
 
     result.push([current, node])
     for (let dep of node.deps) {
-      if (!visited.has(dep)) {
-        queue.push(dep)
-      }
+      if (!visited.has(dep)) queue.push(dep)
     }
   }
 
   return result
-}
-
-// Build the full transitive module graph starting from a given entry point.
-// Used by preloads() to ensure all deps are compiled before generating preload URLs.
-// The `visited` set prevents infinite recursion when circular imports exist.
-export async function buildModuleGraph(
-  absolutePath: string,
-  store: ModuleGraphStore,
-  opts: ModuleGraphOptions,
-  inFlight: Map<string, Promise<ModuleCompileResult>>,
-  visited: Set<string> = new Set(),
-): Promise<void> {
-  if (visited.has(absolutePath)) return
-  visited.add(absolutePath)
-  let result = await buildModule(absolutePath, store, opts, inFlight)
-  // Recursively build all deps (in parallel)
-  await Promise.all(
-    result.deps.map((depPath) => buildModuleGraph(depPath, store, opts, inFlight, visited)),
-  )
 }
 
 export class CjsModuleError extends Error {
@@ -272,8 +452,6 @@ export class CjsModuleError extends Error {
   }
 }
 
-// Batch-resolve multiple import specifiers from the same importer directory
-// using a single esbuild build invocation. Returns a map from specifier → absolute path.
 async function batchResolveSpecifiers(
   specifiers: string[],
   importerDir: string,
@@ -284,10 +462,16 @@ async function batchResolveSpecifiers(
   try {
     let resolved = await resolveWithEsbuild(specifiers, importerDir)
     for (let { specifier, absolutePath } of resolved) {
-      if (absolutePath) result.set(specifier, absolutePath)
+      if (absolutePath) {
+        let realPath = absolutePath
+        try {
+          realPath = fs.realpathSync(absolutePath)
+        } catch {}
+        result.set(specifier, realPath)
+      }
     }
   } catch {
-    // Resolution failed — return empty map, imports will be left unrewritten
+    // Resolution failed — return empty map, imports will be left unrewritten.
   }
 
   return result
@@ -316,7 +500,6 @@ async function resolveWithEsbuild(
         name: 'batch-resolver',
         setup(build) {
           build.onStart(async () => {
-            // Resolve all specifiers in parallel within the single build
             let results = await Promise.all(
               specifiers.map((specifier) =>
                 build.resolve(specifier, {
@@ -332,7 +515,6 @@ async function resolveWithEsbuild(
               resolved.push({ specifier: specifiers[i], absolutePath })
             }
           })
-          // Mark everything external to avoid actual bundling
           build.onResolve({ filter: /.*/ }, (args) => {
             if (args.importer) return { external: true }
             return undefined
