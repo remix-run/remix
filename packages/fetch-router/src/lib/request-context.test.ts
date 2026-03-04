@@ -1,7 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { createContextKey } from './app-storage.ts'
-import { RequestContext } from './request-context.ts'
+import { createContextKey, RequestContext } from './request-context.ts'
 
 describe('new RequestContext()', () => {
   it('provides access to request headers', () => {
