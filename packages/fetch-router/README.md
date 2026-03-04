@@ -587,7 +587,7 @@ router.map(routes.admin.dashboard, {
 Every action and middleware receives a `context` object with useful properties:
 
 ```ts
-let userKey = createStorageKey<{ id: string }>()
+let userKey = createContextKey<{ id: string }>()
 
 router.get('/posts/:id', ({ request, url, params, set, get }) => {
   // request: The original Request object

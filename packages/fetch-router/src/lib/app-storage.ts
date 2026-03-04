@@ -1,10 +1,10 @@
 /**
- * Create a storage key with an optional default value.
+ * Create a request context key with an optional default value.
  *
- * @param defaultValue The default value for the storage key
- * @returns The new storage key
+ * @param defaultValue The default value for the context key
+ * @returns The new context key
  */
-export function createStorageKey<value>(defaultValue?: value): StorageKey<value> {
+export function createContextKey<value>(defaultValue?: value): StorageKey<value> {
   return { defaultValue }
 }
 

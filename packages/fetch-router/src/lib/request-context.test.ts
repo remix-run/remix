@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { createStorageKey } from './app-storage.ts'
+import { createContextKey } from './app-storage.ts'
 import { RequestContext } from './request-context.ts'
 
 describe('new RequestContext()', () => {
@@ -50,7 +50,7 @@ describe('new RequestContext()', () => {
   })
 
   it('sets and gets values in request-scoped storage', () => {
-    let key = createStorageKey('hello')
+    let key = createContextKey('hello')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     context.set(key, 'world')
@@ -59,28 +59,28 @@ describe('new RequestContext()', () => {
   })
 
   it('gets a default value from request-scoped storage when one is available', () => {
-    let key = createStorageKey('hello')
+    let key = createContextKey('hello')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.equal(context.get(key), 'hello')
   })
 
   it('allows `null` as a valid default value in request-scoped storage', () => {
-    let key = createStorageKey(null)
+    let key = createContextKey(null)
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.equal(context.get(key), null)
   })
 
   it('throws if a request-scoped value is not set and no default value exists', () => {
-    let key = createStorageKey()
+    let key = createContextKey()
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.throws(() => context.get(key), Error)
   })
 
   it('checks if a key has a request-scoped value', () => {
-    let key = createStorageKey('default')
+    let key = createContextKey('default')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.equal(context.has(key), false)
