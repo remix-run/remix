@@ -20,6 +20,11 @@ export type MatchData = {
   middleware: Middleware<any>[] | undefined
 }
 
+type NormalizedAction = {
+  handler: RequestHandler<any, any>
+  middleware: Middleware<any, any>[] | undefined
+}
+
 /**
  * The valid types for the first argument to `router.map()`.
  */
@@ -181,6 +186,35 @@ export function createRouter(options?: RouterOptions): Router {
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
+  function normalizeAction(action: Action<any, any>): NormalizedAction {
+    if (isActionWithMiddleware(action)) {
+      return {
+        handler: action.action,
+        middleware: action.middleware.length > 0 ? action.middleware : undefined,
+      }
+    }
+
+    return {
+      handler: action as RequestHandler<any, any>,
+      middleware: undefined,
+    }
+  }
+
+  function mergeMiddleware(
+    routeMiddleware: Middleware<any, any>[] | undefined,
+    actionMiddleware: Middleware<any, any>[] | undefined,
+  ): Middleware<any, any>[] | undefined {
+    if (!routeMiddleware || routeMiddleware.length === 0) {
+      return actionMiddleware
+    }
+
+    if (!actionMiddleware || actionMiddleware.length === 0) {
+      return routeMiddleware
+    }
+
+    return routeMiddleware.concat(actionMiddleware)
+  }
+
   function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
     let request = new Request(input, init)
 
@@ -212,25 +246,24 @@ export function createRouter(options?: RouterOptions): Router {
     return raceRequestAbort(Promise.resolve(defaultHandler(context)), context.request)
   }
 
+  function registerRoute<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: NormalizedAction,
+  ): void {
+    matcher.add(route instanceof Route ? route.pattern : route, {
+      handler: action.handler,
+      method,
+      middleware: action.middleware,
+    })
+  }
+
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
     action: Action<method, pattern>,
   ): void {
-    let middleware: Middleware<any, any>[] | undefined
-    let requestHandler: RequestHandler<any, any>
-    if (isActionWithMiddleware(action)) {
-      middleware = action.middleware.length > 0 ? action.middleware : undefined
-      requestHandler = action.action
-    } else {
-      requestHandler = action as RequestHandler<any, any>
-    }
-
-    matcher.add(route instanceof Route ? route.pattern : route, {
-      handler: requestHandler,
-      method,
-      middleware,
-    })
+    registerRoute(method, route, normalizeAction(action))
   }
 
   function mapRoutes(target: MapTarget, handler: unknown): void {
@@ -262,22 +295,12 @@ export function createRouter(options?: RouterOptions): Router {
       let action = controller.actions[key]
 
       if (route instanceof Route) {
-        if (isActionWithMiddleware(action)) {
-          let actionMiddleware =
-            middleware.length > 0 ? middleware.concat(action.middleware) : action.middleware
-
-          addRoute(route.method, route.pattern, {
-            middleware: actionMiddleware,
-            action: action.action,
-          })
-        } else if (middleware.length > 0) {
-          addRoute(route.method, route.pattern, {
-            middleware,
-            action: action as RequestHandler<any, any>,
-          })
-        } else {
-          addRoute(route.method, route.pattern, action as Action<any, any>)
-        }
+        let normalizedAction = normalizeAction(action as Action<any, any>)
+        let routeMiddleware = middleware.length > 0 ? middleware : undefined
+        registerRoute(route.method, route.pattern, {
+          handler: normalizedAction.handler,
+          middleware: mergeMiddleware(routeMiddleware, normalizedAction.middleware),
+        })
       } else {
         if (!isController(action)) {
           throw new TypeError(`Expected a nested controller with an \`actions\` property at \`${key}\``)
