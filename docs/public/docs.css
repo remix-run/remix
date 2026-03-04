@@ -409,10 +409,6 @@ code {
   a {
     display: inline-block;
 
-    &.active {
-      font-weight: bold;
-    }
-
     @media (max-width: 900px) {
       padding: var(--spacing-small) 0;
     }

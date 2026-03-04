@@ -2271,4 +2271,88 @@ describe('run', () => {
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
     root.dispose()
   })
+
+  it.todo('does not duplicate component-rendered head elements on frame reload', async () => {
+    let renderCount = 0
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let ActiveLinkHighlighter = clientEntry(
+      '/assets/highlighter.js#ActiveLinkHighlighter',
+      function ActiveLinkHighlighter(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return ({ activeUrl }: { activeUrl: string }) => (
+          <style data-active-link-style data-key="active-link">{`nav a[href="${activeUrl}"] { font-weight: bold; }`}</style>
+        )
+      },
+    )
+
+    async function renderFragment() {
+      renderCount++
+      let activeUrl = renderCount === 1 ? '/docs/intro' : '/docs/advanced'
+      let stream = renderToStream(
+        <>
+          <div>Page content {renderCount}</div>
+          <ActiveLinkHighlighter activeUrl={activeUrl} />
+        </>,
+        {
+          onError(error) {
+            console.error(error)
+          },
+        },
+      )
+      return await drain(stream)
+    }
+
+    let stream = renderToStream(
+      <main>
+        <Frame src="/fragment" />
+      </main>,
+      { resolveFrame: renderFragment },
+    )
+
+    let html = await drain(stream)
+    document.body.innerHTML = html
+
+    let clientFrame = run(document, {
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/highlighter.js' && exportName === 'ActiveLinkHighlighter') {
+          return ActiveLinkHighlighter
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: renderFragment,
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // After initial render, should have exactly one style element
+    let initialStyles = document.head.querySelectorAll('style[data-active-link-style]')
+    expect(initialStyles.length).toBe(1)
+    expect(initialStyles[0]?.textContent).toContain('/docs/intro')
+    expect(document.querySelector('div')?.textContent).toBe('Page content 1')
+
+    invariant(reload)
+
+    // Reload the frame
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // After reload, should STILL have exactly one style element (not duplicated)
+    let stylesAfterReload = document.head.querySelectorAll('style[data-active-link-style]')
+    expect(stylesAfterReload.length).toBe(1)
+    expect(stylesAfterReload[0]?.textContent).toContain('/docs/advanced')
+    expect(document.querySelector('div')?.textContent).toBe('Page content 2')
+
+    // Reload again to be sure
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let stylesAfterSecondReload = document.head.querySelectorAll('style[data-active-link-style]')
+    expect(stylesAfterSecondReload.length).toBe(1)
+    expect(stylesAfterSecondReload[0]?.textContent).toContain('/docs/intro')
+    expect(document.querySelector('div')?.textContent).toBe('Page content 3')
+
+    clientFrame.dispose()
+  })
 })
