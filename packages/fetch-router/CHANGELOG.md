@@ -8,7 +8,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 - Expose `context.router` on request context
 
-  Each router request context now gets the owning `Router` assigned as `context.router` by `createRouter()` when `fetch()` is called. This lets framework helpers read router state directly from `RequestContext` instead of requiring app-level middleware to store the router in `context.storage`.
+  Each router request context now gets the owning `Router` assigned as `context.router` by `createRouter()` when `fetch()` is called. This lets framework helpers read router state directly from `RequestContext` instead of requiring app-level middleware to store the router via `context.set(...)`.
 
 - Added a new `@remix-run/fetch-router/routes` export exporting route creation utilities
 
@@ -502,7 +502,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
-- Add `storage.has(key)` for checking if a value is stored for a given key
+- Add `context.has(key)` for checking if a value is stored for a given key
 - Add `next(moreContext)` API for passing additional context to the next middleware or handler in the chain
 - Move `logger` middleware to `@remix-run/fetch-router/logger-middleware` export
 - Add `json` and `redirect` response helpers

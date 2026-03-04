@@ -10,7 +10,7 @@ import { parseId } from '../utils/ids.ts'
 /**
  * Middleware that optionally loads the current user if authenticated.
  * Does not redirect if not authenticated.
- * Attaches user (if any) to context.storage.
+ * Attaches user (if any) to request context.
  */
 export function loadAuth(): Middleware {
   return async ({ db, session }) => {
@@ -36,7 +36,7 @@ export interface RequireAuthOptions {
 /**
  * Middleware that requires a user to be authenticated.
  * Redirects to login if not authenticated.
- * Attaches user to context.storage.
+ * Attaches user to request context.
  */
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
