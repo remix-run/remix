@@ -1,32 +1,26 @@
-export interface TestResults {
-  passed: number
-  failed: number
-  tests: Array<{
-    name: string
-    suiteName?: string
-    status: 'passed' | 'failed'
-    error?: {
-      message: string
-      stack?: string
-    }
-    duration: number
-  }>
-}
+import type { TestResults } from './test-runner'
 
 function normalizeStack(stack: string): string {
   let lines = stack.split('\n')
   let cwd = process.cwd().replace(/\\/g, '/')
 
   return lines
-    .map((line) =>
-      line
+    .map((line) => {
+      let normalized = line
         .replace(/https?:\/\/localhost:\d+\//g, '')
         .replace(/\/?_browser\/([^):]+)\.js(?=[:)])/g, '$1.ts')
         .replace(/\/?_module\/([^):]+)(?=[:)])/g, (_match, encoded) => decodeURIComponent(encoded))
         .replace(/\/?_test\/([^):]+)(?=[:)])/g, (_match, encoded) => decodeURIComponent(encoded))
         .replace(`${cwd}/`, './')
-        .replace(cwd, '.'),
-    )
+        .replace(cwd, '.')
+
+      // Normalize indentation to 2 spaces if line has leading whitespace
+      if (/^\s/.test(normalized)) {
+        normalized = normalized.replace(/^\s+/, '  ')
+      }
+
+      return normalized
+    })
     .join('\n')
 }
 
@@ -47,7 +41,7 @@ export function displayResults(results: TestResults) {
   for (let file of fileOrder) {
     let tests = fileMap.get(file)!
     let displayPath = file.replace(`${cwd}/`, './')
-    console.log(`\n--- ${displayPath}`)
+    console.log(`\n${displayPath}`)
 
     let suiteMap = new Map<string, typeof tests>()
     for (let test of tests) {
@@ -59,20 +53,20 @@ export function displayResults(results: TestResults) {
     }
 
     for (let [suiteName, suiteTests] of suiteMap) {
-      console.log(`${suiteName}:`)
+      console.log(`  ${suiteName}:`)
 
       for (let test of suiteTests) {
         let icon = test.status === 'passed' ? '✓' : '✗'
         let color = test.status === 'passed' ? '\x1b[32m' : '\x1b[31m'
         let reset = '\x1b[0m'
 
-        console.log(`  ${color}${icon}${reset} ${test.name} (${test.duration.toFixed(2)}ms)`)
+        console.log(`    ${color}${icon}${reset} ${test.name} (${test.duration.toFixed(2)}ms)`)
 
         if (test.error) {
-          console.log(`    ${color}Error: ${test.error.message}${reset}`)
+          console.log(`      ${color}Error: ${test.error.message}${reset}`)
           if (test.error.stack) {
             let stack = normalizeStack(test.error.stack)
-            console.log(`    ${stack.split('\n').slice(1, 5).join('\n    ')}`)
+            console.log(`      ${stack.split('\n').slice(1, 5).join('\n      ')}`)
           }
         }
       }
