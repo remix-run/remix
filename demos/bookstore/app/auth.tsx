@@ -7,13 +7,15 @@ import { passwordResetTokens, users } from './data/schema.ts'
 import { Document } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
+import { Session } from './utils/session.ts'
 
 export default {
   middleware: [loadAuth()],
   actions: {
     login: {
       actions: {
-        index({ session, url }) {
+        index({ get, url }) {
+          let session = get(Session)
           let error = session.get('error')
           let formAction = routes.auth.login.action.href(undefined, {
             returnTo: url.searchParams.get('returnTo'),
@@ -83,7 +85,9 @@ export default {
           )
         },
 
-        async action({ db, session, formData, url }) {
+        async action({ db, get, url }) {
+          let session = get(Session)
+          let formData = get(FormData)
           let email = formData.get('email')?.toString() ?? ''
           let password = formData.get('password')?.toString() ?? ''
           let returnTo = url.searchParams.get('returnTo')
@@ -144,7 +148,9 @@ export default {
           )
         },
 
-        async action({ db, session, formData }) {
+        async action({ db, get }) {
+          let session = get(Session)
+          let formData = get(FormData)
           let name = formData.get('name')?.toString() ?? ''
           let email = formData.get('email')?.toString() ?? ''
           let password = formData.get('password')?.toString() ?? ''
@@ -190,7 +196,8 @@ export default {
       },
     },
 
-    logout({ session }) {
+    logout({ get }) {
+      let session = get(Session)
       session.destroy()
       return redirect(routes.home.href())
     },
@@ -223,7 +230,8 @@ export default {
           )
         },
 
-        async action({ db, formData }) {
+        async action({ db, get }) {
+          let formData = get(FormData)
           let email = formData.get('email')?.toString() ?? ''
           let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
           let token = undefined as string | undefined
@@ -281,7 +289,8 @@ export default {
 
     resetPassword: {
       actions: {
-        index({ params, session }) {
+        index({ params, get }) {
+          let session = get(Session)
           let token = params.token
           let error = session.get('error')
 
@@ -329,7 +338,9 @@ export default {
           )
         },
 
-        async action({ db, session, formData, params }) {
+        async action({ db, get, params }) {
+          let session = get(Session)
+          let formData = get(FormData)
           let password = formData.get('password')?.toString() ?? ''
           let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
           let token = params.token

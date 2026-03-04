@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createCookie } from '@remix-run/cookie'
 import { SetCookie } from '@remix-run/headers'
-import { createSession } from '@remix-run/session'
+import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createRouter } from '@remix-run/fetch-router'
 
@@ -31,7 +31,8 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.map('/', ({ get }) => {
+      let session = get(Session)
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`)
     })
@@ -54,7 +55,8 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.map('/', ({ get }) => {
+      let session = get(Session)
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return fetch('http://example.com')
     })
@@ -101,7 +103,7 @@ describe('session middleware', () => {
     })
 
     router.map('/', (context) => {
-      context.session = createSession()
+      context.set(Session, createSession())
       return new Response('Home')
     })
 
@@ -118,7 +120,8 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.map('/', ({ get }) => {
+      let session = get(Session)
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`, {
         headers: {

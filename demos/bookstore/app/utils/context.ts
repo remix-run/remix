@@ -4,6 +4,7 @@ import { getContext } from 'remix/async-context-middleware'
 import { getCart } from '../data/cart.ts'
 import type { Cart } from '../data/cart.ts'
 import type { User } from '../data/schema.ts'
+import { Session } from './session.ts'
 
 // Context key for attaching user data to request context
 let USER_KEY = createContextKey<User>()
@@ -38,5 +39,5 @@ export function setCurrentUser(user: User): void {
  * Get the current cart from the session.
  */
 export function getCurrentCart(): Cart {
-  return getCart(getContext().session.get('cart'))
+  return getCart(getContext().get(Session).get('cart'))
 }

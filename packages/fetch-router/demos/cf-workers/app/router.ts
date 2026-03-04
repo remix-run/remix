@@ -1,5 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
+import { Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
@@ -19,7 +20,8 @@ let sessionCookie = createCookie('__sess', {
 let sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return ({ session }, next) => {
+  return ({ get }, next) => {
+    let session = get(Session)
     let username = session.get('username')
 
     if (!username) {
@@ -34,7 +36,8 @@ export let router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 
-router.map(routes.home, async ({ session }) => {
+router.map(routes.home, async ({ get }) => {
+  let session = get(Session)
   let posts = await data.getPosts(env.DB)
   let username = session.get('username') as string | undefined
 
@@ -82,7 +85,8 @@ router.map(routes.home, async ({ session }) => {
 
 router.map(routes.login, {
   actions: {
-    index({ session }) {
+    index({ get }) {
+      let session = get(Session)
       let username = session.get('username') as string | undefined
       if (username) {
         return redirect(routes.home.href())
@@ -112,7 +116,9 @@ router.map(routes.login, {
         </html>
       `)
     },
-    async action({ formData, session }) {
+    async action({ get }) {
+      let session = get(Session)
+      let formData = get(FormData)
       let username = formData.get('username') as string
 
       if (username) {
@@ -125,7 +131,8 @@ router.map(routes.login, {
   },
 })
 
-router.post(routes.logout, ({ session }) => {
+router.post(routes.logout, ({ get }) => {
+  let session = get(Session)
   session.destroy()
   return redirect(routes.home.href())
 })
@@ -160,7 +167,9 @@ router.map(routes.posts, {
         `)
       },
     },
-    async create({ formData, session }) {
+    async create({ get }) {
+      let session = get(Session)
+      let formData = get(FormData)
       let username = session.get('username') as string
       if (!username) {
         return redirect(routes.login.index.href())

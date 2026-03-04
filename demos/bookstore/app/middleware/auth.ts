@@ -6,6 +6,7 @@ import { routes } from '../routes.ts'
 import { users } from '../data/schema.ts'
 import { setCurrentUser } from '../utils/context.ts'
 import { parseId } from '../utils/ids.ts'
+import { Session } from '../utils/session.ts'
 
 /**
  * Middleware that optionally loads the current user if authenticated.
@@ -13,7 +14,8 @@ import { parseId } from '../utils/ids.ts'
  * Attaches user (if any) to request context.
  */
 export function loadAuth(): Middleware {
-  return async ({ db, session }) => {
+  return async ({ db, get }) => {
+    let session = get(Session)
     let userId = parseId(session.get('userId'))
 
     if (userId !== undefined) {
@@ -41,7 +43,8 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ db, session, url }) => {
+  return async ({ db, get, url }) => {
+    let session = get(Session)
     let userId = parseId(session.get('userId'))
     let user = userId === undefined ? undefined : await db.find(users, userId)
 

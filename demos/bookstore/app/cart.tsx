@@ -11,6 +11,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
+import { Session } from './utils/session.ts'
 
 export default {
   middleware: [loadAuth()],
@@ -29,7 +30,9 @@ export default {
 
     api: {
       actions: {
-        async add({ db, session, formData }) {
+        async add({ db, get }) {
+          let session = get(Session)
+          let formData = get(FormData)
           if (process.env.NODE_ENV !== 'test') {
             // Simulate network latency
             await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -53,7 +56,9 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async update({ db, session, formData }) {
+        async update({ db, get }) {
+          let session = get(Session)
+          let formData = get(FormData)
           await new Promise((resolve) => setTimeout(resolve, 1000))
 
           let bookId = parseId(formData.get('bookId'))
@@ -73,7 +78,9 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async remove({ db, session, formData }) {
+        async remove({ db, get }) {
+          let session = get(Session)
+          let formData = get(FormData)
           if (process.env.NODE_ENV !== 'test') {
             // Simulate network latency
             await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -98,7 +105,9 @@ export default {
   },
 } satisfies Controller<typeof routes.cart>
 
-export async function toggleCart({ db, session, formData }: RequestContext<'POST'>) {
+export async function toggleCart({ db, get }: RequestContext) {
+  let session = get(Session)
+  let formData = get(FormData)
   let bookId = parseId(formData.get('bookId'))
   let book = bookId === undefined ? undefined : await db.find(books, bookId)
   if (!book) {

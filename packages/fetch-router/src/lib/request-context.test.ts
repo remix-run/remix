@@ -72,14 +72,14 @@ describe('new RequestContext()', () => {
     assert.equal(context.get(key), null)
   })
 
-  it('throws if a request-scoped value is not set and no default value exists', () => {
+  it('throws if a context value is not set and no default value exists', () => {
     let key = createContextKey()
     let context = new RequestContext(new Request('https://remix.run/test'))
 
     assert.throws(() => context.get(key), Error)
   })
 
-  it('checks if a key has a request-scoped value', () => {
+  it('checks if a key has a context value', () => {
     let key = createContextKey('default')
     let context = new RequestContext(new Request('https://remix.run/test'))
 
@@ -100,5 +100,23 @@ describe('new RequestContext()', () => {
 
     assert.equal(has(key), true)
     assert.equal(get(key), 'value')
+  })
+
+  it('supports class constructors as context keys', () => {
+    class Value {
+      text: string
+
+      constructor(text: string) {
+        this.text = text
+      }
+    }
+
+    let context = new RequestContext(new Request('https://remix.run/test'))
+    let value = new Value('hello')
+
+    context.set(Value, value)
+
+    assert.equal(context.has(Value), true)
+    assert.equal(context.get(Value), value)
   })
 })

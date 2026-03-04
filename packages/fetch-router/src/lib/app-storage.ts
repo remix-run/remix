@@ -18,4 +18,7 @@ export interface ContextKey<value> {
   defaultValue?: value
 }
 
-export type ContextValue<key> = key extends ContextKey<infer value> ? value : never
+export type ContextValue<key> =
+  key extends ContextKey<infer value> ? value :
+  key extends abstract new (...args: any[]) => infer instance ? instance :
+  never

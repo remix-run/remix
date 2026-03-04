@@ -460,9 +460,6 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
-      '@remix-run/session':
-        specifier: workspace:^
-        version: link:../session
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

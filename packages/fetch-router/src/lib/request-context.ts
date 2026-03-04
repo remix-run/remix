@@ -1,4 +1,3 @@
-import { createSession, type Session } from '@remix-run/session'
 import type { Router } from './router.ts'
 
 import type { ContextKey, ContextValue } from './app-storage.ts'
@@ -97,28 +96,7 @@ export class RequestContext<
    */
   request: Request
 
-  /**
-   * The current session.
-   */
-  get session(): Session {
-    if (this.#session == null) {
-      console.warn(
-        "Session isn't started yet, so session data won't be saved. Use the session() middleware to start the session.",
-      )
-
-      this.#session = createSession()
-    }
-
-    return this.#session
-  }
-
-  set session(value: Session) {
-    this.#session = value
-  }
-
-  #session?: Session
-
-  #contextMap: Map<ContextKey<any>, ContextValue<any>> = new Map()
+  #contextMap: Map<object, unknown> = new Map()
 
   /**
    * Get a value from request context.
@@ -126,13 +104,14 @@ export class RequestContext<
    * @param key The key to read
    * @returns The value for the given key
    */
-  get = <key extends ContextKey<any>>(key: key): ContextValue<key> => {
+  get = <key extends object>(key: key): ContextValue<key> => {
     if (!this.#contextMap.has(key)) {
-      if (key.defaultValue === undefined) {
+      let contextKey = key as ContextKey<ContextValue<key>>
+      if (contextKey.defaultValue === undefined) {
         throw new Error(`Missing default value in context for key ${key}`)
       }
 
-      return key.defaultValue
+      return contextKey.defaultValue
     }
 
     return this.#contextMap.get(key) as ContextValue<key>
@@ -144,7 +123,7 @@ export class RequestContext<
    * @param key The key to check
    * @returns `true` if a value has been set for the key
    */
-  has = <key extends ContextKey<any>>(key: key): boolean => this.#contextMap.has(key)
+  has = <key extends object>(key: key): boolean => this.#contextMap.has(key)
 
   /**
    * Set a value in request context.
@@ -152,7 +131,7 @@ export class RequestContext<
    * @param key The key to write
    * @param value The value to write
    */
-  set = <key extends ContextKey<any>>(key: key, value: ContextValue<key>): void => {
+  set = <key extends object>(key: key, value: ContextValue<key>): void => {
     this.#contextMap.set(key, value)
   }
 
@@ -171,13 +150,6 @@ export class RequestContext<
 
   set router(router: Router) {
     this.#router = router
-  }
-
-  /**
-   * Whether the session has been started.
-   */
-  get sessionStarted(): boolean {
-    return this.#session != null
   }
 
   /**

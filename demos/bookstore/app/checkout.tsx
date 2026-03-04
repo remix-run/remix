@@ -10,6 +10,7 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
+import { Session } from './utils/session.ts'
 
 export default {
   middleware: [requireAuth()],
@@ -109,7 +110,8 @@ export default {
       )
     },
 
-    async action({ db, session, formData }) {
+    async action({ db, get, formData }) {
+      let session = get(Session)
       let user = getCurrentUser()
       let cart = getCurrentCart()
 
