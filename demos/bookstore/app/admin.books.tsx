@@ -237,7 +237,8 @@ export default {
       )
     },
 
-    async create({ db, formData }) {
+    async create({ db, get }) {
+      let formData = get(FormData)
       await db.create(books, {
         slug: formData.get('slug')?.toString() ?? '',
         title: formData.get('title')?.toString() ?? '',
@@ -381,7 +382,8 @@ export default {
       )
     },
 
-    async update({ db, formData, params }) {
+    async update({ db, get, params }) {
+      let formData = get(FormData)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
       if (!book) {

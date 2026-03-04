@@ -1,10 +1,6 @@
 import type { Router } from './router.ts'
 
-import {
-  RequestBodyMethods,
-  type RequestBodyMethod,
-  type RequestMethod,
-} from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 
 /**
  * Create a request context key with an optional default value.
@@ -58,8 +54,8 @@ export class RequestContext<
   get files(): Map<string, File> {
     let files: Map<string, File> = new Map()
 
-    if (this.#formData != null) {
-      for (let [key, value] of this.#formData.entries()) {
+    if (this.has(FormData)) {
+      for (let [key, value] of this.get(FormData).entries()) {
         if (value instanceof File) {
           files.set(key, value)
         }
@@ -68,28 +64,6 @@ export class RequestContext<
 
     return files
   }
-
-  /**
-   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
-   * request body.
-   *
-   * Note: This is only available for requests with a body (not `GET` or `HEAD`).
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
-   */
-  get formData(): method extends RequestBodyMethod ? FormData : FormData | undefined {
-    if (this.#formData == null && RequestBodyMethods.includes(this.method as RequestBodyMethod)) {
-      this.#formData = new FormData()
-    }
-
-    return this.#formData as any
-  }
-
-  set formData(value: FormData) {
-    this.#formData = value
-  }
-
-  #formData?: FormData
 
   /**
    * The headers of the request.
@@ -112,10 +86,10 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    *
    * Note: Various properties of the original request may not be available or may have been
-   * modified by middleware. For example, the request's body may already have been consumed by
-   * the `formData` middleware (available as `context.formData`), or its method may have been
+   * modified by middleware. For example, the request's body may already have been consumed by the
+   * `formData` middleware (available as `context.get(FormData)`), or its method may have been
    * overridden by the `methodOverride` middleware (available as `context.method`). You should
-   * always default to using properties of the `context` object instead of the original request.
+   * default to using properties of the `context` object instead of the original request.
    * However, the original request is made available in case you need it for some edge case.
    */
   request: Request

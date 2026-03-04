@@ -32,20 +32,22 @@ describe('new RequestContext()', () => {
     assert.equal(req.headers.get('X-New'), null)
   })
 
-  it('does not provide formData on GET requests', () => {
-    let req = new Request('https://remix.run/test', {
-      method: 'GET',
-    })
-    let context = new RequestContext(req)
-    assert.equal(context.formData, undefined)
+  it('provides an empty files map when FormData is not set in context', () => {
+    let context = new RequestContext(new Request('https://remix.run/test', { method: 'GET' }))
+    assert.equal(context.files.size, 0)
   })
 
-  it('provides formData on POST requests', () => {
-    let req = new Request('https://remix.run/test', {
-      method: 'POST',
-    })
-    let context = new RequestContext(req)
-    assert.ok(context.formData)
+  it('reads files from FormData stored in context', () => {
+    let context = new RequestContext(new Request('https://remix.run/test', { method: 'POST' }))
+    let formData = new FormData()
+    let file = new File(['hello'], 'hello.txt', { type: 'text/plain' })
+
+    formData.set('avatar', file)
+    formData.set('name', 'Jane')
+    context.set(FormData, formData)
+
+    assert.equal(context.files.size, 1)
+    assert.equal(context.files.get('avatar'), file)
   })
 
   it('sets and gets values in request context', () => {

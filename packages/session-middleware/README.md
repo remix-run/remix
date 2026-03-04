@@ -77,8 +77,9 @@ router.get('/login', ({ get }) => {
   `)
 })
 
-router.post('/login', ({ get, formData }) => {
+router.post('/login', ({ get }) => {
   let session = get(Session)
+  let formData = get(FormData)
   let username = formData.get('username')
   let password = formData.get('password')
 

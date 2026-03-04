@@ -13,7 +13,7 @@ describe('formData middleware', () => {
     })
 
     router.post('/', (context) => {
-      let entries = Object.fromEntries(context.formData.entries())
+      let entries = Object.fromEntries(context.get(FormData).entries())
       return Response.json(entries)
     })
 
@@ -35,7 +35,7 @@ describe('formData middleware', () => {
     })
 
     router.post('/', (context) => {
-      let entries = Object.fromEntries(context.formData.entries())
+      let entries = Object.fromEntries(context.get(FormData).entries())
       return Response.json(entries)
     })
 
@@ -118,7 +118,7 @@ describe('formData middleware', () => {
       middleware: [formData()],
     })
 
-    router.post('/', (context) => Response.json(context.formData))
+    router.post('/', (context) => Response.json(context.get(FormData)))
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/', {
@@ -137,7 +137,7 @@ describe('formData middleware', () => {
     })
 
     router.post('/', (context) => {
-      let entries = Object.fromEntries(context.formData.entries())
+      let entries = Object.fromEntries(context.get(FormData).entries())
       return Response.json(entries)
     })
 
@@ -153,17 +153,17 @@ describe('formData middleware', () => {
     assert.deepEqual(await response.json(), {})
   })
 
-  it('sets context.formData to an empty FormData when parse errors are suppressed', async () => {
+  it('sets context.get(FormData) to an empty FormData when parse errors are suppressed', async () => {
     let router = createRouter({
       middleware: [formData({ suppressErrors: true })],
     })
 
     router.post('/', (context) =>
-      // Explicitly check that formData is defined and is a FormData instance
+      // Explicitly check that FormData exists in request context
       Response.json({
-        isDefined: context.formData !== undefined,
-        isFormData: context.formData instanceof FormData,
-        isEmpty: context.formData.entries().next().done,
+        isDefined: context.has(FormData),
+        isFormData: context.get(FormData) instanceof FormData,
+        isEmpty: context.get(FormData).entries().next().done,
       }),
     )
 

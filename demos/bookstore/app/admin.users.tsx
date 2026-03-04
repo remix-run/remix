@@ -196,7 +196,8 @@ export default {
       )
     },
 
-    async update({ db, formData, params }) {
+    async update({ db, get, params }) {
+      let formData = get(FormData)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
       if (targetUser) {

@@ -109,7 +109,8 @@ export default {
           )
         },
 
-        async update({ db, formData }) {
+        async update({ db, get }) {
+          let formData = get(FormData)
           let user = getCurrentUser()
 
           let name = formData.get('name')?.toString() ?? ''

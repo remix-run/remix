@@ -156,10 +156,10 @@ router.get(routes.contact, () => {
 })
 
 // Register an action for `POST /contact`
-router.post(routes.contact, ({ formData }) => {
-  // POST actions receive a `context` object with a `formData` property that
-  // contains the `FormData` from the form submission. It is automatically
-  // parsed from the request body and available in all POST actions.
+router.post(routes.contact, ({ get }) => {
+  // POST actions can read parsed FormData from request context using FormData
+  // as the context key after the formData middleware has run.
+  let formData = get(FormData)
   let message = formData.get('message') as string
   let body = html`
     <html>
@@ -310,7 +310,8 @@ router.map(routes, {
           `)
         },
         // POST /contact - handles the form submission
-        action({ formData }) {
+        action({ get }) {
+          let formData = get(FormData)
           let message = formData.get('message') as string
           let body = html`
             <html>
@@ -637,8 +638,8 @@ router.get('/posts/:id', ({ request, url, params, set, get }) => {
 #### Form Data and File Uploads
 
 - use the `formData()` middleware to parse the `FormData` object from the request body
-- use the `formData` property of the context object to access the form data
-- use the `files` property of the context object to access the uploaded files
+- use `context.get(FormData)` to access parsed form data
+- use `context.get(FormData).get(name)`/`getAll(name)` to access uploaded files
 - use the `uploadHandler` option of the `formData()` middleware to handle file uploads
 
 #### Request Method Override

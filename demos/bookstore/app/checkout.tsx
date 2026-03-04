@@ -110,8 +110,9 @@ export default {
       )
     },
 
-    async action({ db, get, formData }) {
+    async action({ db, get }) {
       let session = get(Session)
+      let formData = get(FormData)
       let user = getCurrentUser()
       let cart = getCurrentCart()
 
