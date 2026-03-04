@@ -81,6 +81,7 @@ export type {
   ColumnReference,
   ColumnReferenceForQualifiedName,
   CreateTableOptions,
+  DefaultPrimaryKey,
   HasManyOptions,
   HasManyThroughOptions,
   HasOneOptions,
@@ -161,7 +162,13 @@ export {
 export type { ColumnInput, ColumnNamespace, ColumnOutput } from './lib/column.ts'
 export { ColumnBuilder, column } from './lib/column.ts'
 
-export type { ColumnInput as ColumnInputRef, ColumnReferenceLike, NormalizeColumnInput, TableMetadataLike } from './lib/references.ts'
+export type {
+  ColumnInput as ColumnInputRef,
+  ColumnReferenceLike,
+  NormalizeColumnInput,
+  TableMetadataLike,
+  UnknownTableMetadata,
+} from './lib/references.ts'
 
 export type { ComparisonOperator, Predicate, PredicateColumn, WhereInput, WhereObject } from './lib/operators.ts'
 export {
@@ -200,6 +207,8 @@ export type {
   OrderByInput,
   OrderByTuple,
   PrimaryKeyInputForRow,
+  QualifiedRowColumnName,
+  QualifiedTableColumnName as QualifiedTableColumnNameDb,
   QueryBuilderFor,
   QueryColumnInput,
   QueryColumnName,
@@ -216,10 +225,11 @@ export type {
   RowColumnName,
   SingleTableColumn,
   SingleTableWhere,
+  TableColumnName as TableColumnNameDb,
   UpdateManyOptions,
   UpdateOptions,
   WriteResult,
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export { createDatabase, QueryBuilder } from './lib/database.ts'
+export { createDatabase, DatabaseRuntime, QueryBuilder } from './lib/database.ts'

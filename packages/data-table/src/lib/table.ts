@@ -109,7 +109,7 @@ export type TableAfterRead<row extends Record<string, unknown>> = (
 
 export type ColumnNameFromColumns<columns extends TableColumnsDefinition> = keyof columns & string
 
-type DefaultPrimaryKey<columns extends TableColumnsDefinition> =
+export type DefaultPrimaryKey<columns extends TableColumnsDefinition> =
   'id' extends ColumnNameFromColumns<columns>
     ? readonly ['id']
     : readonly ColumnNameFromColumns<columns>[]

@@ -2,6 +2,7 @@ export type {
   MysqlDatabaseAdapterOptions,
   MysqlDatabaseConnection,
   MysqlDatabasePool,
+  MysqlQueryable,
   MysqlQueryResponse,
   MysqlQueryResultHeader,
   MysqlQueryRows,

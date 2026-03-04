@@ -8,7 +8,7 @@ export const tableMetadataKey = Symbol('data-table.tableMetadata')
  */
 export const columnMetadataKey = Symbol('data-table.columnMetadata')
 
-type UnknownTableMetadata<
+export type UnknownTableMetadata<
   name extends string = string,
   columns extends Record<string, unknown> = Record<string, unknown>,
   primaryKey extends readonly string[] = readonly string[],

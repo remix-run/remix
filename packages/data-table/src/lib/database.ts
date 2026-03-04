@@ -77,7 +77,7 @@ export type QueryState = {
   with: Record<string, AnyRelation>
 }
 
-type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
+export type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
 export type QualifiedTableColumnName<table extends AnyTable> =
   `${TableName<table>}.${TableColumnName<table>}`
 export type QueryColumnName<table extends AnyTable> =
@@ -85,7 +85,7 @@ export type QueryColumnName<table extends AnyTable> =
   | QualifiedTableColumnName<table>
 
 export type RowColumnName<row extends Record<string, unknown>> = keyof row & string
-type QualifiedRowColumnName<
+export type QualifiedRowColumnName<
   tableName extends string,
   row extends Record<string, unknown>,
 > = `${tableName}.${RowColumnName<row>}`
@@ -396,7 +396,7 @@ export type Database = {
   ): Promise<result>
 }
 
-class DatabaseRuntime implements Database {
+export class DatabaseRuntime implements Database {
   #adapter: DatabaseAdapter
   #token?: TransactionToken
   #now: () => unknown

@@ -22,7 +22,7 @@ import {
 
 import { compilePostgresOperation } from './sql-compiler.ts'
 
-type Pretty<value> = {
+export type Pretty<value> = {
   [key in keyof value]: value[key]
 } & {}
 

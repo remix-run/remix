@@ -71,7 +71,7 @@ type TransactionState = {
   releaseOnClose: boolean
 }
 
-type MysqlQueryable = MysqlDatabasePool | MysqlDatabaseConnection
+export type MysqlQueryable = MysqlDatabasePool | MysqlDatabaseConnection
 
 /**
  * `DatabaseAdapter` implementation for mysql-compatible clients.
