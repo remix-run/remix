@@ -43,7 +43,11 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-await spider(docsRouter, outputDir)
+await spider(
+  docsRouter,
+  outputDir,
+  new Set(['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])]),
+)
 
 // Spider the website served by router, beginning at /
 async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'])) {

@@ -13,8 +13,10 @@ export const LightDarkToggle = clientEntry(
             css({ height: '100%', width: '44px', cursor: 'pointer' }),
             ref((node) => {
               el = node as HTMLButtonElement
-              isDark = document.body.classList.contains('dark')
-              handle.update()
+              if (isDark !== document.body.classList.contains('dark')) {
+                isDark = document.body.classList.contains('dark')
+                handle.queueTask(() => handle.update())
+              }
             }),
             on('click', () => {
               document.body.classList.toggle('dark')

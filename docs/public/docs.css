@@ -382,10 +382,6 @@ code {
     }
   }
 
-  .items {
-    padding-left: var(--spacing-medium);
-  }
-
   p {
     font-size: var(--nav-subheading-size);
     margin-bottom: var(--spacing-xs);
