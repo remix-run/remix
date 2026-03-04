@@ -151,5 +151,5 @@ type ResourcesRoutes<param extends string> = {
 }
 
 // prettier-ignore
-export type GetParam<options extends ResourcesOptions> =
+type GetParam<options extends ResourcesOptions> =
   options extends { param: infer param extends string } ? param : 'id'

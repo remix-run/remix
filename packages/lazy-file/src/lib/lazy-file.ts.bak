@@ -359,7 +359,7 @@ type BlobLike = Blob | LazyBlob | LazyFile
 /**
  * Union of BlobPart and lazy blob types. Used for constructor signatures.
  */
-export type BlobPartLike = BlobPart | LazyBlob | LazyFile
+type BlobPartLike = BlobPart | LazyBlob | LazyFile
 
 function isBlobLike(value: unknown): value is BlobLike {
   return value instanceof Blob || value instanceof LazyBlob || value instanceof LazyFile

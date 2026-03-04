@@ -2,7 +2,7 @@ import { type HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 import { capitalize, isValidDate } from './utils.ts'
 
-export type SameSiteValue = 'Strict' | 'Lax' | 'None'
+type SameSiteValue = 'Strict' | 'Lax' | 'None'
 
 /**
  * Properties for a `Set-Cookie` header value.

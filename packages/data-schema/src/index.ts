@@ -40,6 +40,7 @@ export type {
   ParseOptions,
   Schema,
   SyncStandardSchema,
+  SyncStandardSchemaProps,
   ValidationContext,
   ValidationOptions,
   ValidationResult,

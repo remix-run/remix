@@ -4,7 +4,8 @@
       "Bash(pnpm run docs:*)",
       "Bash(tee:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)"
     ]
   }
 }

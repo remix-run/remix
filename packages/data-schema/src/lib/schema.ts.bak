@@ -50,7 +50,7 @@ export type ParseOptions = StandardSchemaV1.Options & {
   locale?: string
 }
 
-export type SyncStandardSchemaProps<input, output> = Omit<
+type SyncStandardSchemaProps<input, output> = Omit<
   StandardSchemaV1.Props<input, output>,
   'validate'
 > & {

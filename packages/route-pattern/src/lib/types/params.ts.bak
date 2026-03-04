@@ -7,7 +7,7 @@ import type { Simplify } from './utils.ts'
 export type Params<T extends string> = T extends string ? BuildParams<T> : never
 
 // prettier-ignore
-export type BuildParams<T extends string> =
+type BuildParams<T extends string> =
   Parse<T> extends infer A extends ParsedPattern ?
     Simplify<
       ParamsFromTokens<A['protocol']> &

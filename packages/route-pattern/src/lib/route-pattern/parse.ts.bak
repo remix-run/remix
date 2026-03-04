@@ -81,7 +81,7 @@ export function parseSearch(source: string): RoutePattern['ast']['search'] {
   return constraints
 }
 
-export type ParseErrorType =
+type ParseErrorType =
   | 'unmatched ('
   | 'unmatched )'
   | 'missing variable name'

@@ -128,7 +128,7 @@ export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplif
 }>
 
 // prettier-ignore
-export type BuildRouteWithBase<base extends string, def extends RouteDef> =
+type BuildRouteWithBase<base extends string, def extends RouteDef> =
   def extends string ? Route<'ANY', Join<base, def>> :
   def extends RoutePattern<infer pattern extends string> ? Route<'ANY', Join<base, pattern>> :
   def extends { method: infer method extends RequestMethod | 'ANY', pattern: infer pattern } ? (

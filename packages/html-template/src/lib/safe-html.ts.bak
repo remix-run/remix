@@ -79,7 +79,7 @@ function isTemplateStringsArray(obj: any): obj is TemplateStringsArray {
  * This has the same semantics as `String.raw` but for HTML snippets that have
  * already been escaped or are from trusted sources.
  */
-export type SafeHtmlHelper = {
+type SafeHtmlHelper = {
   /**
    * A tagged template function that escapes interpolated values as HTML.
    *

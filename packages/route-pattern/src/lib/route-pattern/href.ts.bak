@@ -82,7 +82,7 @@ export function hrefSearch(
   return result || undefined
 }
 
-export type HrefErrorDetails =
+type HrefErrorDetails =
   | {
       type: 'missing-hostname'
       pattern: RoutePattern

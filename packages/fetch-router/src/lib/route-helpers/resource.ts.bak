@@ -109,7 +109,7 @@ type BuildResourceMap<base extends string, options extends ResourceOptions> = Bu
   >
 >
 
-export type BuildResourceRoutes<options extends ResourceOptions, method extends ResourceMethod> = {
+type BuildResourceRoutes<options extends ResourceOptions, method extends ResourceMethod> = {
   [methodName in method as GetRouteName<options, methodName>]: ResourceRoutes[methodName]
 }
 

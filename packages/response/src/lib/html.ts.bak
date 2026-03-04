@@ -2,7 +2,7 @@ import { isSafeHtml, type SafeHtml } from '@remix-run/html-template'
 
 const DOCTYPE = '<!DOCTYPE html>'
 
-export type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
+type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
 
 /**
  * Creates an HTML [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)

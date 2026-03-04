@@ -11,7 +11,7 @@ export type Controller<routes extends RouteMap> = {
 }
 
 // prettier-ignore
-export type ControllerActions<routes extends RouteMap> = routes extends any ?
+type ControllerActions<routes extends RouteMap> = routes extends any ?
   {
     [name in keyof routes]: (
       routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern> :

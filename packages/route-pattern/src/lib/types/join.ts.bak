@@ -6,7 +6,7 @@ import type { StartsWithSeparator, Stringify } from './stringify'
  */
 export type Join<A extends string, B extends string> = _Join<Parse<A>, Parse<B>>
 
-export type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
+type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
   protocol: JoinOriginField<A, B, 'protocol'>
   hostname: JoinOriginField<A, B, 'hostname'>
   port: JoinOriginField<A, B, 'port'>
