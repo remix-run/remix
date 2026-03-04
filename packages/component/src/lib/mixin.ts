@@ -15,7 +15,7 @@ type RebindNode<value, baseNode, boundNode> = value extends (
       : value
     : value
 
-type RebindTuple<args extends unknown[], baseNode, boundNode> = {
+export type RebindTuple<args extends unknown[], baseNode, boundNode> = {
   [index in keyof args]: RebindNode<args[index], baseNode, boundNode>
 }
 
@@ -56,7 +56,7 @@ export type MixinBeforeRemoveEvent = Event & {
   persistNode(teardown: (signal: AbortSignal) => void | Promise<void>): void
 }
 
-type MixinHandleEventMap<node extends EventTarget = Element> = {
+export type MixinHandleEventMap<node extends EventTarget = Element> = {
   beforeRemove: MixinBeforeRemoveEvent
   reclaimed: MixinReclaimedEvent<node>
   remove: Event

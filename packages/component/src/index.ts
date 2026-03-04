@@ -56,7 +56,6 @@ export type {
   MixinType,
   MixValue,
   MixinHandleEventMap,
-  MixinRuntimeType,
   MixinElement,
   RebindTuple,
 } from './lib/mixin.ts'

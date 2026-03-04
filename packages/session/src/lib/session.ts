@@ -1,4 +1,4 @@
-type Data = Record<string, unknown>
+export type Data = Record<string, unknown>
 
 export type SessionData<valueData extends Data = Data, flashData extends Data = Data> = [
   valueData,

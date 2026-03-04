@@ -7,7 +7,7 @@ import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
 import { matchSearch } from './route-pattern/match.ts'
 
-type AST = {
+export type AST = {
   protocol: 'http' | 'https' | 'http(s)' | null
   hostname: PartPattern | null
   port: string | null

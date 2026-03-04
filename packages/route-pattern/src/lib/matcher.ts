@@ -4,7 +4,7 @@ export type Match<source extends string = string, data = unknown> = RoutePattern
   data: data
 }
 
-type CompareFn = (a: RoutePatternMatch, b: RoutePatternMatch) => number
+export type CompareFn = (a: RoutePatternMatch, b: RoutePatternMatch) => number
 
 /**
  * A type for matching URLs against patterns.
