@@ -182,7 +182,7 @@ describe('router.map() with single routes', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware(context: RequestContext<'ANY', { id: string }>) {
+    function middleware(context: RequestContext<{ id: string }>) {
       requestLog.push(`middleware ${context.params.id}`)
     }
 

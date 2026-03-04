@@ -32,7 +32,6 @@ export type ContextValue<key> =
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
 export class RequestContext<
-  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
   /**
