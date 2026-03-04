@@ -17,7 +17,7 @@ type AnimateStyleProps = {
 
 export type AnimateMixinConfig = AnimateTiming & AnimateStyleProps
 
-type AnimationConfig = true | false | null | undefined | AnimateMixinConfig
+export type AnimationConfig = true | false | null | undefined | AnimateMixinConfig
 
 const DEFAULT_ENTER: AnimateMixinConfig = {
   opacity: 0,

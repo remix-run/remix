@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm run docs:*)",
+      "Bash(tee:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -28,6 +28,6 @@ export interface TypedEventTarget<eventMap> {
   ): void
 }
 
-type TypedEventListener<eventMap> = {
+export type TypedEventListener<eventMap> = {
   [key in keyof eventMap]: (event: eventMap[key]) => void
 }

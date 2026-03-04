@@ -13,8 +13,8 @@ type SignaledListener<event extends Event> = (
   signal: AbortSignal,
 ) => void | Promise<void>
 
-type EventType<target extends Element> = Extract<AddEventType<target>, string>
-type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
+export type EventType<target extends Element> = Extract<AddEventType<target>, string>
+export type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
   Parameters<AddEventListenerFor<target, type>>[0]
 >
 

@@ -39,7 +39,7 @@ export interface CookieOptions extends CookieProperties {
   secrets?: string[]
 }
 
-type SameSiteValue = 'Strict' | 'Lax' | 'None'
+export type SameSiteValue = 'Strict' | 'Lax' | 'None'
 type Coder = (value: string) => string
 
 /**

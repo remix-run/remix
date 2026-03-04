@@ -9,9 +9,9 @@ import {
 import { defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 
-type EmptyFn = () => void
-type SchedulerPhaseType = 'beforeUpdate' | 'commit'
-type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
+export type EmptyFn = () => void
+export type SchedulerPhaseType = 'beforeUpdate' | 'commit'
+export type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
 
 export type Scheduler = ReturnType<typeof createScheduler>
 

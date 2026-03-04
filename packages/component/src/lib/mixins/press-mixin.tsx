@@ -176,7 +176,7 @@ let basePressEvents = createMixin<HTMLElement>((handle) => {
   })
 })
 
-type PressEventsMixin = typeof basePressEvents & {
+export type PressEventsMixin = typeof basePressEvents & {
   readonly press: typeof pressEventType
   readonly down: typeof pressDownEventType
   readonly up: typeof pressUpEventType

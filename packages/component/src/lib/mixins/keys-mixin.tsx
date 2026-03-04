@@ -70,7 +70,7 @@ let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
   />
 ))
 
-type KeysEventsMixin = typeof baseKeysEvents & {
+export type KeysEventsMixin = typeof baseKeysEvents & {
   readonly escape: typeof escapeEventType
   readonly enter: typeof enterEventType
   readonly space: typeof spaceEventType

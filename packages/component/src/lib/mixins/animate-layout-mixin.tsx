@@ -3,7 +3,7 @@ import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from '../mixin.ts'
 import type { LayoutAnimationConfig } from '../dom.ts'
 
-type LayoutConfig = true | false | null | undefined | LayoutAnimationConfig
+export type LayoutConfig = true | false | null | undefined | LayoutAnimationConfig
 
 type Axis = { min: number; max: number }
 type Box = { x: Axis; y: Axis }

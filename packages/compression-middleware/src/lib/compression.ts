@@ -3,7 +3,7 @@ import type { Middleware } from '@remix-run/fetch-router'
 import { compressResponse, type CompressResponseOptions } from '@remix-run/response/compress'
 import { isCompressibleMimeType } from '@remix-run/mime'
 
-type Encoding = 'br' | 'gzip' | 'deflate'
+export type Encoding = 'br' | 'gzip' | 'deflate'
 
 export interface CompressionOptions {
   /**

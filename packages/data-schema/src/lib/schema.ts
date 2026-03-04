@@ -60,7 +60,7 @@ type SyncStandardSchemaProps<input, output> = Omit<
   types?: StandardSchemaV1.Types<input, output> | undefined
 }
 
-type SyncStandardSchema<input, output = input> = {
+export type SyncStandardSchema<input, output = input> = {
   '~standard': SyncStandardSchemaProps<input, output>
 }
 
@@ -116,7 +116,7 @@ export type InferInput<schema> = schema extends StandardSchemaV1<infer input, an
 export type InferOutput<schema> =
   schema extends StandardSchemaV1<any, infer output> ? output : never
 
-type ValidationContext = {
+export type ValidationContext = {
   path: NonNullable<Issue['path']>
   options?: ParseOptions
 }
@@ -613,9 +613,9 @@ export function number(): Schema<unknown, number> {
   })
 }
 
-type ObjectShape = Record<string, Schema<any, any>>
+export type ObjectShape = Record<string, Schema<any, any>>
 
-type ObjectOptions = {
+export type ObjectOptions = {
   unknownKeys?: 'strip' | 'passthrough' | 'error'
 }
 

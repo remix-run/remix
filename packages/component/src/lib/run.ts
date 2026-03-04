@@ -3,8 +3,8 @@ import { createScheduler } from './vdom.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import type { FrameContent } from './component.ts'
 
-type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
-type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
+export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
+export type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
 
 export type RunInit = {
   loadModule: LoadModule
