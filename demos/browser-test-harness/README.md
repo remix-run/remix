@@ -163,6 +163,7 @@ This is a proof-of-concept with intentional simplifications:
 ### TypeScript Transformation
 
 esbuild transforms TypeScript to JavaScript with:
+
 - ESM format, ES2022 target, browser platform
 - Inline sourcemaps for debugging
 - Automatic removal of `node:test` and `node:assert/strict` imports (replaced with globals)
@@ -171,6 +172,7 @@ esbuild transforms TypeScript to JavaScript with:
 ### Browser Communication
 
 Uses the simplest approach for PoC:
+
 - Browser sets `window.__testResults` when tests complete
 - Playwright uses `page.waitForFunction` to poll for results
 - Results serialized as JSON and passed back to Node.js
@@ -178,6 +180,7 @@ Uses the simplest approach for PoC:
 ### Route Handling
 
 Uses Remix `fetch-router` for clean URL routing:
+
 - Splat routes for dynamic file paths
 - URL encoding/decoding for absolute paths
 - Transform pipeline integrated into request handling
