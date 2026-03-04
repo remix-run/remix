@@ -2,6 +2,8 @@ import './globals.ts'
 
 export {
   TarParseError,
+  type TarArchiveSource,
+  type TarEntryHandler,
   type TarHeader,
   type ParseTarHeaderOptions,
   parseTarHeader,

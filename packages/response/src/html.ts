@@ -1,1 +1,1 @@
-export { createHtmlResponse } from './lib/html.ts'
+export { createHtmlResponse, type HtmlBody } from './lib/html.ts'

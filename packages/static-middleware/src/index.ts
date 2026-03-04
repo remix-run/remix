@@ -1,1 +1,1 @@
-export { type StaticFilesOptions, staticFiles } from './lib/static.ts'
+export { type AcceptRangesFunction, type StaticFilesOptions, staticFiles } from './lib/static.ts'

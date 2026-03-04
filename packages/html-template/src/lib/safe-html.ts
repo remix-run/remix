@@ -35,7 +35,7 @@ function escapeHtml(text: string): string {
   return text.replace(escapeRe, (c) => escapeMap[c as keyof typeof escapeMap])
 }
 
-type Interpolation = SafeHtml | string | number | boolean | null | undefined | Array<Interpolation>
+export type Interpolation = SafeHtml | string | number | boolean | null | undefined | Array<Interpolation>
 
 function stringifyInterpolation(value: Interpolation): string {
   if (value == null) return ''
