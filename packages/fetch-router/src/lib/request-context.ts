@@ -181,7 +181,9 @@ export class RequestContext<
         'Assets middleware not configured. Use remix/dev-assets-middleware or remix/assets-middleware.',
       )
 
-      return { resolve: (_entryPath: string, _variant?: string) => null } as AssetsContext
+      return {
+        resolve: (_entryPath: string, _variant?: string) => null,
+      } as unknown as AssetsContext
     }
 
     return this.#assets

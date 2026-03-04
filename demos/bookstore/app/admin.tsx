@@ -13,7 +13,7 @@ import adminUsersController from './admin.users.tsx'
 export default {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    index() {
+    async index() {
       return render(
         <Layout>
           <h1>Admin Dashboard</h1>

@@ -13,7 +13,7 @@ import { RestfulForm } from './components/restful-form.tsx'
 export default {
   middleware: [requireAuth()],
   actions: {
-    index() {
+    async index() {
       let user = getCurrentUser()
 
       return render(
@@ -62,7 +62,7 @@ export default {
     },
 
     settings: {
-      index() {
+      async index() {
         let user = getCurrentUser()
 
         return render(

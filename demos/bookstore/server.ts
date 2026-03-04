@@ -4,7 +4,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 let isDev = process.env.NODE_ENV === 'development'
 
 async function main() {
-  let { router, closeMiddleware } = await import('./app/router.ts')
+  let { router } = await import('./app/router.ts')
 
   let server = http.createServer(
     createRequestListener(async (request) => {
@@ -34,7 +34,6 @@ async function main() {
   function shutdown() {
     if (shuttingDown) return
     shuttingDown = true
-    closeMiddleware()
     server.close(() => {
       process.exit(0)
     })

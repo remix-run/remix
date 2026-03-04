@@ -14,7 +14,7 @@ import { render } from './utils/render.ts'
 export default {
   middleware: [loadAuth()],
   actions: {
-    index() {
+    async index() {
       return render(
         <Layout>
           <h1>Shopping Cart</h1>

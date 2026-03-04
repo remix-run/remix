@@ -8,17 +8,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const uploadsStorage = createFsFileStorage(resolve(__dirname, '..', '..', 'tmp', 'uploads'))
 
 /**
- * Upload handler for file uploads. Stores files in local storage and returns
- * a public URL path that can be used to access the file.
+ * Upload handler for file uploads. Stores files via the FileStorage abstraction
+ * (content-addressed on disk) and returns a URL path at /uploads/...
+ * The uploads files handler reads from the same storage and applies transforms.
  */
 export async function uploadHandler(file: FileUpload): Promise<string> {
-  // Generate unique key for this file
   let ext = file.name.split('.').pop() || 'jpg'
   let key = `${file.fieldName}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
 
-  // Put the file in storage
   await uploadsStorage.set(key, file)
 
-  // Return public URL path
   return `/uploads/${key}`
 }

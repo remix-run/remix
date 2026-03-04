@@ -1,18 +1,24 @@
-import * as fs from 'node:fs'
-import type { AssetsContext, Middleware } from 'remix/fetch-router'
+import * as path from 'node:path'
+import sharp from 'sharp'
+import type { Middleware } from 'remix/fetch-router'
 import { createRouter } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
+import { createFileCache } from 'remix/file-cache'
+import { createFsFileStorage } from 'remix/file-storage/fs'
 import { formData } from 'remix/form-data-middleware'
-import { logger } from 'remix/logger-middleware'
+import { openLazyFile } from 'remix/fs'
 import { methodOverride } from 'remix/method-override-middleware'
+import { logger } from 'remix/logger-middleware'
+import { createFileResponse } from 'remix/response/file'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
 import { initializeBookstoreDatabase } from './models/database.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
-import { uploadHandler } from './utils/uploads.ts'
+import { uploadHandler, uploadsStorage } from './utils/uploads.ts'
+import { scriptHandler } from './utils/scripts.ts'
 
 import adminController from './admin.tsx'
 import accountController from './account.tsx'
@@ -22,77 +28,32 @@ import cartController from './cart.tsx'
 import { toggleCart } from './cart.tsx'
 import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
-import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
 import { routerStorageKey } from './utils/router-storage.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { loadScriptEntry } from './middleware/script-entry.ts'
 
-// Mock assets middleware for tests (returns mock asset entries)
-function mockAssets(): Middleware {
-  return (context, next) => {
-    context.assets = {
-      resolve: (sourcePath: string) => ({
-        href: `/mock/${sourcePath}`,
-        preloads: [],
-      }),
-    }
-    return next()
-  }
+let root = path.resolve(import.meta.dirname, '..')
+
+let imageCache = createFileCache(createFsFileStorage(path.join(root, 'tmp/image-cache')), {
+  maxSize: 200 * 1024 * 1024,
+})
+
+await imageCache.prune()
+
+let imageVariants = {
+  optimized: async (file: File) => {
+    let buf = await sharp(await file.arrayBuffer())
+      .jpeg({ quality: 72, mozjpeg: true })
+      .toBuffer()
+    return new File([new Uint8Array(buf)], 'output.jpg', { type: 'image/jpeg' })
+  },
 }
 
-/**
- * Get the middleware required for assets in the current environment.
- *
- * In development: createDevAssets only (on-the-fly transform).
- * In test: mock assets middleware.
- * In production: assets middleware (manifest/entry resolution) plus staticFiles
- * for serving the built asset output at /assets.
- */
-async function getAssetsMiddleware(): Promise<{
-  middleware: Middleware[]
-  close(): void
-}> {
-  if (process.env.NODE_ENV === 'development') {
-    let { createDevAssets } = await import('remix/dev-assets-middleware')
-    let { getAssetsBuildConfig } = await import('../assets.ts')
-    let config = await getAssetsBuildConfig()
-    let devAssets = createDevAssets({
-      source: config.source,
-      allow: ['app/**', '**/node_modules/**'],
-      workspaceRoot: config.workspaceRoot,
-      workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
-    })
-    return {
-      middleware: [devAssets.middleware],
-      close: () => devAssets.close(),
-    }
-  }
-  if (process.env.NODE_ENV === 'test') {
-    return {
-      middleware: [mockAssets()],
-      close() {},
-    }
-  }
-  let { assets } = await import('remix/assets-middleware')
-  let manifestPath = './build/assets-manifest.json'
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error(
-      `Build manifest not found at ${manifestPath}. Run "pnpm run build" or "pnpm run build:bundled" before starting in production mode.`,
-    )
-  }
-  let manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-  return {
-    middleware: [
-      assets(manifest, {
-        baseUrl: '/assets',
-      }),
-      staticFiles('./build/assets', {
-        basePath: '/assets',
-        cacheControl: 'public, max-age=31536000, immutable',
-      }),
-    ],
-    close() {},
-  }
+type ImageVariant = 'original' | keyof typeof imageVariants
+
+function isImageVariant(value: string): value is ImageVariant {
+  return value === 'original' || value in imageVariants
 }
 
 let middleware = []
@@ -102,11 +63,6 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(compression())
-
-let assets = await getAssetsMiddleware()
-middleware.push(...assets.middleware)
-export let closeMiddleware = () => assets.close()
-
 middleware.push(
   staticFiles('./public', {
     cacheControl: 'no-store, must-revalidate',
@@ -119,6 +75,7 @@ middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
+middleware.push(loadScriptEntry())
 
 await initializeBookstoreDatabase()
 
@@ -130,7 +87,61 @@ middleware.unshift((context: any, next: any) => {
   return next()
 })
 
-router.get(routes.uploads, uploadsAction)
+router.get(routes.images, async ({ request, params }) => {
+  if (!params.path) return new Response('Not found', { status: 404 })
+
+  let sourceFile: File
+  try {
+    sourceFile = openLazyFile(path.join(root, 'app/images', params.path))
+  } catch {
+    return new Response('Not found', { status: 404 })
+  }
+
+  let variantName = new URL(request.url).searchParams.get('variant') ?? 'optimized'
+  if (!isImageVariant(variantName)) {
+    return new Response('Unknown variant', { status: 400 })
+  }
+
+  if (variantName === 'original') {
+    return createFileResponse(sourceFile, request, { cacheControl: 'no-cache' })
+  }
+
+  let result = await imageCache.getOrSet([sourceFile, variantName], () =>
+    imageVariants[variantName](sourceFile),
+  )
+  return createFileResponse(result, request, { cacheControl: 'no-cache' })
+})
+
+router.get(routes.scripts, async ({ request, params }) => {
+  if (!params.path) return new Response('Not found', { status: 404 })
+
+  let script = await scriptHandler.handle(request, params.path)
+  return script ?? new Response('Not found', { status: 404 })
+})
+
+router.get(routes.uploads, async ({ request, params }) => {
+  if (!params.path) return new Response('Not found', { status: 404 })
+
+  let sourceFile = await uploadsStorage.get(params.path)
+  if (!sourceFile) {
+    return new Response('Not found', { status: 404 })
+  }
+
+  let variantName = new URL(request.url).searchParams.get('variant') ?? 'optimized'
+  if (!isImageVariant(variantName)) {
+    return new Response('Unknown variant', { status: 400 })
+  }
+
+  if (variantName === 'original') {
+    return createFileResponse(sourceFile, request, { cacheControl: 'no-cache' })
+  }
+
+  let result = await imageCache.getOrSet([sourceFile, variantName], () =>
+    imageVariants[variantName](sourceFile),
+  )
+  return createFileResponse(result, request, { cacheControl: 'no-cache' })
+})
+
 router.map(routes.fragments, fragmentsController)
 router.post(routes.api.cartToggle, toggleCart)
 

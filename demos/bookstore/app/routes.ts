@@ -1,7 +1,6 @@
 import { del, get, post, put, route, form, resources } from 'remix/fetch-router/routes'
 
 export let routes = route({
-  uploads: '/uploads/*key',
   fragments: route('fragments', {
     cartButton: get('/cart-button/:bookId'),
     cartItems: get('/cart-items'),
@@ -87,4 +86,9 @@ export let routes = route({
       param: 'orderId',
     }),
   }),
+
+  // Asset routes
+  scripts: '/scripts/*path',
+  images: '/images/*path',
+  uploads: '/uploads/*path',
 })

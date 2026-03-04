@@ -46,7 +46,7 @@ export let home: BuildAction<'GET', typeof routes.home> = {
 
 export let about: BuildAction<'GET', typeof routes.about> = {
   middleware: [loadAuth()],
-  action() {
+  async action() {
     return render(
       <Layout>
         <div class="card">
@@ -108,7 +108,7 @@ export let about: BuildAction<'GET', typeof routes.about> = {
 export let contact: Controller<typeof routes.contact> = {
   middleware: [loadAuth()],
   actions: {
-    index() {
+    async index() {
       return render(
         <Layout>
           <div class="card">

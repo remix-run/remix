@@ -150,7 +150,7 @@ export default {
     )
   },
 
-  new() {
+  async new() {
     return render(
       <Layout>
         <h1>Add New Book</h1>

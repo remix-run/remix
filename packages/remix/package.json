@@ -41,6 +41,7 @@
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
+    "./file-cache": "./src/file-cache.ts",
     "./file-storage": "./src/file-storage.ts",
     "./file-storage/fs": "./src/file-storage/fs.ts",
     "./file-storage/memory": "./src/file-storage/memory.ts",
@@ -72,6 +73,7 @@
     "./session/cookie-storage": "./src/session/cookie-storage.ts",
     "./session/fs-storage": "./src/session/fs-storage.ts",
     "./session/memory-storage": "./src/session/memory-storage.ts",
+    "./script-handler": "./src/script-handler.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
     "./package.json": "./package.json"
@@ -169,6 +171,10 @@
       "./fetch-router/routes": {
         "types": "./dist/fetch-router/routes.d.ts",
         "default": "./dist/fetch-router/routes.js"
+      },
+      "./file-cache": {
+        "types": "./dist/file-cache.d.ts",
+        "default": "./dist/file-cache.js"
       },
       "./file-storage": {
         "types": "./dist/file-storage.d.ts",
@@ -294,6 +300,10 @@
         "types": "./dist/session/memory-storage.d.ts",
         "default": "./dist/session/memory-storage.js"
       },
+      "./script-handler": {
+        "types": "./dist/script-handler.d.ts",
+        "default": "./dist/script-handler.js"
+      },
       "./static-middleware": {
         "types": "./dist/static-middleware.d.ts",
         "default": "./dist/static-middleware.js"
@@ -316,6 +326,7 @@
     "@remix-run/cookie": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/file-cache": "workspace:^",
     "@remix-run/file-storage": "workspace:^",
     "@remix-run/form-data-middleware": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
@@ -338,6 +349,7 @@
     "@remix-run/assets": "workspace:^",
     "@remix-run/assets-middleware": "workspace:^",
     "@remix-run/dev-assets-middleware": "workspace:^",
+    "@remix-run/script-handler": "workspace:^",
     "@remix-run/data-schema": "workspace:^",
     "@remix-run/data-table": "workspace:^",
     "@remix-run/data-table-mysql": "workspace:^",

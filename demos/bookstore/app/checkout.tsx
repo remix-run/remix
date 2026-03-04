@@ -12,7 +12,7 @@ import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 export default {
   middleware: [requireAuth()],
   actions: {
-    index() {
+    async index() {
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
 

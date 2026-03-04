@@ -4,31 +4,20 @@
   "type": "module",
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "sharp": "^0.34.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "cheerio": "^1.2.0",
-    "esbuild": "catalog:",
-    "glob": "^11.0.0",
     "tsx": "catalog:"
   },
-  "imports": {
-    "#assets/*": {
-      "placeholder": "./.assets/*.placeholder.ts",
-      "default": "./.assets/*.build.ts"
-    }
-  },
   "scripts": {
-    "dev": "pnpm codegen && NODE_ENV=development NODE_OPTIONS='--conditions=placeholder' tsx watch server.ts",
-    "build": "tsx build.ts",
-    "build:bundled": "tsx build.bundled.ts",
+    "dev": "NODE_ENV=development tsx watch server.ts",
     "start": "NODE_ENV=production tsx server.ts",
-    "test": "NODE_ENV=test NODE_OPTIONS='--conditions=placeholder' tsx --test",
-    "codegen": "tsx codegen.ts",
-    "codegen:check": "tsx codegen.check.ts",
-    "typecheck": "pnpm codegen && tsgo --noEmit"
+    "test": "NODE_ENV=test tsx --test",
+    "typecheck": "tsgo --noEmit"
   }
 }
