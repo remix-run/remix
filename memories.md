@@ -136,6 +136,34 @@ However, exposing internal implementation types may not be desirable for API cla
 
 ---
 
+## Phase 2: Further Documentation Improvements (March 4, 2026)
+
+Continued work to reduce remaining documentation warnings and add JSDoc comments.
+
+### Export Warnings Eliminated
+
+Exported additional internal types to eliminate "not included in documentation" warnings:
+
+**Component Package** (reduced from ~30 warnings to 6):
+- Exported: RebindNode, MixinRuntimeType, MixinProps, MixinInsertEvent, MixinReclaimedEvent, MixinUpdateEvent, MixinBeforeRemoveEvent
+- Exported: VNode, VNodeType, Component, ComponentHandle, createComponent
+- Exported: SignaledListener from on-mixin.tsx
+- Exported: baseKeysEvents, basePressEvents and all event type constants
+- Exported: AnimateMixinConfig, AnimateTiming, AnimateStyleProps
+- Exported: EventTypeGeneric, ListenerForGeneric from event-listeners.ts
+- Exported: createStyleManager from stylesheet.ts
+
+**Data-Table Package** (reduced from 9 warnings to 2):
+- Exported: DefaultPrimaryKey from table.ts
+- Exported: TableColumnName, QualifiedRowColumnName, DatabaseRuntime from database.ts
+- Exported: UnknownTableMetadata from references.ts
+- Exported: MysqlQueryable from data-table-mysql
+- Exported: Pretty from data-table-postgres
+
+### Results
+- **Export warnings**: 68 → 31 (54% reduction)
+- **Remaining warnings**: Mostly internal TypeScript utility types in route-pattern package
+
 **Date**: March 4, 2026
 **Branch**: `brophdawg11/docs-gaps`
-**Status**: ✅ Documentation generation working, primary task complete
+**Status**: ✅ Significant progress on export warnings, JSDoc comments next
