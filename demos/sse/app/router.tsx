@@ -150,7 +150,10 @@ router.map(pageRoutes, {
               ) : (
                 <>
                   No limit set.{' '}
-                  <a href="?limit=10" mix={[css({ color: '#007bff', textDecoration: 'underline' })]}>
+                  <a
+                    href="?limit=10"
+                    mix={[css({ color: '#007bff', textDecoration: 'underline' })]}
+                  >
                     Add{' '}
                     <code
                       mix={[

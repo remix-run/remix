@@ -306,7 +306,9 @@ export function createRouter(options?: RouterOptions): Router {
         })
       } else {
         if (!isController(action)) {
-          throw new TypeError(`Expected a nested controller with an \`actions\` property at \`${key}\``)
+          throw new TypeError(
+            `Expected a nested controller with an \`actions\` property at \`${key}\``,
+          )
         }
 
         mapController(route as RouteMap, action, middleware)

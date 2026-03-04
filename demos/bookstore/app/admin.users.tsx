@@ -13,211 +13,211 @@ import { RestfulForm } from './components/restful-form.tsx'
 export default {
   actions: {
     async index({ db }) {
-    let user = getCurrentUser()
-    let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
+      let user = getCurrentUser()
+      let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
-    return render(
-      <Layout>
-        <h1>Manage Users</h1>
+      return render(
+        <Layout>
+          <h1>Manage Users</h1>
 
-        <p mix={[css({ marginBottom: '1rem' })]}>
-          <a href={routes.admin.index.href()} class="btn btn-secondary">
-            Back to Dashboard
-          </a>
-        </p>
+          <p mix={[css({ marginBottom: '1rem' })]}>
+            <a href={routes.admin.index.href()} class="btn btn-secondary">
+              Back to Dashboard
+            </a>
+          </p>
 
-        <div class="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allUsers.map((u) => (
+          <div class="card">
+            <table>
+              <thead>
                 <tr>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>
-                    <span class={`badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td class="actions">
-                    <a
-                      href={routes.admin.users.edit.href({ userId: u.id })}
-                      class="btn btn-secondary"
-                      mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                    >
-                      Edit
-                    </a>
-                    {u.id !== user.id ? (
-                      <RestfulForm
-                        method="DELETE"
-                        action={routes.admin.users.destroy.href({ userId: u.id })}
-                        mix={[css({ display: 'inline' })]}
-                      >
-                        <button
-                          type="submit"
-                          class="btn btn-danger"
-                          mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                        >
-                          Delete
-                        </button>
-                      </RestfulForm>
-                    ) : null}
-                  </td>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Layout>,
-    )
-  },
+              </thead>
+              <tbody>
+                {allUsers.map((u) => (
+                  <tr>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <span class={`badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                    <td class="actions">
+                      <a
+                        href={routes.admin.users.edit.href({ userId: u.id })}
+                        class="btn btn-secondary"
+                        mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                      >
+                        Edit
+                      </a>
+                      {u.id !== user.id ? (
+                        <RestfulForm
+                          method="DELETE"
+                          action={routes.admin.users.destroy.href({ userId: u.id })}
+                          mix={[css({ display: 'inline' })]}
+                        >
+                          <button
+                            type="submit"
+                            class="btn btn-danger"
+                            mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                          >
+                            Delete
+                          </button>
+                        </RestfulForm>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Layout>,
+      )
+    },
 
     async show({ db, params }) {
-    let userId = parseId(params.userId)
-    let targetUser = userId === undefined ? undefined : await db.find(users, userId)
+      let userId = parseId(params.userId)
+      let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
-    if (!targetUser) {
+      if (!targetUser) {
+        return render(
+          <Layout>
+            <div class="card">
+              <h1>User Not Found</h1>
+            </div>
+          </Layout>,
+          { status: 404 },
+        )
+      }
+
       return render(
         <Layout>
+          <h1>User Details</h1>
+
           <div class="card">
-            <h1>User Not Found</h1>
+            <p>
+              <strong>Name:</strong> {targetUser.name}
+            </p>
+            <p>
+              <strong>Email:</strong> {targetUser.email}
+            </p>
+            <p>
+              <strong>Role:</strong>{' '}
+              <span class={`badge ${targetUser.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
+                {targetUser.role}
+              </span>
+            </p>
+            <p>
+              <strong>Created:</strong> {new Date(targetUser.created_at).toLocaleDateString()}
+            </p>
+
+            <div mix={[css({ marginTop: '2rem' })]}>
+              <a href={routes.admin.users.edit.href({ userId: targetUser.id })} class="btn">
+                Edit
+              </a>
+              <a
+                href={routes.admin.users.index.href()}
+                class="btn btn-secondary"
+                mix={[css({ marginLeft: '0.5rem' })]}
+              >
+                Back to List
+              </a>
+            </div>
           </div>
         </Layout>,
-        { status: 404 },
       )
-    }
-
-    return render(
-      <Layout>
-        <h1>User Details</h1>
-
-        <div class="card">
-          <p>
-            <strong>Name:</strong> {targetUser.name}
-          </p>
-          <p>
-            <strong>Email:</strong> {targetUser.email}
-          </p>
-          <p>
-            <strong>Role:</strong>{' '}
-            <span class={`badge ${targetUser.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
-              {targetUser.role}
-            </span>
-          </p>
-          <p>
-            <strong>Created:</strong> {new Date(targetUser.created_at).toLocaleDateString()}
-          </p>
-
-          <div mix={[css({ marginTop: '2rem' })]}>
-            <a href={routes.admin.users.edit.href({ userId: targetUser.id })} class="btn">
-              Edit
-            </a>
-            <a
-              href={routes.admin.users.index.href()}
-              class="btn btn-secondary"
-              mix={[css({ marginLeft: '0.5rem' })]}
-            >
-              Back to List
-            </a>
-          </div>
-        </div>
-      </Layout>,
-    )
-  },
+    },
 
     async edit({ db, params }) {
-    let userId = parseId(params.userId)
-    let targetUser = userId === undefined ? undefined : await db.find(users, userId)
+      let userId = parseId(params.userId)
+      let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
-    if (!targetUser) {
+      if (!targetUser) {
+        return render(
+          <Layout>
+            <div class="card">
+              <h1>User Not Found</h1>
+            </div>
+          </Layout>,
+          { status: 404 },
+        )
+      }
+
       return render(
         <Layout>
+          <h1>Edit User</h1>
+
           <div class="card">
-            <h1>User Not Found</h1>
+            <RestfulForm
+              method="PUT"
+              action={routes.admin.users.update.href({ userId: targetUser.id })}
+            >
+              <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" value={targetUser.name} required />
+              </div>
+
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value={targetUser.email} required />
+              </div>
+
+              <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" name="role">
+                  <option value="customer" selected={targetUser.role === 'customer'}>
+                    Customer
+                  </option>
+                  <option value="admin" selected={targetUser.role === 'admin'}>
+                    Admin
+                  </option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn">
+                Update User
+              </button>
+              <a
+                href={routes.admin.users.index.href()}
+                class="btn btn-secondary"
+                mix={[css({ marginLeft: '0.5rem' })]}
+              >
+                Cancel
+              </a>
+            </RestfulForm>
           </div>
         </Layout>,
-        { status: 404 },
       )
-    }
-
-    return render(
-      <Layout>
-        <h1>Edit User</h1>
-
-        <div class="card">
-          <RestfulForm
-            method="PUT"
-            action={routes.admin.users.update.href({ userId: targetUser.id })}
-          >
-            <div class="form-group">
-              <label for="name">Name</label>
-              <input type="text" id="name" name="name" value={targetUser.name} required />
-            </div>
-
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" value={targetUser.email} required />
-            </div>
-
-            <div class="form-group">
-              <label for="role">Role</label>
-              <select id="role" name="role">
-                <option value="customer" selected={targetUser.role === 'customer'}>
-                  Customer
-                </option>
-                <option value="admin" selected={targetUser.role === 'admin'}>
-                  Admin
-                </option>
-              </select>
-            </div>
-
-            <button type="submit" class="btn">
-              Update User
-            </button>
-            <a
-              href={routes.admin.users.index.href()}
-              class="btn btn-secondary"
-              mix={[css({ marginLeft: '0.5rem' })]}
-            >
-              Cancel
-            </a>
-          </RestfulForm>
-        </div>
-      </Layout>,
-    )
-  },
+    },
 
     async update({ db, formData, params }) {
-    let userId = parseId(params.userId)
-    let targetUser = userId === undefined ? undefined : await db.find(users, userId)
-    if (targetUser) {
-      await db.update(users, targetUser.id, {
-        name: formData.get('name')?.toString() ?? '',
-        email: formData.get('email')?.toString() ?? '',
-        role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
-      })
-    }
+      let userId = parseId(params.userId)
+      let targetUser = userId === undefined ? undefined : await db.find(users, userId)
+      if (targetUser) {
+        await db.update(users, targetUser.id, {
+          name: formData.get('name')?.toString() ?? '',
+          email: formData.get('email')?.toString() ?? '',
+          role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
+        })
+      }
 
-    return redirect(routes.admin.users.index.href())
-  },
+      return redirect(routes.admin.users.index.href())
+    },
 
     async destroy({ db, params }) {
-    let userId = parseId(params.userId)
-    let targetUser = userId === undefined ? undefined : await db.find(users, userId)
-    if (targetUser) {
-      await db.delete(users, targetUser.id)
-    }
+      let userId = parseId(params.userId)
+      let targetUser = userId === undefined ? undefined : await db.find(users, userId)
+      if (targetUser) {
+        await db.delete(users, targetUser.id)
+      }
 
-    return redirect(routes.admin.users.index.href())
+      return redirect(routes.admin.users.index.href())
     },
   },
 } satisfies Controller<typeof routes.admin.users>

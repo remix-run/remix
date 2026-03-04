@@ -67,47 +67,47 @@ export default {
         index() {
           let user = getCurrentUser()
 
-        return render(
-          <Layout>
-            <h1>Account Settings</h1>
+          return render(
+            <Layout>
+              <h1>Account Settings</h1>
 
-            <div class="card">
-              <RestfulForm method="PUT" action={routes.account.settings.update.href()}>
-                <div class="form-group">
-                  <label for="name">Name</label>
-                  <input type="text" id="name" name="name" value={user.name} required />
-                </div>
+              <div class="card">
+                <RestfulForm method="PUT" action={routes.account.settings.update.href()}>
+                  <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" value={user.name} required />
+                  </div>
 
-                <div class="form-group">
-                  <label for="email">Email</label>
-                  <input type="email" id="email" name="email" value={user.email} required />
-                </div>
+                  <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value={user.email} required />
+                  </div>
 
-                <div class="form-group">
-                  <label for="password">New Password (leave blank to keep current)</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    autoComplete="new-password"
-                  />
-                </div>
+                  <div class="form-group">
+                    <label for="password">New Password (leave blank to keep current)</label>
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      autoComplete="new-password"
+                    />
+                  </div>
 
-                <button type="submit" class="btn">
-                  Update Settings
-                </button>
-                <a
-                  href={routes.account.index.href()}
-                  class="btn btn-secondary"
-                  mix={[css({ marginLeft: '0.5rem' })]}
-                >
-                  Cancel
-                </a>
-              </RestfulForm>
-            </div>
-          </Layout>,
-        )
-      },
+                  <button type="submit" class="btn">
+                    Update Settings
+                  </button>
+                  <a
+                    href={routes.account.index.href()}
+                    class="btn btn-secondary"
+                    mix={[css({ marginLeft: '0.5rem' })]}
+                  >
+                    Cancel
+                  </a>
+                </RestfulForm>
+              </div>
+            </Layout>,
+          )
+        },
 
         async update({ db, formData }) {
           let user = getCurrentUser()
@@ -138,59 +138,59 @@ export default {
             with: { items: orderItemsWithBook },
           })
 
-        return render(
-          <Layout>
-            <h1>My Orders</h1>
+          return render(
+            <Layout>
+              <h1>My Orders</h1>
 
-            <div class="card">
-              {userOrders.length > 0 ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Order ID</th>
-                      <th>Date</th>
-                      <th>Items</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userOrders.map((order) => (
+              <div class="card">
+                {userOrders.length > 0 ? (
+                  <table>
+                    <thead>
                       <tr>
-                        <td>#{order.id}</td>
-                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                        <td>{order.items.length} item(s)</td>
-                        <td>${order.total.toFixed(2)}</td>
-                        <td>
-                          <span class="badge badge-info">{order.status}</span>
-                        </td>
-                        <td>
-                          <a
-                            href={routes.account.orders.show.href({ orderId: order.id })}
-                            class="btn btn-secondary"
-                            mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                          >
-                            View
-                          </a>
-                        </td>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>You have no orders yet.</p>
-              )}
-            </div>
+                    </thead>
+                    <tbody>
+                      {userOrders.map((order) => (
+                        <tr>
+                          <td>#{order.id}</td>
+                          <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                          <td>{order.items.length} item(s)</td>
+                          <td>${order.total.toFixed(2)}</td>
+                          <td>
+                            <span class="badge badge-info">{order.status}</span>
+                          </td>
+                          <td>
+                            <a
+                              href={routes.account.orders.show.href({ orderId: order.id })}
+                              class="btn btn-secondary"
+                              mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                            >
+                              View
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>You have no orders yet.</p>
+                )}
+              </div>
 
-            <p mix={[css({ marginTop: '1.5rem' })]}>
-              <a href={routes.account.index.href()} class="btn btn-secondary">
-                Back to Account
-              </a>
-            </p>
-          </Layout>,
-        )
-      },
+              <p mix={[css({ marginTop: '1.5rem' })]}>
+                <a href={routes.account.index.href()} class="btn btn-secondary">
+                  Back to Account
+                </a>
+              </p>
+            </Layout>,
+          )
+        },
 
         async show({ db, params }) {
           let user = getCurrentUser()
@@ -229,50 +229,50 @@ export default {
             <Layout>
               <h1>Order #{order.id}</h1>
 
-            <div class="card">
-              <p>
-                <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
-              </p>
-              <p>
-                <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
-              </p>
+              <div class="card">
+                <p>
+                  <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
+                </p>
+                <p>
+                  <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
+                </p>
 
-              <h2 mix={[css({ marginTop: '2rem' })]}>Items</h2>
-              <table mix={[css({ marginTop: '1rem' })]}>
-                <thead>
-                  <tr>
-                    <th>Book</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item) => (
+                <h2 mix={[css({ marginTop: '2rem' })]}>Items</h2>
+                <table mix={[css({ marginTop: '1rem' })]}>
+                  <thead>
                     <tr>
-                      <td>{item.title}</td>
-                      <td>{item.quantity}</td>
-                      <td>${item.unit_price.toFixed(2)}</td>
-                      <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
+                      <th>Book</th>
+                      <th>Quantity</th>
+                      <th>Price</th>
+                      <th>Subtotal</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
-                      Total:
-                    </td>
-                    <td mix={[css({ fontWeight: 'bold' })]}>${order.total.toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item) => (
+                      <tr>
+                        <td>{item.title}</td>
+                        <td>{item.quantity}</td>
+                        <td>${item.unit_price.toFixed(2)}</td>
+                        <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
+                        Total:
+                      </td>
+                      <td mix={[css({ fontWeight: 'bold' })]}>${order.total.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
 
-              <h2 mix={[css({ marginTop: '2rem' })]}>Shipping Address</h2>
-              <p>{shippingAddress.street}</p>
-              <p>
-                {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
-              </p>
-            </div>
+                <h2 mix={[css({ marginTop: '2rem' })]}>Shipping Address</h2>
+                <p>{shippingAddress.street}</p>
+                <p>
+                  {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
+                </p>
+              </div>
 
               <p mix={[css({ marginTop: '1.5rem' })]}>
                 <a href={routes.account.orders.index.href()} class="btn btn-secondary">

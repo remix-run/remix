@@ -102,13 +102,10 @@ router.map(routes, {
           )
         }
         if (error instanceof InvalidPathError) {
-          return renderError(
-            'Invalid path',
-            `The path "${error.path}" is not valid.`,
-          )
+          return renderError('Invalid path', `The path "${error.path}" is not valid.`)
         }
         throw error
       }
-    }
+    },
   },
 })
