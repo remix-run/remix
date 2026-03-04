@@ -8,7 +8,7 @@
     "dev": "esbuild index.tsx --bundle --minify --outfile=dist/index.js --format=esm --watch"
   },
   "dependencies": {
-    "esbuild": "^0.27.1",
+    "esbuild": "catalog:",
     "preact": "^10.28.0"
   }
 }

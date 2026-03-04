@@ -9,7 +9,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "concurrently": "^9.2.1",
-    "esbuild": "^0.25.11"
+    "esbuild": "catalog:"
   },
   "scripts": {
     "dev": "concurrently \"pnpm dev:browser\" \"pnpm dev:server\"",

@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "@remix-run/component": "workspace:^",
-    "esbuild": "^0.27.1"
+    "esbuild": "catalog:"
   }
 }

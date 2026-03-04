@@ -15,7 +15,7 @@
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "esbuild": "^0.25.10",
+    "esbuild": "catalog:",
     "shiki": "^3.22.0",
     "typedoc": "^0.28.15"
   },
