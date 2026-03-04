@@ -47,25 +47,6 @@ export class RequestContext<
   }
 
   /**
-   * A map of files that were uploaded in the request.
-   *
-   * Note: For requests without a body (e.g. `GET` or `HEAD`), this map will be empty.
-   */
-  get files(): Map<string, File> {
-    let files: Map<string, File> = new Map()
-
-    if (this.has(FormData)) {
-      for (let [key, value] of this.get(FormData).entries()) {
-        if (value instanceof File) {
-          files.set(key, value)
-        }
-      }
-    }
-
-    return files
-  }
-
-  /**
    * The headers of the request.
    */
   headers: Headers

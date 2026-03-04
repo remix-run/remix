@@ -58,23 +58,25 @@ describe('formData middleware', () => {
     assert.deepEqual(await response.json(), { name: 'test' })
   })
 
-  it('provides context.files on a POST with a multipart/form-data body', async () => {
+  it('stores uploaded files in context.get(FormData) on a multipart/form-data request', async () => {
     let router = createRouter({
       middleware: [formData()],
     })
 
     router.post('/', (context) => {
-      let file1 = context.files?.get('file1')
-      let file2 = context.files?.get('file2')
+      let file1 = context.get(FormData).get('file1')
+      let file2 = context.get(FormData).get('file2')
 
       return Response.json({
         file1: {
-          name: file1?.name,
-          type: file1?.type,
+          isFile: file1 instanceof File,
+          name: file1 instanceof File ? file1.name : null,
+          type: file1 instanceof File ? file1.type : null,
         },
         file2: {
-          name: file2?.name,
-          type: file2?.type,
+          isFile: file2 instanceof File,
+          name: file2 instanceof File ? file2.name : null,
+          type: file2 instanceof File ? file2.type : null,
         },
       })
     })
@@ -103,10 +105,12 @@ describe('formData middleware', () => {
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       file1: {
+        isFile: true,
         name: 'test1.txt',
         type: 'text/plain',
       },
       file2: {
+        isFile: true,
         name: 'test2.txt',
         type: 'text/plain',
       },
