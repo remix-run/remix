@@ -347,6 +347,10 @@ code {
   font-family: var(--primary-font);
 }
 
+ul {
+  padding-left: var(--spacing-large);
+}
+
 /* Styling */
 .container {
   background-color: var(--surface-level-4-color);
