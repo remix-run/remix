@@ -63,8 +63,9 @@ export default {
     },
 
     settings: {
-      index() {
-        let user = getCurrentUser()
+      actions: {
+        index() {
+          let user = getCurrentUser()
 
         return render(
           <Layout>
@@ -108,32 +109,34 @@ export default {
         )
       },
 
-      async update({ db, formData }) {
-        let user = getCurrentUser()
+        async update({ db, formData }) {
+          let user = getCurrentUser()
 
-        let name = formData.get('name')?.toString() ?? ''
-        let email = formData.get('email')?.toString() ?? ''
-        let password = formData.get('password')?.toString() ?? ''
+          let name = formData.get('name')?.toString() ?? ''
+          let email = formData.get('email')?.toString() ?? ''
+          let password = formData.get('password')?.toString() ?? ''
 
-        let updateData: any = { name, email }
-        if (password) {
-          updateData.password = password
-        }
+          let updateData: any = { name, email }
+          if (password) {
+            updateData.password = password
+          }
 
-        await db.update(users, user.id, updateData)
+          await db.update(users, user.id, updateData)
 
-        return redirect(routes.account.index.href())
+          return redirect(routes.account.index.href())
+        },
       },
     },
 
     orders: {
-      async index({ db }) {
-        let user = getCurrentUser()
-        let userOrders = await db.findMany(orders, {
-          where: { user_id: user.id },
-          orderBy: ['created_at', 'asc'],
-          with: { items: orderItemsWithBook },
-        })
+      actions: {
+        async index({ db }) {
+          let user = getCurrentUser()
+          let userOrders = await db.findMany(orders, {
+            where: { user_id: user.id },
+            orderBy: ['created_at', 'asc'],
+            with: { items: orderItemsWithBook },
+          })
 
         return render(
           <Layout>
@@ -189,42 +192,42 @@ export default {
         )
       },
 
-      async show({ db, params }) {
-        let user = getCurrentUser()
-        let orderId = parseId(params.orderId)
-        let order =
-          orderId === undefined
-            ? undefined
-            : await db.find(orders, orderId, {
-                with: { items: orderItemsWithBook },
-              })
+        async show({ db, params }) {
+          let user = getCurrentUser()
+          let orderId = parseId(params.orderId)
+          let order =
+            orderId === undefined
+              ? undefined
+              : await db.find(orders, orderId, {
+                  with: { items: orderItemsWithBook },
+                })
 
-        if (!order || order.user_id !== user.id) {
+          if (!order || order.user_id !== user.id) {
+            return render(
+              <Layout>
+                <div class="card">
+                  <h1>Order Not Found</h1>
+                  <p>
+                    <a href={routes.account.orders.index.href()} class="btn">
+                      Back to Orders
+                    </a>
+                  </p>
+                </div>
+              </Layout>,
+              { status: 404 },
+            )
+          }
+
+          let shippingAddress = JSON.parse(order.shipping_address_json) as {
+            street: string
+            city: string
+            state: string
+            zip: string
+          }
+
           return render(
             <Layout>
-              <div class="card">
-                <h1>Order Not Found</h1>
-                <p>
-                  <a href={routes.account.orders.index.href()} class="btn">
-                    Back to Orders
-                  </a>
-                </p>
-              </div>
-            </Layout>,
-            { status: 404 },
-          )
-        }
-
-        let shippingAddress = JSON.parse(order.shipping_address_json) as {
-          street: string
-          city: string
-          state: string
-          zip: string
-        }
-
-        return render(
-          <Layout>
-            <h1>Order #{order.id}</h1>
+              <h1>Order #{order.id}</h1>
 
             <div class="card">
               <p>
@@ -271,13 +274,14 @@ export default {
               </p>
             </div>
 
-            <p mix={[css({ marginTop: '1.5rem' })]}>
-              <a href={routes.account.orders.index.href()} class="btn btn-secondary">
-                Back to Orders
-              </a>
-            </p>
-          </Layout>,
-        )
+              <p mix={[css({ marginTop: '1.5rem' })]}>
+                <a href={routes.account.orders.index.href()} class="btn btn-secondary">
+                  Back to Orders
+                </a>
+              </p>
+            </Layout>,
+          )
+        },
       },
     },
   },

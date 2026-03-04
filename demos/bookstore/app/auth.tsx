@@ -12,7 +12,8 @@ export default {
   middleware: [loadAuth()],
   actions: {
     login: {
-      index({ session, url }) {
+      actions: {
+        index({ session, url }) {
         let error = session.get('error')
         let formAction = routes.auth.login.action.href(undefined, {
           returnTo: url.searchParams.get('returnTo'),
@@ -81,7 +82,7 @@ export default {
         )
       },
 
-      async action({ db, session, formData, url }) {
+        async action({ db, session, formData, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let returnTo = url.searchParams.get('returnTo')
@@ -95,12 +96,14 @@ export default {
         session.regenerateId(true)
         session.set('userId', user.id)
 
-        return redirect(returnTo ?? routes.account.index.href())
+          return redirect(returnTo ?? routes.account.index.href())
+        },
       },
     },
 
     register: {
-      index() {
+      actions: {
+        index() {
         return render(
           <Document>
             <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
@@ -140,7 +143,7 @@ export default {
         )
       },
 
-      async action({ db, session, formData }) {
+        async action({ db, session, formData }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -181,7 +184,8 @@ export default {
 
         session.set('userId', user.id)
 
-        return redirect(routes.account.index.href())
+          return redirect(routes.account.index.href())
+        },
       },
     },
 
@@ -191,7 +195,8 @@ export default {
     },
 
     forgotPassword: {
-      index() {
+      actions: {
+        index() {
         return render(
           <Document>
             <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
@@ -217,7 +222,7 @@ export default {
         )
       },
 
-      async action({ db, formData }) {
+        async action({ db, formData }) {
         let email = formData.get('email')?.toString() ?? ''
         let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
         let token = undefined as string | undefined
@@ -231,7 +236,7 @@ export default {
           })
         }
 
-        return render(
+          return render(
           <Document>
             <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
               <div class="alert alert-success">Password reset link sent! Check your email.</div>
@@ -269,11 +274,13 @@ export default {
             </div>
           </Document>,
         )
+        },
       },
     },
 
     resetPassword: {
-      index({ params, session }) {
+      actions: {
+        index({ params, session }) {
         let token = params.token
         let error = session.get('error')
 
@@ -321,7 +328,7 @@ export default {
         )
       },
 
-      async action({ db, session, formData, params }) {
+        async action({ db, session, formData, params }) {
         let password = formData.get('password')?.toString() ?? ''
         let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
         let token = params.token
@@ -352,7 +359,7 @@ export default {
         await db.update(users, user.id, { password })
         await db.delete(passwordResetTokens, { token })
 
-        return render(
+          return render(
           <Document>
             <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
               <div class="alert alert-success">
@@ -366,6 +373,7 @@ export default {
             </div>
           </Document>,
         )
+        },
       },
     },
   },

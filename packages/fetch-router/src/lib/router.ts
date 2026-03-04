@@ -7,8 +7,9 @@ import type { RequestMethod } from './request-methods.ts'
 import {
   type Controller,
   type Action,
+  type ControllerShape,
   type RequestHandler,
-  isControllerWithMiddleware,
+  isController,
   isActionWithMiddleware,
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
@@ -240,64 +241,49 @@ export function createRouter(options?: RouterOptions): Router {
     }
 
     // Route map
-    if (isControllerWithMiddleware(handler)) {
-      // map(routes, { middleware, actions })
-      mapControllerWithMiddleware(target, handler.middleware, handler.actions)
-    } else {
-      // map(routes, controller)
-      mapController(target, handler as Record<string, unknown>)
+    if (!isController(handler)) {
+      throw new TypeError('Expected a controller with an `actions` property')
     }
+
+    mapController(target, handler)
   }
 
-  function mapControllerWithMiddleware(
+  function mapController(
     routes: RouteMap,
-    middleware: Middleware[],
-    actions: Record<string, unknown>,
+    controller: ControllerShape,
+    parentMiddleware: Middleware[] = [],
   ): void {
+    let middleware = controller.middleware
+      ? parentMiddleware.concat(controller.middleware)
+      : parentMiddleware
+
     for (let key in routes) {
       let route = routes[key]
-      let action = actions[key]
+      let action = controller.actions[key]
 
       if (route instanceof Route) {
-        // Single route - check if action has its own middleware
         if (isActionWithMiddleware(action)) {
+          let actionMiddleware =
+            middleware.length > 0 ? middleware.concat(action.middleware) : action.middleware
+
           addRoute(route.method, route.pattern, {
-            middleware: middleware.concat(action.middleware),
+            middleware: actionMiddleware,
             action: action.action,
           })
-        } else {
+        } else if (middleware.length > 0) {
           addRoute(route.method, route.pattern, {
             middleware,
             action: action as RequestHandler<any, any>,
           })
+        } else {
+          addRoute(route.method, route.pattern, action as Action<any, any>)
         }
-      } else if (isControllerWithMiddleware(action)) {
-        // Nested controller with its own middleware - merge and recurse
-        mapControllerWithMiddleware(
-          route as RouteMap,
-          middleware.concat(action.middleware),
-          action.actions,
-        )
       } else {
-        // Nested controller without middleware - pass down current middleware
-        mapControllerWithMiddleware(
-          route as RouteMap,
-          middleware,
-          action as Record<string, unknown>,
-        )
-      }
-    }
-  }
+        if (!isController(action)) {
+          throw new TypeError(`Expected a nested controller with an \`actions\` property at \`${key}\``)
+        }
 
-  function mapController(routes: RouteMap, controller: Record<string, unknown>): void {
-    for (let key in routes) {
-      let route = routes[key]
-      let action = controller[key]
-
-      if (route instanceof Route) {
-        addRoute(route.method, route.pattern, action as Action<any, any>)
-      } else {
-        mapRoutes(route as RouteMap, action)
+        mapController(route as RouteMap, action, middleware)
       }
     }
   }

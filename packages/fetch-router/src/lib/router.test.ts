@@ -228,18 +228,22 @@ describe('router.map()', () => {
     let router = createRouter()
 
     router.map(routes, {
-      home() {
-        return new Response('Home')
-      },
-      blog: {
-        index() {
-          return new Response('Blog')
+      actions: {
+        home() {
+          return new Response('Home')
         },
-        create() {
-          return new Response('Blog Post Created')
-        },
-        show({ params }) {
-          return new Response(`Blog Post ${params.id}`)
+        blog: {
+          actions: {
+            index() {
+              return new Response('Blog')
+            },
+            create() {
+              return new Response('Blog Post Created')
+            },
+            show({ params }) {
+              return new Response(`Blog Post ${params.id}`)
+            },
+          },
         },
       },
     })
@@ -290,7 +294,7 @@ describe('router.map()', () => {
     assert.deepEqual(requestLog, ['middleware', 'action'])
   })
 
-  it('does not allow middleware alongside actions', async () => {
+  it('requires controllers to define actions under `actions`', async () => {
     let routes = route({
       home: '/',
     })
@@ -301,8 +305,7 @@ describe('router.map()', () => {
     // to verify that TypeScript catches the error without running the code.
     if (false as boolean) {
       router.map(routes, {
-        middleware: [],
-        // @ts-expect-error - should not allow middleware alongside actions
+        // @ts-expect-error - controllers must define actions under `actions`
         home() {
           return new Response('OK')
         },

@@ -55,22 +55,26 @@ let router = createRouter({
   middleware: [logger()],
 })
 
-// Map the routes to a "controller" that defines actions for each route. The structure
-// of the controller mirrors the structure of the route map, with full type safety.
+// Map the routes to a "controller" that defines actions for each route.
+// Controllers always use the shape: { actions, middleware? }.
 router.map(routes, {
-  home() {
-    return new Response('Home')
-  },
-  about() {
-    return new Response('About')
-  },
-  blog: {
-    index() {
-      return new Response('Blog')
+  actions: {
+    home() {
+      return new Response('Home')
     },
-    show({ params }) {
-      // params is a type-safe object with the parameters from the route pattern
-      return new Response(`Post ${params.slug}`)
+    about() {
+      return new Response('About')
+    },
+    blog: {
+      actions: {
+        index() {
+          return new Response('Blog')
+        },
+        show({ params }) {
+          // params is a type-safe object with the parameters from the route pattern
+          return new Response(`Post ${params.slug}`)
+        },
+      },
     },
   },
 })
@@ -216,18 +220,22 @@ type Routes = typeof routes
 let router = createRouter()
 
 router.map(routes, {
-  home({ method }) {
-    assert.equal(method, 'GET')
-    return new Response('Home')
-  },
-  contact: {
-    index({ method }) {
+  actions: {
+    home({ method }) {
       assert.equal(method, 'GET')
-      return new Response('Contact')
+      return new Response('Home')
     },
-    action({ method }) {
-      assert.equal(method, 'POST')
-      return new Response('Contact Action')
+    contact: {
+      actions: {
+        index({ method }) {
+          assert.equal(method, 'GET')
+          return new Response('Contact')
+        },
+        action({ method }) {
+          assert.equal(method, 'POST')
+          return new Response('Contact Action')
+        },
+      },
     },
   },
 })
@@ -269,53 +277,57 @@ type Routes = typeof routes
 let router = createRouter()
 
 router.map(routes, {
-  home() {
-    return createHtmlResponse(`
-      <html>
-        <body>
-          <h1>Home</h1>
-          <footer>
-            <p>
-              <a href="${routes.contact.index.href()}">Contact Us</a>
-            </p>
-          </footer>
-        </body>
-      </html>
-    `)
-  },
-  contact: {
-    // GET /contact - shows the form
-    index() {
+  actions: {
+    home() {
       return createHtmlResponse(`
         <html>
           <body>
-            <h1>Contact Us</h1>
-            <form method="POST" action="${routes.contact.action.href()}">
-              <label for="message">Message</label>
-              <input type="text" name="message" />
-              <button type="submit">Send</button>
-            </form>
+            <h1>Home</h1>
+            <footer>
+              <p>
+                <a href="${routes.contact.index.href()}">Contact Us</a>
+              </p>
+            </footer>
           </body>
         </html>
       `)
     },
-    // POST /contact - handles the form submission
-    action({ formData }) {
-      let message = formData.get('message') as string
-      let body = html`
-        <html>
-          <body>
-            <h1>Thanks!</h1>
-            <p>You said: ${message}</p>
+    contact: {
+      actions: {
+        // GET /contact - shows the form
+        index() {
+          return createHtmlResponse(`
+            <html>
+              <body>
+                <h1>Contact Us</h1>
+                <form method="POST" action="${routes.contact.action.href()}">
+                  <label for="message">Message</label>
+                  <input type="text" name="message" />
+                  <button type="submit">Send</button>
+                </form>
+              </body>
+            </html>
+          `)
+        },
+        // POST /contact - handles the form submission
+        action({ formData }) {
+          let message = formData.get('message') as string
+          let body = html`
+            <html>
+              <body>
+                <h1>Thanks!</h1>
+                <p>You said: ${message}</p>
 
-            <p>
-              Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
-            </p>
-          </body>
-        </html>
-      `
+                <p>
+                  Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
+                </p>
+              </body>
+            </html>
+          `
 
-      return createHtmlResponse(body)
+          return createHtmlResponse(body)
+        },
+      },
     },
   },
 })
@@ -353,22 +365,26 @@ type Routes = typeof routes
 let router = createRouter()
 
 router.map(routes.brands, {
-  // GET /brands
-  index() {
-    return new Response('Brands Index')
-  },
-  // GET /brands/:id
-  show({ params }) {
-    return new Response(`Brand ${params.id}`)
-  },
-  products: {
-    // GET /brands/:brandId/products
+  actions: {
+    // GET /brands
     index() {
-      return new Response('Products Index')
+      return new Response('Brands Index')
     },
-    // GET /brands/:brandId/products/:id
+    // GET /brands/:id
     show({ params }) {
-      return new Response(`Brand ${params.brandId}, Product ${params.id}`)
+      return new Response(`Brand ${params.id}`)
+    },
+    products: {
+      actions: {
+        // GET /brands/:brandId/products
+        index() {
+          return new Response('Products Index')
+        },
+        // GET /brands/:brandId/products/:id
+        show({ params }) {
+          return new Response(`Brand ${params.brandId}, Product ${params.id}`)
+        },
+      },
     },
   },
 })

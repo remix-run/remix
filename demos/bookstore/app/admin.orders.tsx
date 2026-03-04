@@ -8,7 +8,8 @@ import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  async index({ db }) {
+  actions: {
+    async index({ db }) {
     let allOrders = await db.findMany(orders, {
       orderBy: ['created_at', 'asc'],
       with: { items: orderItemsWithBook },
@@ -64,7 +65,7 @@ export default {
     )
   },
 
-  async show({ db, params }) {
+    async show({ db, params }) {
     let orderId = parseId(params.orderId)
     let order =
       orderId === undefined
@@ -150,5 +151,6 @@ export default {
         </p>
       </Layout>,
     )
+    },
   },
 } satisfies Controller<typeof routes.admin.orders>

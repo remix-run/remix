@@ -5,33 +5,20 @@ import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
-// prettier-ignore
-export type Controller<routes extends RouteMap> =
-  | ControllerWithMiddleware<routes>
-  | ControllerWithoutMiddleware<routes>
-
-type ControllerWithMiddleware<routes extends RouteMap> = {
-  middleware: Middleware[]
-  actions: ControllerWithoutMiddleware<routes>
-} & (routes extends Record<string, any>
-  ? {
-      // Explicitly exclude route name keys from objects with `middleware`
-      [name in keyof routes as routes extends any ? never : name]?: never
-    }
-  : {})
+export type Controller<routes extends RouteMap> = {
+  actions: ControllerActions<routes>
+  middleware?: Middleware[]
+}
 
 // prettier-ignore
-type ControllerWithoutMiddleware<routes extends RouteMap> = routes extends any ?
-  ({
+type ControllerActions<routes extends RouteMap> = routes extends any ?
+  {
     [name in keyof routes]: (
       routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern> :
       routes[name] extends RouteMap ? Controller<routes[name]> :
       never
     )
-  } & {
-    // Explicitly exclude `middleware` from objects with route name keys
-    middleware?: never
-  }) :
+  } :
   never
 
 /**
@@ -73,21 +60,21 @@ export interface RequestHandler<
 }
 
 /**
- * Runtime shape for a controller with middleware.
+ * Runtime shape for a controller.
  */
-export interface ControllerWithMiddlewareShape {
-  middleware: Middleware[]
+export interface ControllerShape {
   actions: Record<string, unknown>
+  middleware?: Middleware[]
 }
 
 /**
- * Check if an object has middleware and an `actions` property (controller with middleware).
+ * Check if an object has an `actions` property (controller).
  *
  * @param obj The object to check
- * @returns `true` if the object is a controller with middleware
+ * @returns `true` if the object is a controller
  */
-export function isControllerWithMiddleware(obj: unknown): obj is ControllerWithMiddlewareShape {
-  return typeof obj === 'object' && obj != null && 'middleware' in obj && 'actions' in obj
+export function isController(obj: unknown): obj is ControllerShape {
+  return typeof obj === 'object' && obj != null && 'actions' in obj
 }
 
 /**

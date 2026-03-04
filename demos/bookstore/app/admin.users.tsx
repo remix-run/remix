@@ -11,7 +11,8 @@ import { parseId } from './utils/ids.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  async index({ db }) {
+  actions: {
+    async index({ db }) {
     let user = getCurrentUser()
     let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
@@ -80,7 +81,7 @@ export default {
     )
   },
 
-  async show({ db, params }) {
+    async show({ db, params }) {
     let userId = parseId(params.userId)
     let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -133,7 +134,7 @@ export default {
     )
   },
 
-  async edit({ db, params }) {
+    async edit({ db, params }) {
     let userId = parseId(params.userId)
     let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -195,7 +196,7 @@ export default {
     )
   },
 
-  async update({ db, formData, params }) {
+    async update({ db, formData, params }) {
     let userId = parseId(params.userId)
     let targetUser = userId === undefined ? undefined : await db.find(users, userId)
     if (targetUser) {
@@ -209,7 +210,7 @@ export default {
     return redirect(routes.admin.users.index.href())
   },
 
-  async destroy({ db, params }) {
+    async destroy({ db, params }) {
     let userId = parseId(params.userId)
     let targetUser = userId === undefined ? undefined : await db.find(users, userId)
     if (targetUser) {
@@ -217,5 +218,6 @@ export default {
     }
 
     return redirect(routes.admin.users.index.href())
+    },
   },
 } satisfies Controller<typeof routes.admin.users>

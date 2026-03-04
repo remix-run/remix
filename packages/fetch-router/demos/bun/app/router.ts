@@ -82,46 +82,48 @@ router.map(routes.home, ({ session }) => {
 })
 
 router.map(routes.login, {
-  index({ session }) {
-    let username = session.get('username') as string | undefined
-    if (username) {
-      return redirect(routes.home.href())
-    }
+  actions: {
+    index({ session }) {
+      let username = session.get('username') as string | undefined
+      if (username) {
+        return redirect(routes.home.href())
+      }
 
-    return createHtmlResponse(html`
-      <html>
-        <head>
-          <title>Login - Simple Blog</title>
-          <meta charset="utf-8" />
-          <link rel="icon" href="/favicon.ico" />
-        </head>
-        <body>
-          <h1>Login</h1>
-          <p>Enter any username to login (no password required for demo)</p>
-          <form method="POST" action="${routes.login.action.href()}">
-            <div style="display: flex; flex-direction: column; gap: 10px; width: 150px;">
-              <label for="username">Username:</label>
-              <input type="text" id="username" name="username" required />
-              <label for="password">Password:</label>
-              <input type="password" id="password" name="password" required />
-            </div>
-            <br />
-            <button type="submit">Login</button>
-          </form>
-          <p><a href="${routes.home.href()}">← Back to Home</a></p>
-        </body>
-      </html>
-    `)
-  },
-  async action({ formData, session }) {
-    let username = formData.get('username') as string
+      return createHtmlResponse(html`
+        <html>
+          <head>
+            <title>Login - Simple Blog</title>
+            <meta charset="utf-8" />
+            <link rel="icon" href="/favicon.ico" />
+          </head>
+          <body>
+            <h1>Login</h1>
+            <p>Enter any username to login (no password required for demo)</p>
+            <form method="POST" action="${routes.login.action.href()}">
+              <div style="display: flex; flex-direction: column; gap: 10px; width: 150px;">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required />
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required />
+              </div>
+              <br />
+              <button type="submit">Login</button>
+            </form>
+            <p><a href="${routes.home.href()}">← Back to Home</a></p>
+          </body>
+        </html>
+      `)
+    },
+    async action({ formData, session }) {
+      let username = formData.get('username') as string
 
-    if (username) {
-      session.set('username', username)
-      return redirect(routes.home.href())
-    }
+      if (username) {
+        session.set('username', username)
+        return redirect(routes.home.href())
+      }
 
-    return redirect(routes.login.index.href())
+      return redirect(routes.login.index.href())
+    },
   },
 })
 
@@ -131,72 +133,74 @@ router.post(routes.logout, ({ session }) => {
 })
 
 router.map(routes.posts, {
-  new: {
-    middleware: [requireAuth()],
-    action() {
+  actions: {
+    new: {
+      middleware: [requireAuth()],
+      action() {
+        return createHtmlResponse(html`
+          <html>
+            <head>
+              <title>New Post - Simple Blog</title>
+              <meta charset="utf-8" />
+              <link rel="icon" href="/favicon.ico" />
+            </head>
+            <body>
+              <h1>New Post</h1>
+              <form method="POST" action="${routes.posts.create.href()}">
+                <div>
+                  <label for="title">Title:</label>
+                  <input type="text" id="title" name="title" required />
+                </div>
+                <div>
+                  <label for="content">Content:</label>
+                  <textarea id="content" name="content" required></textarea>
+                </div>
+                <button type="submit">Create Post</button>
+              </form>
+              <p><a href="${routes.home.href()}">← Back to Home</a></p>
+            </body>
+          </html>
+        `)
+      },
+    },
+    async create({ formData, session }) {
+      let username = session.get('username') as string
+      if (!username) {
+        return redirect(routes.login.index.href())
+      }
+
+      let title = formData.get('title') as string
+      let content = formData.get('content') as string
+
+      if (!title || !content) {
+        return redirect(routes.posts.new.href())
+      }
+
+      let post = data.createPost(title, content, username)
+      return redirect(routes.posts.show.href({ id: post.id }))
+    },
+    show({ params }) {
+      let post = data.getPost(params.id)
+      if (!post) {
+        return new Response('Post not found', { status: 404 })
+      }
+
       return createHtmlResponse(html`
         <html>
           <head>
-            <title>New Post - Simple Blog</title>
+            <title>${post.title} - Simple Blog</title>
             <meta charset="utf-8" />
             <link rel="icon" href="/favicon.ico" />
           </head>
           <body>
-            <h1>New Post</h1>
-            <form method="POST" action="${routes.posts.create.href()}">
-              <div>
-                <label for="title">Title:</label>
-                <input type="text" id="title" name="title" required />
-              </div>
-              <div>
-                <label for="content">Content:</label>
-                <textarea id="content" name="content" required></textarea>
-              </div>
-              <button type="submit">Create Post</button>
-            </form>
+            <h1>${post.title}</h1>
+            <div>By ${post.author} on ${post.createdAt.toLocaleDateString()}</div>
+            <div>${post.content.replace(/\n/g, '<br>')}</div>
             <p><a href="${routes.home.href()}">← Back to Home</a></p>
           </body>
         </html>
       `)
     },
-  },
-  async create({ formData, session }) {
-    let username = session.get('username') as string
-    if (!username) {
-      return redirect(routes.login.index.href())
-    }
-
-    let title = formData.get('title') as string
-    let content = formData.get('content') as string
-
-    if (!title || !content) {
-      return redirect(routes.posts.new.href())
-    }
-
-    let post = data.createPost(title, content, username)
-    return redirect(routes.posts.show.href({ id: post.id }))
-  },
-  show({ params }) {
-    let post = data.getPost(params.id)
-    if (!post) {
-      return new Response('Post not found', { status: 404 })
-    }
-
-    return createHtmlResponse(html`
-      <html>
-        <head>
-          <title>${post.title} - Simple Blog</title>
-          <meta charset="utf-8" />
-          <link rel="icon" href="/favicon.ico" />
-        </head>
-        <body>
-          <h1>${post.title}</h1>
-          <div>By ${post.author} on ${post.createdAt.toLocaleDateString()}</div>
-          <div>${post.content.replace(/\n/g, '<br>')}</div>
-          <p><a href="${routes.home.href()}">← Back to Home</a></p>
-        </body>
-      </html>
-    `)
   },
 })
 

@@ -28,7 +28,8 @@ export default {
     },
 
     api: {
-      async add({ db, session, formData }) {
+      actions: {
+        async add({ db, session, formData }) {
         if (process.env.NODE_ENV !== 'test') {
           // Simulate network latency
           await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -52,7 +53,7 @@ export default {
         return redirect(routes.cart.index.href())
       },
 
-      async update({ db, session, formData }) {
+        async update({ db, session, formData }) {
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
         let bookId = parseId(formData.get('bookId'))
@@ -72,7 +73,7 @@ export default {
         return redirect(routes.cart.index.href())
       },
 
-      async remove({ db, session, formData }) {
+        async remove({ db, session, formData }) {
         if (process.env.NODE_ENV !== 'test') {
           // Simulate network latency
           await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -91,6 +92,7 @@ export default {
         }
 
         return redirect(routes.cart.index.href())
+        },
       },
     },
   },

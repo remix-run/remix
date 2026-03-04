@@ -10,7 +10,8 @@ import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  async index({ db }) {
+  actions: {
+    async index({ db }) {
     let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
     return render(
@@ -85,7 +86,7 @@ export default {
     )
   },
 
-  async show({ db, params }) {
+    async show({ db, params }) {
     let bookId = parseId(params.bookId)
     let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -153,7 +154,7 @@ export default {
     )
   },
 
-  new() {
+    new() {
     return render(
       <Layout>
         <h1>Add New Book</h1>
@@ -236,7 +237,7 @@ export default {
     )
   },
 
-  async create({ db, formData }) {
+    async create({ db, formData }) {
     await db.create(books, {
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
@@ -254,7 +255,7 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async edit({ db, params }) {
+    async edit({ db, params }) {
     let bookId = parseId(params.bookId)
     let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -380,7 +381,7 @@ export default {
     )
   },
 
-  async update({ db, formData, params }) {
+    async update({ db, formData, params }) {
     let bookId = parseId(params.bookId)
     let book = bookId === undefined ? undefined : await db.find(books, bookId)
     if (!book) {
@@ -407,7 +408,7 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async destroy({ db, params }) {
+    async destroy({ db, params }) {
     let bookId = parseId(params.bookId)
     let book = bookId === undefined ? undefined : await db.find(books, bookId)
     if (book) {
@@ -415,5 +416,6 @@ export default {
     }
 
     return redirect(routes.admin.books.index.href())
+    },
   },
 } satisfies Controller<typeof routes.admin.books>
