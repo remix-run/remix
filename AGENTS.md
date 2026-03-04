@@ -49,6 +49,7 @@
 ## Changes and Releases
 
 - **Adding changes**: Create `packages/*/.changes/[major|minor|patch].short-description.md` files. See [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-change-file) for details.
+- **Do not edit past changelogs**: Do not modify existing `CHANGELOG.md` entries for already-released versions. Capture new work with change files only.
 - **Remix package changes are generated in CI**: In new PRs, do not manually edit `packages/remix/*` and do not add `packages/remix/.changes/*` files.
 - **Updating changes**: If iterating on an unpublished change with a change file, update it in place rather than creating a new one.
 - **Organizing change files**: Prefer a small set of logically grouped change files (for example, one file for a breaking API shape change and another for additive features) instead of one giant mixed note. API iterations made within the same unmerged PR are not breaking changes and should not be marked as `BREAKING CHANGE:` unless they break behavior relative to `main`.
