@@ -30,68 +30,68 @@ export default {
     api: {
       actions: {
         async add({ db, session, formData }) {
-        if (process.env.NODE_ENV !== 'test') {
-          // Simulate network latency
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-        }
+          if (process.env.NODE_ENV !== 'test') {
+            // Simulate network latency
+            await new Promise((resolve) => setTimeout(resolve, 1000))
+          }
 
-        let bookId = parseId(formData.get('bookId'))
-        let book = bookId === undefined ? undefined : await db.find(books, bookId)
-        if (!book) {
-          return new Response('Book not found', { status: 404 })
-        }
+          let bookId = parseId(formData.get('bookId'))
+          let book = bookId === undefined ? undefined : await db.find(books, bookId)
+          if (!book) {
+            return new Response('Book not found', { status: 404 })
+          }
 
-        session.set(
-          'cart',
-          addToCart(getCurrentCart(), book.id, book.slug, book.title, book.price, 1),
-        )
+          session.set(
+            'cart',
+            addToCart(getCurrentCart(), book.id, book.slug, book.title, book.price, 1),
+          )
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
-      },
+          return redirect(routes.cart.index.href())
+        },
 
         async update({ db, session, formData }) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        let bookId = parseId(formData.get('bookId'))
-        let book = bookId === undefined ? undefined : await db.find(books, bookId)
-        if (!book) {
-          return new Response('Book not found', { status: 404 })
-        }
+          let bookId = parseId(formData.get('bookId'))
+          let book = bookId === undefined ? undefined : await db.find(books, bookId)
+          if (!book) {
+            return new Response('Book not found', { status: 404 })
+          }
 
-        let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
+          let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
-        session.set('cart', updateCartItem(getCurrentCart(), book.id, quantity))
+          session.set('cart', updateCartItem(getCurrentCart(), book.id, quantity))
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
-      },
+          return redirect(routes.cart.index.href())
+        },
 
         async remove({ db, session, formData }) {
-        if (process.env.NODE_ENV !== 'test') {
-          // Simulate network latency
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-        }
+          if (process.env.NODE_ENV !== 'test') {
+            // Simulate network latency
+            await new Promise((resolve) => setTimeout(resolve, 1000))
+          }
 
-        let bookId = parseId(formData.get('bookId'))
-        let book = bookId === undefined ? undefined : await db.find(books, bookId)
-        if (!book) {
-          return new Response('Book not found', { status: 404 })
-        }
+          let bookId = parseId(formData.get('bookId'))
+          let book = bookId === undefined ? undefined : await db.find(books, bookId)
+          if (!book) {
+            return new Response('Book not found', { status: 404 })
+          }
 
-        session.set('cart', removeFromCart(getCurrentCart(), book.id))
+          session.set('cart', removeFromCart(getCurrentCart(), book.id))
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
+          return redirect(routes.cart.index.href())
         },
       },
     },
