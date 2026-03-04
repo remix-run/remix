@@ -35,7 +35,7 @@ export class PressEvent extends Event {
   }
 }
 
-let basePressEvents = createMixin<HTMLElement>((handle) => {
+export let basePressEvents = createMixin<HTMLElement>((handle) => {
   let target: HTMLElement | null = null
   let doc: Document | null = null
   let isPointerDown = false

@@ -8,7 +8,7 @@ import type {
 
 export type { Dispatched } from '../event-listeners.ts'
 
-type SignaledListener<event extends Event> = (
+export type SignaledListener<event extends Event> = (
   event: event,
   signal: AbortSignal,
 ) => void | Promise<void>

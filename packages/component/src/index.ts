@@ -7,8 +7,9 @@ export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } 
 
 export type { StyleManager } from './lib/style/index.ts'
 export type { CSSProps } from './lib/style/lib/style.ts'
+export { createStyleManager } from './lib/style/lib/stylesheet.ts'
 
-export type { CommittedComponentNode } from './lib/vnode.ts'
+export type { CommittedComponentNode, VNode } from './lib/vnode.ts'
 export type { EmptyFn, SchedulerPhaseType, SchedulerPhaseListener } from './lib/scheduler.ts'
 
 // -- Client Entries --
@@ -36,6 +37,8 @@ export type {
   NoContext,
   ContextFrom,
   FragmentProps,
+  Component,
+  ComponentHandle,
 } from './lib/component.ts'
 
 // -- Elements/JSX/Props --
@@ -58,22 +61,51 @@ export type {
   MixinHandleEventMap,
   MixinElement,
   RebindTuple,
+  RebindNode,
+  MixinRuntimeType,
+  MixinInsertEvent,
+  MixinReclaimedEvent,
+  MixinUpdateEvent,
+  MixinBeforeRemoveEvent,
+  MixinProps,
 } from './lib/mixin.ts'
 export { TypedEventTarget } from './lib/typed-event-target.ts'
 export type { TypedEventListener } from './lib/typed-event-target.ts'
 export { addEventListeners } from './lib/event-listeners.ts'
 export type { EventListeners } from './lib/event-listeners.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
-export type { Dispatched, EventType, ListenerFor } from './lib/mixins/on-mixin.tsx'
-export { keysEvents } from './lib/mixins/keys-mixin.tsx'
+export type { Dispatched, EventType, ListenerFor, SignaledListener } from './lib/mixins/on-mixin.tsx'
+export { keysEvents, baseKeysEvents } from './lib/mixins/keys-mixin.tsx'
+export {
+  escapeEventType,
+  enterEventType,
+  spaceEventType,
+  backspaceEventType,
+  deleteEventType,
+  arrowLeftEventType,
+  arrowRightEventType,
+  arrowUpEventType,
+  arrowDownEventType,
+  homeEventType,
+  endEventType,
+  pageUpEventType,
+  pageDownEventType,
+} from './lib/mixins/keys-mixin.tsx'
 export type { KeysEventsMixin } from './lib/mixins/keys-mixin.tsx'
-export { pressEvents } from './lib/mixins/press-mixin.tsx'
+export { pressEvents, basePressEvents } from './lib/mixins/press-mixin.tsx'
+export {
+  pressEventType,
+  pressDownEventType,
+  pressUpEventType,
+  longPressEventType,
+  pressCancelEventType,
+} from './lib/mixins/press-mixin.tsx'
 export type { PressEvent, PressEventsMixin } from './lib/mixins/press-mixin.tsx'
 export { ref } from './lib/mixins/ref-mixin.tsx'
 export type { RefCallback } from './lib/mixins/ref-mixin.tsx'
 export { css } from './lib/mixins/css-mixin.tsx'
 export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
-export type { AnimationConfig } from './lib/mixins/animate-mixins.tsx'
+export type { AnimationConfig, AnimateMixinConfig } from './lib/mixins/animate-mixins.tsx'
 export { animateLayout } from './lib/mixins/animate-layout-mixin.tsx'
 export type { LayoutConfig } from './lib/mixins/animate-layout-mixin.tsx'
 

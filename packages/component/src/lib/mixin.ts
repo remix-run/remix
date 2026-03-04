@@ -5,7 +5,7 @@ import type { SchedulerPhaseEvent } from './scheduler.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import { invariant } from './invariant.ts'
 
-type RebindNode<value, baseNode, boundNode> = value extends (
+export type RebindNode<value, baseNode, boundNode> = value extends (
   ...args: infer fnArgs
 ) => infer fnResult
   ? (...args: RebindTuple<fnArgs, baseNode, boundNode>) => RebindNode<fnResult, baseNode, boundNode>
@@ -77,7 +77,7 @@ export type MixinHandle<
   queueTask(task: (node: node, signal: AbortSignal) => void): void
 }
 
-type MixinRuntimeType<
+export type MixinRuntimeType<
   args extends unknown[] = [],
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,

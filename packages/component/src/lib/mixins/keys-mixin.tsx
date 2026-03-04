@@ -52,7 +52,7 @@ let keyToEventType: Record<string, string> = {
   PageDown: pageDownEventType,
 }
 
-let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
+export let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
   <handle.element
     {...props}
     mix={[
