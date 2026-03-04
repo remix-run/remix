@@ -587,7 +587,9 @@ router.map(routes.admin.dashboard, {
 Every action and middleware receives a `context` object with useful properties:
 
 ```ts
-router.get('/posts/:id', ({ request, url, params, storage }) => {
+let userKey = createStorageKey<{ id: string }>()
+
+router.get('/posts/:id', ({ request, url, params, set, get }) => {
   // request: The original Request object
   console.log(request.method) // "GET"
   console.log(request.headers.get('Accept'))
@@ -599,8 +601,10 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
   // params: Route parameters (fully typed!)
   console.log(params.id) // "123"
 
-  // storage: AppStorage for type-safe access to request-scoped data
-  storage.set('user', currentUser)
+  // set/get: type-safe request-scoped storage on the context object
+  set(userKey, currentUser)
+  let user = get(userKey)
+  console.log(user.id)
 
   return new Response(`Post ${params.id}`)
 })

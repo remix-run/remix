@@ -1,7 +1,7 @@
 import { createSession, type Session } from '@remix-run/session'
 import type { Router } from './router.ts'
 
-import { AppStorage } from './app-storage.ts'
+import type { StorageKey, StorageValue } from './app-storage.ts'
 import {
   RequestBodyMethods,
   type RequestBodyMethod,
@@ -24,7 +24,6 @@ export class RequestContext<
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
-    this.storage = new AppStorage()
     this.url = new URL(request.url)
   }
 
@@ -119,6 +118,46 @@ export class RequestContext<
 
   #session?: Session
 
+  #storage: Map<StorageKey<any>, StorageValue<any>> = new Map()
+
+  /**
+   * Get a value from request-scoped storage.
+   *
+   * @param key The key to read
+   * @returns The value for the given key
+   */
+  get<key extends StorageKey<any>>(key: key): StorageValue<key> {
+    if (!this.#storage.has(key)) {
+      if (key.defaultValue === undefined) {
+        throw new Error(`Missing default value in storage for key ${key}`)
+      }
+
+      return key.defaultValue
+    }
+
+    return this.#storage.get(key) as StorageValue<key>
+  }
+
+  /**
+   * Check whether a value exists in request-scoped storage.
+   *
+   * @param key The key to check
+   * @returns `true` if a value has been set for the key
+   */
+  has<key extends StorageKey<any>>(key: key): boolean {
+    return this.#storage.has(key)
+  }
+
+  /**
+   * Set a value in request-scoped storage.
+   *
+   * @param key The key to write
+   * @param value The value to write
+   */
+  set<key extends StorageKey<any>>(key: key, value: StorageValue<key>): void {
+    this.#storage.set(key, value)
+  }
+
   #router?: Router
 
   /**
@@ -142,11 +181,6 @@ export class RequestContext<
   get sessionStarted(): boolean {
     return this.#session != null
   }
-
-  /**
-   * Shared application-specific storage.
-   */
-  storage: AppStorage
 
   /**
    * The URL that was matched by the route.

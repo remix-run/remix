@@ -1,5 +1,4 @@
 export { createStorageKey } from './lib/app-storage.ts'
-export { AppStorage } from './lib/app-storage.ts'
 
 export type { Controller, Action, BuildAction, RequestHandler } from './lib/controller.ts'
 
