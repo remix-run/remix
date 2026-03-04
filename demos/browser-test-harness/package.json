@@ -10,8 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "esbuild": "^0.25.10",
-    "glob": "^11.0.0",
+    "esbuild": "catalog:",
     "playwright": "catalog:",
     "remix": "workspace:*"
   },

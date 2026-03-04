@@ -8,7 +8,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "esbuild": "^0.25.10",
+    "esbuild": "catalog:",
     "tsx": "catalog:"
   },
   "scripts": {
