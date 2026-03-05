@@ -8,7 +8,14 @@ type NavKey = 'dashboard' | 'courses' | 'calendar' | 'account' | 'settings'
 type LayoutProps = {
   title: string
   active: NavKey
+  secondaryNavigation?: SecondaryNavigation
   children?: RemixNode
+}
+
+type SecondaryNavigation = {
+  title: string
+  activeKey: string
+  items: Array<{ key: string; href: string; label: string }>
 }
 
 let navItems: Array<{ key: NavKey; href: string; label: string }> = [
@@ -16,11 +23,11 @@ let navItems: Array<{ key: NavKey; href: string; label: string }> = [
   { key: 'courses', href: routes.main.courses.href(), label: 'Courses' },
   { key: 'calendar', href: routes.main.calendar.href(), label: 'Calendar' },
   { key: 'account', href: routes.main.account.href(), label: 'Account' },
-  { key: 'settings', href: routes.main.settings.href(), label: 'Settings' },
+  { key: 'settings', href: routes.settings.index.href(), label: 'Settings' },
 ]
 
 export function Layout() {
-  return ({ title, active, children }: LayoutProps) => (
+  return ({ title, active, secondaryNavigation, children }: LayoutProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
@@ -51,7 +58,31 @@ export function Layout() {
             <header mix={[mainHeaderStyle]}>
               <h1 mix={[mainTitleStyle]}>{title}</h1>
             </header>
-            {children}
+            {secondaryNavigation ? (
+              <section mix={[contentShellStyle]}>
+                <aside mix={[secondarySidebarStyle]}>
+                  <p mix={[secondarySidebarTitleStyle]}>{secondaryNavigation.title}</p>
+                  <nav mix={[secondaryNavStyle]}>
+                    {secondaryNavigation.items.map((item) => (
+                      <a
+                        href={item.href}
+                        mix={[
+                          secondaryNavItemBaseStyle,
+                          item.key === secondaryNavigation.activeKey
+                            ? secondaryNavItemActiveStyle
+                            : secondaryNavItemIdleStyle,
+                        ]}
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                  </nav>
+                </aside>
+                <section mix={[secondaryContentStyle]}>{children}</section>
+              </section>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </body>
@@ -141,4 +172,58 @@ let mainTitleStyle = css({
   margin: 0,
   fontSize: '1.25rem',
   color: '#0f172a',
+})
+
+let contentShellStyle = css({
+  display: 'grid',
+  gridTemplateColumns: '240px minmax(0, 1fr)',
+  gap: '1.25rem',
+  alignItems: 'start',
+})
+
+let secondarySidebarStyle = css({
+  position: 'sticky',
+  top: '1.5rem',
+  border: '1px solid #e2e8f0',
+  borderRadius: '14px',
+  backgroundColor: '#ffffff',
+  padding: '0.9rem',
+})
+
+let secondarySidebarTitleStyle = css({
+  margin: 0,
+  color: '#64748b',
+  fontSize: '0.85rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  fontWeight: 600,
+})
+
+let secondaryNavStyle = css({
+  marginTop: '0.7rem',
+  display: 'grid',
+  gap: '0.35rem',
+})
+
+let secondaryNavItemBaseStyle = css({
+  textDecoration: 'none',
+  borderRadius: '10px',
+  padding: '0.55rem 0.65rem',
+  fontSize: '0.9rem',
+})
+
+let secondaryNavItemActiveStyle = css({
+  color: '#0f172a',
+  backgroundColor: '#e2e8f0',
+  fontWeight: 600,
+})
+
+let secondaryNavItemIdleStyle = css({
+  color: '#334155',
+  backgroundColor: 'transparent',
+  fontWeight: 500,
+})
+
+let secondaryContentStyle = css({
+  minWidth: 0,
 })

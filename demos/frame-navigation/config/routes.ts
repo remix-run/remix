@@ -6,6 +6,13 @@ export let routes = route({
     courses: get('courses'),
     calendar: get('calendar'),
     account: get('account'),
-    settings: get('settings'),
   },
+  settings: route('settings', {
+    index: get('/'),
+    profile: get('profile'),
+    notifications: get('notifications'),
+    privacy: get('privacy'),
+    grading: get('grading'),
+    integrations: get('integrations'),
+  }),
 })
