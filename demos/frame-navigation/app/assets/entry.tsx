@@ -10,7 +10,11 @@ let app = run({
     return exp
   },
   async resolveFrame(src: string, signal?: AbortSignal) {
-    let res = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    let headers = new Headers()
+    headers.set('accept', 'text/html')
+    headers.set('x-remix-frame', 'true')
+
+    let res = await fetch(src, { headers, signal })
     if (!res.ok) {
       return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
     }
