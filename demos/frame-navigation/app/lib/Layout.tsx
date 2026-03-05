@@ -1,0 +1,144 @@
+import type { RemixNode } from 'remix/component'
+import { css } from 'remix/component'
+
+import { routes } from '../../config/routes.ts'
+
+type NavKey = 'dashboard' | 'courses' | 'calendar' | 'account' | 'settings'
+
+type LayoutProps = {
+  title: string
+  active: NavKey
+  children?: RemixNode
+}
+
+let navItems: Array<{ key: NavKey; href: string; label: string }> = [
+  { key: 'dashboard', href: routes.main.index.href(), label: 'Dashboard' },
+  { key: 'courses', href: routes.main.courses.href(), label: 'Courses' },
+  { key: 'calendar', href: routes.main.calendar.href(), label: 'Calendar' },
+  { key: 'account', href: routes.main.account.href(), label: 'Account' },
+  { key: 'settings', href: routes.main.settings.href(), label: 'Settings' },
+]
+
+export function Layout() {
+  return ({ title, active, children }: LayoutProps) => (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title} | LMS</title>
+        <script async type="module" src="/assets/entry.js" />
+      </head>
+      <body mix={[bodyStyle]}>
+        <div mix={[appShellStyle]}>
+          <aside mix={[sidebarStyle]}>
+            <a href={routes.main.index.href()} mix={[brandLinkStyle]}>
+              Atlas LMS
+            </a>
+            <p mix={[sidebarSubtitleStyle]}>Student workspace</p>
+            <nav mix={[navStyle]}>
+              {navItems.map((item) => (
+                <a
+                  href={item.href}
+                  mix={[navItemBaseStyle, item.key === active ? navItemActiveStyle : navItemIdleStyle]}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          </aside>
+
+          <main mix={[mainStyle]}>
+            <header mix={[mainHeaderStyle]}>
+              <h1 mix={[mainTitleStyle]}>{title}</h1>
+            </header>
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
+  )
+}
+
+let bodyStyle = css({
+  margin: 0,
+  minHeight: '100vh',
+  fontFamily:
+    'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
+  color: '#0f172a',
+  backgroundColor: '#f8fafc',
+})
+
+let appShellStyle = css({
+  height: '100vh',
+  display: 'grid',
+  gridTemplateColumns: '280px minmax(0, 1fr)',
+})
+
+let sidebarStyle = css({
+  position: 'sticky',
+  top: 0,
+  alignSelf: 'start',
+  height: '100vh',
+  boxSizing: 'border-box',
+  borderRight: '1px solid #e2e8f0',
+  backgroundColor: '#ffffff',
+  padding: '1.25rem 1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.75rem',
+})
+
+let brandLinkStyle = css({
+  fontWeight: 700,
+  letterSpacing: '-0.01em',
+  color: '#0f172a',
+  textDecoration: 'none',
+  fontSize: '1.1rem',
+})
+
+let sidebarSubtitleStyle = css({
+  margin: 0,
+  color: '#64748b',
+  fontSize: '0.9rem',
+})
+
+let navStyle = css({
+  display: 'grid',
+  gap: '0.35rem',
+  marginTop: '0.5rem',
+})
+
+let navItemBaseStyle = css({
+  textDecoration: 'none',
+  borderRadius: '10px',
+  padding: '0.55rem 0.75rem',
+  fontSize: '0.95rem',
+})
+
+let navItemActiveStyle = css({
+  color: '#0f172a',
+  backgroundColor: '#e2e8f0',
+  fontWeight: 600,
+})
+
+let navItemIdleStyle = css({
+  color: '#334155',
+  backgroundColor: 'transparent',
+  fontWeight: 500,
+})
+
+let mainStyle = css({
+  padding: '1.5rem 2rem 3rem',
+})
+
+let mainHeaderStyle = css({
+  marginBottom: '1.25rem',
+  paddingBottom: '0.75rem',
+  borderBottom: '1px solid #e2e8f0',
+})
+
+let mainTitleStyle = css({
+  margin: 0,
+  fontSize: '1.25rem',
+  color: '#0f172a',
+})
