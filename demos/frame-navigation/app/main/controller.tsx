@@ -7,7 +7,6 @@ import { MainAccountPage } from './account.tsx'
 import { MainCalendarPage } from './calendar.tsx'
 import { MainCoursesPage } from './courses.tsx'
 import { MainIndexPage } from './index.tsx'
-import { MainSettingsPage } from './settings.tsx'
 
 let mainController: Controller<typeof routes.main> = {
   actions: {
@@ -36,13 +35,6 @@ let mainController: Controller<typeof routes.main> = {
       return render(
         <Layout title="Account" active="account">
           <MainAccountPage />
-        </Layout>,
-      )
-    },
-    settings() {
-      return render(
-        <Layout title="Settings" active="settings">
-          <MainSettingsPage />
         </Layout>,
       )
     },
