@@ -29,6 +29,7 @@ async function resolveFrame(router: Router, request: Request, src: string) {
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
+  headers.set('x-remix-frame', 'true')
 
   let cookie = request.headers.get('cookie')
   if (cookie) headers.set('cookie', cookie)

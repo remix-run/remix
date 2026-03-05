@@ -1,8 +1,9 @@
 import type { Controller } from 'remix/fetch-router'
 
-import { routes } from '../../config/routes.ts'
+import type { routes } from '../../config/routes.ts'
 import { render } from '../../config/render.tsx'
 import { Layout } from '../lib/Layout.tsx'
+import { SettingsLayout } from './layout.tsx'
 import { SettingsGradingPage } from './grading.tsx'
 import { SettingsIndexPage } from './index.tsx'
 import { SettingsIntegrationsPage } from './integrations.tsx'
@@ -14,86 +15,69 @@ let settingsController: Controller<typeof routes.settings> = {
   actions: {
     index() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('overview')}
-        >
-          <SettingsIndexPage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="overview" />
         </Layout>,
       )
     },
     profile() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('profile')}
-        >
-          <SettingsProfilePage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="profile" />
         </Layout>,
       )
     },
     notifications() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('notifications')}
-        >
-          <SettingsNotificationsPage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="notifications" />
         </Layout>,
       )
     },
     privacy() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('privacy')}
-        >
-          <SettingsPrivacyPage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="privacy" />
         </Layout>,
       )
     },
     grading() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('grading')}
-        >
-          <SettingsGradingPage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="grading" />
         </Layout>,
       )
     },
     integrations() {
       return render(
-        <Layout
-          title="Settings"
-          active="settings"
-          secondaryNavigation={getSettingsNavigation('integrations')}
-        >
-          <SettingsIntegrationsPage />
+        <Layout title="Settings" active="settings">
+          <SettingsLayout active="integrations" />
         </Layout>,
       )
     },
+    frame: {
+      actions: {
+        index() {
+          return render(<SettingsIndexPage />)
+        },
+        profile() {
+          return render(<SettingsProfilePage />)
+        },
+        notifications() {
+          return render(<SettingsNotificationsPage />)
+        },
+        privacy() {
+          return render(<SettingsPrivacyPage />)
+        },
+        grading() {
+          return render(<SettingsGradingPage />)
+        },
+        integrations() {
+          return render(<SettingsIntegrationsPage />)
+        },
+      },
+    },
   },
-}
-
-function getSettingsNavigation(activeKey: string) {
-  return {
-    title: 'Settings',
-    activeKey,
-    items: [
-      { key: 'overview', href: routes.settings.index.href(), label: 'Overview' },
-      { key: 'profile', href: routes.settings.profile.href(), label: 'Profile' },
-      { key: 'notifications', href: routes.settings.notifications.href(), label: 'Notifications' },
-      { key: 'privacy', href: routes.settings.privacy.href(), label: 'Privacy' },
-      { key: 'grading', href: routes.settings.grading.href(), label: 'Grading' },
-      { key: 'integrations', href: routes.settings.integrations.href(), label: 'Integrations' },
-    ],
-  }
 }
 
 export default settingsController
