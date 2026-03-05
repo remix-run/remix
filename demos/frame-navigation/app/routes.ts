@@ -19,11 +19,7 @@ export let routes = route({
       sales: get('/sales'),
     },
     frames: route('frame', {
-      shell: {
-        home: get('/shell/home'),
-        customers: get('/shell/customers'),
-        sales: get('/shell/sales'),
-      },
+      shell: get('/shell/:section'),
       content: {
         home: get('/content/activity'),
         customers: get('/content/customers'),

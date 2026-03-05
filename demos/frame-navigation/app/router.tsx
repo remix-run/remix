@@ -25,88 +25,94 @@ middleware.push(
 export let router = createRouter({ middleware })
 
 router.map(routes.main, {
-  pages: {
-    home(context: any) {
-      return renderRootPage(context, routes.main.frames.home.href(), 'Home')
+  actions: {
+    pages: {
+      actions: {
+        home(context: any) {
+          return renderRootPage(context, routes.main.frames.home.href(), 'Home')
+        },
+        settings(context: any) {
+          return renderRootPage(context, routes.main.frames.settings.href(), 'Settings')
+        },
+      },
     },
-    settings(context: any) {
-      return renderRootPage(context, routes.main.frames.settings.href(), 'Settings')
-    },
-  },
-  frames: {
-    home() {
-      return htmlResponse(renderToStream(<MainHome />, { onError: console.error }))
-    },
-    settings() {
-      return htmlResponse(renderToStream(<MainSettings />, { onError: console.error }))
-    },
-    dashboard(context: any) {
-      let Dashboard = createDashboardShell(routes.dashboard.frames.content.home.href())
-      let stream = renderToStream(<Dashboard />, {
-        resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-        onError: console.error,
-      })
-      return htmlResponse(stream)
+    frames: {
+      actions: {
+        home() {
+          return htmlResponse(renderToStream(<MainHome />, { onError: console.error }))
+        },
+        settings() {
+          return htmlResponse(renderToStream(<MainSettings />, { onError: console.error }))
+        },
+        dashboard(context: any) {
+          let Dashboard = createDashboardShell(routes.dashboard.frames.content.home.href())
+          let stream = renderToStream(<Dashboard />, {
+            resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+            onError: console.error,
+          })
+          return htmlResponse(stream)
+        },
+      },
     },
   },
 })
 
 router.map(routes.dashboard, {
-  pages: {
-    home(context: any) {
-      return renderRootPage(
-        context,
-        routes.dashboard.frames.shell.home.href(),
-        'Dashboard Activity',
-      )
-    },
-    customers(context: any) {
-      return renderRootPage(
-        context,
-        routes.dashboard.frames.shell.customers.href(),
-        'Dashboard Customers',
-      )
-    },
-    sales(context: any) {
-      return renderRootPage(context, routes.dashboard.frames.shell.sales.href(), 'Dashboard Sales')
-    },
-  },
-  frames: {
-    shell: {
-      home(context: any) {
-        let Dashboard = createDashboardShell(routes.dashboard.frames.content.home.href())
-        let stream = renderToStream(<Dashboard />, {
-          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-          onError: console.error,
-        })
-        return htmlResponse(stream)
-      },
-      customers(context: any) {
-        let Dashboard = createDashboardShell(routes.dashboard.frames.content.customers.href())
-        let stream = renderToStream(<Dashboard />, {
-          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-          onError: console.error,
-        })
-        return htmlResponse(stream)
-      },
-      sales(context: any) {
-        let Dashboard = createDashboardShell(routes.dashboard.frames.content.sales.href())
-        let stream = renderToStream(<Dashboard />, {
-          resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
-          onError: console.error,
-        })
-        return htmlResponse(stream)
+  actions: {
+    pages: {
+      actions: {
+        home(context: any) {
+          return renderRootPage(
+            context,
+            routes.dashboard.frames.shell.href({ section: 'home' }),
+            'Dashboard Activity',
+          )
+        },
+        customers(context: any) {
+          return renderRootPage(
+            context,
+            routes.dashboard.frames.shell.href({ section: 'customers' }),
+            'Dashboard Customers',
+          )
+        },
+        sales(context: any) {
+          return renderRootPage(
+            context,
+            routes.dashboard.frames.shell.href({ section: 'sales' }),
+            'Dashboard Sales',
+          )
+        },
       },
     },
-    content: {
-      home() {
-        return htmlResponse(renderToStream(<DashboardActivity />, { onError: console.error }))
-      },
-      customers() {
-        return htmlResponse(renderToStream(<DashboardCustomers />, { onError: console.error }))
-      },
-      sales() {
-        return htmlResponse(renderToStream(<DashboardSales />, { onError: console.error }))
+    frames: {
+      actions: {
+        shell(context: any) {
+          let contentFrameHref = getDashboardContentHref(context.params.section)
+
+          if (!contentFrameHref) {
+            return new Response('Not Found', { status: 404 })
+          }
+
+          let Dashboard = createDashboardShell(contentFrameHref)
+          let stream = renderToStream(<Dashboard />, {
+            resolveFrame: (src: string) => resolveFrameViaRouter(context.request, src),
+            onError: console.error,
+          })
+          return htmlResponse(stream)
+        },
+        content: {
+          actions: {
+            home() {
+              return htmlResponse(renderToStream(<DashboardActivity />, { onError: console.error }))
+            },
+            customers() {
+              return htmlResponse(renderToStream(<DashboardCustomers />, { onError: console.error }))
+            },
+            sales() {
+              return htmlResponse(renderToStream(<DashboardSales />, { onError: console.error }))
+            },
+          },
+        },
       },
     },
   },
@@ -238,6 +244,20 @@ function createDashboardShell(frameHref: string) {
         </section>
       </div>
     )
+  }
+}
+
+function getDashboardContentHref(section: string): string | undefined {
+  if (section === 'home') {
+    return routes.dashboard.frames.content.home.href()
+  }
+
+  if (section === 'customers') {
+    return routes.dashboard.frames.content.customers.href()
+  }
+
+  if (section === 'sales') {
+    return routes.dashboard.frames.content.sales.href()
   }
 }
 
