@@ -13,8 +13,8 @@
     "tsx": "catalog:"
   },
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "tsx server.ts",
+    "dev": "tsx watch server.js",
+    "start": "tsx server.js",
     "test": "tsx --test",
     "typecheck": "tsgo --noEmit"
   }
