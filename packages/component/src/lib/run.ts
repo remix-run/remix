@@ -1,11 +1,9 @@
 import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { defaultStyleManager } from './diff-props.ts'
-import type { FrameContent, FrameHandle } from './component.ts'
+import type { FrameHandle } from './component.ts'
+import type { LoadModule, ResolveFrame } from './frame.ts'
 import { startNavigationListener } from './navigate.ts'
-
-type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
-type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
 
 export type RunInit = {
   loadModule: LoadModule

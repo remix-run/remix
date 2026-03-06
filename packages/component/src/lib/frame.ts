@@ -39,9 +39,15 @@ type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
 export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
 
+export type ResolveFrameInfo = {
+  name?: string
+  isTop: boolean
+}
+
 export type ResolveFrame = (
   src: string,
   signal?: AbortSignal,
+  info?: ResolveFrameInfo,
 ) => Promise<FrameContent> | FrameContent
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -132,7 +138,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       reloadController = controller
       frame.dispatchEvent(new Event('reloadStart'))
       try {
-        let content = await init.resolveFrame(frame.src, controller.signal)
+        let content = await init.resolveFrame(frame.src, controller.signal, {
+          name: frameName,
+          isTop: runtime.topFrame === frame,
+        })
         if (reloadController !== controller || controller.signal.aborted) return controller.signal
         await render(content, { signal: controller.signal })
         return controller.signal
