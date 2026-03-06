@@ -102,6 +102,11 @@ describe('html tagged template', () => {
     expect(el).toEqual([jsx('div', {}), jsx('span', {})])
   })
 
+  it('returns two paragraphs with text as an array', () => {
+    let el = html`<p>a</p><p>b</p>`
+    expect(el).toEqual([jsx('p', { children: 'a' }), jsx('p', { children: 'b' })])
+  })
+
   it('supports dynamic child interpolation', () => {
     let name = 'world'
     let el = html`<p>hello ${name}!</p>`
