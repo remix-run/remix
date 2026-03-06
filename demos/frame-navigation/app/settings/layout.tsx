@@ -1,7 +1,7 @@
 import type { RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { routes } from '../../config/routes.ts'
+import { frames, routes } from '../../config/routes.ts'
 import { NavLink } from '../lib/NavLink.tsx'
 
 type SettingsLayoutProps = {
@@ -42,7 +42,7 @@ export function SettingsLayout() {
         <p mix={secondarySidebarTitleStyle}>Settings</p>
         <nav mix={secondaryNavStyle}>
           {settingsItems.map((item) => (
-            <NavLink route={item.route} target="settings">
+            <NavLink route={item.route} target={frames.settings}>
               {item.label}
             </NavLink>
           ))}

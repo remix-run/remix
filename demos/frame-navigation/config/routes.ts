@@ -5,6 +5,10 @@ import type { RouteDefs, RouteMap } from 'remix/fetch-router/routes'
 type NavRoute = Route<any, string>
 type NavController = RouteMap<string>
 
+export let frames = {
+  settings: 'settings',
+} as const
+
 let routeControllers = new WeakMap<NavRoute, NavController>()
 let controllerPrefixes = new WeakMap<NavController, string>()
 
