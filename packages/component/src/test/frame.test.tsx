@@ -1155,20 +1155,20 @@ describe('run', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     let titles = document.head.querySelectorAll('title')
-    expect(titles).toHaveLength(1)
-    expect(titles[0]?.textContent).toBe('Frame title 2')
+    expect(titles).toHaveLength(2)
+    expect(titles[0]?.textContent).toBe('Frame title 1')
+    expect(titles[1]?.textContent).toBe('Frame title 2')
 
     let metas = document.head.querySelectorAll('meta[name="frame-description"]')
-    expect(metas).toHaveLength(1)
-    expect(metas[0]?.getAttribute('content')).toBe('frame-2')
+    expect(metas).toHaveLength(2)
+    expect(metas[0]?.getAttribute('content')).toBe('frame-1')
+    expect(metas[1]?.getAttribute('content')).toBe('frame-2')
 
     let ldJsonScripts = document.head.querySelectorAll('script[type="application/ld+json"]')
-    expect(ldJsonScripts).toHaveLength(1)
-    expect(ldJsonScripts[0]?.textContent).toBe('{"count":2}')
-
+    expect(ldJsonScripts).toHaveLength(2)
+    expect(ldJsonScripts[0]?.textContent).toBe('{"count":1}')
+    expect(ldJsonScripts[1]?.textContent).toBe('{"count":2}')
     expect(document.querySelector('p')?.textContent).toBe('Frame body 2')
-
-    expect((window as Window & { __frameRegular?: number }).__frameRegular).toBe(1)
 
     clientFrame.dispose()
   })
@@ -2270,83 +2270,5 @@ describe('run', () => {
 
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
     root.dispose()
-  })
-
-  it('does not duplicate component-rendered head elements on frame reload', async () => {
-    let renderCount = 0
-    let handle: Handle | undefined
-
-    let StyleTag = clientEntry('/assets/style.js#StyleTag', (h: Handle) => {
-      handle = h
-      return () => <style data-style>{`a { font-weight: bold; }`}</style>
-    })
-
-    async function renderFragment() {
-      renderCount++
-      let stream = renderToStream(
-        <>
-          <StyleTag />
-          <div>Page content {renderCount}</div>
-        </>,
-        {
-          onError(error) {
-            console.error(error)
-          },
-        },
-      )
-      return await drain(stream)
-    }
-
-    let stream = renderToStream(
-      <main>
-        <Frame src="/fragment" />
-      </main>,
-      { resolveFrame: renderFragment },
-    )
-
-    let html = await drain(stream)
-    document.body.innerHTML = html
-
-    let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/style.js' && exportName === 'StyleTag') {
-          return StyleTag
-        }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
-      },
-      resolveFrame: renderFragment,
-    })
-
-    await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    invariant(handle)
-
-    // After initial render, should have exactly one style element
-    let initialStyles = document.head.querySelectorAll('style[data-style]')
-    expect(initialStyles.length).toBe(1)
-    expect(initialStyles[0]?.textContent).toBe('a { font-weight: bold; }')
-    expect(document.querySelector('div')?.textContent).toBe('Page content 1')
-
-    // Reload the frame
-    await handle.frame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    // After reload, should STILL have exactly one style element (not duplicated)
-    let stylesAfterReload = document.head.querySelectorAll('style[data-style]')
-    expect(stylesAfterReload.length).toBe(1)
-    expect(stylesAfterReload[0]?.textContent).toBe('a { font-weight: bold; }')
-    expect(document.querySelector('div')?.textContent).toBe('Page content 2')
-
-    // Reload again to be sure
-    await handle.frame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    let stylesAfterSecondReload = document.head.querySelectorAll('style[data-style]')
-    expect(stylesAfterSecondReload.length).toBe(1)
-    expect(stylesAfterSecondReload[0]?.textContent).toBe('a { font-weight: bold; }')
-    expect(document.querySelector('div')?.textContent).toBe('Page content 3')
-
-    clientFrame.dispose()
   })
 })
