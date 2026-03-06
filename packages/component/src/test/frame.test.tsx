@@ -71,7 +71,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Counter)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledWith('/js/counter.js', 'Counter')
@@ -116,7 +116,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Button)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     // Module is cached by moduleUrl+exportName
@@ -188,7 +188,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let app = run(document, { loadModule })
+    let app = run({ loadModule })
 
     let readySettled = false
     let readyPromise = app.ready().then(() => {
@@ -247,7 +247,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Card)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledWith('/js/card.js', 'Card')
@@ -314,7 +314,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let app = run(document, { loadModule })
+    let app = run({ loadModule })
     await app.ready()
 
     // Only initial adopted-document markers block ready().
@@ -351,7 +351,7 @@ describe('run', () => {
 
     let loadModule = vi.fn()
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).not.toHaveBeenCalled()
@@ -367,7 +367,7 @@ describe('run', () => {
 
     let loadModule = vi.fn()
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).not.toHaveBeenCalled()
@@ -394,7 +394,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Counter)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     let spanAfterHydration = document.querySelector('span')
@@ -424,7 +424,7 @@ describe('run', () => {
     invariant(h1 && p && nav)
     expect(nav.textContent).toBe('Loading...')
 
-    let frame = run(document, { loadModule: vi.fn() })
+    let frame = run({ loadModule: vi.fn() })
     await frame.ready()
 
     let second = await chunks.next()
@@ -493,7 +493,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledTimes(2)
@@ -537,7 +537,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledTimes(1)
@@ -591,7 +591,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload.js' && exportName === 'Reload') return ReloadButton
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -671,7 +671,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-empty.js' && exportName === 'ReloadEmpty') {
           return ReloadButton
@@ -741,7 +741,7 @@ describe('run', () => {
     let html = await drain(stream)
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/row-action.js' && exportName === 'RowAction') return RowAction
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -794,7 +794,7 @@ describe('run', () => {
       ),
     )
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-top.js' && exportName === 'ReloadTop') {
           return ReloadTop
@@ -888,7 +888,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-events.js' && exportName === 'ReloadEvents') {
           return RowAction
@@ -958,7 +958,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-css.js' && exportName === 'ReloadCss') return ReloadButton
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -1027,7 +1027,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-abort.js' && exportName === 'ReloadAbort') {
           return ReloadButton
@@ -1125,7 +1125,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-head.js' && exportName === 'ReloadHead')
           return ReloadButton
@@ -1198,7 +1198,7 @@ describe('run', () => {
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
     let loadModule = vi.fn().mockImplementation(async () => modulePromise)
-    let clientFrame = run(document, { loadModule })
+    let clientFrame = run({ loadModule })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
     resolveModule(Counter)
@@ -1253,7 +1253,7 @@ describe('run', () => {
     // Frame shows fallback.
     expect(document.getElementById('frame')!.textContent).toBe('Loading…')
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(Counter),
     })
     await clientFrame.ready()
@@ -1313,7 +1313,7 @@ describe('run', () => {
     expect(document.getElementById('fast')!.textContent).toBe('Loading fast…')
     expect(document.getElementById('slow')!.textContent).toBe('Loading slow…')
 
-    let clientFrame = run(document, { loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: vi.fn() })
     await clientFrame.ready()
 
     // Resolve the fast frame first.
@@ -1368,7 +1368,7 @@ describe('run', () => {
       return mod
     })
 
-    let clientFrame = run(document, { loadModule: loadModuleFn })
+    let clientFrame = run({ loadModule: loadModuleFn })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -1452,7 +1452,7 @@ describe('run', () => {
     document.body.innerHTML = pageFirst.value
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(Counter),
     })
 
@@ -1538,7 +1538,7 @@ describe('run', () => {
     document.body.innerHTML = pageFirst.value
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
-    let clientFrame = run(document, { loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: vi.fn() })
     await clientFrame.ready()
 
     // Page content is visible, outer frame shows fallback.
@@ -1633,7 +1633,7 @@ describe('run', () => {
     let pageHtml = await drain(pageStream)
     document.body.innerHTML = pageHtml
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(ReloadButton),
       resolveFrame: renderInner,
     })
@@ -1920,7 +1920,7 @@ describe('run', () => {
     let pageHtml = await drain(renderToStream(<PostRunFrame />))
     document.body.innerHTML = pageHtml
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/post-run.js' && exportName === 'PostRunFrame') return PostRunFrame
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -1987,7 +1987,7 @@ describe('run', () => {
         async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
       )
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/mounted-frame.js' && exportName === 'MountedFrame') {
           return MountedFrame
@@ -2044,7 +2044,7 @@ describe('run', () => {
 
     expect(document.getElementById('child-frame')?.textContent).toBe('Loading child frame…')
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/card.js' && exportName === 'Card') return Card
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -2179,7 +2179,7 @@ describe('run', () => {
     )
     document.body.innerHTML = serverHtml
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-stream.js' && exportName === 'ReloadStream') {
           return ReloadButton

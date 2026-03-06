@@ -161,7 +161,7 @@ During SSR, `handle.frame.src` should point at the frame currently being rendere
 On the client, `run` accepts an optional `resolveFrame` implementation:
 
 ```tsx
-let app = run(document, {
+let app = run({
   loadModule: ...,
   async resolveFrame(src) {
     let response = await fetch(src, { headers: { accept: 'text/html' } })

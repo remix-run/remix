@@ -6,25 +6,46 @@ type NavigationState = {
   $rmx: true
 }
 
+type NavigationLike = EventTarget & {
+  navigate(
+    href: string,
+    options: { state: NavigationState },
+  ): {
+    finished: Promise<unknown>
+  }
+  updateCurrentEntry(options: { state: NavigationState }): void
+  addEventListener(
+    type: 'navigate',
+    listener: (event: NavigateEventLike) => void,
+    options?: AddEventListenerOptions,
+  ): void
+}
+
+type NavigateEventLike = Event & {
+  canIntercept: boolean
+  destination: {
+    url: string
+    getState(): unknown
+  }
+  intercept(options: { handler(): Promise<void> | void }): void
+  sourceElement: HTMLAnchorElement | HTMLFormElement | null
+}
+
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
 }
 
 export async function navigate(href: string, src?: string | null, target?: string | null) {
-  let navigation = window.navigation.navigate(href, {
-    state: { target, src, $rmx: true },
+  let navigation = getNavigation().navigate(href, {
+    state: { target: target ?? undefined, src: src ?? href, $rmx: true },
   })
   await navigation.finished
 }
 
-declare global {
-  interface NavigateEvent {
-    sourceElement: HTMLAnchorElement | HTMLFormElement | null
-  }
-}
-
 export function startNavigationListener(signal: AbortSignal) {
-  window.navigation.updateCurrentEntry({
+  let navigation = getNavigation()
+
+  navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, $rmx: true },
   })
 
@@ -48,7 +69,7 @@ export function startNavigationListener(signal: AbortSignal) {
     { signal: signal },
   )
 
-  window.navigation.addEventListener(
+  navigation.addEventListener(
     'navigate',
     (event) => {
       if (!event.canIntercept) return
@@ -69,4 +90,10 @@ export function startNavigationListener(signal: AbortSignal) {
     },
     { signal },
   )
+}
+
+function getNavigation(): NavigationLike {
+  let navigation = (window as Window & { navigation?: NavigationLike }).navigation
+  if (!navigation) throw new Error('Navigation API is not available')
+  return navigation
 }
