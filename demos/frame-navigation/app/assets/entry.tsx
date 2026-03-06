@@ -1,7 +1,7 @@
 import { run } from 'remix/component'
 
 let app = run({
-  async loadModule(moduleUrl: string, exportName: string) {
+  async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     let exp = (mod as any)[exportName]
     if (typeof exp !== 'function') {
@@ -9,10 +9,16 @@ let app = run({
     }
     return exp
   },
-  async resolveFrame(src: string, signal?: AbortSignal) {
+  async resolveFrame(src, signal, info) {
     let headers = new Headers()
     headers.set('accept', 'text/html')
-    headers.set('x-remix-frame', 'true')
+
+    if (!info?.isTop) {
+      headers.set('x-remix-frame', 'true')
+    }
+    if (info?.name) {
+      headers.set('x-remix-frame-target', info.name)
+    }
 
     let res = await fetch(src, { headers, signal })
     if (!res.ok) {

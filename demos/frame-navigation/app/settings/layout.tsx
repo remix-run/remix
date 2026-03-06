@@ -1,12 +1,14 @@
-import { Frame, css } from 'remix/component'
+import type { RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 
 import { routes } from '../../config/routes.ts'
 
 type SettingsLayoutProps = {
   active: SettingsKey
+  children?: RemixNode
 }
 
-type SettingsKey =
+export type SettingsKey =
   | 'overview'
   | 'profile'
   | 'notifications'
@@ -14,47 +16,41 @@ type SettingsKey =
   | 'grading'
   | 'integrations'
 
-let settingsItems: Array<{ key: SettingsKey; href: string; src: string; label: string }> = [
+let settingsItems: Array<{ key: SettingsKey; href: string; label: string }> = [
   {
     key: 'overview',
     href: routes.settings.index.href(),
-    src: routes.settings.frame.index.href(),
     label: 'Overview',
   },
   {
     key: 'profile',
     href: routes.settings.profile.href(),
-    src: routes.settings.frame.profile.href(),
     label: 'Profile',
   },
   {
     key: 'notifications',
     href: routes.settings.notifications.href(),
-    src: routes.settings.frame.notifications.href(),
     label: 'Notifications',
   },
   {
     key: 'privacy',
     href: routes.settings.privacy.href(),
-    src: routes.settings.frame.privacy.href(),
     label: 'Privacy',
   },
   {
     key: 'grading',
     href: routes.settings.grading.href(),
-    src: routes.settings.frame.grading.href(),
     label: 'Grading',
   },
   {
     key: 'integrations',
     href: routes.settings.integrations.href(),
-    src: routes.settings.frame.integrations.href(),
     label: 'Integrations',
   },
 ]
 
 export function SettingsLayout() {
-  return ({ active }: SettingsLayoutProps) => (
+  return ({ active, children }: SettingsLayoutProps) => (
     <section mix={contentShellStyle}>
       <aside mix={secondarySidebarStyle}>
         <p mix={secondarySidebarTitleStyle}>Settings</p>
@@ -63,7 +59,7 @@ export function SettingsLayout() {
             <a
               href={item.href}
               rmx-target="settings"
-              rmx-src={item.src}
+              rmx-src={item.href}
               mix={[
                 secondaryNavItemBaseStyle,
                 item.key === active ? secondaryNavItemActiveStyle : secondaryNavItemIdleStyle,
@@ -74,20 +70,9 @@ export function SettingsLayout() {
           ))}
         </nav>
       </aside>
-      <section mix={secondaryContentStyle}>
-        <Frame name="settings" src={getSettingsFrameSource(active)} fallback={<p>Loading settings...</p>} />
-      </section>
+      <section mix={secondaryContentStyle}>{children}</section>
     </section>
   )
-}
-
-function getSettingsFrameSource(active: SettingsKey) {
-  if (active === 'overview') return routes.settings.frame.index.href()
-  if (active === 'profile') return routes.settings.frame.profile.href()
-  if (active === 'notifications') return routes.settings.frame.notifications.href()
-  if (active === 'privacy') return routes.settings.frame.privacy.href()
-  if (active === 'grading') return routes.settings.frame.grading.href()
-  return routes.settings.frame.integrations.href()
 }
 
 let contentShellStyle = css({

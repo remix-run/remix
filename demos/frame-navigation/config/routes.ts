@@ -14,13 +14,5 @@ export let routes = route({
     privacy: get('privacy'),
     grading: get('grading'),
     integrations: get('integrations'),
-    frame: route('frame', {
-      index: get('/'),
-      profile: get('profile'),
-      notifications: get('notifications'),
-      privacy: get('privacy'),
-      grading: get('grading'),
-      integrations: get('integrations'),
-    }),
   }),
 })
