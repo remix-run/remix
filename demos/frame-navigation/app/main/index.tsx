@@ -3,21 +3,21 @@ import { css } from 'remix/component'
 export function MainIndexPage() {
   return () => (
     <section>
-      <h1 mix={[titleStyle]}>Learning dashboard</h1>
-      <p mix={[descriptionStyle]}>Keep up with coursework, deadlines, and instructor updates from one central place.</p>
+      <h1 mix={titleStyle}>Learning dashboard</h1>
+      <p mix={descriptionStyle}>Keep up with coursework, deadlines, and instructor updates from one central place.</p>
 
-      <div mix={[statsGridStyle]}>
-        <article mix={[statCardStyle]}>
-          <p mix={[statLabelStyle]}>In progress</p>
-          <p mix={[statValueStyle]}>4 courses</p>
+      <div mix={statsGridStyle}>
+        <article mix={statCardStyle}>
+          <p mix={statLabelStyle}>In progress</p>
+          <p mix={statValueStyle}>4 courses</p>
         </article>
-        <article mix={[statCardStyle]}>
-          <p mix={[statLabelStyle]}>Due this week</p>
-          <p mix={[statValueStyle]}>7 tasks</p>
+        <article mix={statCardStyle}>
+          <p mix={statLabelStyle}>Due this week</p>
+          <p mix={statValueStyle}>7 tasks</p>
         </article>
-        <article mix={[statCardStyle]}>
-          <p mix={[statLabelStyle]}>Average grade</p>
-          <p mix={[statValueStyle]}>92%</p>
+        <article mix={statCardStyle}>
+          <p mix={statLabelStyle}>Average grade</p>
+          <p mix={statValueStyle}>92%</p>
         </article>
       </div>
     </section>

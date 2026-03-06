@@ -55,10 +55,10 @@ let settingsItems: Array<{ key: SettingsKey; href: string; src: string; label: s
 
 export function SettingsLayout() {
   return ({ active }: SettingsLayoutProps) => (
-    <section mix={[contentShellStyle]}>
-      <aside mix={[secondarySidebarStyle]}>
-        <p mix={[secondarySidebarTitleStyle]}>Settings</p>
-        <nav mix={[secondaryNavStyle]}>
+    <section mix={contentShellStyle}>
+      <aside mix={secondarySidebarStyle}>
+        <p mix={secondarySidebarTitleStyle}>Settings</p>
+        <nav mix={secondaryNavStyle}>
           {settingsItems.map((item) => (
             <a
               href={item.href}
@@ -74,7 +74,7 @@ export function SettingsLayout() {
           ))}
         </nav>
       </aside>
-      <section mix={[secondaryContentStyle]}>
+      <section mix={secondaryContentStyle}>
         <Frame name="settings" src={getSettingsFrameSource(active)} fallback={<p>Loading settings...</p>} />
       </section>
     </section>

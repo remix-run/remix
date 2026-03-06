@@ -3,13 +3,13 @@ import { css } from 'remix/component'
 export function SettingsProfilePage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Profile</h2>
-      <p mix={[descriptionStyle]}>Update personal details shown to instructors and classmates.</p>
-      <dl mix={[detailsStyle]}>
-        <dt mix={[termStyle]}>Display name</dt>
-        <dd mix={[valueStyle]}>Riley Student</dd>
-        <dt mix={[termStyle]}>Timezone</dt>
-        <dd mix={[valueStyle]}>America/Los_Angeles</dd>
+      <h2 mix={titleStyle}>Profile</h2>
+      <p mix={descriptionStyle}>Update personal details shown to instructors and classmates.</p>
+      <dl mix={detailsStyle}>
+        <dt mix={termStyle}>Display name</dt>
+        <dd mix={valueStyle}>Riley Student</dd>
+        <dt mix={termStyle}>Timezone</dt>
+        <dd mix={valueStyle}>America/Los_Angeles</dd>
       </dl>
     </section>
   )

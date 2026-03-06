@@ -3,21 +3,21 @@ import { css } from 'remix/component'
 export function SettingsNotificationsPage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Notifications</h2>
-      <p mix={[descriptionStyle]}>
+      <h2 mix={titleStyle}>Notifications</h2>
+      <p mix={descriptionStyle}>
         Choose how and when you are notified about assignment deadlines, grade releases, and course
         announcements.
       </p>
-      <ul mix={[listStyle]}>
-        <li mix={[rowStyle]}>
+      <ul mix={listStyle}>
+        <li mix={rowStyle}>
           <span>Assignment due reminders</span>
           <strong>Enabled</strong>
         </li>
-        <li mix={[rowStyle]}>
+        <li mix={rowStyle}>
           <span>Weekly progress summary</span>
           <strong>Enabled</strong>
         </li>
-        <li mix={[rowStyle]}>
+        <li mix={rowStyle}>
           <span>Push notifications</span>
           <strong>Muted after 8PM</strong>
         </li>

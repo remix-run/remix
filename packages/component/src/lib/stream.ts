@@ -561,8 +561,12 @@ function createSsrMixinHandle(hostType: string, context: RenderContext) {
 
 function resolveSsrMixDescriptors(props: ElementProps): Array<{ type: any; args: unknown[] }> {
   let mix = props.mix
-  if (mix == null || !Array.isArray(mix) || mix.length === 0) return []
-  return [...mix] as Array<{ type: any; args: unknown[] }>
+  if (mix == null) return []
+  if (Array.isArray(mix)) {
+    if (mix.length === 0) return []
+    return [...mix] as Array<{ type: any; args: unknown[] }>
+  }
+  return [mix] as Array<{ type: any; args: unknown[] }>
 }
 
 function withoutSsrMix(props: ElementProps): ElementProps {

@@ -116,7 +116,9 @@ export type MixinDescriptor<
 export type MixValue<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = ReadonlyArray<MixinDescriptor<node, any, props>>
+> =
+  | MixinDescriptor<node, any, props>
+  | ReadonlyArray<MixinDescriptor<node, any, props>>
 
 type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
@@ -682,8 +684,12 @@ function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNod
 
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
   let mix = props.mix
-  if (mix == null || !Array.isArray(mix) || mix.length === 0) return []
-  return [...mix] as AnyMixinDescriptor[]
+  if (mix == null) return []
+  if (Array.isArray(mix)) {
+    if (mix.length === 0) return []
+    return [...mix] as AnyMixinDescriptor[]
+  }
+  return [mix] as AnyMixinDescriptor[]
 }
 
 function withoutMix(props: ElementProps): ElementProps {

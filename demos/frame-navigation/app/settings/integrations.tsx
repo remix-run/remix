@@ -3,20 +3,20 @@ import { css } from 'remix/component'
 export function SettingsIntegrationsPage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Integrations</h2>
-      <p mix={[descriptionStyle]}>
+      <h2 mix={titleStyle}>Integrations</h2>
+      <p mix={descriptionStyle}>
         Manage connected tools used for video conferencing, cloud storage, and assignment syncing.
       </p>
-      <ul mix={[integrationsStyle]}>
-        <li mix={[integrationRowStyle]}>
+      <ul mix={integrationsStyle}>
+        <li mix={integrationRowStyle}>
           <span>Zoom</span>
           <strong>Connected</strong>
         </li>
-        <li mix={[integrationRowStyle]}>
+        <li mix={integrationRowStyle}>
           <span>Google Drive</span>
           <strong>Connected</strong>
         </li>
-        <li mix={[integrationRowStyle]}>
+        <li mix={integrationRowStyle}>
           <span>Notion</span>
           <strong>Not Connected</strong>
         </li>
