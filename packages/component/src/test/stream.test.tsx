@@ -257,6 +257,37 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe('<div><span>Count: 42</span><br /><span>Double: 84</span></div>')
     })
+
+    it('exposes the current and top frame src during SSR', async () => {
+      let seen:
+        | {
+            frameSrc: string
+            topFrameSrc: string
+            sameFrame: boolean
+          }
+        | undefined
+
+      function Inspect(handle: Handle) {
+        seen = {
+          frameSrc: handle.frame.src,
+          topFrameSrc: handle.frames.top.src,
+          sameFrame: handle.frame === handle.frames.top,
+        }
+
+        return () => <div>{handle.frames.top.src}</div>
+      }
+
+      let html = await drain(
+        renderToStream(<Inspect />, { frameSrc: 'https://example.com/dashboard' }),
+      )
+
+      expect(seen).toEqual({
+        frameSrc: 'https://example.com/dashboard',
+        topFrameSrc: 'https://example.com/dashboard',
+        sameFrame: true,
+      })
+      expect(html).toBe('<div>https://example.com/dashboard</div>')
+    })
   })
 
   describe('special props', () => {
@@ -1649,6 +1680,109 @@ describe('stream', () => {
       // Stream should complete
       let done = await chunks.next()
       expect(done.done).toBe(true)
+    })
+
+    it('preserves top frame src across nested SSR frame renders', async () => {
+      let seen = new Map<
+        string,
+        {
+          frameSrc: string
+          topFrameSrc: string
+          sameFrame: boolean
+        }
+      >()
+      let resolveFrameContexts: Array<{ src: string; currentFrameSrc: string; topFrameSrc: string }> = []
+
+      function Inspect(handle: Handle) {
+        return ({ label }: { label: string }) => {
+          seen.set(label, {
+            frameSrc: handle.frame.src,
+            topFrameSrc: handle.frames.top.src,
+            sameFrame: handle.frame === handle.frames.top,
+          })
+
+          return <div data-label={label}>{handle.frame.src}</div>
+        }
+      }
+
+      async function resolveFrame(
+        src: string,
+        _target?: string,
+        context?: { currentFrameSrc: string; topFrameSrc: string },
+      ) {
+        invariant(context)
+        resolveFrameContexts.push({ src, ...context })
+
+        if (src === '/settings') {
+          return renderToStream(
+            <section>
+              <Inspect label="settings" />
+              <Frame src="/settings/profile" />
+            </section>,
+            {
+              frameSrc: new URL(src, context.currentFrameSrc),
+              topFrameSrc: context.topFrameSrc,
+              resolveFrame,
+            },
+          )
+        }
+
+        if (src === '/settings/profile') {
+          return renderToStream(<Inspect label="profile" />, {
+            frameSrc: new URL(src, context.currentFrameSrc),
+            topFrameSrc: context.topFrameSrc,
+            resolveFrame,
+          })
+        }
+
+        throw new Error(`Unexpected frame src: ${src}`)
+      }
+
+      let html = await drain(
+        renderToStream(
+          <main>
+            <Inspect label="root" />
+            <Frame src="/settings" />
+          </main>,
+          {
+            frameSrc: 'https://example.com/app',
+            resolveFrame,
+          },
+        ),
+      )
+
+      expect(html).toContain('https://example.com/app')
+      expect(html).toContain('https://example.com/settings')
+      expect(html).toContain('https://example.com/settings/profile')
+
+      expect(resolveFrameContexts).toEqual([
+        {
+          src: '/settings',
+          currentFrameSrc: 'https://example.com/app',
+          topFrameSrc: 'https://example.com/app',
+        },
+        {
+          src: '/settings/profile',
+          currentFrameSrc: 'https://example.com/settings',
+          topFrameSrc: 'https://example.com/app',
+        },
+      ])
+
+      expect(seen.get('root')).toEqual({
+        frameSrc: 'https://example.com/app',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: true,
+      })
+      expect(seen.get('settings')).toEqual({
+        frameSrc: 'https://example.com/settings',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
+      expect(seen.get('profile')).toEqual({
+        frameSrc: 'https://example.com/settings/profile',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
     })
 
     it('handles blocking descendant frames returned from resolveFrame', async () => {

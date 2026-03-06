@@ -25,8 +25,10 @@ Renders a component tree to a streaming response. The initial HTML is sent immed
 import { renderToStream } from '@remix-run/component/server'
 
 let stream = renderToStream(<App />, {
-  resolveFrame(src) {
-    return fetchHtml(src)
+  frameSrc: request.url,
+  resolveFrame(src, _target, context) {
+    let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url)
+    return fetchHtml(frameUrl)
   },
   onError(error) {
     console.error(error)
@@ -40,8 +42,12 @@ return new Response(stream, {
 
 ### Options
 
-- **`resolveFrame(src)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. Required if your component tree contains `<Frame>` elements.
+- **`frameSrc`** - Seeds SSR frame state for the current render. When provided, server-rendered components can read `handle.frame.src` and `handle.frames.top.src` during SSR.
+- **`topFrameSrc`** - Overrides the root frame URL used for `handle.frames.top.src`. This is mainly useful when calling `renderToStream()` from inside `resolveFrame()` for a nested frame render.
+- **`resolveFrame(src, target, context)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. Required if your component tree contains `<Frame>` elements.
 - **`onError(error)`** - Called when a rendering error occurs. If not provided, the stream rejects with the error.
+
+When you render nested frame responses with `renderToStream()` inside `resolveFrame()`, pass `frameSrc` for the frame being rendered and carry `topFrameSrc` forward from the parent context. That preserves `handle.frames.top.src` across the whole SSR frame tree.
 
 ### Streaming behavior
 
