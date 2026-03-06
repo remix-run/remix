@@ -12,28 +12,28 @@ let mainController: Controller<typeof routes.main> = {
   actions: {
     index() {
       return render(
-        <Layout title="Dashboard" active="dashboard">
+        <Layout title="Dashboard">
           <MainIndexPage />
         </Layout>,
       )
     },
     courses() {
       return render(
-        <Layout title="Courses" active="courses">
+        <Layout title="Courses">
           <MainCoursesPage />
         </Layout>,
       )
     },
     calendar() {
       return render(
-        <Layout title="Calendar" active="calendar">
+        <Layout title="Calendar">
           <MainCalendarPage />
         </Layout>,
       )
     },
     account() {
       return render(
-        <Layout title="Account" active="account">
+        <Layout title="Account">
           <MainAccountPage />
         </Layout>,
       )

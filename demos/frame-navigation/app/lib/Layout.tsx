@@ -2,25 +2,23 @@ import type { RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { routes } from '../../config/routes.ts'
-
-type NavKey = 'dashboard' | 'courses' | 'calendar' | 'account' | 'settings'
+import { NavLink } from './NavLink.tsx'
 
 type LayoutProps = {
   title: string
-  active: NavKey
   children?: RemixNode
 }
 
-let navItems: Array<{ key: NavKey; href: string; label: string }> = [
-  { key: 'dashboard', href: routes.main.index.href(), label: 'Dashboard' },
-  { key: 'courses', href: routes.main.courses.href(), label: 'Courses' },
-  { key: 'calendar', href: routes.main.calendar.href(), label: 'Calendar' },
-  { key: 'account', href: routes.main.account.href(), label: 'Account' },
-  { key: 'settings', href: routes.settings.index.href(), label: 'Settings' },
+let navItems = [
+  { label: 'Dashboard', route: routes.main.index },
+  { label: 'Courses', route: routes.main.courses },
+  { label: 'Calendar', route: routes.main.calendar },
+  { label: 'Account', route: routes.main.account },
+  { label: 'Settings', route: routes.settings.index },
 ]
 
 export function Layout() {
-  return ({ title, active, children }: LayoutProps) => (
+  return ({ title, children }: LayoutProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
@@ -37,12 +35,9 @@ export function Layout() {
             <p mix={sidebarSubtitleStyle}>Student workspace</p>
             <nav mix={navStyle}>
               {navItems.map((item) => (
-                <a
-                  href={item.href}
-                  mix={[navItemBaseStyle, item.key === active ? navItemActiveStyle : navItemIdleStyle]}
-                >
+                <NavLink route={item.route} match={item.route === routes.settings.index ? 'controller' : 'route'}>
                   {item.label}
-                </a>
+                </NavLink>
               ))}
             </nav>
           </aside>
@@ -106,25 +101,20 @@ let navStyle = css({
   display: 'grid',
   gap: '0.35rem',
   marginTop: '0.5rem',
-})
-
-let navItemBaseStyle = css({
-  textDecoration: 'none',
-  borderRadius: '10px',
-  padding: '0.55rem 0.75rem',
-  fontSize: '0.95rem',
-})
-
-let navItemActiveStyle = css({
-  color: '#0f172a',
-  backgroundColor: '#e2e8f0',
-  fontWeight: 600,
-})
-
-let navItemIdleStyle = css({
-  color: '#334155',
-  backgroundColor: 'transparent',
-  fontWeight: 500,
+  '& a': {
+    textDecoration: 'none',
+    borderRadius: '10px',
+    padding: '0.55rem 0.75rem',
+    fontSize: '0.95rem',
+    color: '#334155',
+    backgroundColor: 'transparent',
+    fontWeight: 500,
+  },
+  '& a[aria-current="page"]': {
+    color: '#0f172a',
+    backgroundColor: '#e2e8f0',
+    fontWeight: 600,
+  },
 })
 
 let mainStyle = css({
