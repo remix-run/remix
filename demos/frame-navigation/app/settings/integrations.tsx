@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsIntegrationsPage() {
+export function Integrations() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Integrations</h2>

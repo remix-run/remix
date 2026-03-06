@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsProfilePage() {
+export function Profile() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Profile</h2>

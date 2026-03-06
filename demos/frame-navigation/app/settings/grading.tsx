@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsGradingPage() {
+export function Grading() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Grading</h2>
