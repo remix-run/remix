@@ -27,17 +27,17 @@ async function resolveFrame(
   router: Router,
   request: Request,
   src: string,
-  info?: { name?: string; isTop: boolean },
+  info: { name?: string; isTop: boolean },
 ) {
   let url = new URL(src, request.url)
 
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
-  if (!info?.isTop) {
+  if (!info.isTop) {
     headers.set('x-remix-frame', 'true')
   }
-  if (info?.name) {
+  if (info.name) {
     headers.set('x-remix-frame-target', info.name)
   }
 

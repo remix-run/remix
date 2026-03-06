@@ -30,7 +30,7 @@ export type VirtualRootOptions = {
     resolveFrame: (
       src: string,
       signal?: AbortSignal,
-      info?: ResolveFrameInfo,
+      info: ResolveFrameInfo,
     ) => Promise<FrameContent> | FrameContent
     loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   }
@@ -222,7 +222,7 @@ function createRootFrameHandle(init: {
   resolveFrame?: (
     src: string,
     signal?: AbortSignal,
-    info?: ResolveFrameInfo,
+    info: ResolveFrameInfo,
   ) => Promise<FrameContent> | FrameContent
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   scheduler: Scheduler
