@@ -125,8 +125,8 @@ function getDocumentedFunction(
     path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
     name: method.name,
-    aliases: getApiAliases(node.comment!),
-    description: method.description,
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
     signature: method.signature,
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
@@ -221,8 +221,8 @@ function getDocumentedInterface(
     path: getApiFilePath(fullName, 'interface'),
     source: node.sources?.[0]?.url,
     name: getApiNameFromFullName(fullName),
-    aliases: getApiAliases(node.comment!),
-    description: getApiDescription(node.comment!),
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
     signature,
     properties,
     methods,
@@ -261,8 +261,8 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
     path: getApiFilePath(fullName, 'type'),
     source: node.sources?.[0]?.url,
     name,
-    aliases: getApiAliases(node.comment!),
-    description: getApiDescription(node.comment!),
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
     signature,
   }
 }
