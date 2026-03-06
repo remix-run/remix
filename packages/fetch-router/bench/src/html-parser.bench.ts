@@ -6,52 +6,94 @@ import type { HTMLElement } from '../../src/lib/html-parser.ts'
 import type { HTMLElement as NodeHTMLElement } from 'node-html-parser'
 
 // Load HTML fixtures and duplicate to reach target sizes (~20KB, ~30KB, ~45KB)
-let landingPage = readFileSync(new URL('../fixtures/landing-page.html', import.meta.url), 'utf-8').repeat(2)
-let blogPost = readFileSync(new URL('../fixtures/blog-post.html', import.meta.url), 'utf-8').repeat(2)
-let docsPage = readFileSync(new URL('../fixtures/docs-page.html', import.meta.url), 'utf-8').repeat(2)
+let landingPage = readFileSync(new URL('../fixtures/landing-page.html', import.meta.url), 'utf-8')
+let blogPost = readFileSync(new URL('../fixtures/blog-post.html', import.meta.url), 'utf-8')
+let docsPage = readFileSync(new URL('../fixtures/docs-page.html', import.meta.url), 'utf-8')
 
 // Helper function to extract links and assets (matching crawl.ts logic)
 function extractLinksAndAssets(elements: HTMLElement[]): { links: string[]; assets: string[] } {
-  let links = elements
-    .filter((el) => el.name === 'a')
-    .map((el) => el.getAttribute('href'))
-    .filter((href): href is string => href != null)
+  return {
+    links: elements
+      .filter((el) => el.name === 'a' && el.getAttribute('href'))
+      .map((el) => el.getAttribute('href') as string),
+    assets: elements
+      .filter(
+        (el) =>
+          (el.name === 'link' && el.getAttribute('href')) ||
+          ((el.name === 'script' || el.name === 'img') && el.getAttribute('src')),
+      )
+      .map((el) => (el.getAttribute('href') || el.getAttribute('src')) as string),
+  }
+}
 
-  let assets = elements
-    .filter(
-      (el) =>
-        (el.name === 'link' && el.getAttribute('href')) ||
-        ((el.name === 'script' || el.name === 'img') && el.getAttribute('src')),
+// Extract links and assets using node-html-parser's querySelectorAll
+function extractLinksAndAssetsNodeHtml(root: NodeHTMLElement): {
+  links: string[]
+  assets: string[]
+} {
+  return {
+    links: root
+      .querySelectorAll('a[href]')
+      .map((el) => el.getAttribute('href'))
+      .filter((href): href is string => href != null),
+    assets: [
+      ...root.querySelectorAll('link[href]').map((el) => el.getAttribute('href')),
+      ...root.querySelectorAll('script[src]').map((el) => el.getAttribute('src')),
+      ...root.querySelectorAll('img[src]').map((el) => el.getAttribute('src')),
+    ].filter((attr): attr is string => attr != null),
+  }
+}
+
+// Validate that both parsers extract identical links and assets for each fixture
+let fixtures = [
+  { name: 'Landing Page', html: landingPage },
+  { name: 'Blog Post', html: blogPost },
+  { name: 'Docs Page', html: docsPage },
+]
+
+for (let { name, html } of fixtures) {
+  let customResult = extractLinksAndAssets(customParse(html))
+  let nodeResult = extractLinksAndAssetsNodeHtml(nodeHtmlParse(html))
+
+  console.log(
+    `[${name}] custom: ${customResult.links.length} links, ${customResult.assets.length} assets` +
+      ` | node-html-parser: ${nodeResult.links.length} links, ${nodeResult.assets.length} assets`,
+  )
+
+  if (
+    customResult.links.length !== nodeResult.links.length ||
+    customResult.assets.length !== nodeResult.assets.length
+  ) {
+    throw new Error(
+      `[${name}] Extraction mismatch! ` +
+        `links: ${customResult.links.length} vs ${nodeResult.links.length}, ` +
+        `assets: ${customResult.assets.length} vs ${nodeResult.assets.length}`,
     )
-    .map((el) => el.getAttribute('href') || el.getAttribute('src'))
-    .filter((attr): attr is string => attr != null)
+  }
 
-  return { links, assets }
+  let sortedCustomLinks = customResult.links.toSorted()
+  let sortedNodeLinks = nodeResult.links.toSorted()
+  let sortedCustomAssets = customResult.assets.toSorted()
+  let sortedNodeAssets = nodeResult.assets.toSorted()
+
+  for (let i = 0; i < sortedCustomLinks.length; i++) {
+    if (sortedCustomLinks[i] !== sortedNodeLinks[i]) {
+      throw new Error(
+        `[${name}] Link mismatch at index ${i}: "${sortedCustomLinks[i]}" vs "${sortedNodeLinks[i]}"`,
+      )
+    }
+  }
+
+  for (let i = 0; i < sortedCustomAssets.length; i++) {
+    if (sortedCustomAssets[i] !== sortedNodeAssets[i]) {
+      throw new Error(
+        `[${name}] Asset mismatch at index ${i}: "${sortedCustomAssets[i]}" vs "${sortedNodeAssets[i]}"`,
+      )
+    }
+  }
 }
 
-// Helper for node-html-parser extraction
-function extractLinksAndAssetsNodeHtml(
-  root: NodeHTMLElement,
-): { links: string[]; assets: string[] } {
-  let links = root
-    .querySelectorAll('a')
-    .map((el) => el.getAttribute('href'))
-    .filter((href): href is string => href != null)
-
-  let linkElements = root.querySelectorAll('link[href]')
-  let scriptElements = root.querySelectorAll('script[src]')
-  let imgElements = root.querySelectorAll('img[src]')
-
-  let assets = [
-    ...linkElements.map((el) => el.getAttribute('href')),
-    ...scriptElements.map((el) => el.getAttribute('src')),
-    ...imgElements.map((el) => el.getAttribute('src')),
-  ].filter((attr): attr is string => attr != null)
-
-  return { links, assets }
-}
-
-describe('Raw Parsing - Landing Page (~20KB)', () => {
+describe('Raw Parsing - Landing Page (~10KB)', () => {
   bench('custom parser', () => {
     customParse(landingPage)
   })
@@ -61,7 +103,7 @@ describe('Raw Parsing - Landing Page (~20KB)', () => {
   })
 })
 
-describe('Raw Parsing - Blog Post (~30KB)', () => {
+describe('Raw Parsing - Blog Post (~20KB)', () => {
   bench('custom parser', () => {
     customParse(blogPost)
   })
@@ -71,7 +113,7 @@ describe('Raw Parsing - Blog Post (~30KB)', () => {
   })
 })
 
-describe('Raw Parsing - Docs Page (~45KB)', () => {
+describe('Raw Parsing - Docs Page (~30KB)', () => {
   bench('custom parser', () => {
     customParse(docsPage)
   })
