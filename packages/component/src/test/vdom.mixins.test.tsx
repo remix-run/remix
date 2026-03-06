@@ -3,6 +3,7 @@ import { createRoot } from '../lib/vdom.ts'
 import { createMixin, on, ref } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
 import type { Handle } from '../lib/component.ts'
+import type { Props } from '../index.ts'
 
 describe('vnode mixins', () => {
   it('composes mixins in order and does not leak mix to the DOM', () => {
@@ -40,6 +41,33 @@ describe('vnode mixins', () => {
     let div = container.querySelector('div')
     invariant(div)
     expect(div.getAttribute('data-mixed')).toBe('nested')
+  })
+
+  it('normalizes component mix props so wrapped hosts can compose them', () => {
+    let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+      <handle.element {...props} title={title} />
+    ))
+    let appendTitle = createMixin((handle) => (suffix: string, props: { title?: string }) => (
+      <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
+    ))
+
+    function Button() {
+      return ({ children, mix, ...props }: Props<'button'>) => (
+        <button {...props} mix={[withTitle('base'), ...(mix ?? [])]}>
+          {children}
+        </button>
+      )
+    }
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<Button mix={appendTitle('-override')}>Click</Button>)
+    root.flush()
+
+    let button = container.querySelector('button')
+    invariant(button)
+    expect(button.getAttribute('title')).toBe('base-override')
+    expect(button.hasAttribute('mix')).toBe(false)
   })
 
   it('shares one handle instance across mixins on the same host node', () => {
