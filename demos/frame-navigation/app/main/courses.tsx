@@ -7,15 +7,9 @@ export function MainCoursesPage() {
       <p mix={descriptionStyle}>Continue where you left off in each course track.</p>
 
       <ul mix={courseListStyle}>
-        <li mix={courseItemStyle}>
-          Introduction to Product Design
-        </li>
-        <li mix={courseItemStyle}>
-          Applied Statistics for Engineers
-        </li>
-        <li mix={courseItemStyle}>
-          Web Accessibility Foundations
-        </li>
+        <li mix={courseItemStyle}>Introduction to Product Design</li>
+        <li mix={courseItemStyle}>Applied Statistics for Engineers</li>
+        <li mix={courseItemStyle}>Web Accessibility Foundations</li>
       </ul>
     </section>
   )

@@ -4,7 +4,9 @@ export function MainAccountPage() {
   return () => (
     <section>
       <h1 mix={titleStyle}>Account</h1>
-      <p mix={descriptionStyle}>Manage your profile, enrollment details, and contact preferences.</p>
+      <p mix={descriptionStyle}>
+        Manage your profile, enrollment details, and contact preferences.
+      </p>
 
       <dl mix={detailsGridStyle}>
         <dt mix={termStyle}>Name</dt>

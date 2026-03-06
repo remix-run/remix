@@ -1089,7 +1089,6 @@ function collectHtmlMarkerSummary(html: string): Record<string, number> {
 
 function hasBalancedMarkerSummary(summary: Record<string, number>): boolean {
   return (
-    summary.frameStarts === summary.frameEnds &&
-    summary.hydrationStarts === summary.hydrationEnds
+    summary.frameStarts === summary.frameEnds && summary.hydrationStarts === summary.hydrationEnds
   )
 }

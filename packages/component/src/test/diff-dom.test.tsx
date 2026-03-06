@@ -210,7 +210,8 @@ describe('diffNodes', () => {
 
     it('preserves current select value when incoming html changes selected options', () => {
       let container = document.createElement('div')
-      container.innerHTML = '<select><option value="a">A</option><option value="b">B</option></select>'
+      container.innerHTML =
+        '<select><option value="a">A</option><option value="b">B</option></select>'
       let select = container.querySelector('select')
       invariant(select)
       let first = select.options.item(0)

@@ -4,7 +4,9 @@ export function MainIndexPage() {
   return () => (
     <section>
       <h1 mix={titleStyle}>Learning dashboard</h1>
-      <p mix={descriptionStyle}>Keep up with coursework, deadlines, and instructor updates from one central place.</p>
+      <p mix={descriptionStyle}>
+        Keep up with coursework, deadlines, and instructor updates from one central place.
+      </p>
 
       <div mix={statsGridStyle}>
         <article mix={statCardStyle}>

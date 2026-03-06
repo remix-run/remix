@@ -9,9 +9,7 @@ export function MainCalendarPage() {
       <div mix={cardStyle}>
         <p mix={cardTitleStyle}>Today</p>
         <p mix={eventFirstStyle}>11:00 AM - UX Research Workshop</p>
-        <p mix={eventNextStyle}>
-          3:30 PM - Intro to Accessibility Quiz
-        </p>
+        <p mix={eventNextStyle}>3:30 PM - Intro to Accessibility Quiz</p>
       </div>
     </section>
   )

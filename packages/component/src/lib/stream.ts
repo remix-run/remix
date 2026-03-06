@@ -399,15 +399,13 @@ function buildFrameSegment(props: any, context: RenderContext, frameState: SsrFr
   } else {
     seg.pending = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
-    ).then(
-      async (resolved) => {
-        let { html, tail } = await resolveFrameHtml(resolved)
-        seg.content = staticSeg(html)
-        if (tail) {
-          context.blockingFrameTails.push(tail)
-        }
-      },
-    )
+    ).then(async (resolved) => {
+      let { html, tail } = await resolveFrameHtml(resolved)
+      seg.content = staticSeg(html)
+      if (tail) {
+        context.blockingFrameTails.push(tail)
+      }
+    })
   }
 
   return seg

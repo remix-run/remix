@@ -1691,7 +1691,11 @@ describe('stream', () => {
           sameFrame: boolean
         }
       >()
-      let resolveFrameContexts: Array<{ src: string; currentFrameSrc: string; topFrameSrc: string }> = []
+      let resolveFrameContexts: Array<{
+        src: string
+        currentFrameSrc: string
+        topFrameSrc: string
+      }> = []
 
       function Inspect(handle: Handle) {
         return ({ label }: { label: string }) => {
