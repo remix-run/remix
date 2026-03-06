@@ -36,14 +36,21 @@ function isRuntimeNavigation(info: unknown): info is NavigationState {
 }
 
 export async function navigate(href: string, src?: string | null, target?: string | null) {
-  let navigation = getNavigation().navigate(href, {
+  let navigation = getNavigation()
+  if (!navigation) {
+    window.location.assign(href)
+    return
+  }
+
+  let transition = navigation.navigate(href, {
     state: { target: target ?? undefined, src: src ?? href, $rmx: true },
   })
-  await navigation.finished
+  await transition.finished
 }
 
 export function startNavigationListener(signal: AbortSignal) {
   let navigation = getNavigation()
+  if (!navigation) return
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, $rmx: true },
@@ -92,8 +99,6 @@ export function startNavigationListener(signal: AbortSignal) {
   )
 }
 
-function getNavigation(): NavigationLike {
-  let navigation = (window as Window & { navigation?: NavigationLike }).navigation
-  if (!navigation) throw new Error('Navigation API is not available')
-  return navigation
+function getNavigation(): NavigationLike | undefined {
+  return (window as Window & { navigation?: NavigationLike }).navigation
 }
