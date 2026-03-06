@@ -59,7 +59,7 @@ function renderSettingsPage(active: SettingsKey, frameSrc: string, page: RemixNo
 }
 
 function isFrameRequest() {
-  return getContext().request.headers.get('x-remix-frame-target') === 'settings'
+  return getContext().request.headers.get('x-remix-target') === 'settings'
 }
 
 export default settingsController
