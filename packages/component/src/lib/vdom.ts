@@ -1,6 +1,5 @@
 import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
-import type { ResolveFrameInfo } from './frame.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
@@ -30,7 +29,7 @@ export type VirtualRootOptions = {
     resolveFrame: (
       src: string,
       signal?: AbortSignal,
-      info: ResolveFrameInfo,
+      target?: string,
     ) => Promise<FrameContent> | FrameContent
     loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   }
@@ -222,7 +221,7 @@ function createRootFrameHandle(init: {
   resolveFrame?: (
     src: string,
     signal?: AbortSignal,
-    info: ResolveFrameInfo,
+    target?: string,
   ) => Promise<FrameContent> | FrameContent
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   scheduler: Scheduler
