@@ -23,6 +23,7 @@
     "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
     "./component/jsx-runtime": "./src/component/jsx-runtime.ts",
     "./component/server": "./src/component/server.ts",
+    "./component/tag": "./src/component/tag.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./data-schema": "./src/data-schema.ts",
@@ -95,6 +96,10 @@
       "./component/server": {
         "types": "./dist/component/server.d.ts",
         "default": "./dist/component/server.js"
+      },
+      "./component/tag": {
+        "types": "./dist/component/tag.d.ts",
+        "default": "./dist/component/tag.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
