@@ -28,12 +28,7 @@ let app = run({
   },
 })
 
-let isRenderingError = false
-
 app.addEventListener('error', async (event) => {
-  if (isRenderingError) return
-  isRenderingError = true
-
   app.dispose()
   await fadeOutBody()
 
