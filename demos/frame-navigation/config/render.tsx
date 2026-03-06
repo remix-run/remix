@@ -1,5 +1,5 @@
 import type { RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
+import { renderToStream, type ResolveFrameContext } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
 import type { Router } from 'remix/fetch-router'
 
@@ -7,9 +7,12 @@ export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
   let request = context.request
   let router = context.router
+  let topFrameSrc = request.headers.get('x-remix-top-frame-src') ?? request.url
 
   let stream = renderToStream(node, {
-    resolveFrame: (src, target) => resolveFrame(router, request, src, target),
+    frameSrc: request.url,
+    topFrameSrc,
+    resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
     onError(error) {
       console.error(error)
     },
@@ -28,13 +31,17 @@ async function resolveFrame(
   request: Request,
   src: string,
   target?: string,
+  context?: ResolveFrameContext,
 ) {
-  let url = new URL(src, request.url)
+  let frameSrc = context?.currentFrameSrc ?? request.url
+  let topFrameSrc = context?.topFrameSrc ?? request.headers.get('x-remix-top-frame-src') ?? request.url
+  let url = new URL(src, frameSrc)
 
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
   headers.set('x-remix-frame', 'true')
+  headers.set('x-remix-top-frame-src', topFrameSrc)
   if (target) {
     headers.set('x-remix-target', target)
   }
