@@ -5,6 +5,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 ## Features
 
 - **JSX Runtime** - Convenient JSX syntax
+- **Tagged Templates** - JSX-free element creation with `` html`...` `` — no build step required
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
 - **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
@@ -706,6 +707,7 @@ function List(handle: Handle) {
 
 - [Getting Started](./docs/getting-started.md)
 - [Components](./docs/components.md)
+- [Tagged Templates](./docs/htm.md) - JSX-free element creation with `html`\`...\``
 - [Handle API](./docs/handle.md)
 - [Server Rendering](./docs/server-rendering.md)
 - [Hydration](./docs/hydration.md)
