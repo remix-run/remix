@@ -8,9 +8,19 @@ export function toTableRef(name: string): TableRef {
     return { name }
   }
 
+  if (segments.length > 2) {
+    throw new Error(
+      'Invalid table name "' +
+        name +
+        '": expected "table" or "schema.table", got ' +
+        segments.length +
+        ' dot-separated segments',
+    )
+  }
+
   return {
     schema: segments[0],
-    name: segments.slice(1).join('.'),
+    name: segments[1],
   }
 }
 
