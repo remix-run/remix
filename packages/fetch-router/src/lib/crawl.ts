@@ -17,7 +17,7 @@ export interface CrawlOptions {
   paths?: string[]
   /**
    * Whether to follow outbound links found in HTML documents.
-   * @default false
+   * @default true
    */
   spider?: boolean
   /**
@@ -47,7 +47,7 @@ export async function* runCrawl(
   fetchFn: (request: Request) => Promise<Response>,
   options: CrawlOptions,
 ): AsyncIterableIterator<CrawlResult> {
-  let { paths = ['/'], spider = false, filter = defaultFilter, variants } = options
+  let { paths = ['/'], spider = true, filter = defaultFilter, variants } = options
 
   let queue = new Set(paths)
   let visited = new Set<string>()

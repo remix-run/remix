@@ -65,25 +65,25 @@ describe('router.crawl()', () => {
     ])
   })
 
-  it('does not follow links when spider is false (default)', async () => {
+  it('does not follow links when spider is false', async () => {
+    let router = createRouter()
+    router.get('/', () => html('<a href="/about">About</a>'))
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of router.crawl({ spider: false })) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('follows links by default (spider is true)', async () => {
     let router = createRouter()
     router.get('/', () => html('<a href="/about">About</a>'))
     router.get('/about', () => html('<html></html>'))
 
     let visited: string[] = []
     for await (let { pathname } of router.crawl()) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/'])
-  })
-
-  it('follows links when spider is true', async () => {
-    let router = createRouter()
-    router.get('/', () => html('<a href="/about">About</a>'))
-    router.get('/about', () => html('<html></html>'))
-
-    let visited: string[] = []
-    for await (let { pathname } of router.crawl({ spider: true })) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/', '/about'])
@@ -114,7 +114,7 @@ describe('router.crawl()', () => {
     router.get('/', () => html('<a href="https://example.com/page">External</a>'))
 
     let visited: string[] = []
-    for await (let { pathname } of router.crawl({ spider: true })) {
+    for await (let { pathname } of router.crawl()) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/'])
@@ -125,7 +125,7 @@ describe('router.crawl()', () => {
     router.get('/', () => html('<a href="//example.com/page">External</a>'))
 
     let visited: string[] = []
-    for await (let { pathname } of router.crawl({ spider: true })) {
+    for await (let { pathname } of router.crawl()) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/'])
@@ -138,7 +138,6 @@ describe('router.crawl()', () => {
 
     let visited: string[] = []
     for await (let { pathname } of router.crawl({
-      spider: true,
       filter: (href) => href !== '/blocked',
     })) {
       visited.push(pathname)
@@ -161,7 +160,7 @@ describe('router.crawl()', () => {
     router.get('/real', () => html('<html></html>'))
 
     let visited: string[] = []
-    for await (let { pathname } of router.crawl({ spider: true })) {
+    for await (let { pathname } of router.crawl()) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/', '/real'])
@@ -175,7 +174,7 @@ describe('router.crawl()', () => {
     router.get('/follow', () => html('<html></html>'))
 
     let visited: string[] = []
-    for await (let { pathname } of router.crawl({ spider: true })) {
+    for await (let { pathname } of router.crawl()) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/', '/follow'])
@@ -206,7 +205,7 @@ describe('router.crawl()', () => {
     router.get('/blog/post-1', () => html('<html></html>'))
 
     let visited: string[] = []
-    for await (let { pathname } of router.crawl({ paths: ['/blog/'], spider: true })) {
+    for await (let { pathname } of router.crawl({ paths: ['/blog/'] })) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/blog/', '/blog/post-1'])
@@ -219,7 +218,7 @@ describe('router.crawl()', () => {
     router.get('/shared', () => html('<html></html>'))
 
     let visitCount: Record<string, number> = {}
-    for await (let { pathname } of router.crawl({ paths: ['/', '/about'], spider: true })) {
+    for await (let { pathname } of router.crawl({ paths: ['/', '/about'] })) {
       visitCount[pathname] = (visitCount[pathname] ?? 0) + 1
     }
     assert.equal(visitCount['/shared'], 1)
