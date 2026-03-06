@@ -10,7 +10,7 @@ import { Layout } from '../lib/Layout.tsx'
 import { Grading } from './grading.tsx'
 import { Index } from './index.tsx'
 import { Integrations } from './integrations.tsx'
-import { SettingsLayout, type SettingsKey } from './layout.tsx'
+import { SettingsLayout } from './layout.tsx'
 import { Notifications } from './notifications.tsx'
 import { Privacy } from './privacy.tsx'
 import { Profile } from './profile.tsx'
@@ -19,42 +19,42 @@ export default {
   actions: {
     index() {
       return render(
-        <SettingsShellOrFragment active="overview">
+        <SettingsShellOrFragment>
           <Index />
         </SettingsShellOrFragment>,
       )
     },
     profile() {
       return render(
-        <SettingsShellOrFragment active="profile">
+        <SettingsShellOrFragment>
           <Profile />
         </SettingsShellOrFragment>,
       )
     },
     notifications() {
       return render(
-        <SettingsShellOrFragment active="notifications">
+        <SettingsShellOrFragment>
           <Notifications />
         </SettingsShellOrFragment>,
       )
     },
     privacy() {
       return render(
-        <SettingsShellOrFragment active="privacy">
+        <SettingsShellOrFragment>
           <Privacy />
         </SettingsShellOrFragment>,
       )
     },
     grading() {
       return render(
-        <SettingsShellOrFragment active="grading">
+        <SettingsShellOrFragment>
           <Grading />
         </SettingsShellOrFragment>,
       )
     },
     integrations() {
       return render(
-        <SettingsShellOrFragment active="integrations">
+        <SettingsShellOrFragment>
           <Integrations />
         </SettingsShellOrFragment>,
       )
@@ -62,19 +62,16 @@ export default {
   },
 } satisfies Controller<typeof routes.settings>
 
-type SettingsPageProps = {
-  active: SettingsKey
-  children?: RemixNode
-}
+type SettingsPageProps = { children?: RemixNode }
 
 function SettingsShellOrFragment() {
-  return ({ active, children }: SettingsPageProps) => {
+  return ({ children }: SettingsPageProps) => {
     if (isFrameRequest()) {
-      return <SettingsLayout active={active}>{children}</SettingsLayout>
+      return <SettingsLayout>{children}</SettingsLayout>
     }
 
     return (
-      <Layout title="Settings" active="settings">
+      <Layout title="Settings">
         <Frame name="settings" src={getContext().request.url} />
       </Layout>
     )
