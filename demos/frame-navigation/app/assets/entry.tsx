@@ -9,15 +9,13 @@ let app = run({
     }
     return exp
   },
-  async resolveFrame(src, signal, info) {
+  async resolveFrame(src, signal, target) {
     let headers = new Headers()
     headers.set('accept', 'text/html')
+    headers.set('x-remix-frame', 'true')
 
-    if (!info.isTop) {
-      headers.set('x-remix-frame', 'true')
-    }
-    if (info.name) {
-      headers.set('x-remix-frame-target', info.name)
+    if (target) {
+      headers.set('x-remix-target', target)
     }
 
     let res = await fetch(src, { headers, signal })
