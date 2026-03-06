@@ -847,6 +847,7 @@ function insertFrame(
           name: getFrameName(node),
           src,
           marker: frameId && marker ? { ...marker, id: frameId } : undefined,
+          errorTarget: runtime.errorTarget,
           loadModule: runtime.loadModule,
           resolveFrame: runtime.resolveFrame,
           pendingClientEntries: runtime.pendingClientEntries,
@@ -892,6 +893,7 @@ function insertFrame(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     src: getFrameSrc(node),
+    errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
     resolveFrame: runtime.resolveFrame,
     pendingClientEntries: runtime.pendingClientEntries,
