@@ -890,6 +890,10 @@ async function renderFrameStream(
 
       if (parsed.html !== '') {
         html += parsed.html
+        let htmlMarkers = collectHtmlMarkerSummary(html)
+        if (!hasBalancedMarkerSummary(htmlMarkers)) {
+          continue
+        }
         await applyHtml(html)
         appliedLength = html.length
         appliedOnce = true
@@ -1072,4 +1076,20 @@ function findEndMarker(
   }
 
   throw new Error('End marker not found')
+}
+
+function collectHtmlMarkerSummary(html: string): Record<string, number> {
+  return {
+    frameStarts: html.match(/<!--\s*rmx:f:/g)?.length ?? 0,
+    frameEnds: html.match(/<!--\s*\/rmx:f\s*-->/g)?.length ?? 0,
+    hydrationStarts: html.match(/<!--\s*rmx:h:/g)?.length ?? 0,
+    hydrationEnds: html.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0,
+  }
+}
+
+function hasBalancedMarkerSummary(summary: Record<string, number>): boolean {
+  return (
+    summary.frameStarts === summary.frameEnds &&
+    summary.hydrationStarts === summary.hydrationEnds
+  )
 }
