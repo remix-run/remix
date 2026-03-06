@@ -75,9 +75,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/frames:
     dependencies:
