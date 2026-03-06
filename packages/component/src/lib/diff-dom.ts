@@ -86,6 +86,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
     // Same tag: update attributes then children
     diffElementAttributes(current, next)
+    if (shouldPreserveElementChildren(current, next)) return
     diffElementChildren(current, next, context)
     return
   }
@@ -103,14 +104,88 @@ function diffElementAttributes(current: Element, next: Element): void {
 
   // Removals
   for (let name of prevAttrNames) {
-    if (!nextNameSet.has(name)) current.removeAttribute(name)
+    if (!nextNameSet.has(name)) {
+      if (shouldPreserveLiveAttribute(current, next, name)) continue
+      current.removeAttribute(name)
+    }
   }
 
   // Additions/updates
   for (let name of nextAttrNames) {
     let prevVal = current.getAttribute(name)
     let nextVal = next.getAttribute(name)
-    if (prevVal !== nextVal) current.setAttribute(name, nextVal == null ? '' : String(nextVal))
+    if (prevVal !== nextVal) {
+      if (shouldPreserveLiveAttribute(current, next, name)) continue
+      current.setAttribute(name, nextVal == null ? '' : String(nextVal))
+    }
+  }
+}
+
+function shouldPreserveLiveAttribute(current: Element, next: Element, name: string): boolean {
+  if (name === 'open') {
+    if (current instanceof HTMLDetailsElement && next instanceof HTMLDetailsElement) {
+      return current.open !== next.open
+    }
+
+    if (current instanceof HTMLDialogElement && next instanceof HTMLDialogElement) {
+      return current.open !== next.open
+    }
+  }
+
+  if (name === 'checked') {
+    if (current instanceof HTMLInputElement && next instanceof HTMLInputElement) {
+      return current.checked !== next.checked
+    }
+  }
+
+  if (name === 'value') {
+    if (
+      current instanceof HTMLInputElement &&
+      next instanceof HTMLInputElement &&
+      shouldPreserveInputValue(current)
+    ) {
+      return current.value !== next.value
+    }
+  }
+
+  if (name === 'selected') {
+    if (current instanceof HTMLOptionElement && next instanceof HTMLOptionElement) {
+      return current.selected !== next.selected
+    }
+  }
+
+  if (name === 'popover') {
+    return isPopoverOpen(current) !== isPopoverOpen(next)
+  }
+
+  return false
+}
+
+function shouldPreserveElementChildren(current: Element, next: Element): boolean {
+  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
+    return current.value !== next.value
+  }
+
+  return false
+}
+
+function shouldPreserveInputValue(input: HTMLInputElement): boolean {
+  return (
+    input.type !== 'button' &&
+    input.type !== 'checkbox' &&
+    input.type !== 'hidden' &&
+    input.type !== 'image' &&
+    input.type !== 'radio' &&
+    input.type !== 'reset' &&
+    input.type !== 'submit'
+  )
+}
+
+function isPopoverOpen(element: Element): boolean {
+  try {
+    return element.matches(':popover-open')
+  } catch {
+    return false
   }
 }
 

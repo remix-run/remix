@@ -144,4 +144,109 @@ describe('diffNodes', () => {
       )
     })
   })
+
+  describe('live browser state', () => {
+    it('preserves current details open state when incoming html removes open', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<details open><summary>Toggle</summary><p>Body</p></details>'
+      let details = container.querySelector('details')
+      invariant(details)
+
+      diffDom(container, '<details><summary>Toggle</summary><p>Body</p></details>')
+
+      expect(details.open).toBe(true)
+      expect(details.hasAttribute('open')).toBe(true)
+    })
+
+    it('preserves current dialog open state when incoming html removes open', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<dialog open>Hello</dialog>'
+      let dialog = container.querySelector('dialog')
+      invariant(dialog)
+
+      diffDom(container, '<dialog>Hello</dialog>')
+
+      expect(dialog.open).toBe(true)
+      expect(dialog.hasAttribute('open')).toBe(true)
+    })
+
+    it('preserves current input checked state when incoming html removes checked', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<input type="checkbox" checked>'
+      let input = container.querySelector('input')
+      invariant(input)
+
+      diffDom(container, '<input type="checkbox">')
+
+      expect(input.checked).toBe(true)
+      expect(input.hasAttribute('checked')).toBe(true)
+    })
+
+    it('preserves current input value when incoming html changes value', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<input value="server">'
+      let input = container.querySelector('input')
+      invariant(input)
+      input.value = 'user'
+
+      diffDom(container, '<input value="server-next">')
+
+      expect(input.value).toBe('user')
+      expect(input.getAttribute('value')).toBe('server')
+    })
+
+    it('preserves current textarea value when incoming html changes its text', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<textarea>server</textarea>'
+      let textarea = container.querySelector('textarea')
+      invariant(textarea)
+      textarea.value = 'user'
+
+      diffDom(container, '<textarea>server-next</textarea>')
+
+      expect(textarea.value).toBe('user')
+      expect(textarea.textContent).toBe('server')
+    })
+
+    it('preserves current select value when incoming html changes selected options', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<select><option value="a">A</option><option value="b">B</option></select>'
+      let select = container.querySelector('select')
+      invariant(select)
+      let first = select.options.item(0)
+      let second = select.options.item(1)
+      invariant(first && second)
+      select.value = 'b'
+
+      diffDom(
+        container,
+        '<select><option value="a" selected>A</option><option value="b">B</option></select>',
+      )
+
+      expect(select.value).toBe('b')
+      expect(first.selected).toBe(false)
+      expect(second.selected).toBe(true)
+      expect(first.hasAttribute('selected')).toBe(false)
+    })
+
+    it('preserves current popover visibility when incoming html removes popover', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div popover="auto">Hello</div>'
+      let popover = container.querySelector('div')
+      invariant(popover)
+      document.body.appendChild(container)
+
+      try {
+        expect(typeof popover.showPopover).toBe('function')
+        popover.showPopover()
+
+        diffDom(container, '<div>Hello</div>')
+
+        expect(popover.matches(':popover-open')).toBe(true)
+        expect(popover.getAttribute('popover')).toBe('auto')
+      } finally {
+        container.remove()
+      }
+    })
+  })
 })
