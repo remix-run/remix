@@ -101,27 +101,10 @@ export function createRouter(versions?: ServerContext['versions']) {
           }
         }
 
-        let activeUrl = params.slug
-          ? routes.docs.href({
-              version: params.version,
-              slug: params.slug,
-            })
-          : routes.home.href({ version: params.version })
-
-        activeUrl = activeUrl.replace(/\/$/, '')
-
         return respond.fragment(
           request,
           <>
             {node}
-            <style
-              data-active-link
-              innerHTML={`
-                nav a[href="${activeUrl}"] {
-                  font-weight: bold;
-                }
-              `}
-            />
             <ClientRouter />
           </>,
         )

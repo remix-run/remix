@@ -47,10 +47,11 @@ export const ClientRouter = clientEntry(
               if (signal.aborted) return
               handle.frame.src = routes.fragment.href(nextMatch.params)
               await handle.frame.reload()
-              // Fix duplicate hoisted style element bug
-              while ($$('[data-active-link]').length > 1) {
-                $('[data-active-link]')?.remove()
-              }
+
+              // Update active sidebar link
+              $$('nav a.active').forEach((e) => e.classList.remove('active'))
+              $(`nav a[href="${routes.docs.href(nextMatch.params)}"]`)?.classList.add('active')
+
               // Close mobile nav
               let toggle = $('#nav-toggle') as HTMLInputElement | null
               if (toggle) {
