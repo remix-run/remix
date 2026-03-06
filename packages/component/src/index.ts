@@ -27,6 +27,7 @@ export type {
   FrameHandle,
   FrameProps,
 } from './lib/component.ts'
+export type { LoadModule, ResolveFrame, ResolveFrameInfo } from './lib/frame.ts'
 
 // -- Elements/JSX/Props --
 export { createElement } from './lib/create-element.ts'

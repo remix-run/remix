@@ -1,4 +1,5 @@
 import type { ComponentHandle, Key, RemixNode } from './component.ts'
+import type { ResolveFrameInfo } from './frame.ts'
 import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
 import { isEntry, type EntryComponent } from './client-entries.ts'
@@ -20,6 +21,7 @@ export interface RenderToStreamOptions {
   onError?: (error: unknown) => void
   resolveFrame?: (
     src: string,
+    info?: ResolveFrameInfo,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
 }
 
@@ -44,6 +46,7 @@ interface RenderContext {
   styleCache: Map<string, { selector: string; css: string }>
   resolveFrame: (
     src: string,
+    info?: ResolveFrameInfo,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
@@ -355,12 +358,14 @@ function buildFrameSegment(props: any, context: RenderContext, framePath: string
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     seg.content = buildSegment(props.fallback, context, framePath)
-    let framePromise = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) =>
-      resolveFrameHtml(resolved),
-    )
+    let framePromise = Promise.resolve(
+      context.resolveFrame(props.src, { name: props.name, isTop: false }),
+    ).then(async (resolved) => resolveFrameHtml(resolved))
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) => {
+    seg.pending = Promise.resolve(
+      context.resolveFrame(props.src, { name: props.name, isTop: false }),
+    ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
       seg.content = staticSeg(html)
       if (tail) {
