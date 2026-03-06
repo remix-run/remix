@@ -9,7 +9,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
   let router = context.router
 
   let stream = renderToStream(node, {
-    resolveFrame: (src) => resolveFrame(router, request, src),
+    resolveFrame: (src, info) => resolveFrame(router, request, src, info),
     onError(error) {
       console.error(error)
     },
@@ -23,13 +23,23 @@ export function render(node: RemixNode, init?: ResponseInit) {
   return new Response(stream, { ...init, headers })
 }
 
-async function resolveFrame(router: Router, request: Request, src: string) {
+async function resolveFrame(
+  router: Router,
+  request: Request,
+  src: string,
+  info?: { name?: string; isTop: boolean },
+) {
   let url = new URL(src, request.url)
 
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
-  headers.set('x-remix-frame', 'true')
+  if (!info?.isTop) {
+    headers.set('x-remix-frame', 'true')
+  }
+  if (info?.name) {
+    headers.set('x-remix-frame-target', info.name)
+  }
 
   let cookie = request.headers.get('cookie')
   if (cookie) headers.set('cookie', cookie)
