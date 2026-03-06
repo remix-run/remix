@@ -13,10 +13,10 @@ let app = run({
     let headers = new Headers()
     headers.set('accept', 'text/html')
 
-    if (!info?.isTop) {
+    if (!info.isTop) {
       headers.set('x-remix-frame', 'true')
     }
-    if (info?.name) {
+    if (info.name) {
       headers.set('x-remix-frame-target', info.name)
     }
 

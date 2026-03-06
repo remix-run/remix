@@ -21,7 +21,7 @@ export interface RenderToStreamOptions {
   onError?: (error: unknown) => void
   resolveFrame?: (
     src: string,
-    info?: ResolveFrameInfo,
+    info: ResolveFrameInfo,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
 }
 
@@ -46,7 +46,7 @@ interface RenderContext {
   styleCache: Map<string, { selector: string; css: string }>
   resolveFrame: (
     src: string,
-    info?: ResolveFrameInfo,
+    info: ResolveFrameInfo,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>

@@ -47,7 +47,7 @@ export type ResolveFrameInfo = {
 export type ResolveFrame = (
   src: string,
   signal?: AbortSignal,
-  info?: ResolveFrameInfo,
+  info: ResolveFrameInfo,
 ) => Promise<FrameContent> | FrameContent
 
 type InternalFrameContent = FrameContent | DocumentFragment
