@@ -34,7 +34,8 @@ async function resolveFrame(
   context?: ResolveFrameContext,
 ) {
   let frameSrc = context?.currentFrameSrc ?? request.url
-  let topFrameSrc = context?.topFrameSrc ?? request.headers.get('x-remix-top-frame-src') ?? request.url
+  let topFrameSrc =
+    context?.topFrameSrc ?? request.headers.get('x-remix-top-frame-src') ?? request.url
   let url = new URL(src, frameSrc)
 
   let headers = new Headers()

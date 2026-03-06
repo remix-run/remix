@@ -35,7 +35,10 @@ export function Layout() {
             <p mix={sidebarSubtitleStyle}>Student workspace</p>
             <nav mix={navStyle}>
               {navItems.map((item) => (
-                <NavLink route={item.route} match={item.route === routes.settings.index ? 'controller' : 'route'}>
+                <NavLink
+                  route={item.route}
+                  match={item.route === routes.settings.index ? 'controller' : 'route'}
+                >
                   {item.label}
                 </NavLink>
               ))}

@@ -116,9 +116,7 @@ export type MixinDescriptor<
 export type MixValue<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> =
-  | MixinDescriptor<node, any, props>
-  | ReadonlyArray<MixinDescriptor<node, any, props>>
+> = MixinDescriptor<node, any, props> | ReadonlyArray<MixinDescriptor<node, any, props>>
 
 type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
