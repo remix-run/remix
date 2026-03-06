@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsNotificationsPage() {
+export function Notifications() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Notifications</h2>

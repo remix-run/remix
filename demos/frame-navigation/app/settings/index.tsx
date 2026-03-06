@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsIndexPage() {
+export function Index() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Settings overview</h2>

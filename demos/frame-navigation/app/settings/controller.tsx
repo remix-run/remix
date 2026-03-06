@@ -3,63 +3,84 @@ import type { RemixNode } from 'remix/component'
 import { Frame } from 'remix/component'
 import { getContext } from 'remix/async-context-middleware'
 
-import { routes } from '../../config/routes.ts'
+import type { routes } from '../../config/routes.ts'
 import { render } from '../../config/render.tsx'
 import { Layout } from '../lib/Layout.tsx'
-import { SettingsLayout } from './layout.tsx'
-import type { SettingsKey } from './layout.tsx'
-import { SettingsGradingPage } from './grading.tsx'
-import { SettingsIndexPage } from './index.tsx'
-import { SettingsIntegrationsPage } from './integrations.tsx'
-import { SettingsNotificationsPage } from './notifications.tsx'
-import { SettingsPrivacyPage } from './privacy.tsx'
-import { SettingsProfilePage } from './profile.tsx'
 
-let settingsController: Controller<typeof routes.settings> = {
+import { Grading } from './grading.tsx'
+import { Index } from './index.tsx'
+import { Integrations } from './integrations.tsx'
+import { SettingsLayout, type SettingsKey } from './layout.tsx'
+import { Notifications } from './notifications.tsx'
+import { Privacy } from './privacy.tsx'
+import { Profile } from './profile.tsx'
+
+export default {
   actions: {
     index() {
-      return renderSettingsPage('overview', routes.settings.index.href(), <SettingsIndexPage />)
+      return render(
+        <SettingsShellOrFragment active="overview">
+          <Index />
+        </SettingsShellOrFragment>,
+      )
     },
     profile() {
-      return renderSettingsPage('profile', routes.settings.profile.href(), <SettingsProfilePage />)
+      return render(
+        <SettingsShellOrFragment active="profile">
+          <Profile />
+        </SettingsShellOrFragment>,
+      )
     },
     notifications() {
-      return renderSettingsPage(
-        'notifications',
-        routes.settings.notifications.href(),
-        <SettingsNotificationsPage />,
+      return render(
+        <SettingsShellOrFragment active="notifications">
+          <Notifications />
+        </SettingsShellOrFragment>,
       )
     },
     privacy() {
-      return renderSettingsPage('privacy', routes.settings.privacy.href(), <SettingsPrivacyPage />)
+      return render(
+        <SettingsShellOrFragment active="privacy">
+          <Privacy />
+        </SettingsShellOrFragment>,
+      )
     },
     grading() {
-      return renderSettingsPage('grading', routes.settings.grading.href(), <SettingsGradingPage />)
+      return render(
+        <SettingsShellOrFragment active="grading">
+          <Grading />
+        </SettingsShellOrFragment>,
+      )
     },
     integrations() {
-      return renderSettingsPage(
-        'integrations',
-        routes.settings.integrations.href(),
-        <SettingsIntegrationsPage />,
+      return render(
+        <SettingsShellOrFragment active="integrations">
+          <Integrations />
+        </SettingsShellOrFragment>,
       )
     },
   },
+} satisfies Controller<typeof routes.settings>
+
+type SettingsPageProps = {
+  active: SettingsKey
+  children?: RemixNode
 }
 
-function renderSettingsPage(active: SettingsKey, frameSrc: string, page: RemixNode) {
-  if (isFrameRequest()) {
-    return render(<SettingsLayout active={active}>{page}</SettingsLayout>)
-  }
+function SettingsShellOrFragment() {
+  return ({ active, children }: SettingsPageProps) => {
+    if (isFrameRequest()) {
+      return <SettingsLayout active={active}>{children}</SettingsLayout>
+    }
 
-  return render(
-    <Layout title="Settings" active="settings">
-      <Frame name="settings" src={frameSrc} fallback={<p>Loading settings...</p>} />
-    </Layout>,
-  )
+    return (
+      <Layout title="Settings" active="settings">
+        <Frame name="settings" src={getContext().request.url} />
+      </Layout>
+    )
+  }
 }
 
 function isFrameRequest() {
   return getContext().request.headers.get('x-remix-target') === 'settings'
 }
-
-export default settingsController

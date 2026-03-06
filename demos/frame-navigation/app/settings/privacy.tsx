@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 
-export function SettingsPrivacyPage() {
+export function Privacy() {
   return () => (
     <section>
       <h2 mix={titleStyle}>Privacy</h2>
