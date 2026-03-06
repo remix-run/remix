@@ -3,7 +3,7 @@ import type { RemixNode } from 'remix/component'
 import { Frame } from 'remix/component'
 import { getContext } from 'remix/async-context-middleware'
 
-import type { routes } from '../../config/routes.ts'
+import { frames, type routes } from '../../config/routes.ts'
 import { render } from '../../config/render.tsx'
 import { Layout } from '../lib/Layout.tsx'
 
@@ -72,12 +72,12 @@ function SettingsShellOrFragment() {
 
     return (
       <Layout title="Settings">
-        <Frame name="settings" src={getContext().request.url} />
+        <Frame name={frames.settings} src={getContext().request.url} />
       </Layout>
     )
   }
 }
 
 function isFrameRequest() {
-  return getContext().request.headers.get('x-remix-target') === 'settings'
+  return getContext().request.headers.get('x-remix-target') === frames.settings
 }
