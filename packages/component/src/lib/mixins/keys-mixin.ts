@@ -1,6 +1,4 @@
-// @jsxRuntime classic
-// @jsx jsx
-import { on } from './on-mixin.tsx'
+import { on } from './on-mixin.ts'
 import { createMixin } from '../mixin.ts'
 import { jsx } from '../jsx.ts'
 
@@ -52,23 +50,23 @@ let keyToEventType: Record<string, string> = {
   PageDown: pageDownEventType,
 }
 
-let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
-  <handle.element
-    {...props}
-    mix={[
-      on('keydown', (event) => {
-        let type = keyToEventType[event.key]
+let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) =>
+  jsx(handle.element, {
+    ...props,
+    mix: [
+      on<HTMLElement, 'keydown'>('keydown', (event) => {
+        let type = keyToEventType[(event as unknown as KeyboardEvent).key]
         if (!type) return
         event.preventDefault()
         event.currentTarget.dispatchEvent(
           new KeyboardEvent(type, {
-            key: event.key,
+            key: (event as unknown as KeyboardEvent).key,
           }),
         )
       }),
-    ]}
-  />
-))
+    ],
+  }),
+)
 
 type KeysEventsMixin = typeof baseKeysEvents & {
   readonly escape: typeof escapeEventType

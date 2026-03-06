@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import { ref } from './ref-mixin.tsx'
+import { ref } from './ref-mixin.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
 
 describe('ref mixin', () => {

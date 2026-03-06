@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx jsx
 import { createMixin } from '../mixin.ts'
 import { jsx } from '../jsx.ts'
 import type { ElementProps } from '../jsx.ts'
@@ -56,12 +54,10 @@ export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle)
       return handle.element
     }
 
-    return (
-      <handle.element
-        {...props}
-        className={props.className ? `${props.className} ${selector}` : selector}
-      />
-    )
+    return jsx(handle.element, {
+      ...props,
+      className: props.className ? `${props.className} ${selector}` : selector,
+    })
   }
 })
 

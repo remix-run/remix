@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createRoot } from '../vdom.ts'
-import { animateLayout } from './animate-layout-mixin.tsx'
+import { animateLayout } from './animate-layout-mixin.ts'
 import { invariant } from '../invariant.ts'
 
 interface MockAnimation {

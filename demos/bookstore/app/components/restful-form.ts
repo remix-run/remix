@@ -1,4 +1,5 @@
-import type { Props, RemixNode } from 'remix/component'
+import { html } from 'remix/component/tag'
+import type { Props } from 'remix/component'
 
 export interface RestfulFormProps extends Props<'form'> {
   /**
@@ -20,16 +21,12 @@ export function RestfulForm() {
     let upperMethod = method.toUpperCase()
 
     if (upperMethod === 'GET') {
-      return <form method="GET" {...props} />
+      return html`<form method="GET" ...${props} />`
     }
 
-    return (
-      <form method="POST" {...props}>
-        {upperMethod !== 'POST' && (
-          <input type="hidden" name={methodOverrideField} value={upperMethod} />
-        )}
-        {props.children}
-      </form>
-    )
+    return html`<form method="POST" ...${props}>
+      ${upperMethod !== 'POST' && html`<input type="hidden" name=${methodOverrideField} value=${upperMethod} />`}
+      ${props.children}
+    </form>`
   }
 }

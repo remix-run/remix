@@ -1,14 +1,15 @@
+import { html } from 'remix/component/tag'
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { users } from './data/schema.ts'
-import { Layout } from './layout.tsx'
+import { Layout } from './layout.ts'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
-import { RestfulForm } from './components/restful-form.tsx'
+import { RestfulForm } from './components/restful-form.ts'
 
 export default {
   actions: {
@@ -17,11 +18,11 @@ export default {
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Manage Users</h1>
 
-          <p mix={[css({ marginBottom: '1rem' })]}>
-            <a href={routes.admin.index.href()} class="btn btn-secondary">
+          <p mix=${[css({ marginBottom: '1rem' })]}>
+            <a href=${routes.admin.index.href()} class="btn btn-secondary">
               Back to Dashboard
             </a>
           </p>
@@ -38,46 +39,51 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                {allUsers.map((u) => (
-                  <tr>
-                    <td>{u.name}</td>
-                    <td>{u.email}</td>
-                    <td>
-                      <span class={`badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                    <td class="actions">
-                      <a
-                        href={routes.admin.users.edit.href({ userId: u.id })}
-                        class="btn btn-secondary"
-                        mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                      >
-                        Edit
-                      </a>
-                      {u.id !== user.id ? (
-                        <RestfulForm
-                          method="DELETE"
-                          action={routes.admin.users.destroy.href({ userId: u.id })}
-                          mix={[css({ display: 'inline' })]}
+                ${allUsers.map(
+                  (u) =>
+                    html`<tr>
+                      <td>${u.name}</td>
+                      <td>${u.email}</td>
+                      <td>
+                        <span
+                          class=${`badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}`}
                         >
-                          <button
-                            type="submit"
-                            class="btn btn-danger"
-                            mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                          >
-                            Delete
-                          </button>
-                        </RestfulForm>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                          ${u.role}
+                        </span>
+                      </td>
+                      <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                      <td class="actions">
+                        <a
+                          href=${routes.admin.users.edit.href({ userId: u.id })}
+                          class="btn btn-secondary"
+                          mix=${[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                        >
+                          Edit
+                        </a>
+                        ${
+                          u.id !== user.id
+                            ? html`<${RestfulForm}
+                                method="DELETE"
+                                action=${routes.admin.users.destroy.href({ userId: u.id })}
+                                mix=${[css({ display: 'inline' })]}
+                              >
+                                <button
+                                  type="submit"
+                                  class="btn btn-danger"
+                                  mix=${[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                                >
+                                  Delete
+                                </button>
+                              <//>`
+                            : null
+                        }
+                      </td>
+                    </tr>`,
+                )}
               </tbody>
             </table>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
@@ -87,50 +93,52 @@ export default {
 
       if (!targetUser) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>User Not Found</h1>
             </div>
-          </Layout>,
+          <//>`,
           { status: 404 },
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>User Details</h1>
 
           <div class="card">
             <p>
-              <strong>Name:</strong> {targetUser.name}
+              <strong>Name:</strong> ${targetUser.name}
             </p>
             <p>
-              <strong>Email:</strong> {targetUser.email}
+              <strong>Email:</strong> ${targetUser.email}
             </p>
             <p>
-              <strong>Role:</strong>{' '}
-              <span class={`badge ${targetUser.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
-                {targetUser.role}
+              <strong>Role:</strong>
+              <span
+                class=${`badge ${targetUser.role === 'admin' ? 'badge-info' : 'badge-success'}`}
+              >
+                ${targetUser.role}
               </span>
             </p>
             <p>
-              <strong>Created:</strong> {new Date(targetUser.created_at).toLocaleDateString()}
+              <strong>Created:</strong> ${new Date(targetUser.created_at).toLocaleDateString()}
             </p>
 
-            <div mix={[css({ marginTop: '2rem' })]}>
-              <a href={routes.admin.users.edit.href({ userId: targetUser.id })} class="btn">
+            <div mix=${[css({ marginTop: '2rem' })]}>
+              <a href=${routes.admin.users.edit.href({ userId: targetUser.id })} class="btn">
                 Edit
               </a>
               <a
-                href={routes.admin.users.index.href()}
+                href=${routes.admin.users.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Back to List
               </a>
             </div>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
@@ -140,41 +148,47 @@ export default {
 
       if (!targetUser) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>User Not Found</h1>
             </div>
-          </Layout>,
+          <//>`,
           { status: 404 },
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Edit User</h1>
 
           <div class="card">
-            <RestfulForm
+            <${RestfulForm}
               method="PUT"
-              action={routes.admin.users.update.href({ userId: targetUser.id })}
+              action=${routes.admin.users.update.href({ userId: targetUser.id })}
             >
               <div class="form-group">
                 <label for="name">Name</label>
-                <input type="text" id="name" name="name" value={targetUser.name} required />
+                <input type="text" id="name" name="name" value=${targetUser.name} required />
               </div>
 
               <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" value={targetUser.email} required />
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value=${targetUser.email}
+                  required
+                />
               </div>
 
               <div class="form-group">
                 <label for="role">Role</label>
                 <select id="role" name="role">
-                  <option value="customer" selected={targetUser.role === 'customer'}>
+                  <option value="customer" selected=${targetUser.role === 'customer'}>
                     Customer
                   </option>
-                  <option value="admin" selected={targetUser.role === 'admin'}>
+                  <option value="admin" selected=${targetUser.role === 'admin'}>
                     Admin
                   </option>
                 </select>
@@ -184,15 +198,15 @@ export default {
                 Update User
               </button>
               <a
-                href={routes.admin.users.index.href()}
+                href=${routes.admin.users.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Cancel
               </a>
-            </RestfulForm>
+            <//>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 

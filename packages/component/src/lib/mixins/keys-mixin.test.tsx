@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import { on } from './on-mixin.tsx'
-import { keysEvents } from './keys-mixin.tsx'
+import { on } from './on-mixin.ts'
+import { keysEvents } from './keys-mixin.ts'
 
 describe('keysEvents mixin', () => {
   it('dispatches keydown:Space events and prevents default', () => {

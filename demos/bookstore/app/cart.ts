@@ -1,3 +1,4 @@
+import { html } from 'remix/component/tag'
 import type { Controller, RequestContext } from 'remix/fetch-router'
 import { Frame } from 'remix/component'
 import { redirect } from 'remix/response/redirect'
@@ -6,7 +7,7 @@ import { routes } from './routes.ts'
 
 import { books } from './data/schema.ts'
 import { addToCart, removeFromCart, updateCartItem } from './data/cart.ts'
-import { Layout } from './layout.tsx'
+import { Layout } from './layout.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
@@ -18,13 +19,13 @@ export default {
   actions: {
     index() {
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Shopping Cart</h1>
 
           <div class="card">
-            <Frame name="cart" src={routes.fragments.cartItems.href()} />
+            <${Frame} name="cart" src=${routes.fragments.cartItems.href()} />
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 

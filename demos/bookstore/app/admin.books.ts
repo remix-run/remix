@@ -1,13 +1,14 @@
+import { html } from 'remix/component/tag'
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { books } from './data/schema.ts'
-import { Layout } from './layout.tsx'
+import { Layout } from './layout.ts'
 import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
-import { RestfulForm } from './components/restful-form.tsx'
+import { RestfulForm } from './components/restful-form.ts'
 
 export default {
   actions: {
@@ -15,17 +16,17 @@ export default {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Manage Books</h1>
 
-          <p mix={[css({ marginBottom: '1rem' })]}>
-            <a href={routes.admin.books.new.href()} class="btn">
+          <p mix=${[css({ marginBottom: '1rem' })]}>
+            <a href=${routes.admin.books.new.href()} class="btn">
               Add New Book
             </a>
             <a
-              href={routes.admin.index.href()}
+              href=${routes.admin.index.href()}
               class="btn btn-secondary"
-              mix={[css({ marginLeft: '0.5rem' })]}
+              mix=${[css({ marginLeft: '0.5rem' })]}
             >
               Back to Dashboard
             </a>
@@ -44,45 +45,46 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                {allBooks.map((book) => (
-                  <tr>
-                    <td>{book.title}</td>
-                    <td>{book.author}</td>
-                    <td>{book.genre}</td>
-                    <td>${book.price.toFixed(2)}</td>
-                    <td>
-                      <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
-                        {book.in_stock ? 'Yes' : 'No'}
-                      </span>
-                    </td>
-                    <td class="actions">
-                      <a
-                        href={routes.admin.books.edit.href({ bookId: book.id })}
-                        class="btn btn-secondary"
-                        mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
-                      >
-                        Edit
-                      </a>
-                      <RestfulForm
-                        method="DELETE"
-                        action={routes.admin.books.destroy.href({ bookId: book.id })}
-                        mix={[css({ display: 'inline' })]}
-                      >
-                        <button
-                          type="submit"
-                          class="btn btn-danger"
-                          mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                ${allBooks.map(
+                  (book) =>
+                    html`<tr>
+                      <td>${book.title}</td>
+                      <td>${book.author}</td>
+                      <td>${book.genre}</td>
+                      <td>$${book.price.toFixed(2)}</td>
+                      <td>
+                        <span class=${`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
+                          ${book.in_stock ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td class="actions">
+                        <a
+                          href=${routes.admin.books.edit.href({ bookId: book.id })}
+                          class="btn btn-secondary"
+                          mix=${[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
                         >
-                          Delete
-                        </button>
-                      </RestfulForm>
-                    </td>
-                  </tr>
-                ))}
+                          Edit
+                        </a>
+                        <${RestfulForm}
+                          method="DELETE"
+                          action=${routes.admin.books.destroy.href({ bookId: book.id })}
+                          mix=${[css({ display: 'inline' })]}
+                        >
+                          <button
+                            type="submit"
+                            class="btn btn-danger"
+                            mix=${[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                          >
+                            Delete
+                          </button>
+                        <//>
+                      </td>
+                    </tr>`,
+                )}
               </tbody>
             </table>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
@@ -92,77 +94,77 @@ export default {
 
       if (!book) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>Book Not Found</h1>
             </div>
-          </Layout>,
+          <//>`,
           { status: 404 },
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Book Details</h1>
 
           <div class="card">
             <p>
-              <strong>Title:</strong> {book.title}
+              <strong>Title:</strong> ${book.title}
             </p>
             <p>
-              <strong>Author:</strong> {book.author}
+              <strong>Author:</strong> ${book.author}
             </p>
             <p>
-              <strong>Slug:</strong> {book.slug}
+              <strong>Slug:</strong> ${book.slug}
             </p>
             <p>
-              <strong>Description:</strong> {book.description}
+              <strong>Description:</strong> ${book.description}
             </p>
             <p>
-              <strong>Price:</strong> ${book.price.toFixed(2)}
+              <strong>Price:</strong> $${book.price.toFixed(2)}
             </p>
             <p>
-              <strong>Genre:</strong> {book.genre}
+              <strong>Genre:</strong> ${book.genre}
             </p>
             <p>
-              <strong>ISBN:</strong> {book.isbn}
+              <strong>ISBN:</strong> ${book.isbn}
             </p>
             <p>
-              <strong>Published:</strong> {book.published_year}
+              <strong>Published:</strong> ${book.published_year}
             </p>
             <p>
-              <strong>In Stock:</strong>{' '}
-              <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
-                {book.in_stock ? 'Yes' : 'No'}
+              <strong>In Stock:</strong>
+              <span class=${`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
+                ${book.in_stock ? 'Yes' : 'No'}
               </span>
             </p>
 
-            <div mix={[css({ marginTop: '2rem' })]}>
-              <a href={routes.admin.books.edit.href({ bookId: book.id })} class="btn">
+            <div mix=${[css({ marginTop: '2rem' })]}>
+              <a href=${routes.admin.books.edit.href({ bookId: book.id })} class="btn">
                 Edit
               </a>
               <a
-                href={routes.admin.books.index.href()}
+                href=${routes.admin.books.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Back to List
               </a>
             </div>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
     new() {
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Add New Book</h1>
 
           <div class="card">
             <form
               method="POST"
-              action={routes.admin.books.create.href()}
+              action=${routes.admin.books.create.href()}
               encType="multipart/form-data"
             >
               <div class="form-group">
@@ -216,7 +218,7 @@ export default {
               <div class="form-group">
                 <label for="cover">Book Cover Image</label>
                 <input type="file" id="cover" name="cover" accept="image/*" />
-                <small mix={[css({ color: '#666' })]}>
+                <small mix=${[css({ color: '#666' })]}>
                   Optional. Upload a cover image for this book.
                 </small>
               </div>
@@ -225,15 +227,15 @@ export default {
                 Create Book
               </button>
               <a
-                href={routes.admin.books.index.href()}
+                href=${routes.admin.books.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Cancel
               </a>
             </form>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
@@ -262,45 +264,43 @@ export default {
 
       if (!book) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>Book Not Found</h1>
             </div>
-          </Layout>,
+          <//>`,
           { status: 404 },
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Edit Book</h1>
 
           <div class="card">
-            <RestfulForm
+            <${RestfulForm}
               method="PUT"
-              action={routes.admin.books.update.href({ bookId: book.id })}
+              action=${routes.admin.books.update.href({ bookId: book.id })}
               encType="multipart/form-data"
             >
               <div class="form-group">
                 <label for="title">Title</label>
-                <input type="text" id="title" name="title" value={book.title} required />
+                <input type="text" id="title" name="title" value=${book.title} required />
               </div>
 
               <div class="form-group">
                 <label for="author">Author</label>
-                <input type="text" id="author" name="author" value={book.author} required />
+                <input type="text" id="author" name="author" value=${book.author} required />
               </div>
 
               <div class="form-group">
                 <label for="slug">Slug (URL-friendly name)</label>
-                <input type="text" id="slug" name="slug" value={book.slug} required />
+                <input type="text" id="slug" name="slug" value=${book.slug} required />
               </div>
 
               <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description" name="description" required>
-                  {book.description}
-                </textarea>
+                <textarea id="description" name="description" required>${book.description}</textarea>
               </div>
 
               <div class="form-group">
@@ -310,19 +310,19 @@ export default {
                   id="price"
                   name="price"
                   step="0.01"
-                  value={book.price}
+                  value=${book.price}
                   required
                 />
               </div>
 
               <div class="form-group">
                 <label for="genre">Genre</label>
-                <input type="text" id="genre" name="genre" value={book.genre} required />
+                <input type="text" id="genre" name="genre" value=${book.genre} required />
               </div>
 
               <div class="form-group">
                 <label for="isbn">ISBN</label>
-                <input type="text" id="isbn" name="isbn" value={book.isbn} required />
+                <input type="text" id="isbn" name="isbn" value=${book.isbn} required />
               </div>
 
               <div class="form-group">
@@ -331,7 +331,7 @@ export default {
                   type="number"
                   id="publishedYear"
                   name="publishedYear"
-                  value={book.published_year}
+                  value=${book.published_year}
                   required
                 />
               </div>
@@ -339,10 +339,10 @@ export default {
               <div class="form-group">
                 <label for="inStock">In Stock</label>
                 <select id="inStock" name="inStock">
-                  <option value="true" selected={book.in_stock}>
+                  <option value="true" selected=${book.in_stock}>
                     Yes
                   </option>
-                  <option value="false" selected={!book.in_stock}>
+                  <option value="false" selected=${!book.in_stock}>
                     No
                   </option>
                 </select>
@@ -350,18 +350,19 @@ export default {
 
               <div class="form-group">
                 <label for="cover">Book Cover Image</label>
-                {book.cover_url !== '/images/placeholder.jpg' && (
-                  <div mix={[css({ marginBottom: '0.5rem' })]}>
+                ${
+                  book.cover_url !== '/images/placeholder.jpg' &&
+                  html`<div mix=${[css({ marginBottom: '0.5rem' })]}>
                     <img
-                      src={book.cover_url}
-                      alt={book.title}
-                      mix={[css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })]}
+                      src=${book.cover_url}
+                      alt=${book.title}
+                      mix=${[css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })]}
                     />
-                    <p mix={[css({ fontSize: '0.875rem', color: '#666' })]}>Current cover image</p>
-                  </div>
-                )}
+                    <p mix=${[css({ fontSize: '0.875rem', color: '#666' })]}>Current cover image</p>
+                  </div>`
+                }
                 <input type="file" id="cover" name="cover" accept="image/*" />
-                <small mix={[css({ color: '#666' })]}>
+                <small mix=${[css({ color: '#666' })]}>
                   Optional. Upload a new cover image to replace the current one.
                 </small>
               </div>
@@ -370,15 +371,15 @@ export default {
                 Update Book
               </button>
               <a
-                href={routes.admin.books.index.href()}
+                href=${routes.admin.books.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Cancel
               </a>
-            </RestfulForm>
+            <//>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 

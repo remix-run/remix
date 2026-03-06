@@ -1,3 +1,4 @@
+import { html } from 'remix/component/tag'
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
@@ -6,7 +7,7 @@ import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
 import { clearCart, getCartTotal } from './data/cart.ts'
 import { itemsByOrder, orders, orderItemsWithBook } from './data/schema.ts'
-import { Layout } from './layout.tsx'
+import { Layout } from './layout.ts'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
@@ -21,27 +22,27 @@ export default {
 
       if (cart.items.length === 0) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>Checkout</h1>
               <p>Your cart is empty. Add some books before checking out.</p>
-              <p mix={[css({ marginTop: '1rem' })]}>
-                <a href={routes.books.index.href()} class="btn">
+              <p mix=${[css({ marginTop: '1rem' })]}>
+                <a href=${routes.books.index.href()} class="btn">
                   Browse Books
                 </a>
               </p>
             </div>
-          </Layout>,
+          <//>`,
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <h1>Checkout</h1>
 
           <div class="card">
             <h2>Order Summary</h2>
-            <table mix={[css({ marginTop: '1rem' })]}>
+            <table mix=${[css({ marginTop: '1rem' })]}>
               <thead>
                 <tr>
                   <th>Book</th>
@@ -51,29 +52,30 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                {cart.items.map((item) => (
-                  <tr>
-                    <td>{item.title}</td>
-                    <td>{item.quantity}</td>
-                    <td>${item.price.toFixed(2)}</td>
-                    <td>${(item.price * item.quantity).toFixed(2)}</td>
-                  </tr>
-                ))}
+                ${cart.items.map(
+                  (item) =>
+                    html`<tr>
+                      <td>${item.title}</td>
+                      <td>${item.quantity}</td>
+                      <td>$${item.price.toFixed(2)}</td>
+                      <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>`,
+                )}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
+                  <td colSpan=${3} mix=${[css({ textAlign: 'right', fontWeight: 'bold' })]}>
                     Total:
                   </td>
-                  <td mix={[css({ fontWeight: 'bold' })]}>${total.toFixed(2)}</td>
+                  <td mix=${[css({ fontWeight: 'bold' })]}>${total.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          <div class="card" mix={[css({ marginTop: '1.5rem' })]}>
+          <div class="card" mix=${[css({ marginTop: '1.5rem' })]}>
             <h2>Shipping Information</h2>
-            <form method="POST" action={routes.checkout.action.href()}>
+            <form method="POST" action=${routes.checkout.action.href()}>
               <div class="form-group">
                 <label for="street">Street Address</label>
                 <input type="text" id="street" name="street" required />
@@ -98,15 +100,15 @@ export default {
                 Place Order
               </button>
               <a
-                href={routes.cart.index.href()}
+                href=${routes.cart.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Back to Cart
               </a>
             </form>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
 
@@ -179,58 +181,58 @@ export default {
 
       if (!order || order.user_id !== user.id) {
         return render(
-          <Layout>
+          html`<${Layout}>
             <div class="card">
               <h1>Order Not Found</h1>
               <p>
-                <a href={routes.account.orders.index.href()} class="btn">
+                <a href=${routes.account.orders.index.href()} class="btn">
                   View My Orders
                 </a>
               </p>
             </div>
-          </Layout>,
+          <//>`,
           { status: 404 },
         )
       }
 
       return render(
-        <Layout>
+        html`<${Layout}>
           <div class="alert alert-success">
-            <h1 mix={[css({ marginBottom: '0.5rem' })]}>Order Confirmed!</h1>
+            <h1 mix=${[css({ marginBottom: '0.5rem' })]}>Order Confirmed!</h1>
             <p>Thank you for your purchase. Your order has been placed successfully.</p>
           </div>
 
           <div class="card">
-            <h2>Order #{order.id}</h2>
+            <h2>Order #${order.id}</h2>
             <p>
-              <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
+              <strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}
             </p>
             <p>
-              <strong>Total:</strong> ${order.total.toFixed(2)}
+              <strong>Total:</strong> $${order.total.toFixed(2)}
             </p>
             <p>
-              <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
+              <strong>Status:</strong> <span class="badge badge-info">${order.status}</span>
             </p>
 
-            <p mix={[css({ marginTop: '2rem' })]}>
+            <p mix=${[css({ marginTop: '2rem' })]}>
               We'll send you a confirmation email shortly. You can track your order status in your
               account.
             </p>
 
-            <div mix={[css({ marginTop: '2rem' })]}>
-              <a href={routes.account.orders.show.href({ orderId: order.id })} class="btn">
+            <div mix=${[css({ marginTop: '2rem' })]}>
+              <a href=${routes.account.orders.show.href({ orderId: order.id })} class="btn">
                 View Order Details
               </a>
               <a
-                href={routes.books.index.href()}
+                href=${routes.books.index.href()}
                 class="btn btn-secondary"
-                mix={[css({ marginLeft: '0.5rem' })]}
+                mix=${[css({ marginLeft: '0.5rem' })]}
               >
                 Continue Shopping
               </a>
             </div>
           </div>
-        </Layout>,
+        <//>`,
       )
     },
   },

@@ -1,8 +1,9 @@
+import { html } from 'remix/component/tag'
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import type { routes } from './routes.ts'
-import { CartButton } from './assets/cart-button.tsx'
-import { CartItems } from './assets/cart-items.tsx'
+import { CartButton } from './assets/cart-button.ts'
+import { CartItems } from './assets/cart-items.ts'
 import { getCartTotal } from './data/cart.ts'
 import { books } from './data/schema.ts'
 import { loadAuth } from './middleware/auth.ts'
@@ -19,13 +20,13 @@ export default {
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
       if (!book) {
-        return renderFragment(<p>Book not found</p>, { status: 404 })
+        return renderFragment(html`<p>Book not found</p>`, { status: 404 })
       }
 
       let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
-      return renderFragment(<CartButton inCart={inCart} id={book.id} slug={book.slug} />)
+      return renderFragment(html`<${CartButton} inCart=${inCart} id=${book.id} slug=${book.slug} />`)
     },
 
     cartItems() {
@@ -35,18 +36,20 @@ export default {
 
       if (cart.items.length === 0) {
         return renderFragment(
-          <div mix={[css({ marginTop: '2rem' })]}>
+          html`<div mix=${[css({ marginTop: '2rem' })]}>
             <p>Your cart is empty.</p>
-            <p mix={[css({ marginTop: '1rem' })]}>
-              <a href={appRoutes.books.index.href()} class="btn">
+            <p mix=${[css({ marginTop: '1rem' })]}>
+              <a href=${appRoutes.books.index.href()} class="btn">
                 Browse Books
               </a>
             </p>
-          </div>,
+          </div>`,
         )
       }
 
-      return renderFragment(<CartItems items={cart.items} total={total} canCheckout={!!user} />)
+      return renderFragment(
+        html`<${CartItems} items=${cart.items} total=${total} canCheckout=${!!user} />`,
+      )
     },
   },
 } satisfies Controller<typeof routes.fragments>
