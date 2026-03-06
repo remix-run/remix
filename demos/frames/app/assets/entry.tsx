@@ -1,6 +1,6 @@
 import { run } from 'remix/component'
 
-let app = run(document, {
+let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     let exp = (mod as any)[exportName]
