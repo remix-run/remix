@@ -1,15 +1,27 @@
+import { createHash } from 'node:crypto'
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import { quoteTableRef } from '../sql-helpers.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 import { toTableRef } from './helpers.ts'
 
+/**
+ * Returns a stable content-based checksum for a migration.
+ *
+ * If the descriptor already carries an explicit `checksum` (e.g. supplied by
+ * a file-based registry that hashed the source on disk), that value is used
+ * as-is.  Otherwise a SHA-256 digest of the `up` and `down` function source
+ * text is computed.  This catches accidental edits to already-applied
+ * migrations that would previously have gone undetected because the fallback
+ * only used the migration `id` and `name`.
+ */
 export function normalizeChecksum(migration: MigrationDescriptor): string {
   if (migration.checksum) {
     return migration.checksum
   }
 
-  return migration.id + ':' + migration.name
+  let content = migration.migration.up.toString() + '\n' + migration.migration.down.toString()
+  return createHash('sha256').update(content).digest('hex')
 }
 
 /**
