@@ -1,5 +1,6 @@
 import { jsx } from './jsx.ts'
 import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement } from './jsx.ts'
 import type { FrameHandle } from './component.ts'
@@ -54,6 +55,7 @@ let frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 
 export type FrameRuntime = {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -68,6 +70,7 @@ export type FrameRuntime = {
 
 export type FrameContext = {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -87,6 +90,7 @@ type FrameInit = {
   name?: string
   topFrame?: FrameHandle
   src: string
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -137,6 +141,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         if (reloadController !== controller || controller.signal.aborted) return controller.signal
         await render(content, { signal: controller.signal })
         return controller.signal
+      } catch (error) {
+        if (reloadController !== controller || controller.signal.aborted) return controller.signal
+        init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+        throw error
       } finally {
         if (reloadController === controller) {
           frame.dispatchEvent(new Event('reloadComplete'))
@@ -156,6 +164,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let context: FrameContext = {
     topFrame: runtime.topFrame,
+    errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
     pendingClientEntries: init.pendingClientEntries,
@@ -314,6 +323,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
 export function createFrameRuntime(init: {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -327,6 +337,7 @@ export function createFrameRuntime(init: {
 }): FrameRuntime {
   return {
     topFrame: init.topFrame,
+    errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
     pendingClientEntries: init.pendingClientEntries,
@@ -609,6 +620,10 @@ function hydrateRegion(
     frame: context.frame,
     styleManager: context.styleManager,
   })
+  root.addEventListener('error', (event) => {
+    if (context.errorTarget === root) return
+    context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+  })
 
   Object.defineProperty(start, '$rmx', { value: root, enumerable: false })
   root.render(vElement)
@@ -630,6 +645,7 @@ function createSubFrames(nodes: Node[], context: FrameContext) {
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
+            errorTarget: context.errorTarget,
             loadModule: context.loadModule,
             resolveFrame: context.resolveFrame,
             pendingClientEntries: context.pendingClientEntries,

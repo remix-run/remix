@@ -1,4 +1,5 @@
 import { createDocumentState } from './document-state.ts'
+import { createComponentErrorEvent } from './error-event.ts'
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import {
@@ -52,7 +53,7 @@ export function createScheduler(
 
   function dispatchError(error: unknown) {
     console.error(error)
-    rootTarget.dispatchEvent(new ErrorEvent('error', { error }))
+    rootTarget.dispatchEvent(createComponentErrorEvent(error))
   }
 
   function scheduleCounterReset() {

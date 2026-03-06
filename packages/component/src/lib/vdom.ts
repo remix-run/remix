@@ -2,6 +2,11 @@ import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
+import {
+  createComponentErrorEvent,
+  getComponentError,
+  type ComponentErrorEvent,
+} from './error-event.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
 import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
@@ -11,7 +16,7 @@ import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 
 export type VirtualRootEventMap = {
-  error: ErrorEvent
+  error: ComponentErrorEvent
 }
 
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
@@ -70,13 +75,14 @@ export function createRangeRoot(
       src: options.frameInit?.src,
       resolveFrame: options.frameInit?.resolveFrame,
       loadModule: options.frameInit?.loadModule,
+      errorTarget: eventTarget,
       scheduler,
       styleManager: styles,
     })
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   }
   function attachDomErrorForwarding() {
     if (isErrorForwardingAttached) return
@@ -153,13 +159,14 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       src: options.frameInit?.src,
       resolveFrame: options.frameInit?.resolveFrame,
       loadModule: options.frameInit?.loadModule,
+      errorTarget: eventTarget,
       scheduler,
       styleManager: styles,
     })
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   }
   function attachDomErrorForwarding() {
     if (isErrorForwardingAttached) return
@@ -224,6 +231,7 @@ function createRootFrameHandle(init: {
     target?: string,
   ) => Promise<FrameContent> | FrameContent
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
+  errorTarget: EventTarget
   scheduler: Scheduler
   styleManager: StyleManager
 }): FrameHandle {
@@ -246,6 +254,7 @@ function createRootFrameHandle(init: {
           throw new Error('loadModule is required to hydrate client entries inside <Frame />')
         }),
       resolveFrame,
+      errorTarget: init.errorTarget,
       pendingClientEntries: new Map(),
       scheduler: init.scheduler,
       styleManager: init.styleManager,

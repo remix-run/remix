@@ -87,6 +87,55 @@ describe('run', () => {
     frame.dispose()
   })
 
+  it('forwards hydrated client entry root error events to app listeners', async () => {
+    let error = new Error('hydrated client entry root error')
+    let Broken = clientEntry(
+      '/js/broken.js#Broken',
+      function Broken() {
+        return () => <button>Trigger</button>
+      },
+    )
+
+    let html = await drain(renderToStream(<Broken />))
+    document.body.innerHTML = html
+
+    let app = run({ loadModule: vi.fn().mockResolvedValue(Broken) })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = (event as ErrorEvent).error
+    })
+
+    await app.ready()
+
+    let marker = Array.from(document.body.childNodes).find(
+      (node): node is Comment & { $rmx: EventTarget } => node instanceof Comment && '$rmx' in node,
+    )
+    invariant(marker, 'Expected hydrated client entry marker')
+    marker.$rmx.dispatchEvent(new ErrorEvent('error', { error }))
+
+    expect(forwarded).toBe(error)
+
+    app.dispose()
+  })
+
+  it('dispatches ready() rejections to app error listeners', async () => {
+    document.body.innerHTML = '<!-- rmx:h:broken --><button>Broken</button>'
+
+    let app = run({ loadModule: vi.fn() })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    let readyError = await app.ready().catch((error) => error)
+
+    expect(readyError).toBeInstanceOf(Error)
+    expect((readyError as Error).message).toBe('End marker not found')
+    expect(forwarded).toBe(readyError)
+
+    app.dispose()
+  })
+
   it('hydrates multiple components', async () => {
     let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle) {
       let clicked = false
@@ -988,6 +1037,73 @@ describe('run', () => {
     expect(document.querySelector('button')).toBe(button)
 
     clientFrame.dispose()
+  })
+
+  it('dispatches reload rejections to app error listeners', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let reloadError = new TypeError('Failed to fetch')
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-error.js#ReloadError',
+      function ReloadError(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-error">Reload error</button>
+      },
+    )
+
+    async function resolveFrame(src: string) {
+      if (src !== '/reload-error') throw new Error(`Unexpected frame src: ${src}`)
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(
+          renderToStream(
+            <section>
+              <p id="reload-error-value">Initial</p>
+              <ReloadButton />
+            </section>,
+          ),
+        )
+      }
+      throw reloadError
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-error" fallback={<div>Loading…</div>} />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-error.js' && exportName === 'ReloadError') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+
+    let caught = await reload().catch((error) => error)
+
+    expect(caught).toBe(reloadError)
+    expect(forwarded).toBe(reloadError)
+    expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
+
+    app.dispose()
   })
 
   it('aborts stale frame reloads when reload is re-entered', async () => {

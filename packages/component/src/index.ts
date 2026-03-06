@@ -1,6 +1,7 @@
 // -- Roots --
 export { run } from './lib/run.ts'
-export type { AppRuntime, RunInit } from './lib/run.ts'
+export type { AppRuntime, AppRuntimeEventMap, RunInit } from './lib/run.ts'
+export type { ComponentErrorEvent } from './lib/error-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
 export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
