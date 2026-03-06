@@ -1,0 +1,1 @@
+no transform component option via htm patterns

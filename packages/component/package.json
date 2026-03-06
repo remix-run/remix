@@ -23,6 +23,7 @@
     "./server": "./src/server.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./tag": "./src/tag.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -42,6 +43,10 @@
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-dev-runtime.d.ts",
         "default": "./dist/jsx-dev-runtime.js"
+      },
+      "./tag": {
+        "types": "./dist/tag.d.ts",
+        "default": "./dist/tag.js"
       },
       "./package.json": "./package.json"
     }
