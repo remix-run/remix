@@ -347,10 +347,6 @@ code {
   font-family: var(--primary-font);
 }
 
-ul {
-  padding-left: var(--spacing-large);
-}
-
 /* Styling */
 .container {
   background-color: var(--surface-level-4-color);
@@ -384,10 +380,6 @@ ul {
       font-size: calc(var(--nav-heading-size) * 1.33);
       padding: var(--spacing-small) 0;
     }
-  }
-
-  .items {
-    padding-left: var(--spacing-medium);
   }
 
   p {
