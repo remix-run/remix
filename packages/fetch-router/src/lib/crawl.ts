@@ -5,7 +5,7 @@ const BASE_URL = 'http://localhost'
 
 export interface CrawlResult {
   pathname: string
-  filePath: string
+  filepath: string
   response: Response
 }
 
@@ -64,7 +64,7 @@ export async function* runCrawl(
 
     if (isHtml) {
       // Pass a clone so we can read the body for parsing
-      yield { pathname: urlPath, filePath: getHtmlFilepath(urlPath), response: response.clone() }
+      yield { pathname: urlPath, filepath: getHtmlFilepath(urlPath), response: response.clone() }
 
       let elements = parse(await response.text())
 
@@ -76,7 +76,7 @@ export async function* runCrawl(
         toQueue.push(...extractLinkPaths(elements, urlPath, filter))
       }
     } else {
-      yield { pathname: urlPath, filePath: urlPath, response }
+      yield { pathname: urlPath, filepath: urlPath, response }
     }
 
     // Queue any path variants returned by the variants callback

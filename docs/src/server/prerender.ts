@@ -57,8 +57,8 @@ let crawlOpts: CrawlOptions = {
 
 for await (let result of docsRouter.crawl(crawlOpts)) {
   // Output files
-  let { pathname, filePath, response } = result
-  let outputPath = path.join(outputDir, filePath)
+  let { pathname, filepath, response } = result
+  let outputPath = path.join(outputDir, filepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
   await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
   console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)

@@ -21,8 +21,8 @@ describe('router.crawl()', () => {
     router.get('/', () => html('hello'))
 
     let visited: [string, string, string][] = []
-    for await (let { pathname, filePath, response } of router.crawl()) {
-      visited.push([pathname, filePath, await response.text()])
+    for await (let { pathname, filepath, response } of router.crawl()) {
+      visited.push([pathname, filepath, await response.text()])
     }
     assert.deepEqual(visited, [['/', '/index.html', 'hello']])
   })
@@ -33,8 +33,10 @@ describe('router.crawl()', () => {
     router.get('/b', () => html('B'))
 
     let visited: [string, string, string][] = []
-    for await (let { pathname, filePath, response } of router.crawl({ paths: ['/a', '/b'] })) {
-      visited.push([pathname, filePath, await response.text()])
+    for await (let { pathname, filepath, response } of router.crawl({
+      paths: ['/a', '/b'],
+    })) {
+      visited.push([pathname, filepath, await response.text()])
     }
     assert.deepEqual(visited, [
       ['/a', '/a/index.html', 'A'],
@@ -51,10 +53,10 @@ describe('router.crawl()', () => {
     router.get('/app.js', () => js('console.log()'))
 
     let filePaths: string[] = []
-    for await (let { filePath } of router.crawl({
+    for await (let { filepath } of router.crawl({
       paths: ['/', '/about', '/about/', '/style.css', '/app.js'],
     })) {
-      filePaths.push(filePath)
+      filePaths.push(filepath)
     }
     assert.deepEqual(filePaths, [
       '/index.html',
