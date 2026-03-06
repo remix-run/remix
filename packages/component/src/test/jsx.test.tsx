@@ -4,6 +4,9 @@ import type { Handle } from '../lib/component'
 import { animateLayout, createMixin, on, ref } from '../index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
+type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+type NormalizedMix<mix> = Array<MixItem<Exclude<mix, undefined>>> | undefined
+
 describe('jsx', () => {
   it('creates an element', () => {
     let element = <div>Hello, world!</div>
@@ -95,6 +98,28 @@ describe('jsx', () => {
       }
 
       let good = <Counter setup={10} label="Count" />
+    })
+
+    it('accepts single or array mix values for component JSX while render props see arrays', () => {
+      let passthrough = createMixin((_handle) => {})
+
+      function Button() {
+        return (props: Props<'button'>) => {
+          type normalizedMix = Assert<
+            Equal<typeof props.mix, NormalizedMix<JSX.IntrinsicElements['button']['mix']>>
+          >
+          return <button {...props} />
+        }
+      }
+
+      let descriptor = passthrough()
+      let withSingle = <Button mix={descriptor} />
+      let withArray = <Button mix={[descriptor]} />
+      let withoutMix = <Button />
+
+      expect(withSingle.props.mix).toEqual([descriptor])
+      expect(withArray.props.mix).toEqual([descriptor])
+      expect(withoutMix.props.mix).toBeUndefined()
     })
   })
 
