@@ -66,7 +66,9 @@ type ExpandMixProp<props> = props extends { mix?: infer mix }
  *   size: "sm" | "md" | "lg"
  * }
  */
-export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<JSX.IntrinsicElements[T]>
+export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
+  JSX.IntrinsicElements[T]
+>
 
 export function jsx(type: string, props: ElementProps, key?: string): RemixElement
 export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
