@@ -3,14 +3,14 @@ import { css } from 'remix/component'
 export function SettingsIndexPage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Settings overview</h2>
-      <p mix={[descriptionStyle]}>
+      <h2 mix={titleStyle}>Settings overview</h2>
+      <p mix={descriptionStyle}>
         Configure your LMS experience, from profile details to grading visibility and connected
         learning tools.
       </p>
-      <div mix={[cardStyle]}>
-        <p mix={[cardTitleStyle]}>Recommended setup</p>
-        <p mix={[cardBodyStyle]}>
+      <div mix={cardStyle}>
+        <p mix={cardTitleStyle}>Recommended setup</p>
+        <p mix={cardBodyStyle}>
           Complete profile, enable deadline reminders, and review privacy controls at least once
           this semester.
         </p>

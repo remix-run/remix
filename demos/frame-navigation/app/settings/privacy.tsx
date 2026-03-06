@@ -3,20 +3,20 @@ import { css } from 'remix/component'
 export function SettingsPrivacyPage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Privacy</h2>
-      <p mix={[descriptionStyle]}>
+      <h2 mix={titleStyle}>Privacy</h2>
+      <p mix={descriptionStyle}>
         Control what activity and profile details are visible to classmates and collaborators.
       </p>
-      <div mix={[cardStyle]}>
-        <p mix={[rowStyle]}>
+      <div mix={cardStyle}>
+        <p mix={rowStyle}>
           <span>Show course progress to classmates</span>
           <strong>Off</strong>
         </p>
-        <p mix={[rowStyle]}>
+        <p mix={rowStyle}>
           <span>Allow direct messages from peers</span>
           <strong>On</strong>
         </p>
-        <p mix={[rowStyle]}>
+        <p mix={rowStyle}>
           <span>Display email in group projects</span>
           <strong>Off</strong>
         </p>

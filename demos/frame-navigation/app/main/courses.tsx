@@ -3,17 +3,17 @@ import { css } from 'remix/component'
 export function MainCoursesPage() {
   return () => (
     <section>
-      <h1 mix={[titleStyle]}>Courses</h1>
-      <p mix={[descriptionStyle]}>Continue where you left off in each course track.</p>
+      <h1 mix={titleStyle}>Courses</h1>
+      <p mix={descriptionStyle}>Continue where you left off in each course track.</p>
 
-      <ul mix={[courseListStyle]}>
-        <li mix={[courseItemStyle]}>
+      <ul mix={courseListStyle}>
+        <li mix={courseItemStyle}>
           Introduction to Product Design
         </li>
-        <li mix={[courseItemStyle]}>
+        <li mix={courseItemStyle}>
           Applied Statistics for Engineers
         </li>
-        <li mix={[courseItemStyle]}>
+        <li mix={courseItemStyle}>
           Web Accessibility Foundations
         </li>
       </ul>

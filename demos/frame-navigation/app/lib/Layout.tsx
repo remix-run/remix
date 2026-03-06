@@ -28,14 +28,14 @@ export function Layout() {
         <title>{title} | LMS</title>
         <script async type="module" src="/assets/entry.js" />
       </head>
-      <body mix={[bodyStyle]}>
-        <div mix={[appShellStyle]}>
-          <aside mix={[sidebarStyle]}>
-            <a href={routes.main.index.href()} mix={[brandLinkStyle]}>
+      <body mix={bodyStyle}>
+        <div mix={appShellStyle}>
+          <aside mix={sidebarStyle}>
+            <a href={routes.main.index.href()} mix={brandLinkStyle}>
               Atlas LMS
             </a>
-            <p mix={[sidebarSubtitleStyle]}>Student workspace</p>
-            <nav mix={[navStyle]}>
+            <p mix={sidebarSubtitleStyle}>Student workspace</p>
+            <nav mix={navStyle}>
               {navItems.map((item) => (
                 <a
                   href={item.href}
@@ -47,9 +47,9 @@ export function Layout() {
             </nav>
           </aside>
 
-          <main mix={[mainStyle]}>
-            <header mix={[mainHeaderStyle]}>
-              <h1 mix={[mainTitleStyle]}>{title}</h1>
+          <main mix={mainStyle}>
+            <header mix={mainHeaderStyle}>
+              <h1 mix={mainTitleStyle}>{title}</h1>
             </header>
             {children}
           </main>

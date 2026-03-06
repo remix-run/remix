@@ -3,16 +3,16 @@ import { css } from 'remix/component'
 export function MainAccountPage() {
   return () => (
     <section>
-      <h1 mix={[titleStyle]}>Account</h1>
-      <p mix={[descriptionStyle]}>Manage your profile, enrollment details, and contact preferences.</p>
+      <h1 mix={titleStyle}>Account</h1>
+      <p mix={descriptionStyle}>Manage your profile, enrollment details, and contact preferences.</p>
 
-      <dl mix={[detailsGridStyle]}>
-        <dt mix={[termStyle]}>Name</dt>
-        <dd mix={[definitionStyle]}>Riley Student</dd>
-        <dt mix={[termStyle]}>Program</dt>
-        <dd mix={[definitionStyle]}>Human Computer Interaction</dd>
-        <dt mix={[termStyle]}>Expected graduation</dt>
-        <dd mix={[definitionStyle]}>May 2027</dd>
+      <dl mix={detailsGridStyle}>
+        <dt mix={termStyle}>Name</dt>
+        <dd mix={definitionStyle}>Riley Student</dd>
+        <dt mix={termStyle}>Program</dt>
+        <dd mix={definitionStyle}>Human Computer Interaction</dd>
+        <dt mix={termStyle}>Expected graduation</dt>
+        <dd mix={definitionStyle}>May 2027</dd>
       </dl>
     </section>
   )

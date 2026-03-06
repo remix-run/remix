@@ -3,20 +3,20 @@ import { css } from 'remix/component'
 export function SettingsGradingPage() {
   return () => (
     <section>
-      <h2 mix={[titleStyle]}>Grading</h2>
-      <p mix={[descriptionStyle]}>
+      <h2 mix={titleStyle}>Grading</h2>
+      <p mix={descriptionStyle}>
         Set grading display preferences and default rubric visibility for your courses.
       </p>
-      <div mix={[cardStyle]}>
-        <p mix={[settingStyle]}>
+      <div mix={cardStyle}>
+        <p mix={settingStyle}>
           <span>Default grade format</span>
           <strong>Percentage + Letter</strong>
         </p>
-        <p mix={[settingStyle]}>
+        <p mix={settingStyle}>
           <span>Show running course average</span>
           <strong>Enabled</strong>
         </p>
-        <p mix={[settingStyle]}>
+        <p mix={settingStyle}>
           <span>Rubric criteria expanded by default</span>
           <strong>Enabled</strong>
         </p>

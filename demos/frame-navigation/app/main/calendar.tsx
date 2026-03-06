@@ -3,13 +3,13 @@ import { css } from 'remix/component'
 export function MainCalendarPage() {
   return () => (
     <section>
-      <h1 mix={[titleStyle]}>Calendar</h1>
-      <p mix={[descriptionStyle]}>Track class sessions, assignment due dates, and office hours.</p>
+      <h1 mix={titleStyle}>Calendar</h1>
+      <p mix={descriptionStyle}>Track class sessions, assignment due dates, and office hours.</p>
 
-      <div mix={[cardStyle]}>
-        <p mix={[cardTitleStyle]}>Today</p>
-        <p mix={[eventFirstStyle]}>11:00 AM - UX Research Workshop</p>
-        <p mix={[eventNextStyle]}>
+      <div mix={cardStyle}>
+        <p mix={cardTitleStyle}>Today</p>
+        <p mix={eventFirstStyle}>11:00 AM - UX Research Workshop</p>
+        <p mix={eventNextStyle}>
           3:30 PM - Intro to Accessibility Quiz
         </p>
       </div>
