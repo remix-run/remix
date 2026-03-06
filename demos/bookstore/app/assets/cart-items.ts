@@ -92,7 +92,7 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                   method="POST"
                   action=${routes.cart.api.update.href()}
                   mix=${[
-                    on('submit', async (event, signal) => {
+                    on<HTMLFormElement, 'submit'>('submit', async (event, signal) => {
                       event.preventDefault()
                       await submit(event.currentTarget, signal, {
                         type: 'update',
@@ -137,7 +137,7 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                   method="POST"
                   action=${routes.cart.api.remove.href()}
                   mix=${[
-                    on('submit', async (event, signal) => {
+                    on<HTMLFormElement, 'submit'>('submit', async (event, signal) => {
                       event.preventDefault()
                       await submit(event.currentTarget, signal, {
                         type: 'remove',

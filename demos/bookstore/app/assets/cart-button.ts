@@ -12,7 +12,7 @@ export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
     html`<button
       type="button"
       mix=${[
-        on('click', async (_event, signal) => {
+        on<HTMLButtonElement, 'click'>('click', async (_event, signal) => {
           pending = true
           handle.update()
 

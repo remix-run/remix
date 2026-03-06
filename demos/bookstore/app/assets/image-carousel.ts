@@ -49,33 +49,34 @@ export const ImageCarousel = clientEntry(
           ]}
           style=${{ transform: `translateX(-${index * 100}%)` }}
         >
-          ${images.map((src, i) =>
-            html`<div
-              key=${src + i}
-              mix=${[
-                css({
-                  minWidth: '100%',
-                  height: '100%',
-                  position: 'relative',
-                }),
-              ]}
-            >
-              <img
-                src=${src}
-                alt=${`Image ${i + 1} of ${total}`}
+          ${images.map(
+            (src, i) =>
+              html`<div
+                key=${src + i}
                 mix=${[
                   css({
-                    width: '100%',
+                    minWidth: '100%',
                     height: '100%',
-                    objectFit: 'cover',
-                    display: 'block',
-                    userSelect: 'none',
-                    pointerEvents: 'none',
+                    position: 'relative',
                   }),
                 ]}
-                draggable=${false}
-              />
-            </div>`,
+              >
+                <img
+                  src=${src}
+                  alt=${`Image ${i + 1} of ${total}`}
+                  mix=${[
+                    css({
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                    }),
+                  ]}
+                  draggable=${false}
+                />
+              </div>`,
           )}
         </div>
 
@@ -83,7 +84,7 @@ export const ImageCarousel = clientEntry(
           aria-label="Previous image"
           disabled=${index === 0}
           mix=${[
-            on('click', () => goPrev(total)),
+            on<HTMLButtonElement, 'click'>('click', () => goPrev(total)),
             css({
               position: 'absolute',
               top: '50%',
@@ -112,7 +113,7 @@ export const ImageCarousel = clientEntry(
           aria-label="Next image"
           disabled=${index === total - 1}
           mix=${[
-            on('click', () => goNext(total)),
+            on<HTMLButtonElement, 'click'>('click', () => goNext(total)),
             css({
               position: 'absolute',
               top: '50%',
