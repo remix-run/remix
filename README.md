@@ -37,27 +37,36 @@ The benefit is code that's not just reusable, but **future-proof**.
 We currently publish the following packages:
 
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
-- [component](packages/component): A minimal component system that leans on JavaScript and DOM primitives
+- [component](packages/component): UI components for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
+- [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
+- [data-table](packages/data-table): A typed, relational query toolkit for Remix
+- [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
+- [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
+- [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
 - [fetch-router](packages/fetch-router): A minimal, composable router for the web Fetch API
 - [file-storage](packages/file-storage): Key/value storage for JavaScript File objects
+- [file-storage-s3](packages/file-storage-s3): S3 backend for remix/file-storage
 - [form-data-middleware](packages/form-data-middleware): Middleware for parsing FormData from request bodies
 - [form-data-parser](packages/form-data-parser): A request.formData() wrapper with streaming file upload handling
 - [fs](packages/fs): Filesystem utilities using the Web File API
 - [headers](packages/headers): A toolkit for working with HTTP headers in JavaScript
 - [html-template](packages/html-template): HTML template tag with auto-escaping for JavaScript
-- [interaction](packages/interaction): Like components but for events
 - [lazy-file](packages/lazy-file): Lazy, streaming files for JavaScript
 - [logger-middleware](packages/logger-middleware): Middleware for logging HTTP requests and responses
 - [method-override-middleware](packages/method-override-middleware): Middleware for overriding HTTP request methods from form data
-- [mime](packages/mime): Utilities for dealing with MIME types
+- [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [remix](packages/remix): Remix Web Framework
+- [response](packages/response): Response helpers for the web Fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
 - [session](packages/session): Session management for JavaScript
 - [session-middleware](packages/session-middleware): Middleware for managing sessions with cookie-based storage
+- [session-storage-memcache](packages/session-storage-memcache): Memcache session storage for remix/session
+- [session-storage-redis](packages/session-storage-redis): Redis session storage for remix/session
 - [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 

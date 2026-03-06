@@ -1,6 +1,6 @@
 # session-middleware
 
-Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it on `context.session`, and persists updates automatically.
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, stores it in request context using `Session`, and persists updates automatically.
 
 ## Features
 
@@ -19,6 +19,7 @@ npm i remix
 ```ts
 import { createRouter } from 'remix/fetch-router'
 import { createCookie } from 'remix/cookie'
+import { Session } from 'remix/session'
 import { createCookieSessionStorage } from 'remix/session/cookie-storage'
 import { session } from 'remix/session-middleware'
 
@@ -36,15 +37,16 @@ let router = createRouter({
 })
 
 router.get('/', (context) => {
-  context.session.set('count', Number(context.session.get('count') ?? 0) + 1)
-  return new Response(`Count: ${context.session.get('count')}`)
+  let session = context.get(Session)
+  session.set('count', Number(session.get('count') ?? 0) + 1)
+  return new Response(`Count: ${session.get('count')}`)
 })
 ```
 
 The middleware:
 
 - Reads the session from the cookie on incoming requests
-- Makes it available as `context.session`
+- Makes it available as `context.get(Session)`
 - Automatically saves session changes and sets the cookie on responses
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
@@ -55,8 +57,10 @@ A basic login/logout flow could look like this:
 
 ```ts
 import * as res from 'remix/fetch-router/response-helpers'
+import { Session } from 'remix/session'
 
-router.get('/login', ({ session }) => {
+router.get('/login', ({ get }) => {
+  let session = get(Session)
   let error = session.get('error')
   return res.html(`
     <html>
@@ -73,7 +77,9 @@ router.get('/login', ({ session }) => {
   `)
 })
 
-router.post('/login', ({ session, formData }) => {
+router.post('/login', ({ get }) => {
+  let session = get(Session)
+  let formData = get(FormData)
   let username = formData.get('username')
   let password = formData.get('password')
 
@@ -89,7 +95,8 @@ router.post('/login', ({ session, formData }) => {
   return res.redirect('/dashboard')
 })
 
-router.post('/logout', ({ session }) => {
+router.post('/logout', ({ get }) => {
+  let session = get(Session)
   session.destroy()
   return res.redirect('/')
 })

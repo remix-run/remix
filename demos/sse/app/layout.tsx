@@ -1,11 +1,11 @@
-import type { Remix } from '@remix-run/dom'
+import { css, type RemixNode } from 'remix/component'
 
 import { routes } from './routes.ts'
 
-const css = String.raw
+const rawCss = String.raw
 
-export function Layout({ children }: { children?: Remix.RemixNode }): Remix.RemixNode {
-  return (
+export function Layout() {
+  return ({ children }: { children?: RemixNode }) => (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
@@ -13,7 +13,7 @@ export function Layout({ children }: { children?: Remix.RemixNode }): Remix.Remi
         <title>Server-Sent Events Demo</title>
         <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
         <style>
-          {css`
+          {rawCss`
             @layer reset {
               * {
                 box-sizing: border-box;
@@ -46,14 +46,16 @@ export function Layout({ children }: { children?: Remix.RemixNode }): Remix.Remi
         </style>
       </head>
       <body
-        css={{
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          lineHeight: 1.5,
-          padding: '2rem',
-          maxWidth: '800px',
-          margin: '0 auto',
-          background: '#f5f5f5',
-        }}
+        mix={[
+          css({
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            lineHeight: 1.5,
+            padding: '2rem',
+            maxWidth: '800px',
+            margin: '0 auto',
+            background: '#f5f5f5',
+          }),
+        ]}
       >
         {children}
       </body>

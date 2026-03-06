@@ -1,4 +1,5 @@
 import type { BuildAction, Controller } from 'remix/fetch-router'
+import { css } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
@@ -27,7 +28,7 @@ export let home: BuildAction<'GET', typeof routes.home> = {
       <Layout>
         <div class="card">
           <h1>Welcome to the Bookstore</h1>
-          <p css={{ margin: '1rem 0' }}>
+          <p mix={[css({ margin: '1rem 0' })]}>
             Discover your next favorite book from our curated collection of fiction, non-fiction,
             and more.
           </p>
@@ -38,7 +39,7 @@ export let home: BuildAction<'GET', typeof routes.home> = {
           </p>
         </div>
 
-        <h2 css={{ margin: '2rem 0 1rem' }}>Featured Books</h2>
+        <h2 mix={[css({ margin: '2rem 0 1rem' })]}>Featured Books</h2>
         <div class="grid">
           {featuredBooks.map((book) => {
             let inCart = cart.items.some((item) => item.slug === book.slug)
@@ -58,15 +59,15 @@ export let about: BuildAction<'GET', typeof routes.about> = {
       <Layout>
         <div class="card">
           <h1>About Our Bookstore</h1>
-          <p css={{ margin: '1rem 0' }}>
+          <p mix={[css({ margin: '1rem 0' })]}>
             Welcome to our online bookstore, a demo application built to showcase the capabilities
             of
             <strong>fetch-router</strong> - a powerful, type-safe routing library for web
             applications.
           </p>
 
-          <h2 css={{ margin: '1.5rem 0 0.5rem' }}>What This Demo Shows</h2>
-          <ul css={{ marginLeft: '2rem', lineHeight: 2 }}>
+          <h2 mix={[css({ margin: '1.5rem 0 0.5rem' })]}>What This Demo Shows</h2>
+          <ul mix={[css({ marginLeft: '2rem', lineHeight: 2 })]}>
             <li>
               <strong>Resource Routes:</strong> Full RESTful CRUD operations
             </li>
@@ -87,21 +88,21 @@ export let about: BuildAction<'GET', typeof routes.about> = {
             </li>
           </ul>
 
-          <h2 css={{ margin: '1.5rem 0 0.5rem' }}>Try It Out</h2>
-          <p css={{ margin: '1rem 0' }}>
+          <h2 mix={[css({ margin: '1.5rem 0 0.5rem' })]}>Try It Out</h2>
+          <p mix={[css({ margin: '1rem 0' })]}>
             Explore the site to see all these features in action. You can browse books, create an
             account, add items to your cart, and even access the admin panel (login as
             admin@bookstore.com / admin123).
           </p>
 
-          <p css={{ marginTop: '2rem' }}>
+          <p mix={[css({ marginTop: '2rem' })]}>
             <a href={routes.books.index.href()} class="btn">
               Explore Books
             </a>
             <a
               href={routes.auth.register.index.href()}
               class="btn btn-secondary"
-              css={{ marginLeft: '1rem' }}
+              mix={[css({ marginLeft: '1rem' })]}
             >
               Create Account
             </a>
@@ -120,7 +121,7 @@ export let contact: Controller<typeof routes.contact> = {
         <Layout>
           <div class="card">
             <h1>Contact Us</h1>
-            <p css={{ margin: '1rem 0' }}>
+            <p mix={[css({ margin: '1rem 0' })]}>
               Have a question or feedback? We'd love to hear from you!
             </p>
 
@@ -188,14 +189,18 @@ export let search: BuildAction<'GET', typeof routes.search> = {
       <Layout>
         <h1>Search Results</h1>
 
-        <div class="card" css={{ marginBottom: '2rem' }}>
-          <form action={routes.search.href()} method="GET" css={{ display: 'flex', gap: '0.5rem' }}>
+        <div class="card" mix={[css({ marginBottom: '2rem' })]}>
+          <form
+            action={routes.search.href()}
+            method="GET"
+            mix={[css({ display: 'flex', gap: '0.5rem' })]}
+          >
             <input
               type="search"
               name="q"
               placeholder="Search books..."
               value={query}
-              css={{ flex: 1, padding: '0.5rem' }}
+              mix={[css({ flex: 1, padding: '0.5rem' })]}
             />
             <button type="submit" class="btn">
               Search
@@ -204,7 +209,7 @@ export let search: BuildAction<'GET', typeof routes.search> = {
         </div>
 
         {query ? (
-          <p css={{ marginBottom: '1rem' }}>
+          <p mix={[css({ marginBottom: '1rem' })]}>
             Found {matchingBooks.length} result(s) for "{query}"
           </p>
         ) : null}

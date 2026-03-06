@@ -1,4 +1,4 @@
-import { type Handle, clientEntry } from 'remix/component'
+import { css, type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
@@ -58,7 +58,7 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
     return (
       <>
         {isPending ? (
-          <p css={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+          <p mix={[css({ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' })]}>
             Updating your cart...
           </p>
         ) : null}
@@ -92,16 +92,16 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                     <form
                       method="POST"
                       action={routes.cart.api.update.href()}
-                      on={{
-                        async submit(event, signal) {
+                      mix={[
+                        on('submit', async (event, signal) => {
                           event.preventDefault()
                           await submit(event.currentTarget, signal, {
                             type: 'update',
                             bookId: item.bookId,
                           })
-                        },
-                      }}
-                      css={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}
+                        }),
+                        css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }),
+                      ]}
                     >
                       <input type="hidden" name="_method" value="PUT" />
                       <input type="hidden" name="bookId" value={item.bookId} />
@@ -109,22 +109,24 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                       <input
                         type="number"
                         name="quantity"
-                        value={item.quantity}
+                        defaultValue={item.quantity}
                         min="1"
                         disabled={isPending}
-                        css={{ width: '70px' }}
+                        mix={[css({ width: '70px' })]}
                       />
 
                       <button
                         type="submit"
                         disabled={isPending}
                         class="btn btn-secondary"
-                        css={{
-                          fontSize: '0.875rem',
-                          padding: '0.25rem 0.5rem',
-                          minWidth: '6.25rem',
-                          textAlign: 'center',
-                        }}
+                        mix={[
+                          css({
+                            fontSize: '0.875rem',
+                            padding: '0.25rem 0.5rem',
+                            minWidth: '6.25rem',
+                            textAlign: 'center',
+                          }),
+                        ]}
                       >
                         {isUpdating ? 'Saving...' : 'Update'}
                       </button>
@@ -137,16 +139,16 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                     <form
                       method="POST"
                       action={routes.cart.api.remove.href()}
-                      on={{
-                        async submit(event, signal) {
+                      mix={[
+                        on('submit', async (event, signal) => {
                           event.preventDefault()
                           await submit(event.currentTarget, signal, {
                             type: 'remove',
                             bookId: item.bookId,
                           })
-                        },
-                      }}
-                      css={{ display: 'inline' }}
+                        }),
+                        css({ display: 'inline' }),
+                      ]}
                     >
                       <input type="hidden" name="_method" value="DELETE" />
                       <input type="hidden" name="bookId" value={item.bookId} />
@@ -155,12 +157,14 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
                         type="submit"
                         disabled={isPending}
                         class="btn btn-danger"
-                        css={{
-                          fontSize: '0.875rem',
-                          padding: '0.25rem 0.5rem',
-                          minWidth: '7rem',
-                          textAlign: 'center',
-                        }}
+                        mix={[
+                          css({
+                            fontSize: '0.875rem',
+                            padding: '0.25rem 0.5rem',
+                            minWidth: '7rem',
+                            textAlign: 'center',
+                          }),
+                        ]}
                       >
                         {isRemoving ? 'Removing...' : 'Remove'}
                       </button>
@@ -172,8 +176,10 @@ export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
           </tbody>
         </table>
 
-        <div css={{ marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <p css={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' }}>
+        <div mix={[css({ marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' })]}>
+          <p
+            mix={[css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })]}
+          >
             Total: {totalLabel}
           </p>
 

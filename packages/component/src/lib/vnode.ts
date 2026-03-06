@@ -1,4 +1,3 @@
-import type { EventsContainer } from '@remix-run/interaction'
 import type { ComponentHandle, Component } from './component.ts'
 import { Fragment, Frame } from './component.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
@@ -17,14 +16,16 @@ export type VNodeType =
 export type VNode<T extends VNodeType = VNodeType> = {
   type: T
   props?: ElementProps
+  _mixedProps?: ElementProps
   key?: string
 
   // _prefixes assigned during reconciliation
   _parent?: VNode
   _children?: VNode[]
   _dom?: unknown
-  _events?: EventsContainer<EventTarget>
   _controller?: AbortController
+  _mixState?: unknown
+  _controlledState?: unknown
   _svg?: boolean
   // Range roots render between comment boundary markers
   _rangeStart?: Node
@@ -48,10 +49,10 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _id?: string
   _content?: VNode
 
-  // Presence animation
-  _animation?: Animation
-  _exiting?: boolean
-  _exitingParent?: ParentNode
+  // Mixin-persisted node removal state
+  _persistedByMixins?: boolean
+  _persistedParentByMixins?: ParentNode
+  _persistedRemovalToken?: number
 }
 
 export type FragmentNode = VNode & {
@@ -77,7 +78,6 @@ export type HostNode = VNode & {
 export type CommittedHostNode = HostNode & {
   _dom: Element
   _controller?: AbortController
-  _events?: EventsContainer<EventTarget>
 }
 
 export type ComponentNode = VNode & {

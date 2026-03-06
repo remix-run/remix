@@ -24,6 +24,26 @@ export type CreateReleaseResult =
   | { status: 'error'; error: string }
 
 /**
+ * Check if a GitHub release exists for a tag.
+ */
+export async function releaseExists(tag: string): Promise<boolean> {
+  try {
+    await request('GET /repos/{owner}/{repo}/releases/tags/{tag}', {
+      ...auth(),
+      owner,
+      repo,
+      tag,
+    })
+    return true
+  } catch (error) {
+    if (error instanceof Error && 'status' in error && error.status === 404) {
+      return false
+    }
+    throw error
+  }
+}
+
+/**
  * Creates a GitHub release for a package version.
  * Returns a result object indicating success, already exists, or error.
  */
@@ -54,22 +74,13 @@ export async function createRelease(
     return { status: 'skipped', reason: 'Preview mode' }
   }
 
-  // Check if release already exists
   try {
-    await request('GET /repos/{owner}/{repo}/releases/tags/{tag}', {
-      ...auth(),
-      owner,
-      repo,
-      tag: tagName,
-    })
-    // Release exists, skip creation
-    return { status: 'skipped', reason: 'Already exists' }
-  } catch (error) {
-    // Only proceed if release doesn't exist (404)
-    if (!(error instanceof Error && 'status' in error && error.status === 404)) {
-      let message = error instanceof Error ? error.message : String(error)
-      return { status: 'error', error: message }
+    if (await releaseExists(tagName)) {
+      return { status: 'skipped', reason: 'Already exists' }
     }
+  } catch (error) {
+    let message = error instanceof Error ? error.message : String(error)
+    return { status: 'error', error: message }
   }
 
   try {

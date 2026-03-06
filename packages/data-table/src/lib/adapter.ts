@@ -33,7 +33,7 @@ export type ReturningSelection = '*' | string[]
 /**
  * Canonical select statement shape consumed by adapters.
  */
-export type SelectStatement<table extends AnyTable = AnyTable> = {
+export type SelectOperation<table extends AnyTable = AnyTable> = {
   kind: 'select'
   table: table
   select: '*' | SelectColumn[]
@@ -50,7 +50,7 @@ export type SelectStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical count statement shape consumed by adapters.
  */
-export type CountStatement<table extends AnyTable = AnyTable> = {
+export type CountOperation<table extends AnyTable = AnyTable> = {
   kind: 'count'
   table: table
   joins: JoinClause[]
@@ -62,7 +62,7 @@ export type CountStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical exists statement shape consumed by adapters.
  */
-export type ExistsStatement<table extends AnyTable = AnyTable> = {
+export type ExistsOperation<table extends AnyTable = AnyTable> = {
   kind: 'exists'
   table: table
   joins: JoinClause[]
@@ -74,7 +74,7 @@ export type ExistsStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical insert statement shape consumed by adapters.
  */
-export type InsertStatement<table extends AnyTable = AnyTable> = {
+export type InsertOperation<table extends AnyTable = AnyTable> = {
   kind: 'insert'
   table: table
   values: Record<string, unknown>
@@ -84,7 +84,7 @@ export type InsertStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical bulk-insert statement shape consumed by adapters.
  */
-export type InsertManyStatement<table extends AnyTable = AnyTable> = {
+export type InsertManyOperation<table extends AnyTable = AnyTable> = {
   kind: 'insertMany'
   table: table
   values: Record<string, unknown>[]
@@ -94,7 +94,7 @@ export type InsertManyStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical update statement shape consumed by adapters.
  */
-export type UpdateStatement<table extends AnyTable = AnyTable> = {
+export type UpdateOperation<table extends AnyTable = AnyTable> = {
   kind: 'update'
   table: table
   changes: Record<string, unknown>
@@ -105,7 +105,7 @@ export type UpdateStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical delete statement shape consumed by adapters.
  */
-export type DeleteStatement<table extends AnyTable = AnyTable> = {
+export type DeleteOperation<table extends AnyTable = AnyTable> = {
   kind: 'delete'
   table: table
   where: Predicate[]
@@ -115,7 +115,7 @@ export type DeleteStatement<table extends AnyTable = AnyTable> = {
 /**
  * Canonical upsert statement shape consumed by adapters.
  */
-export type UpsertStatement<table extends AnyTable = AnyTable> = {
+export type UpsertOperation<table extends AnyTable = AnyTable> = {
   kind: 'upsert'
   table: table
   values: Record<string, unknown>
@@ -127,24 +127,308 @@ export type UpsertStatement<table extends AnyTable = AnyTable> = {
 /**
  * Raw SQL statement execution descriptor.
  */
-export type RawStatement = {
+export type RawOperation = {
   kind: 'raw'
   sql: SqlStatement
 }
 
 /**
- * Union of all canonical statement shapes.
+ * Union of all data-manipulation statement shapes.
  */
-export type AdapterStatement =
-  | SelectStatement
-  | CountStatement
-  | ExistsStatement
-  | InsertStatement
-  | InsertManyStatement
-  | UpdateStatement
-  | DeleteStatement
-  | UpsertStatement
-  | RawStatement
+export type DataManipulationOperation =
+  | SelectOperation
+  | CountOperation
+  | ExistsOperation
+  | InsertOperation
+  | InsertManyOperation
+  | UpdateOperation
+  | DeleteOperation
+  | UpsertOperation
+  | RawOperation
+
+export type TableRef = {
+  name: string
+  schema?: string
+}
+
+export type ForeignKeyAction = 'cascade' | 'restrict' | 'set null' | 'set default' | 'no action'
+
+export type ColumnTypeName =
+  | 'varchar'
+  | 'text'
+  | 'integer'
+  | 'bigint'
+  | 'decimal'
+  | 'boolean'
+  | 'uuid'
+  | 'date'
+  | 'time'
+  | 'timestamp'
+  | 'json'
+  | 'binary'
+  | 'enum'
+
+export type ColumnDefault =
+  | { kind: 'literal'; value: unknown }
+  | { kind: 'now' }
+  | { kind: 'sql'; expression: string }
+
+export type ColumnComputed = {
+  expression: string
+  stored: boolean
+}
+
+export type IdentityOptions = {
+  always?: boolean
+  start?: number
+  increment?: number
+}
+
+export type ColumnReference = {
+  table: TableRef
+  columns: string[]
+  name: string
+  onDelete?: ForeignKeyAction
+  onUpdate?: ForeignKeyAction
+}
+
+export type ColumnCheck = {
+  expression: string
+  name: string
+}
+
+export type ColumnDefinition = {
+  type: ColumnTypeName
+  nullable?: boolean
+  primaryKey?: boolean
+  unique?: boolean | { name?: string }
+  default?: ColumnDefault
+  computed?: ColumnComputed
+  references?: ColumnReference
+  checks?: ColumnCheck[]
+  comment?: string
+  length?: number
+  precision?: number
+  scale?: number
+  unsigned?: boolean
+  withTimezone?: boolean
+  enumValues?: string[]
+  autoIncrement?: boolean
+  identity?: IdentityOptions
+  collate?: string
+  charset?: string
+}
+
+export type PrimaryKeyConstraint = {
+  columns: string[]
+  name: string
+}
+
+export type UniqueConstraint = {
+  columns: string[]
+  name: string
+}
+
+export type CheckConstraint = {
+  expression: string
+  name: string
+}
+
+export type ForeignKeyConstraint = {
+  columns: string[]
+  references: {
+    table: TableRef
+    columns: string[]
+  }
+  name: string
+  onDelete?: ForeignKeyAction
+  onUpdate?: ForeignKeyAction
+}
+
+export type IndexMethod = 'btree' | 'hash' | 'gin' | 'gist' | 'fulltext' | (string & {})
+
+export type IndexDefinition = {
+  table: TableRef
+  name: string
+  columns: string[]
+  unique?: boolean
+  where?: string
+  using?: IndexMethod
+}
+
+export type CreateTableOperation = {
+  kind: 'createTable'
+  table: TableRef
+  ifNotExists?: boolean
+  columns: Record<string, ColumnDefinition>
+  primaryKey?: PrimaryKeyConstraint
+  uniques?: UniqueConstraint[]
+  checks?: CheckConstraint[]
+  foreignKeys?: ForeignKeyConstraint[]
+  comment?: string
+}
+
+export type AddColumnChange = {
+  kind: 'addColumn'
+  column: string
+  definition: ColumnDefinition
+}
+
+export type ChangeColumnChange = {
+  kind: 'changeColumn'
+  column: string
+  definition: ColumnDefinition
+}
+
+export type RenameColumnChange = {
+  kind: 'renameColumn'
+  from: string
+  to: string
+}
+
+export type DropColumnChange = {
+  kind: 'dropColumn'
+  column: string
+  ifExists?: boolean
+}
+
+export type AddPrimaryKeyChange = {
+  kind: 'addPrimaryKey'
+  constraint: PrimaryKeyConstraint
+}
+
+export type DropPrimaryKeyChange = {
+  kind: 'dropPrimaryKey'
+  name: string
+}
+
+export type AddUniqueChange = {
+  kind: 'addUnique'
+  constraint: UniqueConstraint
+}
+
+export type DropUniqueChange = {
+  kind: 'dropUnique'
+  name: string
+}
+
+export type AddForeignKeyChange = {
+  kind: 'addForeignKey'
+  constraint: ForeignKeyConstraint
+}
+
+export type DropForeignKeyChange = {
+  kind: 'dropForeignKey'
+  name: string
+}
+
+export type AddCheckChange = {
+  kind: 'addCheck'
+  constraint: CheckConstraint
+}
+
+export type DropCheckChange = {
+  kind: 'dropCheck'
+  name: string
+}
+
+export type SetTableCommentChange = {
+  kind: 'setTableComment'
+  comment: string
+}
+
+export type AlterTableChange =
+  | AddColumnChange
+  | ChangeColumnChange
+  | RenameColumnChange
+  | DropColumnChange
+  | AddPrimaryKeyChange
+  | DropPrimaryKeyChange
+  | AddUniqueChange
+  | DropUniqueChange
+  | AddForeignKeyChange
+  | DropForeignKeyChange
+  | AddCheckChange
+  | DropCheckChange
+  | SetTableCommentChange
+
+export type AlterTableOperation = {
+  kind: 'alterTable'
+  table: TableRef
+  changes: AlterTableChange[]
+  ifExists?: boolean
+}
+
+export type RenameTableOperation = {
+  kind: 'renameTable'
+  from: TableRef
+  to: TableRef
+}
+
+export type DropTableOperation = {
+  kind: 'dropTable'
+  table: TableRef
+  ifExists?: boolean
+  cascade?: boolean
+}
+
+export type CreateIndexOperation = {
+  kind: 'createIndex'
+  index: IndexDefinition
+  ifNotExists?: boolean
+}
+
+export type DropIndexOperation = {
+  kind: 'dropIndex'
+  table: TableRef
+  name: string
+  ifExists?: boolean
+}
+
+export type RenameIndexOperation = {
+  kind: 'renameIndex'
+  table: TableRef
+  from: string
+  to: string
+}
+
+export type AddForeignKeyOperation = {
+  kind: 'addForeignKey'
+  table: TableRef
+  constraint: ForeignKeyConstraint
+}
+
+export type DropForeignKeyOperation = {
+  kind: 'dropForeignKey'
+  table: TableRef
+  name: string
+}
+
+export type AddCheckOperation = {
+  kind: 'addCheck'
+  table: TableRef
+  constraint: CheckConstraint
+}
+
+export type DropCheckOperation = {
+  kind: 'dropCheck'
+  table: TableRef
+  name: string
+}
+
+export type DataMigrationOperation =
+  | CreateTableOperation
+  | AlterTableOperation
+  | RenameTableOperation
+  | DropTableOperation
+  | CreateIndexOperation
+  | DropIndexOperation
+  | RenameIndexOperation
+  | AddForeignKeyOperation
+  | DropForeignKeyOperation
+  | AddCheckOperation
+  | DropCheckOperation
+  | RawOperation
 
 /**
  * Opaque transaction handle supplied by adapters.
@@ -165,18 +449,36 @@ export type TransactionOptions = {
 /**
  * Adapter execution request payload.
  */
-export type AdapterExecuteRequest = {
-  statement: AdapterStatement
+export type DataManipulationRequest = {
+  operation: DataManipulationOperation
   transaction?: TransactionToken
 }
 
 /**
- * Adapter execution result payload.
+ * Adapter migration request payload.
  */
-export type AdapterResult = {
+export type DataMigrationRequest = {
+  operation: DataMigrationOperation
+  transaction?: TransactionToken
+}
+
+/**
+ * Adapter data-manipulation result payload.
+ */
+export type DataManipulationResult = {
   rows?: Record<string, unknown>[]
   affectedRows?: number
   insertId?: unknown
+}
+
+/**
+ * Adapter data-migration result payload.
+ */
+export type DataMigrationResult = {
+  /**
+   * Number of migration operations processed by the adapter call.
+   */
+  affectedOperations?: number
 }
 
 /**
@@ -186,6 +488,8 @@ export type AdapterCapabilities = {
   returning: boolean
   savepoints: boolean
   upsert: boolean
+  transactionalDdl: boolean
+  migrationLock: boolean
 }
 
 /**
@@ -199,11 +503,17 @@ export type AdapterCapabilityOverrides = Pretty<Partial<AdapterCapabilities>>
 export interface DatabaseAdapter {
   dialect: string
   capabilities: AdapterCapabilities
-  execute(request: AdapterExecuteRequest): Promise<AdapterResult>
+  compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[]
+  execute(request: DataManipulationRequest): Promise<DataManipulationResult>
+  migrate(request: DataMigrationRequest): Promise<DataMigrationResult>
+  hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
+  hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean>
   beginTransaction(options?: TransactionOptions): Promise<TransactionToken>
   commitTransaction(token: TransactionToken): Promise<void>
   rollbackTransaction(token: TransactionToken): Promise<void>
   createSavepoint(token: TransactionToken, name: string): Promise<void>
   rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
+  acquireMigrationLock?(): Promise<void>
+  releaseMigrationLock?(): Promise<void>
 }

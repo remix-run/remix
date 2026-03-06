@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-mysql",
-  "version": "0.0.0",
-  "description": "MySQL adapter for @remix-run/data-table",
+  "version": "0.1.0",
+  "description": "MySQL adapter for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,6 @@
     }
   },
   "devDependencies": {
-    "@remix-run/data-schema": "workspace:*",
     "@remix-run/data-table": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",

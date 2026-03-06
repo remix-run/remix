@@ -2,6 +2,23 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.0
+
+### Minor Changes
+
+- Expose `context.router` on request context
+
+  Each router request context now gets the owning `Router` assigned as `context.router` by `createRouter()` when `fetch()` is called. This lets framework helpers read router state directly from `RequestContext` instead of requiring app-level middleware to store the router in `context.storage`.
+
+- Added a new `@remix-run/fetch-router/routes` export exporting route creation utilities
+
+  This has been decoupled from the main `@remix-run/fetch-router` exports so that it can be used by application `routes.ts` files intended to be loaded by the client, without pulling in server-side-specific underlying packages such as `@remix-run/session`.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.19.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.19.0)
+
 ## v0.16.0
 
 ### Minor Changes

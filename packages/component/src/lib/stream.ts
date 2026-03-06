@@ -1,4 +1,3 @@
-import { processStyle } from './style/lib/style.ts'
 import type { ComponentHandle, Key, RemixNode } from './component.ts'
 import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
@@ -107,7 +106,28 @@ const NUMERIC_CSS_PROPS = new Set([
   'column-count',
 ])
 
-const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'css'])
+const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
+const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
+
+function createSsrSignalError() {
+  return new Error('handle.signal is not available during SSR.')
+}
+
+function createSsrThrowingSignal(): AbortSignal {
+  let error = createSsrSignalError()
+  let throwAccess = () => {
+    throw error
+  }
+  return new Proxy({} as AbortSignal, {
+    get: throwAccess,
+    set: throwAccess,
+    has: throwAccess,
+    ownKeys: throwAccess,
+    getOwnPropertyDescriptor: throwAccess,
+    defineProperty: throwAccess,
+    getPrototypeOf: throwAccess,
+  })
+}
 
 export function renderToStream(
   node: RemixNode,
@@ -358,7 +378,8 @@ function buildElementSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let processedProps = processStyleProps(props, context)
+  let mixedProps = resolveSsrMixedProps(tag, props, context)
+  let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
   let attrs = renderAttributes(processedProps, currentIsSvg)
@@ -388,7 +409,7 @@ function buildHeadElementSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let processedProps = processStyleProps(props, context)
+  let processedProps = processStyleProps(props)
   let attrs = renderAttributes(processedProps, false)
   let previousInsideHead = context.insideHead
   context.insideHead = true
@@ -421,6 +442,141 @@ function renderAttributes(props: any, isSvg: boolean): string {
   }
 
   return attrs
+}
+
+function resolveSsrMixedProps(
+  hostType: string,
+  initialProps: ElementProps,
+  context: RenderContext,
+): ElementProps {
+  let descriptors = resolveSsrMixDescriptors(initialProps)
+  if (descriptors.length === 0) return initialProps
+
+  let composedProps = withoutSsrMix(initialProps)
+  let maxDescriptors = 1024
+
+  for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
+    let descriptor = descriptors[index]
+    let runner = resolveSsrMixinRunner(hostType, descriptor, context)
+    if (!runner) continue
+
+    let result: unknown
+    try {
+      result = runner(...descriptor.args, composedProps)
+    } catch (error) {
+      console.error(error)
+      continue
+    }
+
+    if (!result) continue
+    if (isSsrMixinElement(result)) continue
+
+    if (!isRemixElement(result)) {
+      console.error(new Error('mixins must return a remix element'))
+      continue
+    }
+    let remixResult = result
+
+    let resultType =
+      typeof remixResult.type === 'string'
+        ? remixResult.type
+        : isSsrMixinElement(remixResult.type)
+          ? remixResult.type.__rmxMixinElementType
+          : null
+
+    if (resultType !== hostType) {
+      console.error(new Error('mixins must return an element with the same host type'))
+      continue
+    }
+
+    if (remixResult.type !== resultType) {
+      remixResult = { ...remixResult, type: resultType }
+    }
+
+    let nextProps = remixResult.props as ElementProps
+    let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
+    for (let nested of nestedDescriptors) descriptors.push(nested)
+    composedProps = { ...composedProps, ...withoutSsrMix(nextProps) }
+  }
+
+  let nextMix = initialProps.mix
+  return {
+    ...composedProps,
+    ...(nextMix === undefined ? {} : { mix: nextMix }),
+  }
+}
+
+function resolveSsrMixinRunner(
+  hostType: string,
+  descriptor: { type?: unknown; args?: unknown[] },
+  context: RenderContext,
+): ((...args: unknown[]) => unknown) | null {
+  if (typeof descriptor.type !== 'function') return null
+  try {
+    let handle = createSsrMixinHandle(hostType, context)
+    let runner = descriptor.type(handle, hostType)
+    if (typeof runner !== 'function') return null
+    return runner
+  } catch (error) {
+    console.error(error)
+    return null
+  }
+}
+
+function createSsrMixinHandle(hostType: string, context: RenderContext) {
+  let signal = SSR_MIXIN_SIGNAL
+  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
+    $rmx: true as const,
+    type: hostType,
+    key: null,
+    props,
+  })) as ((
+    handle: { update(): Promise<AbortSignal> },
+    setup: unknown,
+  ) => (props: ElementProps) => RemixElement) & {
+    __rmxMixinElementType: string
+  }
+  element.__rmxMixinElementType = hostType
+
+  return {
+    id: 'ssr-mixin',
+    frame: createFrameHandle({
+      src: '',
+      $runtime: {
+        styleCache: context.styleCache,
+      },
+    }),
+    element,
+    signal,
+    update: () => {
+      throw new Error('handle.update() is not available during SSR.')
+    },
+    queueTask: () => {},
+    on: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => true,
+  }
+}
+
+function resolveSsrMixDescriptors(props: ElementProps): Array<{ type: any; args: unknown[] }> {
+  let mix = props.mix
+  if (mix == null || !Array.isArray(mix) || mix.length === 0) return []
+  return [...mix] as Array<{ type: any; args: unknown[] }>
+}
+
+function withoutSsrMix(props: ElementProps): ElementProps {
+  if (!('mix' in props)) return props
+  let output = { ...props }
+  delete output.mix
+  return output
+}
+
+function isSsrMixinElement(
+  value: unknown,
+): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
+  if (typeof value !== 'function') return false
+  return '__rmxMixinElementType' in value
 }
 
 function buildComponentSegment(
@@ -706,18 +862,15 @@ function finalizeHtml(html: string, context: RenderContext): string {
   return html
 }
 
-function processStyleProps(props: any, context: RenderContext): any {
+function processStyleProps(props: any): any {
   let processedProps = { ...props }
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  let mergedClassName = [classAttr, className].filter(Boolean).join(' ')
 
-  if (props.css) {
-    if (typeof props.css === 'object') {
-      let { selector } = processStyle(props.css, context.styleCache)
-      if (selector) {
-        // Style system uses data-css attribute for CSS selectors
-        processedProps['data-css'] = selector
-      }
-    }
-    delete processedProps.css
+  if (mergedClassName) {
+    processedProps.className = mergedClassName
+    delete processedProps.class
   }
 
   if (typeof props.style === 'object') {

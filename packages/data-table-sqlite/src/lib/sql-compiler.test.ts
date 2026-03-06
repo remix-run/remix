@@ -1,10 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
-import { boolean, number, string } from '@remix-run/data-schema'
 import {
   between,
+  column,
   createDatabase,
-  createTable,
+  table,
   eq,
   gt,
   gte,
@@ -17,33 +17,33 @@ import {
   notInList,
   isNull,
   notNull,
-  type AdapterStatement,
+  type DataManipulationOperation,
   type DatabaseAdapter,
   or,
   and,
 } from '@remix-run/data-table'
-import { compileSqliteStatement } from './sql-compiler.ts'
+import { compileSqliteOperation } from './sql-compiler.ts'
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
-    status: string(),
-    deleted: boolean(),
+    id: column.integer(),
+    email: column.text(),
+    status: column.text(),
+    deleted: column.boolean(),
   },
 })
 
-let tasks = createTable({
+let tasks = table({
   name: 'tasks',
   columns: {
-    id: number(),
-    name: string(),
-    account_id: number(),
+    id: column.integer(),
+    name: column.text(),
+    account_id: column.integer(),
   },
 })
 
-let statements: AdapterStatement[] = []
+let statements: DataManipulationOperation[] = []
 
 let fakeAdapter = {
   capabilities: {
@@ -52,16 +52,16 @@ let fakeAdapter = {
   },
 
   execute: async (request) => {
-    statements.push(request.statement)
+    statements.push(request.operation)
     // usefull for update
-    if (request.statement.kind === 'select') {
+    if (request.operation.kind === 'select') {
       return {
         rows: [{ id: 1 }],
       }
     }
 
     // for insert with returning
-    if (request.statement.kind === 'insert' && request.statement.returning) {
+    if (request.operation.kind === 'insert' && request.operation.returning) {
       return {
         rows: [{ id: 10 }],
       }
@@ -79,7 +79,7 @@ describe('sqlite sql-compiler', () => {
   describe('select statement', () => {
     it('compile wildcard selection', async () => {
       await db.query(accounts).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts"',
         values: [],
@@ -94,7 +94,7 @@ describe('sqlite sql-compiler', () => {
           accountEmail: accounts.email,
         })
         .all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select "accounts"."id" as "accountId", "accounts"."email" as "accountEmail" from "accounts"',
         values: [],
@@ -104,7 +104,7 @@ describe('sqlite sql-compiler', () => {
     it('compile inner join', async () => {
       await db.query(accounts).join(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" inner join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -114,7 +114,7 @@ describe('sqlite sql-compiler', () => {
     it('compile left join', async () => {
       await db.query(accounts).leftJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" left join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -124,7 +124,7 @@ describe('sqlite sql-compiler', () => {
     it('compile right join', async () => {
       await db.query(accounts).rightJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" right join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -133,7 +133,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile empty where', async () => {
       await db.query(accounts).where({}).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (1 = 1)',
         values: [],
@@ -142,7 +142,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile eq where - filled', async () => {
       await db.query(accounts).where({ status: 'enabled' }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" = ?))',
         values: ['enabled'],
@@ -151,7 +151,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile eq where - null', async () => {
       await db.query(accounts).where({ status: null }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" is null))',
         values: [],
@@ -160,7 +160,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile eq where - undefined', async () => {
       await db.query(accounts).where({ status: undefined }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" is null))',
         values: [],
@@ -169,7 +169,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile ne where - filled', async () => {
       await db.query(accounts).where(ne('status', 'enabled')).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" <> ?)',
         values: ['enabled'],
@@ -178,7 +178,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile ne where - null', async () => {
       await db.query(accounts).where(ne('status', null)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" is not null)',
         values: [],
@@ -187,7 +187,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile ne where - undefined', async () => {
       await db.query(accounts).where(ne('status', undefined)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" is not null)',
         values: [],
@@ -196,7 +196,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile gt where', async () => {
       await db.query(accounts).where(gt('id', 100)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" > ?)',
         values: [100],
@@ -205,7 +205,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile gte where', async () => {
       await db.query(accounts).where(gte('id', 100)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" >= ?)',
         values: [100],
@@ -214,7 +214,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile lt where', async () => {
       await db.query(accounts).where(lt('id', 100)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" < ?)',
         values: [100],
@@ -223,7 +223,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile lte where', async () => {
       await db.query(accounts).where(lte('id', 100)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" <= ?)',
         values: [100],
@@ -235,7 +235,7 @@ describe('sqlite sql-compiler', () => {
         .query(accounts)
         .where(inList('id', [100, 101]))
         .all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" in (?, ?))',
         values: [100, 101],
@@ -244,7 +244,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile in where - empty', async () => {
       await db.query(accounts).where(inList('id', [])).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (1 = 0)',
         values: [],
@@ -256,7 +256,7 @@ describe('sqlite sql-compiler', () => {
         .query(accounts)
         .where(notInList('id', [100, 101]))
         .all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" not in (?, ?))',
         values: [100, 101],
@@ -265,7 +265,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile not in where - empty', async () => {
       await db.query(accounts).where(notInList('id', [])).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (1 = 1)',
         values: [],
@@ -274,7 +274,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile like where', async () => {
       await db.query(accounts).where(like('status', 'ena')).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" like ?)',
         values: ['ena'],
@@ -283,7 +283,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile ilike where', async () => {
       await db.query(accounts).where(ilike('status', 'EnA')).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (lower("status") like lower(?))',
         values: ['EnA'],
@@ -295,7 +295,7 @@ describe('sqlite sql-compiler', () => {
         .query(accounts)
         .where(between(accounts.id, 20, 50))
         .all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("accounts"."id" between ? and ?)',
         values: [20, 50],
@@ -304,7 +304,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile isNull where', async () => {
       await db.query(accounts).where(isNull(accounts.status)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("accounts"."status" is null)',
         values: [],
@@ -313,7 +313,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile notNull where', async () => {
       await db.query(accounts).where(notNull(accounts.status)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("accounts"."status" is not null)',
         values: [],
@@ -322,7 +322,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile logical and', async () => {
       await db.query(accounts).where({ status: 'enabled' }).where(gt(accounts.id, 10)).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" = ?)) and ("accounts"."id" > ?)',
         values: ['enabled', 10],
@@ -335,7 +335,7 @@ describe('sqlite sql-compiler', () => {
         .where(or(eq(accounts.status, 'enabled'), eq(accounts.status, 'disabled')))
         .all()
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("accounts"."status" = ?) or ("accounts"."status" = ?))',
         values: ['enabled', 'disabled'],
@@ -353,7 +353,7 @@ describe('sqlite sql-compiler', () => {
         )
         .all()
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("accounts"."id" = ?) and (("accounts"."status" = ?) or ("accounts"."status" = ?)))',
         values: [1, 'enabled', 'disabled'],
@@ -362,7 +362,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile groupBy', async () => {
       await db.query(tasks).groupBy(tasks.account_id).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "tasks" group by "tasks"."account_id"',
         values: [],
@@ -371,7 +371,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile having', async () => {
       await db.query(tasks).having({ account_id: 20 }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "tasks" having (("account_id" = ?))',
         values: [20],
@@ -380,7 +380,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile pagination', async () => {
       await db.query(accounts).offset(5).limit(10).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" limit 10 offset 5',
         values: [],
@@ -389,7 +389,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile with normalized boolean - true', async () => {
       await db.query(accounts).where({ deleted: true }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("deleted" = ?))',
         values: [1],
@@ -398,7 +398,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile with normalized boolean - false', async () => {
       await db.query(accounts).where({ deleted: false }).all()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("deleted" = ?))',
         values: [0],
@@ -409,7 +409,7 @@ describe('sqlite sql-compiler', () => {
   describe('count - exists statement', () => {
     it('compile count', async () => {
       await db.query(tasks).where({ account_id: 1 }).count()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = ?))) as "__dt_count"',
         values: [1],
@@ -418,7 +418,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile exists', async () => {
       await db.query(tasks).where({ account_id: 1 }).exists()
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = ?))) as "__dt_count"',
         values: [1],
@@ -433,7 +433,7 @@ describe('sqlite sql-compiler', () => {
         email: 'info@remix.run',
         status: 'enabled',
       })
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values (?, ?, ?)',
         values: [1, 'info@remix.run', 'enabled'],
@@ -450,7 +450,7 @@ describe('sqlite sql-compiler', () => {
         },
         { returnRow: true },
       )
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values (?, ?, ?) returning *',
         values: [1, 'info@remix.run', 'enabled'],
@@ -459,7 +459,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile for one with default values', async () => {
       await db.create(accounts, {})
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" default values',
         values: [],
@@ -479,7 +479,7 @@ describe('sqlite sql-compiler', () => {
           status: 'draft',
         },
       ])
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values (?, ?, ?), (?, ?, ?)',
         values: [1, 'info@remix.run', 'enabled', 2, 'contact@remix.run', 'draft'],
@@ -487,7 +487,7 @@ describe('sqlite sql-compiler', () => {
     })
 
     it('compile for many with default values', () => {
-      let compiled = compileSqliteStatement({
+      let compiled = compileSqliteOperation({
         kind: 'insertMany',
         table: accounts,
         values: [{}, {}],
@@ -500,7 +500,7 @@ describe('sqlite sql-compiler', () => {
 
     it('compile for many without data', async () => {
       await db.createMany(accounts, [])
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select 0 where 1 = 0',
         values: [],
@@ -515,7 +515,7 @@ describe('sqlite sql-compiler', () => {
         status: 'enabled',
       })
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update "accounts" set "email" = ?, "status" = ? where (("id" = ?))',
         values: ['info@remix.run', 'enabled', 1],
@@ -536,7 +536,7 @@ describe('sqlite sql-compiler', () => {
         },
       )
 
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update "accounts" set "email" = ?, "status" = ? where (("status" = ?))',
         values: ['info@remix.run', 'enabled', 'disabled'],
@@ -552,7 +552,7 @@ describe('sqlite sql-compiler', () => {
           conflictTarget: ['id'],
         },
       )
-      assert.throws(() => compileSqliteStatement(statements[0]))
+      assert.throws(() => compileSqliteOperation(statements[0]))
     })
 
     it('compile with update columns', async () => {
@@ -568,7 +568,7 @@ describe('sqlite sql-compiler', () => {
           },
         },
       )
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values (?, ?) on conflict ("id") do update set "email" = ?',
         values: ['contact@remix.run', 'enabled', 'info@remix.run'],
@@ -586,7 +586,7 @@ describe('sqlite sql-compiler', () => {
           update: {},
         },
       )
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values (?, ?) on conflict ("id") do nothing',
         values: ['enabled', 'info@remix.run'],
@@ -597,7 +597,7 @@ describe('sqlite sql-compiler', () => {
   describe('delete statement', () => {
     it('compile for one', async () => {
       await db.delete(accounts, 10)
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from "accounts" where (("id" = ?))',
         values: [10],
@@ -610,7 +610,7 @@ describe('sqlite sql-compiler', () => {
           status: 'enabled',
         },
       })
-      let compiled = compileSqliteStatement(statements[0])
+      let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from "accounts" where (("status" = ?))',
         values: ['enabled'],
@@ -620,7 +620,7 @@ describe('sqlite sql-compiler', () => {
 
   describe('raw statement', () => {
     it('compile', () => {
-      let compiled = compileSqliteStatement({
+      let compiled = compileSqliteOperation({
         kind: 'raw',
         sql: {
           text: 'select * from accounts where id = ?',

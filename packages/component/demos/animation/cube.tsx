@@ -1,4 +1,5 @@
 import type { Handle } from 'remix/component'
+import { css, ref } from 'remix/component'
 
 export function Cube(handle: Handle) {
   let cube: HTMLDivElement
@@ -15,83 +16,99 @@ export function Cube(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        perspective: '400px',
-        width: '100px',
-        height: '100px',
-      }}
-    >
-      <div
-        connect={(node) => {
-          cube = node
-          requestAnimationFrame(animate)
-        }}
-        css={{
+      mix={[
+        css({
+          perspective: '400px',
           width: '100px',
           height: '100px',
-          position: 'relative',
-          transformStyle: 'preserve-3d',
-        }}
+        }),
+      ]}
+    >
+      <div
+        mix={[
+          ref((node) => {
+            cube = node
+            requestAnimationFrame(animate)
+          }),
+          css({
+            width: '100px',
+            height: '100px',
+            position: 'relative',
+            transformStyle: 'preserve-3d',
+          }),
+        ]}
       >
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateY(0deg) translateZ(50px)',
-            backgroundColor: '#ff0055',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateY(0deg) translateZ(50px)',
+              backgroundColor: '#ff0055',
+            }),
+          ]}
         />
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateY(90deg) translateZ(50px)',
-            backgroundColor: '#0099ff',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateY(90deg) translateZ(50px)',
+              backgroundColor: '#0099ff',
+            }),
+          ]}
         />
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateY(180deg) translateZ(50px)',
-            backgroundColor: '#22cc88',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateY(180deg) translateZ(50px)',
+              backgroundColor: '#22cc88',
+            }),
+          ]}
         />
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateY(-90deg) translateZ(50px)',
-            backgroundColor: '#ffaa00',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateY(-90deg) translateZ(50px)',
+              backgroundColor: '#ffaa00',
+            }),
+          ]}
         />
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateX(90deg) translateZ(50px)',
-            backgroundColor: '#aa00ff',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateX(90deg) translateZ(50px)',
+              backgroundColor: '#aa00ff',
+            }),
+          ]}
         />
         <div
-          css={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            opacity: 0.6,
-            transform: 'rotateX(-90deg) translateZ(50px)',
-            backgroundColor: '#ff00aa',
-          }}
+          mix={[
+            css({
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              opacity: 0.6,
+              transform: 'rotateX(-90deg) translateZ(50px)',
+              backgroundColor: '#ff00aa',
+            }),
+          ]}
         />
       </div>
     </div>

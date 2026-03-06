@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/session-storage-memcache",
-  "version": "0.0.0",
-  "description": "Memcache session storage for @remix-run/session",
+  "version": "0.1.0",
+  "description": "Memcache session storage for remix/session",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

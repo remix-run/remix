@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import { on } from '../index.ts'
 import type { Handle, RemixNode } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
@@ -213,15 +214,15 @@ describe('vnode rendering', () => {
         <svg>
           <circle
             id="c"
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 clicked = true
-              },
-            }}
+              }),
+            ]}
           />
         </svg>,
       )
-      root.flush() // attach events
+      root.flush()
 
       let circle = container.querySelector('#c')
       invariant(circle instanceof SVGCircleElement)

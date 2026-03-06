@@ -9,6 +9,7 @@
     "semver": "^7.6.3"
   },
   "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test",
     "typecheck": "tsgo --noEmit"
   }
 }

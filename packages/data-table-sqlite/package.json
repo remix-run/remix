@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-sqlite",
-  "version": "0.0.0",
-  "description": "SQLite adapter for @remix-run/data-table",
+  "version": "0.1.0",
+  "description": "SQLite adapter for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,6 @@
     }
   },
   "devDependencies": {
-    "@remix-run/data-schema": "workspace:*",
     "@remix-run/data-table": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",

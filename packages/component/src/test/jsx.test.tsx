@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
-import type { Dispatched } from '@remix-run/interaction'
 import type { Handle } from '../lib/component'
+import { animateLayout, createMixin, on, ref } from '../index.ts'
+import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -27,14 +28,14 @@ describe('jsx', () => {
     it('infers the event target type from the element type', () => {
       let element = (
         <button
-          on={{
-            pointerdown: (event) => {
+          mix={[
+            on('pointerdown', (event) => {
               type dispatchedEvent = Assert<
                 Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
               >
               type eventTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>
@@ -52,12 +53,12 @@ describe('jsx', () => {
           type componentProps = Assert<Equal<typeof props, { label: string }>>
           return (
             <button
-              on={{
-                click: () => {
+              mix={[
+                on('click', () => {
                   count++
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             >
               {props.label} {count}
             </button>
@@ -80,12 +81,12 @@ describe('jsx', () => {
           type componentProps = Assert<Equal<typeof props, { label: string }>>
           return (
             <button
-              on={{
-                click: () => {
+              mix={[
+                on('click', () => {
                   count++
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             >
               {props.label} {count}
             </button>
@@ -97,152 +98,87 @@ describe('jsx', () => {
     })
   })
 
-  describe('animate', () => {
-    it('accepts true for individual animation types', () => {
-      let element = <div animate={{ enter: true }}>Hello</div>
-      let element2 = <div animate={{ enter: true, exit: true, layout: true }}>Hello</div>
+  describe('mixins', () => {
+    it('infers mixin usage from scoped callback annotations without top-level generics', () => {
+      let buttonOnly = createMixin(
+        (handle: MixinHandle<HTMLButtonElement, Props<'button'>>) => (props: Props<'button'>) => {
+          type inferredButtonProps = Assert<Equal<typeof props, Props<'button'>>>
+          return <handle.element {...props} />
+        },
+      )
+
+      let good = <button mix={[buttonOnly()]} />
+      // @ts-expect-error button-scoped mixin should not apply to div
+      let bad = <div mix={[buttonOnly()]} />
     })
 
-    it('accepts enter-only config', () => {
+    it('allows optional explicit narrowing for specific element kinds', () => {
+      let inputOnly = createMixin<HTMLInputElement>((_handle) => {})
+
+      let good = <input mix={[inputOnly()]} />
+      // @ts-expect-error input-only mixin should not apply to button
+      let bad = <button mix={[inputOnly()]} />
+    })
+
+    it('infers insert event node type from createMixin node generic', () => {
+      let inputOnly = createMixin<HTMLInputElement>((handle) => {
+        handle.addEventListener('insert', (event) => {
+          type inferredInsertNode = Assert<Equal<typeof event.node, HTMLInputElement>>
+        })
+      })
+
+      let good = <input mix={[inputOnly()]} />
+    })
+
+    it('infers on mixin event/currentTarget types from host context', () => {
+      let direct = (
+        <button
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+              >
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      )
+
+      let withOnMixin = createMixin<HTMLElement>((handle) => (props: Props<'div'>) => (
+        <handle.element
+          {...props}
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLElement>>
+              >
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      ))
+
+      let applied = <div mix={[withOnMixin()]} />
+    })
+
+    it('infers ref mixin node type from host context', () => {
       let element = (
-        <div
-          animate={{
-            enter: { opacity: 0, duration: 200 },
-          }}
-        >
-          Enter only
-        </div>
+        <button
+          mix={[
+            ref((node, signal) => {
+              type inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
       )
     })
 
-    it('accepts exit-only config', () => {
+    it('accepts animateLayout mixin usage', () => {
       let element = (
-        <div
-          animate={{
-            exit: { opacity: 0, duration: 150 },
-          }}
-        >
-          Exit only
-        </div>
-      )
-    })
-
-    it('accepts shorthand config with single keyframe', () => {
-      let element = (
-        <div
-          animate={{
-            enter: { opacity: 0, transform: 'scale(0.85)', duration: 200, easing: 'ease-out' },
-            exit: { opacity: 0, duration: 150 },
-          }}
-        >
-          Shorthand config
-        </div>
-      )
-    })
-
-    it('accepts full keyframes config', () => {
-      let element = (
-        <div
-          animate={{
-            enter: {
-              keyframes: [
-                { opacity: 0, transform: 'scale(0.8)' },
-                { opacity: 1, transform: 'scale(1.05)', offset: 0.7 },
-                { opacity: 1, transform: 'scale(1)' },
-              ],
-              duration: 300,
-              easing: 'ease-out',
-              // @ts-expect-error - keyframes defined so only config here
-              opacity: 0,
-            },
-            exit: {
-              opacity: 0,
-              transform: 'scale(0.9)',
-              duration: 150,
-            },
-          }}
-        >
-          Full keyframes
-        </div>
-      )
-    })
-
-    it('accepts delay option', () => {
-      let element = (
-        <div
-          animate={{
-            enter: { opacity: 0, duration: 200, delay: 100 },
-            exit: { opacity: 0, duration: 150, delay: 50 },
-          }}
-        >
-          With delay
-        </div>
-      )
-    })
-
-    it('accepts composite option', () => {
-      let element = (
-        <div
-          animate={{
-            enter: { opacity: 0, duration: 200, composite: 'add' },
-            exit: { opacity: 0, duration: 150, composite: 'replace' },
-          }}
-        >
-          With composite
-        </div>
-      )
-    })
-
-    it('accepts per-keyframe easing and offset', () => {
-      let element = (
-        <div
-          animate={{
-            enter: {
-              keyframes: [
-                { opacity: 0, easing: 'ease-in' },
-                { opacity: 0.5, offset: 0.3, easing: 'linear' },
-                { opacity: 1, offset: 1 },
-              ],
-              duration: 300,
-            },
-          }}
-        >
-          Per-keyframe options
-        </div>
-      )
-    })
-
-    it('rejects invalid animate values', () => {
-      // @ts-expect-error - animate must be true or PresenceProp
-      let bad1 = <div animate={false}>Bad</div>
-      // @ts-expect-error - animate must be true or PresenceProp
-      let bad2 = <div animate="fade">Bad</div>
-      // @ts-expect-error - duration is required in animate config
-      let bad3 = <div animate={{ enter: { opacity: 0 } }}>Bad</div>
-      // @ts-expect-error - keyframes requires an array
-      let bad4 = <div animate={{ enter: { keyframes: { opacity: 0 }, duration: 200 } }}>Bad</div>
-    })
-
-    it('accepts various animatable style properties', () => {
-      let element = (
-        <div
-          animate={{
-            enter: {
-              opacity: 0,
-              transform: 'translateY(-10px)',
-              filter: 'blur(4px)',
-              clipPath: 'inset(0 0 100% 0)',
-              backgroundColor: 'transparent',
-              color: 'red',
-              scale: 0.9,
-              rotate: '5deg',
-              translate: '0 -10px',
-              duration: 200,
-            },
-          }}
-        >
-          Various properties
-        </div>
+        <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
       )
     })
   })

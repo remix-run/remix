@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
-import { boolean, number, string } from '@remix-run/data-schema'
 import {
   and,
   between,
+  column,
   createDatabase,
-  createTable,
+  table,
   eq,
   gt,
   gte,
@@ -18,33 +18,33 @@ import {
   ne,
   notInList,
   notNull,
-  type AdapterStatement,
+  type DataManipulationOperation,
   type DatabaseAdapter,
   or,
 } from '@remix-run/data-table'
 
-import { compilePostgresStatement } from './sql-compiler.ts'
+import { compilePostgresOperation } from './sql-compiler.ts'
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
-    status: string(),
-    deleted: boolean(),
+    id: column.integer(),
+    email: column.text(),
+    status: column.text(),
+    deleted: column.boolean(),
   },
 })
 
-let tasks = createTable({
+let tasks = table({
   name: 'tasks',
   columns: {
-    id: number(),
-    name: string(),
-    account_id: number(),
+    id: column.integer(),
+    name: column.text(),
+    account_id: column.integer(),
   },
 })
 
-let statements: AdapterStatement[] = []
+let statements: DataManipulationOperation[] = []
 
 let fakeAdapter = {
   capabilities: {
@@ -53,7 +53,7 @@ let fakeAdapter = {
   },
 
   execute: async (request) => {
-    statements.push(request.statement)
+    statements.push(request.operation)
     return {}
   },
 } as DatabaseAdapter
@@ -68,7 +68,7 @@ describe('postgres sql-compiler', () => {
   describe('select statement', () => {
     it('compile wildcard selection', async () => {
       await db.query(accounts).all()
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts"',
         values: [],
@@ -84,7 +84,7 @@ describe('postgres sql-compiler', () => {
         })
         .all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select "accounts"."id" as "accountId", "accounts"."email" as "accountEmail" from "accounts"',
         values: [],
@@ -94,7 +94,7 @@ describe('postgres sql-compiler', () => {
     it('compile joins', async () => {
       await db.query(accounts).join(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" inner join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -104,7 +104,7 @@ describe('postgres sql-compiler', () => {
     it('compile left join', async () => {
       await db.query(accounts).leftJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" left join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -114,7 +114,7 @@ describe('postgres sql-compiler', () => {
     it('compile right join', async () => {
       await db.query(accounts).rightJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" right join "tasks" on "accounts"."id" = "tasks"."account_id"',
         values: [],
@@ -124,7 +124,7 @@ describe('postgres sql-compiler', () => {
     it('compile object where filters', async () => {
       await db.query(accounts).where({ status: 'enabled' }).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" = $1))',
         values: ['enabled'],
@@ -134,7 +134,7 @@ describe('postgres sql-compiler', () => {
     it('compile null where filters', async () => {
       await db.query(accounts).where({ status: null }).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" is null))',
         values: [],
@@ -144,7 +144,7 @@ describe('postgres sql-compiler', () => {
     it('compile predicate operators', async () => {
       await db.query(accounts).where(ne('status', 'disabled')).where(gt('id', 10)).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("status" <> $1) and ("id" > $2)',
         values: ['disabled', 10],
@@ -162,7 +162,7 @@ describe('postgres sql-compiler', () => {
         .where(ilike('email', '%@example.com'))
         .all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" >= $1) and ("id" < $2) and ("id" <= $3) and ("id" between $4 and $5) and ("email" like $6) and ("email" ilike $7)',
         values: [1, 20, 30, 2, 9, '%@example.com', '%@example.com'],
@@ -175,7 +175,7 @@ describe('postgres sql-compiler', () => {
         .where(inList('id', [1, 2]))
         .all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" in ($1, $2))',
         values: [1, 2],
@@ -185,7 +185,7 @@ describe('postgres sql-compiler', () => {
     it('compile empty in-list predicates', async () => {
       await db.query(accounts).where(inList('id', [])).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (1 = 0)',
         values: [],
@@ -198,7 +198,7 @@ describe('postgres sql-compiler', () => {
         .where(notInList('id', [1, 2]))
         .all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("id" not in ($1, $2))',
         values: [1, 2],
@@ -216,7 +216,7 @@ describe('postgres sql-compiler', () => {
         )
         .all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("accounts"."id" = $1) and (("accounts"."status" = $2) or ("accounts"."status" = $3)))',
         values: [1, 'enabled', 'disabled'],
@@ -226,7 +226,7 @@ describe('postgres sql-compiler', () => {
     it('compile empty logical combinators', async () => {
       await db.query(accounts).where(and()).where(or()).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (1 = 1) and (1 = 0)',
         values: [],
@@ -236,7 +236,7 @@ describe('postgres sql-compiler', () => {
     it('compile group by and having', async () => {
       await db.query(tasks).groupBy(tasks.account_id).having({ account_id: 20 }).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "tasks" group by "tasks"."account_id" having (("account_id" = $1))',
         values: [20],
@@ -246,7 +246,7 @@ describe('postgres sql-compiler', () => {
     it('compile pagination', async () => {
       await db.query(accounts).offset(5).limit(10).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" limit 10 offset 5',
         values: [],
@@ -256,7 +256,7 @@ describe('postgres sql-compiler', () => {
     it('compile distinct selection with order by', async () => {
       await db.query(accounts).distinct().orderBy('id', 'desc').all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select distinct * from "accounts" order by "id" DESC',
         values: [],
@@ -266,7 +266,7 @@ describe('postgres sql-compiler', () => {
     it('compile boolean bindings', async () => {
       await db.query(accounts).where({ deleted: true }).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("deleted" = $1))',
         values: [true],
@@ -276,7 +276,7 @@ describe('postgres sql-compiler', () => {
     it('compile boolean predicates', async () => {
       await db.query(accounts).where(isNull(accounts.status)).where(notNull(accounts.email)).all()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where ("accounts"."status" is null) and ("accounts"."email" is not null)',
         values: [],
@@ -284,7 +284,7 @@ describe('postgres sql-compiler', () => {
     })
 
     it('compile wildcard segment path', () => {
-      let compiled = compilePostgresStatement({
+      let compiled = compilePostgresOperation({
         kind: 'select',
         table: accounts,
         select: [{ column: 'accounts.*', alias: 'allColumns' }],
@@ -309,7 +309,7 @@ describe('postgres sql-compiler', () => {
     it('compile count', async () => {
       await db.query(tasks).where({ account_id: 1 }).count()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = $1))) as "__dt_count"',
         values: [1],
@@ -319,7 +319,7 @@ describe('postgres sql-compiler', () => {
     it('compile exists', async () => {
       await db.query(tasks).where({ account_id: 1 }).exists()
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = $1))) as "__dt_count"',
         values: [1],
@@ -335,7 +335,7 @@ describe('postgres sql-compiler', () => {
         status: 'enabled',
       })
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3)',
         values: [1, 'info@remix.run', 'enabled'],
@@ -352,7 +352,7 @@ describe('postgres sql-compiler', () => {
         { returning: '*' },
       )
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3) returning *',
         values: [1, 'info@remix.run', 'enabled'],
@@ -369,7 +369,7 @@ describe('postgres sql-compiler', () => {
         { returning: ['id', 'email'] },
       )
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3) returning "id", "email"',
         values: [2, 'contact@remix.run', 'active'],
@@ -379,7 +379,7 @@ describe('postgres sql-compiler', () => {
     it('compile for one with default values', async () => {
       await db.create(accounts, {})
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" default values',
         values: [],
@@ -392,7 +392,7 @@ describe('postgres sql-compiler', () => {
         { id: 2, email: 'contact@remix.run', status: 'draft' },
       ])
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("id", "email", "status") values ($1, $2, $3), ($4, $5, $6)',
         values: [1, 'info@remix.run', 'enabled', 2, 'contact@remix.run', 'draft'],
@@ -400,7 +400,7 @@ describe('postgres sql-compiler', () => {
     })
 
     it('compile for many with default values', () => {
-      let compiled = compilePostgresStatement({
+      let compiled = compilePostgresOperation({
         kind: 'insertMany',
         table: accounts,
         values: [{}, {}],
@@ -414,7 +414,7 @@ describe('postgres sql-compiler', () => {
     it('compile for many without data', async () => {
       await db.createMany(accounts, [])
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select 0 where 1 = 0',
         values: [],
@@ -429,7 +429,7 @@ describe('postgres sql-compiler', () => {
         status: 'enabled',
       })
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update "accounts" set "email" = $1, "status" = $2 where (("id" = $3))',
         values: ['info@remix.run', 'enabled', 1],
@@ -450,7 +450,7 @@ describe('postgres sql-compiler', () => {
         },
       )
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update "accounts" set "email" = $1, "status" = $2 where (("status" = $3))',
         values: ['info@remix.run', 'enabled', 'disabled'],
@@ -467,7 +467,7 @@ describe('postgres sql-compiler', () => {
         },
       )
 
-      assert.throws(() => compilePostgresStatement(statements[0]))
+      assert.throws(() => compilePostgresOperation(statements[0]))
     })
 
     it('compile with update columns', async () => {
@@ -484,7 +484,7 @@ describe('postgres sql-compiler', () => {
         },
       )
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values ($1, $2) on conflict ("id") do update set "email" = $3',
         values: ['enabled', 'info@remix.run', 'contact@remix.run'],
@@ -503,7 +503,7 @@ describe('postgres sql-compiler', () => {
         },
       )
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values ($1, $2) on conflict ("id") do nothing',
         values: ['enabled', 'info@remix.run'],
@@ -515,7 +515,7 @@ describe('postgres sql-compiler', () => {
     it('compile for one', async () => {
       await db.delete(accounts, 10)
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from "accounts" where (("id" = $1))',
         values: [10],
@@ -529,7 +529,7 @@ describe('postgres sql-compiler', () => {
         },
       })
 
-      let compiled = compilePostgresStatement(statements[0])
+      let compiled = compilePostgresOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from "accounts" where (("status" = $1))',
         values: ['enabled'],
@@ -539,7 +539,7 @@ describe('postgres sql-compiler', () => {
 
   describe('raw statement', () => {
     it('compile', () => {
-      let compiled = compilePostgresStatement({
+      let compiled = compilePostgresOperation({
         kind: 'raw',
         sql: {
           text: 'select * from accounts where id = ? and status = ?',
@@ -554,7 +554,7 @@ describe('postgres sql-compiler', () => {
     })
 
     it('compile without placeholders', () => {
-      let compiled = compilePostgresStatement({
+      let compiled = compilePostgresOperation({
         kind: 'raw',
         sql: {
           text: 'select 1',
@@ -572,15 +572,15 @@ describe('postgres sql-compiler', () => {
   describe('error handling', () => {
     it('throws for unsupported statements', () => {
       assert.throws(
-        () => compilePostgresStatement({ kind: 'unknown' } as never),
-        /Unsupported statement kind/,
+        () => compilePostgresOperation({ kind: 'unknown' } as never),
+        /Unsupported operation kind/,
       )
     })
 
     it('throws for unsupported predicates', () => {
       assert.throws(
         () =>
-          compilePostgresStatement({
+          compilePostgresOperation({
             kind: 'select',
             table: accounts,
             select: '*',

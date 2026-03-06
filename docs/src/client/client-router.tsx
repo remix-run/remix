@@ -1,22 +1,7 @@
-import { type Handle, clientEntry } from 'remix/component'
+import { type Handle, addEventListeners, clientEntry } from 'remix/component'
 import { routes } from '../server/routes'
 
-declare global {
-  const navigation: Navigation
-
-  interface Navigation {
-    __eventMap?: NavigationEventMap
-  }
-
-  interface NavigationInterceptOptions {
-    precommitHandler?: () => Promise<void>
-  }
-
-  interface NavigateEvent {
-    readonly cancelable: boolean
-  }
-}
-
+// moo
 const $ = (s: string) => document.querySelector(s)
 const $$ = (s: string) => Array.from(document.querySelectorAll(s))
 
@@ -24,7 +9,7 @@ export const ClientRouter = clientEntry(
   `${routes.assets.href({ asset: 'client-router.js' })}#ClientRouter`,
   (handle: Handle) => {
     handle.queueTask(() => {
-      handle.on(window.navigation, {
+      addEventListeners(window.navigation, handle.signal, {
         navigate(event, signal) {
           let shouldNotIntercept =
             !event.canIntercept ||

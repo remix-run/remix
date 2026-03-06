@@ -69,12 +69,12 @@ export type EntryComponent<context = NoContext, setup = undefined, props = {}> =
  *     return ({ label }: { label: string }) => (
  *       <button
  *         type="button"
- *         on={{
- *           click: () => {
+ *         mix={[
+ *           on('click', () => {
  *             count++
  *             handle.update()
- *           },
- *         }}
+ *           }),
+ *         ]}
  *       >
  *         {label} {count}
  *       </button>

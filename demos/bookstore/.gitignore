@@ -1,2 +1,3 @@
 public/assets/
 tmp/
+data/*.sqlite

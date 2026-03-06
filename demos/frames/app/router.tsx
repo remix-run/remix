@@ -40,7 +40,7 @@ function App() {
         <script async type="module" src="/assets/entry.js" />
       </head>
       <body
-        css={{
+        style={{
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
           margin: 0,
@@ -49,32 +49,32 @@ function App() {
           color: '#e9eefc',
         }}
       >
-        <div css={{ maxWidth: 980, margin: '0 auto' }}>
-          <h1 css={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>
-          <p css={{ marginTop: 8, color: '#b9c6ff' }}>
+        <div style={{ maxWidth: 980, margin: '0 auto' }}>
+          <h1 style={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>
+          <p style={{ marginTop: 8, color: '#b9c6ff' }}>
             Server routes are handled by <code>remix/fetch-router</code>; UI is streamed with{' '}
             <code>remix/component</code> Frames and client entries.
           </p>
-          <p css={{ marginTop: 0, marginBottom: 16 }}>
-            <a href="/time" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+          <p style={{ marginTop: 0, marginBottom: 16 }}>
+            <a href="/time" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               Server time demo
             </a>
             {' · '}
-            <a href="/reload-scope" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+            <a href="/reload-scope" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               Frame vs top reload demo
             </a>
             {' · '}
-            <a href="/state-search" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+            <a href="/state-search" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               Dynamic src search demo
             </a>
             {' · '}
-            <a href="/client-mounted" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+            <a href="/client-mounted" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               Client-mounted nested frame demo
             </a>
           </p>
 
           <div
-            css={{
+            style={{
               display: 'grid',
               gridTemplateColumns: '320px 1fr',
               gap: 16,
@@ -83,39 +83,39 @@ function App() {
             }}
           >
             <aside
-              css={{
+              style={{
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 12,
                 padding: 16,
                 background: 'rgba(255,255,255,0.04)',
               }}
             >
-              <h2 css={{ marginTop: 0, fontSize: 16 }}>Sidebar (Frame)</h2>
+              <h2 style={{ marginTop: 0, fontSize: 16 }}>Sidebar (Frame)</h2>
               <Frame
                 src="/frames/sidebar"
-                fallback={<div css={{ color: '#9aa8e8' }}>Loading sidebar…</div>}
+                fallback={<div style={{ color: '#9aa8e8' }}>Loading sidebar…</div>}
               />
             </aside>
 
             <main
-              css={{
+              style={{
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 12,
                 padding: 16,
                 background: 'rgba(255,255,255,0.04)',
               }}
             >
-              <h2 css={{ marginTop: 0, fontSize: 16 }}>Main</h2>
-              <p css={{ color: '#b9c6ff', marginTop: 0 }}>The counter below is a client entry.</p>
+              <h2 style={{ marginTop: 0, fontSize: 16 }}>Main</h2>
+              <p style={{ color: '#b9c6ff', marginTop: 0 }}>The counter below is a client entry.</p>
               <Counter setup={0} label="Clicks" />
               <ClientFrameExample />
 
-              <div css={{ height: 16 }} />
+              <div style={{ height: 16 }} />
 
-              <h3 css={{ margin: 0, fontSize: 14, color: '#cfd8ff' }}>Activity (Frame)</h3>
+              <h3 style={{ margin: 0, fontSize: 14, color: '#cfd8ff' }}>Activity (Frame)</h3>
               <Frame
                 src="/frames/activity"
-                fallback={<div css={{ color: '#9aa8e8' }}>Loading activity…</div>}
+                fallback={<div style={{ color: '#9aa8e8' }}>Loading activity…</div>}
               />
             </main>
           </div>
@@ -152,7 +152,7 @@ router.get(routes.clientMounted, async (context: any) => {
           <script async type="module" src="/assets/entry.js" />
         </head>
         <body
-          css={{
+          style={{
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
             margin: 0,
@@ -161,14 +161,14 @@ router.get(routes.clientMounted, async (context: any) => {
             color: '#e9eefc',
           }}
         >
-          <div css={{ maxWidth: 760, margin: '0 auto' }}>
-            <a href="/" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <a href="/" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               ← Back
             </a>
-            <h1 css={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
+            <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
               Client-mounted nested non-blocking frame
             </h1>
-            <p css={{ marginTop: 0, color: '#b9c6ff' }}>
+            <p style={{ marginTop: 0, color: '#b9c6ff' }}>
               Mount the outer frame, then watch the nested frame fallback render before its server
               content streams in.
             </p>
@@ -205,7 +205,7 @@ router.get(routes.time, async (context: any) => {
           <script async type="module" src="/assets/entry.js" />
         </head>
         <body
-          css={{
+          style={{
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
             margin: 0,
@@ -214,21 +214,21 @@ router.get(routes.time, async (context: any) => {
             color: '#e9eefc',
           }}
         >
-          <div css={{ maxWidth: 720, margin: '0 auto' }}>
-            <a href="/" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <a href="/" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               ← Back
             </a>
 
-            <h1 css={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
+            <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
               Server time (Frame reload)
             </h1>
-            <p css={{ marginTop: 0, color: '#b9c6ff' }}>
+            <p style={{ marginTop: 0, color: '#b9c6ff' }}>
               The frame below renders the current server time. Click “Refresh” to call{' '}
               <code>frame.reload()</code> from a client entry inside the frame.
             </p>
 
             <div
-              css={{
+              style={{
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 12,
                 padding: 16,
@@ -237,7 +237,7 @@ router.get(routes.time, async (context: any) => {
             >
               <Frame
                 src={routes.frames.time.href()}
-                fallback={<div css={{ color: '#9aa8e8' }}>Loading server time…</div>}
+                fallback={<div style={{ color: '#9aa8e8' }}>Loading server time…</div>}
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ router.get(routes.reloadScope, async (context: any) => {
           <script async type="module" src="/assets/entry.js" />
         </head>
         <body
-          css={{
+          style={{
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
             margin: 0,
@@ -283,25 +283,25 @@ router.get(routes.reloadScope, async (context: any) => {
             color: '#e9eefc',
           }}
         >
-          <div css={{ maxWidth: 760, margin: '0 auto' }}>
-            <a href="/" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <a href="/" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               ← Back
             </a>
-            <h1 css={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
+            <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
               Frame reload vs top reload
             </h1>
-            <p css={{ marginTop: 0, color: '#b9c6ff' }}>
+            <p style={{ marginTop: 0, color: '#b9c6ff' }}>
               Reload only this frame, or reload the entire runtime tree from inside the same client
               entry.
             </p>
-            <div css={{ marginBottom: 10 }}>
-              <div css={{ fontSize: 13, color: '#b9c6ff' }}>Page server time</div>
-              <div css={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 13, color: '#b9c6ff' }}>Page server time</div>
+              <div style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>
                 {pageNow.toLocaleTimeString()}
               </div>
             </div>
             <div
-              css={{
+              style={{
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 12,
                 padding: 16,
@@ -310,7 +310,7 @@ router.get(routes.reloadScope, async (context: any) => {
             >
               <Frame
                 src={routes.frames.reloadScope.href()}
-                fallback={<div css={{ color: '#9aa8e8' }}>Loading reload controls…</div>}
+                fallback={<div style={{ color: '#9aa8e8' }}>Loading reload controls…</div>}
               />
             </div>
           </div>
@@ -348,7 +348,7 @@ router.get(routes.stateSearch, async (context: any) => {
           <script async type="module" src="/assets/entry.js" />
         </head>
         <body
-          css={{
+          style={{
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
             margin: 0,
@@ -357,14 +357,14 @@ router.get(routes.stateSearch, async (context: any) => {
             color: '#e9eefc',
           }}
         >
-          <div css={{ maxWidth: 760, margin: '0 auto' }}>
-            <a href="/" css={{ color: '#b9c6ff', textDecoration: 'underline' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <a href="/" style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
               ← Back
             </a>
-            <h1 css={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
+            <h1 style={{ marginTop: 16, marginBottom: 8, letterSpacing: '-0.02em' }}>
               Dynamic <code>{'<Frame src>'}</code> state search
             </h1>
-            <p css={{ marginTop: 0, color: '#b9c6ff' }}>
+            <p style={{ marginTop: 0, color: '#b9c6ff' }}>
               Submit the form to update the frame <code>src</code> query params and fetch matching
               U.S. states.
             </p>
@@ -425,7 +425,7 @@ router.get(routes.frames.activity, async (context: any) => {
       </p>
       <Frame
         src={routes.frames.activityDetail.href()}
-        fallback={<div css={{ color: '#9aa8e8' }}>Loading detail…</div>}
+        fallback={<div style={{ color: '#9aa8e8' }}>Loading detail…</div>}
       />
     </div>,
     {
@@ -450,10 +450,10 @@ router.get(routes.frames.activityDetail, async (context: any) => {
       <p style={{ marginTop: 0, marginBottom: 8, color: '#9aa8e8' }}>
         Nested frame with a hydrated counter:
       </p>
-      <div css={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12 }}>
         <Frame
           src={routes.frames.time.href()}
-          fallback={<div css={{ color: '#9aa8e8' }}>Loading server time…</div>}
+          fallback={<div style={{ color: '#9aa8e8' }}>Loading server time…</div>}
         />
       </div>
     </div>,
@@ -477,27 +477,27 @@ router.get(routes.frames.clientFrameExample, async (context) => {
   let now = new Date()
   let stream = renderToStream(
     <div
-      css={{
+      style={{
         border: '1px solid rgba(255,255,255,0.10)',
         borderRadius: 10,
         padding: 10,
         background: 'rgba(255,255,255,0.02)',
       }}
     >
-      <div css={{ fontSize: 12, color: '#b9c6ff' }}>
+      <div style={{ fontSize: 12, color: '#b9c6ff' }}>
         Server fragment from /frames/client-frame-example
       </div>
-      <div css={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
+      <div style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
         {now.toLocaleTimeString()}
       </div>
-      <div css={{ marginTop: 8 }}>
+      <div style={{ marginTop: 8 }}>
         <Counter setup={5} label="Inside mounted frame" />
       </div>
-      <div css={{ marginTop: 10 }}>
-        <div css={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>Nested frame:</div>
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>Nested frame:</div>
         <Frame
           src={routes.frames.clientFrameExampleNested.href()}
-          fallback={<div css={{ color: '#9aa8e8' }}>Loading nested frame…</div>}
+          fallback={<div style={{ color: '#9aa8e8' }}>Loading nested frame…</div>}
         />
       </div>
     </div>,
@@ -520,15 +520,15 @@ router.get(routes.frames.clientFrameExampleNested, async () => {
 
   let stream = renderToStream(
     <div
-      css={{
+      style={{
         border: '1px solid rgba(255,255,255,0.10)',
         borderRadius: 8,
         padding: 8,
         background: 'rgba(255,255,255,0.02)',
       }}
     >
-      <div css={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
-      <div css={{ marginTop: 6 }}>
+      <div style={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
+      <div style={{ marginTop: 6 }}>
         <Counter setup={1} label="Nested frame counter" />
       </div>
     </div>,
@@ -548,26 +548,26 @@ router.get(routes.frames.clientMountedOuter, async (context: any) => {
 
   let stream = renderToStream(
     <div
-      css={{
+      style={{
         border: '1px solid rgba(255,255,255,0.10)',
         borderRadius: 10,
         padding: 10,
         background: 'rgba(255,255,255,0.02)',
       }}
     >
-      <div css={{ fontSize: 12, color: '#b9c6ff' }}>
+      <div style={{ fontSize: 12, color: '#b9c6ff' }}>
         Outer server fragment from /frames/client-mounted-outer
       </div>
-      <div css={{ marginTop: 8 }}>
+      <div style={{ marginTop: 8 }}>
         <Counter setup={2} label="Outer frame counter" />
       </div>
-      <div css={{ marginTop: 10 }}>
-        <div css={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>
           Nested non-blocking frame:
         </div>
         <Frame
           src={routes.frames.clientMountedNested.href()}
-          fallback={<div css={{ color: '#9aa8e8' }}>Loading nested non-blocking frame…</div>}
+          fallback={<div style={{ color: '#9aa8e8' }}>Loading nested non-blocking frame…</div>}
         />
       </div>
     </div>,
@@ -590,18 +590,18 @@ router.get(routes.frames.clientMountedNested, async () => {
 
   let stream = renderToStream(
     <div
-      css={{
+      style={{
         border: '1px solid rgba(255,255,255,0.10)',
         borderRadius: 8,
         padding: 8,
         background: 'rgba(255,255,255,0.02)',
       }}
     >
-      <div css={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
-      <div css={{ fontSize: 16, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
+      <div style={{ fontSize: 16, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
         {new Date().toLocaleTimeString()}
       </div>
-      <div css={{ marginTop: 6 }}>
+      <div style={{ marginTop: 6 }}>
         <Counter setup={3} label="Nested frame counter" />
       </div>
     </div>,
@@ -624,7 +624,7 @@ router.get(routes.frames.time, async () => {
   let stream = renderToStream(
     <div>
       <div
-        css={{
+        style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -632,13 +632,13 @@ router.get(routes.frames.time, async () => {
         }}
       >
         <div>
-          <div css={{ fontSize: 13, color: '#b9c6ff' }}>Server time</div>
-          <div css={{ fontSize: 18, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 13, color: '#b9c6ff' }}>Server time</div>
+          <div style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums' }}>
             {now.toLocaleTimeString()}
           </div>
         </div>
         <Counter setup={0} label="In a frame" />
-        <div css={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <ReloadTime />
         </div>
       </div>
@@ -660,8 +660,8 @@ router.get(routes.frames.reloadScope, async () => {
   let now = new Date()
   let stream = renderToStream(
     <div>
-      <div css={{ fontSize: 13, color: '#b9c6ff' }}>Frame server time</div>
-      <div css={{ fontSize: 18, fontVariantNumeric: 'tabular-nums', marginBottom: 10 }}>
+      <div style={{ fontSize: 13, color: '#b9c6ff' }}>Frame server time</div>
+      <div style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums', marginBottom: 10 }}>
         {now.toLocaleTimeString()}
       </div>
       <ReloadScope />
@@ -686,19 +686,19 @@ router.get(routes.frames.stateSearchResults, async (context: any) => {
 
   let stream = renderToStream(
     <div>
-      <p css={{ marginTop: 0, marginBottom: 10, color: '#b9c6ff' }}>
+      <p style={{ marginTop: 0, marginBottom: 10, color: '#b9c6ff' }}>
         {query
           ? `Results for "${query}" (${matches.length})`
           : `Showing all states (${matches.length})`}
       </p>
       {matches.length > 0 ? (
-        <ul css={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
           {matches.map((state) => (
             <li key={state}>{state}</li>
           ))}
         </ul>
       ) : (
-        <p css={{ margin: 0, color: '#9aa8e8' }}>No states matched that query.</p>
+        <p style={{ margin: 0, color: '#9aa8e8' }}>No states matched that query.</p>
       )}
     </div>,
     { onError: console.error },

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { boolean, number, string } from '@remix-run/data-schema'
 
+import { column } from './column.ts'
 import { createDatabase } from './database.ts'
 import type {
   QueryBuilder,
@@ -9,8 +9,8 @@ import type {
   QueryForTable,
   WriteResult,
 } from './database.ts'
-import { createTable, hasMany } from './table.ts'
-import type { TableReference } from './table.ts'
+import { table, hasMany } from './table.ts'
+import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
 import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
 import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
@@ -20,27 +20,42 @@ type Equal<left, right> =
     ? true
     : false
 
-function expectType<condition extends true>(): void {}
+function expectType<condition extends true>(_value?: condition): void {}
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
-    status: string(),
+    id: column.integer(),
+    email: column.text(),
+    status: column.text(),
   },
 })
 
-let projects = createTable({
+let projects = table({
   name: 'projects',
   columns: {
-    id: number(),
-    account_id: number(),
-    archived: boolean(),
+    id: column.integer(),
+    account_id: column.integer(),
+    archived: column.boolean(),
   },
 })
 
 let accountProjects = hasMany(accounts, projects)
+
+let inferredColumns = table({
+  name: 'inferred_columns',
+  columns: {
+    id: column.integer(),
+    title: column.text(),
+    is_active: column.boolean(),
+    amount: column.decimal(10, 2),
+    status: column.enum(['draft', 'published'] as const),
+    metadata: column.json(),
+    happened_at: column.timestamp(),
+    big_counter: column.bigint(),
+    validated_payload: column.json(),
+  },
+})
 
 let cleanups = new Set<() => void>()
 
@@ -53,6 +68,19 @@ afterEach(() => {
 })
 
 describe('type safety', () => {
+  it('infers unvalidated column types from physical types and falls back to unknown', () => {
+    type Row = TableRow<typeof inferredColumns>
+
+    expectType<Equal<Row['title'], string>>()
+    expectType<Equal<Row['is_active'], boolean>>()
+    expectType<Equal<Row['amount'], number>>()
+    expectType<Equal<Row['status'], 'draft' | 'published'>>()
+    expectType<Equal<Row['metadata'], unknown>>()
+    expectType<Equal<Row['happened_at'], unknown>>()
+    expectType<Equal<Row['big_counter'], unknown>>()
+    expectType<Equal<Row['validated_payload'], unknown>>()
+  })
+
   it('exposes query builder generics as column and row output maps', () => {
     let db = createDatabase(createAdapter())
     let query = db.query(accounts)

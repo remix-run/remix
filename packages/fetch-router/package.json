@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/fetch-router",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "A minimal, composable router for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -38,13 +38,11 @@
     }
   },
   "devDependencies": {
-    "@remix-run/session": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {
-    "@remix-run/route-pattern": "workspace:^",
-    "@remix-run/session": "workspace:^"
+    "@remix-run/route-pattern": "workspace:^"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

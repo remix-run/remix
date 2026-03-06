@@ -52,69 +52,71 @@ export function createRouter(versions?: ServerContext['versions']) {
     },
   }
   router.map(routes, {
-    assets: ({ request, params }) => {
-      // Replicate `staticFiles` middleware but allowing for a dynamic version param
-      let filePath =
-        process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
-          ? path.join(DEV_CSS_DIR, params.asset)
-          : path.join(ASSETS_DIR, params.asset)
-      return respond.file(request, filePath, params.asset)
-    },
-    async docs({ request, params }) {
-      return await respond.document(
-        request,
-        <ServerPage
-          setup={{
-            docFiles,
-            versions,
-            slug: params.slug,
-            activeVersion: params.version,
-          }}
-        >
-          <Frame src={routes.fragment.href({ version: params.version, slug: params.slug })} />
-        </ServerPage>,
-      )
-    },
-    async home({ request, params }) {
-      return respond.document(
-        request,
-        <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
-          <Frame src={routes.fragment.href({ version: params.version })} />
-        </ServerPage>,
-      )
-    },
-    async fragment({ request, url, params }) {
-      let node: RemixNode
+    actions: {
+      assets: ({ request, params }) => {
+        // Replicate `staticFiles` middleware but allowing for a dynamic version param
+        let filePath =
+          process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
+            ? path.join(DEV_CSS_DIR, params.asset)
+            : path.join(ASSETS_DIR, params.asset)
+        return respond.file(request, filePath, params.asset)
+      },
+      async docs({ request, params }) {
+        return await respond.document(
+          request,
+          <ServerPage
+            setup={{
+              docFiles,
+              versions,
+              slug: params.slug,
+              activeVersion: params.version,
+            }}
+          >
+            <Frame src={routes.fragment.href({ version: params.version, slug: params.slug })} />
+          </ServerPage>,
+        )
+      },
+      async home({ request, params }) {
+        return respond.document(
+          request,
+          <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
+            <Frame src={routes.fragment.href({ version: params.version })} />
+          </ServerPage>,
+        )
+      },
+      async fragment({ request, url, params }) {
+        let node: RemixNode
 
-      if (!params.slug) {
-        // Home page
-        node = <Home />
-      } else {
-        // Docs page
+        if (!params.slug) {
+          // Home page
+          node = <Home />
+        } else {
+          // Docs page
+          let docFile = docFiles.find((file) => file.urlPath === params.slug)
+          if (!docFile) {
+            node = <NotFound slug={params.slug} />
+          } else {
+            let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
+            node = <div innerHTML={html} />
+          }
+        }
+
+        return respond.fragment(
+          request,
+          <>
+            {node}
+            <ClientRouter />
+          </>,
+        )
+      },
+      async markdown({ request, params }) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
-          node = <NotFound slug={params.slug} />
-        } else {
-          let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
-          node = <div innerHTML={html} />
+          return new Response('Not Found', { status: 404 })
         }
-      }
 
-      return respond.fragment(
-        request,
-        <>
-          {node}
-          <ClientRouter />
-        </>,
-      )
-    },
-    async markdown({ request, params }) {
-      let docFile = docFiles.find((file) => file.urlPath === params.slug)
-      if (!docFile) {
-        return new Response('Not Found', { status: 404 })
-      }
-
-      return respond.file(request, docFile.path, params.slug)
+        return respond.file(request, docFile.path, params.slug)
+      },
     },
   })
 

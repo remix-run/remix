@@ -232,6 +232,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
   // Validate changes config / version consistency
   let configPrereleaseChannel = changesConfig?.prereleaseChannel ?? null
+  let isActivePrereleaseMode = Boolean(configPrereleaseChannel) && isCurrentVersionPrerelease
   if (configPrereleaseChannel) {
     // Config has prerelease channel
     if (
@@ -271,7 +272,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
       continue
     }
 
-    // Parse and validate filename format (e.g. "minor.add-feature.md")
+    // Parse filename format when it follows bump naming (e.g. "minor.add-feature.md")
     let bump: BumpType | null = null
 
     let withoutExt = file.slice(0, -3)
@@ -282,6 +283,11 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
       if (bumpTypes.includes(bumpStr as BumpType) && name.length > 0) {
         bump = bumpStr as BumpType
       }
+    }
+
+    if (bump == null && isActivePrereleaseMode) {
+      // In prerelease mode, bump type does not affect versioning, so any filename is allowed.
+      bump = 'patch'
     }
 
     if (bump == null) {
@@ -643,6 +649,16 @@ function formatChangelogEntry(content: string): string {
   return formatted.join('\n')
 }
 
+function sortChangelogChanges(changes: PackageRelease['changes']): PackageRelease['changes'] {
+  // Sort with breaking changes hoisted to top, then alphabetically by filename
+  return [...changes].sort((a, b) => {
+    let aBreaking = hasBreakingChangePrefix(a.content)
+    let bBreaking = hasBreakingChangePrefix(b.content)
+    if (aBreaking !== bBreaking) return aBreaking ? -1 : 1
+    return a.file.localeCompare(b.file)
+  })
+}
+
 /**
  * Generates a section for a specific bump type (e.g., "### Major Changes")
  */
@@ -663,13 +679,7 @@ function generateBumpTypeSection(
     return null
   }
 
-  // Sort with breaking changes hoisted to top, then alphabetically by filename
-  let sorted = [...filtered].sort((a, b) => {
-    let aBreaking = hasBreakingChangePrefix(a.content)
-    let bBreaking = hasBreakingChangePrefix(b.content)
-    if (aBreaking !== bBreaking) return aBreaking ? -1 : 1
-    return a.file.localeCompare(b.file)
-  })
+  let sorted = sortChangelogChanges(filtered)
 
   let lines: string[] = []
   let subheadingPrefix = '#'.repeat(subheadingLevel)
@@ -679,6 +689,38 @@ function generateBumpTypeSection(
 
   for (let change of sorted) {
     lines.push(formatChangelogEntry(change.content))
+    lines.push('')
+  }
+
+  return lines.join('\n')
+}
+
+function generatePrereleaseChangesSection(
+  changes: PackageRelease['changes'],
+  dependencyBumps: DependencyBump[],
+  subheadingLevel: number,
+): string | null {
+  if (changes.length === 0 && dependencyBumps.length === 0) {
+    return null
+  }
+
+  let lines: string[] = []
+  let subheadingPrefix = '#'.repeat(subheadingLevel)
+  lines.push(`${subheadingPrefix} Pre-release Changes`)
+  lines.push('')
+
+  let sortedChanges = sortChangelogChanges(changes)
+  for (let change of sortedChanges) {
+    lines.push(formatChangelogEntry(change.content))
+    lines.push('')
+  }
+
+  if (dependencyBumps.length > 0) {
+    lines.push('- Bumped `@remix-run/*` dependencies:')
+    for (let dep of dependencyBumps) {
+      let tag = getGitTag(dep.packageName, dep.version)
+      lines.push(`  - [\`${tag}\`](${dep.releaseUrl})`)
+    }
     lines.push('')
   }
 
@@ -734,6 +776,20 @@ export function generateChangelogContent(
   lines.push('')
 
   let subheadingLevel = headingLevel + 1
+
+  // In prerelease mode, all change-file entries are grouped into a single section.
+  let isPrereleaseRelease = getPrereleaseIdentifier(release.nextVersion) !== null
+  if (isPrereleaseRelease) {
+    let prereleaseSection = generatePrereleaseChangesSection(
+      release.changes,
+      release.dependencyBumps,
+      subheadingLevel,
+    )
+    if (prereleaseSection) {
+      lines.push(prereleaseSection)
+    }
+    return lines.join('\n')
+  }
 
   // Generate sections in order: major, minor, patch (skipping empty sections)
   for (let bumpType of bumpTypes) {

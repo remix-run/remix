@@ -1,48 +1,17 @@
 import { invariant } from './invariant.ts'
-import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
+import { createStyleManager, normalizeCssValue } from './style/index.ts'
 import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { normalizeSvgAttribute } from './svg-attributes.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-// global so all roots share it
-let styleCache = new Map<string, { selector: string; css: string }>()
 let globalStyleManager =
   typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
 
 export { type StyleManager }
 
 export let defaultStyleManager: StyleManager = globalStyleManager
-
-export function cleanupCssProps(props: ElementProps | undefined, styles?: StyleManager) {
-  if (!props?.css) return
-  let { selector } = processStyle(props.css, styleCache)
-  if (selector) {
-    ;(styles ?? globalStyleManager).remove(selector)
-  }
-}
-
-function diffCssProp(curr: ElementProps, next: ElementProps, dom: Element, styles: StyleManager) {
-  let prevSelector = curr.css ? processStyle(curr.css, styleCache).selector : ''
-  let { selector: nextSelector, css } = next.css
-    ? processStyle(next.css, styleCache)
-    : { selector: '', css: '' }
-
-  if (prevSelector === nextSelector) return
-
-  // Remove old CSS
-  if (prevSelector) {
-    dom.removeAttribute('data-css')
-    styles.remove(prevSelector)
-  }
-
-  // Add new CSS
-  if (css && nextSelector) {
-    dom.setAttribute('data-css', nextSelector)
-    styles.insert(nextSelector, css)
-  }
-}
 
 // Preact excludes certain attributes from the property path due to browser quirks
 const ATTRIBUTE_FALLBACK_NAMES = new Set([
@@ -74,11 +43,9 @@ function canUseProperty(
 function isFrameworkProp(name: string): boolean {
   return (
     name === 'children' ||
+    name === 'mix' ||
     name === 'key' ||
-    name === 'on' ||
-    name === 'css' ||
     name === 'setup' ||
-    name === 'connect' ||
     name === 'animate' ||
     name === 'innerHTML'
   )
@@ -143,17 +110,29 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
   } catch {}
 }
 
-export function diffHostProps(
-  curr: ElementProps,
-  next: ElementProps,
-  dom: Element,
-  styles?: StyleManager,
-) {
-  let isSvg = dom.namespaceURI === SVG_NS
+function normalizeClassProps(props: ElementProps): ElementProps {
+  if (!('class' in props) && !('className' in props)) return props
 
-  if (next.css || curr.css) {
-    diffCssProp(curr, next, dom, styles ?? globalStyleManager)
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  let mergedClassName =
+    classAttr && className ? `${classAttr} ${className}` : classAttr || className
+  let normalizedProps = { ...props }
+
+  delete normalizedProps.class
+  if (mergedClassName) {
+    normalizedProps.className = mergedClassName
+  } else {
+    delete normalizedProps.className
   }
+
+  return normalizedProps
+}
+
+export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Element) {
+  let isSvg = dom.namespaceURI === SVG_NS
+  curr = normalizeClassProps(curr)
+  next = normalizeClassProps(next)
 
   // Removals
   for (let name in curr) {
@@ -222,7 +201,6 @@ export function diffHostProps(
  * Reset the global style state. For testing only - not exported from index.ts.
  */
 export function resetStyleState() {
-  styleCache.clear()
   invariant(
     typeof window !== 'undefined',
     'resetStyleState() is only available in a browser environment',

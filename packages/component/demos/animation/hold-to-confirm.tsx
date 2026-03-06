@@ -1,24 +1,27 @@
-import { defineInteraction, type Interaction } from 'remix/interaction'
-import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
-import { spring, type Handle } from 'remix/component'
+import {
+  animateEntrance,
+  animateExit,
+  createMixin,
+  css,
+  on,
+  pressEvents,
+  spring,
+  type Handle,
+} from 'remix/component'
 
 // Demo
-let buttonAnimation = {
-  exit: {
-    opacity: 0,
-    transform: 'scale(1.15)',
-    duration: 100,
-    easing: 'ease-in',
-  },
+let buttonExitAnimation = {
+  opacity: 0,
+  transform: 'scale(1.15)',
+  duration: 100,
+  easing: 'ease-in',
 }
 
-let confirmationAnimation = {
-  enter: {
-    opacity: 0,
-    transform: 'scale(0.9)',
-    duration: 200,
-    easing: 'ease-out',
-  },
+let confirmationEnterAnimation = {
+  opacity: 0,
+  transform: 'scale(0.9)',
+  duration: 200,
+  easing: 'ease-out',
 }
 
 export function HoldToConfirm(handle: Handle) {
@@ -26,13 +29,15 @@ export function HoldToConfirm(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        display: 'grid',
-        placeItems: 'center',
-        minHeight: 140,
-        // so children can animate in the same position
-        '& > *': { gridArea: '1 / 1' },
-      }}
+      mix={[
+        css({
+          display: 'grid',
+          placeItems: 'center',
+          minHeight: 140,
+          // so children can animate in the same position
+          '& > *': { gridArea: '1 / 1' },
+        }),
+      ]}
     >
       {!confirmed && (
         <HoldButton
@@ -61,50 +66,54 @@ function HoldButton(handle: Handle) {
 
   return (props: { onConfirm: () => void }) => (
     <button
-      animate={buttonAnimation}
-      css={{
-        position: 'relative',
-        overflow: 'hidden',
-        width: 200,
-        height: 56,
-        border: 'none',
-        borderRadius: 12,
-        backgroundColor: '#dc2626',
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 600,
-        cursor: 'pointer',
-        userSelect: 'none',
-        transition: 'transform 150ms ease',
-        '&:focus': {
-          outline: '3px solid rgba(220, 38, 38, 0.4)',
-          outlineOffset: 2,
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
-      on={{
-        [pressConfirmStart]() {
+      mix={[
+        animateExit(buttonExitAnimation),
+        css({
+          position: 'relative',
+          overflow: 'hidden',
+          width: 200,
+          height: 56,
+          border: 'none',
+          borderRadius: 12,
+          backgroundColor: '#dc2626',
+          color: 'white',
+          fontSize: 16,
+          fontWeight: 600,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: 'transform 150ms ease',
+          '&:focus': {
+            outline: '3px solid rgba(220, 38, 38, 0.4)',
+            outlineOffset: 2,
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+        confirmPress(),
+        on(confirmPress.start, () => {
           confirming = true
           handle.update()
-        },
-        [pressConfirmCancel]() {
+        }),
+        on(confirmPress.cancel, () => {
+          if (!confirming) return
           confirming = false
           handle.update()
-        },
-        [pressConfirmEnd]() {
+        }),
+        on(confirmPress.end, () => {
           props.onConfirm()
-        },
-      }}
+        }),
+      ]}
     >
       <div
-        css={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          transformOrigin: 'left',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            transformOrigin: 'left',
+          }),
+        ]}
         style={{
           transform: confirming ? 'scaleX(1)' : 'scaleX(0)',
           transition: confirming
@@ -114,14 +123,16 @@ function HoldButton(handle: Handle) {
       />
 
       <span
-        css={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-        }}
+        mix={[
+          css({
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }),
+        ]}
       >
         <TrashIcon />
         Hold to Delete
@@ -133,44 +144,50 @@ function HoldButton(handle: Handle) {
 function Confirmation() {
   return (props: { onReset: () => void }) => (
     <div
-      animate={confirmationAnimation}
-      css={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 16,
-      }}
+      mix={[
+        animateEntrance(confirmationEnterAnimation),
+        css({
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+        }),
+      ]}
     >
       <div
-        css={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          color: '#22c55e',
-          fontSize: 18,
-          fontWeight: 600,
-        }}
+        mix={[
+          css({
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: '#22c55e',
+            fontSize: 18,
+            fontWeight: 600,
+          }),
+        ]}
       >
         <CheckIcon />
         Deleted
       </div>
 
       <button
-        css={{
-          padding: '8px 16px',
-          border: '1px solid #e2e8f0',
-          borderRadius: 8,
-          backgroundColor: 'white',
-          color: '#64748b',
-          fontSize: 14,
-          cursor: 'pointer',
-          transition: 'all 150ms ease',
-          '&:hover': {
-            backgroundColor: '#f8fafc',
-            borderColor: '#cbd5e1',
-          },
-        }}
-        on={{ click: props.onReset }}
+        mix={[
+          css({
+            padding: '8px 16px',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            backgroundColor: 'white',
+            color: '#64748b',
+            fontSize: 14,
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            '&:hover': {
+              backgroundColor: '#f8fafc',
+              borderColor: '#cbd5e1',
+            },
+          }),
+          on('click', props.onReset),
+        ]}
       >
         Reset Demo
       </button>
@@ -213,41 +230,69 @@ function CheckIcon() {
   )
 }
 
-// Custom interaction for press-and-hold confirmation
 const PRESS_CONFIRM_TIME = 2000
-
-let pressConfirmStart = defineInteraction('demo:press-confirm-start', PressConfirm)
-let pressConfirmCancel = defineInteraction('demo:press-confirm-cancel', PressConfirm)
-let pressConfirmEnd = defineInteraction('demo:press-confirm-end', PressConfirm)
+let pressConfirmStartEventType = 'demo:press-confirm-start' as const
+let pressConfirmCancelEventType = 'demo:press-confirm-cancel' as const
+let pressConfirmEndEventType = 'demo:press-confirm-end' as const
 
 declare global {
   interface HTMLElementEventMap {
-    [pressConfirmStart]: Event
-    [pressConfirmCancel]: Event
-    [pressConfirmEnd]: Event
+    [pressConfirmStartEventType]: Event
+    [pressConfirmCancelEventType]: Event
+    [pressConfirmEndEventType]: Event
   }
 }
 
-function PressConfirm(handle: Interaction) {
-  if (!(handle.target instanceof HTMLElement)) return
-
-  let target = handle.target
+let baseConfirmPress = createMixin<HTMLElement>((handle) => {
   let timer = 0
 
-  handle.on(target, {
-    [pressDown]() {
-      target.dispatchEvent(new Event(pressConfirmStart, { bubbles: true }))
-      timer = window.setTimeout(() => {
-        target.dispatchEvent(new Event(pressConfirmEnd, { bubbles: true }))
-      }, PRESS_CONFIRM_TIME)
-    },
-    [pressUp]() {
+  let clearTimer = () => {
+    if (timer) {
       clearTimeout(timer)
-      target.dispatchEvent(new Event(pressConfirmCancel, { bubbles: true }))
-    },
-    [pressCancel]() {
-      clearTimeout(timer)
-      target.dispatchEvent(new Event(pressConfirmCancel, { bubbles: true }))
-    },
-  })
+      timer = 0
+    }
+  }
+
+  handle.addEventListener('remove', clearTimer)
+
+  return (props) => (
+    <handle.element
+      {...props}
+      mix={[
+        pressEvents(),
+        on(pressEvents.down, (event) => {
+          let target = event.currentTarget
+          clearTimer()
+          target.dispatchEvent(new Event(pressConfirmStartEventType, { bubbles: true }))
+          timer = window.setTimeout(() => {
+            target.dispatchEvent(new Event(pressConfirmEndEventType, { bubbles: true }))
+          }, PRESS_CONFIRM_TIME)
+        }),
+        on(pressEvents.up, (event) => {
+          clearTimer()
+          event.currentTarget.dispatchEvent(
+            new Event(pressConfirmCancelEventType, { bubbles: true }),
+          )
+        }),
+        on(pressEvents.cancel, (event) => {
+          clearTimer()
+          event.currentTarget.dispatchEvent(
+            new Event(pressConfirmCancelEventType, { bubbles: true }),
+          )
+        }),
+      ]}
+    />
+  )
+})
+
+type ConfirmPressMixin = typeof baseConfirmPress & {
+  readonly start: typeof pressConfirmStartEventType
+  readonly cancel: typeof pressConfirmCancelEventType
+  readonly end: typeof pressConfirmEndEventType
 }
+
+let confirmPress: ConfirmPressMixin = Object.assign(baseConfirmPress, {
+  start: pressConfirmStartEventType,
+  cancel: pressConfirmCancelEventType,
+  end: pressConfirmEndEventType,
+})

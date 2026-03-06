@@ -38,16 +38,21 @@ export type {
   RemixNode,
   Props,
 } from './lib/jsx.ts'
-export type {
-  HostProps,
-  LayoutAnimationConfig,
-  PresenceStyleProperties,
-  PresenceKeyframe,
-  PresenceOptions,
-  PresenceConfig,
-  PresenceKeyframeConfig,
-  AnimateProp,
-} from './lib/dom.ts'
+export type { HostProps, LayoutAnimationConfig } from './lib/dom.ts'
+export { createMixin } from './lib/mixin.ts'
+export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mixin.ts'
+export { TypedEventTarget } from './lib/typed-event-target.ts'
+export { addEventListeners } from './lib/event-listeners.ts'
+export { on } from './lib/mixins/on-mixin.tsx'
+export type { Dispatched } from './lib/mixins/on-mixin.tsx'
+export { keysEvents } from './lib/mixins/keys-mixin.tsx'
+export { pressEvents } from './lib/mixins/press-mixin.tsx'
+export type { PressEvent } from './lib/mixins/press-mixin.tsx'
+export { ref } from './lib/mixins/ref-mixin.tsx'
+export type { RefCallback } from './lib/mixins/ref-mixin.tsx'
+export { css } from './lib/mixins/css-mixin.tsx'
+export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.tsx'
+export { animateLayout } from './lib/mixins/animate-layout-mixin.tsx'
 
 // -- Animation --
 export { spring } from './lib/spring.ts'

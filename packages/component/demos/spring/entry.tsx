@@ -1,6 +1,6 @@
-import { createRoot, type Handle } from 'remix/component'
+import { addEventListeners, createRoot, css, on, ref, type Handle } from 'remix/component'
 
-import { dragRelease } from './drag-release.ts'
+import { dragVelocityEvents } from './drag-release.ts'
 import { spring, type SpringPreset } from 'remix/component'
 
 interface TrailPoint {
@@ -99,7 +99,7 @@ function PointerTrail(handle: Handle) {
     }
   }
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     pointerdown(event) {
       if (!(event.target as HTMLElement).closest('.draggable')) return
       isDown = true
@@ -127,17 +127,19 @@ function PointerTrail(handle: Handle) {
 
   return () => (
     <canvas
-      connect={(node) => {
-        canvas = node
-        canvas.width = window.innerWidth
-        canvas.height = window.innerHeight
-      }}
-      css={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 5,
-      }}
+      mix={[
+        ref((node) => {
+          canvas = node
+          canvas.width = window.innerWidth
+          canvas.height = window.innerHeight
+        }),
+        css({
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 5,
+        }),
+      ]}
     />
   )
 }
@@ -162,7 +164,7 @@ function SpringDemo(handle: Handle) {
   // Get default spring transition for target circle
   let springValue = spring(selectedPreset)
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     click(event) {
       // Ignore clicks on controls or when dragging
       if ((event.target as HTMLElement).closest('.controls')) return
@@ -176,29 +178,33 @@ function SpringDemo(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: '#1a1a2e',
-        cursor: 'crosshair',
-        overflow: 'hidden',
-      }}
+      mix={[
+        css({
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: '#1a1a2e',
+          cursor: 'crosshair',
+          overflow: 'hidden',
+        }),
+      ]}
     >
       {/* Pointer trail */}
       <PointerTrail />
 
       {/* Target circle */}
       <div
-        css={{
-          position: 'absolute',
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          backgroundColor: 'transparent',
-          border: '3px dashed rgba(233, 69, 96, 0.5)',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            backgroundColor: 'transparent',
+            border: '3px dashed rgba(233, 69, 96, 0.5)',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+          }),
+        ]}
         style={{
           left: `${targetX}px`,
           top: `${targetY}px`,
@@ -209,45 +215,37 @@ function SpringDemo(handle: Handle) {
       {/* Draggable circle */}
       <div
         className="draggable"
-        css={{
-          position: 'absolute',
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          backgroundColor: '#0ea5e9',
-          boxShadow: '0 0 20px rgba(14, 165, 233, 0.5)',
-          transform: 'translate(-50%, -50%)',
-          userSelect: 'none',
-          touchAction: 'none',
-          zIndex: 10,
-        }}
-        style={{
-          left: `${dragX}px`,
-          top: `${dragY}px`,
-          cursor: isDragging ? 'grabbing' : 'grab',
-          transition: isAnimating ? `left ${transitionX}, top ${transitionY}` : 'none',
-        }}
-        on={{
-          transitionend() {
+        mix={[
+          css({
+            position: 'absolute',
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            backgroundColor: '#0ea5e9',
+            boxShadow: '0 0 20px rgba(14, 165, 233, 0.5)',
+            transform: 'translate(-50%, -50%)',
+            userSelect: 'none',
+            touchAction: 'none',
+            zIndex: 10,
+          }),
+          on('transitionend', () => {
             isAnimating = false
             handle.update()
-          },
-
-          pointerdown(event) {
+          }),
+          on('pointerdown', (event) => {
             event.preventDefault()
             isDragging = true
             isAnimating = false
             handle.update()
-          },
-
-          pointermove(event) {
+          }),
+          on('pointermove', (event) => {
             if (!isDragging) return
             dragX = event.clientX
             dragY = event.clientY
             handle.update()
-          },
-
-          [dragRelease](event) {
+          }),
+          dragVelocityEvents(),
+          on(dragVelocityEvents.release, (event) => {
             isDragging = false
 
             // Calculate distance to target on each axis
@@ -283,63 +281,71 @@ function SpringDemo(handle: Handle) {
             dragX = targetX
             dragY = targetY
             handle.update()
-          },
+          }),
+        ]}
+        style={{
+          left: `${dragX}px`,
+          top: `${dragY}px`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isAnimating ? `left ${transitionX}, top ${transitionY}` : 'none',
         }}
       />
 
       {/* Controls */}
       <div
         className="controls"
-        css={{
-          position: 'absolute',
-          top: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: '4px',
-          padding: '4px',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '8px',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: '14px',
-          cursor: 'default',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '4px',
+            padding: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '14px',
+            cursor: 'default',
+          }),
+        ]}
       >
         {(Object.keys(spring.presets) as SpringPreset[]).map((preset) => (
           <label
             key={preset}
-            css={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              color: '#fff',
-              cursor: 'pointer',
-              transition: 'background-color 150ms ease',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              },
-              '&:has(input:checked)': {
-                backgroundColor: 'rgba(14, 165, 233, 0.3)',
-              },
-            }}
+            mix={[
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: 'pointer',
+                transition: 'background-color 150ms ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+                '&:has(input:checked)': {
+                  backgroundColor: 'rgba(14, 165, 233, 0.3)',
+                },
+              }),
+            ]}
           >
             <input
               type="radio"
               name="spring-preset"
               value={preset}
               checked={selectedPreset === preset}
-              css={{
-                accentColor: '#0ea5e9',
-              }}
-              on={{
-                change() {
+              mix={[
+                css({ accentColor: '#0ea5e9' }),
+                on('change', () => {
                   selectedPreset = preset
                   springValue = spring(selectedPreset)
                   handle.update()
-                },
-              }}
+                }),
+              ]}
             />
             {preset}
           </label>
@@ -348,16 +354,18 @@ function SpringDemo(handle: Handle) {
 
       {/* Instructions */}
       <div
-        css={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: '#ffffff80',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: '14px',
-          textAlign: 'center',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: '#ffffff80',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '14px',
+            textAlign: 'center',
+          }),
+        ]}
       >
         Click to move target • Drag the blue circle and release to see velocity-based spring
       </div>

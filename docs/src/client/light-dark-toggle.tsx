@@ -1,4 +1,4 @@
-import { clientEntry, type Handle, type RemixNode } from 'remix/component'
+import { clientEntry, css, on, ref, type Handle } from 'remix/component'
 import { routes } from '../server/routes'
 
 export const LightDarkToggle = clientEntry(
@@ -9,19 +9,19 @@ export const LightDarkToggle = clientEntry(
     return () => {
       return (
         <button
-          css={{ height: '100%', width: '44px', cursor: 'pointer' }}
-          connect={(node) => {
-            el = node
-            isDark = document.body.classList.contains('dark')
-            handle.update()
-          }}
-          on={{
-            click: () => {
+          mix={[
+            css({ height: '100%', width: '44px', cursor: 'pointer' }),
+            ref((node) => {
+              el = node as HTMLButtonElement
+              isDark = document.body.classList.contains('dark')
+              handle.update()
+            }),
+            on('click', () => {
               document.body.classList.toggle('dark')
               isDark = document.body.classList.contains('dark')
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {isDark ? '💡' : '🌙'}
         </button>

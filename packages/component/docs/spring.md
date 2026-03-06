@@ -67,22 +67,22 @@ css={{
 // → "left 385ms linear(...), top 385ms linear(...)"
 ```
 
-## Animate Prop
+## Animation Mixins
 
 Spread the spring value to get both `duration` and `easing`:
 
 ```tsx
-animate={{
-  enter: {
+mix={[
+  animateEntrance({
     opacity: 0,
     transform: 'scale(0.9)',
     ...spring('bouncy')
-  },
-  exit: {
+  }),
+  animateExit({
     opacity: 0,
     ...spring('snappy')
-  }
-}}
+  }),
+]}
 ```
 
 ## Presets

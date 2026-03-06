@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Publish Placeholder Package'
+  short_description: 'Publish npm placeholder package at 0.0.0'
+  default_prompt: 'Use $publish-placeholder-package to publish a minimal npm placeholder package at 0.0.0 so we can configure npm OIDC permissions for CI publishing.'

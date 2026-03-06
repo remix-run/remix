@@ -1,6 +1,6 @@
-import type { CSSProps, StyleProps } from './style/lib/style.ts'
-import type { EventListeners } from '@remix-run/interaction'
+import type { StyleProps } from './style/lib/style.ts'
 import type { RemixNode } from './jsx.ts'
+import type { MixValue } from './mixin.ts'
 
 /**
  * Adapted from Preact:
@@ -9,71 +9,6 @@ import type { RemixNode } from './jsx.ts'
  * - Copyright (c) 2015-present Jason Miller
  */
 type Booleanish = boolean | 'true' | 'false'
-
-/**
- * All animatable CSS properties with autocomplete.
- * Derived from CSSStyleDeclaration for complete coverage.
- */
-export type PresenceStyleProperties = {
-  [K in keyof Omit<
-    CSSStyleDeclaration,
-    | 'length'
-    | 'parentRule'
-    | 'cssFloat'
-    | 'cssText'
-    | 'item'
-    | 'setProperty'
-    | 'removeProperty'
-    | 'getPropertyValue'
-    | 'getPropertyPriority'
-    | typeof Symbol.iterator
-  >]?: string | number
-}
-
-/**
- * A keyframe in a presence animation sequence.
- * Extends animatable properties with timing/composition controls.
- */
-export interface PresenceKeyframe extends PresenceStyleProperties {
-  /** Position in timeline (0-1) */
-  offset?: number
-  /** Per-keyframe easing function */
-  easing?: string
-  /** How this keyframe's values combine with underlying values */
-  composite?: CompositeOperationOrAuto
-}
-
-/**
- * Timing and playback options for presence animations.
- */
-export interface PresenceOptions {
-  /** Animation duration in milliseconds */
-  duration: number
-  /** Delay before animation starts in milliseconds */
-  delay?: number
-  /** Easing function for the animation */
-  easing?: string
-  /** How animated values combine with underlying values */
-  composite?: CompositeOperationOrAuto
-}
-
-/**
- * Full presence configuration with multiple keyframes.
- * Use for complex multi-step animations.
- */
-export interface PresenceConfig extends PresenceOptions {
-  /** Array of keyframes defining the animation sequence */
-  keyframes: PresenceKeyframe[]
-}
-
-/**
- * Shorthand presence configuration with a single keyframe.
- * For enter: defines the starting state (animates FROM these values TO natural styles).
- * For exit: defines the ending state (animates FROM current styles TO these values).
- */
-export interface PresenceKeyframeConfig extends PresenceKeyframe, PresenceOptions {
-  keyframes?: undefined
-}
 
 /**
  * Layout animation configuration for FLIP-based position animations.
@@ -86,37 +21,10 @@ export interface LayoutAnimationConfig {
   easing?: string
 }
 
-/**
- * Presence animation configuration for enter/exit/layout transitions.
- * Each property can be:
- * - `true`: Use default animation
- * - Object: Custom configuration
- * - Falsy (`false`, `null`, `undefined`): Disabled
- *
- * Falsy values are useful for conditional animations:
- * ```tsx
- * animate={{ enter: isReady && { opacity: 0, duration: 200 } }}
- * ```
- */
-export interface AnimateProp {
-  enter?: true | false | null | PresenceConfig | PresenceKeyframeConfig
-  exit?: true | false | null | PresenceConfig | PresenceKeyframeConfig
-  layout?: true | false | null | LayoutAnimationConfig
-}
-
 export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode
-  on?: EventListeners<eventTarget> | undefined
-  css?: CSSProps
-  connect?: (node: eventTarget, signal: AbortSignal) => void
-  /**
-   * Enable animations for this element.
-   * - `{ enter, exit, layout }`: Configure each animation type
-   * - Use `true` for defaults: `{ enter: true, exit: true, layout: true }`
-   * - Use falsy values to disable: `{ enter: false }`
-   */
-  animate?: AnimateProp
+  mix?: MixValue<eventTarget>
   /**
    * Set the innerHTML of the element directly.
    * When provided, children are ignored.

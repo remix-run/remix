@@ -2,6 +2,8 @@
 
 This guide provides a comprehensive overview of the Remix Component API, its runtime behavior, and practical use cases for building interactive UIs.
 
+> Note: Host-element `on` props were removed. Use `mix={[on('event', handler)]}` for DOM event listeners.
+
 ## Getting Started
 
 ### Creating a Root
@@ -9,7 +11,7 @@ This guide provides a comprehensive overview of the Remix Component API, its run
 To start using Remix Component, create a root and render your top-level component:
 
 ```tsx
-import { createRoot } from 'remix/component'
+import { createRoot, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
@@ -38,12 +40,12 @@ function App(handle: Handle) {
     <div>
       <h1>Count: {count}</h1>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -162,12 +164,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -185,13 +187,13 @@ function Player(handle: Handle) {
   return () => (
     <button
       disabled={isPlaying}
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           isPlaying = true
           await handle.update()
           stopButton.focus()
-        },
-      }}
+        }),
+      ]}
     >
       Play
     </button>
@@ -218,8 +220,8 @@ function Form(handle: Handle) {
       <input
         type="checkbox"
         checked={showDetails}
-        on={{
-          change(event) {
+        mix={[
+          on('change', (event) => {
             showDetails = event.currentTarget.checked
             handle.update()
             if (showDetails) {
@@ -228,11 +230,11 @@ function Form(handle: Handle) {
                 detailsSection.scrollIntoView({ behavior: 'smooth' })
               })
             }
-          },
-        }}
+          }),
+        ]}
       />
       {showDetails && (
-        <section connect={(node) => (detailsSection = node)}>Details content</section>
+        <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
       )}
     </form>
   )
@@ -1180,9 +1182,9 @@ This example demonstrates:
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements that need them
 
-### Connect Prop
+### Ref Mixin
 
-Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
+Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
 
 ```tsx
 function Form(handle: Handle) {
@@ -1190,7 +1192,7 @@ function Form(handle: Handle) {
 
   return () => (
     <form>
-      <input type="text" connect={(node) => (inputRef = node)} />
+      <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
         on={{
           click() {
@@ -1206,7 +1208,7 @@ function Form(handle: Handle) {
 }
 ```
 
-The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
+The `ref` callback receives an `AbortSignal` as its second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
 
 ```tsx
 function ResizeTracker(handle: Handle) {
@@ -1214,23 +1216,25 @@ function ResizeTracker(handle: Handle) {
 
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up ResizeObserver
-        let observer = new ResizeObserver((entries) => {
-          let entry = entries[0]
-          if (entry) {
-            dimensions.width = Math.round(entry.contentRect.width)
-            dimensions.height = Math.round(entry.contentRect.height)
-            handle.update()
-          }
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up ResizeObserver
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
     >
       Size: {dimensions.width} × {dimensions.height}
     </div>
@@ -1238,7 +1242,7 @@ function ResizeTracker(handle: Handle) {
 }
 ```
 
-The `connect` callback is called only once when the element is first rendered, not on every update.
+The `ref` callback is called only once when the element is first rendered, not on every update.
 
 ### Key Prop
 
@@ -1393,7 +1397,7 @@ function ThemedContent(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -1498,7 +1502,7 @@ function Analytics(handle: Handle, setup: { apiKey: string }) {
 #### EventEmitters
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class DataEvent extends Event {
   constructor(public value: string) {
@@ -1605,7 +1609,7 @@ function Modal(handle: Handle) {
   return () => (
     <div>
       <button
-        connect={(node) => (openButton = node)}
+        mix={[ref((node) => (openButton = node))]}
         on={{
           click() {
             isOpen = true
@@ -1623,7 +1627,7 @@ function Modal(handle: Handle) {
       {isOpen && (
         <div role="dialog">
           <button
-            connect={(node) => (closeButton = node)}
+            mix={[ref((node) => (closeButton = node))]}
             on={{
               click() {
                 isOpen = false
@@ -1655,7 +1659,7 @@ function ScrollableList(handle: Handle) {
   return () => (
     <div>
       <input
-        connect={(node) => (newItemInput = node)}
+        mix={[ref((node) => (newItemInput = node))]}
         on={{
           keydown(event) {
             if (event.key === 'Enter') {
@@ -1674,7 +1678,7 @@ function ScrollableList(handle: Handle) {
         }}
       />
       <div
-        connect={(node) => (listContainer = node)}
+        mix={[ref((node) => (listContainer = node))]}
         css={{
           maxHeight: '300px',
           overflowY: 'auto',

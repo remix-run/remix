@@ -4,6 +4,12 @@ pnpm-publish-summary.json
 reference/
 .tmp/
 /demos/tmp/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
 
 .env
 

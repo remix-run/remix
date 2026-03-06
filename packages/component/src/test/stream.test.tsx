@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
+import { createMixin, css, on } from '../index.ts'
 
 import { renderToStream, renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
@@ -350,7 +351,7 @@ describe('stream', () => {
     it('filters framework-specific props', async () => {
       let stream = renderToStream(
         <div>
-          <button key="btn-1" on={{ click: () => {} }} type="button">
+          <button key="btn-1" mix={[on('click', () => {})]} type="button">
             Click me
           </button>
           <ul>
@@ -363,12 +364,91 @@ describe('stream', () => {
 
       // Framework props should not appear in HTML
       expect(html).not.toContain('key=')
-      expect(html).not.toContain('on=')
+      expect(html).not.toContain('mix=')
 
       // But regular HTML attributes should be preserved
       expect(html).toContain('type="button"')
       expect(html).toContain('<li>First</li>')
       expect(html).toContain('<li>Second</li>')
+    })
+
+    it('resolves mixins for host prop composition', async () => {
+      let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+        <handle.element {...props} title={title} />
+      ))
+      let appendTitle = createMixin((handle) => (suffix: string, props: { title?: string }) => (
+        <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
+      ))
+
+      let stream = renderToStream(<div mix={[withTitle('hello'), appendTitle('-world')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="hello-world"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('supports nested mix descriptors via handle.element', async () => {
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} data-mixed={value} />
+        ),
+      )
+      let withNested = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} mix={[withData(value)]} />
+        ),
+      )
+
+      let stream = renderToStream(<div mix={[withNested('nested')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="nested"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('ignores lifecycle-only mixin side effects during SSR', async () => {
+      let updateError: unknown
+      let lifecycleOnly = createMixin((handle) => {
+        handle.addEventListener('insert', () => {
+          throw new Error('should not run in SSR')
+        })
+        handle.queueTask(() => {
+          throw new Error('should not run in SSR')
+        })
+        try {
+          void handle.update()
+        } catch (error) {
+          updateError = error
+        }
+
+        return (props: { title?: string }) => <handle.element {...props} title="ok" />
+      })
+
+      let stream = renderToStream(<div mix={[lifecycleOnly()]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="ok"></div>')
+      expect(updateError).toBeInstanceOf(Error)
+      expect((updateError as Error).message).toBe('handle.update() is not available during SSR.')
+    })
+
+    it('serializes css mixin styles into style tags and class names', async () => {
+      let stream = renderToStream(
+        <div
+          className="base"
+          mix={[
+            css({ color: 'red' }),
+            css({
+              backgroundColor: 'black',
+            }),
+          ]}
+        />,
+      )
+      let html = await drain(stream)
+
+      expect(html).toContain('<style data-rmx-styles>')
+      expect(html).toMatch(/class="base rmxc-[a-z0-9]+ rmxc-[a-z0-9]+"/)
+      expect(html).toContain('.rmxc-')
     })
   })
 
@@ -437,18 +517,19 @@ describe('stream', () => {
   })
 
   describe('styles', () => {
-    it('handles css prop with style objects', async () => {
-      let stream = renderToStream(<div css={{ color: 'red', fontSize: '16px' }}>Styled text</div>)
+    it('handles css mixin with style objects', async () => {
+      let stream = renderToStream(
+        <div mix={[css({ color: 'red', fontSize: '16px' })]}>Styled text</div>,
+      )
       let html = await drain(stream)
 
       // Should have a style tag in head
       expect(html).toContain('<style data-rmx-styles>')
-      expect(html).toContain('[data-css="rmx-')
+      expect(html).toContain('.rmxc-')
       expect(html).toContain('color: red')
       expect(html).toContain('font-size: 16px')
 
-      // Should have the data-css attribute applied
-      expect(html).toMatch(/<div data-css="rmx-[a-z0-9]+"/)
+      expect(html).toMatch(/<div class="rmxc-[a-z0-9]+"/)
     })
 
     it('handles string style prop', async () => {
@@ -471,38 +552,36 @@ describe('stream', () => {
       )
     })
 
-    it('combines css prop with existing className', async () => {
+    it('combines css mixin with existing className', async () => {
       let stream = renderToStream(
-        <div className="existing-class" css={{ background: 'yellow' }}>
+        <div className="existing-class" mix={[css({ background: 'yellow' })]}>
           Combined classes
         </div>,
       )
       let html = await drain(stream)
 
-      // Should have both class and data-css
-      expect(html).toMatch(/<div class="existing-class" data-css="rmx-[a-z0-9]+"/)
+      expect(html).toMatch(/<div class="existing-class rmxc-[a-z0-9]+"/)
       expect(html).toContain('background: yellow')
     })
 
-    it('combines css prop with existing class attribute', async () => {
+    it('combines css mixin with existing class attribute', async () => {
       let stream = renderToStream(
-        <div class="existing-class" css={{ background: 'yellow' }}>
+        <div class="existing-class" mix={[css({ background: 'yellow' })]}>
           Combined classes
         </div>,
       )
       let html = await drain(stream)
 
-      // Should have both class and data-css
-      expect(html).toMatch(/<div class="existing-class" data-css="rmx-[a-z0-9]+"/)
+      expect(html).toMatch(/<div class="existing-class rmxc-[a-z0-9]+"/)
       expect(html).toContain('background: yellow')
     })
 
     it('deduplicates styles across multiple elements', async () => {
       let stream = renderToStream(
         <div>
-          <span css={{ color: 'red', fontSize: '14px' }}>First</span>
-          <span css={{ color: 'red', fontSize: '14px' }}>Second</span>
-          <span css={{ color: 'blue' }}>Third</span>
+          <span mix={[css({ color: 'red', fontSize: '14px' })]}>First</span>
+          <span mix={[css({ color: 'red', fontSize: '14px' })]}>Second</span>
+          <span mix={[css({ color: 'blue' })]}>Third</span>
         </div>,
       )
       let html = await drain(stream)
@@ -514,8 +593,8 @@ describe('stream', () => {
       // Should have the blue style too
       expect(html).toContain('color: blue')
 
-      // Both red spans should have same data-css (spans with identical css get same selector)
-      let spanMatches = html.match(/<span data-css="(rmx-[a-z0-9]+)">/g)
+      // Both red spans should have same className (same css hash)
+      let spanMatches = html.match(/<span class="rmxc-[a-z0-9]+">/g)
       expect(spanMatches?.length).toBe(3)
       // First two spans have same style, third has different
       expect(spanMatches?.[0]).toBe(spanMatches?.[1])
@@ -526,7 +605,7 @@ describe('stream', () => {
       let stream = renderToStream(
         <html>
           <body>
-            <div css={{ color: 'purple' }}>Content</div>
+            <div mix={[css({ color: 'purple' })]}>Content</div>
           </body>
         </html>,
       )
@@ -539,19 +618,21 @@ describe('stream', () => {
     })
 
     it('places styles in head when no html root', async () => {
-      let stream = renderToStream(<div css={{ color: 'orange' }}>No HTML root</div>)
+      let stream = renderToStream(<div mix={[css({ color: 'orange' })]}>No HTML root</div>)
       let html = await drain(stream)
 
       // Style should be in a head element
       expect(html).toMatch(/^<head><style data-rmx-styles>/)
       expect(html).toContain('color: orange')
-      expect(html).toMatch(/<\/style><\/head><div data-css="rmx-[a-z0-9]+">No HTML root<\/div>$/)
+      expect(html).toMatch(/<\/style><\/head><div class="rmxc-[a-z0-9]+">No HTML root<\/div>$/)
     })
 
-    it('handles css prop in components', async () => {
+    it('handles css mixin in components', async () => {
       function StyledButton(handle: Handle) {
         return ({ label }: { label: string }) => (
-          <button css={{ background: 'blue', color: 'white', padding: '10px' }}>{label}</button>
+          <button mix={[css({ background: 'blue', color: 'white', padding: '10px' })]}>
+            {label}
+          </button>
         )
       }
 
@@ -567,50 +648,36 @@ describe('stream', () => {
       let bgMatches = html.match(/background: blue/g)
       expect(bgMatches?.length).toBe(1)
 
-      // Both buttons should have the same data-css
-      let buttonMatches = html.match(/<button data-css="rmx-[a-z0-9]+"/g)
+      // Both buttons should have the same generated class
+      let buttonMatches = html.match(/<button class="rmxc-[a-z0-9]+"/g)
       expect(buttonMatches?.length).toBe(2)
       expect(buttonMatches?.[0]).toBe(buttonMatches?.[1])
     })
 
-    it('handles empty css prop', async () => {
-      let stream = renderToStream(<div css={{}}>Empty css prop</div>)
+    it('handles empty css mixin', async () => {
+      let stream = renderToStream(<div mix={[css({})]}>Empty css mixin</div>)
       let html = await drain(stream)
 
       // Should not add any class or styles
-      expect(html).toBe('<div>Empty css prop</div>')
+      expect(html).toBe('<div>Empty css mixin</div>')
       expect(html).not.toContain('<style')
       expect(html).not.toContain('class=')
     })
 
-    it('handles null/undefined css prop', async () => {
-      let stream = renderToStream(
-        <div>
-          {/* @ts-expect-error */}
-          <span css={null}>Null css</span>
-          <span css={undefined}>Undefined css</span>
-        </div>,
-      )
-      let html = await drain(stream)
-
-      // Should not add any classes or styles
-      expect(html).toBe('<div><span>Null css</span><span>Undefined css</span></div>')
-      expect(html).not.toContain('style')
-      expect(html).not.toContain('class')
-    })
-
-    it('handles pseudo selectors in css prop', async () => {
+    it('handles pseudo selectors in css mixin', async () => {
       let stream = renderToStream(
         <button
-          css={{
-            color: 'black',
-            ':hover': {
-              color: 'red',
-            },
-            ':focus': {
-              outline: '2px solid blue',
-            },
-          }}
+          mix={[
+            css({
+              color: 'black',
+              ':hover': {
+                color: 'red',
+              },
+              ':focus': {
+                outline: '2px solid blue',
+              },
+            }),
+          ]}
         >
           Hover me
         </button>,
@@ -624,15 +691,17 @@ describe('stream', () => {
       expect(html).toContain('outline: 2px solid blue')
     })
 
-    it('handles media queries in css prop', async () => {
+    it('handles media queries in css mixin', async () => {
       let stream = renderToStream(
         <div
-          css={{
-            fontSize: '14px',
-            '@media (min-width: 768px)': {
-              fontSize: '16px',
-            },
-          }}
+          mix={[
+            css({
+              fontSize: '14px',
+              '@media (min-width: 768px)': {
+                fontSize: '16px',
+              },
+            }),
+          ]}
         >
           Responsive text
         </div>,
@@ -652,7 +721,7 @@ describe('stream', () => {
             <meta charSet="utf-8" />
           </head>
           <body>
-            <div css={{ fontWeight: 'bold' }}>Bold text</div>
+            <div mix={[css({ fontWeight: 'bold' })]}>Bold text</div>
           </body>
         </html>,
       )

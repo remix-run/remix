@@ -5,18 +5,20 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from '../routes.ts'
 import { users } from '../data/schema.ts'
 import { setCurrentUser } from '../utils/context.ts'
+import { parseId } from '../utils/ids.ts'
+import { Session } from '../utils/session.ts'
 
 /**
  * Middleware that optionally loads the current user if authenticated.
  * Does not redirect if not authenticated.
- * Attaches user (if any) to context.storage.
+ * Attaches user (if any) to request context.
  */
 export function loadAuth(): Middleware {
-  return async ({ db, session }) => {
-    let userId = session.get('userId')
+  return async ({ db, get }) => {
+    let session = get(Session)
+    let userId = parseId(session.get('userId'))
 
-    // Only set current user if authenticated
-    if (typeof userId === 'string' || typeof userId === 'number') {
+    if (userId !== undefined) {
       let user = await db.find(users, userId)
       if (user) {
         setCurrentUser(user)
@@ -36,17 +38,15 @@ export interface RequireAuthOptions {
 /**
  * Middleware that requires a user to be authenticated.
  * Redirects to login if not authenticated.
- * Attaches user to context.storage.
+ * Attaches user to request context.
  */
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ db, session, url }) => {
-    let userId = session.get('userId')
-    let user =
-      typeof userId === 'string' || typeof userId === 'number'
-        ? await db.find(users, userId)
-        : undefined
+  return async ({ db, get, url }) => {
+    let session = get(Session)
+    let userId = parseId(session.get('userId'))
+    let user = userId === undefined ? undefined : await db.find(users, userId)
 
     if (!user) {
       // Capture the current URL to redirect back to after login

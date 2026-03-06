@@ -1,6 +1,5 @@
-import type { EventListeners } from '@remix-run/interaction'
-import { createContainer, TypedEventTarget } from '@remix-run/interaction'
 import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
+import { TypedEventTarget } from './typed-event-target.ts'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -81,28 +80,6 @@ export interface Handle<C = Record<string, never>> {
    * render/event signals are aborted when the component disconnects.
    */
   signal: AbortSignal
-
-  /**
-   * Listen to an event target with automatic cleanup when the component is
-   * disconnected. Ideal for listening to events on global event targets like
-   * document and window (or any other event target that is reachable outside of
-   * the component scope).
-   *
-   * @example
-   * ```ts
-   * function SomeComp(handle: Handle) {
-   *   let keys = []
-   *   handle.on(document, {
-   *     keydown: (event) => {
-   *       keys.push(event.key)
-   *       handle.update()
-   *     },
-   *   })
-   *   return () => <span>{keys.join(', ')}</span>
-   * }
-   * ```
-   */
-  on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => void
 }
 
 /**
@@ -147,7 +124,7 @@ export interface FrameProps {
   name?: string
   src: string
   fallback?: Renderable
-  on?: EventListeners
+  on?: Record<string, (event: Event, signal: AbortSignal) => void | Promise<void>>
 }
 
 export type ComponentFn<Context = NoContext, Setup = undefined, Props = Record<string, never>> = (
@@ -228,10 +205,6 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     context: context,
     get signal() {
       return getConnectedSignal()
-    },
-    on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => {
-      let container = createContainer(target, { signal: getConnectedSignal() })
-      container.set(listeners)
     },
   }
 

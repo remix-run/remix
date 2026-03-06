@@ -190,8 +190,32 @@ async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
   }
 
   let semverType = removedExports.length > 0 ? 'major' : 'minor'
-  let changeFile = path.join(remixChangesDir, `${semverType}.remix.update-exports-${Date.now()}.md`)
+  let changeFileBaseName = 'remix.update-exports.md'
+  let changeFile = path.join(remixChangesDir, `${semverType}.${changeFileBaseName}`)
+  let alternateSemverType = semverType === 'major' ? 'minor' : 'major'
+  let alternateChangeFile = path.join(
+    remixChangesDir,
+    `${alternateSemverType}.${changeFileBaseName}`,
+  )
+  let legacyChangeFilePattern = /^(major|minor)\.remix\.update-exports-\d+\.md$/
   let changes = ''
+
+  // Remove any old timestamped exports change files from prior runs.
+  for (let fileName of await fs.readdir(remixChangesDir)) {
+    if (!legacyChangeFilePattern.test(fileName)) {
+      continue
+    }
+    await fs.unlink(path.join(remixChangesDir, fileName))
+  }
+
+  // Remove the alternate semver deterministic file if present so we only keep one.
+  try {
+    await fs.unlink(alternateChangeFile)
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw e
+    }
+  }
 
   if (removedExports.length > 0) {
     console.log()

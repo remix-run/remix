@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
-import { boolean, number, string } from '@remix-run/data-schema'
 import {
   and,
   between,
+  column,
   createDatabase,
-  createTable,
+  table,
   eq,
   gt,
   gte,
@@ -17,33 +17,33 @@ import {
   ne,
   notInList,
   notNull,
-  type AdapterStatement,
+  type DataManipulationOperation,
   type DatabaseAdapter,
   or,
 } from '@remix-run/data-table'
 
-import { compileMysqlStatement } from './sql-compiler.ts'
+import { compileMysqlOperation } from './sql-compiler.ts'
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
-    status: string(),
-    deleted: boolean(),
+    id: column.integer(),
+    email: column.text(),
+    status: column.text(),
+    deleted: column.boolean(),
   },
 })
 
-let tasks = createTable({
+let tasks = table({
   name: 'tasks',
   columns: {
-    id: number(),
-    name: string(),
-    account_id: number(),
+    id: column.integer(),
+    name: column.text(),
+    account_id: column.integer(),
   },
 })
 
-let statements: AdapterStatement[] = []
+let statements: DataManipulationOperation[] = []
 
 let fakeAdapter = {
   capabilities: {
@@ -52,7 +52,7 @@ let fakeAdapter = {
   },
 
   execute: async (request) => {
-    statements.push(request.statement)
+    statements.push(request.operation)
     return {}
   },
 } as DatabaseAdapter
@@ -67,7 +67,7 @@ describe('mysql sql-compiler', () => {
   describe('select statement', () => {
     it('compile wildcard selection', async () => {
       await db.query(accounts).all()
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts`',
         values: [],
@@ -83,7 +83,7 @@ describe('mysql sql-compiler', () => {
         })
         .all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select `accounts`.`id` as `accountId`, `accounts`.`email` as `accountEmail` from `accounts`',
         values: [],
@@ -93,7 +93,7 @@ describe('mysql sql-compiler', () => {
     it('compile joins', async () => {
       await db.query(accounts).join(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` inner join `tasks` on `accounts`.`id` = `tasks`.`account_id`',
         values: [],
@@ -103,7 +103,7 @@ describe('mysql sql-compiler', () => {
     it('compile left join', async () => {
       await db.query(accounts).leftJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` left join `tasks` on `accounts`.`id` = `tasks`.`account_id`',
         values: [],
@@ -113,7 +113,7 @@ describe('mysql sql-compiler', () => {
     it('compile right join', async () => {
       await db.query(accounts).rightJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` right join `tasks` on `accounts`.`id` = `tasks`.`account_id`',
         values: [],
@@ -123,7 +123,7 @@ describe('mysql sql-compiler', () => {
     it('compile object where filters', async () => {
       await db.query(accounts).where({ status: 'enabled' }).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where ((`status` = ?))',
         values: ['enabled'],
@@ -133,7 +133,7 @@ describe('mysql sql-compiler', () => {
     it('compile null where filters', async () => {
       await db.query(accounts).where({ status: null }).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where ((`status` is null))',
         values: [],
@@ -143,7 +143,7 @@ describe('mysql sql-compiler', () => {
     it('compile predicate operators', async () => {
       await db.query(accounts).where(ne('status', 'disabled')).where(gt('id', 10)).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (`status` <> ?) and (`id` > ?)',
         values: ['disabled', 10],
@@ -160,7 +160,7 @@ describe('mysql sql-compiler', () => {
         .where(like('email', '%@example.com'))
         .all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (`id` >= ?) and (`id` < ?) and (`id` <= ?) and (`id` between ? and ?) and (`email` like ?)',
         values: [1, 20, 30, 2, 9, '%@example.com'],
@@ -173,7 +173,7 @@ describe('mysql sql-compiler', () => {
         .where(inList('id', [1, 2]))
         .all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (`id` in (?, ?))',
         values: [1, 2],
@@ -183,7 +183,7 @@ describe('mysql sql-compiler', () => {
     it('compile empty in-list predicates', async () => {
       await db.query(accounts).where(inList('id', [])).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (1 = 0)',
         values: [],
@@ -196,7 +196,7 @@ describe('mysql sql-compiler', () => {
         .where(notInList('id', [1, 2]))
         .all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (`id` not in (?, ?))',
         values: [1, 2],
@@ -214,7 +214,7 @@ describe('mysql sql-compiler', () => {
         )
         .all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where ((`accounts`.`id` = ?) and ((`accounts`.`status` = ?) or (`accounts`.`status` = ?)))',
         values: [1, 'enabled', 'disabled'],
@@ -224,7 +224,7 @@ describe('mysql sql-compiler', () => {
     it('compile empty logical combinators', async () => {
       await db.query(accounts).where(and()).where(or()).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (1 = 1) and (1 = 0)',
         values: [],
@@ -234,7 +234,7 @@ describe('mysql sql-compiler', () => {
     it('compile group by and having', async () => {
       await db.query(tasks).groupBy(tasks.account_id).having({ account_id: 20 }).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `tasks` group by `tasks`.`account_id` having ((`account_id` = ?))',
         values: [20],
@@ -244,7 +244,7 @@ describe('mysql sql-compiler', () => {
     it('compile pagination', async () => {
       await db.query(accounts).offset(5).limit(10).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` limit 10 offset 5',
         values: [],
@@ -254,7 +254,7 @@ describe('mysql sql-compiler', () => {
     it('compile distinct selection with order by', async () => {
       await db.query(accounts).distinct().orderBy('id', 'desc').all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select distinct * from `accounts` order by `id` DESC',
         values: [],
@@ -264,7 +264,7 @@ describe('mysql sql-compiler', () => {
     it('compile boolean bindings', async () => {
       await db.query(accounts).where({ deleted: true }).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where ((`deleted` = ?))',
         values: [true],
@@ -274,7 +274,7 @@ describe('mysql sql-compiler', () => {
     it('compile boolean predicates', async () => {
       await db.query(accounts).where(isNull(accounts.status)).where(notNull(accounts.email)).all()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from `accounts` where (`accounts`.`status` is null) and (`accounts`.`email` is not null)',
         values: [],
@@ -282,7 +282,7 @@ describe('mysql sql-compiler', () => {
     })
 
     it('compile wildcard segment path', () => {
-      let compiled = compileMysqlStatement({
+      let compiled = compileMysqlOperation({
         kind: 'select',
         table: accounts,
         select: [{ column: 'accounts.*', alias: 'allColumns' }],
@@ -307,7 +307,7 @@ describe('mysql sql-compiler', () => {
     it('compile count', async () => {
       await db.query(tasks).where({ account_id: 1 }).count()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as `count` from (select 1 from `tasks` where ((`account_id` = ?))) as `__dt_count`',
         values: [1],
@@ -317,7 +317,7 @@ describe('mysql sql-compiler', () => {
     it('compile exists', async () => {
       await db.query(tasks).where({ account_id: 1 }).exists()
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select count(*) as `count` from (select 1 from `tasks` where ((`account_id` = ?))) as `__dt_count`',
         values: [1],
@@ -333,7 +333,7 @@ describe('mysql sql-compiler', () => {
         status: 'enabled',
       })
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`id`, `email`, `status`) values (?, ?, ?)',
         values: [1, 'info@remix.run', 'enabled'],
@@ -343,7 +343,7 @@ describe('mysql sql-compiler', () => {
     it('compile for one with default values', async () => {
       await db.create(accounts, {})
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` () values ()',
         values: [],
@@ -356,7 +356,7 @@ describe('mysql sql-compiler', () => {
         { id: 2, email: 'contact@remix.run', status: 'draft' },
       ])
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`id`, `email`, `status`) values (?, ?, ?), (?, ?, ?)',
         values: [1, 'info@remix.run', 'enabled', 2, 'contact@remix.run', 'draft'],
@@ -364,7 +364,7 @@ describe('mysql sql-compiler', () => {
     })
 
     it('compile for many with default values', () => {
-      let compiled = compileMysqlStatement({
+      let compiled = compileMysqlOperation({
         kind: 'insertMany',
         table: accounts,
         values: [{}, {}],
@@ -378,7 +378,7 @@ describe('mysql sql-compiler', () => {
     it('compile for many without data', async () => {
       await db.createMany(accounts, [])
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'select 0 where 1 = 0',
         values: [],
@@ -393,7 +393,7 @@ describe('mysql sql-compiler', () => {
         status: 'enabled',
       })
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update `accounts` set `email` = ?, `status` = ? where ((`id` = ?))',
         values: ['info@remix.run', 'enabled', 1],
@@ -414,7 +414,7 @@ describe('mysql sql-compiler', () => {
         },
       )
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'update `accounts` set `email` = ?, `status` = ? where ((`status` = ?))',
         values: ['info@remix.run', 'enabled', 'disabled'],
@@ -431,7 +431,7 @@ describe('mysql sql-compiler', () => {
         },
       )
 
-      assert.throws(() => compileMysqlStatement(statements[0]))
+      assert.throws(() => compileMysqlOperation(statements[0]))
     })
 
     it('compile with update columns', async () => {
@@ -448,7 +448,7 @@ describe('mysql sql-compiler', () => {
         },
       )
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`status`, `email`) values (?, ?) on duplicate key update `email` = ?',
         values: ['contact@remix.run', 'enabled', 'info@remix.run'],
@@ -467,7 +467,7 @@ describe('mysql sql-compiler', () => {
         },
       )
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`status`, `email`) values (?, ?) on duplicate key update `id` = `id`',
         values: ['enabled', 'info@remix.run'],
@@ -479,7 +479,7 @@ describe('mysql sql-compiler', () => {
     it('compile for one', async () => {
       await db.delete(accounts, 10)
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from `accounts` where ((`id` = ?))',
         values: [10],
@@ -493,7 +493,7 @@ describe('mysql sql-compiler', () => {
         },
       })
 
-      let compiled = compileMysqlStatement(statements[0])
+      let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'delete from `accounts` where ((`status` = ?))',
         values: ['enabled'],
@@ -503,7 +503,7 @@ describe('mysql sql-compiler', () => {
 
   describe('raw statement', () => {
     it('compile', () => {
-      let compiled = compileMysqlStatement({
+      let compiled = compileMysqlOperation({
         kind: 'raw',
         sql: {
           text: 'select * from accounts where id = ? and status = ?',
@@ -521,15 +521,15 @@ describe('mysql sql-compiler', () => {
   describe('error handling', () => {
     it('throws for unsupported statements', () => {
       assert.throws(
-        () => compileMysqlStatement({ kind: 'unknown' } as never),
-        /Unsupported statement kind/,
+        () => compileMysqlOperation({ kind: 'unknown' } as never),
+        /Unsupported operation kind/,
       )
     })
 
     it('throws for unsupported predicates', () => {
       assert.throws(
         () =>
-          compileMysqlStatement({
+          compileMysqlOperation({
             kind: 'select',
             table: accounts,
             select: '*',
