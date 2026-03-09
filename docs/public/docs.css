@@ -305,13 +305,18 @@ h3 {
   font-size: var(--h3-size);
   font-weight: var(--h3-font-weight);
   line-height: var(--h3-line-height);
-  color: var(--text-tertiary-color);
+  color: var(--text-secondary-color);
   margin-top: var(--spacing-medium);
   margin-bottom: var(--spacing-small);
 
   @media (max-width: 900px) {
     font-size: calc(var(--h3-size) * 0.5);
   }
+}
+
+h4 {
+  font-size: var(--p-size);
+  color: var(--text-primary-color);
 }
 
 p {
