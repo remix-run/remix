@@ -238,17 +238,13 @@ describe('ContentDisposition non-ASCII filename handling', () => {
 
   it('decodes percent-encoded UTF-8 Chinese filename', () => {
     // Simulates what happens when raw-headers encodes 文件.png
-    let header = new ContentDisposition(
-      'form-data; name="file"; filename="%E6%96%87%E4%BB%B6.png"',
-    )
+    let header = new ContentDisposition('form-data; name="file"; filename="%E6%96%87%E4%BB%B6.png"')
     assert.equal(header.preferredFilename, '文件.png')
   })
 
   it('decodes percent-encoded UTF-8 Korean filename', () => {
     // Simulates what happens when raw-headers encodes 파일.png
-    let header = new ContentDisposition(
-      'form-data; name="file"; filename="%ED%8C%8C%EC%9D%BC.png"',
-    )
+    let header = new ContentDisposition('form-data; name="file"; filename="%ED%8C%8C%EC%9D%BC.png"')
     assert.equal(header.preferredFilename, '파일.png')
   })
 

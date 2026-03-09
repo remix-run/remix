@@ -128,11 +128,10 @@ describe('parseRawHeaders non-ASCII handling', () => {
   })
 
   it('preserves ASCII-only header values unchanged', () => {
-    let headers = parseRawHeaders('Content-Disposition: form-data; name="file"; filename="test.txt"')
-    assert.equal(
-      headers.get('content-disposition'),
-      'form-data; name="file"; filename="test.txt"',
+    let headers = parseRawHeaders(
+      'Content-Disposition: form-data; name="file"; filename="test.txt"',
     )
+    assert.equal(headers.get('content-disposition'), 'form-data; name="file"; filename="test.txt"')
   })
 
   it('handles mixed ASCII and non-ASCII', () => {
