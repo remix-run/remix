@@ -2,7 +2,7 @@
   --spacing-xxs: 4px;
   --spacing-xs: 8px;
   --spacing-small: 12px;
-  --spacing-medium: 20px;
+  --spacing-medium: 24px;
   --spacing-large: 20px; /* +8 */
   --spacing-xl: 32px; /* +12 */
   --spacing-xxl: 48px; /* +16 */
@@ -326,6 +326,13 @@ p {
   }
 }
 
+li {
+  font-size: var(--p-size);
+  font-weight: var(--p-font-weight);
+  line-height: var(--p-line-height);
+  color: var(--text-primary-color);
+}
+
 a {
   color: var(--text-link-color);
   text-decoration: none;
@@ -447,7 +454,7 @@ code {
 
 /* Shiki Code Highlighting */
 .shiki {
-  background-color: vaR(--surface-level-2-color) !important;
+  background-color: var(--surface-level-3-color) !important;
 
   a {
     color: inherit;
