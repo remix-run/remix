@@ -157,7 +157,7 @@ function percentDecode(value: string): string {
  * This handles filenames that were encoded to pass through native Headers validation.
  * Only decodes if percent-encoding is present; returns original string otherwise.
  *
- * @param value - The string to decode
+ * @param value The string to decode
  * @returns The decoded string with percent-encoded UTF-8 bytes converted to Unicode
  */
 function decodePercentEncodedUtf8(value: string): string {
@@ -167,24 +167,10 @@ function decodePercentEncodedUtf8(value: string): string {
   }
 
   try {
-    // Convert percent-encoded sequences to bytes
-    let bytes: number[] = []
-    let i = 0
-    while (i < value.length) {
-      if (value[i] === '%' && i + 2 < value.length) {
-        let hex = value.substring(i + 1, i + 3)
-        if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
-          bytes.push(parseInt(hex, 16))
-          i += 3
-          continue
-        }
-      }
-      bytes.push(value.charCodeAt(i))
-      i++
-    }
-
-    // Decode UTF-8 bytes
-    return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes))
+    let bytes = Uint8Array.from(value.match(/%[0-9A-Fa-f]{2}|./g)!, (token) =>
+      token[0] === '%' ? parseInt(token.slice(1), 16) : token.charCodeAt(0),
+    )
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes)
   } catch {
     // If decoding fails, return the original value
     return value
