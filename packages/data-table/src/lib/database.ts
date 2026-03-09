@@ -1,23 +1,21 @@
-import { parseSafe } from '@remix-run/data-schema'
-import type { Schema } from '@remix-run/data-schema'
-
 import type {
-  AdapterResult,
-  CountStatement,
+  DataManipulationResult,
+  CountOperation,
+  ColumnDefinition,
   DatabaseAdapter,
-  DeleteStatement,
-  ExistsStatement,
-  InsertManyStatement,
-  InsertStatement,
+  DeleteOperation,
+  ExistsOperation,
+  InsertManyOperation,
+  InsertOperation,
   JoinClause,
   JoinType,
   ReturningSelection,
   SelectColumn,
-  SelectStatement,
+  SelectOperation,
   TransactionOptions,
   TransactionToken,
-  UpdateStatement,
-  UpsertStatement,
+  UpdateOperation,
+  UpsertOperation,
 } from './adapter.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import type {
@@ -28,30 +26,43 @@ import type {
   OrderDirection,
   PrimaryKeyInput,
   Relation,
+  TableAfterDeleteContext,
+  TableAfterWriteContext,
+  TableBeforeDeleteContext,
+  TableLifecycleOperation,
   TableName,
   TablePrimaryKey,
   TableRow,
   TableRowWith,
+  TableWriteOperation,
+  TableValidate,
   TimestampConfig,
+  ValidationIssue,
   tableMetadataKey,
 } from './table.ts'
 import {
   getCompositeKey,
+  getTableAfterDelete,
+  getTableAfterRead,
+  getTableAfterWrite,
+  getTableBeforeDelete,
   getPrimaryKeyObject,
   getTableColumns,
   getTableName,
+  getTableBeforeWrite,
   getTablePrimaryKey,
   getTableTimestamps,
-  validatePartialRow,
+  getTableValidator,
 } from './table.ts'
 import type { Predicate, WhereInput } from './operators.ts'
 import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 import { rawSql, isSqlStatement } from './sql.ts'
-import type { AdapterStatement } from './adapter.ts'
+import type { DataManipulationOperation } from './adapter.ts'
 import type { Pretty } from './types.ts'
 import { normalizeColumnInput } from './references.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
+import type { ColumnBuilder } from './column.ts'
 
 type QueryState = {
   select: '*' | SelectColumn[]
@@ -125,7 +136,16 @@ type SavepointCounter = {
   value: number
 }
 
-const executeStatement = Symbol('executeStatement')
+const executeOperation = Symbol('executeOperation')
+const loadRowsWithRelations = Symbol('loadRowsWithRelations')
+
+type LifecycleCallbackSource =
+  | 'beforeWrite'
+  | 'validate'
+  | 'afterWrite'
+  | 'beforeDelete'
+  | 'afterDelete'
+  | 'afterRead'
 
 type RelationMapForSourceName<tableName extends string> = Record<
   string,
@@ -156,12 +176,21 @@ export type QueryTableInput<
 > = TableMetadataLike<
   tableName,
   {
-    [column in keyof row & string]: Schema<any, row[column]>
+    [column in keyof row & string]: ColumnBuilder<row[column]>
   },
   primaryKey,
   TimestampConfig | null
 > & {
-  '~standard': Schema<unknown, Partial<row>>['~standard']
+  [tableMetadataKey]: {
+    name: tableName
+    columns: {
+      [column in keyof row & string]: ColumnBuilder<row[column]>
+    }
+    primaryKey: primaryKey
+    timestamps: TimestampConfig | null
+    columnDefinitions: Record<string, ColumnDefinition>
+    validate?: TableValidate<Record<string, unknown>>
+  }
 } & Record<string, unknown>
 
 export type QueryBuilderFor<
@@ -295,6 +324,11 @@ export type CreateManyRowsOptions = {
   returnRows: true
 }
 
+/**
+ * High-level database runtime used to build and execute data manipulation operations.
+ *
+ * Create instances with {@link createDatabase}.
+ */
 export type Database = {
   adapter: DatabaseAdapter
   now(): unknown
@@ -344,7 +378,7 @@ export type Database = {
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
   updateMany<table extends AnyTable>(
     table: table,
     changes: Partial<TableRow<table>>,
@@ -355,7 +389,7 @@ export type Database = {
     table: table,
     options: DeleteManyOptions<table>,
   ): Promise<WriteResult>
-  exec(statement: string | SqlStatement, values?: unknown[]): Promise<AdapterResult>
+  exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
   transaction<result>(
     callback: (database: Database) => Promise<result>,
     options?: TransactionOptions,
@@ -514,6 +548,10 @@ class DatabaseRuntime implements Database {
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
+    if (value == null) {
+      return null
+    }
+
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.with) {
@@ -609,18 +647,53 @@ class DatabaseRuntime implements Database {
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let existing = await this.find(table, value)
-    if (!existing) {
-      return null
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
+    let where = getPrimaryKeyWhere(table, value)
+
+    if (this.#adapter.capabilities.returning) {
+      let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
+        touch: options?.touch,
+        returning: '*',
+      })) as WriteRowsResult<TableRow<table>>
+      let updatedRow = updateResult.rows[0]
+
+      if (!updatedRow) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      if (!options?.with) {
+        return updatedRow as TableRowWith<table, LoadedRelationMap<relations>>
+      }
+
+      let loaded = await this.findOne(table, {
+        where: getPrimaryKeyWhereFromRow(table, updatedRow),
+        with: options.with,
+      })
+
+      if (!loaded) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      return loaded
     }
 
-    let where = getPrimaryKeyWhere(table, value)
     await this.query(asQueryTableInput(table)).where(where).update(changes, {
       touch: options?.touch,
     })
 
-    return this.find(table, value, { with: options?.with })
+    let loaded = await this.find(table, value, { with: options?.with })
+
+    if (!loaded) {
+      throw new DataTableQueryError(
+        'update() failed to find row for table "' + getTableName(table) + '"',
+      )
+    }
+
+    return loaded
   }
 
   async updateMany<table extends AnyTable>(
@@ -679,10 +752,13 @@ class DatabaseRuntime implements Database {
     return toWriteResult(result)
   }
 
-  async exec(statement: string | SqlStatement, values: unknown[] = []): Promise<AdapterResult> {
+  async exec(
+    statement: string | SqlStatement,
+    values: unknown[] = [],
+  ): Promise<DataManipulationResult> {
     let sqlStatement = isSqlStatement(statement) ? statement : rawSql(statement, values)
 
-    return this[executeStatement]({
+    return this[executeOperation]({
       kind: 'raw',
       sql: sqlStatement,
     })
@@ -731,10 +807,10 @@ class DatabaseRuntime implements Database {
     }
   }
 
-  async [executeStatement](statement: AdapterStatement): Promise<AdapterResult> {
+  async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
     try {
       return await this.#adapter.execute({
-        statement,
+        operation,
         transaction: this.#token,
       })
     } catch (error) {
@@ -742,7 +818,7 @@ class DatabaseRuntime implements Database {
         cause: error,
         metadata: {
           dialect: this.#adapter.dialect,
-          statementKind: statement.kind,
+          operationKind: operation.kind,
         },
       })
     }
@@ -755,6 +831,21 @@ class DatabaseRuntime implements Database {
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
  * @returns A `Database` API instance.
+ * @example
+ * ```ts
+ * import { column as c, createDatabase, table } from 'remix/data-table'
+ *
+ * let users = table({
+ *   name: 'users',
+ *   columns: {
+ *     id: c.integer(),
+ *     email: c.varchar(255),
+ *   },
+ * })
+ *
+ * let db = createDatabase(adapter)
+ * let rows = await db.query(users).where({ id: 1 }).all()
+ * ```
  */
 export function createDatabase(
   adapter: DatabaseAdapter,
@@ -765,6 +856,30 @@ export function createDatabase(
   return new DatabaseRuntime({
     adapter,
     token: undefined,
+    now,
+    savepointCounter: { value: 0 },
+  })
+}
+
+/**
+ * Creates a database runtime bound to an existing adapter transaction token.
+ * This is an internal helper used by the migration runner.
+ * @param adapter Adapter implementation responsible for SQL execution.
+ * @param token Active adapter transaction token.
+ * @param options Optional runtime options.
+ * @param options.now Clock function used for auto-managed timestamps.
+ * @returns A `Database` API instance bound to the provided transaction.
+ */
+export function createDatabaseWithTransaction(
+  adapter: DatabaseAdapter,
+  token: TransactionToken,
+  options?: { now?: () => unknown },
+): Database {
+  let now = options?.now ?? defaultNow
+
+  return new DatabaseRuntime({
+    adapter,
+    token,
     now,
     savepointCounter: { value: 0 },
   })
@@ -1042,21 +1157,22 @@ export class QueryBuilder<
    * @returns All matching rows with requested eager-loaded relations.
    */
   async all(): Promise<Array<row & loaded>> {
-    let statement = this.#toSelectStatement()
-    let result = await this.#database[executeStatement](statement)
+    let rows = await this[loadRowsWithRelations]()
+    return applyAfterReadHooksToLoadedRows(this.#table, rows, this.#state.with) as Array<
+      row & loaded
+    >
+  }
+
+  async [loadRowsWithRelations](): Promise<Record<string, unknown>[]> {
+    let operation = this.#toSelectOperation()
+    let result = await this.#database[executeOperation](operation)
     let rows = normalizeRows(result.rows)
 
     if (Object.keys(this.#state.with).length === 0) {
-      return rows as Array<row & loaded>
+      return rows
     }
 
-    let rowsWithRelations = await loadRelationsForRows(
-      this.#database,
-      this.#table,
-      rows,
-      this.#state.with,
-    )
-    return rowsWithRelations as Array<row & loaded>
+    return loadRelationsForRows(this.#database, this.#table, rows, this.#state.with)
   }
 
   /**
@@ -1083,7 +1199,7 @@ export class QueryBuilder<
    * @returns Number of rows that match the current query scope.
    */
   async count(): Promise<number> {
-    let statement: CountStatement<AnyTable> = {
+    let operation: CountOperation<AnyTable> = {
       kind: 'count',
       table: this.#table,
       joins: [...this.#state.joins],
@@ -1092,7 +1208,7 @@ export class QueryBuilder<
       having: [...this.#state.having],
     }
 
-    let result = await this.#database[executeStatement](statement)
+    let result = await this.#database[executeOperation](operation)
 
     if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
       return result.rows[0].count as number
@@ -1110,7 +1226,7 @@ export class QueryBuilder<
    * @returns `true` when at least one row matches the current query scope.
    */
   async exists(): Promise<boolean> {
-    let statement: ExistsStatement<AnyTable> = {
+    let operation: ExistsOperation<AnyTable> = {
       kind: 'exists',
       table: this.#table,
       joins: [...this.#state.joins],
@@ -1119,7 +1235,7 @@ export class QueryBuilder<
       having: [...this.#state.having],
     }
 
-    let result = await this.#database[executeStatement](statement)
+    let result = await this.#database[executeOperation](operation)
 
     if (result.rows && result.rows[0] && typeof result.rows[0].exists === 'boolean') {
       return result.rows[0].exists as boolean
@@ -1162,32 +1278,49 @@ export class QueryBuilder<
     assertReturningCapability(this.#database.adapter, 'insert', returning)
 
     if (returning) {
-      let statement: InsertStatement<AnyTable> = {
+      let operation: InsertOperation<AnyTable> = {
         kind: 'insert',
         table: this.#table,
         values: preparedValues,
         returning: normalizeReturningSelection(returning),
       }
 
-      let result = await this.#database[executeStatement](statement)
-      let row = (normalizeRows(result.rows)[0] ?? null) as row | null
+      let result = await this.#database[executeOperation](operation)
+      let row = (applyAfterReadHooksToRows(this.#table, normalizeRows(result.rows))[0] ??
+        null) as row | null
+      let affectedRows = result.affectedRows ?? 0
+      runAfterWriteHook(this.#table, {
+        operation: 'create',
+        tableName: getTableName(this.#table),
+        values: [preparedValues as Partial<row>],
+        affectedRows,
+        insertId: result.insertId,
+      })
 
       return {
-        affectedRows: result.affectedRows ?? 0,
+        affectedRows,
         insertId: result.insertId,
         row,
       }
     }
 
-    let statement: InsertStatement<AnyTable> = {
+    let operation: InsertOperation<AnyTable> = {
       kind: 'insert',
       table: this.#table,
       values: preparedValues,
     }
 
-    let result = await this.#database[executeStatement](statement)
+    let result = await this.#database[executeOperation](operation)
+    let affectedRows = result.affectedRows ?? 0
+    runAfterWriteHook(this.#table, {
+      operation: 'create',
+      tableName: getTableName(this.#table),
+      values: [preparedValues as Partial<row>],
+      affectedRows,
+      insertId: result.insertId,
+    })
     let metadata: WriteResult = {
-      affectedRows: result.affectedRows ?? 0,
+      affectedRows,
       insertId: result.insertId,
     }
 
@@ -1216,36 +1349,62 @@ export class QueryBuilder<
     let preparedValues = values.map((value) =>
       prepareInsertValues(this.#table, value, this.#database.now(), options?.touch ?? true),
     )
+
+    if (
+      preparedValues.length > 0 &&
+      preparedValues.every((preparedValue) => Object.keys(preparedValue).length === 0)
+    ) {
+      throw new DataTableQueryError(
+        'insertMany() requires at least one explicit value across the batch',
+      )
+    }
+
     let returning = options?.returning
 
     assertReturningCapability(this.#database.adapter, 'insertMany', returning)
 
     if (returning) {
-      let statement: InsertManyStatement<AnyTable> = {
+      let operation: InsertManyOperation<AnyTable> = {
         kind: 'insertMany',
         table: this.#table,
         values: preparedValues,
         returning: normalizeReturningSelection(returning),
       }
 
-      let result = await this.#database[executeStatement](statement)
+      let result = await this.#database[executeOperation](operation)
+      let affectedRows = result.affectedRows ?? 0
+      runAfterWriteHook(this.#table, {
+        operation: 'create',
+        tableName: getTableName(this.#table),
+        values: preparedValues as Array<Partial<row>>,
+        affectedRows,
+        insertId: result.insertId,
+      })
 
       return {
-        affectedRows: result.affectedRows ?? 0,
+        affectedRows,
         insertId: result.insertId,
-        rows: normalizeRows(result.rows) as row[],
+        rows: applyAfterReadHooksToRows(this.#table, normalizeRows(result.rows)) as row[],
       }
     }
 
-    let statement: InsertManyStatement<AnyTable> = {
+    let operation: InsertManyOperation<AnyTable> = {
       kind: 'insertMany',
       table: this.#table,
       values: preparedValues,
     }
 
-    let result = await this.#database[executeStatement](statement)
+    let result = await this.#database[executeOperation](operation)
+    let affectedRows = result.affectedRows ?? 0
+    runAfterWriteHook(this.#table, {
+      operation: 'create',
+      tableName: getTableName(this.#table),
+      values: preparedValues as Array<Partial<row>>,
+      affectedRows,
+      insertId: result.insertId,
+    })
     let metadata: WriteResult = {
-      affectedRows: result.affectedRows ?? 0,
+      affectedRows,
       insertId: result.insertId,
     }
 
@@ -1271,67 +1430,78 @@ export class QueryBuilder<
       offset: true,
     })
 
+    let returning = options?.returning
+    assertReturningCapability(this.#database.adapter, 'update', returning)
     let preparedChanges = prepareUpdateValues(
       this.#table,
       changes,
       this.#database.now(),
       options?.touch ?? true,
     )
-    let returning = options?.returning
-    assertReturningCapability(this.#database.adapter, 'update', returning)
 
     if (Object.keys(preparedChanges).length === 0) {
       throw new DataTableQueryError('update() requires at least one change')
     }
 
+    let result: DataManipulationResult
+
     if (hasScopedWriteModifiers(this.#state)) {
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async (tx: Database) => {
+      result = await this.#database.transaction(async (tx: Database) => {
         let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
         if (!primaryKeyPredicate) {
-          if (!returning) {
-            return {
-              affectedRows: 0,
-              insertId: undefined,
-            }
-          }
-
           return {
             affectedRows: 0,
             insertId: undefined,
-            rows: [],
+            rows: returning ? [] : undefined,
           }
         }
 
-        return tx.query(table).where(primaryKeyPredicate).update(changes, options)
+        let txRuntime = tx as unknown as DatabaseRuntime
+        return txRuntime[executeOperation]({
+          kind: 'update',
+          table,
+          changes: preparedChanges,
+          where: [primaryKeyPredicate],
+          returning: returning ? normalizeReturningSelection(returning) : undefined,
+        })
       })
+    } else {
+      let operation: UpdateOperation<AnyTable> = {
+        kind: 'update',
+        table: this.#table,
+        changes: preparedChanges,
+        where: [...this.#state.where],
+        returning: returning ? normalizeReturningSelection(returning) : undefined,
+      }
+
+      result = await this.#database[executeOperation](operation)
     }
 
-    let statement: UpdateStatement<AnyTable> = {
-      kind: 'update',
-      table: this.#table,
-      changes: preparedChanges,
-      where: [...this.#state.where],
-      returning: returning ? normalizeReturningSelection(returning) : undefined,
-    }
-
-    let result = await this.#database[executeStatement](statement)
+    let affectedRows = result.affectedRows ?? 0
+    runAfterWriteHook(this.#table, {
+      operation: 'update',
+      tableName: getTableName(this.#table),
+      values: [preparedChanges as Partial<row>],
+      affectedRows,
+      insertId: result.insertId,
+    })
 
     if (!returning) {
       return {
-        affectedRows: result.affectedRows ?? 0,
+        affectedRows,
         insertId: result.insertId,
       }
     }
 
     return {
-      affectedRows: result.affectedRows ?? 0,
+      affectedRows,
       insertId: result.insertId,
-      rows: normalizeRows(result.rows) as row[],
+      rows: applyAfterReadHooksToRows(this.#table, normalizeRows(result.rows)) as row[],
     }
   }
 
@@ -1353,54 +1523,74 @@ export class QueryBuilder<
 
     let returning = options?.returning
     assertReturningCapability(this.#database.adapter, 'delete', returning)
+    let tableName = getTableName(this.#table)
+    let deleteContext: TableBeforeDeleteContext = {
+      tableName,
+      where: [...this.#state.where],
+      orderBy: [...this.#state.orderBy],
+      limit: this.#state.limit,
+      offset: this.#state.offset,
+    }
+
+    runBeforeDeleteHook(this.#table, deleteContext)
+    let result: DataManipulationResult
 
     if (hasScopedWriteModifiers(this.#state)) {
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async (tx: Database) => {
+      result = await this.#database.transaction(async (tx: Database) => {
         let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
         if (!primaryKeyPredicate) {
-          if (!returning) {
-            return {
-              affectedRows: 0,
-              insertId: undefined,
-            }
-          }
-
           return {
             affectedRows: 0,
             insertId: undefined,
-            rows: [],
+            rows: returning ? [] : undefined,
           }
         }
 
-        return tx.query(table).where(primaryKeyPredicate).delete(options)
+        let txRuntime = tx as unknown as DatabaseRuntime
+        return txRuntime[executeOperation]({
+          kind: 'delete',
+          table,
+          where: [primaryKeyPredicate],
+          returning: returning ? normalizeReturningSelection(returning) : undefined,
+        })
       })
+    } else {
+      let operation: DeleteOperation<AnyTable> = {
+        kind: 'delete',
+        table: this.#table,
+        where: [...this.#state.where],
+        returning: returning ? normalizeReturningSelection(returning) : undefined,
+      }
+
+      result = await this.#database[executeOperation](operation)
     }
 
-    let statement: DeleteStatement<AnyTable> = {
-      kind: 'delete',
-      table: this.#table,
-      where: [...this.#state.where],
-      returning: returning ? normalizeReturningSelection(returning) : undefined,
-    }
-
-    let result = await this.#database[executeStatement](statement)
+    let affectedRows = result.affectedRows ?? 0
+    runAfterDeleteHook(this.#table, {
+      tableName,
+      where: deleteContext.where,
+      orderBy: deleteContext.orderBy,
+      limit: deleteContext.limit,
+      offset: deleteContext.offset,
+      affectedRows,
+    })
 
     if (!returning) {
       return {
-        affectedRows: result.affectedRows ?? 0,
+        affectedRows,
         insertId: result.insertId,
       }
     }
 
     return {
-      affectedRows: result.affectedRows ?? 0,
+      affectedRows,
       insertId: result.insertId,
-      rows: normalizeRows(result.rows) as row[],
+      rows: applyAfterReadHooksToRows(this.#table, normalizeRows(result.rows)) as row[],
     }
   }
 
@@ -1446,13 +1636,14 @@ export class QueryBuilder<
           options.update,
           this.#database.now(),
           options?.touch ?? true,
+          'create',
         )
       : undefined
     let returning = options?.returning
     assertReturningCapability(this.#database.adapter, 'upsert', returning)
 
     if (returning) {
-      let statement: UpsertStatement<AnyTable> = {
+      let operation: UpsertOperation<AnyTable> = {
         kind: 'upsert',
         table: this.#table,
         values: preparedValues,
@@ -1461,17 +1652,29 @@ export class QueryBuilder<
         returning: normalizeReturningSelection(returning),
       }
 
-      let result = await this.#database[executeStatement](statement)
-      let row = (normalizeRows(result.rows)[0] ?? null) as row | null
+      let result = await this.#database[executeOperation](operation)
+      let row = (applyAfterReadHooksToRows(this.#table, normalizeRows(result.rows))[0] ??
+        null) as row | null
+      let affectedRows = result.affectedRows ?? 0
+      let preparedWriteValues = updateChanges
+        ? ([preparedValues, updateChanges] as Array<Partial<row>>)
+        : ([preparedValues] as Array<Partial<row>>)
+      runAfterWriteHook(this.#table, {
+        operation: 'create',
+        tableName: getTableName(this.#table),
+        values: preparedWriteValues,
+        affectedRows,
+        insertId: result.insertId,
+      })
 
       return {
-        affectedRows: result.affectedRows ?? 0,
+        affectedRows,
         insertId: result.insertId,
         row,
       }
     }
 
-    let statement: UpsertStatement<AnyTable> = {
+    let operation: UpsertOperation<AnyTable> = {
       kind: 'upsert',
       table: this.#table,
       values: preparedValues,
@@ -1479,16 +1682,27 @@ export class QueryBuilder<
       update: updateChanges,
     }
 
-    let result = await this.#database[executeStatement](statement)
+    let result = await this.#database[executeOperation](operation)
+    let affectedRows = result.affectedRows ?? 0
+    let preparedWriteValues = updateChanges
+      ? ([preparedValues, updateChanges] as Array<Partial<row>>)
+      : ([preparedValues] as Array<Partial<row>>)
+    runAfterWriteHook(this.#table, {
+      operation: 'create',
+      tableName: getTableName(this.#table),
+      values: preparedWriteValues,
+      affectedRows,
+      insertId: result.insertId,
+    })
     let metadata: WriteResult = {
-      affectedRows: result.affectedRows ?? 0,
+      affectedRows,
       insertId: result.insertId,
     }
 
     return metadata
   }
 
-  #toSelectStatement(): SelectStatement<AnyTable> {
+  #toSelectOperation(): SelectOperation<AnyTable> {
     return {
       kind: 'select',
       table: this.#table,
@@ -1595,7 +1809,7 @@ async function loadDirectRelationValues(
     includePagination: false,
   })
 
-  let relatedRows = (await query.all()) as unknown as Record<string, unknown>[]
+  let relatedRows = await query[loadRowsWithRelations]()
   let grouped = groupRowsByTuple(relatedRows, relation.targetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -1644,7 +1858,7 @@ async function loadHasManyThroughValues(
     includePagination: false,
   })
 
-  let throughRows = (await throughQuery.all()) as unknown as Record<string, unknown>[]
+  let throughRows = await throughQuery[loadRowsWithRelations]()
 
   if (throughRows.length === 0) {
     return sourceRows.map(() => [])
@@ -1686,7 +1900,7 @@ async function loadHasManyThroughValues(
     includePagination: false,
   })
 
-  let relatedRows = (await targetQuery.all()) as unknown as Record<string, unknown>[]
+  let relatedRows = await targetQuery[loadRowsWithRelations]()
   let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -1752,7 +1966,7 @@ function applyPagination<row>(
   return limit === undefined ? offsetRows : offsetRows.slice(0, limit)
 }
 
-function normalizeRows(rows: AdapterResult['rows']): Record<string, unknown>[] {
+function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unknown>[] {
   if (!rows) {
     return []
   }
@@ -1952,7 +2166,7 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
 
   let rows = await query
     .select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[]))
-    .all()
+    [loadRowsWithRelations]()
   let primaryKeys = getTablePrimaryKey(table) as string[]
 
   return rows.map((row) => {
@@ -1997,7 +2211,7 @@ function prepareInsertValues<table extends AnyTable>(
   now: unknown,
   touch: boolean,
 ): Record<string, unknown> {
-  let output = validateWriteValues(table, values)
+  let output = validateWriteValues(table, values, 'create')
   let timestamps = getTableTimestamps(table)
   let columns = getTableColumns(table)
 
@@ -2028,8 +2242,9 @@ function prepareUpdateValues<table extends AnyTable>(
   values: Partial<TableRow<table>>,
   now: unknown,
   touch: boolean,
+  operation: TableWriteOperation = 'update',
 ): Record<string, unknown> {
-  let output = validateWriteValues(table, values)
+  let output = validateWriteValues(table, values, operation)
   let timestamps = getTableTimestamps(table)
   let columns = getTableColumns(table)
 
@@ -2050,55 +2265,383 @@ function prepareUpdateValues<table extends AnyTable>(
 function validateWriteValues<table extends AnyTable>(
   table: table,
   values: Partial<TableRow<table>>,
+  operation: TableWriteOperation,
 ): Record<string, unknown> {
-  let columns = getTableColumns(table)
   let tableName = getTableName(table)
-  let result = validatePartialRow(table, values)
+  let normalizedInput = normalizeWriteObject(table, values, operation)
+  let beforeWrite = getTableBeforeWrite(table)
 
-  if ('issues' in result) {
-    let firstIssue = result.issues[0]
-    let issuePath = firstIssue?.path
-    let firstPathSegment = issuePath && issuePath.length > 0 ? issuePath[0] : undefined
-    let column = typeof firstPathSegment === 'string' ? firstPathSegment : undefined
+  if (beforeWrite) {
+    let beforeWriteResult = beforeWrite({
+      operation,
+      tableName,
+      value: normalizedInput as Partial<TableRow<table>>,
+    })
+    assertSynchronousCallbackResult(tableName, operation, 'beforeWrite', beforeWriteResult)
 
-    if (column && !Object.prototype.hasOwnProperty.call(columns, column)) {
-      throw new DataTableValidationError(
-        'Unknown column "' + column + '" for table "' + tableName + '"',
-        [],
-      )
+    if (hasIssues(beforeWriteResult)) {
+      throwValidationIssues(tableName, beforeWriteResult.issues, operation, 'beforeWrite')
     }
 
-    if (column) {
+    if (!hasValue(beforeWriteResult)) {
       throw new DataTableValidationError(
-        'Invalid value for column "' + column + '" in table "' + tableName + '"',
-        result.issues,
+        'Invalid beforeWrite callback result for table "' + tableName + '"',
+        [{ message: 'Expected beforeWrite to return { value } or { issues }' }],
         {
           metadata: {
             table: tableName,
-            column,
+            operation,
+            source: 'beforeWrite',
           },
         },
       )
     }
 
+    normalizedInput = normalizeWriteObject(table, beforeWriteResult.value, operation, 'beforeWrite')
+  }
+
+  let validator = getTableValidator(table)
+
+  if (!validator) {
+    return normalizedInput
+  }
+
+  let validationResult = validator({
+    operation,
+    tableName,
+    value: normalizedInput as Partial<TableRow<table>>,
+  })
+  assertSynchronousCallbackResult(tableName, operation, 'validate', validationResult)
+
+  if (hasIssues(validationResult)) {
+    throwValidationIssues(tableName, validationResult.issues, operation, 'validate')
+  }
+
+  if (!hasValue(validationResult)) {
     throw new DataTableValidationError(
-      'Invalid value for table "' + tableName + '"',
-      result.issues,
+      'Invalid validator result for table "' + tableName + '"',
+      [{ message: 'Expected validator to return { value } or { issues }' }],
       {
         metadata: {
           table: tableName,
+          operation,
+          source: 'validate',
         },
       },
     )
   }
 
-  return result.value as Record<string, unknown>
+  return normalizeWriteObject(table, validationResult.value, operation, 'validate')
+}
+
+function hasIssues(value: unknown): value is { issues: ReadonlyArray<ValidationIssue> } {
+  return typeof value === 'object' && value !== null && 'issues' in value
+}
+
+function hasValue(value: unknown): value is { value: unknown } {
+  return typeof value === 'object' && value !== null && 'value' in value
+}
+
+function normalizeWriteObject<table extends AnyTable>(
+  table: table,
+  value: unknown,
+  operation: TableWriteOperation,
+  source?: LifecycleCallbackSource,
+): Record<string, unknown> {
+  let tableName = getTableName(table)
+  let columns = getTableColumns(table)
+
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new DataTableValidationError(
+      'Invalid value for table "' + tableName + '"',
+      [{ message: 'Expected object' }],
+      {
+        metadata: {
+          table: tableName,
+          operation,
+          ...(source ? { source } : {}),
+        },
+      },
+    )
+  }
+
+  let output: Record<string, unknown> = {}
+
+  for (let key in value) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      continue
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(columns, key)) {
+      throw new DataTableValidationError(
+        'Unknown column "' + key + '" for table "' + tableName + '"',
+        [],
+        {
+          metadata: {
+            table: tableName,
+            column: key,
+            operation,
+            ...(source ? { source } : {}),
+          },
+        },
+      )
+    }
+
+    output[key] = (value as Record<string, unknown>)[key]
+  }
+
+  return output
+}
+
+function throwValidationIssues(
+  tableName: string,
+  issues: ReadonlyArray<ValidationIssue>,
+  operation: TableLifecycleOperation,
+  source?: LifecycleCallbackSource,
+): never {
+  let firstIssue = issues[0]
+  let issuePath = firstIssue?.path
+  let firstPathSegment = issuePath && issuePath.length > 0 ? issuePath[0] : undefined
+  let column = typeof firstPathSegment === 'string' ? firstPathSegment : undefined
+
+  if (column) {
+    throw new DataTableValidationError(
+      'Invalid value for column "' + column + '" in table "' + tableName + '"',
+      issues,
+      {
+        metadata: {
+          table: tableName,
+          column,
+          operation,
+          ...(source ? { source } : {}),
+        },
+      },
+    )
+  }
+
+  throw new DataTableValidationError('Invalid value for table "' + tableName + '"', issues, {
+    metadata: {
+      table: tableName,
+      operation,
+      ...(source ? { source } : {}),
+    },
+  })
+}
+
+function assertSynchronousCallbackResult(
+  tableName: string,
+  operation: TableLifecycleOperation,
+  callbackName: LifecycleCallbackSource,
+  value: unknown,
+): void {
+  if (!isPromiseLike(value)) {
+    return
+  }
+
+  throw new DataTableValidationError(
+    'Invalid ' + callbackName + ' callback result for table "' + tableName + '"',
+    [{ message: callbackName + ' callbacks must be synchronous and cannot return a Promise' }],
+    {
+      metadata: {
+        table: tableName,
+        operation,
+        source: callbackName,
+      },
+    },
+  )
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    'then' in value &&
+    typeof (value as { then?: unknown }).then === 'function'
+  )
+}
+
+function runBeforeDeleteHook<table extends AnyTable>(
+  table: table,
+  context: TableBeforeDeleteContext,
+): void {
+  let callback = getTableBeforeDelete(table)
+
+  if (!callback) {
+    return
+  }
+
+  let callbackResult = callback(context)
+  assertSynchronousCallbackResult(context.tableName, 'delete', 'beforeDelete', callbackResult)
+
+  if (callbackResult === undefined) {
+    return
+  }
+
+  if (hasIssues(callbackResult)) {
+    throwValidationIssues(context.tableName, callbackResult.issues, 'delete', 'beforeDelete')
+  }
+
+  throw new DataTableValidationError(
+    'Invalid beforeDelete callback result for table "' + context.tableName + '"',
+    [{ message: 'Expected beforeDelete to return nothing or { issues }' }],
+    {
+      metadata: {
+        table: context.tableName,
+        operation: 'delete',
+        source: 'beforeDelete',
+      },
+    },
+  )
+}
+
+function runAfterWriteHook<table extends AnyTable>(
+  table: table,
+  context: TableAfterWriteContext<TableRow<table>>,
+): void {
+  let callback = getTableAfterWrite(table)
+
+  if (!callback) {
+    return
+  }
+
+  let callbackResult = callback(context)
+  assertSynchronousCallbackResult(
+    context.tableName,
+    context.operation,
+    'afterWrite',
+    callbackResult,
+  )
+}
+
+function runAfterDeleteHook<table extends AnyTable>(
+  table: table,
+  context: TableAfterDeleteContext,
+): void {
+  let callback = getTableAfterDelete(table)
+
+  if (!callback) {
+    return
+  }
+
+  let callbackResult = callback(context)
+  assertSynchronousCallbackResult(context.tableName, 'delete', 'afterDelete', callbackResult)
+}
+
+function applyAfterReadHooksToRows<table extends AnyTable>(
+  table: table,
+  rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  let callback = getTableAfterRead(table)
+
+  if (!callback || rows.length === 0) {
+    return rows
+  }
+
+  let tableName = getTableName(table)
+
+  return rows.map((row) => {
+    let callbackResult = callback({
+      tableName,
+      value: row as Partial<TableRow<table>>,
+    })
+    assertSynchronousCallbackResult(tableName, 'read', 'afterRead', callbackResult)
+
+    if (hasIssues(callbackResult)) {
+      throwValidationIssues(tableName, callbackResult.issues, 'read', 'afterRead')
+    }
+
+    if (!hasValue(callbackResult)) {
+      throw new DataTableValidationError(
+        'Invalid afterRead callback result for table "' + tableName + '"',
+        [{ message: 'Expected afterRead to return { value } or { issues }' }],
+        {
+          metadata: {
+            table: tableName,
+            operation: 'read',
+            source: 'afterRead',
+          },
+        },
+      )
+    }
+
+    return normalizeReadObject(tableName, callbackResult.value)
+  })
+}
+
+function applyAfterReadHooksToLoadedRows(
+  table: AnyTable,
+  rows: Record<string, unknown>[],
+  relationMap: Record<string, AnyRelation>,
+): Record<string, unknown>[] {
+  if (rows.length === 0) {
+    return rows
+  }
+
+  let relationNames = Object.keys(relationMap)
+
+  if (relationNames.length > 0) {
+    for (let row of rows) {
+      for (let relationName of relationNames) {
+        let relation = relationMap[relationName]
+        let relationValue = row[relationName]
+
+        if (relation.cardinality === 'many') {
+          if (!Array.isArray(relationValue)) {
+            continue
+          }
+
+          row[relationName] = applyAfterReadHooksToLoadedRows(
+            relation.targetTable,
+            relationValue as Record<string, unknown>[],
+            relation.modifiers.with,
+          )
+          continue
+        }
+
+        if (relationValue === null || relationValue === undefined) {
+          continue
+        }
+
+        if (typeof relationValue !== 'object' || Array.isArray(relationValue)) {
+          continue
+        }
+
+        let transformed = applyAfterReadHooksToLoadedRows(
+          relation.targetTable,
+          [relationValue as Record<string, unknown>],
+          relation.modifiers.with,
+        )
+        row[relationName] = transformed[0] ?? null
+      }
+    }
+  }
+
+  return applyAfterReadHooksToRows(table, rows)
+}
+
+function normalizeReadObject(tableName: string, value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new DataTableValidationError(
+      'Invalid afterRead callback result for table "' + tableName + '"',
+      [{ message: 'Expected afterRead to return an object value' }],
+      {
+        metadata: {
+          table: tableName,
+          operation: 'read',
+          source: 'afterRead',
+        },
+      },
+    )
+  }
+
+  return {
+    ...(value as Record<string, unknown>),
+  }
 }
 
 type ResolvedPredicateColumn = {
   tableName: string
   columnName: string
-  schema: unknown
 }
 
 function createPredicateColumnResolver(
@@ -2120,7 +2663,6 @@ function createPredicateColumnResolver(
       let resolvedColumn: ResolvedPredicateColumn = {
         tableName,
         columnName,
-        schema: tableColumns[columnName],
       }
 
       qualifiedColumns.set(tableName + '.' + columnName, resolvedColumn)
@@ -2178,13 +2720,6 @@ function normalizePredicateValues(
       return predicate
     }
 
-    if (
-      (predicate.operator === 'eq' || predicate.operator === 'ne') &&
-      (predicate.value === null || predicate.value === undefined)
-    ) {
-      return predicate
-    }
-
     if (predicate.operator === 'in' || predicate.operator === 'notIn') {
       if (!Array.isArray(predicate.value)) {
         throw new DataTableValidationError(
@@ -2203,28 +2738,15 @@ function normalizePredicateValues(
         )
       }
 
-      let parsedValues = predicate.value.map((value) => parsePredicateValue(column, value))
-
-      return {
-        ...predicate,
-        value: parsedValues,
-      }
+      return predicate
     }
 
-    return {
-      ...predicate,
-      value: parsePredicateValue(column, predicate.value),
-    }
+    return predicate
   }
 
   if (predicate.type === 'between') {
-    let column = resolveColumn(predicate.column)
-
-    return {
-      ...predicate,
-      lower: parsePredicateValue(column, predicate.lower),
-      upper: parsePredicateValue(column, predicate.upper),
-    }
+    resolveColumn(predicate.column)
+    return predicate
   }
 
   if (predicate.type === 'null') {
@@ -2236,31 +2758,6 @@ function normalizePredicateValues(
     ...predicate,
     predicates: predicate.predicates.map((child) => normalizePredicateValues(child, resolveColumn)),
   }
-}
-
-function parsePredicateValue(column: ResolvedPredicateColumn, value: unknown): unknown {
-  let result = parseSafe(column.schema as any, value) as
-    | { success: true; value: unknown }
-    | { success: false; issues: ReadonlyArray<unknown> }
-
-  if (!result.success) {
-    throw new DataTableValidationError(
-      'Invalid filter value for column "' +
-        column.columnName +
-        '" in table "' +
-        column.tableName +
-        '"',
-      result.issues,
-      {
-        metadata: {
-          table: column.tableName,
-          column: column.columnName,
-        },
-      },
-    )
-  }
-
-  return result.value
 }
 
 function uniqueTuples(rows: Record<string, unknown>[], columns: string[]): unknown[][] {

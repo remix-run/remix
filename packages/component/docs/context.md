@@ -46,7 +46,7 @@ function ThemedContent(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree. This allows descendants to subscribe to specific changes rather than re-rendering on every parent update:
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'

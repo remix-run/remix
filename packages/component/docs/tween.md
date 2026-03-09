@@ -195,9 +195,9 @@ Use `tween` for:
 - Animating non-CSS properties
 - Complex sequenced animations
 
-For most UI animations, prefer the declarative [`animate` prop](./animate.md) or CSS transitions with [`spring`](./spring.md).
+For most UI animations, prefer animation mixins (`animateEntrance`, `animateExit`, `animateLayout`)
+or CSS transitions with [`spring`](./spring.md).
 
 ## See Also
 
-- [Animate API](./animate.md) - Declarative enter/exit/layout animations
 - [Spring API](./spring.md) - Physics-based easing for CSS

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createCookie } from '@remix-run/cookie'
 import { SetCookie } from '@remix-run/headers'
-import { createSession } from '@remix-run/session'
+import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createRouter } from '@remix-run/fetch-router'
 
@@ -31,7 +31,8 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.map('/', ({ get }) => {
+      let session = get(Session)
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`)
     })
@@ -44,6 +45,25 @@ describe('session middleware', () => {
 
     let response3 = await router.fetch(createRequest(response2))
     assert.equal(await response3.text(), 'Count: 3')
+  })
+
+  it('allows for direct return of fetch() call', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ get }) => {
+      let session = get(Session)
+      session.set('count', Number(session.get('count') ?? 0) + 1)
+      return fetch('http://example.com')
+    })
+
+    let response = await router.fetch('https://remix.run')
+
+    assert.equal(response.headers.get('Set-Cookie')?.length != null, true)
   })
 
   it('throws if the session cookie is not signed', async () => {
@@ -83,7 +103,7 @@ describe('session middleware', () => {
     })
 
     router.map('/', (context) => {
-      context.session = createSession()
+      context.set(Session, createSession())
       return new Response('Home')
     })
 
@@ -100,7 +120,8 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.map('/', ({ get }) => {
+      let session = get(Session)
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`, {
         headers: {

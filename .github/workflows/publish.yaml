@@ -59,7 +59,7 @@ jobs:
 
       - name: Get Playwright Version
         id: playwright-version
-        run: echo "version=$(pnpm --filter @remix-run/interaction exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
@@ -70,7 +70,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/interaction exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test
@@ -82,3 +82,23 @@ jobs:
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Output tag
+  #       run: echo "tag=remix@$(node -p "require('./packages/remix/package.json').version")" >> $GITHUB_OUTPUT
+
+  # docs:
+  #   name: Update API Docs
+  #   needs: publish
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Trigger remix-api-docs
+  #       uses: actions/github-script@v8
+  #       with:
+  #         github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
+  #         script: |
+  #           await github.rest.repos.createDispatchEvent({
+  #             owner: 'remix-run',
+  #             repo: 'remix-api-docs',
+  #             event_type: 'update-docs',
+  #             client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
+  #           });

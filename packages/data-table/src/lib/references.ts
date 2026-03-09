@@ -35,7 +35,6 @@ export type ColumnReferenceLike<qualifiedName extends string = string> = {
     tableName: string
     columnName: string
     qualifiedName: qualifiedName
-    schema: unknown
   }
 }
 

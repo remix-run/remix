@@ -1,4 +1,4 @@
-import { clientEntry, type Handle } from 'remix/component'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 export let ReloadScope = clientEntry(
   '/assets/reload-scope.js#ReloadScope',
@@ -7,23 +7,20 @@ export let ReloadScope = clientEntry(
     let topPending = false
 
     return () => (
-      <div css={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div mix={[css({ display: 'flex', gap: 8, flexWrap: 'wrap' })]}>
         <button
           type="button"
-          css={{
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: framePending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: framePending ? 'default' : 'pointer',
-            '&:hover': { background: 'var(--frame-bg)' },
-          }}
-          style={{
-            '--frame-bg': framePending ? undefined : 'rgba(255,255,255,0.10)',
-          }}
-          on={{
-            async click() {
+          mix={[
+            css({
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: framePending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: framePending ? 'default' : 'pointer',
+              '&:hover': { background: 'var(--frame-bg)' },
+            }),
+            on('click', async () => {
               if (framePending || topPending) return
               framePending = true
               handle.update()
@@ -31,27 +28,27 @@ export let ReloadScope = clientEntry(
               if (signal.aborted) return
               framePending = false
               handle.update()
-            },
+            }),
+          ]}
+          style={{
+            '--frame-bg': framePending ? undefined : 'rgba(255,255,255,0.10)',
           }}
         >
           {framePending ? 'Reloading frame…' : 'Reload this frame'}
         </button>
         <button
           type="button"
-          css={{
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: topPending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
-            color: '#e9eefc',
-            cursor: topPending ? 'default' : 'pointer',
-            '&:hover': { background: 'var(--top-bg)' },
-          }}
-          style={{
-            '--top-bg': topPending ? undefined : 'rgba(255,255,255,0.10)',
-          }}
-          on={{
-            async click() {
+          mix={[
+            css({
+              padding: '6px 10px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: topPending ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+              color: '#e9eefc',
+              cursor: topPending ? 'default' : 'pointer',
+              '&:hover': { background: 'var(--top-bg)' },
+            }),
+            on('click', async () => {
               if (topPending || framePending) return
               topPending = true
               handle.update()
@@ -59,7 +56,10 @@ export let ReloadScope = clientEntry(
               if (signal.aborted) return
               topPending = false
               handle.update()
-            },
+            }),
+          ]}
+          style={{
+            '--top-bg': topPending ? undefined : 'rgba(255,255,255,0.10)',
           }}
         >
           {topPending ? 'Reloading page…' : 'Reload top frame'}

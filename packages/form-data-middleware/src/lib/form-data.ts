@@ -25,7 +25,7 @@ export interface FormDataOptions extends ParseFormDataOptions {
 }
 
 /**
- * Middleware that parses `FormData` from the request body and populates `context.formData`.
+ * Middleware that parses `FormData` from the request body and populates request context.
  *
  * @param options Options for parsing form data
  * @returns A middleware function that parses form data
@@ -45,18 +45,18 @@ export function formData(options?: FormDataOptions): Middleware {
       (!contentType.startsWith('multipart/') &&
         !contentType.startsWith('application/x-www-form-urlencoded'))
     ) {
-      context.formData = new FormData()
+      context.set(FormData, new FormData())
       return
     }
 
     try {
-      context.formData = await parseFormData(context.request, options, uploadHandler)
+      context.set(FormData, await parseFormData(context.request, options, uploadHandler))
     } catch (error) {
       if (!suppressErrors || !(error instanceof FormDataParseError)) {
         throw error
       }
 
-      context.formData = new FormData()
+      context.set(FormData, new FormData())
     }
   }
 }

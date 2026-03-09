@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/logger-middleware",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Middleware for logging HTTP requests and responses",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

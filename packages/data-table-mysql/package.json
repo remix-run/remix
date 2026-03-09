@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table-mysql",
-  "version": "0.0.0",
-  "description": "MySQL adapter for @remix-run/data-table",
+  "version": "0.1.0",
+  "description": "MySQL adapter for remix/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,6 @@
     }
   },
   "devDependencies": {
-    "@remix-run/data-schema": "workspace:*",
     "@remix-run/data-table": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
@@ -55,6 +54,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/adapter.test.ts ./src/lib/sql-compiler.test.ts",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

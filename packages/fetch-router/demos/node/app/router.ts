@@ -1,5 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
+import { Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
@@ -19,7 +20,8 @@ let sessionCookie = createCookie('__sess', {
 let sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return ({ session }, next) => {
+  return ({ get }, next) => {
+    let session = get(Session)
     let username = session.get('username')
     if (!username) {
       return redirect(routes.login.index.href())
@@ -32,7 +34,8 @@ export let router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 
-router.map(routes.home, ({ session }) => {
+router.map(routes.home, ({ get }) => {
+  let session = get(Session)
   let posts = data.getPosts()
   let username = session.get('username') as string | undefined
 
@@ -79,115 +82,125 @@ router.map(routes.home, ({ session }) => {
 })
 
 router.map(routes.login, {
-  index({ session }) {
-    let username = session.get('username') as string | undefined
-    if (username) {
-      return redirect(routes.home.href())
-    }
+  actions: {
+    index({ get }) {
+      let session = get(Session)
+      let username = session.get('username') as string | undefined
+      if (username) {
+        return redirect(routes.home.href())
+      }
 
-    return createHtmlResponse(`
-      <html>
-        <head>
-          <title>Login - Simple Blog</title>
-          <meta charset="utf-8" />
-        </head>
-        <body>
-          <h1>Login</h1>
-          <p>Enter any username to login (no password required for demo)</p>
-          <form method="POST" action="${routes.login.action.href()}">
-            <div style="display: flex; flex-direction: column; gap: 10px; width: 150px;">
-              <label for="username">Username:</label>
-              <input type="text" id="username" name="username" required />
-              <label for="password">Password:</label>
-              <input type="password" id="password" name="password" required />
-            </div>
-            <br />
-            <button type="submit">Login</button>
-          </form>
-          <p><a href="${routes.home.href()}">← Back to Home</a></p>
-        </body>
-      </html>
-    `)
-  },
-  async action({ formData, session }) {
-    let username = formData.get('username') as string
-    if (!username) {
-      return redirect(routes.login.index.href())
-    }
-    session.set('username', username)
-    return redirect(routes.home.href())
-  },
-})
-
-router.post(routes.logout, ({ session }) => {
-  session.destroy()
-  return redirect(routes.home.href())
-})
-
-router.map(routes.posts, {
-  new: {
-    middleware: [requireAuth()],
-    action() {
       return createHtmlResponse(`
         <html>
           <head>
-            <title>New Post - Simple Blog</title>
+            <title>Login - Simple Blog</title>
             <meta charset="utf-8" />
           </head>
           <body>
-            <h1>New Post</h1>
-            <form method="POST" action="${routes.posts.create.href()}">
-              <div>
-                <label for="title">Title:</label>
-                <input type="text" id="title" name="title" required />
+            <h1>Login</h1>
+            <p>Enter any username to login (no password required for demo)</p>
+            <form method="POST" action="${routes.login.action.href()}">
+              <div style="display: flex; flex-direction: column; gap: 10px; width: 150px;">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required />
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required />
               </div>
-              <div>
-                <label for="content">Content:</label>
-                <textarea id="content" name="content" required></textarea>
-              </div>
-              <button type="submit">Create Post</button>
+              <br />
+              <button type="submit">Login</button>
             </form>
             <p><a href="${routes.home.href()}">← Back to Home</a></p>
           </body>
         </html>
       `)
     },
+    async action({ get }) {
+      let session = get(Session)
+      let formData = get(FormData)
+      let username = formData.get('username') as string
+      if (!username) {
+        return redirect(routes.login.index.href())
+      }
+      session.set('username', username)
+      return redirect(routes.home.href())
+    },
   },
-  async create({ formData, session }) {
-    let username = session.get('username') as string
-    if (!username) {
-      return redirect(routes.login.index.href())
-    }
+})
 
-    let title = formData.get('title') as string
-    let content = formData.get('content') as string
+router.post(routes.logout, ({ get }) => {
+  let session = get(Session)
+  session.destroy()
+  return redirect(routes.home.href())
+})
 
-    if (!title || !content) {
-      return redirect(routes.posts.new.href())
-    }
+router.map(routes.posts, {
+  actions: {
+    new: {
+      middleware: [requireAuth()],
+      action() {
+        return createHtmlResponse(`
+          <html>
+            <head>
+              <title>New Post - Simple Blog</title>
+              <meta charset="utf-8" />
+            </head>
+            <body>
+              <h1>New Post</h1>
+              <form method="POST" action="${routes.posts.create.href()}">
+                <div>
+                  <label for="title">Title:</label>
+                  <input type="text" id="title" name="title" required />
+                </div>
+                <div>
+                  <label for="content">Content:</label>
+                  <textarea id="content" name="content" required></textarea>
+                </div>
+                <button type="submit">Create Post</button>
+              </form>
+              <p><a href="${routes.home.href()}">← Back to Home</a></p>
+            </body>
+          </html>
+        `)
+      },
+    },
+    async create({ get }) {
+      let session = get(Session)
+      let formData = get(FormData)
+      let username = session.get('username') as string
+      if (!username) {
+        return redirect(routes.login.index.href())
+      }
 
-    let post = data.createPost(title, content, username)
-    return redirect(routes.posts.show.href({ id: post.id }))
-  },
-  show({ params }) {
-    let post = data.getPost(params.id)
-    if (!post) {
-      return new Response('Post not found', { status: 404 })
-    }
+      let title = formData.get('title') as string
+      let content = formData.get('content') as string
 
-    return createHtmlResponse(html`
-      <html>
-        <head>
-          <title>${post.title} - Simple Blog</title>
-          <meta charset="utf-8" />
-        </head>
-        <body>
-          <h1>${post.title}</h1>
-          <div>By ${post.author} on ${post.createdAt.toLocaleDateString()}</div>
-          <div>${post.content.replace(/\n/g, '<br>')}</div>
-          <p><a href="${routes.home.href()}">← Back to Home</a></p>
-        </body>
-      </html>
-    `)
+      if (!title || !content) {
+        return redirect(routes.posts.new.href())
+      }
+
+      let post = data.createPost(title, content, username)
+      return redirect(routes.posts.show.href({ id: post.id }))
+    },
+    show({ params }) {
+      let post = data.getPost(params.id)
+      if (!post) {
+        return new Response('Post not found', { status: 404 })
+      }
+
+      return createHtmlResponse(html`
+        <html>
+          <head>
+            <title>${post.title} - Simple Blog</title>
+            <meta charset="utf-8" />
+          </head>
+          <body>
+            <h1>${post.title}</h1>
+            <div>By ${post.author} on ${post.createdAt.toLocaleDateString()}</div>
+            <div>${post.content.replace(/\n/g, '<br>')}</div>
+            <p><a href="${routes.home.href()}">← Back to Home</a></p>
+          </body>
+        </html>
+      `)
+    },
   },
 })

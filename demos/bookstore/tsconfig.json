@@ -11,7 +11,12 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "remix/component",
-    "customConditions": ["placeholder"]
+    "customConditions": ["placeholder"],
+    "paths": {
+      "*": ["./*"],
+      "remix/component/jsx-runtime": ["../../packages/remix/src/component/jsx-runtime.ts"],
+      "remix/component/jsx-dev-runtime": ["../../packages/remix/src/component/jsx-dev-runtime.ts"]
+    }
   },
   "include": [".assets/**/*.ts", "**/*.ts", "**/*.tsx"]
 }

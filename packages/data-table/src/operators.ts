@@ -1,4 +1,4 @@
-export type { ComparisonOperator, Predicate, WhereInput, WhereObject } from './lib/operators.ts'
+export type { Predicate, WhereInput, WhereObject } from './lib/operators.ts'
 export {
   and,
   between,

@@ -16,7 +16,7 @@ export interface Middleware<
   params extends Record<string, any> = {},
 > {
   (
-    context: RequestContext<method, params>,
+    context: RequestContext<params>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
@@ -33,7 +33,7 @@ export function runMiddleware<
   params extends Record<string, any> = {},
 >(
   middleware: Middleware<method, params>[],
-  context: RequestContext<method, params>,
+  context: RequestContext<params>,
   handler: RequestHandler<method, params>,
 ): Promise<Response> {
   let index = -1

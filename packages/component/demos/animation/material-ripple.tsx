@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
+import { animateEntrance, animateExit, css, on, pressEvents, ref } from 'remix/component'
 
 type Ripple = {
   id: number
@@ -38,98 +38,101 @@ export function MaterialRipple(handle: Handle) {
 
   return () => (
     <button
-      connect={(el) => {
-        buttonEl = el
-      }}
-      css={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px 20px',
-        borderRadius: 4,
-        textTransform: 'uppercase',
-        backgroundColor: 'transparent',
-        color: '#7c3aed',
-        border: '1px solid #7c3aed',
-        userSelect: 'none',
-        cursor: 'pointer',
-        overflow: 'hidden',
-        letterSpacing: '0.2px',
-        WebkitTapHighlightColor: 'transparent',
-        transition: 'border-color 200ms linear, background-color 200ms linear',
-        '&:hover': {
-          borderColor: '#6d28d9',
-          backgroundColor: '#7c3aed20',
-        },
-        '&:focus-visible': {
-          outline: '2px solid #7c3aed80',
-          outlineOffset: 2,
-        },
-      }}
-      on={{
-        [pressDown](event) {
+      mix={[
+        ref((el) => {
+          buttonEl = el
+        }),
+        css({
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '10px 20px',
+          borderRadius: 4,
+          textTransform: 'uppercase',
+          backgroundColor: 'transparent',
+          color: '#7c3aed',
+          border: '1px solid #7c3aed',
+          userSelect: 'none',
+          cursor: 'pointer',
+          overflow: 'hidden',
+          letterSpacing: '0.2px',
+          WebkitTapHighlightColor: 'transparent',
+          transition: 'border-color 200ms linear, background-color 200ms linear',
+          '&:hover': {
+            borderColor: '#6d28d9',
+            backgroundColor: '#7c3aed20',
+          },
+          '&:focus-visible': {
+            outline: '2px solid #7c3aed80',
+            outlineOffset: 2,
+          },
+        }),
+        pressEvents(),
+        on(pressEvents.down, (event) => {
           if (!buttonEl) return
           let rect = buttonEl.getBoundingClientRect()
           let x = event.clientX || rect.left + rect.width / 2
           let y = event.clientY || rect.top + rect.height / 2
           createRipple(x, y)
-        },
-        [pressUp]: removeAllRipples,
-        [pressCancel]: removeAllRipples,
-      }}
+        }),
+        on(pressEvents.up, removeAllRipples),
+        on(pressEvents.cancel, removeAllRipples),
+      ]}
     >
       Click me
       <span
         aria-hidden="true"
-        css={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          borderRadius: 'inherit',
-          pointerEvents: 'none',
-        }}
+        mix={[
+          css({
+            position: 'absolute',
+            inset: 0,
+            overflow: 'hidden',
+            borderRadius: 'inherit',
+            pointerEvents: 'none',
+          }),
+        ]}
       >
         {ripples.map((ripple) => (
           // Outer span: handles exit (fade out)
           <span
             key={ripple.id}
-            css={{
-              position: 'absolute',
-              borderRadius: '50%',
-            }}
+            mix={[
+              css({
+                position: 'absolute',
+                borderRadius: '50%',
+              }),
+              animateExit({
+                opacity: 0,
+                duration: 550,
+                easing: 'ease-out',
+              }),
+            ]}
             style={{
               width: ripple.size,
               height: ripple.size,
               left: ripple.x - ripple.size / 2,
               top: ripple.y - ripple.size / 2,
             }}
-            animate={{
-              exit: {
-                opacity: 0,
-                duration: 550,
-                easing: 'ease-out',
-              },
-            }}
           >
             {/* Inner span: handles enter (scale) so it doesn't get reversed when removed */}
             <span
-              css={{
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                borderRadius: 'inherit',
-                backgroundColor: 'currentColor',
-                opacity: 0.4,
-              }}
-              animate={{
-                enter: {
+              mix={[
+                css({
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: 'inherit',
+                  backgroundColor: 'currentColor',
+                  opacity: 0.4,
+                }),
+                animateEntrance({
                   opacity: 0,
                   transform: 'scale(0)',
                   duration: 300,
                   easing: 'ease-out',
-                },
-              }}
+                }),
+              ]}
             />
           </span>
         ))}

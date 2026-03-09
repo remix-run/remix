@@ -1,38 +1,40 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, it } from 'node:test'
-import { boolean, nullable, number, string } from '@remix-run/data-schema'
 
+import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
-import { createTable, hasMany, hasManyThrough } from '../src/lib/table.ts'
+import { createMigration } from '../src/lib/migrations.ts'
+import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
+import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
-let accounts = createTable({
+let accounts = table({
   name: 'accounts',
   columns: {
-    id: number(),
-    email: string(),
-    status: string(),
-    nickname: nullable(string()),
+    id: column.integer(),
+    email: column.text(),
+    status: column.text(),
+    nickname: column.text().nullable(),
   },
 })
 
-let projects = createTable({
+let projects = table({
   name: 'projects',
   columns: {
-    id: number(),
-    account_id: number(),
-    name: string(),
-    archived: boolean(),
+    id: column.integer(),
+    account_id: column.integer(),
+    name: column.text(),
+    archived: column.boolean(),
   },
 })
 
-let tasks = createTable({
+let tasks = table({
   name: 'tasks',
   columns: {
-    id: number(),
-    project_id: number(),
-    title: string(),
-    state: string(),
+    id: column.integer(),
+    project_id: column.integer(),
+    title: column.text(),
+    state: column.text(),
   },
 })
 
@@ -379,6 +381,99 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         ilikeRows.map((row) => row.id),
         [1, 2, 3],
       )
+    },
+  )
+
+  it(
+    'supports migration up/down with lifecycle hooks and returned reads',
+    { skip: !options.integrationEnabled },
+    async function () {
+      let db = options.createDatabase()
+      let lifecycleEvents: string[] = []
+      let lifecycleAccounts = table({
+        name: 'lifecycle_accounts',
+        columns: {
+          id: column.integer(),
+          email: column.text(),
+          status: column.text(),
+        },
+        beforeWrite({ value }) {
+          lifecycleEvents.push('beforeWrite')
+          return {
+            value: {
+              ...value,
+              email:
+                typeof value.email === 'string' ? value.email.trim().toLowerCase() : value.email,
+              status:
+                value.status === undefined
+                  ? 'active'
+                  : typeof value.status === 'string'
+                    ? value.status.trim().toLowerCase()
+                    : value.status,
+            },
+          }
+        },
+        validate({ value }) {
+          lifecycleEvents.push('validate')
+          if (typeof value.email !== 'string' || !value.email.includes('@')) {
+            return { issues: [{ message: 'Expected valid email', path: ['email'] }] }
+          }
+          return { value }
+        },
+        afterWrite({ operation, affectedRows }) {
+          lifecycleEvents.push('afterWrite:' + operation + ':' + String(affectedRows))
+        },
+        afterRead({ value }) {
+          if (typeof value.email !== 'string') {
+            return { value }
+          }
+          return {
+            value: {
+              ...value,
+              email: value.email.toUpperCase(),
+            },
+          }
+        },
+      })
+      let migration = createMigration({
+        async up({ schema }) {
+          await schema.createTable(lifecycleAccounts, { ifNotExists: true })
+        },
+        async down({ schema }) {
+          await schema.dropTable('lifecycle_accounts', { ifExists: true })
+        },
+      })
+      let runner = createMigrationRunner(
+        db.adapter,
+        [{ id: '20260228001000', name: 'create_lifecycle_accounts', migration }],
+        { journalTable: 'adapter_contract_migrations' },
+      )
+
+      await runner.up()
+
+      let created = await db.create(
+        lifecycleAccounts,
+        {
+          id: 1,
+          email: '  User@Example.com  ',
+        },
+        { returnRow: true },
+      )
+      let loaded = await db.find(lifecycleAccounts, 1)
+      let statusAfterUp = await runner.status()
+
+      assert.equal(created.email, 'USER@EXAMPLE.COM')
+      assert.equal(created.status, 'active')
+      assert.equal(loaded?.email, 'USER@EXAMPLE.COM')
+      assert.deepEqual(lifecycleEvents, ['beforeWrite', 'validate', 'afterWrite:create:1'])
+      assert.equal(statusAfterUp.length, 1)
+      assert.equal(statusAfterUp[0].status, 'applied')
+
+      await runner.down({ step: 1 })
+
+      let statusAfterDown = await runner.status()
+      assert.equal(statusAfterDown.length, 1)
+      assert.equal(statusAfterDown[0].status, 'pending')
     },
   )
 }

@@ -3,13 +3,16 @@ import { describe, it } from 'node:test'
 
 import { loginAsAdmin, requestWithSession } from '../test/helpers.ts'
 import { router } from './router.ts'
-import { getAllBooks } from './models/books.ts'
+import { books } from './data/schema.ts'
+import { db } from './data/setup.ts'
+import { uploadsStorage as uploads } from './utils/uploads.ts'
 
 describe('uploads handler', () => {
   it('stores cover URL at /uploads/ when creating a book with a file upload', async () => {
     let sessionId = await loginAsAdmin(router)
 
-    let initialBookCount = (await router.run('https://remix.run/', () => getAllBooks())).length
+    // Get initial book count
+    let initialBookCount = await db.count(books)
 
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
     let formBody = [
@@ -68,10 +71,12 @@ describe('uploads handler', () => {
     assert.equal(createResponse.status, 302)
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
-    let books = await router.run('https://remix.run/', () => getAllBooks())
-    assert.equal(books.length, initialBookCount + 1)
+    // Get the newly created book from the database
+    let currentBookCount = await db.count(books)
+    assert.equal(currentBookCount, initialBookCount + 1)
 
-    let newBook = books[books.length - 1]
+    let newBook = await db.findOne(books, { where: { slug: 'book-with-cover' } })
+    assert.ok(newBook)
     assert.equal(newBook.slug, 'book-with-cover')
     assert.ok(
       newBook.cover_url.startsWith('/uploads/cover/'),

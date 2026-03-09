@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import type { Handle } from '../lib/component.ts'
+import { ref } from '../lib/mixins/ref-mixin.tsx'
 
 describe('vnode rendering', () => {
-  describe('connect', () => {
+  describe('ref', () => {
     it('connects host node lifecycle to component scope', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
@@ -13,12 +14,14 @@ describe('vnode rendering', () => {
       function App(handle: Handle) {
         return () => (
           <div
-            connect={(node: Element, signal: AbortSignal) => {
-              capturedNode = node
-              signal.addEventListener('abort', () => {
-                capturedNode = null
-              })
-            }}
+            mix={[
+              ref((node: Element, signal: AbortSignal) => {
+                capturedNode = node
+                signal.addEventListener('abort', () => {
+                  capturedNode = null
+                })
+              }),
+            ]}
           >
             Hello, world!
           </div>
@@ -35,20 +38,22 @@ describe('vnode rendering', () => {
     })
   })
 
-  it('calls connect only once', () => {
+  it('calls ref only once', () => {
     let container = document.createElement('div')
     let root = createRoot(container)
 
     let capturedUpdate = () => {}
-    let connectCalls = 0
+    let refCalls = 0
 
     function App(handle: Handle) {
       capturedUpdate = () => handle.update()
       return () => (
         <div
-          connect={() => {
-            connectCalls++
-          }}
+          mix={[
+            ref(() => {
+              refCalls++
+            }),
+          ]}
         >
           Hello, world!
         </div>
@@ -56,10 +61,10 @@ describe('vnode rendering', () => {
     }
     root.render(<App />)
     root.flush()
-    expect(connectCalls).toBe(1)
+    expect(refCalls).toBe(1)
 
     capturedUpdate()
     root.flush()
-    expect(connectCalls).toBe(1)
+    expect(refCalls).toBe(1)
   })
 })

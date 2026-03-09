@@ -3,9 +3,10 @@ import type { Handle } from '../lib/component.ts'
 import { Frame } from '../lib/component.ts'
 import { clientEntry } from '../lib/client-entries.ts'
 import { run } from '../lib/run.ts'
-import { createRoot } from '../lib/vdom.ts'
+import { createRangeRoot, createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
+import { css, on } from '../index.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -50,12 +51,12 @@ describe('run', () => {
         let count = setup
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -91,12 +92,12 @@ describe('run', () => {
       let clicked = false
       return ({ text }: { text: string }) => (
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? `${text} clicked!` : text}
         </button>
@@ -141,12 +142,12 @@ describe('run', () => {
       return () => (
         <button
           id="fast"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Fast!' : 'Fast'}
         </button>
@@ -158,12 +159,12 @@ describe('run', () => {
       return () => (
         <button
           id="slow"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Slow!' : 'Slow'}
         </button>
@@ -263,12 +264,12 @@ describe('run', () => {
       return () => (
         <button
           id="initial"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Initial!' : 'Initial'}
         </button>
@@ -280,12 +281,12 @@ describe('run', () => {
       return () => (
         <button
           id="late"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'Late!' : 'Late'}
         </button>
@@ -446,12 +447,12 @@ describe('run', () => {
       return () => (
         <button
           id="a"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'A!' : 'A'}
         </button>
@@ -463,12 +464,12 @@ describe('run', () => {
       return () => (
         <button
           id="b"
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               clicked = true
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           {clicked ? 'B!' : 'B'}
         </button>
@@ -915,7 +916,7 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('reloads a frame region when the response uses css props', async () => {
+  it('reloads a frame region when the response uses css mixins', async () => {
     let renderCount = 0
 
     let reload: undefined | (() => Promise<AbortSignal>)
@@ -924,15 +925,15 @@ describe('run', () => {
       '/assets/reload-css.js#ReloadCss',
       function ReloadCss(handle: Handle) {
         reload = () => handle.frame.reload()
-        return () => <button css={{ color: '#fff' }}>Reload</button>
+        return () => <button mix={[css({ color: '#fff' })]}>Reload</button>
       },
     )
 
     async function renderTimeFragmentWithCss() {
       renderCount++
       let stream = renderToStream(
-        <section css={{ padding: 8 }}>
-          <p css={{ margin: 0 }}>Server: {renderCount}</p>
+        <section mix={[css({ padding: 8 })]}>
+          <p mix={[css({ margin: 0 })]}>Server: {renderCount}</p>
           <ReloadButton />
         </section>,
         {
@@ -945,7 +946,7 @@ describe('run', () => {
     }
 
     let stream = renderToStream(
-      <main>
+      <main mix={[css({ color: '#0bf' })]}>
         <Frame src="/time-css" fallback={<div>Loading…</div>} />
       </main>,
       { resolveFrame: renderTimeFragmentWithCss },
@@ -1220,12 +1221,12 @@ describe('run', () => {
         return () => (
           <button
             id="counter"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -1406,12 +1407,12 @@ describe('run', () => {
         return () => (
           <button
             id="nested-counter"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Count: {count}
           </button>
@@ -1686,6 +1687,35 @@ describe('run', () => {
     root.dispose()
   })
 
+  it('renders a client-created Frame with createRangeRoot frameInit', async () => {
+    let host = document.createElement('div')
+    document.body.appendChild(host)
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end], {
+      frameInit: {
+        src: '/range-root',
+        resolveFrame: async () => '<p id="resolved-range-frame">Resolved range frame</p>',
+        loadModule: async () =>
+          function Module() {
+            return () => null
+          },
+      },
+    })
+
+    root.render(
+      <Frame src="/client-range-frame" fallback={<p id="fallback-range-frame">Loading…</p>} />,
+    )
+    root.flush()
+
+    expect(host.querySelector('#fallback-range-frame')?.textContent).toBe('Loading…')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(host.querySelector('#resolved-range-frame')?.textContent).toBe('Resolved range frame')
+    root.dispose()
+  })
+
   it('dispatches a clear error for createRoot Frame without frameInit', () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)
@@ -1701,6 +1731,123 @@ describe('run', () => {
 
     expect(error).toBeInstanceOf(Error)
     expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('dispatches a clear error for createRangeRoot Frame without frameInit', () => {
+    let host = document.createElement('div')
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    host.append(start, end)
+
+    let root = createRangeRoot([start, end])
+    let error: unknown
+    root.addEventListener('error', (event) => {
+      error = (event as ErrorEvent).error
+    })
+
+    root.render(<Frame src="/missing-range-runtime" fallback={<p>Loading…</p>} />)
+    root.flush()
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('Cannot render <Frame /> without frame runtime')
+  })
+
+  it('throws from the root runtime resolveFrame fallback without frameInit', () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let runtime: { resolveFrame(src: string): unknown } | undefined
+    function CaptureRuntime(handle: Handle) {
+      runtime = handle.frame.$runtime as { resolveFrame(src: string): unknown }
+      return () => null
+    }
+
+    let root = createRoot(rootContainer)
+    root.render(<CaptureRuntime />)
+    root.flush()
+
+    expect(runtime).toBeDefined()
+    expect(() => runtime!.resolveFrame('/missing-runtime')).toThrow(
+      'Cannot render <Frame /> without frame runtime',
+    )
+  })
+
+  it('logs a clear error when hydrating client entries without loadModule', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle, setup: number) {
+        let count = setup
+        return () => <button>{count}</button>
+      },
+    )
+
+    let html = await drain(renderToStream(<Counter setup={2} />))
+    let container = document.createElement('div')
+    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+        },
+      })
+
+      root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(
+        consoleError.mock.calls.some((call) => String(call[0]).includes('Failed to load module')),
+      ).toBe(true)
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.some((value) =>
+            String(value).includes(
+              'loadModule is required to hydrate client entries inside <Frame />',
+            ),
+          ),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('logs a clear error when loadModule resolves to a non-function export', async () => {
+    let Counter = clientEntry(
+      '/js/counter.js#Counter',
+      function Counter(handle: Handle, setup: number) {
+        let count = setup
+        return () => <button>{count}</button>
+      },
+    )
+
+    let html = await drain(renderToStream(<Counter setup={3} />))
+    let container = document.createElement('div')
+    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      let root = createRoot(container, {
+        frameInit: {
+          resolveFrame: async () => html,
+          loadModule: async () => ({ not: 'a function' }) as any,
+        },
+      })
+
+      root.render(<Frame src="/bad-export-frame" fallback={<p>Loading…</p>} />)
+      root.flush()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleError).toHaveBeenCalled()
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.some((value) => String(value).includes('is not a function')),
+        ),
+      ).toBe(true)
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   it('reloads client-created Frame in place when src changes', async () => {
@@ -1925,23 +2072,23 @@ describe('run', () => {
       let mounted = true
 
       return () => (
-        <main css={{ color: '#0bf' }}>
+        <main mix={[css({ color: '#0bf' })]}>
           <button
             id="toggle-frame"
             type="button"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 mounted = !mounted
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Toggle
           </button>
           {mounted ? (
             <Frame
               src="/style-frame"
-              fallback={<div css={{ color: '#f0b' }}>Loading style frame…</div>}
+              fallback={<div mix={[css({ color: '#f0b' })]}>Loading style frame…</div>}
             />
           ) : null}
         </main>
@@ -1950,7 +2097,7 @@ describe('run', () => {
 
     let root = createRoot(rootContainer, {
       frameInit: {
-        resolveFrame: async () => '<section data-css="rmx-manual">Frame loaded</section>',
+        resolveFrame: async () => '<section class="frame-loaded">Frame loaded</section>',
       },
     })
 
@@ -2077,12 +2224,12 @@ describe('run', () => {
           <button
             id="switch-src"
             type="button"
-            on={{
-              click() {
+            mix={[
+              on('click', () => {
                 src = '/fast'
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             Switch
           </button>

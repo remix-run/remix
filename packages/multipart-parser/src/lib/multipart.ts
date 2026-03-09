@@ -165,10 +165,12 @@ export class MultipartParser {
   #findBoundary: SearchFunction
   #findPartialTailBoundary: PartialTailSearchFunction
   #boundaryLength: number
+  #boundaryBytes: Uint8Array
 
   #state = MultipartParserStateStart
   #buffer: Uint8Array | null = null
-  #currentPart: MultipartPart | null = null
+  #currentHeader: Uint8Array | null = null
+  #currentContent: Uint8Array[] | null = null
   #contentLength = 0
 
   /**
@@ -182,9 +184,11 @@ export class MultipartParser {
 
     this.#findOpeningBoundary = createSearch(`--${boundary}`)
     this.#openingBoundaryLength = 2 + boundary.length // length of '--' + boundary
-    this.#findBoundary = createSearch(`\r\n--${boundary}`)
-    this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`)
+    let boundaryPattern = `\r\n--${boundary}`
+    this.#findBoundary = createSearch(boundaryPattern)
+    this.#findPartialTailBoundary = createPartialTailSearch(boundaryPattern)
     this.#boundaryLength = 4 + boundary.length // length of '\r\n--' + boundary
+    this.#boundaryBytes = new TextEncoder().encode(boundaryPattern)
   }
 
   /**
@@ -202,11 +206,44 @@ export class MultipartParser {
     let chunkLength = chunk.length
 
     if (this.#buffer !== null) {
-      let newChunk = new Uint8Array(this.#buffer.length + chunkLength)
-      newChunk.set(this.#buffer, 0)
-      newChunk.set(chunk, this.#buffer.length)
-      chunk = newChunk
-      chunkLength = chunk.length
+      if (this.#state === MultipartParserStateBody) {
+        let carry = this.#buffer
+        let carryResult = this.#analyzeCarryBoundary(carry, chunk)
+
+        if (carryResult.kind === 'none') {
+          this.#append(carry)
+        } else if (carryResult.kind === 'partial') {
+          if (carryResult.start > 0) {
+            this.#append(carry.subarray(0, carryResult.start))
+          }
+
+          let tailLength = carry.length + chunk.length - carryResult.start
+          let tail = new Uint8Array(tailLength)
+          let carryTail = carry.subarray(carryResult.start)
+          tail.set(carryTail, 0)
+          tail.set(chunk, carryTail.length)
+          this.#buffer = tail
+          return
+        } else {
+          if (carryResult.start > 0) {
+            this.#append(carry.subarray(0, carryResult.start))
+          }
+
+          yield new MultipartPart(this.#currentHeader!, this.#currentContent!)
+
+          this.#state = MultipartParserStateAfterBoundary
+
+          let carryAfterStart = carry.length - carryResult.start
+          index = this.#boundaryLength - carryAfterStart
+        }
+      } else {
+        let newChunk = new Uint8Array(this.#buffer.length + chunkLength)
+        newChunk.set(this.#buffer, 0)
+        newChunk.set(chunk, this.#buffer.length)
+        chunk = newChunk
+        chunkLength = chunk.length
+      }
+
       this.#buffer = null
     }
 
@@ -218,7 +255,6 @@ export class MultipartParser {
         }
 
         let boundaryIndex = this.#findBoundary(chunk, index)
-
         if (boundaryIndex === -1) {
           // No boundary found, but there may be a partial match at the end of the chunk.
           let partialTailIndex = this.#findPartialTailBoundary(chunk)
@@ -226,16 +262,20 @@ export class MultipartParser {
           if (partialTailIndex === -1) {
             this.#append(index === 0 ? chunk : chunk.subarray(index))
           } else {
-            this.#append(chunk.subarray(index, partialTailIndex))
+            if (partialTailIndex > index) {
+              this.#append(chunk.subarray(index, partialTailIndex))
+            }
             this.#buffer = chunk.subarray(partialTailIndex)
           }
 
           break
         }
 
-        this.#append(chunk.subarray(index, boundaryIndex))
+        if (boundaryIndex > index) {
+          this.#append(chunk.subarray(index, boundaryIndex))
+        }
 
-        yield this.#currentPart!
+        yield new MultipartPart(this.#currentHeader!, this.#currentContent!)
 
         index = boundaryIndex + this.#boundaryLength
 
@@ -279,7 +319,8 @@ export class MultipartParser {
           throw new MaxHeaderSizeExceededError(this.maxHeaderSize)
         }
 
-        this.#currentPart = new MultipartPart(chunk.subarray(index, headerEndIndex), [])
+        this.#currentHeader = chunk.subarray(index, headerEndIndex)
+        this.#currentContent = []
         this.#contentLength = 0
 
         index = headerEndIndex + 4 // Skip header + \r\n\r\n
@@ -307,12 +348,51 @@ export class MultipartParser {
   }
 
   #append(chunk: Uint8Array): void {
+    if (chunk.length === 0) {
+      return
+    }
+
     if (this.#contentLength + chunk.length > this.maxFileSize) {
       throw new MaxFileSizeExceededError(this.maxFileSize)
     }
 
-    this.#currentPart!.content.push(chunk)
+    this.#currentContent!.push(chunk)
     this.#contentLength += chunk.length
+  }
+
+  #analyzeCarryBoundary(
+    carry: Uint8Array,
+    chunk: Uint8Array,
+  ): { kind: 'none' } | { kind: 'partial'; start: number } | { kind: 'full'; start: number } {
+    let totalLength = carry.length + chunk.length
+
+    for (let start = 0; start < carry.length; ++start) {
+      let availableLength = totalLength - start
+      let compareLength = Math.min(this.#boundaryLength, availableLength)
+
+      let matched = true
+      for (let i = 0; i < compareLength; ++i) {
+        let sourceIndex = start + i
+        let sourceByte =
+          sourceIndex < carry.length ? carry[sourceIndex] : chunk[sourceIndex - carry.length]
+        if (sourceByte !== this.#boundaryBytes[i]) {
+          matched = false
+          break
+        }
+      }
+
+      if (!matched) {
+        continue
+      }
+
+      if (availableLength >= this.#boundaryLength) {
+        return { kind: 'full', start }
+      }
+
+      return { kind: 'partial', start }
+    }
+
+    return { kind: 'none' }
   }
 
   /**

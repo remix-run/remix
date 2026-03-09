@@ -1,7 +1,5 @@
 build/
 dist/
-docs/api/
-docs/typedoc/
 node_modules/
 .pnpm-store/
 pnpm-publish-summary.json
@@ -10,6 +8,12 @@ reference/
 test-results/
 playwright-report/
 /demos/tmp/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
 
 .env
 

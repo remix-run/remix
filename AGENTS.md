@@ -16,13 +16,17 @@
 - **Monorepo**: pnpm workspace with packages in `packages/` directory
 - **Key packages**: headers, fetch-proxy, fetch-router, file-storage, form-data-parser, lazy-file, multipart-parser, node-fetch-server, route-pattern, tar-parser
 - **Package exports**: All `exports` in `package.json` have a dedicated file in `src` that defines the public API by re-exporting from within `src/lib`
+- **Lib module boundaries**: Files in `src/lib` are implementation files. Do not add barrel-style re-exports or thin pass-through wrapper APIs between `src/lib` files. Re-exporting belongs only in top-level `src` barrel files that map to package exports.
 - **Cross-package boundaries**: Avoid re-exporting APIs/types from other packages. Consumers should import from the owning package directly. Reuse shared concepts from sibling packages internally instead of creating bespoke duplicate implementations.
+- **Documentation imports/install**: In package READMEs, documentation, and pull request code examples, installation instructions should always include `npm i remix`, usage examples should import from `remix` package exports (not `@remix-run/*`), and any required peer dependency should be included in the installation command.
 - **Philosophy**: Web standards-first, runtime-agnostic (Node.js, Bun, Deno, Cloudflare Workers). Use Web Streams API, Uint8Array, Web Crypto API, Blob/File instead of Node.js APIs
 - **Tests run from source** (no build required), using Node.js test runner
 
 ## Code Style
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
+- **One-off scripts**: Write one-off scripts in this repo as TypeScript and make them executable natively with modern Node.js (for example, executable `.ts` files)
+- **Node runtime assumption**: Assume a modern Node.js runtime that supports running TypeScript files natively; prefer `node path/to/script.ts` in examples and instructions.
 - **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
 - **Functions**: Use regular function declarations/expressions by default. For callback-based APIs (array methods, Promise callbacks, test callbacks, transaction callbacks, etc.), prefer arrow functions over `function` expressions. When an arrow callback only returns a single expression, use a concise body (`value => expression`) instead of braces/`return`
 - **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
@@ -45,8 +49,12 @@
 ## Changes and Releases
 
 - **Adding changes**: Create `packages/*/.changes/[major|minor|patch].short-description.md` files. See [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-change-file) for details.
+- **Do not edit past changelogs**: Do not modify existing `CHANGELOG.md` entries for already-released versions. Capture new work with change files only.
+- **Remix package changes are generated in CI**: In new PRs, do not manually edit `packages/remix/*` and do not add `packages/remix/.changes/*` files.
 - **Updating changes**: If iterating on an unpublished change with a change file, update it in place rather than creating a new one.
+- **Organizing change files**: Prefer a small set of logically grouped change files (for example, one file for a breaking API shape change and another for additive features) instead of one giant mixed note. API iterations made within the same unmerged PR are not breaking changes and should not be marked as `BREAKING CHANGE:` unless they break behavior relative to `main`.
 - **Versioning**: Follow semver, but ensure you follow 0.x conventions where breaking changes can happen in minor releases:
+  - For **brand-new packages**: Start at version `0.0.0`. The first release should use a `minor` change file so it bumps to `0.1.0`.
   - For **v0.x packages**: Use "minor" for breaking changes and new features, "patch" for bug fixes. Never use "major" unless explicitly instructed. Change files for breaking changes in v0.x packages should start with `BREAKING CHANGE: ` so they are hoisted to the top.
   - For **v1.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
   - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
@@ -61,3 +69,13 @@
 - **Manual releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, and creates a git commit. Push to `main` and the publish workflow will handle the rest (including tags and GitHub releases).
 - **How publishing works**: The publish workflow checks for change files. If none exist, it runs `pnpm publish --recursive --report-summary`, reads the summary JSON to see what was published, then creates git tags and GitHub releases for each published package.
 - **Test change/release code with preview scripts**: When modifying any change/release code, run `pnpm changes:preview` to test locally. For the release PR script, run `node ./scripts/release-pr.ts --preview`. For the publish script, run `node ./scripts/publish.ts --dry-run` to see what commands would be executed without actually publishing.
+
+## Skills
+
+A skill is a reusable local instruction set stored in a `SKILL.md` file.
+
+### Available skills
+
+- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./skills/supersede-pr/SKILL.md`)
+- **make-pr**: Create GitHub pull requests with clear context, issue/feature bullets, and required usage examples for new or changed APIs. (file: `./skills/make-pr/SKILL.md`)
+- **publish-placeholder-package**: Publish a minimal npm package at `0.0.0` to reserve the name and enable npm OIDC setup before CI-based publishing. (file: `./skills/publish-placeholder-package/SKILL.md`)

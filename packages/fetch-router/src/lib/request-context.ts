@@ -1,12 +1,34 @@
-import { createSession, type Session } from '@remix-run/session'
 import type { AssetResolver, FilesConfig } from '@remix-run/assets'
+import type { Router } from './router.ts'
 
-import { AppStorage } from './app-storage.ts'
-import {
-  RequestBodyMethods,
-  type RequestBodyMethod,
-  type RequestMethod,
-} from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
+
+/**
+ * Create a request context key with an optional default value.
+ *
+ * @param defaultValue The default value for the context key
+ * @returns The new context key
+ */
+export function createContextKey<value>(defaultValue?: value): ContextKey<value> {
+  return { defaultValue }
+}
+
+/**
+ * A type-safe key for storing and retrieving values from `RequestContext`.
+ */
+export interface ContextKey<value> {
+  /**
+   * The default value for this key if no value has been set.
+   */
+  defaultValue?: value
+}
+
+export type ContextValue<key> =
+  key extends ContextKey<infer value>
+    ? value
+    : key extends abstract new (...args: any[]) => infer instance
+      ? instance
+      : never
 
 /**
  * An entry in the assets manifest, representing a single entry point.
@@ -56,10 +78,7 @@ export interface AssetsContext {
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
-export class RequestContext<
-  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  params extends Record<string, any> = {},
-> {
+export class RequestContext<params extends Record<string, any> = {}> {
   /**
    * @param request The incoming request
    */
@@ -68,50 +87,8 @@ export class RequestContext<
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
-    this.storage = new AppStorage()
     this.url = new URL(request.url)
   }
-
-  /**
-   * A map of files that were uploaded in the request.
-   *
-   * Note: For requests without a body (e.g. `GET` or `HEAD`), this map will be empty.
-   */
-  get files(): Map<string, File> {
-    let files: Map<string, File> = new Map()
-
-    if (this.#formData != null) {
-      for (let [key, value] of this.#formData.entries()) {
-        if (value instanceof File) {
-          files.set(key, value)
-        }
-      }
-    }
-
-    return files
-  }
-
-  /**
-   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
-   * request body.
-   *
-   * Note: This is only available for requests with a body (not `GET` or `HEAD`).
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
-   */
-  get formData(): method extends RequestBodyMethod ? FormData : FormData | undefined {
-    if (this.#formData == null && RequestBodyMethods.includes(this.method as RequestBodyMethod)) {
-      this.#formData = new FormData()
-    }
-
-    return this.#formData as any
-  }
-
-  set formData(value: FormData) {
-    this.#formData = value
-  }
-
-  #formData?: FormData
 
   /**
    * The headers of the request.
@@ -134,40 +111,33 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    *
    * Note: Various properties of the original request may not be available or may have been
-   * modified by middleware. For example, the request's body may already have been consumed by
-   * the `formData` middleware (available as `context.formData`), or its method may have been
+   * modified by middleware. For example, the request's body may already have been consumed by the
+   * `formData` middleware (available as `context.get(FormData)`), or its method may have been
    * overridden by the `methodOverride` middleware (available as `context.method`). You should
-   * always default to using properties of the `context` object instead of the original request.
+   * default to using properties of the `context` object instead of the original request.
    * However, the original request is made available in case you need it for some edge case.
    */
   request: Request
 
-  /**
-   * The current session.
-   */
-  get session(): Session {
-    if (this.#session == null) {
-      console.warn(
-        "Session isn't started yet, so session data won't be saved. Use the session() middleware to start the session.",
-      )
+  #contextMap: Map<object, unknown> = new Map()
 
-      this.#session = createSession()
+  /**
+   * Get a value from request context.
+   *
+   * @param key The key to read
+   * @returns The value for the given key
+   */
+  get = <key extends object>(key: key): ContextValue<key> => {
+    if (!this.#contextMap.has(key)) {
+      let contextKey = key as ContextKey<ContextValue<key>>
+      if (contextKey.defaultValue === undefined) {
+        throw new Error(`Missing default value in context for key ${key}`)
+      }
+
+      return contextKey.defaultValue
     }
 
-    return this.#session
-  }
-
-  set session(value: Session) {
-    this.#session = value
-  }
-
-  #session?: Session
-
-  /**
-   * Whether the session has been started.
-   */
-  get sessionStarted(): boolean {
-    return this.#session != null
+    return this.#contextMap.get(key) as ContextValue<key>
   }
 
   /**
@@ -196,9 +166,39 @@ export class RequestContext<
   #assets?: AssetsContext
 
   /**
-   * Shared application-specific storage.
+   * Check whether a value exists in request context.
+   *
+   * @param key The key to check
+   * @returns `true` if a value has been set for the key
    */
-  storage: AppStorage
+  has = <key extends object>(key: key): boolean => this.#contextMap.has(key)
+
+  /**
+   * Set a value in request context.
+   *
+   * @param key The key to write
+   * @param value The value to write
+   */
+  set = <key extends object>(key: key, value: ContextValue<key>): void => {
+    this.#contextMap.set(key, value)
+  }
+
+  #router?: Router
+
+  /**
+   * The router handling this request.
+   */
+  get router(): Router {
+    if (this.#router == null) {
+      throw new Error('No router found in request context.')
+    }
+
+    return this.#router
+  }
+
+  set router(router: Router) {
+    this.#router = router
+  }
 
   /**
    * The URL that was matched by the route.

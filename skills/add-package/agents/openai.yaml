@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Add Package'
+  short_description: 'Create new Remix monorepo packages consistently'
+  default_prompt: 'Use $add-package to scaffold and wire a new package in the Remix monorepo with the standard layout, scripts, tests, and README structure.'

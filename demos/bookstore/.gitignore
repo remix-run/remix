@@ -1,2 +1,3 @@
 build/
 tmp/
+data/*.sqlite

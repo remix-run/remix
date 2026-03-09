@@ -1,4 +1,4 @@
-import { createStorageKey } from 'remix/fetch-router'
+import { createContextKey } from 'remix/fetch-router'
 import type { Middleware } from 'remix/fetch-router'
 import { getContext } from 'remix/async-context-middleware'
 
@@ -10,11 +10,11 @@ interface ScriptEntry {
   preloads: string[]
 }
 
-let scriptEntryKey = createStorageKey<ScriptEntry>()
+let scriptEntryKey = createContextKey<ScriptEntry>()
 
 export function loadScriptEntry(entry = 'app/entry.tsx'): Middleware {
   return async (context, next) => {
-    context.storage.set(scriptEntryKey, {
+    context.set(scriptEntryKey, {
       src: routes.scripts.href({ path: entry }),
       preloads: await scriptHandler.preloads(entry),
     })
@@ -23,5 +23,5 @@ export function loadScriptEntry(entry = 'app/entry.tsx'): Middleware {
 }
 
 export function getScriptEntry(): ScriptEntry {
-  return getContext().storage.get(scriptEntryKey)
+  return getContext().get(scriptEntryKey)
 }

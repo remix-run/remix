@@ -83,7 +83,7 @@ function Form(handle: Handle) {
         }}
       />
       {showDetails && (
-        <section connect={(node) => (detailsSection = node)}>Details content</section>
+        <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
       )}
     </form>
   )

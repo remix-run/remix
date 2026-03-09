@@ -13,7 +13,6 @@ packages:
   - packages/assets/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
-  - packages/interaction/demos
   - packages/component/demos
   - packages/component/bench
   - packages/component/bench/frameworks/*

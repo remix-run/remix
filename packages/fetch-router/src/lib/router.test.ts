@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { createStorageKey } from './app-storage.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import type { MatchData } from './router.ts'
@@ -159,71 +158,6 @@ describe('router.fetch()', () => {
   })
 })
 
-describe('router.run()', () => {
-  it('runs a callback and returns its value', async () => {
-    let router = createRouter()
-    let result = await router.run(
-      'https://remix.run/posts?sort=asc',
-      ({ url }) => `${url.pathname}:${url.searchParams.get('sort')}`,
-    )
-
-    assert.equal(result, '/posts:asc')
-  })
-
-  it('runs middleware before invoking the callback', async () => {
-    let key = createStorageKey('unset')
-    let requestLog: string[] = []
-
-    let router = createRouter({
-      middleware: [
-        (context, next) => {
-          requestLog.push('middleware')
-          context.storage.set(key, 'ready')
-          return next()
-        },
-      ],
-    })
-
-    let value = await router.run('https://remix.run', ({ storage }) => {
-      requestLog.push('callback')
-      return storage.get(key)
-    })
-
-    assert.equal(value, 'ready')
-    assert.deepEqual(requestLog, ['middleware', 'callback'])
-  })
-
-  it('throws when middleware short-circuits before invoking the callback', async () => {
-    let router = createRouter({
-      middleware: [() => new Response('Unauthorized', { status: 401 })],
-    })
-
-    await assert.rejects(
-      () => router.run('https://remix.run', () => 'ok'),
-      /router.run\(\) callback was not invoked/,
-    )
-  })
-
-  it('propagates callback errors', async () => {
-    let router = createRouter()
-
-    await assert.rejects(
-      () =>
-        router.run('https://remix.run', () => {
-          throw new Error('boom')
-        }),
-      /boom/,
-    )
-  })
-
-  it('accepts RequestInit options', async () => {
-    let router = createRouter()
-    let method = await router.run('https://remix.run', { method: 'POST' }, ({ method }) => method)
-
-    assert.equal(method, 'POST')
-  })
-})
-
 describe('router.map() with single routes', () => {
   it('maps a single route to a request handler', async () => {
     let routes = route({
@@ -248,7 +182,7 @@ describe('router.map() with single routes', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware(context: RequestContext<'ANY', { id: string }>) {
+    function middleware(context: RequestContext<{ id: string }>) {
       requestLog.push(`middleware ${context.params.id}`)
     }
 
@@ -294,18 +228,22 @@ describe('router.map()', () => {
     let router = createRouter()
 
     router.map(routes, {
-      home() {
-        return new Response('Home')
-      },
-      blog: {
-        index() {
-          return new Response('Blog')
+      actions: {
+        home() {
+          return new Response('Home')
         },
-        create() {
-          return new Response('Blog Post Created')
-        },
-        show({ params }) {
-          return new Response(`Blog Post ${params.id}`)
+        blog: {
+          actions: {
+            index() {
+              return new Response('Blog')
+            },
+            create() {
+              return new Response('Blog Post Created')
+            },
+            show({ params }) {
+              return new Response(`Blog Post ${params.id}`)
+            },
+          },
         },
       },
     })
@@ -356,7 +294,7 @@ describe('router.map()', () => {
     assert.deepEqual(requestLog, ['middleware', 'action'])
   })
 
-  it('does not allow middleware alongside actions', async () => {
+  it('requires controllers to define actions under `actions`', async () => {
     let routes = route({
       home: '/',
     })
@@ -367,8 +305,7 @@ describe('router.map()', () => {
     // to verify that TypeScript catches the error without running the code.
     if (false as boolean) {
       router.map(routes, {
-        middleware: [],
-        // @ts-expect-error - should not allow middleware alongside actions
+        // @ts-expect-error - controllers must define actions under `actions`
         home() {
           return new Response('OK')
         },

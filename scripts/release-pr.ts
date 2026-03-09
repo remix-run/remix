@@ -10,7 +10,7 @@
 import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
 import { generatePrBody } from './utils/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
-import { findOpenPr, createPr, updatePr, setPrPkgLabels, closePr } from './utils/github.ts'
+import { findOpenPr, createPr, updatePr, closePr } from './utils/github.ts'
 
 let args = process.argv.slice(2)
 let preview = args.includes('--preview')
@@ -107,23 +107,15 @@ async function main() {
   console.log('\nChecking for existing PR...')
   let existingPr = await findOpenPr(prBranch, baseBranch)
 
-  let prNumber: number
   if (existingPr) {
     console.log(`Updating existing PR #${existingPr.number}...`)
     await updatePr(existingPr.number, { title: prTitle, body: prBody })
-    prNumber = existingPr.number
     console.log(`\n✅ Updated PR: ${existingPr.html_url}`)
   } else {
     console.log('Creating new PR...')
     let newPr = await createPr({ title: prTitle, body: prBody, head: prBranch, base: baseBranch })
-    prNumber = newPr.number
     console.log(`\n✅ Created PR #${newPr.number}: ${newPr.html_url}`)
   }
-
-  // Set package labels (using directory names for cleaner labels)
-  let packageDirNames = releases.map((r) => r.packageDirName)
-  console.log(`\nSetting labels: ${packageDirNames.map((p) => `pkg:${p}`).join(', ')}`)
-  await setPrPkgLabels(prNumber, packageDirNames)
 }
 
 main().catch((error) => {

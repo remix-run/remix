@@ -47,15 +47,19 @@ jobs:
         run: |
           pnpm --filter @remix-run/data-table run typecheck
           pnpm --filter @remix-run/data-table run test
+          pnpm --filter @remix-run/data-table run test:coverage
           pnpm --filter @remix-run/data-table run build
           pnpm --filter @remix-run/data-table-postgres run typecheck
           pnpm --filter @remix-run/data-table-postgres run test
+          pnpm --filter @remix-run/data-table-postgres run test:coverage
           pnpm --filter @remix-run/data-table-postgres run build
           pnpm --filter @remix-run/data-table-mysql run typecheck
           pnpm --filter @remix-run/data-table-mysql run test
+          pnpm --filter @remix-run/data-table-mysql run test:coverage
           pnpm --filter @remix-run/data-table-mysql run build
           pnpm --filter @remix-run/data-table-sqlite run typecheck
           pnpm --filter @remix-run/data-table-sqlite run test
+          pnpm --filter @remix-run/data-table-sqlite run test:coverage
           pnpm --filter @remix-run/data-table-sqlite run build
 
   postgres-integration:
@@ -97,7 +101,7 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
-        run: pnpm --filter @remix-run/data-table-postgres run test
+        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-postgres/src/lib/adapter.integration.test.ts'
 
   mysql-integration:
     name: MySQL Integration
@@ -137,7 +141,7 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
-        run: pnpm --filter @remix-run/data-table-mysql run test
+        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-mysql/src/lib/adapter.integration.test.ts'
 
   sqlite-integration:
     name: SQLite Integration
@@ -165,4 +169,4 @@ jobs:
       - name: Run sqlite adapter tests
         env:
           DATA_TABLE_INTEGRATION: '1'
-        run: pnpm --filter @remix-run/data-table-sqlite run test
+        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-sqlite/src/lib/adapter.integration.test.ts'

@@ -1,5 +1,13 @@
-import { createRoot, type Handle, type RemixNode } from 'remix/component'
-import { TypedEventTarget } from 'remix/interaction'
+import {
+  addEventListeners,
+  createRoot,
+  css,
+  on,
+  ref,
+  TypedEventTarget,
+  type Handle,
+  type RemixNode,
+} from 'remix/component'
 
 // ============================================================================
 // Getting Started - Basic App Example
@@ -8,12 +16,12 @@ function App(handle: Handle) {
   let count = 0
   return () => (
     <button
-      on={{
-        click: () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -30,12 +38,12 @@ function Counter(handle: Handle) {
     <div>
       <span>Count: {count}</span>
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -62,12 +70,12 @@ function CounterWithSetup(handle: Handle, setup: number) {
     <div>
       {props.label || 'Count'}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -86,12 +94,12 @@ function CounterWithLabel(handle: Handle, setup: number) {
     <div>
       {props.label}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         +
       </button>
@@ -113,8 +121,8 @@ function SearchInput(handle: Handle) {
         type="text"
         value={query}
         placeholder="Type to search..."
-        on={{
-          input: (event, signal) => {
+        mix={[
+          on('input', (event, signal) => {
             query = event.currentTarget.value
             loading = true
             handle.update()
@@ -126,8 +134,8 @@ function SearchInput(handle: Handle) {
               loading = false
               handle.update()
             }, 300)
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (
@@ -150,34 +158,34 @@ function SlugForm(handle: Handle) {
 
   return () => (
     <form>
-      <label css={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px' })]}>
         <input
           type="checkbox"
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               if (event.currentTarget.checked) {
                 generatedSlug = crypto.randomUUID().slice(0, 8)
               } else {
                 generatedSlug = ''
               }
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
         Auto-generate slug
       </label>
-      <label css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <label mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
         Slug
         <input
           type="text"
           value={generatedSlug || slug}
           disabled={!!generatedSlug}
-          on={{
-            input: (event) => {
+          mix={[
+            on('input', (event) => {
               slug = event.currentTarget.value
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
       </label>
     </form>
@@ -190,7 +198,7 @@ function SlugForm(handle: Handle) {
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown: (event) => {
       keys.push(event.key)
       if (keys.length > 10) keys.shift()
@@ -207,20 +215,22 @@ function KeyboardTracker(handle: Handle) {
 function ButtonBasic(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'rgb(54, 113, 246)',
-        border: 'none',
-        padding: '8px 16px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        '&:hover': {
-          backgroundColor: 'rgb(37, 90, 210)',
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'rgb(54, 113, 246)',
+          border: 'none',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgb(37, 90, 210)',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -233,38 +243,40 @@ function ButtonBasic(handle: Handle) {
 function ButtonAdvanced(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'rgb(54, 113, 246)',
-        border: 'none',
-        padding: '10px 20px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        '&:hover': {
-          backgroundColor: 'rgb(37, 90, 210)',
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: '-2px',
-          borderRadius: '8px',
-          background: 'linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))',
-          zIndex: -1,
-          opacity: 0,
-          transition: 'opacity 0.2s',
-        },
-        '&:hover::before': {
-          opacity: 1,
-        },
-        '.icon': {
-          width: '16px',
-          height: '16px',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'rgb(54, 113, 246)',
+          border: 'none',
+          padding: '10px 20px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          '&:hover': {
+            backgroundColor: 'rgb(37, 90, 210)',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: '-2px',
+            borderRadius: '8px',
+            background: 'linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))',
+            zIndex: -1,
+            opacity: 0,
+            transition: 'opacity 0.2s',
+          },
+          '&:hover::before': {
+            opacity: 1,
+          },
+          '.icon': {
+            width: '16px',
+            height: '16px',
+          },
+        }),
+      ]}
     >
       <span className="icon">★</span>
       Click me
@@ -273,7 +285,7 @@ function ButtonAdvanced(handle: Handle) {
 }
 
 // ============================================================================
-// Connect Prop - Form (Basic)
+// Ref Mixin - Form (Basic)
 // ============================================================================
 function FormBasic(handle: Handle) {
   let inputRef: HTMLInputElement
@@ -283,18 +295,17 @@ function FormBasic(handle: Handle) {
       <input
         type="text"
         placeholder="Click the button to select this"
-        // get the input node
-        connect={(node) => (inputRef = node)}
-        css={{ marginRight: '8px', padding: '4px 8px' }}
+        // capture the input node
+        mix={[ref((node) => (inputRef = node)), css({ marginRight: '8px', padding: '4px 8px' })]}
       />
       <button
-        on={{
-          click: () => {
+        mix={[
+          css({ padding: '4px 12px' }),
+          on('click', () => {
             // Select it from other parts of the form
             inputRef.select()
-          },
-        }}
-        css={{ padding: '4px 12px' }}
+          }),
+        ]}
       >
         Select Input
       </button>
@@ -303,40 +314,42 @@ function FormBasic(handle: Handle) {
 }
 
 // ============================================================================
-// Connect Prop with AbortSignal - ResizeObserver Component
+// Ref Mixin with AbortSignal - ResizeObserver Component
 // ============================================================================
 function ResizeComponent(handle: Handle) {
   let dimensions = { width: 0, height: 0 }
 
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up something that needs cleanup
-        let observer = new ResizeObserver((entries) => {
-          let entry = entries[0]
-          if (entry) {
-            dimensions.width = Math.round(entry.contentRect.width)
-            dimensions.height = Math.round(entry.contentRect.height)
-            handle.update()
-          }
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up something that needs cleanup
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
-      css={{
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '8px',
-        resize: 'both',
-        overflow: 'auto',
-        minWidth: '100px',
-        minHeight: '60px',
-        border: '1px solid rgb(209, 213, 219)',
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+        css({
+          padding: '20px',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          resize: 'both',
+          overflow: 'auto',
+          minWidth: '100px',
+          minHeight: '60px',
+          border: '1px solid rgb(209, 213, 219)',
+        }),
+      ]}
     >
       Resize me! ({dimensions.width} × {dimensions.height})
     </div>
@@ -352,40 +365,40 @@ function Player(handle: Handle) {
   let stopButton: HTMLButtonElement
 
   return () => (
-    <div css={{ display: 'flex', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', gap: '8px' })]}>
       <button
         disabled={isPlaying}
-        connect={(node) => (playButton = node)}
-        on={{
-          async click() {
+        mix={[
+          ref((node) => (playButton = node)),
+          css({
+            padding: '8px 16px',
+            opacity: isPlaying ? 0.5 : 1,
+          }),
+          on('click', async () => {
             isPlaying = true
             await handle.update()
             // Focus the enabled button after update completes
             stopButton.focus()
-          },
-        }}
-        css={{
-          padding: '8px 16px',
-          opacity: isPlaying ? 0.5 : 1,
-        }}
+          }),
+        ]}
       >
         ▶ Play
       </button>
       <button
         disabled={!isPlaying}
-        connect={(node) => (stopButton = node)}
-        on={{
-          async click() {
+        mix={[
+          ref((node) => (stopButton = node)),
+          css({
+            padding: '8px 16px',
+            opacity: !isPlaying ? 0.5 : 1,
+          }),
+          on('click', async () => {
             isPlaying = false
             await handle.update()
             // Focus the enabled button after update completes
             playButton.focus()
-          },
-        }}
-        css={{
-          padding: '8px 16px',
-          opacity: !isPlaying ? 0.5 : 1,
-        }}
+          }),
+        ]}
       >
         ⏹ Stop
       </button>
@@ -402,12 +415,12 @@ function FormWithScroll(handle: Handle) {
 
   return () => (
     <div>
-      <label css={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' })]}>
         <input
           type="checkbox"
           checked={showDetails}
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               showDetails = event.currentTarget.checked
               handle.update()
               if (showDetails) {
@@ -416,24 +429,26 @@ function FormWithScroll(handle: Handle) {
                   detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 })
               }
-            },
-          }}
+            }),
+          ]}
         />
         Show additional details
       </label>
       {showDetails && (
         <section
-          connect={(node) => (detailsSection = node)}
-          css={{
-            marginTop: '1rem',
-            padding: '1rem',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          }}
+          mix={[
+            ref((node) => (detailsSection = node)),
+            css({
+              marginTop: '1rem',
+              padding: '1rem',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            }),
+          ]}
         >
-          <h3 css={{ margin: '0 0 0.5rem 0' }}>Additional Details</h3>
-          <p css={{ margin: 0 }}>This section appears when the checkbox is checked.</p>
+          <h3 mix={[css({ margin: '0 0 0.5rem 0' })]}>Additional Details</h3>
+          <p mix={[css({ margin: 0 })]}>This section appears when the checkbox is checked.</p>
         </section>
       )}
     </div>
@@ -460,12 +475,18 @@ function Clock(handle: Handle) {
 // ============================================================================
 function LabeledInput(handle: Handle) {
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
       <label htmlFor={handle.id}>Name</label>
       <input
         id={handle.id}
         type="text"
-        css={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.3)' }}
+        mix={[
+          css({
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid rgba(255,255,255,0.3)',
+          }),
+        ]}
       />
     </div>
   )
@@ -478,7 +499,7 @@ function ThemeProvider(handle: Handle<{ theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <ThemedHeader />
     </div>
   )
@@ -490,10 +511,12 @@ function ThemedHeader(handle: Handle) {
 
   return () => (
     <header
-      css={{
-        backgroundColor: theme === 'dark' ? '#000' : '#fff',
-        color: theme === 'dark' ? '#fff' : '#000',
-      }}
+      mix={[
+        css({
+          backgroundColor: theme === 'dark' ? '#000' : '#fff',
+          color: theme === 'dark' ? '#fff' : '#000',
+        }),
+      ]}
     >
       Header
     </header>
@@ -521,15 +544,15 @@ function ThemeProviderAdvanced(handle: Handle<Theme>) {
   handle.context.set(theme)
 
   return () => (
-    <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <button
-        on={{
-          click: () => {
+        mix={[
+          css({ padding: '8px 16px', alignSelf: 'flex-start' }),
+          on('click', () => {
             // no updates in the parent component
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
-        css={{ padding: '8px 16px', alignSelf: 'flex-start' }}
+          }),
+        ]}
       >
         Toggle Theme (EventTarget)
       </button>
@@ -542,20 +565,22 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProviderAdvanced)
 
   // Subscribe to theme changes and update when it changes
-  handle.on(theme, {
-    change: () => {
+  addEventListeners(theme, handle.signal, {
+    change() {
       handle.update()
     },
   })
 
   return () => (
     <div
-      css={{
-        padding: '12px',
-        borderRadius: '6px',
-        backgroundColor: theme.value === 'dark' ? '#1a1a1a' : '#f0f0f0',
-        color: theme.value === 'dark' ? '#fff' : '#000',
-      }}
+      mix={[
+        css({
+          padding: '12px',
+          borderRadius: '6px',
+          backgroundColor: theme.value === 'dark' ? '#1a1a1a' : '#f0f0f0',
+          color: theme.value === 'dark' ? '#fff' : '#000',
+        }),
+      ]}
     >
       Current theme: {theme.value}
     </div>
@@ -567,7 +592,7 @@ function ThemedContent(handle: Handle) {
 // ============================================================================
 function ListWithFragment(handle: Handle) {
   return () => (
-    <ul css={{ margin: 0, paddingLeft: '20px' }}>
+    <ul mix={[css({ margin: 0, paddingLeft: '20px' })]}>
       <>
         <li>Item 1</li>
         <li>Item 2</li>
@@ -635,11 +660,11 @@ function DemoApp(handle: Handle) {
         <ButtonAdvanced />
       </Example>
 
-      <Example title="Connect Prop - Form">
+      <Example title="Ref Mixin - Form">
         <FormBasic />
       </Example>
 
-      <Example title="Connect with AbortSignal - Resize Observer">
+      <Example title="Ref with AbortSignal - Resize Observer">
         <ResizeComponent />
       </Example>
 

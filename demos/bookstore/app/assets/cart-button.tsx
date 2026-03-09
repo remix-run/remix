@@ -1,4 +1,4 @@
-import { type Handle, clientEntry } from 'remix/component'
+import { type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
@@ -8,8 +8,8 @@ export const CartButton = clientEntry(import.meta.url + '#CartButton', (handle: 
   return ({ inCart, id, slug }: { inCart: boolean; id: string | number; slug: string }) => (
     <button
       type="button"
-      on={{
-        async click(_event, signal) {
+      mix={[
+        on('click', async (_event, signal) => {
           pending = true
           handle.update()
 
@@ -28,8 +28,8 @@ export const CartButton = clientEntry(import.meta.url + '#CartButton', (handle: 
           if (signal.aborted) return
           pending = false
           handle.update()
-        },
-      }}
+        }),
+      ]}
       class="btn"
     >
       {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}

@@ -21,14 +21,20 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-import { tagExists } from './utils/git.ts'
-import { createRelease } from './utils/github.ts'
+import {
+  findVersionIntroductionCommit,
+  getLocalTagTarget,
+  getRemoteTagTarget,
+  tagExists,
+} from './utils/git.ts'
+import { createRelease, releaseExists } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
 import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
 import {
   getAllPackageDirNames,
   getPackageFile,
   getGitTag,
+  packageNameToDirectoryName,
   getPackageShortName,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
@@ -50,6 +56,17 @@ interface PublishSummary {
     name: string
     version: string
   }>
+}
+
+interface LocalPackage {
+  dirName: string
+  npmName: string
+  localVersion: string
+}
+
+interface TagPlan {
+  pkg: PublishedPackage
+  targetCommit: string
 }
 
 /**
@@ -75,35 +92,12 @@ function readPublishSummary(): PublishedPackage[] {
 }
 
 /**
- * Check if a specific version of a package is published on npm.
+ * Get local package metadata from the workspace.
  */
-async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    cp.exec(
-      `npm view ${packageName}@${version} version`,
-      { encoding: 'utf-8' },
-      (_error, stdout) => {
-        // If we get output that matches the version, it exists
-        resolve(stdout.trim() === version)
-      },
-    )
-  })
-}
-
-interface LocalPackage {
-  dirName: string
-  npmName: string
-  localVersion: string
-}
-
-/**
- * Get all packages that have versions not yet published to npm.
- */
-async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
+function getLocalPackages(): LocalPackage[] {
   let packageDirNames = getAllPackageDirNames()
-
-  // Collect all local package info first
   let localPackages: LocalPackage[] = []
+
   for (let packageDirName of packageDirNames) {
     let packageJsonPath = getPackageFile(packageDirName, 'package.json')
 
@@ -119,6 +113,31 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
       localVersion: packageJson.version as string,
     })
   }
+
+  return localPackages
+}
+
+/**
+ * Check if a specific version of a package is published on npm.
+ */
+async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    cp.exec(
+      `npm view ${packageName}@${version} version`,
+      { encoding: 'utf-8' },
+      (_error, stdout) => {
+        // If we get output that matches the version, it exists
+        resolve(stdout.trim() === version)
+      },
+    )
+  })
+}
+
+/**
+ * Get all packages that have versions not yet published to npm.
+ */
+async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
+  let localPackages = getLocalPackages()
 
   // Query npm for all packages in parallel
   let npmResults = await Promise.all(
@@ -141,6 +160,184 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
   }
 
   return unpublished
+}
+
+/**
+ * Find package versions that are already published to npm but missing git tags.
+ * This enables release recovery after partial publish failures.
+ */
+async function getPublishedPackagesMissingTags(): Promise<PublishedPackage[]> {
+  let localPackages = getLocalPackages()
+
+  let npmResults = await Promise.all(
+    localPackages.map(async (pkg) => ({
+      pkg,
+      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+    })),
+  )
+
+  let missingTags: PublishedPackage[] = []
+  for (let { pkg, isPublished } of npmResults) {
+    if (!isPublished) {
+      continue
+    }
+
+    let tag = getGitTag(pkg.npmName, pkg.localVersion)
+    if (!tagExists(tag)) {
+      missingTags.push({
+        packageName: pkg.npmName,
+        version: pkg.localVersion,
+        tag,
+      })
+    }
+  }
+
+  return missingTags
+}
+
+/**
+ * Find package versions that are already published and tagged but missing GitHub releases.
+ * This enables release recovery after tags were pushed successfully.
+ */
+async function getPublishedPackagesMissingReleases(): Promise<PublishedPackage[]> {
+  let localPackages = getLocalPackages()
+
+  let npmResults = await Promise.all(
+    localPackages.map(async (pkg) => ({
+      pkg,
+      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+    })),
+  )
+
+  let missingReleases: PublishedPackage[] = []
+  for (let { pkg, isPublished } of npmResults) {
+    if (!isPublished) {
+      continue
+    }
+
+    let tag = getGitTag(pkg.npmName, pkg.localVersion)
+    if (!tagExists(tag)) {
+      continue
+    }
+
+    if (!(await releaseExists(tag))) {
+      missingReleases.push({
+        packageName: pkg.npmName,
+        version: pkg.localVersion,
+        tag,
+      })
+    }
+  }
+
+  return missingReleases
+}
+
+function dedupePublishedPackages(packages: PublishedPackage[]): PublishedPackage[] {
+  let seenTags = new Set<string>()
+  let deduped: PublishedPackage[] = []
+
+  for (let pkg of packages) {
+    if (seenTags.has(pkg.tag)) {
+      continue
+    }
+    seenTags.add(pkg.tag)
+    deduped.push(pkg)
+  }
+
+  return deduped
+}
+
+function isShallowRepository(): boolean {
+  try {
+    let output = cp.execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+      stdio: 'pipe',
+      encoding: 'utf-8',
+    })
+    return output.trim() === 'true'
+  } catch {
+    return false
+  }
+}
+
+function ensureGitHistoryForVersionLookup() {
+  if (isShallowRepository()) {
+    console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
+    logAndExec('git fetch --unshallow --tags origin')
+    return
+  }
+
+  console.log('\nFetching tags from origin...')
+  logAndExec('git fetch --tags origin')
+}
+
+function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {
+  let plans: TagPlan[] = []
+
+  for (let pkg of packages) {
+    let packageDirName = packageNameToDirectoryName(pkg.packageName)
+    if (packageDirName === null) {
+      throw new Error(
+        `Could not map package "${pkg.packageName}" to a workspace directory for tag anchoring.`,
+      )
+    }
+
+    let packageJsonPath = path
+      .relative(rootDir, getPackageFile(packageDirName, 'package.json'))
+      .replaceAll('\\', '/')
+
+    let targetCommit = findVersionIntroductionCommit(packageJsonPath, pkg.version)
+    if (targetCommit === null) {
+      throw new Error(
+        `Could not find commit that introduced ${pkg.packageName}@${pkg.version} from ${packageJsonPath}. Ensure full git history is available.`,
+      )
+    }
+
+    plans.push({ pkg, targetCommit })
+  }
+
+  return plans
+}
+
+function verifyTagTargets(tagPlans: TagPlan[]) {
+  let mismatches: Array<{
+    tag: string
+    scope: 'local' | 'remote'
+    actual: string
+    expected: string
+  }> = []
+
+  for (let plan of tagPlans) {
+    let localTarget = getLocalTagTarget(plan.pkg.tag)
+    if (localTarget !== null && localTarget !== plan.targetCommit) {
+      mismatches.push({
+        tag: plan.pkg.tag,
+        scope: 'local',
+        actual: localTarget,
+        expected: plan.targetCommit,
+      })
+    }
+
+    let remoteTarget = getRemoteTagTarget(plan.pkg.tag)
+    if (remoteTarget !== null && remoteTarget !== plan.targetCommit) {
+      mismatches.push({
+        tag: plan.pkg.tag,
+        scope: 'remote',
+        actual: remoteTarget,
+        expected: plan.targetCommit,
+      })
+    }
+  }
+
+  if (mismatches.length > 0) {
+    let lines = ['Detected existing tags pointing at unexpected commits:']
+    for (let mismatch of mismatches) {
+      lines.push(
+        `  • ${mismatch.tag} (${mismatch.scope}) expected ${mismatch.expected.slice(0, 12)} but found ${mismatch.actual.slice(0, 12)}`,
+      )
+    }
+    lines.push('Refusing to continue to avoid creating inconsistent release metadata.')
+    throw new Error(lines.join('\n'))
+  }
 }
 
 interface ChangelogWarning {
@@ -300,15 +497,36 @@ async function main() {
     return
   }
 
-  if (published.length === 0) {
-    console.log('\nNo packages were published.')
+  if (published.length > 0) {
+    console.log(`\n${published.length} package${published.length === 1 ? '' : 's'} published:`)
+    for (let pkg of published) {
+      console.log(`  • ${pkg.packageName}@${pkg.version}`)
+    }
+  } else {
+    console.log('\nNo new packages were published.')
+  }
+
+  let packagesNeedingTagsOrReleases = dedupePublishedPackages([
+    ...published,
+    ...(await getPublishedPackagesMissingTags()),
+    ...(await getPublishedPackagesMissingReleases()),
+  ])
+
+  if (packagesNeedingTagsOrReleases.length === 0) {
+    console.log('\nNo packages need git tags or GitHub releases.')
     return
   }
 
-  console.log(`\n${published.length} package${published.length === 1 ? '' : 's'} published:`)
-  for (let pkg of published) {
-    console.log(`  • ${pkg.packageName}@${pkg.version}`)
+  ensureGitHistoryForVersionLookup()
+
+  console.log('\nResolving release tag targets...')
+  let tagPlans = resolveTagPlans(packagesNeedingTagsOrReleases)
+
+  for (let plan of tagPlans) {
+    console.log(`  • ${plan.pkg.tag} -> ${plan.targetCommit.slice(0, 12)}`)
   }
+
+  verifyTagTargets(tagPlans)
 
   // Configure git
   console.log('\nConfiguring git...')
@@ -316,22 +534,44 @@ async function main() {
   logAndExec('git config user.email "hello@remix.run"')
 
   // Create tags (skip if already exist)
-  console.log(`\nCreating tag${published.length === 1 ? '' : 's'}...`)
-  let tagsCreated = 0
-  for (let pkg of published) {
-    if (tagExists(pkg.tag)) {
-      console.log(`  ⊘ ${pkg.tag} (already exists)`)
-    } else {
-      cp.execSync(`git tag ${pkg.tag}`)
-      console.log(`  ✓ ${pkg.tag}`)
-      tagsCreated++
+  console.log(`\nCreating tag${tagPlans.length === 1 ? '' : 's'} for published packages...`)
+  let createdTags: TagPlan[] = []
+  for (let plan of tagPlans) {
+    let localTarget = getLocalTagTarget(plan.pkg.tag)
+    let remoteTarget = getRemoteTagTarget(plan.pkg.tag)
+
+    if (localTarget !== null || remoteTarget !== null) {
+      let existingTarget = localTarget ?? remoteTarget
+      console.log(`  ⊘ ${plan.pkg.tag} (already exists at ${existingTarget?.slice(0, 12)})`)
+      continue
     }
+
+    cp.execFileSync('git', ['tag', plan.pkg.tag, plan.targetCommit], { stdio: 'pipe' })
+    console.log(`  ✓ ${plan.pkg.tag} -> ${plan.targetCommit.slice(0, 12)}`)
+    createdTags.push(plan)
   }
 
   // Push tags if any were created
-  if (tagsCreated > 0) {
-    console.log(`\nPushing tag${tagsCreated === 1 ? '' : 's'}...`)
-    logAndExec('git push --tags')
+  if (createdTags.length > 0) {
+    console.log(`\nPushing tag${createdTags.length === 1 ? '' : 's'}...`)
+    for (let plan of createdTags) {
+      let ref = `refs/tags/${plan.pkg.tag}`
+      process.stdout.write(`  $ git push origin ${ref}\n`)
+      try {
+        cp.execFileSync('git', ['push', 'origin', ref], { stdio: 'inherit' })
+      } catch {
+        let remoteTarget = getRemoteTagTarget(plan.pkg.tag)
+        if (remoteTarget === plan.targetCommit) {
+          console.log(
+            `  ⊘ ${plan.pkg.tag} (already exists remotely at ${plan.targetCommit.slice(0, 12)})`,
+          )
+          continue
+        }
+        throw new Error(
+          `Failed to push ${plan.pkg.tag}, and remote target does not match expected commit ${plan.targetCommit.slice(0, 12)}.`,
+        )
+      }
+    }
   } else {
     console.log('\nNo new tags to push.')
   }
@@ -340,7 +580,7 @@ async function main() {
   console.log('\nCreating GitHub releases...')
   let failedReleases: Array<{ pkg: PublishedPackage; error: string }> = []
 
-  for (let pkg of published) {
+  for (let pkg of packagesNeedingTagsOrReleases) {
     let result = await createRelease(pkg.packageName, pkg.version)
     if (result.status === 'created') {
       console.log(`  ✓ ${pkg.packageName} v${pkg.version}`)

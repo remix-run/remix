@@ -1,7 +1,7 @@
-import { createFrame } from '@remix-run/dom'
+import { run } from 'remix/component'
 
-createFrame(document, {
-  async loadModule(moduleUrl, name) {
+let app = run(document, {
+  async loadModule(moduleUrl: string, name: string) {
     let mod = await import(moduleUrl)
     if (!mod) {
       throw new Error(`Unknown module: ${moduleUrl}`)
@@ -14,4 +14,8 @@ createFrame(document, {
 
     return Component
   },
+})
+
+app.ready().catch((error: unknown) => {
+  console.error('Hydration failed:', error)
 })

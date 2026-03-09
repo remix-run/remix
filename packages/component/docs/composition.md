@@ -46,9 +46,9 @@ function App() {
 }
 ```
 
-## Connect Prop
+## Ref Mixin
 
-Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
+Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, measuring dimensions, or setting up observers.
 
 ```tsx
 function Form(handle: Handle) {
@@ -56,7 +56,7 @@ function Form(handle: Handle) {
 
   return () => (
     <form>
-      <input type="text" connect={(node) => (inputRef = node)} />
+      <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
         on={{
           click() {
@@ -72,7 +72,7 @@ function Form(handle: Handle) {
 }
 ```
 
-The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
+The `ref` callback receives an `AbortSignal` as its second parameter, which is aborted when the element is removed from the DOM. Use this for cleanup operations:
 
 ```tsx
 function ResizeTracker(handle: Handle) {
@@ -80,23 +80,25 @@ function ResizeTracker(handle: Handle) {
 
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up ResizeObserver
-        let observer = new ResizeObserver((entries) => {
-          let entry = entries[0]
-          if (entry) {
-            dimensions.width = Math.round(entry.contentRect.width)
-            dimensions.height = Math.round(entry.contentRect.height)
-            handle.update()
-          }
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up ResizeObserver
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
     >
       Size: {dimensions.width} x {dimensions.height}
     </div>
@@ -104,7 +106,7 @@ function ResizeTracker(handle: Handle) {
 }
 ```
 
-The `connect` callback is called only once when the element is first rendered, not on every update.
+The `ref` callback is called only once when the element is first rendered, not on every update.
 
 ## Key Prop
 
@@ -191,4 +193,3 @@ Keys can be any type (string, number, bigint, object, symbol), but should be sta
 ## See Also
 
 - [Context](./context.md) - Indirect composition without prop drilling
-- [Animate API](./animate.md) - Keys are required for animation reclamation

@@ -1,4 +1,5 @@
 import type { Handle } from '@remix-run/component'
+import { on } from '@remix-run/component'
 
 export function Counter(handle: Handle) {
   let count = 0
@@ -7,12 +8,12 @@ export function Counter(handle: Handle) {
     <div>
       <p>Count: {count}</p>
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>

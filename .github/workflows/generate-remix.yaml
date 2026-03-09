@@ -25,7 +25,12 @@ concurrency:
 
 jobs:
   generate-remix:
-    if: github.repository == 'remix-run/remix'
+    if: |
+      github.repository == 'remix-run/remix' &&
+      (
+        github.event_name == 'push' ||
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
     runs-on: ubuntu-latest
     steps:
       # Normal checkout of the trigger branch on pushes

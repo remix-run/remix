@@ -1,4 +1,3 @@
-import { TypedEventTarget } from '@remix-run/interaction'
 import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
@@ -6,6 +5,7 @@ import type { RemixNode } from './jsx.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
 import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
+import { TypedEventTarget } from './typed-event-target.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
@@ -52,13 +52,14 @@ export function createRangeRoot(
 
   let container = end.parentNode
   invariant(container, 'Expected parent node')
-  invariant(end.parentNode === container, 'Boundaries must share parent')
+  invariant(start.parentNode === container, 'Boundaries must share parent')
+  let parent = container
 
   let hydrationCursor = start.nextSibling
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
-    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget, styles)
+    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
   let frameStub =
     options.frame ??
     createRootFrameHandle({
@@ -69,13 +70,26 @@ export function createRangeRoot(
       styleManager: styles,
     })
 
-  // Forward bubbling error events from DOM to root EventTarget
-  container.addEventListener('error', (event) => {
+  let isErrorForwardingAttached = false
+  function forwardDomError(event: Event) {
     eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
-  })
+  }
+  function attachDomErrorForwarding() {
+    if (isErrorForwardingAttached) return
+    parent.addEventListener('error', forwardDomError)
+    isErrorForwardingAttached = true
+  }
+  function detachDomErrorForwarding() {
+    if (!isErrorForwardingAttached) return
+    parent.removeEventListener('error', forwardDomError)
+    isErrorForwardingAttached = false
+  }
+  attachDomErrorForwarding()
 
   return Object.assign(eventTarget, {
     render(element: RemixNode) {
+      attachDomErrorForwarding()
+
       let vnode = toVNode(element)
       let vParent: VNode = {
         type: ROOT_VNODE,
@@ -89,7 +103,7 @@ export function createRangeRoot(
           diffVNodes(
             vroot,
             vnode,
-            container,
+            parent,
             frameStub,
             scheduler,
             styles,
@@ -106,10 +120,12 @@ export function createRangeRoot(
     },
 
     dispose() {
+      detachDomErrorForwarding()
+
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueTasks([() => removeVNode(current, parent, scheduler, styles)])
       scheduler.dequeue()
     },
 
@@ -137,13 +153,26 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       styleManager: styles,
     })
 
-  // Forward bubbling error events from DOM to root EventTarget
-  container.addEventListener('error', (event) => {
+  let isErrorForwardingAttached = false
+  function forwardDomError(event: Event) {
     eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
-  })
+  }
+  function attachDomErrorForwarding() {
+    if (isErrorForwardingAttached) return
+    container.addEventListener('error', forwardDomError)
+    isErrorForwardingAttached = true
+  }
+  function detachDomErrorForwarding() {
+    if (!isErrorForwardingAttached) return
+    container.removeEventListener('error', forwardDomError)
+    isErrorForwardingAttached = false
+  }
+  attachDomErrorForwarding()
 
   return Object.assign(eventTarget, {
     render(element: RemixNode) {
+      attachDomErrorForwarding()
+
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       scheduler.enqueueTasks([
@@ -168,6 +197,8 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
     },
 
     dispose() {
+      detachDomErrorForwarding()
+
       if (!vroot) return
       let current = vroot
       vroot = null
@@ -188,20 +219,25 @@ function createRootFrameHandle(init: {
   scheduler: Scheduler
   styleManager: StyleManager
 }): FrameHandle {
-  if (!init.resolveFrame) {
-    return createFrameHandle({ src: init.src ?? '/' })
-  }
+  let resolveFrame =
+    init.resolveFrame ??
+    (() => {
+      throw new Error(
+        'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
+      )
+    })
 
   let frame = createFrameHandle({
     src: init.src ?? '/',
     $runtime: {
+      canResolveFrames: !!init.resolveFrame,
       topFrame: undefined,
       loadModule:
         init.loadModule ??
         (() => {
           throw new Error('loadModule is required to hydrate client entries inside <Frame />')
         }),
-      resolveFrame: init.resolveFrame,
+      resolveFrame,
       pendingClientEntries: new Map(),
       scheduler: init.scheduler,
       styleManager: init.styleManager,

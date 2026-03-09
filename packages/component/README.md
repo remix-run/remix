@@ -7,7 +7,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 - **JSX Runtime** - Convenient JSX syntax
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
-- **Real DOM Events** - Events are real DOM events using [`@remix-run/interaction`](../interaction)
+- **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
 - **Inline CSS** - CSS prop with pseudo-selectors and nested rules
 - **Server Rendering** - Stream full pages or fragments with `renderToStream`
 - **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
@@ -60,7 +60,7 @@ return new Response(stream, {
 Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
 
 ```tsx
-import { clientEntry, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from '@remix-run/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -73,12 +73,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               count++
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           +
         </button>
@@ -125,11 +125,11 @@ Client entries inside a frame can trigger a reload:
 function RefreshButton(handle: Handle) {
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Refresh
     </button>
@@ -150,12 +150,12 @@ You can also name frames and reload adjacent ones:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Save
     </button>
@@ -179,12 +179,12 @@ function Counter(handle: Handle, setup: number) {
     <div>
       {props.label || 'Count'}: {count}
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -228,7 +228,7 @@ function Counter(
 
 ## Events
 
-Events use the `on` prop and are handled by [`@remix-run/interaction`](../interaction). Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
+Events use the `on()` mixin. Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
 
 ```tsx
 function SearchInput(handle: Handle) {
@@ -238,8 +238,8 @@ function SearchInput(handle: Handle) {
     <input
       type="text"
       value={query}
-      on={{
-        input: (event, signal) => {
+      mix={[
+        on('input', (event, signal) => {
           query = event.currentTarget.value
           handle.update()
 
@@ -251,8 +251,8 @@ function SearchInput(handle: Handle) {
               if (signal.aborted) return
               // Update results
             })
-        },
-      }}
+        }),
+      ]}
     />
   )
 }
@@ -364,9 +364,9 @@ function Button(handle: Handle) {
 }
 ```
 
-## Connect Prop
+## Ref Mixin
 
-Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, or measuring dimensions.
+Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, or measuring dimensions.
 
 ```tsx
 function Form(handle: Handle) {
@@ -377,15 +377,15 @@ function Form(handle: Handle) {
       <input
         type="text"
         // get the input node
-        connect={(node) => (inputRef = node)}
+        mix={[ref((node) => (inputRef = node))]}
       />
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             // Select it from other parts of the form
             inputRef.select()
-          },
-        }}
+          }),
+        ]}
       >
         Focus Input
       </button>
@@ -394,24 +394,26 @@ function Form(handle: Handle) {
 }
 ```
 
-The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM:
+The `ref` callback receives an `AbortSignal` as its second parameter, which is aborted when the element is removed from the DOM:
 
 ```tsx
 function Component(handle: Handle) {
   return () => (
     <div
-      connect={(node, signal) => {
-        // Set up something that needs cleanup
-        let observer = new ResizeObserver(() => {
-          // handle resize
-        })
-        observer.observe(node)
+      mix={[
+        ref((node, signal) => {
+          // Set up something that needs cleanup
+          let observer = new ResizeObserver(() => {
+            // handle resize
+          })
+          observer.observe(node)
 
-        // Clean up when element is removed
-        signal.addEventListener('abort', () => {
-          observer.disconnect()
-        })
-      }}
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
     >
       Content
     </div>
@@ -442,12 +444,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click: () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -467,29 +469,29 @@ function Player(handle: Handle) {
     <div>
       <button
         disabled={isPlaying}
-        connect={(node) => (playButton = node)}
-        on={{
-          async click() {
+        mix={[
+          ref((node) => (playButton = node)),
+          on('click', async () => {
             isPlaying = true
             await handle.update()
             // Focus the enabled button after update completes
             stopButton.focus()
-          },
-        }}
+          }),
+        ]}
       >
         Play
       </button>
       <button
         disabled={!isPlaying}
-        connect={(node) => (stopButton = node)}
-        on={{
-          async click() {
+        mix={[
+          ref((node) => (stopButton = node)),
+          on('click', async () => {
             isPlaying = false
             await handle.update()
             // Focus the enabled button after update completes
             playButton.focus()
-          },
-        }}
+          }),
+        ]}
       >
         Stop
       </button>
@@ -513,8 +515,8 @@ function Form(handle: Handle) {
         <input
           type="checkbox"
           checked={showDetails}
-          on={{
-            change: (event) => {
+          mix={[
+            on('change', (event) => {
               showDetails = event.currentTarget.checked
               handle.update()
               if (showDetails) {
@@ -523,19 +525,19 @@ function Form(handle: Handle) {
                   detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 })
               }
-            },
-          }}
+            }),
+          ]}
         />
         Show additional details
       </label>
       {showDetails && (
         <section
-          connect={(node) => (detailsSection = node)}
           css={{
             marginTop: '2rem',
             padding: '1rem',
             border: '1px solid #ccc',
           }}
+          mix={[ref((node) => (detailsSection = node))]}
         >
           <h2>Additional Details</h2>
           <p>This section appears when the checkbox is checked.</p>
@@ -634,7 +636,7 @@ function Header(handle: Handle) {
 Setting context values does not automatically trigger updates. If a provider needs to render its own context values, call `handle.update()` after setting them. However, since providers often don't render context values themselves, calling `update()` can cause expensive updates of the entire subtree. Instead, make your context an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) and have consumers subscribe to changes.
 
 ```tsx
-import { TypedEventTarget } from 'remix/interaction'
+import { TypedEventTarget } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -656,12 +658,12 @@ function App(handle: Handle<Theme>) {
   return () => (
     <div>
       <button
-        on={{
-          click: () => {
+        mix={[
+          on('click', () => {
             // no updates in the parent component
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
+          }),
+        ]}
       >
         Toggle Theme
       </button>

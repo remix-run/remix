@@ -2,9 +2,65 @@ import { describe, it, expect } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { createRangeRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
+  describe('event forwarding', () => {
+    it('forwards bubbling DOM error events to range root listeners', () => {
+      let host = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      host.append(start, end)
+
+      let root = createRangeRoot([start, end])
+      let forwarded: unknown
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      let expected = new Error('createRangeRoot forwarded error')
+      host.dispatchEvent(new ErrorEvent('error', { bubbles: true, error: expected }))
+
+      expect(forwarded).toBe(expected)
+    })
+
+    it('stops forwarding bubbling DOM error events after dispose', () => {
+      let host = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      host.append(start, end)
+
+      let root = createRangeRoot([start, end])
+      let forwarded: unknown
+      root.addEventListener('error', (event) => {
+        forwarded = (event as ErrorEvent).error
+      })
+
+      root.dispose()
+
+      host.dispatchEvent(
+        new ErrorEvent('error', { bubbles: true, error: new Error('after dispose') }),
+      )
+
+      expect(forwarded).toBeUndefined()
+    })
+  })
+
   describe('basic rendering', () => {
+    it('dispose is a no-op before first render', () => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      container.appendChild(start)
+      container.appendChild(end)
+
+      let root = createRangeRoot([start, end])
+      root.dispose()
+      root.flush()
+
+      expect(container.innerHTML).toBe('<!--start--><!--end-->')
+    })
+
     it('renders content between markers', () => {
       let container = document.createElement('div')
       let start = document.createComment('start')
@@ -258,11 +314,11 @@ describe('createRangeRoot', () => {
       let root = createRangeRoot([start, end])
       root.render(
         <button
-          on={{
-            click: () => {
+          mix={[
+            on('click', () => {
               clicked = true
-            },
-          }}
+            }),
+          ]}
         >
           Click me
         </button>,
@@ -340,6 +396,17 @@ describe('createRangeRoot', () => {
   })
 
   describe('boundary handling', () => {
+    it('throws when start and end markers do not share a parent node', () => {
+      let containerA = document.createElement('div')
+      let containerB = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      containerA.appendChild(start)
+      containerB.appendChild(end)
+
+      expect(() => createRangeRoot([start, end])).toThrow('Boundaries must share parent')
+    })
+
     it('does not affect content before start marker', () => {
       let container = document.createElement('div')
       container.innerHTML = '<header>Before</header><!--start--><!--end-->'
@@ -430,12 +497,12 @@ describe('createRangeRoot', () => {
         let count = setup
         return () => (
           <button
-            on={{
-              click: () => {
+            mix={[
+              on('click', () => {
                 count++
                 handle.update()
-              },
-            }}
+              }),
+            ]}
           >
             {count}
           </button>

@@ -15,7 +15,7 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
-import { initializeBookstoreDatabase } from './models/database.ts'
+import { initializeBookstoreDatabase } from './data/setup.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler, uploadsStorage } from './utils/uploads.ts'
 import { scriptHandler } from './utils/scripts.ts'
@@ -29,7 +29,6 @@ import { toggleCart } from './cart.tsx'
 import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import fragmentsController from './fragments.tsx'
-import { routerStorageKey } from './utils/router-storage.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadScriptEntry } from './middleware/script-entry.ts'
 
@@ -80,12 +79,6 @@ middleware.push(loadScriptEntry())
 await initializeBookstoreDatabase()
 
 export let router = createRouter({ middleware })
-
-// Make router available to render() for internal frame resolution (no network).
-middleware.unshift((context: any, next: any) => {
-  context.storage.set(routerStorageKey, router)
-  return next()
-})
 
 router.get(routes.images, async ({ request, params }) => {
   if (!params.path) return new Response('Not found', { status: 404 })

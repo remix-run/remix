@@ -6,7 +6,6 @@ import { getContext } from 'remix/async-context-middleware'
 import type { Router } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
-import { routerStorageKey } from './router-storage.ts'
 
 // Absolute path to the demo root (one level up from app/)
 let demoRoot = path.resolve(import.meta.dirname, '../..')
@@ -14,7 +13,7 @@ let demoRoot = path.resolve(import.meta.dirname, '../..')
 export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
   let request = context.request
-  let router = context.storage.get(routerStorageKey)
+  let router = context.router
 
   let stream = renderToStream(node, {
     resolveFrame: (src) => resolveFrame(router, request, src),
