@@ -17,6 +17,7 @@ let { values, positionals } = parseArgs({
     debug: { type: 'boolean', short: 'd' },
     devtools: { type: 'boolean' },
     headless: { type: 'boolean', short: 'h' },
+    ui: { type: 'boolean', short: 'u' },
     watch: { type: 'boolean', short: 'w' },
     port: { type: 'string', short: 'p', default: '44101' },
   },
@@ -28,7 +29,7 @@ let port = Number(values.port)
 let isWatchMode = values.watch ?? false
 
 let demoDir = __dirname
-let server = await startServer(port)
+let server = await startServer(port, pattern)
 
 let hasExited = false
 let latestExitCode = 0
@@ -97,15 +98,25 @@ async function executeRun() {
     console.log(`Found ${files.length} test file(s)\n`)
     updateWatchers(files)
 
-    let results = await runTests(files, {
+    let { results, close } = await runTests({
       baseUrl: `http://localhost:${port}`,
       headless: values.headless,
       debug: values.debug,
       devtools: values.devtools,
+      ui: values.ui,
     })
 
     displayResults(results)
     latestExitCode = results.failed > 0 ? 1 : 0
+
+    if (values.ui) {
+      console.log('\nBrowser is open. Press Ctrl+C to close.')
+      await new Promise<void>((resolve) => {
+        process.once('SIGINT', resolve)
+        process.once('SIGTERM', resolve)
+      })
+      await close()
+    }
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1

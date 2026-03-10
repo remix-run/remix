@@ -5,6 +5,7 @@ export interface TestRunOptions {
   headless?: boolean
   debug?: boolean
   devtools?: boolean
+  ui?: boolean
 }
 
 export interface TestResults {
@@ -23,44 +24,44 @@ export interface TestResults {
   }>
 }
 
-export async function runTests(files: string[], options: TestRunOptions): Promise<TestResults> {
+export async function runTests(
+  options: TestRunOptions,
+): Promise<{ results: TestResults; close: () => Promise<void> }> {
   let browser: Browser | undefined
 
   try {
     browser = await chromium.launch({
-      headless: options.headless,
+      headless: options.ui ? false : options.headless,
       devtools: options.devtools,
     })
 
-    let aggregatedResults: TestResults = {
-      passed: 0,
-      failed: 0,
-      tests: [],
+    let page = await browser.newPage()
+
+    if (options.debug) {
+      page.on('console', (msg) => console.log(`  [Browser] ${msg.text()}`))
     }
 
-    for (let file of files) {
-      let page = await browser.newPage()
+    await page.goto(options.baseUrl)
+    await page.waitForFunction('window.__testResults', { timeout: 60000 })
+    let results = (await page.evaluate('window.__testResults')) as TestResults
 
-      if (options.debug) {
-        page.on('console', (msg) => console.log(`  [Browser] ${msg.text()}`))
-      }
-
-      let testPath = encodeURIComponent(file)
-      await page.goto(`${options.baseUrl}/_test/${testPath}`)
-
-      await page.waitForFunction('window.__testResults', { timeout: 30000 })
-      let results = (await page.evaluate('window.__testResults')) as TestResults
-
-      aggregatedResults.passed += results.passed
-      aggregatedResults.failed += results.failed
-      let testsWithFile = results.tests.map((test) => ({ ...test, filePath: file }))
-      aggregatedResults.tests.push(...testsWithFile)
-
+    if (!options.ui) {
       await page.close()
     }
 
-    return aggregatedResults
-  } finally {
+    let close = async () => {
+      await browser?.close()
+      browser = undefined
+    }
+
+    if (!options.ui) {
+      await close()
+      return { results, close: async () => {} }
+    }
+
+    return { results, close }
+  } catch (error) {
     await browser?.close()
+    throw error
   }
 }

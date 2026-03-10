@@ -77,3 +77,8 @@ export function setupTestFramework() {
 
   ;(globalThis as any).__testSuites = rootSuites
 }
+
+export function resetTestFramework() {
+  rootSuites.length = 0
+  currentSuite = null
+}
