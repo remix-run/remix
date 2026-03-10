@@ -1,59 +1,18 @@
 import type { Controller } from 'remix/fetch-router'
-import { createCookie } from 'remix/cookie'
 import { css } from 'remix/component'
 import { redirect } from 'remix/response/redirect'
-import { getContext } from 'remix/async-context-middleware'
 
 import { routes } from '../../config/routes.ts'
 import { render } from '../../config/render.tsx'
-import { Layout } from '../lib/Layout.tsx'
-
-let authCookie = createCookie('frame-navigation-auth', {
-  httpOnly: true,
-  sameSite: 'lax',
-  path: '/',
-})
+import { authCookie, isAuthenticated } from './session.ts'
 
 export default {
   actions: {
-    async index() {
-      if (!(await isAuthenticated())) {
-        return redirect(routes.auth.login.index.href())
-      }
-
-      return render(
-        <Layout title="Protected">
-          <section mix={cardStyle}>
-            <p mix={eyebrowStyle}>Protected route</p>
-            <h2 mix={titleStyle}>Authenticated content</h2>
-            <p mix={bodyStyle}>
-              This page is guarded by a simple cookie so frame-targeted navigations can exercise
-              redirect behavior.
-            </p>
-
-            <dl mix={detailsStyle}>
-              <dt mix={termStyle}>Cookie</dt>
-              <dd mix={definitionStyle}>
-                <code>frame-navigation-auth=1</code>
-              </dd>
-              <dt mix={termStyle}>Redirect target</dt>
-              <dd mix={definitionStyle}>{routes.auth.login.index.href()}</dd>
-            </dl>
-
-            <form method="POST" action={routes.auth.logout.href()} mix={formStyle}>
-              <button type="submit" mix={secondaryButtonStyle}>
-                Logout
-              </button>
-            </form>
-          </section>
-        </Layout>,
-      )
-    },
     login: {
       actions: {
         async index() {
           if (await isAuthenticated()) {
-            return redirect(routes.auth.index.href())
+            return redirect(routes.main.index.href())
           }
 
           return render(
@@ -86,7 +45,7 @@ export default {
           )
         },
         async action() {
-          return redirect(routes.auth.index.href(), {
+          return redirect(routes.main.index.href(), {
             headers: {
               'Set-Cookie': await authCookie.serialize('1'),
             },
@@ -103,11 +62,6 @@ export default {
     },
   },
 } satisfies Controller<typeof routes.auth>
-
-async function isAuthenticated() {
-  let cookie = await authCookie.parse(getContext().request.headers.get('cookie'))
-  return cookie === '1'
-}
 
 let cardStyle = css({
   maxWidth: '38rem',
@@ -157,26 +111,6 @@ let bodyStyle = css({
   lineHeight: 1.7,
 })
 
-let detailsStyle = css({
-  marginTop: '1.25rem',
-  marginBottom: 0,
-  display: 'grid',
-  gridTemplateColumns: '140px 1fr',
-  rowGap: '0.65rem',
-})
-
-let termStyle = css({
-  color: '#64748b',
-})
-
-let definitionStyle = css({
-  margin: 0,
-  color: '#0f172a',
-  fontFamily:
-    'ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, monospace',
-  fontSize: '0.92rem',
-})
-
 let formStyle = css({
   marginTop: '1.5rem',
 })
@@ -190,15 +124,4 @@ let primaryButtonStyle = css({
   cursor: 'pointer',
   backgroundColor: '#0f172a',
   color: '#ffffff',
-})
-
-let secondaryButtonStyle = css({
-  border: 'none',
-  borderRadius: '999px',
-  padding: '0.8rem 1.1rem',
-  fontSize: '0.95rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  backgroundColor: '#e2e8f0',
-  color: '#0f172a',
 })

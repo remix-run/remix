@@ -1,60 +1,48 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { navigate, startNavigationListener } from '../lib/navigate.ts'
-import { run } from '../lib/run.ts'
 
 describe('navigate', () => {
-  let initialHref = ''
-
-  beforeEach(() => {
-    initialHref = window.location.href
-  })
-
   afterEach(() => {
-    history.replaceState(history.state, '', initialHref)
     vi.unstubAllGlobals()
   })
 
-  it('falls back to window.location.assign when the Navigation API is unavailable', async () => {
+  it('throws when the Navigation API is unavailable', async () => {
     vi.stubGlobal('navigation', undefined)
 
-    let changed = new Promise<void>((resolve) => {
-      window.addEventListener(
-        'hashchange',
-        () => {
-          resolve()
-        },
-        { once: true },
-      )
-    })
-
-    await navigate('#rmx-fallback')
-    await changed
-
-    expect(window.location.hash).toBe('#rmx-fallback')
+    await expect(navigate('/login')).rejects.toThrow('Navigation API is not available')
   })
 
-  it('ignores navigation listener setup when the Navigation API is unavailable', () => {
+  it('throws when navigation listener setup is attempted without the Navigation API', () => {
     vi.stubGlobal('navigation', undefined)
 
     let controller = new AbortController()
 
     expect(() => {
       startNavigationListener(controller.signal)
-    }).not.toThrow()
+    }).toThrow('Navigation API is not available')
   })
 
-  it('boots run() when the Navigation API is unavailable', async () => {
-    vi.stubGlobal('navigation', undefined)
-
-    let app = run({
-      loadModule() {
-        throw new Error('loadModule should not be called during this test')
-      },
+  it('does not intercept anchors marked for document navigation', () => {
+    let navigation = Object.assign(new EventTarget(), {
+      navigate: vi.fn(() => ({ finished: Promise.resolve() })),
+      updateCurrentEntry: vi.fn(),
     })
+    vi.stubGlobal('navigation', navigation)
 
-    await expect(app.ready()).resolves.toBeUndefined()
+    let controller = new AbortController()
+    startNavigationListener(controller.signal)
 
-    app.dispose()
+    let anchor = document.createElement('a')
+    anchor.href = '/login'
+    anchor.setAttribute('rmx-document', '')
+    document.body.append(anchor)
+
+    anchor.click()
+
+    expect(navigation.navigate).not.toHaveBeenCalled()
+
+    anchor.remove()
+    controller.abort()
   })
 })

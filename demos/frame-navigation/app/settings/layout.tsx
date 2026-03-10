@@ -4,45 +4,60 @@ import { css } from 'remix/component'
 import { frames, routes } from '../../config/routes.ts'
 import { NavLink } from '../lib/NavLink.tsx'
 
+type SettingsNavItem =
+  | 'overview'
+  | 'profile'
+  | 'notifications'
+  | 'privacy'
+  | 'grading'
+  | 'integrations'
+
 type SettingsLayoutProps = {
+  activeItem?: SettingsNavItem
   children?: RemixNode
 }
 
 let settingsItems = [
   {
+    id: 'overview',
     route: routes.settings.index,
     label: 'Overview',
   },
   {
+    id: 'profile',
     route: routes.settings.profile,
     label: 'Profile',
   },
   {
+    id: 'notifications',
     route: routes.settings.notifications,
     label: 'Notifications',
   },
   {
+    id: 'privacy',
     route: routes.settings.privacy,
     label: 'Privacy',
   },
   {
+    id: 'grading',
     route: routes.settings.grading,
     label: 'Grading',
   },
   {
+    id: 'integrations',
     route: routes.settings.integrations,
     label: 'Integrations',
   },
 ]
 
 export function SettingsLayout() {
-  return ({ children }: SettingsLayoutProps) => (
+  return ({ activeItem, children }: SettingsLayoutProps) => (
     <section mix={contentShellStyle}>
       <aside mix={secondarySidebarStyle}>
         <p mix={secondarySidebarTitleStyle}>Settings</p>
         <nav mix={secondaryNavStyle}>
           {settingsItems.map((item) => (
-            <NavLink route={item.route} target={frames.settings}>
+            <NavLink route={item.route} target={frames.settings} active={activeItem === item.id}>
               {item.label}
             </NavLink>
           ))}
@@ -101,3 +116,5 @@ let secondaryNavStyle = css({
 let secondaryContentStyle = css({
   minWidth: 0,
 })
+
+export type { SettingsNavItem }

@@ -6,11 +6,11 @@ import { getContext } from 'remix/async-context-middleware'
 import { frames, type routes } from '../../config/routes.ts'
 import { render } from '../../config/render.tsx'
 import { Layout } from '../lib/Layout.tsx'
+import { type SettingsNavItem, SettingsLayout } from './layout.tsx'
 
 import { Grading } from './grading.tsx'
 import { Index } from './index.tsx'
 import { Integrations } from './integrations.tsx'
-import { SettingsLayout } from './layout.tsx'
 import { Notifications } from './notifications.tsx'
 import { Privacy } from './privacy.tsx'
 import { Profile } from './profile.tsx'
@@ -18,60 +18,47 @@ import { Profile } from './profile.tsx'
 export default {
   actions: {
     index() {
-      return render(
-        <SettingsShellOrFragment>
-          <Index />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('overview', <Index />)
     },
     profile() {
-      return render(
-        <SettingsShellOrFragment>
-          <Profile />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('profile', <Profile />)
     },
     notifications() {
-      return render(
-        <SettingsShellOrFragment>
-          <Notifications />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('notifications', <Notifications />)
     },
     privacy() {
-      return render(
-        <SettingsShellOrFragment>
-          <Privacy />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('privacy', <Privacy />)
     },
     grading() {
-      return render(
-        <SettingsShellOrFragment>
-          <Grading />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('grading', <Grading />)
     },
     integrations() {
-      return render(
-        <SettingsShellOrFragment>
-          <Integrations />
-        </SettingsShellOrFragment>,
-      )
+      return renderSettingsPage('integrations', <Integrations />)
     },
   },
 } satisfies Controller<typeof routes.settings>
 
-type SettingsPageProps = { children?: RemixNode }
+type SettingsPageProps = {
+  activeItem: SettingsNavItem
+  children?: RemixNode
+}
+
+function renderSettingsPage(activeItem: SettingsNavItem, content: RemixNode) {
+  return render(
+    <SettingsShellOrFragment activeItem={activeItem}>
+      {content}
+    </SettingsShellOrFragment>,
+  )
+}
 
 function SettingsShellOrFragment() {
-  return ({ children }: SettingsPageProps) => {
+  return ({ activeItem, children }: SettingsPageProps) => {
     if (isFrameRequest()) {
-      return <SettingsLayout>{children}</SettingsLayout>
+      return <SettingsLayout activeItem={activeItem}>{children}</SettingsLayout>
     }
 
     return (
-      <Layout title="Settings">
+      <Layout title="Settings" activeNav="settings">
         <Frame name={frames.settings} src={getContext().request.url} />
       </Layout>
     )

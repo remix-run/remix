@@ -7,11 +7,9 @@ export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
   let request = context.request
   let router = context.router
-  let topFrameSrc = request.headers.get('x-remix-top-frame-src') ?? request.url
 
   let stream = renderToStream(node, {
     frameSrc: request.url,
-    topFrameSrc,
     resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
     onError(error) {
       console.error(error)
@@ -34,15 +32,12 @@ async function resolveFrame(
   context?: ResolveFrameContext,
 ) {
   let frameSrc = context?.currentFrameSrc ?? request.url
-  let topFrameSrc =
-    context?.topFrameSrc ?? request.headers.get('x-remix-top-frame-src') ?? request.url
   let url = new URL(src, frameSrc)
 
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
   headers.set('x-remix-frame', 'true')
-  headers.set('x-remix-top-frame-src', topFrameSrc)
   if (target) {
     headers.set('x-remix-target', target)
   }
@@ -50,18 +45,40 @@ async function resolveFrame(
   let cookie = request.headers.get('cookie')
   if (cookie) headers.set('cookie', cookie)
 
-  let res = await router.fetch(
-    new Request(url, {
-      method: 'GET',
-      headers,
-      signal: request.signal,
-    }),
-  )
-
-  if (!res.ok) {
-    return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
-  }
-
+  let res = await followFrameRedirects(router, request, url, headers)
   if (res.body) return res.body
-  return res.text()
+
+  if (res.ok) return res.text()
+  return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
+}
+
+async function followFrameRedirects(
+  router: Router,
+  request: Request,
+  url: URL,
+  headers: Headers,
+) {
+  let currentUrl = url
+  let redirectsRemaining = 10
+
+  while (true) {
+    let res = await router.fetch(
+      new Request(currentUrl, {
+        method: 'GET',
+        headers,
+        signal: request.signal,
+      }),
+    )
+
+    let location = res.headers.get('location')
+    if (!location || res.status < 300 || res.status >= 400) {
+      return res
+    }
+
+    if (redirectsRemaining-- <= 0) {
+      throw new Error('Too many frame redirects')
+    }
+
+    currentUrl = new URL(location, currentUrl)
+  }
 }

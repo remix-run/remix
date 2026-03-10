@@ -1,47 +1,24 @@
-import type { Handle, RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/component'
 import type { Route } from 'remix/fetch-router/routes'
-
-import { controllerFor, matchController, routeAddsControllerSegments } from '../../config/routes.ts'
 
 type NavLinkProps = {
   route: Route<any, string>
-  match?: 'route' | 'controller'
+  active?: boolean
   target?: string
   frameSrc?: string
   children?: RemixNode
 }
 
-export function NavLink(handle: Handle) {
-  handle.queueTask((signal) => {
-    window.navigation.addEventListener(
-      'navigate',
-      () => {
-        void handle.update()
-      },
-      { signal },
-    )
-  })
-
-  return ({ route, match = 'route', target: frameTarget, frameSrc, children }: NavLinkProps) => {
+export function NavLink() {
+  return ({ route, active, target: frameTarget, frameSrc, children }: NavLinkProps) => {
     let href = route.href()
-    let controller = controllerFor(route)
-    let isActive = route.match(handle.frames.top.src) != null
-    if (
-      !isActive &&
-      match === 'controller' &&
-      controller &&
-      !routeAddsControllerSegments(route) &&
-      href !== '/'
-    ) {
-      isActive = matchController(controller, handle.frames.top.src)
-    }
 
     return (
       <a
         href={href}
-        aria-current={isActive ? 'page' : undefined}
+        aria-current={active ? 'page' : undefined}
         rmx-target={frameTarget}
-        rmx-src={frameSrc ?? (frameTarget ? href : undefined)}
+        rmx-src={frameSrc}
       >
         {children}
       </a>

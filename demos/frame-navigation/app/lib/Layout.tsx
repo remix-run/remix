@@ -4,22 +4,24 @@ import { css } from 'remix/component'
 import { routes } from '../../config/routes.ts'
 import { NavLink } from './NavLink.tsx'
 
+type MainNavItem = 'dashboard' | 'courses' | 'calendar' | 'account' | 'settings'
+
 type LayoutProps = {
   title: string
+  activeNav?: MainNavItem
   children?: RemixNode
 }
 
 let navItems = [
-  { label: 'Dashboard', route: routes.main.index },
-  { label: 'Courses', route: routes.main.courses },
-  { label: 'Calendar', route: routes.main.calendar },
-  { label: 'Account', route: routes.main.account },
-  { label: 'Protected', route: routes.auth.index },
-  { label: 'Settings', route: routes.settings.index },
+  { id: 'dashboard', label: 'Dashboard', route: routes.main.index },
+  { id: 'courses', label: 'Courses', route: routes.main.courses },
+  { id: 'calendar', label: 'Calendar', route: routes.main.calendar },
+  { id: 'account', label: 'Account', route: routes.main.account },
+  { id: 'settings', label: 'Settings', route: routes.settings.index },
 ]
 
 export function Layout() {
-  return ({ title, children }: LayoutProps) => (
+  return ({ title, activeNav, children }: LayoutProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
@@ -36,14 +38,16 @@ export function Layout() {
             <p mix={sidebarSubtitleStyle}>Student workspace</p>
             <nav mix={navStyle}>
               {navItems.map((item) => (
-                <NavLink
-                  route={item.route}
-                  match={item.route === routes.settings.index ? 'controller' : 'route'}
-                >
+                <NavLink route={item.route} active={activeNav === item.id}>
                   {item.label}
                 </NavLink>
               ))}
             </nav>
+            <form method="POST" action={routes.auth.logout.href()} mix={logoutFormStyle}>
+              <button type="submit" mix={logoutButtonStyle}>
+                Logout
+              </button>
+            </form>
           </aside>
 
           <main mix={mainStyle}>
@@ -121,6 +125,23 @@ let navStyle = css({
   },
 })
 
+let logoutFormStyle = css({
+  marginTop: 'auto',
+  paddingTop: '1rem',
+})
+
+let logoutButtonStyle = css({
+  width: '100%',
+  border: 'none',
+  borderRadius: '10px',
+  padding: '0.65rem 0.75rem',
+  fontSize: '0.9rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  backgroundColor: '#e2e8f0',
+  color: '#0f172a',
+})
+
 let mainStyle = css({
   padding: '1.5rem 2rem 3rem',
 })
@@ -136,3 +157,5 @@ let mainTitleStyle = css({
   fontSize: '1.25rem',
   color: '#0f172a',
 })
+
+export type { MainNavItem }

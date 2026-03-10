@@ -1,3 +1,4 @@
+import type { FrameContent } from 'remix/component'
 import { animateEntrance, createRoot, css, on, run, spring } from 'remix/component'
 
 let app = run({
@@ -10,23 +11,37 @@ let app = run({
     return exp
   },
   async resolveFrame(src, signal, target) {
-    let headers = new Headers()
-    headers.set('accept', 'text/html')
-    headers.set('x-remix-frame', 'true')
-    headers.set('x-remix-top-frame-src', window.location.href)
-
-    if (target) {
-      headers.set('x-remix-target', target)
-    }
-
-    let res = await fetch(src, { headers, signal })
-    if (!res.ok) {
-      return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
-    }
-    if (res.body) return res.body
-    return await res.text()
+    return resolveFrameResponse(new URL(src, window.location.href), signal, target)
   },
 })
+
+async function resolveFrameResponse(
+  url: URL,
+  signal?: AbortSignal,
+  target?: string,
+): Promise<FrameContent> {
+  let headers = new Headers()
+  headers.set('accept', 'text/html')
+  headers.set('x-remix-frame', 'true')
+
+  if (target) {
+    headers.set('x-remix-target', target)
+  }
+
+  let res = await fetch(url, { headers, signal })
+
+  if (res.status === 401) {
+    window.location.assign('/auth/login')
+    return new Promise(() => {})
+  }
+
+  if (!res.ok) {
+    return `<div><h1>Frame Error</h1><p><a rmx-document href="${window.location.href}">Retry</a></p></div>`
+  }
+
+  if (res.body) return res.body
+  return await res.text()
+}
 
 app.addEventListener('error', async (event) => {
   app.dispose()

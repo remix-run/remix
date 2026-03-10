@@ -6,51 +6,26 @@ type NavigationState = {
   $rmx: true
 }
 
-type NavigationLike = EventTarget & {
-  navigate(
-    href: string,
-    options: { state: NavigationState },
-  ): {
-    finished: Promise<unknown>
-  }
-  updateCurrentEntry(options: { state: NavigationState }): void
-  addEventListener(
-    type: 'navigate',
-    listener: (event: NavigateEventLike) => void,
-    options?: AddEventListenerOptions,
-  ): void
+type NavigationOptions = {
+  history?: 'push' | 'replace'
 }
 
-type NavigateEventLike = Event & {
-  canIntercept: boolean
-  destination: {
-    url: string
-    getState(): unknown
-  }
-  intercept(options: { handler(): Promise<void> | void }): void
-  sourceElement: HTMLAnchorElement | HTMLFormElement | null
-}
-
-function isRuntimeNavigation(info: unknown): info is NavigationState {
-  return typeof info === 'object' && info != null && '$rmx' in info
-}
-
-export async function navigate(href: string, src?: string | null, target?: string | null) {
-  let navigation = getNavigation()
-  if (!navigation) {
-    window.location.assign(href)
-    return
-  }
-
+export async function navigate(
+  href: string,
+  src?: string | null,
+  target?: string | null,
+  options?: NavigationOptions,
+) {
+  let navigation = window.navigation
   let transition = navigation.navigate(href, {
     state: { target: target ?? undefined, src: src ?? href, $rmx: true },
+    history: options?.history,
   })
   await transition.finished
 }
 
 export function startNavigationListener(signal: AbortSignal) {
-  let navigation = getNavigation()
-  if (!navigation) return
+  let navigation = window.navigation
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, $rmx: true },
@@ -63,6 +38,7 @@ export function startNavigationListener(signal: AbortSignal) {
 
       let anchor = event.target.closest('a')
       if (!anchor) return
+      if (anchor.hasAttribute('rmx-document')) return
 
       let href = anchor.href
       if (!href) return
@@ -99,6 +75,6 @@ export function startNavigationListener(signal: AbortSignal) {
   )
 }
 
-function getNavigation(): NavigationLike | undefined {
-  return (window as Window & { navigation?: NavigationLike }).navigation
+function isRuntimeNavigation(info: unknown): info is NavigationState {
+  return typeof info === 'object' && info != null && '$rmx' in info
 }
