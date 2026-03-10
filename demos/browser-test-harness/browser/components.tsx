@@ -3,8 +3,8 @@ import { setupTestFramework, resetTestFramework } from './test-framework.ts'
 import { setupAssertions } from './assertions.ts'
 import { runTests } from './test-executor.ts'
 
-export let TestStatus = clientEntry(
-  '/_bundle/test-runner-app.js#TestStatus',
+export const TestStatus = clientEntry(
+  'entry.js#TestStatus',
   function TestStatus(handle: Handle, setup: { testFiles: string[] }) {
     let status = 'Running tests...'
     let done = false
@@ -42,10 +42,7 @@ export let TestStatus = clientEntry(
       <div id="test-status">
         <span>{status}</span>
         {done && (
-          <button
-            type="button"
-            mix={[on('click', () => window.location.reload())]}
-          >
+          <button type="button" mix={[on('click', () => window.location.reload())]}>
             Re-run
           </button>
         )}

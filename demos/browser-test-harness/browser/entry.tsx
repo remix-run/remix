@@ -1,9 +1,9 @@
 import { run } from 'remix/component'
+import * as components from './components.tsx'
 
 let app = run(document, {
   async loadModule(moduleUrl: string, exportName: string) {
-    let mod = await import(moduleUrl)
-    let Component = (mod as any)[exportName]
+    let Component = components[exportName as keyof typeof components]
     if (!Component) {
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
