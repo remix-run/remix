@@ -27,7 +27,7 @@ export default {
       return renderSettingsPage('notifications', <Notifications />)
     },
     privacy() {
-      return renderSettingsPage('privacy', <Privacy />)
+      return renderSettingsPage('privacy', <Privacy />, { status: 500 })
     },
     grading() {
       return renderSettingsPage('grading', <Grading />)
@@ -43,11 +43,12 @@ type SettingsPageProps = {
   children?: RemixNode
 }
 
-function renderSettingsPage(activeItem: SettingsNavItem, content: RemixNode) {
+function renderSettingsPage(activeItem: SettingsNavItem, content: RemixNode, init?: ResponseInit) {
   return render(
     <SettingsShellOrFragment activeItem={activeItem}>
       {content}
     </SettingsShellOrFragment>,
+    init,
   )
 }
 

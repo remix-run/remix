@@ -1,5 +1,7 @@
-import type { FrameContent } from 'remix/component'
+import type { FrameContent, RemixNode } from 'remix/component'
 import { animateEntrance, createRoot, css, on, run, spring } from 'remix/component'
+
+import { routes } from '../../config/routes.ts'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -31,12 +33,23 @@ async function resolveFrameResponse(
   let res = await fetch(url, { headers, signal })
 
   if (res.status === 401) {
-    window.location.assign('/auth/login')
+    window.location.assign(routes.auth.login.index.href())
     return new Promise(() => {})
   }
 
   if (!res.ok) {
-    return `<div><h1>Frame Error</h1><p><a rmx-document href="${window.location.href}">Retry</a></p></div>`
+    return (
+      <ErrorCard
+        eyebrow="Unexpected Error"
+        title="Reload required"
+        message="An unexpected error occurred. Please reload the page to try again."
+        action={
+          <a rmx-document href={window.location.href} mix={actionLinkCss}>
+            Reload
+          </a>
+        }
+      />
+    )
   }
 
   if (res.body) return res.body
@@ -50,21 +63,24 @@ app.addEventListener('error', async (event) => {
   let message = 'message' in event.error ? event.error.message : 'Unknown error'
   createRoot(document.body).render(
     <div mix={pageCss}>
-      <div mix={[cardCss, animateGentlyIn]}>
-        <p mix={eyebrowCss}>Unexpected Error</p>
-        <h1 mix={titleCss}>Something went wrong</h1>
-        <p mix={messageCss}>{message}</p>
-        <button
-          mix={[
-            reloadButtonCss,
-            on('click', () => {
-              window.location.reload()
-            }),
-          ]}
-        >
-          Reload the page
-        </button>
-      </div>
+      <ErrorCard
+        eyebrow="Unexpected Error"
+        title="Something went wrong"
+        message={message}
+        animated
+        action={
+          <button
+            mix={[
+              reloadButtonCss,
+              on('click', () => {
+                window.location.reload()
+              }),
+            ]}
+          >
+            Reload the page
+          </button>
+        }
+      />
     </div>,
   )
 })
@@ -80,6 +96,25 @@ async function fadeOutBody() {
 
   await animation.finished
   document.body.innerHTML = ''
+}
+
+type ErrorCardProps = {
+  eyebrow: string
+  title: string
+  message: string
+  action?: RemixNode
+  animated?: boolean
+}
+
+function ErrorCard() {
+  return ({ eyebrow, title, message, action, animated }: ErrorCardProps) => (
+    <div mix={animated ? [cardCss, animateGentlyIn] : cardCss}>
+      <p mix={eyebrowCss}>{eyebrow}</p>
+      <h1 mix={titleCss}>{title}</h1>
+      <p mix={messageCss}>{message}</p>
+      {action}
+    </div>
+  )
 }
 
 let pageCss = css({
@@ -142,6 +177,22 @@ let reloadButtonCss = css({
   fontWeight: '600',
   lineHeight: '1',
   cursor: 'pointer',
+  '&:hover': {
+    background: '#1e293b',
+  },
+})
+
+let actionLinkCss = css({
+  display: 'inline-flex',
+  marginTop: '24px',
+  padding: '12px 18px',
+  borderRadius: '999px',
+  background: '#0f172a',
+  color: '#ffffff',
+  fontSize: '14px',
+  fontWeight: '600',
+  lineHeight: '1',
+  textDecoration: 'none',
   '&:hover': {
     background: '#1e293b',
   },
