@@ -1,4 +1,0 @@
-interface:
-  display_name: "Remix README Style"
-  short_description: "Write Remix package READMEs in the repo style."
-  default_prompt: "Use $remix-readme-style to draft or rewrite this package README in the style used by the Remix repository."

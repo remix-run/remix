@@ -1,9 +1,9 @@
 ---
-name: remix-readme-style
+name: write-readme
 description: Write or rewrite package README files in the style used by the Remix repository. Use when drafting a new package README, revising an existing README, or reviewing README structure, examples, installation instructions, and section ordering for Remix packages.
 ---
 
-# Remix README Style
+# Write Readme
 
 ## Overview
 
