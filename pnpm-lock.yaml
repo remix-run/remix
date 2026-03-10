@@ -378,6 +378,9 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
     devDependencies:
       '@remix-run/cookie':
         specifier: workspace:*
@@ -385,9 +388,6 @@ importers:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
-      '@remix-run/session':
-        specifier: workspace:*
-        version: link:../session
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware

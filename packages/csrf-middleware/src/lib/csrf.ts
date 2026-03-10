@@ -1,4 +1,5 @@
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
+import { Session } from '@remix-run/session'
 
 let defaultSafeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
 let defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
@@ -100,7 +101,7 @@ export function csrf(options: CsrfOptions = {}): Middleware {
   let allowMissingOrigin = options.allowMissingOrigin ?? true
 
   return async (context, next) => {
-    if (!context.sessionStarted) {
+    if (!context.has(Session)) {
       throw new Error('csrf middleware requires session() middleware to run before it')
     }
 
@@ -142,17 +143,18 @@ export function csrf(options: CsrfOptions = {}): Middleware {
  * @returns The active CSRF token
  */
 export function getCsrfToken(context: RequestContext, tokenKey = '_csrf'): string {
-  if (!context.sessionStarted) {
+  if (!context.has(Session)) {
     throw new Error('Session is not started. Use session() middleware before csrf().')
   }
 
-  let token = context.session.get(tokenKey)
+  let session = context.get(Session)
+  let token = session.get(tokenKey)
   if (typeof token === 'string' && token !== '') {
     return token
   }
 
   let createdToken = createCsrfToken()
-  context.session.set(tokenKey, createdToken)
+  session.set(tokenKey, createdToken)
 
   return createdToken
 }
@@ -217,7 +219,7 @@ async function resolveSubmittedToken(
     }
   }
 
-  let formValue = context.formData?.get(fieldName)
+  let formValue = context.has(FormData) ? context.get(FormData).get(fieldName) : undefined
   if (typeof formValue === 'string') {
     let trimmedFormValue = formValue.trim()
     if (trimmedFormValue !== '') {

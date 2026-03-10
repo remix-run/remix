@@ -4,7 +4,7 @@ CSRF protection middleware for Remix. It provides synchronizer-token validation 
 
 ## Features
 
-- **Session-Backed Tokens** - Creates and persists CSRF tokens in `context.session`
+- **Session-Backed Tokens** - Creates and persists CSRF tokens in the request session
 - **Flexible Token Extraction** - Reads tokens from headers, form fields, query params, or a custom resolver
 - **Origin Validation** - Validates `Origin`/`Referer` for unsafe methods with customizable policies
 - **Configurable Enforcement** - Control safe methods, token keys, and failure responses
