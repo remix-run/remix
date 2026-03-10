@@ -14,6 +14,8 @@ import { toTableRef } from './helpers.ts'
  * text is computed.  This catches accidental edits to already-applied
  * migrations that would previously have gone undetected because the fallback
  * only used the migration `id` and `name`.
+ * @param migration Migration descriptor to normalize.
+ * @returns Stable checksum string.
  */
 export function normalizeChecksum(migration: MigrationDescriptor): string {
   if (migration.checksum) {
@@ -27,6 +29,8 @@ export function normalizeChecksum(migration: MigrationDescriptor): string {
 /**
  * Quotes an individual SQL identifier using ANSI double-quote syntax.
  * This is supported by SQLite, PostgreSQL, and MySQL (in ANSI mode).
+ * @param value Identifier text to quote.
+ * @returns Quoted SQL identifier.
  */
 function quoteIdentifier(value: string): string {
   return '"' + value.replace(/"/g, '""') + '"'
@@ -35,6 +39,8 @@ function quoteIdentifier(value: string): string {
 /**
  * Returns a fully-quoted SQL table reference for use in raw journal SQL.
  * Handles optional schema-qualified names (e.g. "myschema.migrations").
+ * @param tableName Journal table name, optionally schema-qualified.
+ * @returns Fully quoted table reference.
  */
 function quoteJournalTable(tableName: string): string {
   return quoteTableRef(toTableRef(tableName), quoteIdentifier)
