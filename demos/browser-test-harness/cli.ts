@@ -7,6 +7,7 @@ import { discoverTests } from './lib/test-discovery.ts'
 import { startServer } from './server.tsx'
 import { runTests } from './lib/test-runner.ts'
 import { displayResults } from './lib/result-collector.ts'
+import { clearCache } from './lib/transform.ts'
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -82,6 +83,7 @@ async function executeRun() {
   if (hasExited) return
 
   running = true
+  clearCache()
 
   try {
     let files = await discoverTests(pattern, demoDir)
