@@ -1,7 +1,6 @@
 # cop-middleware
 
-Cross-origin protection middleware for Remix. It mirrors Go's `CrossOriginProtection` by
-rejecting unsafe cross-origin browser requests without synchronizer tokens.
+Cross-origin protection middleware for Remix. It mirrors Go's `CrossOriginProtection` by rejecting unsafe cross-origin browser requests without synchronizer tokens.
 
 ## Features
 
@@ -29,8 +28,7 @@ let router = createRouter({
 
 ## Behavior
 
-For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), `cop()` follows the same broad model as
-Go's `CrossOriginProtection`:
+For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), `cop()` follows the same broad model as Go's `CrossOriginProtection`:
 
 - Allow `Sec-Fetch-Site: same-origin`
 - Allow `Sec-Fetch-Site: none`
@@ -38,8 +36,29 @@ Go's `CrossOriginProtection`:
 - If `Sec-Fetch-Site` is missing, compare `Origin` to the request host
 - If both `Sec-Fetch-Site` and `Origin` are missing, allow the request
 
-This middleware is intentionally tokenless. If you cannot guarantee the deployment assumptions
-behind that model, prefer [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware).
+This middleware is intentionally tokenless. If you cannot guarantee the deployment assumptions behind that model, prefer [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware).
+
+## Using with csrf-middleware
+
+You can also layer `cop()` in front of `csrf()` when you want both browser provenance checks and session-backed synchronizer tokens.
+
+```ts
+import { createCookie } from 'remix/cookie'
+import { createRouter } from 'remix/fetch-router'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
+import { session } from 'remix/session-middleware'
+import { cop } from 'remix/cop-middleware'
+import { csrf } from 'remix/csrf-middleware'
+
+let sessionCookie = createCookie('__session', { secrets: ['secret1'] })
+let sessionStorage = createCookieSessionStorage()
+
+let router = createRouter({
+  middleware: [cop(), session(sessionCookie, sessionStorage), csrf()],
+})
+```
+
+In this setup, `cop()` runs first and rejects unsafe cross-origin browser requests early using `Sec-Fetch-Site` and `Origin`. Requests that pass `cop()` continue into `csrf()`, which still enforces synchronizer-token validation and origin checks for the remaining traffic.
 
 ## Trusted Origins
 
