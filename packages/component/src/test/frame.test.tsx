@@ -2387,4 +2387,46 @@ describe('run', () => {
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
     root.dispose()
   })
+
+  it('renders RemixNode results from client resolveFrame', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src: string) {
+          if (src === '/html') {
+            return '<div id="stale">Stale content</div>'
+          }
+
+          if (src === '/error') {
+            return (
+              <section id="frame-error">
+                <h2>Frame Error</h2>
+                <p>Retry the page.</p>
+              </section>
+            )
+          }
+
+          throw new Error(`Unexpected src: ${src}`)
+        },
+      },
+    })
+
+    root.render(<Frame src="/html" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#stale')?.textContent).toBe('Stale content')
+
+    root.render(<Frame src="/error" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#frame-error h2')?.textContent).toBe('Frame Error')
+    expect(rootContainer.querySelector('#frame-error p')?.textContent).toBe('Retry the page.')
+    expect(rootContainer.querySelector('#stale')).toBeNull()
+
+    root.dispose()
+  })
 })

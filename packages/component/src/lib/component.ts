@@ -105,7 +105,7 @@ export interface Context<C> {
   get(component: ElementType | symbol): unknown | undefined
 }
 
-export type FrameContent = ReadableStream<Uint8Array> | string
+export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
 
 export type FrameHandleEventMap = {
   reloadStart: Event

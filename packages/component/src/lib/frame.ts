@@ -2,10 +2,10 @@ import { jsx } from './jsx.ts'
 import { Frame, createFrameHandle, type FrameContent } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
-import type { RemixElement } from './jsx.ts'
+import type { RemixElement, RemixNode } from './jsx.ts'
 import type { FrameHandle } from './component.ts'
-import type { Scheduler } from './vdom.ts'
-import { createRangeRoot } from './vdom.ts'
+import type { Scheduler, VirtualRoot } from './vdom.ts'
+import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import type { StyleManager } from './style/index.ts'
 
@@ -121,6 +121,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let container = createContainer(root)
   let observers: MutationObserver[] = []
   let subscriptions: Array<() => void> = []
+  let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
 
   // Merge any rmx-data found in the current document once at startup.
@@ -183,11 +184,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
     if (options?.signal?.aborted) return
 
-    let isFullDocumentReload =
-      container.root instanceof Document &&
-      typeof content === 'string' &&
-      isFullDocumentHtml(content)
-
     if (content instanceof ReadableStream) {
       await renderFrameStream(content, container.doc, async (html) => {
         if (options?.signal?.aborted) return
@@ -195,6 +191,30 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       })
       return
     }
+
+    if (isRemixNodeFrameContent(content)) {
+      if (!contentRoot) {
+        let currentNodes = getContentNodes()
+        removeVirtualRoots(currentNodes)
+        disposeSubFrames(currentNodes, context)
+        clearFrameContent()
+        contentRoot = createFrameContentRoot()
+      }
+
+      if (options?.signal?.aborted) return
+      contentRoot.render(content)
+      return
+    }
+
+    if (contentRoot) {
+      contentRoot.dispose()
+      contentRoot = undefined
+    }
+
+    let isFullDocumentReload =
+      container.root instanceof Document &&
+      typeof content === 'string' &&
+      isFullDocumentHtml(content)
 
     if (isFullDocumentReload && typeof content === 'string') {
       // Full-document reload should tear down existing hydrated roots and subframes
@@ -244,6 +264,43 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     createSubFrames(container.childNodes, context)
   }
 
+  function createFrameContentRoot(): VirtualRoot {
+    let virtualRoot: VirtualRoot
+    if (container.root instanceof Document) {
+      virtualRoot = createRoot(container.doc.body, {
+        scheduler: context.scheduler,
+        frame,
+        styleManager: context.styleManager,
+      })
+    } else {
+      invariant(Array.isArray(root), 'Expected comment-bounded frame root')
+      virtualRoot = createRangeRoot(root, {
+        scheduler: context.scheduler,
+        frame,
+        styleManager: context.styleManager,
+      })
+    }
+
+    virtualRoot.addEventListener('error', (event: Event) => {
+      if (context.errorTarget === virtualRoot) return
+      context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+    })
+
+    return virtualRoot
+  }
+
+  function getContentNodes(): Node[] {
+    return container.root instanceof Document
+      ? Array.from(container.doc.body.childNodes)
+      : container.childNodes
+  }
+
+  function clearFrameContent() {
+    for (let node of getContentNodes()) {
+      node.parentNode?.removeChild(node)
+    }
+  }
+
   async function hydrateInitial(): Promise<void> {
     let initialHydrationTracker = createInitialHydrationTracker()
 
@@ -286,6 +343,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function dispose(): void {
     reloadController?.abort()
     reloadController = undefined
+    contentRoot?.dispose()
+    contentRoot = undefined
 
     // Disconnect any MutationObservers waiting for templates.
     for (let observer of observers) {
@@ -994,6 +1053,10 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
   let template = doc.createElement('template')
   template.innerHTML = content.trim()
   return template.content
+}
+
+function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
+  return !(content instanceof ReadableStream || content instanceof DocumentFragment || typeof content === 'string')
 }
 
 function isFullDocumentHtml(content: string): boolean {
