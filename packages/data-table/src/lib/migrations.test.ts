@@ -1446,9 +1446,10 @@ describe('normalizeChecksum', () => {
 })
 
 describe('journal store SQL generation', () => {
-  function makeExecuteCapture() {
+  function makeExecuteCapture(dialect = 'memory') {
     let captured: SqlStatement[] = []
     let adapter = {
+      dialect,
       async execute(request: DataManipulationRequest) {
         if (request.operation.kind === 'raw') {
           captured.push(request.operation.sql)
@@ -1495,6 +1496,21 @@ describe('journal store SQL generation', () => {
     assert.ok(
       captured[0].text.includes('"tricky""table"'),
       `expected escaped double-quote in: ${captured[0].text}`,
+    )
+  })
+
+  it('uses mysql identifier quoting for raw journal SQL', async () => {
+    let { adapter, captured } = makeExecuteCapture('mysql')
+    await loadJournalRows(adapter, 'my_journal')
+    assert.ok(captured[0].text.includes('`my_journal`'), `expected mysql quote in: ${captured[0].text}`)
+  })
+
+  it('escapes backticks inside mysql table names', async () => {
+    let { adapter, captured } = makeExecuteCapture('mysql')
+    await loadJournalRows(adapter, 'tricky`table')
+    assert.ok(
+      captured[0].text.includes('`tricky``table`'),
+      `expected escaped mysql quote in: ${captured[0].text}`,
     )
   })
 })

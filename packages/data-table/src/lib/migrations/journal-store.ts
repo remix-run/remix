@@ -27,23 +27,28 @@ export function normalizeChecksum(migration: MigrationDescriptor): string {
 }
 
 /**
- * Quotes an individual SQL identifier using ANSI double-quote syntax.
- * This is supported by SQLite, PostgreSQL, and MySQL (in ANSI mode).
+ * Quotes an individual SQL identifier using the adapter's native syntax.
+ * @param adapter Database adapter that will execute the SQL.
  * @param value Identifier text to quote.
  * @returns Quoted SQL identifier.
  */
-function quoteIdentifier(value: string): string {
+function quoteIdentifier(adapter: DatabaseAdapter, value: string): string {
+  if (adapter.dialect === 'mysql') {
+    return '`' + value.replace(/`/g, '``') + '`'
+  }
+
   return '"' + value.replace(/"/g, '""') + '"'
 }
 
 /**
  * Returns a fully-quoted SQL table reference for use in raw journal SQL.
  * Handles optional schema-qualified names (e.g. "myschema.migrations").
+ * @param adapter Database adapter that will execute the SQL.
  * @param tableName Journal table name, optionally schema-qualified.
  * @returns Fully quoted table reference.
  */
-function quoteJournalTable(tableName: string): string {
-  return quoteTableRef(toTableRef(tableName), quoteIdentifier)
+function quoteJournalTable(adapter: DatabaseAdapter, tableName: string): string {
+  return quoteTableRef(toTableRef(tableName), (value) => quoteIdentifier(adapter, value))
 }
 
 export async function ensureMigrationJournal(
@@ -77,7 +82,7 @@ export async function loadJournalRows(
   adapter: DatabaseAdapter,
   tableName: string,
 ): Promise<MigrationJournalRow[]> {
-  let quotedTable = quoteJournalTable(tableName)
+  let quotedTable = quoteJournalTable(adapter, tableName)
 
   let result = await adapter.execute({
     operation: {
@@ -110,7 +115,7 @@ export async function insertJournalRow(
   },
   transaction?: TransactionToken,
 ): Promise<void> {
-  let quotedTable = quoteJournalTable(tableName)
+  let quotedTable = quoteJournalTable(adapter, tableName)
 
   await adapter.execute({
     operation: {
@@ -130,7 +135,7 @@ export async function deleteJournalRow(
   id: string,
   transaction?: TransactionToken,
 ): Promise<void> {
-  let quotedTable = quoteJournalTable(tableName)
+  let quotedTable = quoteJournalTable(adapter, tableName)
 
   await adapter.execute({
     operation: {
