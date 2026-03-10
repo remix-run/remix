@@ -6,13 +6,14 @@ import { route } from 'remix/fetch-router/routes'
 import { createRequestListener } from 'remix/node-fetch-server'
 import { renderToString } from 'remix/component/server'
 import { transformFile, bundleFile } from './lib/transform.ts'
+import { discoverTests } from './lib/test-discovery.ts'
 import type { RemixNode } from 'remix/component/jsx-runtime'
 import { TestStatus } from './browser/test-runner-app.tsx'
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let routes = route({
-  testRunner: '/_test/:file',
+  testRunner: '/',
   testModule: '/_module/:path*',
   bundleRuntime: '/_bundle/:module',
   transformRuntime: '/_transform/:module',
@@ -30,20 +31,25 @@ let render = {
     })
   },
 }
+let testPattern = ''
+let allowedTestFiles = new Set<string>()
+
 let router = createRouter()
 
-router.get(routes.testRunner, async ({ params }) => {
-  let testFile = params.file
+router.get(routes.testRunner, async () => {
+  let absoluteFiles = await discoverTests(testPattern, __dirname)
+  let testFiles = absoluteFiles.map((f) => path.relative(__dirname, f))
+  allowedTestFiles = new Set(testFiles)
 
   function TestPage() {
     return () => (
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Test: {testFile}</title>
+          <title>Tests: {testPattern}</title>
         </head>
         <body>
-          <TestStatus setup={{ testFile }} />
+          <TestStatus setup={{ testFiles }} />
           <script type="module" src="/_bundle/entry.js" />
         </body>
       </html>
@@ -53,12 +59,15 @@ router.get(routes.testRunner, async ({ params }) => {
   return await render.html(<TestPage />)
 })
 
-router.get(routes.testModule, async ({ params, url }) => {
+router.get(routes.testModule, async ({ url }) => {
   let filePath = decodeURIComponent(url.pathname.slice('/_module/'.length))
   if (!filePath) {
     return new Response('Missing file path', { status: 400 })
   }
-  return render.js(await transformFile(filePath))
+  if (!allowedTestFiles.has(filePath)) {
+    return new Response('Forbidden', { status: 403 })
+  }
+  return render.js(await transformFile(path.resolve(__dirname, filePath)))
 })
 
 router.get(routes.bundleRuntime, async ({ params }) => {
@@ -73,7 +82,8 @@ router.get(routes.transformRuntime, async ({ params }) => {
   return render.js(await transformFile(tsPath))
 })
 
-export async function startServer(port = 44100): Promise<http.Server> {
+export async function startServer(port = 44100, pattern = ''): Promise<http.Server> {
+  testPattern = pattern
   let server = http.createServer(createRequestListener(async (req) => await router.fetch(req)))
 
   await new Promise<void>((resolve) => {
