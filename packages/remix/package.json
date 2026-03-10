@@ -25,6 +25,7 @@
     "./component/server": "./src/component/server.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
+    "./cop-middleware": "./src/cop-middleware.ts",
     "./csrf-middleware": "./src/csrf-middleware.ts",
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
@@ -104,6 +105,10 @@
       "./cookie": {
         "types": "./dist/cookie.d.ts",
         "default": "./dist/cookie.js"
+      },
+      "./cop-middleware": {
+        "types": "./dist/cop-middleware.d.ts",
+        "default": "./dist/cop-middleware.js"
       },
       "./csrf-middleware": {
         "types": "./dist/csrf-middleware.d.ts",
@@ -337,7 +342,8 @@
     "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/file-storage-s3": "workspace:^"
+    "@remix-run/file-storage-s3": "workspace:^",
+    "@remix-run/cop-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

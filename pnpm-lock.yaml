@@ -942,6 +942,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/cop-middleware':
+        specifier: workspace:^
+        version: link:../cop-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
