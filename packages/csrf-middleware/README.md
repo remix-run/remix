@@ -63,8 +63,24 @@ For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), the middleware validates 
 - Custom: provide `origin` as string, regex, array, or function
 - Missing origin behavior: controlled by `allowMissingOrigin` (default `true`)
 
+## Why This Exists
+
+Modern browsers now provide stronger cross-origin signals like `Sec-Fetch-Site`, and explicit
+`SameSite=Lax` cookies already block many CSRF attacks. We have considered the lighter,
+tokenless model used by Go's `CrossOriginProtection`, and we think it is a good fit when a
+deployment can make all of the guarantees that model depends on.
+
+Remix cannot assume those guarantees for every app. `csrf()` still exists as the conservative
+option for apps that want synchronizer tokens in addition to origin checks, especially for
+session-backed HTML form workflows and mixed deployment environments.
+
+If your deployment can guarantee the prerequisites for the tokenless model, this middleware is
+optional. In that case, [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware)
+may be a better fit.
+
 ## Related Packages
 
+- [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) - Middleware for tokenless cross-origin protection using browser provenance headers
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
 - [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Session middleware required by `csrf()`
 - [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Needed for form body token extraction
