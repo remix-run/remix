@@ -49,7 +49,7 @@ router.get(routes.testRunner, async () => {
           <title>Tests: {testPattern}</title>
         </head>
         <body>
-          <TestStatus setup={{ testFiles }} />
+          <TestStatus setup={{ testFiles, baseDir: __dirname }} />
           <script type="module" src="/entry.js" />
         </body>
       </html>
