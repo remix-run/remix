@@ -79,3 +79,5 @@ A skill is a reusable local instruction set stored in a `SKILL.md` file.
 - **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./skills/supersede-pr/SKILL.md`)
 - **make-pr**: Create GitHub pull requests with clear context, issue/feature bullets, and required usage examples for new or changed APIs. (file: `./skills/make-pr/SKILL.md`)
 - **publish-placeholder-package**: Publish a minimal npm package at `0.0.0` to reserve the name and enable npm OIDC setup before CI-based publishing. (file: `./skills/publish-placeholder-package/SKILL.md`)
+- **update-pr**: Rewrite GitHub PR titles and descriptions from scratch so they match the PR as it exists now, and always review the title when updating the body. (file: `./skills/update-pr/SKILL.md`)
+- **remix-readme-style**: Write or rewrite Remix package READMEs using this repo's structure, installation conventions, production-style examples, and section ordering. (file: `./skills/remix-readme-style/SKILL.md`)
