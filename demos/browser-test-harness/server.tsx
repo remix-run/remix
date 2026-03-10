@@ -8,14 +8,14 @@ import { renderToString } from 'remix/component/server'
 import { transformFile, bundleFile } from './lib/transform.ts'
 import { discoverTests } from './lib/test-discovery.ts'
 import type { RemixNode } from 'remix/component/jsx-runtime'
-import { TestStatus } from './browser/test-runner-app.tsx'
+import { TestStatus } from './browser/components.tsx'
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let routes = route({
   testRunner: '/',
+  entry: '/entry.js',
   testModule: '/_module/:path*',
-  bundleRuntime: '/_bundle/:module',
   transformRuntime: '/_transform/:module',
 })
 
@@ -50,7 +50,7 @@ router.get(routes.testRunner, async () => {
         </head>
         <body>
           <TestStatus setup={{ testFiles }} />
-          <script type="module" src="/_bundle/entry.js" />
+          <script type="module" src="/entry.js" />
         </body>
       </html>
     )
@@ -70,9 +70,8 @@ router.get(routes.testModule, async ({ url }) => {
   return render.js(await transformFile(path.resolve(__dirname, filePath)))
 })
 
-router.get(routes.bundleRuntime, async ({ params }) => {
-  let name = params.module.replace('.js', '')
-  let tsxPath = path.join(__dirname, 'browser', name + '.tsx')
+router.get(routes.entry, async () => {
+  let tsxPath = path.join(__dirname, 'browser', 'entry.tsx')
   return render.js(await bundleFile(tsxPath))
 })
 
