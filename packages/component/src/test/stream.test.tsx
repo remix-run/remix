@@ -455,13 +455,13 @@ describe('stream', () => {
   describe('svg', () => {
     it('renders SVG with preserved viewBox and kebab-cased attributes', async () => {
       let stream = renderToStream(
-        <svg viewBox="0 0 24 24" fill="none">
+        <svg viewBox="0 0 24 24" fill="none" className="icon">
           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<svg viewBox="0 0 24 24" fill="none"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path></svg>',
       )
     })
 
