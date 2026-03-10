@@ -3,6 +3,7 @@ import { asyncContext } from 'remix/async-context-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
+import authController from '../app/auth/controller.tsx'
 import mainController from '../app/main/controller.tsx'
 import settingsController from '../app/settings/controller.tsx'
 import { routes } from './routes.ts'
@@ -26,4 +27,5 @@ middleware.push(asyncContext())
 export let router = createRouter({ middleware })
 
 router.map(routes.main, mainController)
+router.map(routes.auth, authController)
 router.map(routes.settings, settingsController)

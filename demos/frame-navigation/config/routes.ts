@@ -1,4 +1,4 @@
-import { get, route } from 'remix/fetch-router/routes'
+import { form, get, post, route } from 'remix/fetch-router/routes'
 import { Route } from 'remix/fetch-router/routes'
 import type { RouteDefs, RouteMap } from 'remix/fetch-router/routes'
 
@@ -66,6 +66,11 @@ export let routes = {
     courses: get('courses'),
     calendar: get('calendar'),
     account: get('account'),
+  }),
+  auth: controller('auth', {
+    index: get('/'),
+    login: form('login'),
+    logout: post('logout'),
   }),
   settings: controller('settings', {
     index: get('/'),

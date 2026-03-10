@@ -14,6 +14,7 @@ let navItems = [
   { label: 'Courses', route: routes.main.courses },
   { label: 'Calendar', route: routes.main.calendar },
   { label: 'Account', route: routes.main.account },
+  { label: 'Protected', route: routes.auth.index },
   { label: 'Settings', route: routes.settings.index },
 ]
 
