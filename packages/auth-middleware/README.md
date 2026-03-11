@@ -60,7 +60,7 @@ router.map(routes.private, {
 
 `auth()` resolves auth state and stores it at `context.get(Auth)`:
 
-- `{ ok: true, identity, scheme }`
+- `{ ok: true, identity, method }`
 - `{ ok: false, error? }`
 
 When implementing custom schemes, return `null`, `undefined`, or no value from `authenticate()` to skip that scheme.
@@ -73,7 +73,7 @@ When implementing custom schemes, return `null`, `undefined`, or no value from `
 
 - it runs schemes in order
 - `null` or `undefined` means "this scheme does not apply"
-- `{ status: 'success', identity }` stops evaluation and stores `{ ok: true, identity, scheme }`
+- `{ status: 'success', identity }` stops evaluation and stores `{ ok: true, identity, method }`
 - `{ status: 'failure', ... }` stops evaluation and stores `{ ok: false, error }`
 - if every scheme skips, the request continues with `{ ok: false }`
 
@@ -126,7 +126,7 @@ let sessionScheme: AuthScheme<User, 'session'> = {
 - `{ status: 'success', identity }` to authenticate the request
 - `{ status: 'failure', code?, message?, challenge? }` to stop with an auth error
 
-The scheme `name` becomes `auth.scheme` when authentication succeeds.
+The scheme `name` becomes `auth.method` when authentication succeeds.
 
 ## Route Protection
 
@@ -202,7 +202,7 @@ router.get(routes.home, ({ get }) => {
   let auth = get(Auth)
 
   if (auth.ok) {
-    return new Response(`Welcome back via ${auth.scheme}`)
+    return new Response(`Welcome back via ${auth.method}`)
   }
 
   return new Response('Welcome, guest')
@@ -227,7 +227,7 @@ router.map(routes.api.profile, {
     let auth = get(Auth)
 
     return Response.json({
-      authenticatedWith: auth.ok ? auth.scheme : null,
+      authenticatedWith: auth.ok ? auth.method : null,
       identity: auth.ok ? auth.identity : null,
     })
   },
@@ -277,7 +277,7 @@ router.map(routes.api.bearerOnly, {
 
     return Response.json({
       mode: 'bearer-only',
-      scheme: auth.ok ? auth.scheme : null,
+      method: auth.ok ? auth.method : null,
     })
   },
 })
@@ -292,7 +292,7 @@ router.map(routes.api.apiKeyOnly, {
 
     return Response.json({
       mode: 'api-key-only',
-      scheme: auth.ok ? auth.scheme : null,
+      method: auth.ok ? auth.method : null,
     })
   },
 })

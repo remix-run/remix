@@ -99,7 +99,7 @@ describe('sessionAuth scheme', () => {
     assert.deepEqual(await response.json(), {
       ok: true,
       identity: { id: 'u1', role: 'admin' },
-      scheme: 'session',
+      method: 'session',
     })
   })
 
@@ -148,7 +148,7 @@ describe('sessionAuth scheme', () => {
       auth: {
         ok: false,
         error: {
-          scheme: 'session',
+          method: 'session',
           code: 'invalid_credentials',
           message: 'Session is no longer valid',
         },
@@ -190,7 +190,7 @@ describe('sessionAuth scheme', () => {
     assert.deepEqual(await response.json(), {
       ok: true,
       identity: { id: 'u1' },
-      scheme: 'member-session',
+      method: 'member-session',
     })
   })
 })
