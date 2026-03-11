@@ -75,6 +75,34 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
+  demos/frame-navigation:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.25.12
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1016,6 +1044,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      '@remix-run/testing':
+        specifier: workspace:^
+        version: link:../testing
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
