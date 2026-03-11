@@ -5,7 +5,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { renderToString } from '@remix-run/component/server'
-import { transformFile, bundleFile } from './transform.ts'
+import { bundleFile } from './transform.ts'
 export { clearCache } from './transform.ts'
 import { discoverTests } from './test-discovery.ts'
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
@@ -79,7 +79,7 @@ router.get(routes.testModule, async ({ url }) => {
   if (!resolved.startsWith(testCwd + path.sep)) {
     return new Response('Forbidden', { status: 403 })
   }
-  return render.js(await transformFile(resolved))
+  return render.js(await bundleFile(resolved, { absWorkingDir: testCwd, cache: false }))
 })
 
 router.get(routes.entry, async () => {
