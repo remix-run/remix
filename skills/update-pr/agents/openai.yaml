@@ -1,4 +1,4 @@
 interface:
-  display_name: "Update PR"
-  short_description: "Refresh an existing pull request title and body."
-  default_prompt: "Use $update-pr to rewrite this pull request title and description so they accurately describe the PR as it exists now."
+  display_name: 'Update PR'
+  short_description: 'Refresh an existing pull request title and body.'
+  default_prompt: 'Use $update-pr to rewrite this pull request title and description so they accurately describe the PR as it exists now.'

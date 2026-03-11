@@ -1,6 +1,1 @@
-export {
-  cop,
-  type CopDenyHandler,
-  type CopFailureReason,
-  type CopOptions,
-} from './lib/cop.ts'
+export { cop, type CopDenyHandler, type CopFailureReason, type CopOptions } from './lib/cop.ts'
