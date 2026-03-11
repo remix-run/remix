@@ -7,13 +7,11 @@ import { Database, ilike } from 'remix/data-table'
 import { books } from './data/schema.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
-import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
-  middleware: [loadAuth()],
   actions: {
     async index({ get }) {
       let db = get(Database)
