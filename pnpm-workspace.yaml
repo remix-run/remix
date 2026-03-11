@@ -23,6 +23,7 @@ packages:
   - packages/route-pattern/bench
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
+  - packages/testing/demos/*
   - scripts
 
 shellEmulator: true
