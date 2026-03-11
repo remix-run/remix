@@ -232,6 +232,33 @@ describe('cors middleware', () => {
     assert.ok(vary.has('Access-Control-Request-Headers'))
   })
 
+  it('falls back to requested headers for function-based allowed header resolvers', async () => {
+    let router = createRouter({
+      middleware: [
+        cors({
+          allowedHeaders: () => undefined,
+        }),
+      ],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'x-api-key,content-type',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Headers'), 'x-api-key,content-type')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Access-Control-Request-Headers'))
+  })
+
   it('sets Access-Control-Allow-Private-Network when requested', async () => {
     let router = createRouter({
       middleware: [cors({ allowPrivateNetwork: true })],
@@ -267,5 +294,31 @@ describe('cors middleware', () => {
 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('Access-Control-Expose-Headers'), 'X-Request-Id, X-Trace-Id')
+  })
+
+  it('merges CORS Vary values with an existing response Vary header', async () => {
+    let router = createRouter({
+      middleware: [cors({ credentials: true })],
+    })
+
+    router.get(
+      '/',
+      () =>
+        new Response('ok', {
+          headers: {
+            Vary: 'Accept-Encoding',
+          },
+        }),
+    )
+
+    let response = await router.fetch('https://remix.run/', {
+      headers: {
+        Origin: 'https://example.com',
+      },
+    })
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Accept-Encoding'))
+    assert.ok(vary.has('Origin'))
   })
 })
