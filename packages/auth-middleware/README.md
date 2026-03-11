@@ -367,7 +367,7 @@ Options:
 - `code` (default: `'invalid_credentials'`)
 - `message` (default: `'Invalid session'`)
 
-If you want Google, GitHub, Facebook, or credentials-based browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
+If you want OIDC providers, Google, GitHub, Facebook, or credentials-based browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
 
 ## Related Packages
 

@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/auth",
   "version": "0.0.0",
-  "description": "Browser login and OAuth helpers for Remix",
+  "description": "Browser login, OAuth, and OIDC helpers for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -56,9 +56,13 @@
     "auth",
     "authentication",
     "oauth",
+    "oidc",
     "google",
     "github",
     "facebook",
+    "microsoft",
+    "okta",
+    "auth0",
     "login",
     "credentials",
     "session"
