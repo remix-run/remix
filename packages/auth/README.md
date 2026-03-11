@@ -20,6 +20,7 @@ npm i remix
 ```ts
 import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
+import { form, route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
 import { callback, credentials, google, login } from 'remix/auth'
 import { formData } from 'remix/form-data-middleware'
@@ -37,10 +38,27 @@ let sessionCookie = createCookie('__session', {
 
 let sessionStorage = createCookieSessionStorage()
 
+let routes = route({
+  home: '/',
+  auth: {
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
+    session: {
+      login: form('/login'),
+      logout: { method: 'POST', pattern: '/logout' },
+    },
+  },
+  app: {
+    dashboard: '/dashboard',
+  },
+})
+
 let googleProvider = google({
   clientId: env.GOOGLE_CLIENT_ID,
   clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri: 'https://app.example.com/auth/google/callback',
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
 })
 
 let passwordProvider = credentials({
@@ -78,40 +96,46 @@ let router = createRouter({
   ],
 })
 
-router.get('/login/google', login(googleProvider))
+router.get(routes.auth.session.login.index, () => {
+  return new Response('Login page')
+})
+
+router.get(routes.auth.google.login, login(googleProvider))
 
 router.get(
-  '/auth/google/callback',
+  routes.auth.google.callback,
   callback(googleProvider, {
     async createSessionAuth(result) {
       let user = await users.upsertFromGoogle(result.profile)
       return { userId: user.id, method: 'google' as const }
     },
+    successRedirectTo: routes.app.dashboard.href(),
+    failureRedirectTo: routes.auth.session.login.index.href(),
   }),
 )
 
-router.post(
-  '/login',
-  login(passwordProvider, {
+router.post(routes.auth.session.login.action, {
+  middleware: [formData()],
+  action: login(passwordProvider, {
     async createSessionAuth(user) {
       return { userId: user.id, method: 'password' as const }
     },
-    successRedirectTo: '/dashboard',
-    failureRedirectTo: '/login',
+    successRedirectTo: routes.app.dashboard.href(),
+    failureRedirectTo: routes.auth.session.login.index.href(),
   }),
-)
+})
 
-router.post('/logout', ({ get }) => {
+router.post(routes.auth.session.logout, ({ get }) => {
   let session = get(Session)
   session.unset('auth')
   session.regenerateId()
   return new Response(null, {
     status: 302,
-    headers: { Location: '/' },
+    headers: { Location: routes.home.href() },
   })
 })
 
-router.get('/dashboard', {
+router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
   action({ get }) {
     let auth = get(Auth)
@@ -142,28 +166,46 @@ Use the built-in provider helpers when you want a standard browser redirect flow
 
 ```ts
 import { facebook, github, google, login } from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
+    github: {
+      login: '/login/github',
+      callback: '/auth/github/callback',
+    },
+    facebook: {
+      login: '/login/facebook',
+      callback: '/auth/facebook/callback',
+    },
+  },
+})
 
 let googleProvider = google({
   clientId: env.GOOGLE_CLIENT_ID,
   clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri: 'https://app.example.com/auth/google/callback',
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
 })
 
 let githubProvider = github({
   clientId: env.GITHUB_CLIENT_ID,
   clientSecret: env.GITHUB_CLIENT_SECRET,
-  redirectUri: 'https://app.example.com/auth/github/callback',
+  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
 })
 
 let facebookProvider = facebook({
   clientId: env.FACEBOOK_CLIENT_ID,
   clientSecret: env.FACEBOOK_CLIENT_SECRET,
-  redirectUri: 'https://app.example.com/auth/facebook/callback',
+  redirectUri: new URL(routes.auth.facebook.callback.href(), env.APP_ORIGIN),
 })
 
-router.get('/login/google', login(googleProvider))
-router.get('/login/github', login(githubProvider))
-router.get('/login/facebook', login(facebookProvider))
+router.get(routes.auth.google.login, login(googleProvider))
+router.get(routes.auth.github.login, login(githubProvider))
+router.get(routes.auth.facebook.login, login(facebookProvider))
 ```
 
 Default scopes:
@@ -181,6 +223,15 @@ Use `credentials()` when you want email/password or some other direct form-based
 ```ts
 import { credentials, login } from 'remix/auth'
 import { formData } from 'remix/form-data-middleware'
+import { form, route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    session: {
+      login: form('/login'),
+    },
+  },
+})
 
 let passwordProvider = credentials({
   parse(context) {
@@ -195,18 +246,15 @@ let passwordProvider = credentials({
   },
 })
 
-router.post(
-  '/login',
-  {
-    middleware: [formData()],
-    action: login(passwordProvider, {
-      async createSessionAuth(user) {
-        return { userId: user.id, method: 'password' as const }
-      },
-      failureRedirectTo: '/login',
-    }),
-  },
-)
+router.post(routes.auth.session.login.action, {
+  middleware: [formData()],
+  action: login(passwordProvider, {
+    async createSessionAuth(user) {
+      return { userId: user.id, method: 'password' as const }
+    },
+    failureRedirectTo: routes.auth.session.login.index.href(),
+  }),
+})
 ```
 
 `createSessionAuth(result, context)` gives you one place to normalize every successful login into the same session record shape.
@@ -217,22 +265,37 @@ Use `callback()` on the provider callback route to validate the stored transacti
 
 ```ts
 import { callback, github } from 'remix/auth'
+import { form, route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    github: {
+      callback: '/auth/github/callback',
+    },
+    session: {
+      login: form('/login'),
+    },
+  },
+  app: {
+    dashboard: '/dashboard',
+  },
+})
 
 let githubProvider = github({
   clientId: env.GITHUB_CLIENT_ID,
   clientSecret: env.GITHUB_CLIENT_SECRET,
-  redirectUri: 'https://app.example.com/auth/github/callback',
+  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
 })
 
 router.get(
-  '/auth/github/callback',
+  routes.auth.github.callback,
   callback(githubProvider, {
     async createSessionAuth(result) {
       let user = await users.upsertFromGitHub(result.profile)
       return { userId: user.id, method: 'github' as const }
     },
-    successRedirectTo: '/dashboard',
-    failureRedirectTo: '/login',
+    successRedirectTo: routes.app.dashboard.href(),
+    failureRedirectTo: routes.auth.session.login.index.href(),
   }),
 )
 ```
