@@ -22,6 +22,7 @@ import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
 import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
 import { callback, credentials, google, login } from 'remix/auth'
+import { formData } from 'remix/form-data-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { createCookieSessionStorage } from 'remix/session/cookie-storage'
@@ -43,9 +44,8 @@ let googleProvider = google({
 })
 
 let passwordProvider = credentials({
-  async parse(context) {
-    let formData = await context.request.formData()
-
+  parse(context) {
+    let formData = context.get(FormData)
     return {
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
@@ -59,6 +59,7 @@ let passwordProvider = credentials({
 let router = createRouter({
   middleware: [
     session(sessionCookie, sessionStorage),
+    formData(),
     auth({
       schemes: [
         sessionAuth({
@@ -133,6 +134,7 @@ This package writes an auth record to `context.get(Session)` by default:
 - OAuth and credentials logins store session data under `auth`
 - OAuth transactions use the internal `__auth` session key
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
+- credentials examples assume `formData()` middleware runs before `login(credentials(...))`
 
 ## OAuth Providers
 
@@ -178,10 +180,11 @@ Use `credentials()` when you want email/password or some other direct form-based
 
 ```ts
 import { credentials, login } from 'remix/auth'
+import { formData } from 'remix/form-data-middleware'
 
 let passwordProvider = credentials({
-  async parse(context) {
-    let formData = await context.request.formData()
+  parse(context) {
+    let formData = context.get(FormData)
     return {
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
@@ -194,12 +197,15 @@ let passwordProvider = credentials({
 
 router.post(
   '/login',
-  login(passwordProvider, {
-    async createSessionAuth(user) {
-      return { userId: user.id, method: 'password' as const }
-    },
-    failureRedirectTo: '/login',
-  }),
+  {
+    middleware: [formData()],
+    action: login(passwordProvider, {
+      async createSessionAuth(user) {
+        return { userId: user.id, method: 'password' as const }
+      },
+      failureRedirectTo: '/login',
+    }),
+  },
 )
 ```
 
