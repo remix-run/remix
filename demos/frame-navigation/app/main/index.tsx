@@ -1,5 +1,26 @@
 import { css } from 'remix/component'
 
+import { DashboardStatGrid } from '../assets/dashboard-stat-grid.tsx'
+import { routes } from '../../config/routes.ts'
+
+let statCards = [
+  {
+    label: 'In progress',
+    value: '4 courses',
+    href: routes.main.courses.href(),
+  },
+  {
+    label: 'Due this week',
+    value: '7 tasks',
+    href: routes.main.calendar.href(),
+  },
+  {
+    label: 'Average grade',
+    value: '92%',
+    href: routes.main.account.href(),
+  },
+]
+
 export function MainIndexPage() {
   return () => (
     <section>
@@ -8,20 +29,9 @@ export function MainIndexPage() {
         Keep up with coursework, deadlines, and instructor updates from one central place.
       </p>
 
-      <div mix={statsGridStyle}>
-        <article mix={statCardStyle}>
-          <p mix={statLabelStyle}>In progress</p>
-          <p mix={statValueStyle}>4 courses</p>
-        </article>
-        <article mix={statCardStyle}>
-          <p mix={statLabelStyle}>Due this week</p>
-          <p mix={statValueStyle}>7 tasks</p>
-        </article>
-        <article mix={statCardStyle}>
-          <p mix={statLabelStyle}>Average grade</p>
-          <p mix={statValueStyle}>92%</p>
-        </article>
-      </div>
+      <DashboardStatGrid cards={statCards} />
+
+      <p mix={hintStyle}>Try tabbing to a card, pressing Enter, or Cmd/Ctrl-clicking one.</p>
     </section>
   )
 }
@@ -39,27 +49,8 @@ let descriptionStyle = css({
   maxWidth: '65ch',
 })
 
-let statsGridStyle = css({
-  marginTop: '1.25rem',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: '0.75rem',
-})
-
-let statCardStyle = css({
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  padding: '1rem',
-})
-
-let statLabelStyle = css({
-  margin: 0,
-  fontSize: '0.875rem',
+let hintStyle = css({
+  marginTop: '0.85rem',
   color: '#64748b',
-})
-
-let statValueStyle = css({
-  margin: '0.3rem 0 0',
-  fontSize: '1.5rem',
-  fontWeight: 700,
+  fontSize: '0.9rem',
 })
