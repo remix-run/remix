@@ -69,6 +69,7 @@ export function facebook(options: FacebookOptions): OAuthProvider<FacebookProfil
         },
         'Failed to load Facebook profile.',
       )
+      profile = validateFacebookProfile(profile)
 
       return {
         provider: 'facebook',
@@ -85,6 +86,14 @@ function createAccount(
   providerAccountId: string,
 ): OAuthAccount<'facebook'> {
   return { provider, providerAccountId }
+}
+
+function validateFacebookProfile(profile: FacebookProfile): FacebookProfile {
+  if (typeof profile.id !== 'string' || profile.id.length === 0) {
+    throw new Error('Facebook profile did not include a valid id.')
+  }
+
+  return profile
 }
 
 function toURLString(value: string | URL): string {

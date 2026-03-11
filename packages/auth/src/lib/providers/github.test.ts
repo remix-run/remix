@@ -207,4 +207,146 @@ describe('github provider', () => {
       restoreFetch()
     }
   })
+
+  it('keeps the GitHub profile email unchanged when the email API returns no addresses', async () => {
+    let restoreFetch = mockFetch(async input => {
+      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://github.com/login/oauth/access_token') {
+        return Response.json({
+          access_token: 'github-token',
+          token_type: 'bearer',
+          scope: 'read:user,user:email',
+        })
+      }
+
+      if (url === 'https://api.github.com/user') {
+        return Response.json({
+          id: 123,
+          login: 'mjackson',
+          email: null,
+          name: 'Michael Jackson',
+        })
+      }
+
+      if (url === 'https://api.github.com/user/emails') {
+        return Response.json([])
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let cookie = createCookie('__session', { secrets: ['secret1'] })
+      let storage = createMemorySessionStorage()
+      let provider = github({
+        clientId: 'github-client-id',
+        clientSecret: 'github-client-secret',
+        redirectUri: 'https://app.example.com/auth/github/callback',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/github', login(provider))
+      router.get(
+        '/auth/github/callback',
+        callback(provider, {
+          writeSession(session, result) {
+            session.set('auth', { userId: String(result.profile.id) })
+          },
+          onSuccess(result) {
+            return Response.json(result)
+          },
+        }),
+      )
+
+      let loginResponse = await router.fetch('https://app.example.com/login/github')
+      let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
+      let response = await router.fetch(
+        createRequest(
+          `https://app.example.com/auth/github/callback?code=github-code&state=${state}`,
+          loginResponse,
+        ),
+      )
+
+      let body = await response.json()
+
+      assert.equal(body.profile.email, null)
+      assert.equal(body.account.providerAccountId, '123')
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('fails when the GitHub profile does not include a valid id', async () => {
+    let restoreFetch = mockFetch(async input => {
+      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://github.com/login/oauth/access_token') {
+        return Response.json({
+          access_token: 'github-token',
+          token_type: 'bearer',
+          scope: 'read:user,user:email',
+        })
+      }
+
+      if (url === 'https://api.github.com/user') {
+        return Response.json({
+          login: 'mjackson',
+          email: 'mj@example.com',
+          name: 'Michael Jackson',
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let cookie = createCookie('__session', { secrets: ['secret1'] })
+      let storage = createMemorySessionStorage()
+      let provider = github({
+        clientId: 'github-client-id',
+        clientSecret: 'github-client-secret',
+        redirectUri: 'https://app.example.com/auth/github/callback',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/github', login(provider))
+      router.get(
+        '/auth/github/callback',
+        callback(provider, {
+          writeSession(session, result) {
+            session.set('auth', { userId: String(result.profile.id) })
+          },
+          onFailure(error) {
+            return Response.json(
+              {
+                error: error instanceof Error ? error.message : 'unknown',
+              },
+              { status: 400 },
+            )
+          },
+        }),
+      )
+
+      let loginResponse = await router.fetch('https://app.example.com/login/github')
+      let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
+      let response = await router.fetch(
+        createRequest(
+          `https://app.example.com/auth/github/callback?code=github-code&state=${state}`,
+          loginResponse,
+        ),
+      )
+
+      assert.equal(response.status, 400)
+      assert.deepEqual(await response.json(), {
+        error: 'GitHub profile did not include a valid id.',
+      })
+    } finally {
+      restoreFetch()
+    }
+  })
 })
