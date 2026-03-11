@@ -23,6 +23,18 @@ describe('navigate', () => {
     }).toThrow('Navigation API is not available')
   })
 
+  it('passes runtime state via navigate history state', async () => {
+    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
+    vi.stubGlobal('navigation', { navigate: navigateMock })
+
+    await navigate('/login', '/partials/login', 'auth', { history: 'replace' })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: { target: 'auth', src: '/partials/login', $rmx: true },
+      history: 'replace',
+    })
+  })
+
   it('does not intercept anchors marked for document navigation', () => {
     let navigation = Object.assign(new EventTarget(), {
       navigate: vi.fn(() => ({ finished: Promise.resolve() })),
@@ -37,10 +49,13 @@ describe('navigate', () => {
     anchor.href = '/login'
     anchor.setAttribute('rmx-document', '')
     document.body.append(anchor)
+    anchor.addEventListener('click', (event) => event.preventDefault())
 
-    anchor.click()
+    let clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true })
+    anchor.dispatchEvent(clickEvent)
 
     expect(navigation.navigate).not.toHaveBeenCalled()
+    expect(clickEvent.defaultPrevented).toBe(true)
 
     anchor.remove()
     controller.abort()

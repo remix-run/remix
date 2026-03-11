@@ -6,6 +6,10 @@ type NavigationState = {
   $rmx: true
 }
 
+type SourceElementNavigateEvent = NavigateEvent & {
+  sourceElement?: Element | null
+}
+
 type NavigationOptions = {
   history?: 'push' | 'replace'
 }
@@ -16,57 +20,41 @@ export async function navigate(
   target?: string | null,
   options?: NavigationOptions,
 ) {
-  let navigation = window.navigation
+  let navigation = getNavigation()
+  let state = { target: target ?? undefined, src: src ?? href, $rmx: true } satisfies NavigationState
   let transition = navigation.navigate(href, {
-    state: { target: target ?? undefined, src: src ?? href, $rmx: true },
+    state,
     history: options?.history,
   })
   await transition.finished
 }
 
 export function startNavigationListener(signal: AbortSignal) {
-  let navigation = window.navigation
+  let navigation = getNavigation()
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, $rmx: true },
   })
-
-  document.addEventListener(
-    'click',
-    (event) => {
-      if (!(event.target instanceof HTMLElement)) return
-
-      let anchor = event.target.closest('a')
-      if (!anchor) return
-      if (anchor.hasAttribute('rmx-document')) return
-
-      let href = anchor.href
-      if (!href) return
-
-      let target = anchor.getAttribute('rmx-target')
-      let src = anchor.getAttribute('rmx-src')
-
-      event.preventDefault()
-      navigate(anchor.href, src, target)
-    },
-    { signal: signal },
-  )
 
   navigation.addEventListener(
     'navigate',
     (event) => {
       if (!event.canIntercept) return
 
-      let info = event.destination.getState()
-      if (!isRuntimeNavigation(info)) return
+      let state = getRuntimeNavigationState(event)
+      if (!state) return
 
       let topFrame = getTopFrame()
-      let namedFrame = info.target ? getNamedFrame(info.target) : undefined
+      let namedFrame = state.target ? getNamedFrame(state.target) : undefined
       let frame = namedFrame ?? topFrame
-      frame.src = frame === topFrame ? event.destination.url : info.src
 
       event.intercept({
         async handler() {
+          if (event.navigationType !== 'traverse') {
+            navigation.updateCurrentEntry({ state })
+          }
+
+          frame.src = frame === topFrame ? event.destination.url : state.src
           await frame.reload()
         },
       })
@@ -77,4 +65,29 @@ export function startNavigationListener(signal: AbortSignal) {
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function getRuntimeNavigationState(event: NavigateEvent): NavigationState | undefined {
+  let state = event.destination.getState()
+  if (isRuntimeNavigation(state)) return state
+
+  let sourceEvent = event as SourceElementNavigateEvent
+  let sourceElement = sourceEvent.sourceElement
+  if (!(sourceElement instanceof Element)) return
+  if (!sourceElement.matches('a, area')) return
+  if (sourceElement.hasAttribute('rmx-document')) return
+
+  return {
+    target: sourceElement.getAttribute('rmx-target') ?? undefined,
+    src: sourceElement.getAttribute('rmx-src') ?? event.destination.url,
+    $rmx: true,
+  }
+}
+
+function getNavigation(): Navigation {
+  let navigation = window.navigation
+  if (!navigation) {
+    throw new Error('Navigation API is not available')
+  }
+  return navigation
 }
