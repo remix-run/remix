@@ -8,7 +8,7 @@ Browser login, OAuth, and OIDC helpers for Remix. This package handles provider 
 - **OAuth Provider Helpers** - Use `createGitHubAuthProvider()` and `createFacebookAuthProvider()` for common browser login flows that need custom provider logic
 - **Credentials Login** - Add email/password authentication with the same session contract as OAuth
 - **Explicit Session Writes** - Use `writeSession(session, result, context)` to persist exactly the auth data your app needs
-- **Route Handler Factories** - Use `login()` and `callback()` to wire browser auth routes, redirects, and callback validation without repeating protocol code
+- **Request Handler Factories** - Use `login()` and `callback()` to build browser auth request handlers without repeating protocol code
 - **Success and Failure Hooks** - Customize successful logins and failures with `onSuccess`, `onFailure`, `onError`, `successRedirectTo`, and `failureRedirectTo`
 - **Session-First Design** - Store a small auth record in the session and load the full identity later with `sessionAuth()`
 
@@ -148,10 +148,12 @@ router.get(routes.app.dashboard, {
       throw new Error('Expected an authenticated session.')
     }
 
+    let user = auth.identity
+
     return Response.json({
-      id: auth.identity.id,
-      email: auth.identity.email,
-      method: auth.scheme,
+      id: user.id,
+      email: user.email,
+      method: auth.method,
     })
   },
 })
@@ -172,20 +174,7 @@ This package manages the OAuth transaction in `context.get(Session)` and lets yo
 - `login(oauthProvider)` creates an OAuth transaction, stores it in the session under `__auth`, and redirects to the provider
 - `login(credentialsProvider, options)` parses input, verifies the submitted credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects
 
-OAuth login options:
-
-- `transactionKey` to change where the in-progress OAuth transaction is stored
-- `returnToParam` to change the query param used to preserve the post-login destination
-- `failureRedirectTo` to redirect instead of surfacing the error
-- `onError(error, context)` to build a custom response when login setup fails
-
-Credentials login options:
-
-- `writeSession(session, result, context)` to persist your app-defined auth record
-- `successRedirectTo` and `failureRedirectTo`
-- `onSuccess(result, context)` for a custom successful response
-- `onFailure(context)` for invalid credentials
-- `onError(error, context)` for unexpected failures such as `writeSession()` errors
+Both forms support redirect and hook customization for success and failure handling. The examples below are the best reference for how those pieces fit together in real routes.
 
 ## Success and Failure Hooks
 
@@ -204,44 +193,6 @@ On failures:
 - credentials login uses `onFailure(context)` for invalid credentials and `onError(error, context)` for unexpected exceptions
 - OAuth login uses `onError(error, context)` when starting the redirect flow fails
 - OAuth callbacks use `onFailure(error, context)` for invalid state, provider errors, token exchange failures, profile fetch failures, or `writeSession()` failures
-
-## Built-In Providers
-
-- `createOIDCAuthProvider()`:
-  - Use this for any standards-compliant OpenID Connect provider
-  - Options: `issuer`, `clientId`, `clientSecret`, `redirectUri`, optional `scopes`, `discoveryUrl`, `metadata`, `authorizationParams`, and `mapProfile()`
-  - `writeSession(session, result)` receives `result.profile` as `OIDCProfile` by default, or your mapped profile type when you provide `mapProfile()`
-- `createGoogleAuthProvider()`:
-  - Thin OIDC wrapper with Google's published authorization, token, and userinfo endpoints
-  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
-  - `result.profile` is `GoogleProfile`, which follows the standard OIDC userinfo shape and typically includes `sub`, `email`, `email_verified`, `name`, `given_name`, `family_name`, `picture`, and `locale`
-- `createMicrosoftAuthProvider()`:
-  - Thin OIDC wrapper for Microsoft identity
-  - Options: `tenant`, `clientId`, `clientSecret`, `redirectUri`, plus the generic OIDC options other than `name` and `issuer`
-  - `tenant` defaults to `'common'`; use `'organizations'`, `'consumers'`, or a specific tenant ID when you want a narrower audience
-  - `result.profile` is `MicrosoftProfile`, which extends OIDC claims with fields like `tid`, `oid`, and `preferred_username`
-- `createOktaAuthProvider()`:
-  - Thin OIDC wrapper for Okta
-  - Options: `issuer`, `clientId`, `clientSecret`, `redirectUri`, plus optional generic OIDC settings like `scopes` or `authorizationParams`
-  - `result.profile` is `OktaProfile`, which is the standard OIDC claim shape for your Okta issuer
-- `createAuth0AuthProvider()`:
-  - Thin OIDC wrapper for Auth0
-  - Options: `domain`, `clientId`, `clientSecret`, `redirectUri`, plus optional generic OIDC settings like `scopes` or `authorizationParams`
-  - `domain` is normalized into the Auth0 issuer URL automatically
-  - `result.profile` is `Auth0Profile`, which is the standard OIDC claim shape plus fields like `nickname` and `updated_at`
-- `createGitHubAuthProvider()`:
-  - Custom OAuth helper for GitHub's OAuth app flow
-  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
-  - `result.profile` is `GitHubProfile`, including `id`, `login`, `name`, `email`, `avatar_url`, and `html_url`
-  - if GitHub does not return an email in `/user`, the provider automatically loads `/user/emails` and hydrates `result.profile.email` when possible
-- `createFacebookAuthProvider()`:
-  - Custom OAuth helper for Facebook Login
-  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
-  - `result.profile` is `FacebookProfile`, including `id`, `name`, `email`, and `picture`
-- `createCredentialsAuthProvider()`:
-  - Form-based authentication helper for email/password or any other direct credential flow
-  - Options: `parse(context)` and `verify(input, context)`
-  - `writeSession(session, result)` receives whatever `verify()` returns on success, so the type is fully application-defined
 
 ## OIDC Providers
 
@@ -492,24 +443,7 @@ router.get(
 - `result.profile`
 - `result.tokens`
 
-Callback options:
-
-- `transactionKey` when you need to store the OAuth transaction somewhere other than `__auth`
-- `writeSession(session, result, context)` to persist your auth record
-- `successRedirectTo` and `failureRedirectTo`
-- `onSuccess(result, context)` for a custom successful response
-- `onFailure(error, context)` for callback validation, provider, or session-write failures
-
-The `result.profile` shape depends on the provider:
-
-- `createOIDCAuthProvider()` and wrappers built on it return OIDC userinfo claims
-- `createGoogleAuthProvider()` returns `GoogleProfile`
-- `createMicrosoftAuthProvider()` returns `MicrosoftProfile`
-- `createOktaAuthProvider()` returns `OktaProfile`
-- `createAuth0AuthProvider()` returns `Auth0Profile`
-- `createGitHubAuthProvider()` returns `GitHubProfile`
-- `createFacebookAuthProvider()` returns `FacebookProfile`
-- `createCredentialsAuthProvider()` does not use `callback()`; its `writeSession()` hook receives whatever your `verify()` function returned
+Like `login()`, `callback()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers, custom OAuth providers, and credentials-based auth.
 
 ## Session Integration
 

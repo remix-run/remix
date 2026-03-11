@@ -107,7 +107,7 @@ describe('OAuth flow integration', () => {
     assert.deepEqual(await dashboardResponse.json(), {
       ok: true,
       identity: { id: 'oauth-user-1', email: 'oauth@example.com' },
-      scheme: 'session',
+      method: 'session',
     })
   })
 })

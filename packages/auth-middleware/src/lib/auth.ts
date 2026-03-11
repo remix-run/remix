@@ -25,7 +25,7 @@ export function auth(options: AuthOptions): Middleware {
         context.set(Auth, {
           ok: true,
           identity: result.identity,
-          scheme: scheme.name,
+          method: scheme.name,
         } satisfies AuthValue)
 
         return next()
@@ -58,7 +58,7 @@ function createFailure(
   result: AuthSchemeFailure,
 ): AuthFailure {
   return {
-    scheme: scheme.name,
+    method: scheme.name,
     code: result.code ?? 'invalid_credentials',
     message: result.message ?? 'Invalid credentials',
     challenge: result.challenge,
