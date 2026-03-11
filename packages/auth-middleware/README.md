@@ -19,7 +19,12 @@ npm i remix
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { auth, Auth, bearer, requireAuth } from 'remix/auth-middleware'
+
+let routes = route({
+  private: '/private',
+})
 
 let router = createRouter({
   middleware: [
@@ -39,7 +44,7 @@ let router = createRouter({
   ],
 })
 
-router.map('/private', {
+router.map(routes.private, {
   middleware: [requireAuth()],
   action(context) {
     let auth = context.get(Auth)
@@ -122,6 +127,9 @@ import { auth, apiKey, Auth, bearer, requireAuth } from 'remix/auth-middleware'
 
 let routes = route({
   home: '/',
+  auth: {
+    login: '/login',
+  },
   api: {
     profile: '/api/profile',
     integrations: '/api/integrations',
@@ -218,8 +226,8 @@ router.map(routes.app.dashboard, {
   middleware: [
     requireAuth({
       onFailure(context) {
-        let returnTo = encodeURIComponent(context.url.pathname + context.url.search)
-        return redirect(`/login?returnTo=${returnTo}`)
+        let returnTo = context.url.pathname + context.url.search
+        return redirect(routes.auth.login.href(undefined, { returnTo }))
       },
     }),
   ],
@@ -304,9 +312,16 @@ Reads an auth record from `context.get(Session)` and resolves the full request i
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
+
+let routes = route({
+  app: {
+    dashboard: '/dashboard',
+  },
+})
 
 let router = createRouter({
   middleware: [
@@ -329,7 +344,7 @@ let router = createRouter({
   ],
 })
 
-router.get('/dashboard', {
+router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
   action({ get }) {
     let auth = get(Auth)
