@@ -19,6 +19,7 @@
   "type": "module",
   "exports": {
     "./async-context-middleware": "./src/async-context-middleware.ts",
+    "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
     "./component": "./src/component.ts",
     "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
@@ -83,6 +84,10 @@
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
+      },
+      "./auth": {
+        "types": "./dist/auth.d.ts",
+        "default": "./dist/auth.js"
       },
       "./auth-middleware": {
         "types": "./dist/auth-middleware.d.ts",
@@ -322,8 +327,11 @@
   },
   "dependencies": {
     "@remix-run/async-context-middleware": "workspace:^",
+    "@remix-run/auth": "workspace:^",
+    "@remix-run/auth-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
+    "@remix-run/cop-middleware": "workspace:^",
     "@remix-run/cors-middleware": "workspace:^",
     "@remix-run/csrf-middleware": "workspace:^",
     "@remix-run/cookie": "workspace:^",
@@ -353,9 +361,6 @@
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/file-storage-s3": "workspace:^",
-    "@remix-run/cop-middleware": "workspace:^",
-    "@remix-run/auth-middleware": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^"
   },
