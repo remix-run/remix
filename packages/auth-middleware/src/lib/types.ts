@@ -7,9 +7,9 @@ export interface AuthFailure {
   challenge?: string
 }
 
-export interface AuthenticatedAuth<principal = unknown, scheme extends string = string> {
+export interface AuthenticatedAuth<identity = unknown, scheme extends string = string> {
   ok: true
-  principal: principal
+  identity: identity
   scheme: scheme
 }
 
@@ -18,15 +18,15 @@ export interface UnauthenticatedAuth {
   error?: AuthFailure
 }
 
-export type Auth<principal = unknown, scheme extends string = string> =
-  | AuthenticatedAuth<principal, scheme>
+export type Auth<identity = unknown, scheme extends string = string> =
+  | AuthenticatedAuth<identity, scheme>
   | UnauthenticatedAuth
 
 export const Auth = createContextKey<Auth>()
 
-export interface AuthSchemeSuccess<principal = unknown> {
+export interface AuthSchemeSuccess<identity = unknown> {
   status: 'success'
-  principal: principal
+  identity: identity
 }
 
 export interface AuthSchemeFailure {
@@ -36,21 +36,21 @@ export interface AuthSchemeFailure {
   challenge?: string
 }
 
-export type AuthSchemeResult<principal = unknown> =
-  | AuthSchemeSuccess<principal>
+export type AuthSchemeResult<identity = unknown> =
+  | AuthSchemeSuccess<identity>
   | AuthSchemeFailure
 
-export type AuthSchemeAuthenticateResult<principal = unknown> =
-  | AuthSchemeResult<principal>
+export type AuthSchemeAuthenticateResult<identity = unknown> =
+  | AuthSchemeResult<identity>
   | null
   | undefined
   | void
 
-export interface AuthScheme<principal = unknown, scheme extends string = string> {
+export interface AuthScheme<identity = unknown, scheme extends string = string> {
   name: scheme
   authenticate(
     context: RequestContext,
-  ): AuthSchemeAuthenticateResult<principal> | Promise<AuthSchemeAuthenticateResult<principal>>
+  ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
 }
 
 export interface AuthOptions {

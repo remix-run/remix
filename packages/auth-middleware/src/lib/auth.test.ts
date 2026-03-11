@@ -24,7 +24,7 @@ describe('auth middleware', () => {
                 callLog.push('bearer')
                 return {
                   status: 'success',
-                  principal: { id: 1 },
+                  identity: { id: 1 },
                 }
               },
             },
@@ -34,7 +34,7 @@ describe('auth middleware', () => {
                 callLog.push('api-key')
                 return {
                   status: 'success',
-                  principal: { id: 2 },
+                  identity: { id: 2 },
                 }
               },
             },
@@ -50,7 +50,7 @@ describe('auth middleware', () => {
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       ok: true,
-      principal: { id: 1 },
+      identity: { id: 1 },
       scheme: 'bearer',
     })
     assert.deepEqual(callLog, ['bearer'])
@@ -76,7 +76,7 @@ describe('auth middleware', () => {
                 callLog.push('api-key')
                 return {
                   status: 'success',
-                  principal: { id: 123 },
+                  identity: { id: 123 },
                 }
               },
             },
@@ -92,7 +92,7 @@ describe('auth middleware', () => {
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       ok: true,
-      principal: { id: 123 },
+      identity: { id: 123 },
       scheme: 'api-key',
     })
     assert.deepEqual(callLog, ['bearer', 'api-key'])
@@ -117,7 +117,7 @@ describe('auth middleware', () => {
                 callLog.push('api-key')
                 return {
                   status: 'success',
-                  principal: { id: 456 },
+                  identity: { id: 456 },
                 }
               },
             },
@@ -133,7 +133,7 @@ describe('auth middleware', () => {
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       ok: true,
-      principal: { id: 456 },
+      identity: { id: 456 },
       scheme: 'api-key',
     })
     assert.deepEqual(callLog, ['custom', 'api-key'])
@@ -217,7 +217,7 @@ describe('auth middleware', () => {
               name: 'api-key',
               authenticate() {
                 callLog.push('api-key')
-                return { status: 'success', principal: { id: 1 } }
+                return { status: 'success', identity: { id: 1 } }
               },
             },
           ],

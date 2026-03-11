@@ -28,7 +28,7 @@ describe('apiKey scheme', () => {
 
     assert.deepEqual(result, {
       status: 'success',
-      principal: { id: 'service-1' },
+      identity: { id: 'service-1' },
     })
     assert.equal(seenKey, 'k_live_123')
   })
@@ -93,7 +93,7 @@ describe('apiKey scheme', () => {
 
     assert.deepEqual(result, {
       status: 'success',
-      principal: { id: 'service-123' },
+      identity: { id: 'service-123' },
     })
   })
 })

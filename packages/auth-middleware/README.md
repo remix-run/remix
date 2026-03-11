@@ -45,7 +45,7 @@ router.map('/private', {
     let auth = context.get(Auth)
 
     return Response.json({
-      userId: auth.ok ? auth.principal.id : null,
+      userId: auth.ok ? auth.identity.id : null,
     })
   },
 })
@@ -53,7 +53,7 @@ router.map('/private', {
 
 `auth()` resolves auth state and stores it at `context.get(Auth)`:
 
-- `{ ok: true, principal, scheme }`
+- `{ ok: true, identity, scheme }`
 - `{ ok: false, error? }`
 
 When implementing custom schemes, return `null` or `undefined` (or no return
@@ -147,7 +147,7 @@ router.map(routes.api.profile, {
 
     return Response.json({
       authenticatedWith: auth.ok ? auth.scheme : null,
-      principal: auth.ok ? auth.principal : null,
+      identity: auth.ok ? auth.identity : null,
     })
   },
 })
@@ -159,7 +159,7 @@ router.map(routes.api.integrations, {
     let auth = get(Auth)
 
     return Response.json({
-      principal: auth.ok ? auth.principal : null,
+      identity: auth.ok ? auth.identity : null,
     })
   },
 })
@@ -181,7 +181,7 @@ router.map(routes.app.dashboard, {
       throw new Error('Expected ok auth state after requireAuth()')
     }
 
-    return new Response(`Dashboard for ${JSON.stringify(auth.principal)}`)
+    return new Response(`Dashboard for ${JSON.stringify(auth.identity)}`)
   },
 })
 
