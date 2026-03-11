@@ -61,6 +61,55 @@ value) from `authenticate()` to skip that scheme.
 
 `requireAuth()` enforces authentication and returns `401 Unauthorized` by default.
 
+## Auth Scheme API
+
+An auth scheme is any object with a `name` and an `authenticate(context)` method.
+The built-in `bearer()` and `apiKey()` helpers just create objects with this shape.
+
+```ts
+import type { RequestContext } from 'remix/fetch-router'
+import type { AuthScheme } from 'remix/auth-middleware'
+
+type User = {
+  id: string
+  role: 'admin' | 'user'
+}
+
+let sessionScheme: AuthScheme<User, 'session'> = {
+  name: 'session',
+  async authenticate(context: RequestContext) {
+    let sessionId = readSessionId(context.headers.get('Cookie'))
+
+    if (sessionId == null) {
+      return
+    }
+
+    let user = await findUserBySessionId(sessionId)
+
+    if (user == null) {
+      return {
+        status: 'failure',
+        code: 'invalid_credentials',
+        message: 'Invalid session',
+      }
+    }
+
+    return {
+      status: 'success',
+      identity: user,
+    }
+  },
+}
+```
+
+`authenticate(context)` can return:
+
+- `null`, `undefined`, or no return value to skip this scheme
+- `{ status: 'success', identity }` to authenticate the request
+- `{ status: 'failure', code?, message?, challenge? }` to stop with an auth error
+
+The scheme `name` becomes `auth.scheme` when authentication succeeds.
+
 ## Detailed Multi-Mode Example
 
 This single router demonstrates five auth modes.
