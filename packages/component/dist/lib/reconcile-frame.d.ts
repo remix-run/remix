@@ -1,0 +1,12 @@
+import type { FrameHandle } from './component.ts';
+import type { FrameRuntime } from './frame.ts';
+import type { StyleManager } from './style/index.ts';
+import type { VNode } from './vnode.ts';
+export declare function insertFrame(node: VNode, domParent: ParentNode, frame: FrameHandle, styles: StyleManager, vParent: VNode, anchor?: Node, cursor?: Node | null): Node | null | undefined;
+export declare function resolveClientFrame(node: VNode, runtime: FrameRuntime): void;
+export declare function disposeFrameResources(node: VNode): void;
+export declare function removeFrameDomRange(node: VNode, domParent: ParentNode): void;
+export declare function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined;
+export declare function getFrameSrc(node: VNode): string;
+export declare function getFrameName(node: VNode): string | undefined;
+export declare function skipCommentsExceptFrameStart(cursor: Node | null): Node | null;
