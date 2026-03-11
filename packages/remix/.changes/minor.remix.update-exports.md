@@ -12,3 +12,4 @@ The incidental `QueryMethod` type export has also been removed; use `Database['q
 
 Added `package.json` `exports`:
 - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
+- `remix/auth` to re-export APIs from `@remix-run/auth`

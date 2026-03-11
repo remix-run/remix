@@ -298,8 +298,65 @@ Options:
 - `name` (default: `'api-key'`)
 - `headerName` (default: `'X-API-Key'`)
 
+### `sessionAuth(options)`
+
+Reads an auth record from `context.get(Session)` and resolves the full request identity.
+
+```ts
+import { createRouter } from 'remix/fetch-router'
+import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
+import { Session } from 'remix/session'
+import { session } from 'remix/session-middleware'
+
+let router = createRouter({
+  middleware: [
+    session(sessionCookie, sessionStorage),
+    auth({
+      schemes: [
+        sessionAuth({
+          read(session) {
+            return session.get('auth') as { userId: string; method: string } | null
+          },
+          verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
+          },
+        }),
+      ],
+    }),
+  ],
+})
+
+router.get('/dashboard', {
+  middleware: [requireAuth()],
+  action({ get }) {
+    let auth = get(Auth)
+    let session = get(Session)
+
+    return Response.json({
+      auth,
+      sessionMethod: session.get('auth')?.method ?? null,
+    })
+  },
+})
+```
+
+Options:
+
+- `read(session, context)` (required)
+- `verify(value, context)` (required)
+- `invalidate(session, context)`
+- `name` (default: `'session'`)
+- `code` (default: `'invalid_credentials'`)
+- `message` (default: `'Invalid session'`)
+
+If you want Google, GitHub, Facebook, or credentials-based browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
+
 ## Related Packages
 
+- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser login and OAuth helpers that persist session auth records
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
 - [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers like redirects
 

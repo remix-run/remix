@@ -2,6 +2,6 @@ Add `auth-middleware`, a pluggable authentication middleware package for `fetch-
 
 Includes:
 
-- `auth()` for resolving request authentication state (`context.auth`)
+- `auth()` for resolving request authentication state with `context.get(Auth)`
 - `requireAuth()` for enforcing authenticated access with configurable failure responses
-- Built-in `bearer()` and `apiKey()` authentication schemes
+- Built-in `bearer()`, `apiKey()`, and `sessionAuth()` authentication schemes

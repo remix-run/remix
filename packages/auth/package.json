@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/auth-middleware",
+  "name": "@remix-run/auth",
   "version": "0.0.0",
-  "description": "Pluggable authentication middleware for Remix",
+  "description": "Browser login and OAuth helpers for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/auth-middleware"
+    "directory": "packages/auth"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/auth-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/auth#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -32,8 +32,12 @@
     }
   },
   "devDependencies": {
+    "@remix-run/auth-middleware": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/headers": "workspace:*",
     "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
@@ -49,13 +53,14 @@
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "fetch",
-    "router",
-    "middleware",
     "auth",
     "authentication",
-    "bearer",
-    "api-key",
+    "oauth",
+    "google",
+    "github",
+    "facebook",
+    "login",
+    "credentials",
     "session"
   ]
 }
