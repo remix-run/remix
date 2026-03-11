@@ -1,4 +1,4 @@
-import type { RequestContext } from '@remix-run/fetch-router'
+import { createContextKey, type RequestContext } from '@remix-run/fetch-router'
 
 export interface AuthFailure {
   scheme?: string
@@ -7,20 +7,22 @@ export interface AuthFailure {
   challenge?: string
 }
 
-export interface AuthenticatedState<principal = unknown, scheme extends string = string> {
+export interface AuthenticatedAuth<principal = unknown, scheme extends string = string> {
   authenticated: true
   principal: principal
   scheme: scheme
 }
 
-export interface UnauthenticatedState {
+export interface UnauthenticatedAuth {
   authenticated: false
   error?: AuthFailure
 }
 
-export type AuthState<principal = unknown, scheme extends string = string> =
-  | AuthenticatedState<principal, scheme>
-  | UnauthenticatedState
+export type Auth<principal = unknown, scheme extends string = string> =
+  | AuthenticatedAuth<principal, scheme>
+  | UnauthenticatedAuth
+
+export const Auth = createContextKey<Auth>()
 
 export interface AuthSchemeSuccess<principal = unknown> {
   status: 'success'
@@ -58,7 +60,7 @@ export interface AuthOptions {
 export interface RequireAuthOptions {
   onFailure?: (
     context: RequestContext,
-    auth: UnauthenticatedState,
+    auth: UnauthenticatedAuth,
   ) => Response | Promise<Response>
   status?: number
   body?: BodyInit | null
