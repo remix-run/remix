@@ -476,7 +476,7 @@ describe('RoutePattern', () => {
 
       it('throws for nameless wildcard', () => {
         let pattern = new RoutePattern('://*.example.com/path')
-        // @ts-expect-error - missing required param
+        // @ts-expect-error - nameless wildcard
         assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 
@@ -579,7 +579,7 @@ describe('RoutePattern', () => {
 
       it('throws for unnamed wildcard', () => {
         let pattern = new RoutePattern('/files/*')
-        // @ts-expect-error - missing required param
+        // @ts-expect-error - nameless wildcard
         assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 

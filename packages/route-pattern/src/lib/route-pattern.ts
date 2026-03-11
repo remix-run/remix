@@ -1,11 +1,12 @@
 import { split } from './route-pattern/split.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
-import type { Join, Params } from './types/index.ts'
+import type { Join } from './types/index.ts'
 import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse.ts'
 import { serializeSearch } from './route-pattern/serialize.ts'
 import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
 import { matchSearch } from './route-pattern/match.ts'
+import type { Params } from './route-pattern/params.ts'
 
 type AST = {
   protocol: 'http' | 'https' | 'http(s)' | null
@@ -134,7 +135,6 @@ export class RoutePattern<source extends string = string> {
 
   href(...args: HrefArgs<source>): string {
     let [params, searchParams] = args
-    params ??= {}
     searchParams ??= {}
 
     let result = ''
@@ -146,12 +146,9 @@ export class RoutePattern<source extends string = string> {
 
       // hostname
       if (this.ast.hostname === null) {
-        throw new HrefError({
-          type: 'missing-hostname',
-          pattern: this,
-        })
+        throw new HrefError({ type: 'missing-hostname', pattern: this as RoutePattern })
       }
-      let hostname = this.ast.hostname.href(this, params)
+      let hostname = this.ast.hostname.href(this as RoutePattern, params ?? {})
 
       // port
       let port = this.ast.port === null ? '' : `:${this.ast.port}`
@@ -159,11 +156,11 @@ export class RoutePattern<source extends string = string> {
     }
 
     // pathname
-    let pathname = this.ast.pathname.href(this, params)
+    let pathname = this.ast.pathname.href(this as RoutePattern, params ?? {})
     result += '/' + pathname
 
     // search
-    let search = hrefSearch(this, searchParams)
+    let search = hrefSearch(this as RoutePattern, searchParams)
     if (search) result += `?${search}`
 
     return result
@@ -235,7 +232,7 @@ export class RoutePattern<source extends string = string> {
     })
 
     return {
-      pattern: this,
+      pattern: this as RoutePattern,
       url,
       params: params as Params<source>,
       paramsMeta: { hostname: hostname ?? [], pathname },

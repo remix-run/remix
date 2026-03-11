@@ -25,11 +25,10 @@ bench('match > mediarss', async () => {
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
-// bench('match > shopify', async () => {
-//   let { patterns } = await import('../patterns/shopify.ts')
-//   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
-//   eagerlyEvaluateTypesForMatchParams(patterns)
-// }).types([5003571, 'instantiations'])
+bench('match > shopify', async () => {
+  let { patterns } = await import('../patterns/shopify.ts')
+  eagerlyEvaluateTypesForMatchParams(patterns)
+}).types([5003571, 'instantiations'])
 
 /** Type-only utility to force eager evaluation of match param types */
 function eagerlyEvaluateTypesForMatchParams<patterns extends ReadonlyArray<string>>(
