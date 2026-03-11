@@ -4,6 +4,7 @@ import { navigate, startNavigationListener } from '../lib/navigation.ts'
 
 describe('navigate', () => {
   afterEach(() => {
+    document.body.innerHTML = ''
     vi.unstubAllGlobals()
   })
 

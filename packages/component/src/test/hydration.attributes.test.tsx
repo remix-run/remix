@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { link } from '../index.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { renderToString } from '../lib/stream.ts'
 import { invariant } from '../lib/invariant.ts'
@@ -75,6 +76,22 @@ describe('hydration', () => {
 
       expect(container.querySelector('button')).toBe(existingButton)
       expect(existingButton.getAttribute('tabindex')).toBe('0')
+    })
+
+    it('hydrates role and tabIndex added by link mixins', async () => {
+      let html = await renderToString(<li mix={link('/docs')}>Docs</li>)
+      container.innerHTML = html
+
+      let existingItem = container.querySelector('li')
+      invariant(existingItem)
+
+      let root = createRoot(container)
+      root.render(<li mix={link('/docs')}>Docs</li>)
+      root.flush()
+
+      expect(container.querySelector('li')).toBe(existingItem)
+      expect(existingItem.getAttribute('role')).toBe('link')
+      expect(existingItem.getAttribute('tabindex')).toBe('0')
     })
 
     it('hydrates acceptCharset as accept-charset attribute', async () => {
