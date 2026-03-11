@@ -71,14 +71,14 @@ In this setup, `cop()` runs first and rejects unsafe cross-origin browser reques
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { cop, CrossOriginProtection } from 'remix/cop-middleware'
-
-let protection = new CrossOriginProtection({
-  trustedOrigins: ['https://admin.example.com'],
-})
+import { cop } from 'remix/cop-middleware'
 
 let router = createRouter({
-  middleware: [cop(protection)],
+  middleware: [
+    cop({
+      trustedOrigins: ['https://admin.example.com'],
+    }),
+  ],
 })
 ```
 
@@ -96,14 +96,14 @@ Bypass patterns intentionally weaken protection for specific endpoints. They sup
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { cop, CrossOriginProtection } from 'remix/cop-middleware'
-
-let protection = new CrossOriginProtection({
-  insecureBypassPatterns: ['POST /webhooks/{provider}', '/healthz'],
-})
+import { cop } from 'remix/cop-middleware'
 
 let router = createRouter({
-  middleware: [cop(protection)],
+  middleware: [
+    cop({
+      insecureBypassPatterns: ['POST /webhooks/{provider}', '/healthz'],
+    }),
+  ],
 })
 ```
 

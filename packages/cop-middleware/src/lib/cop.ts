@@ -24,7 +24,7 @@ export interface CopOptions {
   onDeny?: CopDenyHandler
 }
 
-export class CrossOriginProtection {
+class CrossOriginProtection {
   #trustedOrigins = new Set<string>()
   #insecureBypassPatterns: BypassPattern[] = []
   #onDeny?: CopDenyHandler
@@ -107,9 +107,8 @@ export class CrossOriginProtection {
   }
 }
 
-export function cop(options: CopOptions | CrossOriginProtection = {}): Middleware {
-  let protection =
-    options instanceof CrossOriginProtection ? options : new CrossOriginProtection(options)
+export function cop(options: CopOptions = {}): Middleware {
+  let protection = new CrossOriginProtection(options)
 
   return async (context, next) => {
     let reason = protection.check(context)

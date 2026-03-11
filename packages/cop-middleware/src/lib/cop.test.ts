@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createRouter } from '@remix-run/fetch-router'
 
-import { cop, CrossOriginProtection } from './cop.ts'
+import { cop } from './cop.ts'
 
 function createRequest(pathname: string, init?: RequestInit): Request {
   return new Request(`https://example.com${pathname}`, init)
@@ -151,10 +151,11 @@ describe('cop middleware', () => {
   })
 
   it('supports trusted origins', async () => {
-    let protection = new CrossOriginProtection({
-      trustedOrigins: ['https://trusted.example'],
-    })
-    let router = createTestRouter([cop(protection)])
+    let router = createTestRouter([
+      cop({
+        trustedOrigins: ['https://trusted.example'],
+      }),
+    ])
 
     let response = await router.fetch(
       createRequest('/', {
@@ -170,10 +171,11 @@ describe('cop middleware', () => {
   })
 
   it('supports insecure bypass patterns', async () => {
-    let protection = new CrossOriginProtection({
-      insecureBypassPatterns: ['/bypass/', '/only/{foo}', 'POST /post-only/'],
-    })
-    let router = createTestRouter([cop(protection)])
+    let router = createTestRouter([
+      cop({
+        insecureBypassPatterns: ['/bypass/', '/only/{foo}', 'POST /post-only/'],
+      }),
+    ])
 
     let bypassResponse = await router.fetch(
       createRequest('/bypass/', {
@@ -209,15 +211,16 @@ describe('cop middleware', () => {
   })
 
   it('does not bypass paths that only differ by trailing slash or method', async () => {
-    let protection = new CrossOriginProtection({
-      insecureBypassPatterns: [
-        '/no-trailing',
-        '/yes-trailing/',
-        'PUT /put-only/',
-        'GET /get-only/',
-      ],
-    })
-    let router = createTestRouter([cop(protection)])
+    let router = createTestRouter([
+      cop({
+        insecureBypassPatterns: [
+          '/no-trailing',
+          '/yes-trailing/',
+          'PUT /put-only/',
+          'GET /get-only/',
+        ],
+      }),
+    ])
 
     let noTrailingResponse = await router.fetch(
       createRequest('/no-trailing/', {
@@ -284,9 +287,9 @@ describe('cop middleware', () => {
   })
 
   it('validates trusted origins and bypass patterns', async () => {
-    assert.throws(() => new CrossOriginProtection({ trustedOrigins: ['https://example.com/'] }))
-    assert.throws(() => new CrossOriginProtection({ trustedOrigins: ['null'] }))
-    assert.throws(() => new CrossOriginProtection({ insecureBypassPatterns: ['POST foo'] }))
-    assert.throws(() => new CrossOriginProtection({ insecureBypassPatterns: ['/foo/{...}/bar'] }))
+    assert.throws(() => cop({ trustedOrigins: ['https://example.com/'] }))
+    assert.throws(() => cop({ trustedOrigins: ['null'] }))
+    assert.throws(() => cop({ insecureBypassPatterns: ['POST foo'] }))
+    assert.throws(() => cop({ insecureBypassPatterns: ['/foo/{...}/bar'] }))
   })
 })
