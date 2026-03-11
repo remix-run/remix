@@ -28,14 +28,14 @@ type ControllerActions<routes extends RouteMap> = routes extends any ?
  * An individual route action.
  */
 export type Action<method extends RequestMethod | 'ANY', pattern extends string> =
-  | RequestHandlerWithMiddleware<method, Params<pattern>>
+  | RequestHandlerObject<method, Params<pattern>>
   | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<
+type RequestHandlerObject<
   method extends RequestMethod | 'ANY',
   params extends Record<string, any>,
 > = {
-  middleware: Middleware<method, params>[]
+  middleware?: Middleware<method, params>[]
   action: RequestHandler<method, params>
 }
 
@@ -81,19 +81,19 @@ export function isController(obj: unknown): obj is ControllerShape {
 }
 
 /**
- * Runtime shape for an action with middleware.
+ * Runtime shape for an action object.
  */
-export interface ActionWithMiddlewareShape {
-  middleware: Middleware[]
+export interface ActionObjectShape {
+  middleware?: Middleware[]
   action: RequestHandler<any, any>
 }
 
 /**
- * Check if an object has middleware and an `action` property (action with middleware).
+ * Check if an object has an `action` property (action object).
  *
  * @param obj The object to check
- * @returns `true` if the object is an action with middleware
+ * @returns `true` if the object is an action object
  */
-export function isActionWithMiddleware(obj: unknown): obj is ActionWithMiddlewareShape {
-  return typeof obj === 'object' && obj != null && 'middleware' in obj && 'action' in obj
+export function isActionObject(obj: unknown): obj is ActionObjectShape {
+  return typeof obj === 'object' && obj != null && 'action' in obj
 }
