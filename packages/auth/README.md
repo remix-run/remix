@@ -1,9 +1,10 @@
 # auth
 
-Browser login and OAuth helpers for Remix. This package handles provider redirects, callback validation, and session-backed login flows for Google, GitHub, Facebook, and email/password authentication.
+Browser login, OAuth, and OIDC helpers for Remix. This package handles provider redirects, callback validation, and session-backed login flows for standards-based identity providers, common social providers, and email/password authentication.
 
 ## Features
 
+- **OIDC Core + Wrappers** - Use `oidc()` directly or `microsoft()`, `okta()`, and `auth0()` as thin wrappers
 - **OAuth Provider Helpers** - Use `google()`, `github()`, and `facebook()` for common browser login flows
 - **Credentials Login** - Add email/password authentication with the same session contract as OAuth
 - **Route Handler Factories** - Use `login()` and `callback()` to wire browser auth routes without repeating protocol code
@@ -159,6 +160,80 @@ This package writes an auth record to `context.get(Session)` by default:
 - OAuth transactions use the internal `__auth` session key
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(credentials(...))`
+
+## OIDC Providers
+
+Use `oidc()` for any standards-compliant OpenID Connect provider. The `microsoft()`, `okta()`, and `auth0()` helpers are thin wrappers on top of the same OIDC runtime.
+
+```ts
+import { auth0, login, microsoft, oidc, okta } from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    company: {
+      login: '/login/company',
+      callback: '/auth/company/callback',
+    },
+    microsoft: {
+      login: '/login/microsoft',
+      callback: '/auth/microsoft/callback',
+    },
+    okta: {
+      login: '/login/okta',
+      callback: '/auth/okta/callback',
+    },
+    auth0: {
+      login: '/login/auth0',
+      callback: '/auth/auth0/callback',
+    },
+  },
+})
+
+let companyProvider = oidc({
+  name: 'company-sso',
+  issuer: env.OIDC_ISSUER,
+  clientId: env.OIDC_CLIENT_ID,
+  clientSecret: env.OIDC_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.company.callback.href(), env.APP_ORIGIN),
+  authorizationParams: {
+    prompt: 'login',
+  },
+})
+
+let microsoftProvider = microsoft({
+  tenant: 'organizations',
+  clientId: env.MICROSOFT_CLIENT_ID,
+  clientSecret: env.MICROSOFT_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.microsoft.callback.href(), env.APP_ORIGIN),
+})
+
+let oktaProvider = okta({
+  issuer: env.OKTA_ISSUER,
+  clientId: env.OKTA_CLIENT_ID,
+  clientSecret: env.OKTA_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.okta.callback.href(), env.APP_ORIGIN),
+})
+
+let auth0Provider = auth0({
+  domain: env.AUTH0_DOMAIN,
+  clientId: env.AUTH0_CLIENT_ID,
+  clientSecret: env.AUTH0_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
+})
+
+router.get(routes.auth.company.login, login(companyProvider))
+router.get(routes.auth.microsoft.login, login(microsoftProvider))
+router.get(routes.auth.okta.login, login(oktaProvider))
+router.get(routes.auth.auth0.login, login(auth0Provider))
+```
+
+Notes:
+
+- `oidc()` uses OIDC discovery by default at `/.well-known/openid-configuration`
+- pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
+- default OIDC scopes are `openid profile email`
+- wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
 
 ## OAuth Providers
 

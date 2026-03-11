@@ -9,7 +9,8 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { callback } from './callback.ts'
 import { login } from './login.ts'
-import { createFakeOAuthProvider, createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
+import { oidc } from './providers/oidc.ts'
+import { createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
 
 describe('OAuth flow integration', () => {
   let server: FakeOAuthServer
@@ -26,16 +27,19 @@ describe('OAuth flow integration', () => {
     await server.close()
   })
 
-  it('completes the full browser OAuth flow against a local fake provider', async () => {
+  it('completes the full browser OIDC flow against a local fake provider', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
     let users = new Map([
       ['oauth-user-1', { id: 'oauth-user-1', email: 'oauth@example.com' }],
     ])
-    let provider = createFakeOAuthProvider(
-      server.origin,
-      'https://app.example.com/auth/fake/callback',
-    )
+    let provider = oidc({
+      name: 'fake',
+      issuer: server.origin,
+      clientId: 'fake-client-id',
+      clientSecret: 'fake-client-secret',
+      redirectUri: 'https://app.example.com/auth/fake/callback',
+    })
     let router = createRouter({
       middleware: [
         sessionMiddleware(cookie, storage),
@@ -81,7 +85,7 @@ describe('OAuth flow integration', () => {
     assert.equal(authorizeURL.origin, server.origin)
     assert.equal(authorizeURL.pathname, '/authorize')
     assert.equal(authorizeURL.searchParams.get('response_type'), 'code')
-    assert.equal(authorizeURL.searchParams.get('scope'), 'openid email profile')
+    assert.equal(authorizeURL.searchParams.get('scope'), 'openid profile email')
 
     let providerAuthorizeResponse = await fetch(authorizeURL, {
       redirect: 'manual',

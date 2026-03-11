@@ -1,9 +1,8 @@
 import * as http from 'node:http'
+import type { AddressInfo } from 'node:net'
 
 import { SetCookie } from '@remix-run/headers'
 
-import { createAuthorizationURL, createOAuthProvider, exchangeAuthorizationCode, fetchJson, getAuthorizationCode } from './provider.ts'
-import type { OAuthProvider, OAuthResult } from './types.ts'
 import { createCodeChallenge } from './utils.ts'
 
 export function createRequest(url: string, fromResponse?: Response, init: RequestInit = {}): Request {
@@ -70,6 +69,22 @@ export async function startFakeOAuthServer(
       }
 
       let url = new URL(req.url, 'http://127.0.0.1')
+
+      if (req.method === 'GET' && url.pathname === '/.well-known/openid-configuration') {
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'application/json')
+        res.end(
+          JSON.stringify({
+            issuer: originFromAddress(server.address()),
+            authorization_endpoint: `${originFromAddress(server.address())}/authorize`,
+            token_endpoint: `${originFromAddress(server.address())}/token`,
+            userinfo_endpoint: `${originFromAddress(server.address())}/userinfo`,
+            code_challenge_methods_supported: ['S256'],
+            scopes_supported: ['openid', 'email', 'profile'],
+          }),
+        )
+        return
+      }
 
       if (req.method === 'GET' && url.pathname === '/authorize') {
         expectedState = url.searchParams.get('state') ?? undefined
@@ -165,7 +180,7 @@ export async function startFakeOAuthServer(
       }
 
       resolve({
-        origin: `http://127.0.0.1:${address.port}`,
+        origin: originFromAddress(address),
         close: () =>
           new Promise((resolveClose, rejectClose) => {
             server.close((error) => {
@@ -182,56 +197,6 @@ export async function startFakeOAuthServer(
   })
 }
 
-export function createFakeOAuthProvider(
-  origin: string,
-  redirectUri: string,
-): OAuthProvider<FakeOAuthProfile, 'fake'> {
-  return createOAuthProvider('fake', {
-    async createAuthorizationURL(transaction) {
-      let challenge = await createCodeChallenge(transaction.codeVerifier)
-
-      return createAuthorizationURL(`${origin}/authorize`, {
-        client_id: 'fake-client-id',
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        scope: 'openid email profile',
-        state: transaction.state,
-        code_challenge: challenge,
-        code_challenge_method: 'S256',
-      })
-    },
-    async authenticate(context, transaction): Promise<OAuthResult<FakeOAuthProfile, 'fake'>> {
-      let tokens = await exchangeAuthorizationCode({
-        tokenEndpoint: `${origin}/token`,
-        clientId: 'fake-client-id',
-        clientSecret: 'fake-client-secret',
-        redirectUri,
-        code: getAuthorizationCode(context),
-        codeVerifier: transaction.codeVerifier,
-      })
-      let profile = await fetchJson<FakeOAuthProfile>(
-        `${origin}/userinfo`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokens.accessToken}`,
-          },
-        },
-        'Failed to load fake OAuth profile.',
-      )
-
-      return {
-        provider: 'fake',
-        account: {
-          provider: 'fake',
-          providerAccountId: profile.sub,
-        },
-        profile,
-        tokens,
-      }
-    },
-  })
-}
-
 async function readRequestBody(request: http.IncomingMessage): Promise<string> {
   let chunks: Buffer[] = []
 
@@ -240,4 +205,12 @@ async function readRequestBody(request: http.IncomingMessage): Promise<string> {
   }
 
   return Buffer.concat(chunks).toString('utf8')
+}
+
+function originFromAddress(address: string | AddressInfo | null): string {
+  if (address == null || typeof address === 'string') {
+    throw new Error('Failed to resolve fake OAuth server address')
+  }
+
+  return `http://127.0.0.1:${address.port}`
 }
