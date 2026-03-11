@@ -4,8 +4,8 @@ Browser login, OAuth, and OIDC helpers for Remix. This package handles provider 
 
 ## Features
 
-- **OIDC Core + Wrappers** - Use `oidc()` directly or `microsoft()`, `okta()`, and `auth0()` as thin wrappers
-- **OAuth Provider Helpers** - Use `google()`, `github()`, and `facebook()` for common browser login flows
+- **OIDC Core + Wrappers** - Use `oidc()` directly or `google()`, `microsoft()`, `okta()`, and `auth0()` as thin wrappers
+- **OAuth Provider Helpers** - Use `github()` and `facebook()` for common browser login flows that need custom provider logic
 - **Credentials Login** - Add email/password authentication with the same session contract as OAuth
 - **Route Handler Factories** - Use `login()` and `callback()` to wire browser auth routes without repeating protocol code
 - **Session-First Design** - Store a small auth record in the session and load the full identity with `sessionAuth()`
@@ -163,7 +163,7 @@ This package writes an auth record to `context.get(Session)` by default:
 
 ## OIDC Providers
 
-Use `oidc()` for any standards-compliant OpenID Connect provider. The `microsoft()`, `okta()`, and `auth0()` helpers are thin wrappers on top of the same OIDC runtime.
+Use `oidc()` for any standards-compliant OpenID Connect provider. The `google()`, `microsoft()`, `okta()`, and `auth0()` helpers are thin wrappers on top of the same OIDC runtime.
 
 ```ts
 import { auth0, login, microsoft, oidc, okta } from 'remix/auth'
