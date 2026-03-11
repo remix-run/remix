@@ -38,6 +38,13 @@ For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), `cop()` follows the same 
 
 This middleware is intentionally tokenless. If you cannot guarantee the deployment assumptions behind that model, prefer [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware).
 
+## Caveats
+
+- `cop()` is a browser-origin guard, not a universal CSRF solution. It is designed for deployments that can rely on modern browser provenance signals and same-origin request handling.
+- If both `Sec-Fetch-Site` and `Origin` are missing on an unsafe request, `cop()` allows the request to continue. This is intentional so older clients and non-browser callers do not fail closed by default.
+- If `Sec-Fetch-Site` is missing, `cop()` only rejects when `Origin` is present and does not match the request host.
+- If you need stronger guarantees for session-backed form workflows, mixed deployment environments, or requests that should not fall through when browser provenance headers are missing, use [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware) or layer both middlewares together.
+
 ## Using with csrf-middleware
 
 You can also layer `cop()` in front of `csrf()` when you want both browser provenance checks and session-backed synchronizer tokens.

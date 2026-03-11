@@ -55,6 +55,8 @@ By default, `csrf()` checks token values in this order:
 
 You can override extraction using `value(context)`.
 
+Headers and form fields are the preferred transports. Query param fallback exists for compatibility, but it is the weakest option because tokens are more likely to be exposed in logs, history, and copied URLs.
+
 ## Origin Validation
 
 For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), the middleware validates request origin.
@@ -62,6 +64,13 @@ For unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`), the middleware validates 
 - Default: same-origin validation when `Origin` or `Referer` is present
 - Custom: provide `origin` as string, regex, array, or function
 - Missing origin behavior: controlled by `allowMissingOrigin` (default `true`)
+
+## Caveats
+
+- The synchronizer token is the primary defense in `csrf()`. `Origin` and `Referer` checks are an additional signal, not the only protection.
+- By default, unsafe requests with a valid token still pass when `Origin` and `Referer` are both missing. Set `allowMissingOrigin: false` if your deployment wants to require provenance headers on unsafe requests.
+- Query param tokens are supported for compatibility, but they should not be the default recommendation. Prefer headers or hidden form fields when you control the client.
+- If you want to reject more unsafe requests before token validation, especially when browser provenance headers are available, layer [`cop-middleware`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) in front of `csrf()`.
 
 ## Why This Exists
 
