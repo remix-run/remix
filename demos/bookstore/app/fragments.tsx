@@ -5,14 +5,12 @@ import { CartButton } from './assets/cart-button.tsx'
 import { CartItems } from './assets/cart-items.tsx'
 import { getCartTotal } from './data/cart.ts'
 import { books } from './data/schema.ts'
-import { loadAuth } from './middleware/auth.ts'
 import { getCurrentCart, getCurrentUserSafely } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { renderFragment } from './utils/render.ts'
 import { routes as appRoutes } from './routes.ts'
 
 export default {
-  middleware: [loadAuth()],
   actions: {
     async cartButton({ db, params }) {
       let bookId = parseId(params.bookId)

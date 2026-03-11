@@ -9,7 +9,6 @@ import { routes } from './routes.ts'
 import { books } from './data/schema.ts'
 import { addToCart, removeFromCart, updateCartItem } from './data/cart.ts'
 import { Layout } from './layout.tsx'
-import { loadAuth } from './middleware/auth.ts'
 import { getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
@@ -32,7 +31,6 @@ const cartUpdateSchema = f.object({
 })
 
 export default {
-  middleware: [loadAuth()],
   actions: {
     index() {
       return render(
