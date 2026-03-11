@@ -47,10 +47,10 @@ describe('OAuth flow integration', () => {
           schemes: [
             sessionAuth({
               read(session) {
-                return session.get('auth') as { subjectId: string } | null
+                return session.get('auth') as { userId: string } | null
               },
               verify(value) {
-                return users.get(value.subjectId) ?? null
+                return users.get(value.userId) ?? null
               },
               invalidate(session) {
                 session.unset('auth')
@@ -65,8 +65,8 @@ describe('OAuth flow integration', () => {
     router.get(
       '/auth/fake/callback',
       callback(provider, {
-        createSessionAuth(result) {
-          return { subjectId: result.profile.sub }
+        writeSession(session, result) {
+          session.set('auth', { userId: result.profile.sub })
         },
       }),
     )

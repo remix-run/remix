@@ -2,12 +2,7 @@ import type { RequestHandler } from '@remix-run/fetch-router'
 import type { Session } from '@remix-run/session'
 
 import { getOAuthProviderRuntime } from './provider.ts'
-import type {
-  CallbackOptions,
-  OAuthProvider,
-  OAuthTransaction,
-  SessionAuthData,
-} from './types.ts'
+import type { CallbackOptions, OAuthProvider, OAuthTransaction } from './types.ts'
 import {
   createRedirectResponse,
   getRequiredSearchParam,
@@ -15,13 +10,9 @@ import {
   resolveRedirectTarget,
 } from './utils.ts'
 
-export function callback<
-  profile,
-  provider extends string,
-  session_auth extends SessionAuthData = SessionAuthData,
->(
+export function callback<profile, provider extends string>(
   provider: OAuthProvider<profile, provider>,
-  options: CallbackOptions<profile, provider, session_auth>,
+  options: CallbackOptions<profile, provider>,
 ): RequestHandler {
   return async context => {
     let session: Session | undefined
@@ -48,14 +39,12 @@ export function callback<
       }
 
       let result = await getOAuthProviderRuntime(provider).authenticate(context, transaction)
-      let sessionAuth = await options.createSessionAuth(result, context)
-
       session.unset(transactionKey)
       session.regenerateId(true)
-      session.set(options.sessionKey ?? 'auth', sessionAuth)
+      await options.writeSession(session, result, context)
 
       if (options.onSuccess) {
-        return options.onSuccess(result, sessionAuth, context)
+        return options.onSuccess(result, context)
       }
 
       return createRedirectResponse(resolveRedirectTarget(transaction, options.successRedirectTo))
