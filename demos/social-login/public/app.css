@@ -1,0 +1,259 @@
+:root {
+  --bg: #f4efe7;
+  --paper: rgba(255, 251, 244, 0.9);
+  --text: #1f1b16;
+  --muted: #665b50;
+  --border: rgba(31, 27, 22, 0.12);
+  --shadow: 0 24px 60px rgba(48, 33, 17, 0.12);
+  --google: #0f6fff;
+  --github: #1f2328;
+  --facebook: #1877f2;
+  --error-bg: #fce7e7;
+  --error-text: #8f2222;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  background:
+    radial-gradient(circle at top left, rgba(15, 111, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(24, 119, 242, 0.12), transparent 26%),
+    linear-gradient(180deg, #faf6f0 0%, var(--bg) 100%);
+  color: var(--text);
+}
+
+body {
+  padding: 32px 16px;
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.95em;
+}
+
+.page-shell {
+  display: flex;
+  justify-content: center;
+}
+
+.page-frame {
+  width: min(860px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  padding: 40px;
+  backdrop-filter: blur(14px);
+}
+
+.hero {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hero h1,
+.panel h2,
+.setup-card h3 {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.hero h1 {
+  font-size: clamp(2.2rem, 7vw, 4.2rem);
+}
+
+.lede,
+.muted,
+.provider-copy {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.notice {
+  margin-bottom: 24px;
+  border-radius: 18px;
+  padding: 14px 18px;
+  border: 1px solid rgba(143, 34, 34, 0.15);
+}
+
+.notice-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.panel,
+.setup-card,
+.detail-card,
+.provider-card {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.panel {
+  padding: 28px;
+}
+
+.stack-lg {
+  display: grid;
+  gap: 24px;
+}
+
+.stack-sm {
+  display: grid;
+  gap: 8px;
+}
+
+.provider-list {
+  display: grid;
+  gap: 16px;
+}
+
+.provider-card {
+  padding: 18px;
+}
+
+.provider-button,
+.logout-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 16px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  color: white;
+}
+
+.provider-button:hover,
+.logout-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(31, 27, 22, 0.15);
+}
+
+.provider-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.provider-google {
+  background: linear-gradient(135deg, #4285f4, var(--google));
+}
+
+.provider-github {
+  background: linear-gradient(135deg, #2f363d, var(--github));
+}
+
+.provider-facebook {
+  background: linear-gradient(135deg, #3b5998, var(--facebook));
+}
+
+.logout-button {
+  max-width: 220px;
+  background: linear-gradient(135deg, #7a3f00, #b96812);
+}
+
+.setup-card {
+  padding: 22px;
+}
+
+.callback-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.identity-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  object-fit: cover;
+  background: #ddd;
+}
+
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #8a4d17, #d28732);
+}
+
+.details-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.detail-card {
+  padding: 16px;
+}
+
+.detail-card dt {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.detail-card dd {
+  margin: 0;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: 16px;
+  }
+
+  .page-frame {
+    padding: 24px;
+    border-radius: 22px;
+  }
+
+  .identity-row {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar,
+  .avatar-fallback {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+  }
+}
