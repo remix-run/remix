@@ -1,10 +1,12 @@
 import type { Middleware } from '@remix-run/fetch-router'
 import type {
+  Auth as AuthValue,
   AuthFailure,
   AuthOptions,
   AuthScheme,
   AuthSchemeFailure,
 } from './types.ts'
+import { Auth } from './types.ts'
 
 export function auth(options: AuthOptions): Middleware {
   if (options.schemes.length === 0) {
@@ -20,11 +22,11 @@ export function auth(options: AuthOptions): Middleware {
       }
 
       if (result.status === 'success') {
-        context.auth = {
+        context.set(Auth, {
           authenticated: true,
           principal: result.principal,
           scheme: scheme.name,
-        }
+        } satisfies AuthValue)
 
         return next()
       }
@@ -35,17 +37,17 @@ export function auth(options: AuthOptions): Middleware {
         )
       }
 
-      context.auth = {
+      context.set(Auth, {
         authenticated: false,
         error: createFailure(scheme, result),
-      }
+      } satisfies AuthValue)
 
       return next()
     }
 
-    context.auth = {
+    context.set(Auth, {
       authenticated: false,
-    }
+    } satisfies AuthValue)
 
     return next()
   }

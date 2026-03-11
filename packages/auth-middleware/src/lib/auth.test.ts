@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import { createRouter } from '@remix-run/fetch-router'
 
 import { auth } from './auth.ts'
-import type { AuthScheme } from './types.ts'
+import { Auth, type AuthScheme } from './types.ts'
 
 describe('auth middleware', () => {
   it('throws when no schemes are configured', () => {
@@ -43,7 +43,7 @@ describe('auth middleware', () => {
       ],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
@@ -85,7 +85,7 @@ describe('auth middleware', () => {
       ],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
@@ -126,7 +126,7 @@ describe('auth middleware', () => {
       ],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
@@ -161,7 +161,7 @@ describe('auth middleware', () => {
       ],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
@@ -225,7 +225,7 @@ describe('auth middleware', () => {
       ],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
@@ -279,7 +279,7 @@ describe('auth middleware', () => {
       middleware: [auth({ schemes })],
     })
 
-    router.get('/', (context) => Response.json(context.auth))
+    router.get('/', (context) => Response.json(context.get(Auth)))
 
     let response = await router.fetch('https://remix.run/')
 
