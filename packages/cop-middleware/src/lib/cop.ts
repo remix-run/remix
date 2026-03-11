@@ -82,19 +82,12 @@ export class CrossOriginProtection {
     return this.#isRequestExempt(context) ? null : 'cross-origin-request-from-old-browser'
   }
 
-  middleware(): Middleware {
-    return async (context, next) => {
-      let reason = this.check(context)
-      if (reason == null) {
-        return next()
-      }
-
-      if (this.#onDeny) {
-        return this.#onDeny(reason, context)
-      }
-
-      return new Response(getDefaultErrorMessage(reason), { status: 403 })
+  deny(reason: CopFailureReason, context: RequestContext): Response | Promise<Response> {
+    if (this.#onDeny) {
+      return this.#onDeny(reason, context)
     }
+
+    return new Response(getDefaultErrorMessage(reason), { status: 403 })
   }
 
   #isRequestExempt(context: RequestContext): boolean {
@@ -114,8 +107,18 @@ export class CrossOriginProtection {
   }
 }
 
-export function cop(options: CopOptions = {}): Middleware {
-  return new CrossOriginProtection(options).middleware()
+export function cop(options: CopOptions | CrossOriginProtection = {}): Middleware {
+  let protection =
+    options instanceof CrossOriginProtection ? options : new CrossOriginProtection(options)
+
+  return async (context, next) => {
+    let reason = protection.check(context)
+    if (reason == null) {
+      return next()
+    }
+
+    return protection.deny(reason, context)
+  }
 }
 
 function getDefaultErrorMessage(reason: CopFailureReason): string {

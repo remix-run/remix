@@ -154,7 +154,7 @@ describe('cop middleware', () => {
     let protection = new CrossOriginProtection({
       trustedOrigins: ['https://trusted.example'],
     })
-    let router = createTestRouter([protection.middleware()])
+    let router = createTestRouter([cop(protection)])
 
     let response = await router.fetch(
       createRequest('/', {
@@ -173,7 +173,7 @@ describe('cop middleware', () => {
     let protection = new CrossOriginProtection({
       insecureBypassPatterns: ['/bypass/', '/only/{foo}', 'POST /post-only/'],
     })
-    let router = createTestRouter([protection.middleware()])
+    let router = createTestRouter([cop(protection)])
 
     let bypassResponse = await router.fetch(
       createRequest('/bypass/', {
@@ -217,7 +217,7 @@ describe('cop middleware', () => {
         'GET /get-only/',
       ],
     })
-    let router = createTestRouter([protection.middleware()])
+    let router = createTestRouter([cop(protection)])
 
     let noTrailingResponse = await router.fetch(
       createRequest('/no-trailing/', {
