@@ -247,6 +247,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
@@ -1037,6 +1040,9 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
+      '@remix-run/auth':
+        specifier: workspace:^
+        version: link:../auth
       '@remix-run/auth-middleware':
         specifier: workspace:^
         version: link:../auth-middleware
