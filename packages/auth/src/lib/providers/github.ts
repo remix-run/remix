@@ -73,6 +73,7 @@ export function github(options: GitHubOptions): OAuthProvider<GitHubProfile, 'gi
         },
         'Failed to load GitHub profile.',
       )
+      profile = validateGitHubProfile(profile)
 
       if (profile.email == null) {
         let emails = await fetchJson<GitHubEmail[]>(
@@ -122,6 +123,14 @@ function pickGitHubEmail(emails: GitHubEmail[]): string | undefined {
   }
 
   return emails[0]?.email
+}
+
+function validateGitHubProfile(profile: GitHubProfile): GitHubProfile {
+  if (!Number.isInteger(profile.id)) {
+    throw new Error('GitHub profile did not include a valid id.')
+  }
+
+  return profile
 }
 
 function toURLString(value: string | URL): string {

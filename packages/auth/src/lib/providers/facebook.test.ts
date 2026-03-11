@@ -151,4 +151,74 @@ describe('facebook provider', () => {
       restoreFetch()
     }
   })
+
+  it('fails when the Facebook profile does not include a valid id', async () => {
+    let restoreFetch = mockFetch(async input => {
+      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://graph.facebook.com/oauth/access_token') {
+        return Response.json({
+          access_token: 'facebook-token',
+          token_type: 'bearer',
+          expires_in: 3600,
+        })
+      }
+
+      if (url === 'https://graph.facebook.com/me?fields=id,name,email,picture') {
+        return Response.json({
+          name: 'Michael Jackson',
+          email: 'mj@example.com',
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let cookie = createCookie('__session', { secrets: ['secret1'] })
+      let storage = createMemorySessionStorage()
+      let provider = facebook({
+        clientId: 'facebook-client-id',
+        clientSecret: 'facebook-client-secret',
+        redirectUri: 'https://app.example.com/auth/facebook/callback',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/facebook', login(provider))
+      router.get(
+        '/auth/facebook/callback',
+        callback(provider, {
+          writeSession(session, result) {
+            session.set('auth', { userId: result.profile.id })
+          },
+          onFailure(error) {
+            return Response.json(
+              {
+                error: error instanceof Error ? error.message : 'unknown',
+              },
+              { status: 400 },
+            )
+          },
+        }),
+      )
+
+      let loginResponse = await router.fetch('https://app.example.com/login/facebook')
+      let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
+      let response = await router.fetch(
+        createRequest(
+          `https://app.example.com/auth/facebook/callback?code=facebook-code&state=${state}`,
+          loginResponse,
+        ),
+      )
+
+      assert.equal(response.status, 400)
+      assert.deepEqual(await response.json(), {
+        error: 'Facebook profile did not include a valid id.',
+      })
+    } finally {
+      restoreFetch()
+    }
+  })
 })

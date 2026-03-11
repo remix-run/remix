@@ -66,6 +66,61 @@ describe('oidc provider', () => {
     }
   })
 
+  it('retries discovery after a failed metadata request', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let discoveryRequests = 0
+    let provider = oidc({
+      issuer: 'https://issuer.example.com',
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      redirectUri: 'https://app.example.com/auth/oidc/callback',
+    })
+    let restoreFetch = mockFetch(async input => {
+      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://issuer.example.com/.well-known/openid-configuration') {
+        discoveryRequests += 1
+
+        if (discoveryRequests === 1) {
+          return Response.json({}, { status: 500 })
+        }
+
+        return Response.json({
+          issuer: 'https://issuer.example.com',
+          authorization_endpoint: 'https://issuer.example.com/oauth2/v1/authorize',
+          token_endpoint: 'https://issuer.example.com/oauth2/v1/token',
+          userinfo_endpoint: 'https://issuer.example.com/oauth2/v1/userinfo',
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/oidc', login(provider))
+
+      await assert.rejects(
+        () => router.fetch('https://app.example.com/login/oidc'),
+        /Failed to load OIDC metadata for "oidc"\./,
+      )
+
+      let response = await router.fetch('https://app.example.com/login/oidc')
+      let location = new URL(response.headers.get('Location')!)
+
+      assert.equal(response.status, 302)
+      assert.equal(discoveryRequests, 2)
+      assert.equal(location.origin, 'https://issuer.example.com')
+      assert.equal(location.pathname, '/oauth2/v1/authorize')
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('includes authorizationParams in the authorization URL', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
