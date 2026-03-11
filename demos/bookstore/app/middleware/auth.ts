@@ -15,22 +15,24 @@ interface BookstoreAuthSession {
   userId: number
 }
 
-export let bookstoreAuth = auth({
-  schemes: [
-    sessionAuth<User, BookstoreAuthSession>({
-      read(session) {
-        return parseBookstoreAuthSession(session.get('auth'))
-      },
-      async verify(value, context) {
-        let db = context.get(Database)
-        return (await db.find(users, value.userId)) ?? null
-      },
-      invalidate(session) {
-        session.unset('auth')
-      },
-    }),
-  ],
-})
+export function bookstoreAuth(): Middleware {
+  return auth({
+    schemes: [
+      sessionAuth<User, BookstoreAuthSession>({
+        read(session) {
+          return parseBookstoreAuthSession(session.get('auth'))
+        },
+        async verify(value, context) {
+          let db = context.get(Database)
+          return (await db.find(users, value.userId)) ?? null
+        },
+        invalidate(session) {
+          session.unset('auth')
+        },
+      }),
+    ],
+  })
+}
 
 export let passwordProvider = credentials({
   parse(context) {
