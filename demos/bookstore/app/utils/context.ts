@@ -25,7 +25,7 @@ export function getCurrentUser(): User {
 
 /**
  * Get the current authenticated user from request context, or null if not authenticated.
- * Safe to use anywhere in the bookstore demo because auth() runs globally.
+ * Safe to use anywhere in the bookstore demo because `loadAuth()` runs globally.
  */
 export function getCurrentUserSafely(): User | null {
   let auth = getCurrentAuth()

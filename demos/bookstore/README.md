@@ -30,7 +30,7 @@ Then visit http://localhost:44100
 - [`data/migrations/20260228090000_create_bookstore_schema.ts`](data/migrations/20260228090000_create_bookstore_schema.ts) defines the schema using `remix/data-table/migrations`.
 - [`app/middleware/database.ts`](app/middleware/database.ts) stores the bookstore database on request context with `context.set(Database, db)`, and request handlers read it back with `get(Database)` just like they do for `Session` and `FormData`.
 - [`app/middleware/auth.ts`](app/middleware/auth.ts) shows the Remix auth stack in one place:
-  - **`bookstoreAuth()`** installs global `auth()` middleware with a `sessionAuth()` scheme
+  - **`loadAuth()`** installs global `auth()` middleware with a `sessionAuth()` scheme
   - **`passwordProvider`** uses `credentials()` to verify email/password logins against the demo database
   - **`requireAuth()`** is a thin wrapper around `remix/auth-middleware` that redirects to login with a `returnTo` parameter for post-login redirects
 - [`app/auth.tsx`](app/auth.tsx) uses `login(passwordProvider, ...)` from `remix/auth` for the login POST action, so session rotation and session writes come from the framework abstraction instead of bespoke route code.
