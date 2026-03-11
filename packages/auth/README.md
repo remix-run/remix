@@ -163,6 +163,44 @@ This package manages the OAuth transaction in `context.get(Session)` and lets yo
 - credentials examples assume `formData()` middleware runs before `login(credentials(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
 
+## Built-In Providers
+
+- `oidc()`:
+  - Use this for any standards-compliant OpenID Connect provider
+  - Options: `issuer`, `clientId`, `clientSecret`, `redirectUri`, optional `scopes`, `discoveryUrl`, `metadata`, `authorizationParams`, and `mapProfile()`
+  - `writeSession(session, result)` receives `result.profile` as `OIDCProfile` by default, or your mapped profile type when you provide `mapProfile()`
+- `google()`:
+  - Thin OIDC wrapper with Google's published authorization, token, and userinfo endpoints
+  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
+  - `result.profile` is `GoogleProfile`, which follows the standard OIDC userinfo shape and typically includes `sub`, `email`, `email_verified`, `name`, `given_name`, `family_name`, `picture`, and `locale`
+- `microsoft()`:
+  - Thin OIDC wrapper for Microsoft identity
+  - Options: `tenant`, `clientId`, `clientSecret`, `redirectUri`, plus the generic OIDC options other than `name` and `issuer`
+  - `tenant` defaults to `'common'`; use `'organizations'`, `'consumers'`, or a specific tenant ID when you want a narrower audience
+  - `result.profile` is `MicrosoftProfile`, which extends OIDC claims with fields like `tid`, `oid`, and `preferred_username`
+- `okta()`:
+  - Thin OIDC wrapper for Okta
+  - Options: `issuer`, `clientId`, `clientSecret`, `redirectUri`, plus optional generic OIDC settings like `scopes` or `authorizationParams`
+  - `result.profile` is `OktaProfile`, which is the standard OIDC claim shape for your Okta issuer
+- `auth0()`:
+  - Thin OIDC wrapper for Auth0
+  - Options: `domain`, `clientId`, `clientSecret`, `redirectUri`, plus optional generic OIDC settings like `scopes` or `authorizationParams`
+  - `domain` is normalized into the Auth0 issuer URL automatically
+  - `result.profile` is `Auth0Profile`, which is the standard OIDC claim shape plus fields like `nickname` and `updated_at`
+- `github()`:
+  - Custom OAuth helper for GitHub's OAuth app flow
+  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
+  - `result.profile` is `GitHubProfile`, including `id`, `login`, `name`, `email`, `avatar_url`, and `html_url`
+  - if GitHub does not return an email in `/user`, the provider automatically loads `/user/emails` and hydrates `result.profile.email` when possible
+- `facebook()`:
+  - Custom OAuth helper for Facebook Login
+  - Options: `clientId`, `clientSecret`, `redirectUri`, optional `scopes`
+  - `result.profile` is `FacebookProfile`, including `id`, `name`, `email`, and `picture`
+- `credentials()`:
+  - Form-based authentication helper for email/password or any other direct credential flow
+  - Options: `parse(context)` and `verify(input, context)`
+  - `writeSession(session, result)` receives whatever `verify()` returns on success, so the type is fully application-defined
+
 ## OIDC Providers
 
 Use `oidc()` for any standards-compliant OpenID Connect provider. The `google()`, `microsoft()`, `okta()`, and `auth0()` helpers are thin wrappers on top of the same OIDC runtime.
@@ -248,11 +286,14 @@ Notes:
 - default OIDC scopes are `openid profile email`
 - wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
 - `google()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
+- `microsoft()` adds the `tenant` option and builds the issuer from it
+- `okta()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
+- `auth0()` expects your Auth0 domain and derives the issuer URL for you
+- use `mapProfile()` with `oidc()` when you want `result.profile` to have an app-specific type before it reaches `writeSession()`
 
 ## Custom OAuth Providers
 
-Use the built-in provider helpers when you want a standard browser redirect flow
-for providers that need behavior beyond the generic OIDC runtime.
+Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
 
 ```ts
 import { facebook, github, login } from 'remix/auth'
@@ -293,6 +334,12 @@ Default scopes:
 - Facebook: `public_profile email`
 
 Pass `scopes` if you need a different set for a provider.
+
+Provider notes:
+
+- `github()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
+- `facebook()` fetches a fixed profile shape from `https://graph.facebook.com/me?fields=id,name,email,picture`
+- both helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
 
 ## Credentials Login
 
@@ -391,6 +438,17 @@ router.get(
 - `result.account`
 - `result.profile`
 - `result.tokens`
+
+The `result.profile` shape depends on the provider:
+
+- `oidc()` and wrappers built on it return OIDC userinfo claims
+- `google()` returns `GoogleProfile`
+- `microsoft()` returns `MicrosoftProfile`
+- `okta()` returns `OktaProfile`
+- `auth0()` returns `Auth0Profile`
+- `github()` returns `GitHubProfile`
+- `facebook()` returns `FacebookProfile`
+- `credentials()` does not use `callback()`; its `writeSession()` hook receives whatever your `verify()` function returned
 
 ## Session Integration
 
