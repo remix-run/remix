@@ -9,25 +9,25 @@ bench.baseline(() => {
 bench('href > simple route', () => {
   let pattern = new RoutePattern('/posts/:id')
   pattern.href({ id: '123' })
-}).types([1053, 'instantiations'])
+}).types([493, 'instantiations'])
 
 bench('href > complex route', () => {
   let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
   pattern.href({ major: '1', minor: '2', path: 'users', help: 'help' })
-}).types([4457, 'instantiations'])
+}).types([1252, 'instantiations'])
 
 bench('href > mediarss', async () => {
   let { patterns } = await import('../patterns/mediarss.ts')
   eagerlyEvaluateTypesForHrefParams(patterns)
-}).types([79052, 'instantiations'])
+}).types([13867, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
-bench('href > shopify', async () => {
-  let { patterns } = await import('../patterns/shopify.ts')
-  eagerlyEvaluateTypesForHrefParams(patterns)
-}).types([5027028, 'instantiations'])
+// bench('href > shopify', async () => {
+//   let { patterns } = await import('../patterns/shopify.ts')
+//   eagerlyEvaluateTypesForHrefParams(patterns)
+// }).types([1540592, 'instantiations'])
 
 /** Type-only utility to force eager evaluation of href param types */
 function eagerlyEvaluateTypesForHrefParams<patterns extends ReadonlyArray<string>>(
