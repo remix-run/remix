@@ -7,16 +7,22 @@ A small Remix app that demonstrates social login with the new auth stack. It use
 ```bash
 cd demos/social-login
 pnpm install
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
-FACEBOOK_CLIENT_ID=...
-FACEBOOK_CLIENT_SECRET=...
+cp .env.example .env
 pnpm start
 ```
 
 Then visit http://localhost:44100
+
+Fill [`/.env.example`](./.env.example) into `.env` with the provider credentials for any login buttons you want to enable:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `FACEBOOK_CLIENT_ID`
+- `FACEBOOK_CLIENT_SECRET`
+
+The demo uses Node's built-in `.env` loading to read that file on startup. If `.env` is missing, the app still boots and prints a console message explaining how to create it. Unconfigured providers stay disabled in the UI.
 
 Register these callback URLs with your provider apps:
 
