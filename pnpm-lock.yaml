@@ -232,6 +232,19 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/auth-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/component:
     dependencies:
       '@types/dom-navigation':
@@ -986,6 +999,9 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
+      '@remix-run/auth-middleware':
+        specifier: workspace:^
+        version: link:../auth-middleware
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component

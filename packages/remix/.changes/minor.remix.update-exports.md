@@ -7,3 +7,4 @@ Added `package.json` `exports`:
 - `remix/data-table/operators` to re-export APIs from `@remix-run/data-table/operators`
 - `remix/data-table/sql` to re-export APIs from `@remix-run/data-table/sql`
 - `remix/data-table/sql-helpers` to re-export APIs from `@remix-run/data-table/sql-helpers`
+ - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
