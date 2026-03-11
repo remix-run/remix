@@ -1122,6 +1122,15 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/job':
+        specifier: workspace:^
+        version: link:../job
+      '@remix-run/job-data-table':
+        specifier: workspace:^
+        version: link:../job-data-table
+      '@remix-run/job-redis':
+        specifier: workspace:^
+        version: link:../job-redis
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
