@@ -18,7 +18,6 @@ let { values, positionals } = parseArgs({
   options: {
     debug: { type: 'boolean', short: 'd' },
     devtools: { type: 'boolean' },
-    headless: { type: 'boolean', short: 'h' },
     ui: { type: 'boolean', short: 'u' },
     watch: { type: 'boolean', short: 'w' },
     port: { type: 'string', short: 'p', default: '44101' },
@@ -97,7 +96,6 @@ async function executeRun() {
 
     let { results, close } = await runTests({
       baseUrl: `http://localhost:${port}`,
-      headless: values.headless,
       debug: values.debug,
       devtools: values.devtools,
       ui: values.ui,

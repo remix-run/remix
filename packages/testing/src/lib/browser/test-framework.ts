@@ -79,7 +79,7 @@ export function render(node: RemixNode) {
     $$: (s: string) => container.querySelectorAll<HTMLElement>(s),
     async act(fn: () => unknown | Promise<unknown>) {
       await fn()
-      await Promise.resolve()
+      root.flush()
     },
     cleanup() {
       root.dispose()

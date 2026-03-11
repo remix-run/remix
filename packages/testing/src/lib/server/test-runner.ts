@@ -2,7 +2,6 @@ import { chromium, type Browser } from 'playwright'
 
 export interface TestRunOptions {
   baseUrl: string
-  headless?: boolean
   debug?: boolean
   devtools?: boolean
   ui?: boolean
@@ -31,7 +30,7 @@ export async function runTests(
 
   try {
     browser = await chromium.launch({
-      headless: options.ui ? false : options.headless,
+      headless: !options.ui,
       devtools: options.devtools,
     })
 

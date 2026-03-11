@@ -41,7 +41,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test": "pnpm --filter remix-testing-demo-tests test",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
