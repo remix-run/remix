@@ -27,7 +27,11 @@ describe('navigate', () => {
     let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
     vi.stubGlobal('navigation', { navigate: navigateMock })
 
-    await navigate('/login', '/partials/login', 'auth', { history: 'replace' })
+    await navigate('/login', {
+      src: '/partials/login',
+      target: 'auth',
+      history: 'replace',
+    })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
       state: { target: 'auth', src: '/partials/login', $rmx: true },

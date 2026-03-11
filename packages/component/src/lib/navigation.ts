@@ -11,19 +11,16 @@ type SourceElementNavigateEvent = NavigateEvent & {
 }
 
 type NavigationOptions = {
+  src?: string | null
+  target?: string | null
   history?: 'push' | 'replace'
 }
 
-export async function navigate(
-  href: string,
-  src?: string | null,
-  target?: string | null,
-  options?: NavigationOptions,
-) {
+export async function navigate(href: string, options?: NavigationOptions) {
   let navigation = getNavigation()
   let state = {
-    target: target ?? undefined,
-    src: src ?? href,
+    target: options?.target ?? undefined,
+    src: options?.src ?? href,
     $rmx: true,
   } satisfies NavigationState
   let transition = navigation.navigate(href, {
