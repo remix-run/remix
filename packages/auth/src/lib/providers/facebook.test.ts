@@ -56,8 +56,8 @@ describe('facebook provider', () => {
       router.get(
         '/auth/facebook/callback',
         callback(provider, {
-          createSessionAuth(result) {
-            return { subjectId: result.profile.id }
+          writeSession(session, result) {
+            session.set('auth', { userId: result.profile.id })
           },
           onSuccess(result) {
             return Response.json(result)

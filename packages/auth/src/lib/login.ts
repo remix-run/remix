@@ -6,7 +6,6 @@ import type {
   LoginOptions,
   OAuthLoginOptions,
   OAuthProvider,
-  SessionAuthData,
 } from './types.ts'
 import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
 
@@ -15,9 +14,9 @@ export function login<profile>(
   options?: OAuthLoginOptions,
 ): RequestHandler
 
-export function login<input, result, session_auth extends SessionAuthData>(
+export function login<input, result>(
   provider: CredentialsProvider<input, result>,
-  options: LoginOptions<result, session_auth>,
+  options: LoginOptions<result>,
 ): RequestHandler
 
 export function login(
@@ -64,7 +63,7 @@ async function loginWithOAuthProvider(
 
 async function loginWithCredentialsProvider(
   provider: CredentialsProvider<any, any>,
-  options: LoginOptions<any, any>,
+  options: LoginOptions<any>,
   context: Parameters<RequestHandler>[0],
 ): Promise<Response> {
   try {
@@ -84,12 +83,11 @@ async function loginWithCredentialsProvider(
       return new Response('Invalid credentials', { status: 401 })
     }
 
-    let sessionAuth = await options.createSessionAuth(result, context)
     session.regenerateId(true)
-    session.set(options.sessionKey ?? 'auth', sessionAuth)
+    await options.writeSession(session, result, context)
 
     if (options.onSuccess) {
-      return options.onSuccess(result, sessionAuth, context)
+      return options.onSuccess(result, context)
     }
 
     return createRedirectResponse(options.successRedirectTo ?? '/')

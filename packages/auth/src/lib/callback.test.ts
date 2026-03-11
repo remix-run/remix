@@ -58,10 +58,10 @@ describe('callback()', () => {
             schemes: [
               sessionAuth({
                 read(session) {
-                  return session.get('auth') as { subjectId: string } | null
+                  return session.get('auth') as { userId: string } | null
                 },
                 verify(value) {
-                  return users.get(value.subjectId) ?? null
+                  return users.get(value.userId) ?? null
                 },
               }),
             ],
@@ -73,8 +73,8 @@ describe('callback()', () => {
       router.get(
         '/auth/google/callback',
         callback(provider, {
-          createSessionAuth(result) {
-            return { subjectId: result.profile.sub }
+          writeSession(session, result) {
+            session.set('auth', { userId: result.profile.sub })
           },
         }),
       )
@@ -128,8 +128,8 @@ describe('callback()', () => {
     router.get(
       '/auth/google/callback',
       callback(provider, {
-        createSessionAuth(result) {
-          return { subjectId: result.profile.sub }
+        writeSession(session, result) {
+          session.set('auth', { userId: result.profile.sub })
         },
         onFailure(error) {
           return Response.json(
