@@ -15,7 +15,7 @@ export function requireAuth(options: RequireAuthOptions = {}): Middleware {
 
     let auth = context.get(Auth)
 
-    if (auth.authenticated) {
+    if (auth.ok) {
       return next()
     }
 

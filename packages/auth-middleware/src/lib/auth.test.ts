@@ -49,7 +49,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: true,
+      ok: true,
       principal: { id: 1 },
       scheme: 'bearer',
     })
@@ -91,7 +91,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: true,
+      ok: true,
       principal: { id: 123 },
       scheme: 'api-key',
     })
@@ -132,7 +132,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: true,
+      ok: true,
       principal: { id: 456 },
       scheme: 'api-key',
     })
@@ -167,7 +167,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: false,
+      ok: false,
     })
   })
 
@@ -231,7 +231,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: false,
+      ok: false,
       error: {
         scheme: 'bearer',
         code: 'invalid_credentials',
@@ -285,7 +285,7 @@ describe('auth middleware', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
-      authenticated: false,
+      ok: false,
       error: {
         scheme: 'bearer',
         code: 'invalid_credentials',
