@@ -12,6 +12,59 @@ import { createRequest, mockFetch } from '../test-utils.ts'
 import { facebook } from './facebook.ts'
 
 describe('facebook provider', () => {
+  it('redirects to the Facebook authorization endpoint with default PKCE parameters', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let provider = facebook({
+      clientId: 'facebook-client-id',
+      clientSecret: 'facebook-client-secret',
+      redirectUri: 'https://app.example.com/auth/facebook/callback',
+    })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.get('/login/facebook', login(provider))
+
+    let response = await router.fetch('https://app.example.com/login/facebook')
+    let location = new URL(response.headers.get('Location')!)
+
+    assert.equal(response.status, 302)
+    assert.equal(location.origin, 'https://www.facebook.com')
+    assert.equal(location.pathname, '/dialog/oauth')
+    assert.equal(location.searchParams.get('client_id'), 'facebook-client-id')
+    assert.equal(
+      location.searchParams.get('redirect_uri'),
+      'https://app.example.com/auth/facebook/callback',
+    )
+    assert.equal(location.searchParams.get('response_type'), 'code')
+    assert.equal(location.searchParams.get('scope'), 'public_profile email')
+    assert.equal(typeof location.searchParams.get('state'), 'string')
+    assert.equal(typeof location.searchParams.get('code_challenge'), 'string')
+    assert.equal(location.searchParams.get('code_challenge_method'), 'S256')
+  })
+
+  it('uses configured scopes in the Facebook authorization URL', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let provider = facebook({
+      clientId: 'facebook-client-id',
+      clientSecret: 'facebook-client-secret',
+      redirectUri: 'https://app.example.com/auth/facebook/callback',
+      scopes: ['email'],
+    })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.get('/login/facebook', login(provider))
+
+    let response = await router.fetch('https://app.example.com/login/facebook')
+    let location = new URL(response.headers.get('Location')!)
+
+    assert.equal(location.searchParams.get('scope'), 'email')
+  })
+
   it('normalizes Facebook profiles and tokens', async () => {
     let restoreFetch = mockFetch(async input => {
       let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url

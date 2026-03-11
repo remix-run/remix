@@ -7,6 +7,8 @@ Pluggable authentication middleware for Remix `fetch-router`. It resolves identi
 - **Pluggable Schemes** - Use built-ins or provide your own `AuthScheme`
 - **Multiple Auth Modes** - Optional auth, strict API auth, redirect-based browser auth
 - **Ordered Fallback** - Try Bearer first, then API key (or any order you choose)
+- **Explicit Request State** - Read auth state from `context.get(Auth)` instead of mutating request context objects
+- **Session Bridge** - Use `sessionAuth()` to convert session data into request auth state
 - **Composable Middleware** - Use globally or per-route
 
 ## Installation
@@ -61,10 +63,21 @@ router.map(routes.private, {
 - `{ ok: true, identity, scheme }`
 - `{ ok: false, error? }`
 
-When implementing custom schemes, return `null` or `undefined` (or no return
-value) from `authenticate()` to skip that scheme.
+When implementing custom schemes, return `null`, `undefined`, or no value from `authenticate()` to skip that scheme.
 
 `requireAuth()` enforces authentication and returns `401 Unauthorized` by default.
+
+## Auth State
+
+`auth({ schemes })` does one thing: it resolves request auth state and stores it at `context.get(Auth)`.
+
+- it runs schemes in order
+- `null` or `undefined` means "this scheme does not apply"
+- `{ status: 'success', identity }` stops evaluation and stores `{ ok: true, identity, scheme }`
+- `{ status: 'failure', ... }` stops evaluation and stores `{ ok: false, error }`
+- if every scheme skips, the request continues with `{ ok: false }`
+
+`auth()` does not reject the request by itself. That separation is intentional so the same auth resolution can support public routes, API routes, and browser routes with different failure behavior.
 
 ## Auth Scheme API
 
@@ -114,6 +127,17 @@ let sessionScheme: AuthScheme<User, 'session'> = {
 - `{ status: 'failure', code?, message?, challenge? }` to stop with an auth error
 
 The scheme `name` becomes `auth.scheme` when authentication succeeds.
+
+## Route Protection
+
+Use `requireAuth()` after `auth()` when a route must be authenticated.
+
+- default behavior: `401 Unauthorized`
+- `onFailure(context, auth)` lets you return JSON, redirects, or any custom response
+- `status`, `body`, and `headers` let you customize the default unauthorized response
+- bearer-style challenges are forwarded to `WWW-Authenticate` automatically when the auth failure included a `challenge`
+
+If `requireAuth()` runs before `auth()`, it throws so the middleware order fails loudly instead of silently treating the request as anonymous.
 
 ## Detailed Multi-Mode Example
 
@@ -367,6 +391,13 @@ Options:
 - `code` (default: `'invalid_credentials'`)
 - `message` (default: `'Invalid session'`)
 
+Behavior:
+
+- `read()` returning `null` or `undefined` skips the scheme
+- `verify()` returning an identity authenticates the request
+- `verify()` returning `null` fails auth and can optionally trigger `invalidate()`
+- `session()` middleware must run before `sessionAuth()`
+
 If you want session-backed browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth). That package covers generic OIDC, thin wrappers like Google/Microsoft/Okta/Auth0, custom GitHub/Facebook OAuth helpers, and credentials-based login.
 
 ## Related Packages
@@ -374,6 +405,11 @@ If you want session-backed browser login flows, pair `sessionAuth()` with [`remi
 - [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser login helpers for OIDC, custom OAuth providers, and credentials flows
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
 - [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers like redirects
+
+## Related Work
+
+- [HTTP Authentication Framework](https://datatracker.ietf.org/doc/html/rfc7235)
+- [OAuth 2.0 Bearer Token Usage](https://datatracker.ietf.org/doc/html/rfc6750)
 
 ## License
 
