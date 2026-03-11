@@ -7,8 +7,10 @@ Browser login, OAuth, and OIDC helpers for Remix. This package handles provider 
 - **OIDC Core + Wrappers** - Use `oidc()` directly or `google()`, `microsoft()`, `okta()`, and `auth0()` as thin wrappers
 - **OAuth Provider Helpers** - Use `github()` and `facebook()` for common browser login flows that need custom provider logic
 - **Credentials Login** - Add email/password authentication with the same session contract as OAuth
-- **Route Handler Factories** - Use `login()` and `callback()` to wire browser auth routes without repeating protocol code
-- **Session-First Design** - Store a small auth record in the session and load the full identity with `sessionAuth()`
+- **Explicit Session Writes** - Use `writeSession(session, result, context)` to persist exactly the auth data your app needs
+- **Route Handler Factories** - Use `login()` and `callback()` to wire browser auth routes, redirects, and callback validation without repeating protocol code
+- **Success and Failure Hooks** - Customize successful logins and failures with `onSuccess`, `onFailure`, `onError`, `successRedirectTo`, and `failureRedirectTo`
+- **Session-First Design** - Store a small auth record in the session and load the full identity later with `sessionAuth()`
 
 ## Installation
 
@@ -162,6 +164,46 @@ This package manages the OAuth transaction in `context.get(Session)` and lets yo
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(credentials(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
+
+## Login Routes
+
+`login()` handles both browser redirect flows and direct credentials submissions:
+
+- `login(oauthProvider)` creates an OAuth transaction, stores it in the session under `__auth`, and redirects to the provider
+- `login(credentialsProvider, options)` parses input, verifies credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects
+
+OAuth login options:
+
+- `transactionKey` to change where the in-progress OAuth transaction is stored
+- `returnToParam` to change the query param used to preserve the post-login destination
+- `failureRedirectTo` to redirect instead of surfacing the error
+- `onError(error, context)` to build a custom response when login setup fails
+
+Credentials login options:
+
+- `writeSession(session, result, context)` to persist your app-defined auth record
+- `successRedirectTo` and `failureRedirectTo`
+- `onSuccess(result, context)` for a custom successful response
+- `onFailure(context)` for invalid credentials
+- `onError(error, context)` for unexpected failures such as `writeSession()` errors
+
+## Success and Failure Hooks
+
+`writeSession(session, result, context)` is the common success hook across credentials and OAuth callbacks. It receives the authenticated result for the provider you used:
+
+- credentials: whatever `verify()` returned
+- OAuth and OIDC providers: `{ provider, account, profile, tokens }`
+
+After `writeSession()` runs:
+
+- `onSuccess(result, context)` can return a custom response
+- otherwise the handler redirects to `successRedirectTo` or `/`
+
+On failures:
+
+- credentials login uses `onFailure(context)` for invalid credentials and `onError(error, context)` for unexpected exceptions
+- OAuth login uses `onError(error, context)` when starting the redirect flow fails
+- OAuth callbacks use `onFailure(error, context)` for invalid state, provider errors, token exchange failures, profile fetch failures, or `writeSession()` failures
 
 ## Built-In Providers
 
@@ -450,6 +492,14 @@ router.get(
 - `result.profile`
 - `result.tokens`
 
+Callback options:
+
+- `transactionKey` when you need to store the OAuth transaction somewhere other than `__auth`
+- `writeSession(session, result, context)` to persist your auth record
+- `successRedirectTo` and `failureRedirectTo`
+- `onSuccess(result, context)` for a custom successful response
+- `onFailure(error, context)` for callback validation, provider, or session-write failures
+
 The `result.profile` shape depends on the provider:
 
 - `oidc()` and wrappers built on it return OIDC userinfo claims
@@ -493,10 +543,12 @@ This keeps login mechanics separate from request authentication:
 - `remix/auth` creates and persists the session auth record
 - `sessionAuth()` converts that session record into `context.get(Auth)`
 - `requireAuth()` protects routes that require a signed-in user
+- `session()` middleware must run before `login()`, `callback()`, or `sessionAuth()`
 
 ## Related Packages
 
 - [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
+- [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Form body parsing for `credentials()` routes
 - [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Request-scoped session loading and persistence
 - [`session`](https://github.com/remix-run/remix/tree/main/packages/session) - Session data model and storage backends
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
@@ -506,6 +558,7 @@ This keeps login mechanics separate from request authentication:
 - [OAuth 2.0](https://oauth.net/2/)
 - [RFC 7636: PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
+- [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html)
 
 ## License
 
