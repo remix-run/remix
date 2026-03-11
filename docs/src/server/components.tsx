@@ -2,7 +2,6 @@ import type { RemixNode } from 'remix/component/jsx-runtime'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import type { Handle } from 'remix/component'
-import { LightDarkToggle } from '../client/light-dark-toggle.tsx'
 
 export function Home() {
   return () => {
@@ -91,9 +90,6 @@ function Layout() {
               <RemixLogoDark />
             </a>
             <div class="sidebar-actions">
-              <div class="toggle">
-                <LightDarkToggle />
-              </div>
               <label class="nav-toggle-close" for="nav-toggle" aria-label="Close navigation menu">
                 <span aria-hidden="true">×</span>
                 <span class="visually-hidden">Close navigation menu</span>

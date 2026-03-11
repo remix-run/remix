@@ -6,7 +6,9 @@
   --spacing-large: 28px; /* +4 */
   --spacing-xl: 32px; /* +12 */
   --spacing-xxl: 48px; /* +16 */
+}
 
+:root {
   /* Light Mode */
   --surface-level-0-color: #d2d6da;
   --surface-level-1-color: #d9dde1;
@@ -16,8 +18,8 @@
   --text-primary-color: #25292d;
   --text-secondary-color: #707477;
   --text-tertiary-color: #a1a5a9;
-  --text-link-color: #2DACF9;
-  --button-surface-primary-color: #2DACF9;
+  --text-link-color: #2dacf9;
+  --button-surface-primary-color: #2dacf9;
   --button-surface-secondary-color: #f7fbff;
   --button-label-primary-color: #f7fbff;
   --button-label-secondary-color: #313539;
@@ -27,7 +29,8 @@
   --emphasis-pink-color: #fbb0ed;
   --emphasis-red-color: #fba6a3;
 
-  body.dark {
+  /* Dark Mode */
+  @media (prefers-color-scheme: dark) {
     --surface-level-0-color: #0d1114;
     --surface-level-1-color: #191d21;
     --surface-level-2-color: #25292d;
@@ -36,8 +39,8 @@
     --text-primary-color: #ebeff2;
     --text-secondary-color: #a1a5a9;
     --text-tertiary-color: #63676b;
-    --text-link-color: #2DACF9;
-    --button-surface-primary-color: #2DACF9;
+    --text-link-color: #2dacf9;
+    --button-surface-primary-color: #2dacf9;
     --button-surface-secondary-color: #4b4f52;
     --button-label-primary-color: #f7fbff;
     --button-label-secondary-color: #ebeff2;
@@ -70,9 +73,6 @@
   --nav-font-weight: 300;
   --nav-line-height: 140%;
 }
-
-/* Dark Mode: system preference is handled by the toggle component on mount.
-   The body.dark block inside :root is the single source of truth. */
 
 /* Layout */
 * {
@@ -163,7 +163,7 @@
           display: none;
         }
 
-        body.dark & {
+        @media (prefers-color-scheme: dark) {
           .light {
             display: none;
           }
@@ -178,12 +178,6 @@
         align-items: center;
         gap: var(--spacing-small);
         flex-shrink: 0;
-
-        .toggle button {
-          width: 44px;
-          height: 44px;
-          padding: var(--spacing-xs);
-        }
       }
     }
 
@@ -460,8 +454,10 @@ code {
   }
 
   /* Shiki Code Highlighting Dark Mode */
-  body.dark &,
-  body.dark & span {
-    color: var(--shiki-dark) !important;
+  @media (prefers-color-scheme: dark) {
+    &,
+    & span {
+      color: var(--shiki-dark) !important;
+    }
   }
 }
