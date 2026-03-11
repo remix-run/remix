@@ -80,10 +80,10 @@ describe('login()', () => {
           schemes: [
             sessionAuth({
               read(session) {
-                return session.get('auth') as { userId: string; method: string } | null
+                return session.get('auth') as { subjectId: string } | null
               },
               verify(value) {
-                return users.get(value.userId) ?? null
+                return users.get(value.subjectId) ?? null
               },
               invalidate(session) {
                 session.unset('auth')
@@ -98,7 +98,7 @@ describe('login()', () => {
       '/login',
       login(provider, {
         createSessionAuth(user) {
-          return { userId: user.id, method: 'password' as const }
+          return { subjectId: user.id }
         },
         successRedirectTo: '/dashboard',
       }),
@@ -160,7 +160,7 @@ describe('login()', () => {
       '/login',
       login(provider, {
         createSessionAuth() {
-          return { userId: 'u1', method: 'password' as const }
+          return { subjectId: 'u1' }
         },
         failureRedirectTo: '/login',
       }),
@@ -205,7 +205,7 @@ describe('login()', () => {
       '/login',
       login(provider, {
         createSessionAuth(user) {
-          return { userId: user.id, method: 'password' as const }
+          return { subjectId: user.id }
         },
         onSuccess(_user, _sessionAuth, context) {
           let session = context.get(Session)
@@ -229,7 +229,7 @@ describe('login()', () => {
     )
 
     assert.deepEqual(await response.json(), {
-      auth: { userId: 'u1', method: 'password' },
+      auth: { subjectId: 'u1' },
     })
   })
 })

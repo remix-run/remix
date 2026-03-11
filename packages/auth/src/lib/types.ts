@@ -1,8 +1,7 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-export interface AuthSessionRecord<method extends string = string> {
-  userId: string
-  method: method
+export interface SessionAuthData {
+  [key: string]: unknown
 }
 
 export interface OAuthTokens {
@@ -38,10 +37,7 @@ export interface CredentialsProvider<input, result, provider extends string = st
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
-export interface LoginOptions<
-  result,
-  session_auth extends AuthSessionRecord = AuthSessionRecord,
-> {
+export interface LoginOptions<result, session_auth extends SessionAuthData = SessionAuthData> {
   sessionKey?: string
   createSessionAuth(
     result: result,
@@ -69,7 +65,7 @@ export interface OAuthLoginOptions {
 export interface CallbackOptions<
   profile,
   provider extends string,
-  session_auth extends AuthSessionRecord = AuthSessionRecord<provider>,
+  session_auth extends SessionAuthData = SessionAuthData,
 > {
   sessionKey?: string
   transactionKey?: string

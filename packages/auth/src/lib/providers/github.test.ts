@@ -63,7 +63,7 @@ describe('github provider', () => {
         '/auth/github/callback',
         callback(provider, {
           createSessionAuth(result) {
-            return { userId: String(result.profile.id), method: 'github' as const }
+            return { subjectId: String(result.profile.id) }
           },
           onSuccess(result) {
             return Response.json(result)

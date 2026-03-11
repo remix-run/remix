@@ -82,10 +82,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { userId: string; method: string } | null
+            return session.get('auth') as { subjectId: string } | null
           },
           verify(value) {
-            return users.getById(value.userId)
+            return users.getById(value.subjectId)
           },
           invalidate(session) {
             session.unset('auth')
@@ -107,7 +107,7 @@ router.get(
   callback(googleProvider, {
     async createSessionAuth(result) {
       let user = await users.upsertFromGoogle(result.profile)
-      return { userId: user.id, method: 'google' as const }
+      return { subjectId: user.id }
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -118,7 +118,7 @@ router.post(routes.auth.session.login.action, {
   middleware: [formData()],
   action: login(passwordProvider, {
     async createSessionAuth(user) {
-      return { userId: user.id, method: 'password' as const }
+      return { subjectId: user.id }
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -155,7 +155,7 @@ router.get(routes.app.dashboard, {
 
 This package writes an auth record to `context.get(Session)` by default:
 
-- OAuth and credentials logins store session data under `auth`
+- OAuth and credentials logins store app-defined session data under `auth`
 - OAuth transactions use the internal `__auth` session key
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(credentials(...))`
@@ -250,14 +250,14 @@ router.post(routes.auth.session.login.action, {
   middleware: [formData()],
   action: login(passwordProvider, {
     async createSessionAuth(user) {
-      return { userId: user.id, method: 'password' as const }
+      return { subjectId: user.id }
     },
     failureRedirectTo: routes.auth.session.login.index.href(),
   }),
 })
 ```
 
-`createSessionAuth(result, context)` gives you one place to normalize every successful login into the same session record shape.
+`createSessionAuth(result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist.
 
 ## Callback Handling
 
@@ -292,7 +292,7 @@ router.get(
   callback(githubProvider, {
     async createSessionAuth(result) {
       let user = await users.upsertFromGitHub(result.profile)
-      return { userId: user.id, method: 'github' as const }
+      return { subjectId: user.id }
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -322,10 +322,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { userId: string; method: string } | null
+            return session.get('auth') as { subjectId: string } | null
           },
           verify(value) {
-            return users.getById(value.userId)
+            return users.getById(value.subjectId)
           },
         }),
       ],
