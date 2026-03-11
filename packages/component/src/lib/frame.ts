@@ -1056,7 +1056,11 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
 }
 
 function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
-  return !(content instanceof ReadableStream || content instanceof DocumentFragment || typeof content === 'string')
+  return !(
+    content instanceof ReadableStream ||
+    content instanceof DocumentFragment ||
+    typeof content === 'string'
+  )
 }
 
 function isFullDocumentHtml(content: string): boolean {

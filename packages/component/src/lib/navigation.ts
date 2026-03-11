@@ -21,7 +21,11 @@ export async function navigate(
   options?: NavigationOptions,
 ) {
   let navigation = getNavigation()
-  let state = { target: target ?? undefined, src: src ?? href, $rmx: true } satisfies NavigationState
+  let state = {
+    target: target ?? undefined,
+    src: src ?? href,
+    $rmx: true,
+  } satisfies NavigationState
   let transition = navigation.navigate(href, {
     state,
     history: options?.history,

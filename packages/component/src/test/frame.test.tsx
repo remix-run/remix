@@ -89,12 +89,9 @@ describe('run', () => {
 
   it('forwards hydrated client entry root error events to app listeners', async () => {
     let error = new Error('hydrated client entry root error')
-    let Broken = clientEntry(
-      '/js/broken.js#Broken',
-      function Broken() {
-        return () => <button>Trigger</button>
-      },
-    )
+    let Broken = clientEntry('/js/broken.js#Broken', function Broken() {
+      return () => <button>Trigger</button>
+    })
 
     let html = await drain(renderToStream(<Broken />))
     document.body.innerHTML = html
