@@ -1,9 +1,6 @@
 import * as esbuild from 'esbuild'
-import * as fs from 'node:fs/promises'
-import * as path from 'node:path'
 
-let transformCache = new Map<string, string>()
-let bundleCache = new Map<string, string>()
+let cache = new Map<string, string>()
 
 const esbuildOpts = {
   format: 'esm',
@@ -20,38 +17,13 @@ const esbuildOpts = {
   },
 } as const
 
-export async function transformFile(filePath: string): Promise<string> {
-  if (transformCache.has(filePath)) {
-    return transformCache.get(filePath)!
-  }
-
-  try {
-    let source = await fs.readFile(filePath, 'utf-8')
-
-    let ext = path.extname(filePath)
-    let result = await esbuild.transform(source, {
-      ...esbuildOpts,
-      loader: ext === '.tsx' ? 'tsx' : ext === '.jsx' ? 'jsx' : 'ts',
-      sourcefile: filePath,
-    })
-    let code = result.code
-
-    code = code.replace(/__name/g, '(() => {})')
-    transformCache.set(filePath, code)
-    return code
-  } catch (error: any) {
-    console.error(`Transform error in ${filePath}:`, error)
-    return `throw new Error('Transform error: ${error.message?.replace(/'/g, "\\'")}');`
-  }
-}
-
 export async function bundleFile(
   filePath: string,
-  opts: { absWorkingDir?: string } = {},
+  opts: { absWorkingDir?: string; cache?: boolean } = {},
 ): Promise<string> {
   let cacheKey = [filePath, opts.absWorkingDir ?? ''].join(':')
-  if (bundleCache.has(cacheKey)) {
-    return bundleCache.get(cacheKey)!
+  if (opts.cache == false && cache.has(cacheKey)) {
+    return cache.get(cacheKey)!
   }
 
   try {
@@ -65,7 +37,9 @@ export async function bundleFile(
     })
 
     let code = result.outputFiles[0].text.replace(/__name/g, '(() => {})')
-    bundleCache.set(filePath, code)
+    if (opts.cache !== false) {
+      cache.set(cacheKey, code)
+    }
     return code
   } catch (error: any) {
     console.error(`Bundle error in ${filePath}:`, error)
@@ -74,5 +48,5 @@ export async function bundleFile(
 }
 
 export function clearCache() {
-  transformCache.clear()
+  cache.clear()
 }
