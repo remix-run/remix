@@ -1,6 +1,6 @@
 # auth-middleware
 
-Pluggable authentication middleware for Remix `fetch-router`. It resolves identity into `context.auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior.
+Pluggable authentication middleware for Remix `fetch-router`. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior.
 
 ## Features
 
@@ -19,7 +19,7 @@ npm i remix
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { auth, bearer, requireAuth } from 'remix/auth-middleware'
+import { auth, Auth, bearer, requireAuth } from 'remix/auth-middleware'
 
 let router = createRouter({
   middleware: [
@@ -41,7 +41,9 @@ let router = createRouter({
 
 router.map('/private', {
   middleware: [requireAuth()],
-  action({ auth }) {
+  action(context) {
+    let auth = context.get(Auth)
+
     return Response.json({
       userId: auth.authenticated ? auth.principal.id : null,
     })
@@ -49,7 +51,7 @@ router.map('/private', {
 })
 ```
 
-`auth()` resolves auth state and sets `context.auth`:
+`auth()` resolves auth state and stores it at `context.get(Auth)`:
 
 - `{ authenticated: true, principal, scheme }`
 - `{ authenticated: false, error? }`
@@ -67,7 +69,7 @@ This single router demonstrates five auth modes.
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
 import { redirect } from 'remix/response/redirect'
-import { auth, apiKey, bearer, requireAuth } from 'remix/auth-middleware'
+import { auth, apiKey, Auth, bearer, requireAuth } from 'remix/auth-middleware'
 
 let routes = route({
   home: '/',
@@ -115,8 +117,10 @@ let router = createRouter({
 })
 
 // Mode A: public route with optional auth
-router.get(routes.home, ({ auth }) => {
-  if (auth?.authenticated) {
+router.get(routes.home, ({ get }) => {
+  let auth = get(Auth)
+
+  if (auth.authenticated) {
     return new Response(`Welcome back via ${auth.scheme}`)
   }
 
@@ -138,7 +142,9 @@ router.map(routes.api.profile, {
       },
     }),
   ],
-  action({ auth }) {
+  action({ get }) {
+    let auth = get(Auth)
+
     return Response.json({
       authenticatedWith: auth.authenticated ? auth.scheme : null,
       principal: auth.authenticated ? auth.principal : null,
@@ -149,7 +155,9 @@ router.map(routes.api.profile, {
 // Another API endpoint using default 401 behavior
 router.map(routes.api.integrations, {
   middleware: [requireAuth()],
-  action({ auth }) {
+  action({ get }) {
+    let auth = get(Auth)
+
     return Response.json({
       principal: auth.authenticated ? auth.principal : null,
     })
@@ -166,7 +174,9 @@ router.map(routes.app.dashboard, {
       },
     }),
   ],
-  action({ auth }) {
+  action({ get }) {
+    let auth = get(Auth)
+
     if (!auth.authenticated) {
       throw new Error('Expected authenticated state after requireAuth()')
     }
@@ -181,7 +191,9 @@ router.map(routes.api.bearerOnly, {
     auth({ schemes: [bearerScheme] }),
     requireAuth(),
   ],
-  action({ auth }) {
+  action({ get }) {
+    let auth = get(Auth)
+
     return Response.json({
       mode: 'bearer-only',
       scheme: auth.authenticated ? auth.scheme : null,
@@ -194,7 +206,9 @@ router.map(routes.api.apiKeyOnly, {
     auth({ schemes: [apiKeyScheme] }),
     requireAuth(),
   ],
-  action({ auth }) {
+  action({ get }) {
+    let auth = get(Auth)
+
     return Response.json({
       mode: 'api-key-only',
       scheme: auth.authenticated ? auth.scheme : null,
