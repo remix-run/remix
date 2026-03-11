@@ -146,9 +146,9 @@ export class RoutePattern<source extends string = string> {
 
       // hostname
       if (this.ast.hostname === null) {
-        throw new HrefError({ type: 'missing-hostname', pattern: this as RoutePattern })
+        throw new HrefError({ type: 'missing-hostname', pattern: this })
       }
-      let hostname = this.ast.hostname.href(this as RoutePattern, params ?? {})
+      let hostname = this.ast.hostname.href(this, params ?? {})
 
       // port
       let port = this.ast.port === null ? '' : `:${this.ast.port}`
@@ -156,11 +156,11 @@ export class RoutePattern<source extends string = string> {
     }
 
     // pathname
-    let pathname = this.ast.pathname.href(this as RoutePattern, params ?? {})
+    let pathname = this.ast.pathname.href(this, params ?? {})
     result += '/' + pathname
 
     // search
-    let search = hrefSearch(this as RoutePattern, searchParams)
+    let search = hrefSearch(this, searchParams)
     if (search) result += `?${search}`
 
     return result
@@ -232,7 +232,7 @@ export class RoutePattern<source extends string = string> {
     })
 
     return {
-      pattern: this as RoutePattern,
+      pattern: this,
       url,
       params: params as Params<source>,
       paramsMeta: { hostname: hostname ?? [], pathname },
