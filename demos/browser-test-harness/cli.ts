@@ -24,7 +24,7 @@ let { values, positionals } = parseArgs({
   allowPositionals: true,
 })
 
-let pattern = positionals[0] || '**/*.test.ts'
+let pattern = positionals[0] || '**/*.test.{ts,tsx}'
 let port = Number(values.port)
 let isWatchMode = values.watch ?? false
 

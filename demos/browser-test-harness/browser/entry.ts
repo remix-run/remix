@@ -1,5 +1,5 @@
 import { run } from 'remix/component'
-import * as components from './components.tsx'
+import * as components from './test-status.tsx'
 
 let app = run(document, {
   async loadModule(moduleUrl: string, exportName: string) {

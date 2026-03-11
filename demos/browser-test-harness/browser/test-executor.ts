@@ -84,5 +84,9 @@ export async function runTests(): Promise<TestResults> {
     }
   }
 
+  // Clear suites in-place so the shared test-framework.ts module is reset
+  // for the next test file (which reuses the same cached module instance)
+  suites.length = 0
+
   return results
 }
