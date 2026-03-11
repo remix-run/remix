@@ -330,10 +330,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { userId: string; method: string } | null
+            return session.get('auth') as { subjectId: string } | null
           },
           verify(value) {
-            return users.getById(value.userId)
+            return users.getById(value.subjectId)
           },
           invalidate(session) {
             session.unset('auth')
@@ -352,7 +352,7 @@ router.get(routes.app.dashboard, {
 
     return Response.json({
       auth,
-      sessionMethod: session.get('auth')?.method ?? null,
+      sessionSubjectId: session.get('auth')?.subjectId ?? null,
     })
   },
 })

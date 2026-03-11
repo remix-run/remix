@@ -2,11 +2,11 @@ import type { RequestHandler } from '@remix-run/fetch-router'
 
 import { getOAuthProviderRuntime } from './provider.ts'
 import type {
-  AuthSessionRecord,
   CredentialsProvider,
   LoginOptions,
   OAuthLoginOptions,
   OAuthProvider,
+  SessionAuthData,
 } from './types.ts'
 import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
 
@@ -15,7 +15,7 @@ export function login<profile>(
   options?: OAuthLoginOptions,
 ): RequestHandler
 
-export function login<input, result, session_auth extends AuthSessionRecord>(
+export function login<input, result, session_auth extends SessionAuthData>(
   provider: CredentialsProvider<input, result>,
   options: LoginOptions<result, session_auth>,
 ): RequestHandler

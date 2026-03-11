@@ -19,7 +19,6 @@ export type {
 export type { GoogleOptions, GoogleProfile } from './lib/providers/google.ts'
 
 export type {
-  AuthSessionRecord,
   CallbackOptions,
   CredentialsProvider,
   LoginOptions,
@@ -28,4 +27,5 @@ export type {
   OAuthProvider,
   OAuthResult,
   OAuthTokens,
+  SessionAuthData,
 } from './lib/types.ts'

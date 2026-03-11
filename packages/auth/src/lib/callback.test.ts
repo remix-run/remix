@@ -58,10 +58,10 @@ describe('callback()', () => {
             schemes: [
               sessionAuth({
                 read(session) {
-                  return session.get('auth') as { userId: string; method: string } | null
+                  return session.get('auth') as { subjectId: string } | null
                 },
                 verify(value) {
-                  return users.get(value.userId) ?? null
+                  return users.get(value.subjectId) ?? null
                 },
               }),
             ],
@@ -74,7 +74,7 @@ describe('callback()', () => {
         '/auth/google/callback',
         callback(provider, {
           createSessionAuth(result) {
-            return { userId: result.profile.sub, method: 'google' as const }
+            return { subjectId: result.profile.sub }
           },
         }),
       )
@@ -129,7 +129,7 @@ describe('callback()', () => {
       '/auth/google/callback',
       callback(provider, {
         createSessionAuth(result) {
-          return { userId: result.profile.sub, method: 'google' as const }
+          return { subjectId: result.profile.sub }
         },
         onFailure(error) {
           return Response.json(

@@ -57,7 +57,7 @@ describe('facebook provider', () => {
         '/auth/facebook/callback',
         callback(provider, {
           createSessionAuth(result) {
-            return { userId: result.profile.id, method: 'facebook' as const }
+            return { subjectId: result.profile.id }
           },
           onSuccess(result) {
             return Response.json(result)
