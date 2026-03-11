@@ -1,6 +1,12 @@
 import type { Component, ComponentHandle, FrameHandle } from './component.ts'
 import { createComponent, Frame } from './component.ts'
 import type { Frame as FrameInstance } from './frame.ts'
+import {
+  bindComponentInstance,
+  getNearestParentComponentInstance,
+  unbindComponentInstance,
+  type ComponentInstance,
+} from './instance.ts'
 import type {
   ComponentNode,
   CommittedComponentNode,
@@ -878,6 +884,7 @@ function diffFrame(
 }
 
 export function renderComponent(
+  instance: ComponentInstance,
   handle: ComponentHandle,
   currContent: VNode | null,
   next: ComponentNode,
@@ -889,6 +896,16 @@ export function renderComponent(
   anchor?: Node,
   cursor?: Node | null,
 ): Node | null | undefined {
+  bindComponentInstance({
+    handle,
+    domParent,
+    parentComponent: instance.parentComponent,
+    parentVNode: vParent,
+    vnode: next as CommittedComponentNode,
+    content: currContent,
+    range: instance.range,
+  })
+
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
 
@@ -908,10 +925,18 @@ export function renderComponent(
   next._parent = vParent
   syncComponentRange(next)
 
-  let committed = next as CommittedComponentNode
+  bindComponentInstance({
+    handle,
+    domParent,
+    parentComponent: instance.parentComponent,
+    parentVNode: vParent,
+    vnode: next as CommittedComponentNode,
+    content,
+    range: next._range,
+  })
 
   handle.setScheduleUpdate(() => {
-    scheduler.enqueue(committed, domParent)
+    scheduler.enqueue(instance)
   })
 
   scheduler.enqueueTasks(tasks)
@@ -952,7 +977,17 @@ function diffComponent(
       },
     })
 
+    let instance = bindComponentInstance({
+      handle: next._handle,
+      domParent,
+      parentComponent: getNearestParentComponentInstance(vParent),
+      parentVNode: vParent,
+      vnode: next as CommittedComponentNode,
+      content: null,
+    })
+
     return renderComponent(
+      instance,
       next._handle,
       null,
       next,
@@ -967,7 +1002,17 @@ function diffComponent(
   }
   next._handle = curr._handle
   let { _content, _handle } = curr
+  let instance = bindComponentInstance({
+    handle: _handle,
+    domParent,
+    parentComponent: getNearestParentComponentInstance(vParent),
+    parentVNode: vParent,
+    vnode: next as CommittedComponentNode,
+    content: _content,
+    range: curr._range,
+  })
   return renderComponent(
+    instance,
     _handle,
     _content,
     next,
@@ -1025,6 +1070,7 @@ function teardownNode(
   if (isCommittedComponentNode(node)) {
     teardownNode(node._content, mode, domParent, scheduler)
     let tasks = node._handle.remove()
+    unbindComponentInstance(node._handle)
     scheduler.enqueueTasks(tasks)
     return
   }

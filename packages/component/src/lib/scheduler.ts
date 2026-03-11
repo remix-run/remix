@@ -1,6 +1,5 @@
 import { createDocumentState } from './document-state.ts'
-import type { CommittedComponentNode, VNode } from './vnode.ts'
-import { isCommittedComponentNode } from './vnode.ts'
+import type { ComponentInstance } from './instance.ts'
 import { findNextSiblingDomAnchor, setActiveSchedulerUpdateParents } from './reconcile-anchors.ts'
 import { renderComponent } from './reconcile.ts'
 import type { RendererRuntime } from './runtime.ts'
@@ -23,7 +22,7 @@ export function createScheduler(
   rootTarget: EventTarget,
 ) {
   let documentState = createDocumentState(runtime.document)
-  let scheduled = new Map<CommittedComponentNode, ParentNode>()
+  let scheduled = new Set<ComponentInstance>()
   let commitTasks: EmptyFn[] = []
   let flushScheduled = false
   let cascadingUpdateCount = 0
@@ -31,7 +30,7 @@ export function createScheduler(
   let phaseEvents = new EventTarget()
   let scheduler: {
     runtime: RendererRuntime
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
+    enqueue(instance: ComponentInstance): void
     enqueueTasks(newTasks: EmptyFn[]): void
     addEventListener(
       type: SchedulerPhaseType,
@@ -65,7 +64,7 @@ export function createScheduler(
   function flush() {
     flushScheduled = false
 
-    let batch = new Map(scheduled)
+    let batch = new Set(scheduled)
     scheduled.clear()
 
     let hasWork = batch.size > 0 || commitTasks.length > 0
@@ -82,19 +81,22 @@ export function createScheduler(
 
     documentState.capture()
 
-    let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
+    let updateParents =
+      batch.size > 0 ? Array.from(new Set(Array.from(batch, (instance) => instance.domParent))) : []
     setActiveSchedulerUpdateParents(updateParents)
     dispatchPhaseEvent('beforeUpdate', updateParents)
 
     if (batch.size > 0) {
-      let vnodes = Array.from(batch)
-      let noScheduledAncestor = new Set<VNode>()
+      let instances = Array.from(batch)
+      let safe = new Set<ComponentInstance>()
 
-      for (let [vnode, domParent] of vnodes) {
-        if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
-        let handle = vnode._handle
-        let curr = vnode._content
-        let vParent = vnode._parent!
+      for (let instance of instances) {
+        if (ancestorIsScheduled(instance, batch, safe)) continue
+        let vnode = instance.vnode
+        let handle = instance.handle
+        let curr = instance.content
+        let vParent = instance.parentVNode
+        if (!vnode || !vParent) continue
         // Calculate anchor at render time from current vdom position (never stale).
         // Needed for fragment self-updates that add children - without this, new children
         // would be appended after siblings. The keyed diff has placement logic, but unkeyed
@@ -102,10 +104,11 @@ export function createScheduler(
         let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
         try {
           renderComponent(
+            instance,
             handle,
             curr,
             vnode,
-            domParent,
+            instance.domParent,
             handle.frame,
             scheduler,
             rootTarget,
@@ -152,15 +155,14 @@ export function createScheduler(
   }
 
   function ancestorIsScheduled(
-    vnode: VNode,
-    batch: Map<CommittedComponentNode, ParentNode>,
-    safe: Set<VNode>,
+    instance: ComponentInstance,
+    batch: Set<ComponentInstance>,
+    safe: Set<ComponentInstance>,
   ): boolean {
-    let path: VNode[] = []
-    let current = vnode._parent
+    let path: ComponentInstance[] = []
+    let current = instance.parentComponent
 
     while (current) {
-      // Already verified this node has no scheduled ancestor above it
       if (safe.has(current)) {
         for (let node of path) safe.add(node)
         return false
@@ -168,22 +170,21 @@ export function createScheduler(
 
       path.push(current)
 
-      if (isCommittedComponentNode(current) && batch.has(current)) {
+      if (batch.has(current)) {
         return true
       }
 
-      current = current._parent
+      current = current.parentComponent
     }
 
-    // Reached root - mark entire path as safe for future lookups
     for (let node of path) safe.add(node)
     return false
   }
 
   scheduler = {
     runtime,
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
-      scheduled.set(vnode, domParent)
+    enqueue(instance: ComponentInstance): void {
+      scheduled.add(instance)
       scheduleFlush()
     },
 
