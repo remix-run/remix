@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make Change File"
+  short_description: "Create or update Remix change files using repo conventions."
+  default_prompt: "Use $make-change-file to add or revise package change files for this Remix repo."

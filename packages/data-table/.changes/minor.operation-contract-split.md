@@ -1,5 +1,7 @@
-BREAKING CHANGE: Rename adapter operation contract names/fields (`AdapterStatement` -> `DataManipulationOperation`, `statement` -> `operation`).
+BREAKING CHANGE: Rename adapter operation contracts and fields.
 
-Add separate adapter execution methods for DML and migration/DDL operations: `execute` (DML operations) and `migrate` (migration/DDL operations).
+`AdapterStatement` becomes `DataManipulationOperation`, and `statement` becomes `operation`.
+
+Add separate adapter execution methods for DML and migration/DDL operations: `execute` for `DataManipulationOperation` requests and `migrate` for `DataMigrationOperation` requests.
 
 Add adapter introspection methods with optional transaction context: `hasTable(table, transaction?)` and `hasColumn(table, column, transaction?)`.
