@@ -1,11 +1,11 @@
 {
-  "name": "@remix-run/testing-demo-browser",
+  "name": "remix-testing-demo-tests",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "remix-test 'fixtures/*.test.{ts,tsx}'",
-    "test": "remix-test --headless 'fixtures/*.test.{ts,tsx}'"
+    "test": "remix-test 'fixtures/*.test.{ts,tsx}'"
   },
   "dependencies": {
     "@remix-run/component": "workspace:*",
