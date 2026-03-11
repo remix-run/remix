@@ -1,7 +1,23 @@
 import * as esbuild from 'esbuild'
 import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 
 let transformCache = new Map<string, string>()
+
+const esbuildOpts = {
+  format: 'esm',
+  target: 'es2022',
+  platform: 'browser',
+  sourcemap: 'inline',
+  tsconfigRaw: {
+    compilerOptions: {
+      verbatimModuleSyntax: true,
+      experimentalDecorators: false,
+      jsx: 'react-jsx',
+      jsxImportSource: 'remix/component',
+    },
+  },
+} as const
 
 export async function transformFile(filePath: string): Promise<string> {
   if (transformCache.has(filePath)) {
@@ -11,27 +27,15 @@ export async function transformFile(filePath: string): Promise<string> {
   try {
     let source = await fs.readFile(filePath, 'utf-8')
 
-    source = source
-      .replace(/import\s+.*?\s+from\s+['"]node:test['"]\s*;?\s*/g, '')
-      .replace(/import\s+.*?\s+from\s+['"]node:assert\/strict['"]\s*;?\s*/g, '')
-
+    let ext = path.extname(filePath)
     let result = await esbuild.transform(source, {
-      loader: 'ts',
-      format: 'esm',
-      target: 'es2022',
-      platform: 'browser',
-      sourcemap: 'inline',
+      ...esbuildOpts,
+      loader: ext === '.tsx' ? 'tsx' : ext === '.jsx' ? 'jsx' : 'ts',
       sourcefile: filePath,
-      tsconfigRaw: {
-        compilerOptions: {
-          verbatimModuleSyntax: true,
-          experimentalDecorators: false,
-        },
-      },
     })
+    let code = result.code
 
-    let code = result.code.replace(/__name/g, '(() => {})')
-
+    code = code.replace(/__name/g, '(() => {})')
     transformCache.set(filePath, code)
     return code
   } catch (error: any) {
@@ -48,21 +52,11 @@ export async function bundleFile(filePath: string): Promise<string> {
 
   try {
     let result = await esbuild.build({
+      ...esbuildOpts,
       entryPoints: [filePath],
       bundle: true,
-      format: 'esm',
-      target: 'es2022',
-      platform: 'browser',
-      sourcemap: 'inline',
+      external: ['remix/*'],
       write: false,
-      tsconfigRaw: {
-        compilerOptions: {
-          verbatimModuleSyntax: true,
-          experimentalDecorators: false,
-          jsx: 'react-jsx',
-          jsxImportSource: 'remix/component',
-        },
-      },
     })
 
     let code = result.outputFiles[0].text.replace(/__name/g, '(() => {})')

@@ -1,6 +1,4 @@
 import { clientEntry, on, type Handle } from 'remix/component'
-import { setupTestFramework, resetTestFramework } from './test-framework.ts'
-import { setupAssertions } from './assertions.ts'
 import { runTests } from './test-executor.ts'
 
 // Matches `file:line:col` at end of a stack frame, e.g. `(fixtures/foo.ts:10:5)` or ` fixtures/foo.ts:10:5`
@@ -28,7 +26,10 @@ function renderStack(stack: string, baseDir: string) {
       return (
         <div key={i}>
           {before}
-          <a href={href} style={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: '#aaa' }}>
+          <a
+            href={href}
+            style={{ color: 'inherit', textDecoration: 'underline', textDecorationColor: '#aaa' }}
+          >
             {full}
           </a>
           {after}
@@ -56,18 +57,12 @@ export const TestStatus = clientEntry(
 
     async function run() {
       try {
-        setupTestFramework()
-        setupAssertions()
-
         for (let testFile of setup.testFiles) {
-          resetTestFramework()
-          await import(`/_module/${encodeURIComponent(testFile)}`)
-          let results = await runTests()
-          allResults.passed += results.passed
-          allResults.failed += results.failed
-          allResults.tests.push(
-            ...results.tests.map((t) => ({ ...t, filePath: testFile }) as TestResult),
-          )
+          await import(`/_module/${testFile}`)
+          let { passed, failed, tests } = await runTests()
+          allResults.passed += passed
+          allResults.failed += failed
+          tests.forEach((t) => allResults.tests.push({ ...t, filePath: testFile }))
           handle.update()
         }
 

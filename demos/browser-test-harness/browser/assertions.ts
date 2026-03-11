@@ -12,7 +12,7 @@ export class AssertionError extends Error {
   }
 }
 
-function deepEqual(a: any, b: any): boolean {
+function isDeepEqual(a: any, b: any): boolean {
   if (a === b) return true
   if (a == null || b == null) return false
   if (typeof a !== typeof b) return false
@@ -25,7 +25,7 @@ function deepEqual(a: any, b: any): boolean {
 
     if (keysA.length !== keysB.length) return false
 
-    return keysA.every((key) => deepEqual(a[key], b[key]))
+    return keysA.every((key) => isDeepEqual(a[key], b[key]))
   }
 
   return false
@@ -66,7 +66,7 @@ export let assert = {
   },
 
   deepEqual<T>(actual: T, expected: T, message?: string) {
-    if (!deepEqual(actual, expected)) {
+    if (!isDeepEqual(actual, expected)) {
       throw new AssertionError({
         message: message || `Objects not deeply equal`,
         actual,
@@ -159,6 +159,5 @@ export let assert = {
   },
 }
 
-export function setupAssertions() {
-  ;(globalThis as any).assert = assert
-}
+// Individual named exports so `import * as assert from 'node:assert/strict'` works
+export const { ok, equal, notEqual, deepEqual, throws, rejects } = assert

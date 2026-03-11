@@ -1,3 +1,6 @@
+import { createRoot } from 'remix/component'
+import type { RemixNode } from 'remix/component/jsx-runtime'
+
 interface TestSuite {
   name: string
   tests: Test[]
@@ -16,69 +19,71 @@ interface Test {
 let currentSuite: TestSuite | null = null
 let rootSuites: TestSuite[] = []
 
-export function setupTestFramework() {
-  ;(globalThis as any).describe = function describe(name: string, fn: () => void) {
-    let parentSuite = currentSuite
-    let suite: TestSuite = {
-      name,
-      tests: [],
-    }
+// Expose for test-executor.ts which reads this global
+;(globalThis as any).__testSuites = rootSuites
 
-    if (parentSuite) {
-      throw new Error('Nested describe() not supported in PoC')
-    } else {
-      rootSuites.push(suite)
-    }
+export function describe(name: string, fn: () => void) {
+  let parentSuite = currentSuite
+  let suite: TestSuite = { name, tests: [] }
 
-    currentSuite = suite
-    fn()
-    currentSuite = parentSuite
+  if (parentSuite) {
+    throw new Error('Nested describe() not supported')
   }
 
-  ;(globalThis as any).it = function it(name: string, fn: () => void | Promise<void>) {
-    if (!currentSuite) {
-      throw new Error('it() must be called inside describe()')
-    }
+  rootSuites.push(suite)
+  currentSuite = suite
+  fn()
+  currentSuite = parentSuite
+}
 
-    currentSuite.tests.push({
-      name,
-      fn,
-      suite: currentSuite,
-    })
-  }
+export function it(name: string, fn: () => void | Promise<void>) {
+  if (!currentSuite) throw new Error('it() must be called inside describe()')
+  currentSuite.tests.push({ name, fn, suite: currentSuite })
+}
 
-  ;(globalThis as any).beforeEach = function beforeEach(fn: () => void | Promise<void>) {
-    if (!currentSuite) {
-      throw new Error('beforeEach() must be called inside describe()')
-    }
-    currentSuite.beforeEach = fn
-  }
+export function beforeEach(fn: () => void | Promise<void>) {
+  if (!currentSuite) throw new Error('beforeEach() must be called inside describe()')
+  currentSuite.beforeEach = fn
+}
 
-  ;(globalThis as any).afterEach = function afterEach(fn: () => void | Promise<void>) {
-    if (!currentSuite) {
-      throw new Error('afterEach() must be called inside describe()')
-    }
-    currentSuite.afterEach = fn
-  }
+export function afterEach(fn: () => void | Promise<void>) {
+  if (!currentSuite) throw new Error('afterEach() must be called inside describe()')
+  currentSuite.afterEach = fn
+}
 
-  ;(globalThis as any).beforeAll = function beforeAll(fn: () => void | Promise<void>) {
-    if (!currentSuite) {
-      throw new Error('beforeAll() must be called inside describe()')
-    }
-    currentSuite.beforeAll = fn
-  }
+export function beforeAll(fn: () => void | Promise<void>) {
+  if (!currentSuite) throw new Error('beforeAll() must be called inside describe()')
+  currentSuite.beforeAll = fn
+}
 
-  ;(globalThis as any).afterAll = function afterAll(fn: () => void | Promise<void>) {
-    if (!currentSuite) {
-      throw new Error('afterAll() must be called inside describe()')
-    }
-    currentSuite.afterAll = fn
-  }
-
-  ;(globalThis as any).__testSuites = rootSuites
+export function afterAll(fn: () => void | Promise<void>) {
+  if (!currentSuite) throw new Error('afterAll() must be called inside describe()')
+  currentSuite.afterAll = fn
 }
 
 export function resetTestFramework() {
   rootSuites.length = 0
   currentSuite = null
+}
+
+export function render(node: RemixNode) {
+  let container = document.createElement('div')
+  document.body.appendChild(container)
+  let root = createRoot(container)
+  root.render(node)
+  root.flush()
+  return {
+    container,
+    root,
+    $: (s: string) => container.querySelector<HTMLElement>(s),
+    $$: (s: string) => container.querySelectorAll<HTMLElement>(s),
+    async act(fn: () => unknown | Promise<unknown>) {
+      await fn()
+      await Promise.resolve()
+    },
+    cleanup() {
+      root.dispose()
+      container.remove()
+    },
+  }
 }

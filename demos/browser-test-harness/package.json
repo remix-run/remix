@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "test": "tsx cli.ts --headless",
-    "test:example": "tsx cli.ts \"fixtures/**/*.test.ts\"",
+    "test:example": "tsx cli.ts \"fixtures/**/*.test.{ts,tsx}\"",
     "dev": "tsx cli.ts",
     "typecheck": "tsc --noEmit"
   },

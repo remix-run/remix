@@ -8,7 +8,7 @@ import { renderToString } from 'remix/component/server'
 import { transformFile, bundleFile } from './lib/transform.ts'
 import { discoverTests } from './lib/test-discovery.ts'
 import type { RemixNode } from 'remix/component/jsx-runtime'
-import { TestStatus } from './browser/components.tsx'
+import { TestStatus } from './browser/test-status.tsx'
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -16,7 +16,7 @@ let routes = route({
   testRunner: '/',
   entry: '/entry.js',
   testModule: '/_module/:path*',
-  transformRuntime: '/_transform/:module',
+  pkg: '/_pkg/:package*',
 })
 
 let render = {
@@ -32,14 +32,14 @@ let render = {
   },
 }
 let testPattern = ''
-let allowedTestFiles = new Set<string>()
 
 let router = createRouter()
+
+let importMap = JSON.stringify({ imports: { 'remix/': '/_pkg/remix/' } })
 
 router.get(routes.testRunner, async () => {
   let absoluteFiles = await discoverTests(testPattern, __dirname)
   let testFiles = absoluteFiles.map((f) => path.relative(__dirname, f))
-  allowedTestFiles = new Set(testFiles)
 
   function TestPage() {
     return () => (
@@ -47,6 +47,7 @@ router.get(routes.testRunner, async () => {
         <head>
           <meta charset="utf-8" />
           <title>Tests: {testPattern}</title>
+          <script type={'importmap' as string}>{importMap}</script>
         </head>
         <body>
           <TestStatus setup={{ testFiles, baseDir: __dirname }} />
@@ -64,21 +65,27 @@ router.get(routes.testModule, async ({ url }) => {
   if (!filePath) {
     return new Response('Missing file path', { status: 400 })
   }
-  if (!allowedTestFiles.has(filePath)) {
+  let resolved = path.resolve(__dirname, filePath)
+  if (!resolved.startsWith(__dirname + path.sep)) {
     return new Response('Forbidden', { status: 403 })
   }
-  return render.js(await transformFile(path.resolve(__dirname, filePath)))
+  return render.js(await transformFile(resolved))
 })
 
 router.get(routes.entry, async () => {
-  let tsxPath = path.join(__dirname, 'browser', 'entry.tsx')
-  return render.js(await bundleFile(tsxPath))
+  let entryPath = path.join(__dirname, 'browser', 'entry.ts')
+  return render.js(await bundleFile(entryPath))
 })
 
-router.get(routes.transformRuntime, async ({ params }) => {
-  let name = params.module.replace('.js', '')
-  let tsPath = path.join(__dirname, 'browser', name + '.ts')
-  return render.js(await transformFile(tsPath))
+router.get(routes.pkg, async ({ url }) => {
+  // TODO: use params.package once the router's catch-all param extraction is fixed —
+  // currently it only returns the first character of the matched segment
+  let pkg = url.pathname.slice('/_pkg/'.length)
+  if (!pkg.startsWith('remix/')) {
+    return new Response('Forbidden', { status: 403 })
+  }
+  let resolved = fileURLToPath(import.meta.resolve(pkg))
+  return render.js(await bundleFile(resolved))
 })
 
 export async function startServer(port = 44100, pattern = ''): Promise<http.Server> {
