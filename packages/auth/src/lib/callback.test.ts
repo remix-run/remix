@@ -107,7 +107,7 @@ describe('callback()', () => {
       assert.deepEqual(await dashboardResponse.json(), {
         ok: true,
         identity: { id: 'u1', email: 'mj@example.com' },
-        scheme: 'session',
+        method: 'session',
       })
     } finally {
       restoreFetch()

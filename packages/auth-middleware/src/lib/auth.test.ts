@@ -51,7 +51,7 @@ describe('auth middleware', () => {
     assert.deepEqual(await response.json(), {
       ok: true,
       identity: { id: 1 },
-      scheme: 'bearer',
+      method: 'bearer',
     })
     assert.deepEqual(callLog, ['bearer'])
   })
@@ -93,7 +93,7 @@ describe('auth middleware', () => {
     assert.deepEqual(await response.json(), {
       ok: true,
       identity: { id: 123 },
-      scheme: 'api-key',
+      method: 'api-key',
     })
     assert.deepEqual(callLog, ['bearer', 'api-key'])
   })
@@ -134,7 +134,7 @@ describe('auth middleware', () => {
     assert.deepEqual(await response.json(), {
       ok: true,
       identity: { id: 456 },
-      scheme: 'api-key',
+      method: 'api-key',
     })
     assert.deepEqual(callLog, ['custom', 'api-key'])
   })
@@ -233,7 +233,7 @@ describe('auth middleware', () => {
     assert.deepEqual(await response.json(), {
       ok: false,
       error: {
-        scheme: 'bearer',
+        method: 'bearer',
         code: 'invalid_credentials',
         message: 'Token is invalid',
         challenge: 'Bearer realm="api"',
@@ -287,7 +287,7 @@ describe('auth middleware', () => {
     assert.deepEqual(await response.json(), {
       ok: false,
       error: {
-        scheme: 'bearer',
+        method: 'bearer',
         code: 'invalid_credentials',
         message: 'Invalid credentials',
       },

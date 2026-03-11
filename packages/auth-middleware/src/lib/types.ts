@@ -1,16 +1,16 @@
 import { createContextKey, type RequestContext } from '@remix-run/fetch-router'
 
 export interface AuthFailure {
-  scheme?: string
+  method?: string
   code: 'missing_credentials' | 'invalid_credentials'
   message: string
   challenge?: string
 }
 
-export interface AuthenticatedAuth<identity = unknown, scheme extends string = string> {
+export interface AuthenticatedAuth<identity = unknown, method extends string = string> {
   ok: true
   identity: identity
-  scheme: scheme
+  method: method
 }
 
 export interface UnauthenticatedAuth {
@@ -18,8 +18,8 @@ export interface UnauthenticatedAuth {
   error?: AuthFailure
 }
 
-export type Auth<identity = unknown, scheme extends string = string> =
-  | AuthenticatedAuth<identity, scheme>
+export type Auth<identity = unknown, method extends string = string> =
+  | AuthenticatedAuth<identity, method>
   | UnauthenticatedAuth
 
 export const Auth = createContextKey<Auth>()
