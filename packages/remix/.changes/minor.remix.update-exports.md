@@ -9,3 +9,6 @@ BREAKING CHANGE: `remix/data-table` no longer exports `QueryBuilder`. Import `Qu
 `remix/data-table/migrations` no longer exports a separate `Database` type alias. Import `Database` from `remix/data-table` when you need the migration `db` type directly.
 
 The incidental `QueryMethod` type export has also been removed; use `Database['query']` or `QueryForTable<table>` when you need that type shape.
+
+Added `package.json` `exports`:
+- `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
