@@ -66,6 +66,9 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -107,6 +110,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -132,6 +138,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -343,6 +352,9 @@ importers:
         specifier: workspace:^
         version: link:../../remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1076,6 +1088,9 @@ importers:
         specifier: workspace:^
         version: link:../tar-parser
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

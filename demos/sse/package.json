@@ -8,6 +8,7 @@
     "remix": "workspace:*"
   },
   "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
@@ -19,6 +20,6 @@
     "dev:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --minify --splitting --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
     "start": "tsx server.ts",
     "test": "tsx --test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   }
 }
