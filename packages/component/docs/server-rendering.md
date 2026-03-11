@@ -58,23 +58,25 @@ When the stream encounters a `<Frame>` component:
 
 This means the first chunk always contains a complete, renderable page. Slow data sources don't block the initial paint.
 
-## Head management
+## Head content
 
-Elements like `<title>`, `<meta>`, `<link>`, and `<style>` are automatically hoisted to the `<head>` during rendering, regardless of where they appear in the component tree:
+To render content into the document head during SSR, use an explicit `<head>` element:
 
 ```tsx
 function ProductPage() {
   return () => (
-    <div>
-      <title>Product Name</title>
-      <meta name="description" content="A great product" />
-      <h1>Product Name</h1>
-    </div>
+    <html>
+      <head>
+        <title>Product Name</title>
+        <meta name="description" content="A great product" />
+      </head>
+      <body>
+        <h1>Product Name</h1>
+      </body>
+    </html>
   )
 }
 ```
-
-The `<title>` and `<meta>` elements will appear in `<head>`, not in the `<div>`.
 
 ## CSS
 

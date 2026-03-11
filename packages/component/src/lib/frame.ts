@@ -246,7 +246,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    hoistHeadElements(container.doc, fragment)
+    moveServerStylesToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -311,14 +311,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        hoistHeadElements(container.doc, early)
+        moveServerStylesToHead(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          hoistHeadElements(container.doc, fragment)
+          moveServerStylesToHead(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
@@ -327,7 +327,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          hoistHeadElements(container.doc, buffered)
+          moveServerStylesToHead(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
@@ -471,40 +471,23 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function hoistHeadElements(doc: Document, fragment: DocumentFragment): void {
+function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void {
   let target = doc.head
   if (!target) return
 
+  let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
+  for (let style of styles) {
+    if (style instanceof HTMLStyleElement) {
+      target.appendChild(style)
+    }
+  }
+
   let heads = Array.from(fragment.querySelectorAll('head'))
   for (let head of heads) {
-    while (head.firstChild) {
-      target.appendChild(head.firstChild)
+    if (!head.childNodes.length) {
+      head.remove()
     }
-    head.remove()
   }
-
-  // Some fragment parses can normalize <head> content to top-level siblings
-  // (e.g. leading <style>), so hoist head-managed elements directly as well.
-  let maybeHeadManaged = Array.from(
-    fragment.querySelectorAll('title,meta,link,style,script[type="application/ld+json"]'),
-  )
-
-  for (let element of maybeHeadManaged) {
-    if (!(element instanceof Element)) continue
-    if (!isHeadManagedElementNode(element)) continue
-    target.appendChild(element)
-  }
-}
-
-function isHeadManagedElementNode(element: Element): boolean {
-  let tag = element.tagName.toLowerCase()
-  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
-    return true
-  }
-  if (tag === 'script') {
-    return element.getAttribute('type') === 'application/ld+json'
-  }
-  return false
 }
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {

@@ -1195,7 +1195,7 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('hoists head-managed elements when a frame reloads', async () => {
+  it('keeps head-like elements inside the frame when a frame reloads', async () => {
     let renderCount = 0
     let reload: undefined | (() => Promise<AbortSignal>)
 
@@ -1250,37 +1250,40 @@ describe('run', () => {
     await clientFrame.ready()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(document.head.querySelector('title')?.textContent).toBe('Frame title 1')
-    expect(
-      document.head.querySelector('meta[name="frame-description"]')?.getAttribute('content'),
-    ).toBe('frame-1')
-    expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+    let main = document.querySelector('main')
+    invariant(main)
+    expect(main.querySelector('title')?.textContent).toBe('Frame title 1')
+    expect(main.querySelector('meta[name="frame-description"]')?.getAttribute('content')).toBe(
+      'frame-1',
+    )
+    expect(main.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
       '{"count":1}',
     )
-    expect(document.head.querySelector('script[type="text/javascript"]')).toBeNull()
-    expect(document.querySelector('main script[type="text/javascript"]')).toBeTruthy()
-    expect(document.querySelector('main title')).toBeNull()
-    expect(document.querySelector('main meta[name="frame-description"]')).toBeNull()
-    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 1',
+    )
+    expect(document.head.querySelector('title')).toBeNull()
+    expect(document.head.querySelector('meta[name="frame-description"]')).toBeNull()
+    expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
 
     invariant(reload)
     await reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    let titles = document.head.querySelectorAll('title')
-    expect(titles).toHaveLength(2)
-    expect(titles[0]?.textContent).toBe('Frame title 1')
-    expect(titles[1]?.textContent).toBe('Frame title 2')
+    let titles = main.querySelectorAll('title')
+    expect(titles).toHaveLength(1)
+    expect(titles[0]?.textContent).toBe('Frame title 2')
 
-    let metas = document.head.querySelectorAll('meta[name="frame-description"]')
-    expect(metas).toHaveLength(2)
-    expect(metas[0]?.getAttribute('content')).toBe('frame-1')
-    expect(metas[1]?.getAttribute('content')).toBe('frame-2')
+    let metas = main.querySelectorAll('meta[name="frame-description"]')
+    expect(metas).toHaveLength(1)
+    expect(metas[0]?.getAttribute('content')).toBe('frame-2')
 
-    let ldJsonScripts = document.head.querySelectorAll('script[type="application/ld+json"]')
-    expect(ldJsonScripts).toHaveLength(2)
-    expect(ldJsonScripts[0]?.textContent).toBe('{"count":1}')
-    expect(ldJsonScripts[1]?.textContent).toBe('{"count":2}')
+    let ldJsonScripts = main.querySelectorAll('script[type="application/ld+json"]')
+    expect(ldJsonScripts).toHaveLength(1)
+    expect(ldJsonScripts[0]?.textContent).toBe('{"count":2}')
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 2',
+    )
     expect(document.querySelector('p')?.textContent).toBe('Frame body 2')
 
     clientFrame.dispose()

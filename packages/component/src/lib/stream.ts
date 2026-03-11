@@ -45,8 +45,6 @@ interface FrameData {
 }
 
 interface RenderContext {
-  headElements: string[]
-  insideHead: boolean
   insideSvg: boolean
   onError: (error: unknown) => void
   parentVNode?: VNode
@@ -83,8 +81,6 @@ type Segment =
       content: Segment | null
       pending?: Promise<void>
     }
-
-const HEAD_ELEMENTS = new Set(['title', 'meta', 'link', 'style'])
 
 const SELF_CLOSING_TAGS = new Set([
   'area',
@@ -156,8 +152,6 @@ export function renderToStream(
   let rootFrameState = createSsrFrameState(currentFrameSrc, topFrameSrc)
 
   let context: RenderContext = {
-    headElements: [],
-    insideHead: false,
     insideSvg: false,
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
@@ -297,10 +291,6 @@ function isRemixElement(node: unknown): node is RemixElement {
   return typeof node === 'object' && node !== null && '$rmx' in node
 }
 
-function isHeadManagedElement(tag: string, props: ElementProps): boolean {
-  return HEAD_ELEMENTS.has(tag) || (tag === 'script' && props.type === 'application/ld+json')
-}
-
 function staticSeg(html: string): Segment {
   return { kind: 'static', html }
 }
@@ -340,13 +330,6 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
       if (tag === 'head') {
         return buildHeadElementSegment(tag, props, context, frameState)
-      }
-
-      if (isHeadManagedElement(tag, props) && !context.insideHead) {
-        let elementSeg = buildElementSegment(tag, props, context, frameState)
-        let html = serializeSegment(elementSeg)
-        context.headElements.push(html)
-        return staticSeg('')
       }
 
       return buildElementSegment(tag, props, context, frameState)
@@ -450,15 +433,12 @@ function buildHeadElementSegment(
 ): Segment {
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(processedProps, false)
-  let previousInsideHead = context.insideHead
-  context.insideHead = true
 
   let open = staticSeg(`<${tag}${attrs}>`)
   let children =
     props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
   let close = staticSeg(`</${tag}>`)
 
-  context.insideHead = previousInsideHead
   return compositeSeg([open, children, close])
 }
 
@@ -862,12 +842,7 @@ function finalizeHtml(html: string, context: RenderContext): string {
 
   let css = collectAllStyles(context)
   if (css) {
-    context.headElements.push(`<style data-rmx-styles>${css}</style>`)
-  }
-
-  // Inject head elements if we have any
-  if (context.headElements.length > 0) {
-    let headContent = context.headElements.join('')
+    let headContent = `<style data-rmx-styles>${css}</style>`
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -1000,8 +975,8 @@ function serializeStyleObject(style: Record<string, any>): string {
 
 // Frame styles work end-to-end when frame handlers use their own `renderToStream`:
 // the handler's `finalizeHtml` emits `<style data-rmx-styles>` in its HTML, and on the client,
-// `hoistHeadElements` (frame.ts) moves it to `document.head` where the `adoptServerStyleTag`
-// MutationObserver (stylesheet.ts) picks it up and adopts the CSS into an adopted stylesheet.
+// the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
+// document and adopts the CSS into an adopted stylesheet.
 async function streamPendingFrames(
   context: RenderContext,
   controller: ReadableStreamDefaultController,

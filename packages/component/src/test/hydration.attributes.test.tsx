@@ -103,8 +103,8 @@ describe('hydration', () => {
       root.render(<meta httpEquiv="refresh" content="5" />)
       root.flush()
 
-      expect(document.head.querySelector('meta')).toBe(existingMeta)
-      expect(container.querySelector('meta')).toBeNull()
+      expect(container.querySelector('meta')).toBe(existingMeta)
+      expect(document.head.querySelector('meta')).toBeNull()
       expect(existingMeta.getAttribute('http-equiv')).toBe('refresh')
     })
 

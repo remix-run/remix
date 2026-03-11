@@ -826,8 +826,8 @@ describe('stream', () => {
     })
   })
 
-  describe('head managed content', () => {
-    it('hoists title elements to head', async () => {
+  describe('head-like elements outside explicit head', () => {
+    it('renders title elements in place', async () => {
       let stream = renderToStream(
         <html>
           <body>
@@ -838,11 +838,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<html><head><title>Page Title</title></head><body><div>Content</div></body></html>',
+        '<html><body><title>Page Title</title><div>Content</div></body></html>',
       )
     })
 
-    it('hoists meta elements to head', async () => {
+    it('renders meta elements in place', async () => {
       let stream = renderToStream(
         <div>
           <meta name="description" content="Test page" />
@@ -850,12 +850,10 @@ describe('stream', () => {
         </div>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<head><meta name="description" content="Test page" /></head><div><h1>Hello</h1></div>',
-      )
+      expect(html).toBe('<div><meta name="description" content="Test page" /><h1>Hello</h1></div>')
     })
 
-    it('hoists link elements to head', async () => {
+    it('renders link elements in place', async () => {
       let stream = renderToStream(
         <div>
           <link rel="stylesheet" href="/styles.css" />
@@ -863,12 +861,10 @@ describe('stream', () => {
         </div>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<head><link rel="stylesheet" href="/styles.css" /></head><div><p>Content</p></div>',
-      )
+      expect(html).toBe('<div><link rel="stylesheet" href="/styles.css" /><p>Content</p></div>')
     })
 
-    it('collects multiple head elements', async () => {
+    it('renders multiple head-like elements in place', async () => {
       let stream = renderToStream(
         <div>
           <title>My App</title>
@@ -880,11 +876,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><title>My App</title><meta charset="utf-8" /><link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width" /></head><div><p>Hello</p></div>',
+        '<div><title>My App</title><meta charset="utf-8" /><p>Hello</p><link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width" /></div>',
       )
     })
 
-    it('hoists head elements from components', async () => {
+    it('renders head-like elements from components in place', async () => {
       function SEO(handle: Handle) {
         return () => (
           <>
@@ -902,11 +898,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><title>Component Title</title><meta name="description" content="Component Description" /></head><div><main>Content</main></div>',
+        '<div><title>Component Title</title><meta name="description" content="Component Description" /><main>Content</main></div>',
       )
     })
 
-    it('merges head elements with existing head tag', async () => {
+    it('keeps bare head-like elements out of an explicit head tag', async () => {
       let stream = renderToStream(
         <html>
           <head>
@@ -921,11 +917,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<html><head><meta charset="utf-8" /><title>Body Title</title><link rel="stylesheet" href="/app.css" /></head><body><div>Content</div></body></html>',
+        '<html><head><meta charset="utf-8" /></head><body><title>Body Title</title><link rel="stylesheet" href="/app.css" /><div>Content</div></body></html>',
       )
     })
 
-    it('hoists structured data scripts to head', async () => {
+    it('renders structured data scripts in place', async () => {
       let structuredData = {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -940,7 +936,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Test Product"}</script></head><div><h1>Product Page</h1></div>',
+        '<div><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Test Product"}</script><h1>Product Page</h1></div>',
       )
     })
 
@@ -958,7 +954,7 @@ describe('stream', () => {
       )
     })
 
-    it('hoists only ld+json scripts when mixed with regular scripts', async () => {
+    it('renders ld+json scripts in place when mixed with regular scripts', async () => {
       let stream = renderToStream(
         <div>
           <script type="text/javascript" innerHTML="console.log('Regular script')" />
@@ -972,7 +968,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script></head><div><script type="text/javascript">console.log(\'Regular script\')</script><script>console.log(\'Another regular script\')</script><h1>Mixed Scripts Page</h1></div>',
+        '<div><script type="text/javascript">console.log(\'Regular script\')</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script><script>console.log(\'Another regular script\')</script><h1>Mixed Scripts Page</h1></div>',
       )
     })
   })

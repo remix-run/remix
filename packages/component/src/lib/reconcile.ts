@@ -294,18 +294,6 @@ function isHeadHostNode(node: HostNode): boolean {
   return node.type.toLowerCase() === 'head'
 }
 
-function isHeadManagedHostNode(node: HostNode): boolean {
-  let tag = node.type.toLowerCase()
-  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
-    return true
-  }
-  if (tag === 'script') {
-    let props = getHostProps(node)
-    return props.type === 'application/ld+json'
-  }
-  return false
-}
-
 function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
   if (domParent instanceof Document) {
     return domParent.head
@@ -402,8 +390,6 @@ function replace(
   anchor?: Node,
 ) {
   // Use curr's DOM position (most accurate) when it belongs to this parent.
-  // Hoisted head nodes live under document.head and cannot be used as anchors
-  // for body/range insertions.
   let currAnchor = findFirstDomAnchor(curr)
   if (currAnchor && currAnchor.parentNode === domParent) {
     anchor = currAnchor
@@ -621,12 +607,6 @@ function insert(
 
         setupHostNode(node, cursor, scheduler)
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
-        if (isHeadManagedHostNode(node)) {
-          let targetHead = getDocumentHead(domParent)
-          if (targetHead && cursor.parentNode !== targetHead) {
-            targetHead.appendChild(cursor)
-          }
-        }
         return nextCursor
       } else {
         // Type mismatch - try single-advance retry to handle browser extension injections
@@ -658,12 +638,6 @@ function insert(
 
             setupHostNode(node, nextSibling, scheduler)
             bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
-            if (isHeadManagedHostNode(node)) {
-              let targetHead = getDocumentHead(domParent)
-              if (targetHead && nextSibling.parentNode !== targetHead) {
-                targetHead.appendChild(nextSibling)
-              }
-            }
             return nextCursor
           }
         }
@@ -686,16 +660,7 @@ function insert(
 
     setupHostNode(node, dom, scheduler)
     bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
-    if (isHeadManagedHostNode(node)) {
-      let targetHead = getDocumentHead(domParent)
-      if (targetHead) {
-        targetHead.appendChild(dom)
-      } else {
-        doInsert(dom)
-      }
-    } else {
-      doInsert(dom)
-    }
+    doInsert(dom)
     return cursor
   }
 

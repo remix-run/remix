@@ -417,7 +417,7 @@ describe('hydration', () => {
       expect(container.querySelector('span')).toBe(span)
     })
 
-    it('hoists head-managed elements during hydration', () => {
+    it('hydrates head-like elements in place', () => {
       container.innerHTML =
         '<title>Hydrated title</title>' +
         '<meta name="description" content="Hydrated description" />' +
@@ -441,13 +441,13 @@ describe('hydration', () => {
       )
       root.flush()
 
-      expect(document.head.querySelector('title')).toBe(existingTitle)
-      expect(document.head.querySelector('meta[name="description"]')).toBe(existingMeta)
-      expect(document.head.querySelector('script[type="application/ld+json"]')).toBe(existingLdJson)
-      expect(container.querySelector('title')).toBeNull()
-      expect(container.querySelector('meta[name="description"]')).toBeNull()
-      expect(container.querySelector('script[type="application/ld+json"]')).toBeNull()
+      expect(container.querySelector('title')).toBe(existingTitle)
+      expect(container.querySelector('meta[name="description"]')).toBe(existingMeta)
+      expect(container.querySelector('script[type="application/ld+json"]')).toBe(existingLdJson)
       expect(container.querySelector('#content')).toBe(existingContent)
+      expect(document.head.querySelector('title')).toBeNull()
+      expect(document.head.querySelector('meta[name="description"]')).toBeNull()
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
     })
   })
 })
