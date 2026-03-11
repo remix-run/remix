@@ -1263,6 +1263,59 @@ importers:
         specifier: ^3.1.3
         version: 3.1.3
 
+  packages/testing:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../component
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../node-fetch-server
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      playwright:
+        specifier: ^1.0.0
+        version: 1.57.0
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/testing/demos/browser:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../../../component
+      '@remix-run/testing':
+        specifier: workspace:*
+        version: link:../..
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.25.12
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   scripts:
     dependencies:
       '@octokit/request':

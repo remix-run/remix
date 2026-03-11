@@ -1,0 +1,21 @@
+{
+  "name": "@remix-run/testing-demo-browser",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remix-test fixtures/*.test.{ts,tsx}",
+    "test": "remix-test --headless fixtures/*.test.{ts,tsx}"
+  },
+  "dependencies": {
+    "@remix-run/component": "workspace:*",
+    "@remix-run/testing": "workspace:*",
+    "esbuild": "catalog:",
+    "playwright": "catalog:",
+    "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
