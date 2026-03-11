@@ -7,9 +7,12 @@ import type { Simplify } from '../types/utils.ts'
 
 // todo: `Split<source>` return { hostname: "" } instead of { hostname: undefined } which causes issues
 export type HrefArgs<source extends string> = _HrefArgs<ParseHrefParams<source>>
-type _HrefArgs<params> = { [key: string]: unknown } extends params
-  ? [params?: params | null | undefined, searchParams?: SearchParams]
-  : [params: params, searchParams?: SearchParams]
+// prettier-ignore
+type _HrefArgs<params> =
+  {} extends params ?
+    [params?: Simplify<params & Record<string, unknown>> | null | undefined, searchParams?: SearchParams]
+  :
+  [params: Simplify<params & Record<string, unknown>>, searchParams?: SearchParams]
 
 type SearchParams = Record<
   string,
@@ -22,7 +25,7 @@ type ParseHrefParams<source extends string> =
     split extends ({ protocol: string, hostname: undefined } | { hostname: undefined, port: string }) ? never : // missing-hostname
     ParseParams<split> extends infer params extends Record<string, string | undefined> ?
       params extends { '*': string } ? never : // nameless-wildcard
-      Simplify<Optionalize<Omit<params, '*'>> & Record<string, unknown>>
+      Optionalize<Omit<params, '*'>>
     :
     never
   :
