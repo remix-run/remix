@@ -4,3 +4,4 @@ BREAKING CHANGE: Remove the `remix/data-table/sql` export. Import `SqlStatement`
 
 Added `package.json` `exports`:
 - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
+- `remix/auth` to re-export APIs from `@remix-run/auth`
