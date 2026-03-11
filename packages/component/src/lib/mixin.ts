@@ -164,7 +164,7 @@ type ResolveMixedPropsInput = {
 
 type ResolveMixedPropsOutput = {
   props: ElementProps
-  state: MixinRuntimeState
+  state?: MixinRuntimeState
 }
 
 export type MixinRuntimeState = {
@@ -198,6 +198,14 @@ export function createMixin<
 }
 
 export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
+  let descriptors = resolveMixDescriptors(input.props)
+  if (descriptors.length === 0 && !input.state) {
+    return {
+      state: undefined,
+      props: input.props,
+    }
+  }
+
   let state = input.state ?? createMixinRuntimeState()
   let handle = state.handle as ScopedAnyMixinHandle | undefined
   if (!handle) {
@@ -212,7 +220,6 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     state.handle = handle
   }
   let hostType = input.hostType
-  let descriptors = resolveMixDescriptors(input.props)
   let composedProps = withoutMix(input.props)
   let maxDescriptors = 1024
 
