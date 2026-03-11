@@ -28,7 +28,7 @@ describe('bearer scheme', () => {
 
     assert.deepEqual(result, {
       status: 'success',
-      principal: { id: 'u1' },
+      identity: { id: 'u1' },
     })
     assert.equal(observedToken, 'abc123')
   })
@@ -110,7 +110,7 @@ describe('bearer scheme', () => {
 
     assert.deepEqual(success, {
       status: 'success',
-      principal: { id: 'u2' },
+      identity: { id: 'u2' },
     })
     assert.equal(skip, null)
   })

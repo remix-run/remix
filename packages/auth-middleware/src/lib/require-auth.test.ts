@@ -17,7 +17,7 @@ describe('requireAuth middleware', () => {
               authenticate() {
                 return {
                   status: 'success',
-                  principal: { id: 123 },
+                  identity: { id: 123 },
                 }
               },
             },
