@@ -86,6 +86,32 @@ describe('vdom controlled props', () => {
     expect(check.checked).toBe(true)
   })
 
+  it('stops restoring value when an input leaves controlled mode', async () => {
+    let controlled = true
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<input value={controlled ? 'hello' : undefined} />)
+    root.flush()
+
+    let input = container.querySelector('input') as HTMLInputElement
+    input.value = 'hello123'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(input.value).toBe('hello')
+
+    controlled = false
+    root.render(<input value={controlled ? 'hello' : undefined} />)
+    root.flush()
+
+    input.value = 'user typed'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(input.value).toBe('user typed')
+  })
+
   it('detaches controlled listeners on dispose', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)

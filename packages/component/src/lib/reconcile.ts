@@ -177,15 +177,30 @@ function ensureControlledReflection(
   return state
 }
 
-function syncControlledReflection(node: CommittedHostNode, props: ElementProps): void {
-  let state = node._controlledState as ControlledReflectionState | undefined
-  if (!state || state.disposed) return
+function syncControlledReflection(
+  node: CommittedHostNode,
+  props: ElementProps,
+  scheduler: Scheduler,
+): void {
+  let managesValue = canManageValue(node.type, node._dom)
+  let managesChecked = canReflectProperty(node._dom, 'checked')
+  let hasControlledValue = managesValue && hasControlledValueProp(props)
+  let hasControlledChecked = managesChecked && hasControlledCheckedProp(props)
 
-  state.managesValue = canManageValue(node.type, node._dom)
-  state.managesChecked = canReflectProperty(node._dom, 'checked')
-  state.hasControlledValue = state.managesValue && hasControlledValueProp(props)
+  if (!hasControlledValue && !hasControlledChecked) {
+    teardownControlledReflection(node)
+    node._controlledState = undefined
+    return
+  }
+
+  let state = ensureControlledReflection(node, scheduler)
+  if (state.disposed) return
+
+  state.managesValue = managesValue
+  state.managesChecked = managesChecked
+  state.hasControlledValue = hasControlledValue
   state.controlledValue = props.value
-  state.hasControlledChecked = state.managesChecked && hasControlledCheckedProp(props)
+  state.hasControlledChecked = hasControlledChecked
   state.controlledChecked = props.checked
   state.pendingRestoreVersion++
 }
@@ -500,8 +515,7 @@ function diffHost(
   next._controller = curr._controller
   next._controlledState = curr._controlledState
 
-  ensureControlledReflection(next as CommittedHostNode, scheduler)
-  syncControlledReflection(next as CommittedHostNode, nextProps)
+  syncControlledReflection(next as CommittedHostNode, nextProps, scheduler)
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
   syncLeafRange(next, curr._dom)
@@ -519,8 +533,7 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
-  ensureControlledReflection(committedNode, scheduler)
-  syncControlledReflection(committedNode, props)
+  syncControlledReflection(committedNode, props, scheduler)
   syncLeafRange(node, dom)
 }
 
@@ -1445,8 +1458,7 @@ function reclaimPersistedMixinNode(
     )
   }
   diffHostProps(prevProps, nextProps, persistedNode._dom)
-  ensureControlledReflection(newNode as CommittedHostNode, scheduler)
-  syncControlledReflection(newNode as CommittedHostNode, nextProps)
+  syncControlledReflection(newNode as CommittedHostNode, nextProps, scheduler)
   newNode._children = nextChildren
   syncLeafRange(newNode, persistedNode._dom)
 
