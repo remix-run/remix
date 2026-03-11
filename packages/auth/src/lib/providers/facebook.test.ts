@@ -9,13 +9,13 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 import { callback } from '../callback.ts'
 import { login } from '../login.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
-import { facebook } from './facebook.ts'
+import { createFacebookAuthProvider } from './facebook.ts'
 
 describe('facebook provider', () => {
   it('redirects to the Facebook authorization endpoint with default PKCE parameters', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = facebook({
+    let provider = createFacebookAuthProvider({
       clientId: 'facebook-client-id',
       clientSecret: 'facebook-client-secret',
       redirectUri: 'https://app.example.com/auth/facebook/callback',
@@ -47,7 +47,7 @@ describe('facebook provider', () => {
   it('uses configured scopes in the Facebook authorization URL', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = facebook({
+    let provider = createFacebookAuthProvider({
       clientId: 'facebook-client-id',
       clientSecret: 'facebook-client-secret',
       redirectUri: 'https://app.example.com/auth/facebook/callback',
@@ -96,7 +96,7 @@ describe('facebook provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = facebook({
+      let provider = createFacebookAuthProvider({
         clientId: 'facebook-client-id',
         clientSecret: 'facebook-client-secret',
         redirectUri: 'https://app.example.com/auth/facebook/callback',
@@ -177,7 +177,7 @@ describe('facebook provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = facebook({
+      let provider = createFacebookAuthProvider({
         clientId: 'facebook-client-id',
         clientSecret: 'facebook-client-secret',
         redirectUri: 'https://app.example.com/auth/facebook/callback',

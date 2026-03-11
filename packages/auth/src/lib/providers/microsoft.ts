@@ -1,6 +1,6 @@
 import type { OIDCOptions, OIDCProfile, OAuthProvider } from '../types.ts'
 
-import { oidc } from './oidc.ts'
+import { createOIDCAuthProvider } from './oidc.ts'
 
 export interface MicrosoftProfile extends OIDCProfile {
   tid?: string
@@ -13,10 +13,10 @@ export interface MicrosoftOptions
   tenant?: 'common' | 'organizations' | 'consumers' | string
 }
 
-export function microsoft(
+export function createMicrosoftAuthProvider(
   options: MicrosoftOptions,
 ): OAuthProvider<MicrosoftProfile, 'microsoft'> {
-  return oidc({
+  return createOIDCAuthProvider({
     ...options,
     name: 'microsoft',
     issuer: `https://login.microsoftonline.com/${options.tenant ?? 'common'}/v2.0`,

@@ -1,6 +1,6 @@
 import type { OIDCOptions, OIDCProfile, OAuthProvider } from '../types.ts'
 
-import { oidc } from './oidc.ts'
+import { createOIDCAuthProvider } from './oidc.ts'
 
 export interface Auth0Profile extends OIDCProfile {
   nickname?: string
@@ -12,10 +12,10 @@ export interface Auth0Options
   domain: string
 }
 
-export function auth0(options: Auth0Options): OAuthProvider<Auth0Profile, 'auth0'> {
+export function createAuth0AuthProvider(options: Auth0Options): OAuthProvider<Auth0Profile, 'auth0'> {
   let issuer = createAuth0Issuer(options.domain)
 
-  return oidc({
+  return createOIDCAuthProvider({
     ...options,
     name: 'auth0',
     issuer,

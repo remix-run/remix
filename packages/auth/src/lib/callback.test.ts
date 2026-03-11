@@ -10,7 +10,7 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { callback } from './callback.ts'
 import { login } from './login.ts'
-import { google } from './providers/google.ts'
+import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest, mockFetch } from './test-utils.ts'
 
 describe('callback()', () => {
@@ -47,7 +47,7 @@ describe('callback()', () => {
       let users = new Map([
         ['u1', { id: 'u1', email: 'mj@example.com' }],
       ])
-      let provider = google({
+      let provider = createGoogleAuthProvider({
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
         redirectUri: 'https://app.example.com/auth/google/callback',
@@ -117,7 +117,7 @@ describe('callback()', () => {
   it('uses onFailure for callback errors', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = google({
+    let provider = createGoogleAuthProvider({
       clientId: 'google-client-id',
       clientSecret: 'google-client-secret',
       redirectUri: 'https://app.example.com/auth/google/callback',
@@ -180,7 +180,7 @@ describe('callback()', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = google({
+      let provider = createGoogleAuthProvider({
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
         redirectUri: 'https://app.example.com/auth/google/callback',
@@ -249,7 +249,7 @@ describe('callback()', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = google({
+      let provider = createGoogleAuthProvider({
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
         redirectUri: 'https://app.example.com/auth/google/callback',
@@ -321,7 +321,7 @@ describe('callback()', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = google({
+      let provider = createGoogleAuthProvider({
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
         redirectUri: 'https://app.example.com/auth/google/callback',

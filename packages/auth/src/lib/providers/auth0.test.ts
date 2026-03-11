@@ -8,13 +8,13 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { login } from '../login.ts'
 import { mockFetch } from '../test-utils.ts'
-import { auth0 } from './auth0.ts'
+import { createAuth0AuthProvider } from './auth0.ts'
 
 describe('auth0 provider', () => {
   it('derives the issuer from the Auth0 domain and provider name', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = auth0({
+    let provider = createAuth0AuthProvider({
       domain: 'tenant.us.auth0.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',

@@ -8,14 +8,14 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { callback } from '../callback.ts'
 import { login } from '../login.ts'
-import { github } from './github.ts'
+import { createGitHubAuthProvider } from './github.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 
 describe('github provider', () => {
   it('redirects to the GitHub authorization endpoint with configured scopes', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = github({
+    let provider = createGitHubAuthProvider({
       clientId: 'github-client-id',
       clientSecret: 'github-client-secret',
       redirectUri: 'https://app.example.com/auth/github/callback',
@@ -81,7 +81,7 @@ describe('github provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = github({
+      let provider = createGitHubAuthProvider({
         clientId: 'github-client-id',
         clientSecret: 'github-client-secret',
         redirectUri: 'https://app.example.com/auth/github/callback',
@@ -168,7 +168,7 @@ describe('github provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = github({
+      let provider = createGitHubAuthProvider({
         clientId: 'github-client-id',
         clientSecret: 'github-client-secret',
         redirectUri: 'https://app.example.com/auth/github/callback',
@@ -239,7 +239,7 @@ describe('github provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = github({
+      let provider = createGitHubAuthProvider({
         clientId: 'github-client-id',
         clientSecret: 'github-client-secret',
         redirectUri: 'https://app.example.com/auth/github/callback',
@@ -305,7 +305,7 @@ describe('github provider', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let provider = github({
+      let provider = createGitHubAuthProvider({
         clientId: 'github-client-id',
         clientSecret: 'github-client-secret',
         redirectUri: 'https://app.example.com/auth/github/callback',

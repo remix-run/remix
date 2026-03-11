@@ -8,13 +8,13 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { login } from '../login.ts'
 import { mockFetch } from '../test-utils.ts'
-import { okta } from './okta.ts'
+import { createOktaAuthProvider } from './okta.ts'
 
 describe('okta provider', () => {
   it('uses the provided Okta issuer and provider name', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = okta({
+    let provider = createOktaAuthProvider({
       issuer: 'https://example.okta.com/oauth2/default',
       clientId: 'client-id',
       clientSecret: 'client-secret',

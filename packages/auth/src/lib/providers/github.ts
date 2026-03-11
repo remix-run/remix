@@ -38,7 +38,7 @@ export interface GitHubEmail {
   visibility?: string | null
 }
 
-export function github(options: GitHubOptions): OAuthProvider<GitHubProfile, 'github'> {
+export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<GitHubProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {

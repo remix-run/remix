@@ -7,13 +7,13 @@ import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { login } from '../login.ts'
-import { google } from './google.ts'
+import { createGoogleAuthProvider } from './google.ts'
 
 describe('google provider', () => {
   it('uses the Google OIDC defaults and provider name', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = google({
+    let provider = createGoogleAuthProvider({
       clientId: 'client-id',
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/google/callback',
