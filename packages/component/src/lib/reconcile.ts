@@ -117,6 +117,7 @@ function findMatchingPersistedMixinNode(
   scheduler: Scheduler,
 ): CommittedHostNode | null {
   if (key == null) return null
+  if (scheduler.runtime.persistedMixinNodes.size === 0) return null
   for (let node of scheduler.runtime.persistedMixinNodes) {
     if (node._persistedParentByMixins !== domParent) continue
     if (node.type !== type) continue
@@ -279,6 +280,13 @@ function resolveNodeMixProps(
   scheduler: Scheduler,
   state?: MixinRuntimeState,
 ): ElementProps {
+  let mix = node.props.mix
+  if (!state && (mix == null || !Array.isArray(mix) || mix.length === 0)) {
+    node._mixState = undefined
+    node._mixedProps = undefined
+    return node.props
+  }
+
   let resolved = resolveMixedProps({
     hostType: node.type,
     frame,
@@ -291,6 +299,10 @@ function resolveNodeMixProps(
   return resolved.props
 }
 
+function hasMixinRunners(state: MixinRuntimeState | undefined): boolean {
+  return !!state && state.runners.length > 0
+}
+
 function bindNodeMixRuntime(
   node: CommittedHostNode,
   frame: FrameHandle,
@@ -300,6 +312,7 @@ function bindNodeMixRuntime(
   parent?: ParentNode,
 ) {
   let state = node._mixState as MixinRuntimeState | undefined
+  if (!hasMixinRunners(state)) return
   bindMixinRuntime(
     state,
     {
@@ -485,11 +498,14 @@ function diffHost(
   let mixState = curr._mixState as MixinRuntimeState | undefined
   let currProps = getHostProps(curr)
   let nextProps = resolveNodeMixProps(next, frame, scheduler, mixState)
+  let nextMixState = next._mixState as MixinRuntimeState | undefined
   let nextContentMode = getHostContentMode(nextProps)
   let nextChildren = getCanonicalHostChildren(nextContentMode, next._children)
   let currContentMode = getHostContentMode(currProps)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    dispatchMixinBeforeUpdate(next._mixState as MixinRuntimeState | undefined)
+  let shouldDispatchMixinLifecycle =
+    hasMixinRunners(nextMixState) && shouldDispatchInlineMixinLifecycle(curr._dom)
+  if (shouldDispatchMixinLifecycle) {
+    dispatchMixinBeforeUpdate(nextMixState)
   }
 
   if (nextContentMode === 'innerHTML') {
@@ -517,11 +533,13 @@ function diffHost(
 
   syncControlledReflection(next as CommittedHostNode, nextProps, scheduler)
 
-  bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+  if (hasMixinRunners(nextMixState)) {
+    bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+  }
   syncLeafRange(next, curr._dom)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
+  if (shouldDispatchMixinLifecycle) {
     scheduler.enqueueTasks([
-      () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
+      () => dispatchMixinCommit(nextMixState),
     ])
   }
 
@@ -612,6 +630,7 @@ function insert(
 
   if (isHostNode(node)) {
     let hostProps = resolveNodeMixProps(node, frame, scheduler)
+    let mixState = node._mixState as MixinRuntimeState | undefined
     let contentMode = getHostContentMode(hostProps)
     let nextChildren = getCanonicalHostChildren(contentMode, node._children)
 
@@ -645,7 +664,9 @@ function insert(
         diffHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
         node._children = nextChildren
-        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+        if (hasMixinRunners(mixState)) {
+          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+        }
         syncLeafRange(node, targetHead)
         return cursor
       }
@@ -693,12 +714,14 @@ function insert(
 
         setupHostNode(node, cursor, scheduler)
         node._children = nextChildren
-        bindNodeMixRuntime(
-          node as CommittedHostNode,
-          frame,
-          scheduler,
-          scheduler.runtime.styleManager,
-        )
+        if (hasMixinRunners(mixState)) {
+          bindNodeMixRuntime(
+            node as CommittedHostNode,
+            frame,
+            scheduler,
+            scheduler.runtime.styleManager,
+          )
+        }
         syncLeafRange(node, cursor)
         if (isHeadManagedHostNode(node)) {
           let targetHead = getDocumentHead(domParent)
@@ -736,12 +759,14 @@ function insert(
 
             setupHostNode(node, nextSibling, scheduler)
             node._children = nextChildren
-            bindNodeMixRuntime(
-              node as CommittedHostNode,
-              frame,
-              scheduler,
-              scheduler.runtime.styleManager,
-            )
+            if (hasMixinRunners(mixState)) {
+              bindNodeMixRuntime(
+                node as CommittedHostNode,
+                frame,
+                scheduler,
+                scheduler.runtime.styleManager,
+              )
+            }
             syncLeafRange(node, nextSibling)
             if (isHeadManagedHostNode(node)) {
               let targetHead = getDocumentHead(domParent)
@@ -770,14 +795,16 @@ function insert(
 
     setupHostNode(node, dom, scheduler)
     node._children = nextChildren
-    bindNodeMixRuntime(
-      node as CommittedHostNode,
-      frame,
-      scheduler,
-      scheduler.runtime.styleManager,
-      false,
-      domParent,
-    )
+    if (hasMixinRunners(mixState)) {
+      bindNodeMixRuntime(
+        node as CommittedHostNode,
+        frame,
+        scheduler,
+        scheduler.runtime.styleManager,
+        false,
+        domParent,
+      )
+    }
     if (isHeadManagedHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
@@ -1428,11 +1455,14 @@ function reclaimPersistedMixinNode(
     scheduler,
     newNode._mixState as MixinRuntimeState | undefined,
   )
+  let nextMixState = newNode._mixState as MixinRuntimeState | undefined
   let prevContentMode = getHostContentMode(prevProps)
   let nextContentMode = getHostContentMode(nextProps)
   let nextChildren = getCanonicalHostChildren(nextContentMode, newNode._children)
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
+  let shouldDispatchMixinLifecycle =
+    hasMixinRunners(nextMixState) && shouldDispatchInlineMixinLifecycle(persistedNode._dom)
+  if (shouldDispatchMixinLifecycle) {
+    dispatchMixinBeforeUpdate(nextMixState)
   }
   if (nextContentMode === 'innerHTML') {
     if (prevProps.innerHTML !== nextProps.innerHTML) {
@@ -1462,10 +1492,12 @@ function reclaimPersistedMixinNode(
   newNode._children = nextChildren
   syncLeafRange(newNode, persistedNode._dom)
 
-  bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
+  if (hasMixinRunners(nextMixState)) {
+    bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
+  }
+  if (shouldDispatchMixinLifecycle) {
     scheduler.enqueueTasks([
-      () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
+      () => dispatchMixinCommit(nextMixState),
     ])
   }
 }
