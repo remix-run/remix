@@ -23,6 +23,7 @@ npm i remix
 ```ts
 import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
+import type { RequestContext } from 'remix/fetch-router'
 import { form, route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
 import { callback, createCredentialsAuthProvider, createGoogleAuthProvider, login } from 'remix/auth'
@@ -77,6 +78,16 @@ let passwordProvider = createCredentialsAuthProvider({
     return user
   },
 })
+
+function getUser(context: RequestContext) {
+  let auth = context.get(Auth)
+
+  if (!auth.ok) {
+    throw new Error('Expected an authenticated session.')
+  }
+
+  return auth.identity
+}
 
 let router = createRouter({
   middleware: [
@@ -141,14 +152,9 @@ router.post(routes.auth.session.logout, ({ get }) => {
 
 router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
-  action({ get }) {
-    let auth = get(Auth)
-
-    if (!auth.ok) {
-      throw new Error('Expected an authenticated session.')
-    }
-
-    let user = auth.identity
+  action(context) {
+    let user = getUser(context)
+    let auth = context.get(Auth)
 
     return Response.json({
       id: user.id,
@@ -166,6 +172,8 @@ This package manages the OAuth transaction in `context.get(Session)` and lets yo
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(createCredentialsAuthProvider(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
+
+The example also uses `requireAuth()` from `remix/auth-middleware` to turn that resolved auth state into route protection. Use `auth()` to load auth state for the request, then use `requireAuth()` on routes that must reject anonymous requests. See the [`auth-middleware` README](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) for the full request-auth and route-protection API.
 
 ## Login Routes
 
