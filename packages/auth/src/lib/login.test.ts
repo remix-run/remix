@@ -9,9 +9,9 @@ import { Session } from '@remix-run/session'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { credentials } from './credentials.ts'
+import { createCredentialsAuthProvider } from './credentials.ts'
 import { login } from './login.ts'
-import { google } from './providers/google.ts'
+import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest } from './test-utils.ts'
 
 describe('login()', () => {
@@ -22,7 +22,7 @@ describe('login()', () => {
   it('redirects OAuth login requests to the provider authorization URL and stores a transaction', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = google({
+    let provider = createGoogleAuthProvider({
       clientId: 'google-client-id',
       clientSecret: 'google-client-secret',
       redirectUri: 'https://app.example.com/auth/google/callback',
@@ -58,7 +58,7 @@ describe('login()', () => {
     let users = new Map([
       ['u1', { id: 'u1', email: 'mj@example.com' }],
     ])
-    let provider = credentials({
+    let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
         return {
@@ -144,7 +144,7 @@ describe('login()', () => {
   it('redirects invalid credentials to failureRedirectTo', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = credentials({
+    let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
         return {
@@ -195,7 +195,7 @@ describe('login()', () => {
     let router = createRouter({
       middleware: [sessionMiddleware(cookie, storage)],
     })
-    let provider = credentials({
+    let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
         return {
@@ -248,7 +248,7 @@ describe('login()', () => {
     let router = createRouter({
       middleware: [sessionMiddleware(cookie, storage)],
     })
-    let provider = credentials({
+    let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
         return {
@@ -304,7 +304,7 @@ describe('login()', () => {
     let router = createRouter({
       middleware: [sessionMiddleware(cookie, storage)],
     })
-    let provider = credentials({
+    let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
         return {

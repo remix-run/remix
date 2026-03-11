@@ -9,7 +9,7 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { callback } from './callback.ts'
 import { login } from './login.ts'
-import { oidc } from './providers/oidc.ts'
+import { createOIDCAuthProvider } from './providers/oidc.ts'
 import { createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
 
 describe('OAuth flow integration', () => {
@@ -33,7 +33,7 @@ describe('OAuth flow integration', () => {
     let users = new Map([
       ['oauth-user-1', { id: 'oauth-user-1', email: 'oauth@example.com' }],
     ])
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       name: 'fake',
       issuer: server.origin,
       clientId: 'fake-client-id',

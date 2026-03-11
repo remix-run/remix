@@ -8,7 +8,7 @@ export interface CredentialsOptions<input, result, provider extends string = 'pa
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
-export function credentials<input, result, provider extends string = 'password'>(
+export function createCredentialsAuthProvider<input, result, provider extends string = 'password'>(
   options: CredentialsOptions<input, result, provider>,
 ): CredentialsProvider<input, result, provider> {
   return {

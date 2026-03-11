@@ -34,7 +34,7 @@ export interface FacebookProfile {
   picture?: FacebookPicture
 }
 
-export function facebook(options: FacebookOptions): OAuthProvider<FacebookProfile, 'facebook'> {
+export function createFacebookAuthProvider(options: FacebookOptions): OAuthProvider<FacebookProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 
   return createOAuthProvider('facebook', {

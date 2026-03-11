@@ -1,6 +1,6 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
-import { credentials } from 'remix/auth'
+import { createCredentialsAuthProvider } from 'remix/auth'
 import { auth, requireAuth as requireAuthenticatedUser, sessionAuth } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
@@ -34,7 +34,7 @@ export function loadAuth(): Middleware {
   })
 }
 
-export let passwordProvider = credentials({
+export let passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let formData = context.get(FormData)
 

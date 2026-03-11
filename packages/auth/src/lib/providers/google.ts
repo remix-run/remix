@@ -1,6 +1,6 @@
 import type { OIDCMetadata, OIDCProfile, OAuthProvider } from '../types.ts'
 
-import { oidc } from './oidc.ts'
+import { createOIDCAuthProvider } from './oidc.ts'
 
 const GOOGLE_ISSUER = 'https://accounts.google.com'
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -24,8 +24,8 @@ export interface GoogleOptions {
 
 export interface GoogleProfile extends OIDCProfile {}
 
-export function google(options: GoogleOptions): OAuthProvider<GoogleProfile, 'google'> {
-  return oidc({
+export function createGoogleAuthProvider(options: GoogleOptions): OAuthProvider<GoogleProfile, 'google'> {
+  return createOIDCAuthProvider({
     ...options,
     name: 'google',
     issuer: GOOGLE_ISSUER,

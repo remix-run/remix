@@ -24,7 +24,7 @@ export type OIDCOptions<
   provider extends string = 'oidc',
 > = OIDCOptionsShape<profile, provider>
 
-export function oidc<
+export function createOIDCAuthProvider<
   profile extends OIDCProfile = OIDCProfile,
   provider extends string = 'oidc',
 >(options: OIDCOptions<profile, provider>): OAuthProvider<profile, provider> {
