@@ -22,7 +22,7 @@ import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
-import { bookstoreAuth } from './middleware/auth.ts'
+import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 
 let middleware = []
@@ -44,7 +44,7 @@ middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
-middleware.push(bookstoreAuth())
+middleware.push(loadAuth())
 
 await initializeBookstoreDatabase()
 
