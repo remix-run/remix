@@ -31,7 +31,7 @@ Then visit http://localhost:44100
 - [`app/middleware/database.ts`](app/middleware/database.ts) shows a request-scoped database pattern. It "checks out" a database handle at the start of each request, stores it in request context, and releases it in a `finally` block.
 - [`app/middleware/auth.ts`](app/middleware/auth.ts) shows the Remix auth stack in one place:
   - **`loadAuth()`** installs global `auth()` middleware with a `sessionAuth()` scheme
-  - **`passwordProvider`** uses `credentials()` to verify email/password logins against the demo database
+  - **`passwordProvider`** uses `createCredentialsAuthProvider()` to verify email/password logins against the demo database
   - **`requireAuth()`** is a thin wrapper around `remix/auth-middleware` that redirects to login with a `returnTo` parameter for post-login redirects
 - [`app/auth.tsx`](app/auth.tsx) uses `login(passwordProvider, ...)` from `remix/auth` for the login POST action, so session rotation and session writes come from the framework abstraction instead of bespoke route code.
 - [`app/middleware/admin.ts`](app/middleware/admin.ts) shows role-based authorization layered on top of authenticated user state and returns 403 for non-admin users.

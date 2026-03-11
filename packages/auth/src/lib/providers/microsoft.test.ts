@@ -8,13 +8,13 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { login } from '../login.ts'
 import { mockFetch } from '../test-utils.ts'
-import { microsoft } from './microsoft.ts'
+import { createMicrosoftAuthProvider } from './microsoft.ts'
 
 describe('microsoft provider', () => {
   it('uses the tenant-specific Microsoft issuer and provider name', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = microsoft({
+    let provider = createMicrosoftAuthProvider({
       tenant: 'organizations',
       clientId: 'client-id',
       clientSecret: 'client-secret',

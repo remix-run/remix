@@ -9,7 +9,7 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 import { callback } from '../callback.ts'
 import { login } from '../login.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
-import { oidc } from './oidc.ts'
+import { createOIDCAuthProvider } from './oidc.ts'
 
 describe('oidc provider', () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe('oidc provider', () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
     let discoveryRequests = 0
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',
@@ -70,7 +70,7 @@ describe('oidc provider', () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
     let discoveryRequests = 0
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',
@@ -124,7 +124,7 @@ describe('oidc provider', () => {
   it('includes authorizationParams in the authorization URL', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',
@@ -171,7 +171,7 @@ describe('oidc provider', () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
     let fetchCalls = 0
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',
@@ -212,7 +212,7 @@ describe('oidc provider', () => {
   it('completes callback, normalizes claims, and applies mapProfile', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       name: 'company-sso',
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
@@ -312,7 +312,7 @@ describe('oidc provider', () => {
   it('fails when metadata does not include a userinfo endpoint', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let provider = oidc({
+    let provider = createOIDCAuthProvider({
       issuer: 'https://issuer.example.com',
       clientId: 'client-id',
       clientSecret: 'client-secret',
