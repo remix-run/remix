@@ -198,7 +198,10 @@ describe('cors middleware', () => {
     })
 
     assert.equal(response.status, 204)
-    assert.equal(response.headers.get('Access-Control-Allow-Headers'), 'Authorization, Content-Type')
+    assert.equal(
+      response.headers.get('Access-Control-Allow-Headers'),
+      'Authorization, Content-Type',
+    )
     assert.equal(response.headers.get('Access-Control-Max-Age'), '600')
 
     let vary = Vary.from(response.headers.get('Vary'))
