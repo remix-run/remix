@@ -1,35 +1,52 @@
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
 
-import { createRouter, route } from '@remix-run/fetch-router'
-import { createRequestListener } from '@remix-run/node-fetch-server'
-import { staticFiles } from '@remix-run/static-middleware'
+const PORT = 44100
+const frameworksDir = path.resolve(import.meta.dirname, 'frameworks')
 
-let frameworksDir = path.resolve(import.meta.dirname, 'frameworks')
+const contentTypes = new Map([
+  ['.css', 'text/css; charset=utf-8'],
+  ['.html', 'text/html; charset=utf-8'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.map', 'application/json; charset=utf-8'],
+])
 
-let routes = route({
-  index: '/',
-})
+function html(strings: TemplateStringsArray, ...values: string[]) {
+  return String.raw({ raw: strings }, ...values)
+}
 
-let router = createRouter({
-  middleware: [staticFiles('./frameworks')],
-})
-
-let html = String.raw
-
-router.get(routes.index, () => {
-  let entries = fs.readdirSync(frameworksDir, { withFileTypes: true })
-  let frameworks = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
+async function getFrameworkNames(): Promise<string[]> {
+  let entries = await fs.readdir(frameworksDir, { withFileTypes: true })
+  return entries
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
     .sort()
+}
 
-  let links = frameworks
-    .map((name) => `<li><a href="/${name}/index.html">${name}</a></li>`)
-    .join('')
+function getContentType(filePath: string): string {
+  return contentTypes.get(path.extname(filePath)) ?? 'application/octet-stream'
+}
 
-  return new Response(
+function resolveFrameworkPath(urlPathname: string): string | null {
+  let relativePath = urlPathname.replace(/^\/+/, '')
+  if (relativePath === '') return null
+
+  let absolutePath = path.resolve(frameworksDir, relativePath)
+  if (absolutePath !== frameworksDir && !absolutePath.startsWith(frameworksDir + path.sep)) {
+    return null
+  }
+
+  return absolutePath
+}
+
+async function serveIndex(response: http.ServerResponse): Promise<void> {
+  let frameworks = await getFrameworkNames()
+  let links = frameworks.map(name => `<li><a href="/${name}/index.html">${name}</a></li>`).join('')
+
+  response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+  response.end(
     html`<!doctype html>
       <html>
         <head>
@@ -72,18 +89,64 @@ router.get(routes.index, () => {
           </ul>
         </body>
       </html>`,
-    { headers: { 'Content-Type': 'text/html' } },
   )
+}
+
+async function serveStaticFile(
+  filePath: string,
+  response: http.ServerResponse,
+): Promise<void> {
+  let resolvedPath = filePath
+  let stats = await fs.stat(resolvedPath)
+
+  if (stats.isDirectory()) {
+    resolvedPath = path.join(resolvedPath, 'index.html')
+    stats = await fs.stat(resolvedPath)
+  }
+
+  if (!stats.isFile()) {
+    response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+    response.end('Not found')
+    return
+  }
+
+  let file = await fs.readFile(resolvedPath)
+  response.writeHead(200, { 'Content-Type': getContentType(resolvedPath) })
+  response.end(file)
+}
+
+let server = http.createServer(async (request, response) => {
+  try {
+    let url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
+
+    if (url.pathname === '/') {
+      await serveIndex(response)
+      return
+    }
+
+    let filePath = resolveFrameworkPath(decodeURIComponent(url.pathname))
+    if (filePath == null) {
+      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+      response.end('Not found')
+      return
+    }
+
+    await serveStaticFile(filePath, response)
+  } catch (error) {
+    let code = error instanceof Error && 'code' in error ? error.code : null
+    if (code === 'ENOENT') {
+      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+      response.end('Not found')
+      return
+    }
+
+    response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+    response.end('Internal server error')
+  }
 })
 
-let server = http.createServer(
-  createRequestListener(async (request) => {
-    return await router.fetch(request)
-  }),
-)
-
-server.listen(44100, () => {
-  console.log('Benchmark server running at http://localhost:44100')
+server.listen(PORT, () => {
+  console.log(`Benchmark server running at http://localhost:${PORT}`)
 })
 
 function shutdown() {

@@ -1,20 +1,17 @@
 {
   "private": true,
   "type": "module",
-  "dependencies": {
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/static-middleware": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "catalog:",
     "playwright": "^1.49.1",
     "tsx": "catalog:"
   },
   "scripts": {
+    "baseline": "node baseline.ts",
     "start": "tsx server.ts",
     "dev": "tsx watch server.ts",
     "build-frameworks": "pnpm --filter \"component-benchmark-*\" run build",
-    "bench": "tsx runner.ts"
+    "bench": "tsx runner.ts",
+    "bench:remix": "tsx runner.ts --framework remix --cpu 4 --warmups 5 --runs 20 --headless"
   }
 }

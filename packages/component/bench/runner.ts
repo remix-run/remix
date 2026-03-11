@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parseArgs } from 'node:util'
@@ -9,6 +9,7 @@ const PORT = 44100
 const BASE_URL = `http://localhost:${PORT}`
 const REMIX_RESULTS_FILE = path.join(import.meta.dirname, '.remix-prev-results.json')
 const LAST_ARGS_FILE = path.join(import.meta.dirname, '.last-args.json')
+const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..')
 
 interface SavedArgs {
   cpu: string
@@ -19,6 +20,20 @@ interface SavedArgs {
   profile: boolean
   framework: string[]
   benchmark: string[]
+}
+
+interface GitInfo {
+  branch: string | null
+  sha: string | null
+}
+
+interface BenchmarkRun {
+  version: 1
+  label: string
+  createdAt: string
+  git: GitInfo
+  config: SavedArgs
+  results: BenchmarkResult[]
 }
 
 function saveArgs(args: SavedArgs): void {
@@ -36,13 +51,53 @@ function loadLastArgs(): SavedArgs | null {
   return null
 }
 
+function runGitCommand(args: string[]): string | null {
+  let result = spawnSync('git', args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+
+  if (result.status !== 0) return null
+
+  let output = result.stdout.trim()
+  return output === '' ? null : output
+}
+
+function getGitInfo(): GitInfo {
+  return {
+    branch: runGitCommand(['branch', '--show-current']),
+    sha: runGitCommand(['rev-parse', '--short', 'HEAD']),
+  }
+}
+
+function getDefaultLabel(git: GitInfo): string {
+  if (git.branch && git.sha) return `${git.branch} @ ${git.sha}`
+  if (git.branch) return git.branch
+  if (git.sha) return git.sha
+  return 'current'
+}
+
+function resolveFilePath(filePath: string): string {
+  return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath)
+}
+
+let cliArgs = process.argv.slice(2)
+if (cliArgs[0] === '--') {
+  cliArgs = cliArgs.slice(1)
+}
+
 // Check for 'repeat' command
-let isRepeat = process.argv[2] === 'repeat'
+let isRepeat = cliArgs[0] === 'repeat'
 
 // Parse command line arguments
 let { values: args } = parseArgs({
+  args: cliArgs,
   options: {
+    baseline: { type: 'string' },
     cpu: { type: 'string', default: '4' },
+    label: { type: 'string' },
+    out: { type: 'string' },
     runs: { type: 'string', default: '5' },
     warmups: { type: 'string', default: '2' },
     headless: { type: 'boolean', default: false },
@@ -89,8 +144,12 @@ let warmupRuns = parseInt(args.warmups!, 10)
 let headless = args.headless!
 let useTable = args.table!
 let showProfile = args.profile!
+let baselineFile = args.baseline ? resolveFilePath(args.baseline) : null
 let frameworkFilter = args.framework || []
 let benchmarkFilter = args.benchmark || []
+let outputFile = args.out ? resolveFilePath(args.out) : null
+let gitInfo = getGitInfo()
+let runLabel = args.label ?? getDefaultLabel(gitInfo)
 
 interface FunctionProfile {
   name: string
@@ -118,54 +177,43 @@ interface Operation {
   teardown?: (page: Page) => Promise<void>
 }
 
-// Click an element and measure time until next paint using Event Timing API
-// Also captures Chrome DevTools Profiler data for detailed function-level analysis
+// Dispatch a click inside the page and measure handler time plus next-paint time.
+// Keeping the action in-page avoids Playwright/headless timing gaps and focuses the
+// benchmark on renderer work instead of browser input dispatch overhead.
+// Also captures Chrome DevTools Profiler data for detailed function-level analysis.
 async function clickAndMeasure(
   page: Page,
   selector: string,
-  operationName?: string,
 ): Promise<TimingResult> {
-  // Set up the observer before clicking (using string to avoid tsx transformation issues)
-  await page.evaluate(`
-    window.__benchResult = null;
-    window.__benchObserver = new PerformanceObserver(function(list) {
-      var entries = list.getEntries();
-      for (var i = 0; i < entries.length; i++) {
-        var entry = entries[i];
-        if (entry.entryType === 'event' && entry.name === 'click') {
-          window.__benchResult = {
-            scripting: entry.processingEnd - entry.processingStart,
-            total: entry.duration
-          };
-          window.__benchObserver.disconnect();
-          return;
-        }
-      }
-    });
-    window.__benchObserver.observe({ type: 'event', buffered: false, durationThreshold: 0 });
-  `)
-
   // Start Chrome DevTools Profiler
   let cdp = await page.context().newCDPSession(page)
   await cdp.send('Profiler.enable')
   await cdp.send('Profiler.start')
 
-  // Use Playwright's click which fires real pointer events
-  await page.click(selector)
-
-  // Wait for paint and retrieve the timing result
-  let timing = (await page.evaluate(`
-    new Promise(function(resolve) {
-      function check() {
-        if (window.__benchResult !== null) {
-          resolve(window.__benchResult);
-        } else {
-          requestAnimationFrame(check);
-        }
+  let timing = (await page.evaluate((clickSelector) => {
+    return new Promise<TimingResult>((resolve, reject) => {
+      let element = document.querySelector(clickSelector)
+      if (!(element instanceof Element)) {
+        reject(new Error(`Selector not found: ${clickSelector}`))
+        return
       }
-      requestAnimationFrame(check);
+
+      let start = performance.now()
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+      queueMicrotask(() => {
+        let scripting = performance.now() - start
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve({
+              scripting,
+              total: performance.now() - start,
+            })
+          })
+        })
+      })
     })
-  `)) as TimingResult
+  }, selector)) as TimingResult
 
   // Stop profiler and get results
   let result = await cdp.send('Profiler.stop')
@@ -237,7 +285,14 @@ async function waitForIdle(page: Page): Promise<void> {
 
 // Click without measuring (for setup/teardown)
 async function click(page: Page, selector: string): Promise<void> {
-  await page.click(selector)
+  await page.evaluate((clickSelector) => {
+    let element = document.querySelector(clickSelector)
+    if (!(element instanceof Element)) {
+      throw new Error(`Selector not found: ${clickSelector}`)
+    }
+
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+  }, selector)
   // Wait for paint and idle to complete before continuing
   await waitForIdle(page)
 }
@@ -257,70 +312,70 @@ const operations: Operation[] = [
   {
     name: 'create1k',
     setup: clear,
-    action: (page) => clickAndMeasure(page, '#run', 'create1k'),
+    action: (page) => clickAndMeasure(page, '#run'),
   },
   // {
   //   name: 'create10k',
   //   setup: clear,
-  //   action: (page) => clickAndMeasure(page, '#runlots', 'create10k'),
+  //   action: (page) => clickAndMeasure(page, '#runlots'),
   // },
   {
     name: 'append1k',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#add', 'append1k'),
+    action: (page) => clickAndMeasure(page, '#add'),
     teardown: clear,
   },
   {
     name: 'update',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#update', 'update'),
+    action: (page) => clickAndMeasure(page, '#update'),
     teardown: clear,
   },
   {
     name: 'clear',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#clear', 'clear'),
+    action: (page) => clickAndMeasure(page, '#clear'),
   },
   {
     name: 'swapRows',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#swaprows', 'swapRows'),
+    action: (page) => clickAndMeasure(page, '#swaprows'),
     teardown: clear,
   },
   {
     name: 'selectRow',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, 'tbody tr:first-child td.col-md-4 a', 'selectRow'),
+    action: (page) => clickAndMeasure(page, 'tbody tr:first-child td.col-md-4 a'),
     teardown: clear,
   },
   {
     name: 'removeRow',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, 'tbody tr:first-child td.col-md-1 a', 'removeRow'),
+    action: (page) => clickAndMeasure(page, 'tbody tr:first-child td.col-md-1 a'),
     teardown: clear,
   },
   {
     name: 'replace1k',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#run', 'replace1k'),
+    action: (page) => clickAndMeasure(page, '#run'),
     teardown: clear,
   },
   {
     name: 'sortAsc',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#sortasc', 'sortAsc'),
+    action: (page) => clickAndMeasure(page, '#sortasc'),
     teardown: clear,
   },
   {
     name: 'sortDesc',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#sortdesc', 'sortDesc'),
+    action: (page) => clickAndMeasure(page, '#sortdesc'),
     teardown: clear,
   },
   {
     name: 'switchToDashboard',
     setup: create1k,
-    action: (page) => clickAndMeasure(page, '#switchToDashboard', 'switchToDashboard'),
+    action: (page) => clickAndMeasure(page, '#switchToDashboard'),
     teardown: async (page) => {
       await click(page, '#switchToTable')
       await clear(page)
@@ -329,7 +384,7 @@ const operations: Operation[] = [
   {
     name: 'renderDashboard',
     setup: clear,
-    action: (page) => clickAndMeasure(page, '#switchToDashboard', 'renderDashboard'),
+    action: (page) => clickAndMeasure(page, '#switchToDashboard'),
     teardown: async (page) => {
       await click(page, '#switchToTable')
       await clear(page)
@@ -341,7 +396,7 @@ const operations: Operation[] = [
       await clear(page)
       await click(page, '#switchToDashboard')
     },
-    action: (page) => clickAndMeasure(page, '#switchToTable', 'teardownDashboard'),
+    action: (page) => clickAndMeasure(page, '#switchToTable'),
     teardown: clear,
   },
   {
@@ -350,7 +405,7 @@ const operations: Operation[] = [
       await clear(page)
       await click(page, '#switchToDashboard')
     },
-    action: (page) => clickAndMeasure(page, '#sortDashboardAsc', 'sortDashboardAsc'),
+    action: (page) => clickAndMeasure(page, '#sortDashboardAsc'),
     teardown: async (page) => {
       await click(page, '#switchToTable')
       await clear(page)
@@ -362,7 +417,7 @@ const operations: Operation[] = [
       await clear(page)
       await click(page, '#switchToDashboard')
     },
-    action: (page) => clickAndMeasure(page, '#sortDashboardDesc', 'sortDashboardDesc'),
+    action: (page) => clickAndMeasure(page, '#sortDashboardDesc'),
     teardown: async (page) => {
       await click(page, '#switchToTable')
       await clear(page)
@@ -424,27 +479,148 @@ function getFrameworks(): string[] {
     .sort()
 }
 
-// Save remix results to file for comparison with next run
-function saveRemixResults(results: BenchmarkResult[]): void {
-  let remixResults = results.filter((r) => r.framework === 'remix')
-  if (remixResults.length > 0) {
-    fs.writeFileSync(REMIX_RESULTS_FILE, JSON.stringify(remixResults, null, 2))
-  }
+function saveBenchmarkRun(filePath: string, run: BenchmarkRun): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, JSON.stringify(run, null, 2))
 }
 
-// Load previous remix results if they exist
-function loadPreviousRemixResults(): BenchmarkResult[] {
+function loadBenchmarkRun(filePath: string): BenchmarkRun | null {
   try {
-    if (fs.existsSync(REMIX_RESULTS_FILE)) {
-      let data = fs.readFileSync(REMIX_RESULTS_FILE, 'utf-8')
-      let results: BenchmarkResult[] = JSON.parse(data)
-      // Rename framework to "remix (prev)"
-      return results.map((r) => ({ ...r, framework: 'remix (prev)' }))
+    if (fs.existsSync(filePath)) {
+      let data = fs.readFileSync(filePath, 'utf-8')
+      let parsed = JSON.parse(data)
+
+      if (Array.isArray(parsed)) {
+        return {
+          version: 1,
+          label: 'previous',
+          createdAt: '',
+          git: { branch: null, sha: null },
+          config: {
+            cpu: '4',
+            runs: '0',
+            warmups: '0',
+            headless: true,
+            table: false,
+            profile: false,
+            framework: [],
+            benchmark: [],
+          },
+          results: parsed,
+        }
+      }
+
+      if (parsed && Array.isArray(parsed.results)) {
+        return parsed as BenchmarkRun
+      }
     }
   } catch {
     // Ignore errors loading previous results
   }
-  return []
+
+  return null
+}
+
+function createRun(
+  label: string,
+  git: GitInfo,
+  config: SavedArgs,
+  results: BenchmarkResult[],
+): BenchmarkRun {
+  return {
+    version: 1,
+    label,
+    createdAt: new Date().toISOString(),
+    git,
+    config,
+    results,
+  }
+}
+
+// Save remix results to file for comparison with next run
+function saveRemixResults(run: BenchmarkRun): void {
+  let remixResults = run.results.filter((result) => result.framework === 'remix')
+  if (remixResults.length === 0) return
+
+  saveBenchmarkRun(REMIX_RESULTS_FILE, {
+    ...run,
+    results: remixResults,
+  })
+}
+
+type ComparisonRun = {
+  run: BenchmarkRun
+  displayLabel: string
+}
+
+function loadPreviousRemixResults(): ComparisonRun | null {
+  let run = loadBenchmarkRun(REMIX_RESULTS_FILE)
+  if (run == null) return null
+
+  return {
+    run,
+    displayLabel: 'prev',
+  }
+}
+
+function getComparableResults(
+  currentResults: BenchmarkResult[],
+  comparisonRun: ComparisonRun,
+): BenchmarkResult[] {
+  let currentKeys = new Set(currentResults.map(result => `${result.framework}:${result.operation}`))
+
+  return comparisonRun.run.results
+    .filter(result => currentKeys.has(`${result.framework}:${result.operation}`))
+    .map(result => ({
+      ...result,
+      framework: `${result.framework} (${comparisonRun.displayLabel})`,
+    }))
+}
+
+function printComparisonSummary(
+  currentResults: BenchmarkResult[],
+  comparisonRun: ComparisonRun,
+): void {
+  let baselineByKey = new Map(
+    comparisonRun.run.results.map(result => [`${result.framework}:${result.operation}`, result]),
+  )
+
+  let totalSummary: Record<string, Record<string, string | number>> = {}
+  let scriptingSummary: Record<string, Record<string, string | number>> = {}
+
+  for (let result of currentResults) {
+    let baseline = baselineByKey.get(`${result.framework}:${result.operation}`)
+    if (!baseline) continue
+    if (baseline.total.median === 0 || baseline.scripting.median === 0) continue
+
+    let rowKey = `${result.framework}/${result.operation}`
+    let totalDelta = ((result.total.median - baseline.total.median) / baseline.total.median) * 100
+    let scriptingDelta =
+      ((result.scripting.median - baseline.scripting.median) / baseline.scripting.median) * 100
+
+    totalSummary[rowKey] = {
+      baseline: Math.round(baseline.total.median * 10) / 10,
+      current: Math.round(result.total.median * 10) / 10,
+      delta: `${totalDelta >= 0 ? '+' : ''}${totalDelta.toFixed(1)}%`,
+      ratio: `${(result.total.median / baseline.total.median).toFixed(2)}x`,
+    }
+
+    scriptingSummary[rowKey] = {
+      baseline: Math.round(baseline.scripting.median * 10) / 10,
+      current: Math.round(result.scripting.median * 10) / 10,
+      delta: `${scriptingDelta >= 0 ? '+' : ''}${scriptingDelta.toFixed(1)}%`,
+      ratio: `${(result.scripting.median / baseline.scripting.median).toFixed(2)}x`,
+    }
+  }
+
+  if (Object.keys(totalSummary).length === 0) return
+
+  let gitSuffix = comparisonRun.run.git.sha ? ` @ ${comparisonRun.run.git.sha}` : ''
+  console.log(`\nComparison vs ${comparisonRun.run.label}${gitSuffix}`)
+  console.log('Total Time (median ms):')
+  console.table(totalSummary)
+  console.log('Scripting Time (median ms):')
+  console.table(scriptingSummary)
 }
 
 // Run a single operation and measure time
@@ -572,6 +748,7 @@ async function benchmarkFramework(
     // Reload page before each operation to reset all JS state (idCounter, etc.)
     await page.goto(url)
     await page.waitForSelector('#run')
+    await waitForIdle(page)
 
     // Warmup runs (not recorded)
     for (let i = 0; i < warmupRuns; i++) {
@@ -802,12 +979,23 @@ async function main(): Promise<void> {
     let allResults: BenchmarkResult[] = []
     let allProfiles = new Map<string, FunctionProfile[][]>()
 
-    // Load previous remix results if remix is being benchmarked
     let hasRemix = frameworks.includes('remix')
-    let previousRemixResults: BenchmarkResult[] = []
-    if (hasRemix) {
-      previousRemixResults = loadPreviousRemixResults()
-      if (previousRemixResults.length > 0) {
+    let comparisonRun: ComparisonRun | null = null
+    if (baselineFile) {
+      let loadedRun = loadBenchmarkRun(baselineFile)
+      if (loadedRun == null) {
+        console.error(`Error: Could not load baseline file ${baselineFile}`)
+        process.exit(1)
+      }
+
+      comparisonRun = {
+        run: loadedRun,
+        displayLabel: loadedRun.label,
+      }
+      console.log(`Loaded baseline results from ${baselineFile}`)
+    } else if (hasRemix) {
+      comparisonRun = loadPreviousRemixResults()
+      if (comparisonRun != null) {
         console.log('Loaded previous remix results for comparison')
       }
     }
@@ -815,6 +1003,7 @@ async function main(): Promise<void> {
     console.log(`Benchmarking ${frameworks.length} frameworks: ${frameworks.join(', ')}`)
     console.log(`${warmupRuns} warmup runs, ${benchmarkRuns} benchmark runs per operation`)
     console.log(`CPU throttling: ${cpuThrottling}x`)
+    console.log(`Run label: ${runLabel}`)
     console.log('')
 
     for (let framework of frameworks) {
@@ -829,15 +1018,32 @@ async function main(): Promise<void> {
       console.log(' done')
     }
 
+    let savedArgs: SavedArgs = {
+      cpu: String(cpuThrottling),
+      runs: String(benchmarkRuns),
+      warmups: String(warmupRuns),
+      headless,
+      table: useTable,
+      profile: showProfile,
+      framework: frameworks,
+      benchmark: benchmarkFilter,
+    }
+    let currentRun = createRun(runLabel, gitInfo, savedArgs, allResults)
+
     // Save current remix results for next run
     if (hasRemix) {
-      saveRemixResults(allResults)
+      saveRemixResults(currentRun)
+    }
+
+    if (outputFile) {
+      saveBenchmarkRun(outputFile, currentRun)
+      console.log(`Saved benchmark results to ${outputFile}`)
     }
 
     // Add previous remix results to display only when remix is the only framework
     // (When comparing against other frameworks, we don't need to show previous remix)
-    if (previousRemixResults.length > 0 && frameworks.length === 1) {
-      allResults.push(...previousRemixResults)
+    if (comparisonRun != null && frameworks.length === 1) {
+      allResults.push(...getComparableResults(currentRun.results, comparisonRun))
     }
 
     // Print aggregated profiling tables first
@@ -848,6 +1054,10 @@ async function main(): Promise<void> {
           printProfileTable(aggregated, key)
         }
       }
+    }
+
+    if (comparisonRun != null) {
+      printComparisonSummary(currentRun.results, comparisonRun)
     }
 
     // Print benchmark results after profiles

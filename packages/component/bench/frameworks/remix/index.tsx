@@ -8,14 +8,18 @@ import {
   buildData,
 } from '../shared.ts'
 import type { Benchmark, Row } from '../shared.ts'
-import { type Handle, createRoot } from '@remix-run/component'
+import { type Handle, createRoot, on } from '@remix-run/component'
 
 export const name = 'remix'
+
+function events(handlers: Record<string, (...args: any[]) => void>) {
+  return Object.entries(handlers).map(([type, handler]) => on(type as any, handler as any))
+}
 
 function Button() {
   return ({ id, text, fn }: { id: string; text: string; fn: () => void }) => (
     <div class="col-sm-6 smallpad">
-      <button id={id} class="btn btn-primary btn-block" type="button" on={{ click: fn }}>
+      <button id={id} class="btn btn-primary btn-block" type="button" mix={events({ click: fn })}>
         {text}
       </button>
     </div>
@@ -40,7 +44,7 @@ function MetricCard(handle: Handle) {
   }) => (
     <div
       class={`metric-card ${selected ? 'selected' : ''}`}
-      on={{
+      mix={events({
         click: () => {
           selected = !selected
           handle.update()
@@ -60,7 +64,7 @@ function MetricCard(handle: Handle) {
         blur: (e: any) => {
           e.currentTarget.style.outline = ''
         },
-      }}
+      })}
       tabIndex={0}
       style={{
         backgroundColor: hovered ? '#f5f5f5' : '#fff',
@@ -99,7 +103,7 @@ function ChartBar(handle: Handle) {
         opacity: hovered ? 0.9 : 1,
         transform: hovered ? 'scaleY(1.1)' : 'scaleY(1)',
       }}
-      on={{
+      mix={events({
         click: () => {},
         mouseenter: () => {
           hovered = true
@@ -116,7 +120,7 @@ function ChartBar(handle: Handle) {
         blur: (e: any) => {
           e.currentTarget.style.outline = ''
         },
-      }}
+      })}
       tabIndex={0}
     />
   )
@@ -130,7 +134,7 @@ function ActivityItem(handle: Handle) {
   return ({ id, title, time, icon }: { id: number; title: string; time: string; icon: string }) => (
     <li
       class={`activity-item ${read ? 'read' : ''}`}
-      on={{
+      mix={events({
         click: () => {
           read = !read
           handle.update()
@@ -143,7 +147,7 @@ function ActivityItem(handle: Handle) {
           hovered = false
           handle.update()
         },
-      }}
+      })}
       style={{
         padding: '12px',
         borderBottom: '1px solid #eee',
@@ -188,7 +192,7 @@ function DropdownMenu(handle: Handle) {
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
         class="btn btn-primary"
-        on={{
+        mix={events({
           click: (e: any) => {
             e.stopPropagation()
             open = !open
@@ -209,7 +213,7 @@ function DropdownMenu(handle: Handle) {
           blur: (e: any) => {
             e.currentTarget.style.outline = ''
           },
-        }}
+        })}
         style={{
           padding: '4px 8px',
           fontSize: '12px',
@@ -227,22 +231,22 @@ function DropdownMenu(handle: Handle) {
             backgroundColor: '#fff',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-            zIndex: 1000,
-            minWidth: '150px',
-            marginTop: '4px',
-          }}
-          on={{
+          boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+          zIndex: 1000,
+          minWidth: '150px',
+          marginTop: '4px',
+        }}
+          mix={events({
             mouseleave: () => {
               open = false
               handle.update()
             },
-          }}
+          })}
         >
           {actions.map((action, idx) => (
             <div
               key={idx}
-              on={{
+              mix={events({
                 click: (e: any) => {
                   e.stopPropagation()
                   open = false
@@ -254,7 +258,7 @@ function DropdownMenu(handle: Handle) {
                 mouseleave: (e: any) => {
                   e.currentTarget.style.backgroundColor = '#fff'
                 },
-              }}
+              })}
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
@@ -278,7 +282,7 @@ function DashboardTableRow(handle: Handle) {
   return ({ row }: { row: Row }) => (
     <tr
       class={selected ? 'danger' : ''}
-      on={{
+      mix={events({
         click: () => {
           selected = !selected
           handle.update()
@@ -291,7 +295,7 @@ function DashboardTableRow(handle: Handle) {
           hovered = false
           handle.update()
         },
-      }}
+      })}
       style={{
         backgroundColor: hovered ? '#f5f5f5' : '#fff',
         cursor: 'pointer',
@@ -322,7 +326,7 @@ function SearchInput(handle: Handle) {
       type="text"
       placeholder="Search..."
       value={value}
-      on={{
+      mix={events({
         input: (e: any) => {
           value = e.target.value
           handle.update()
@@ -335,7 +339,7 @@ function SearchInput(handle: Handle) {
           focused = false
           handle.update()
         },
-      }}
+      })}
       style={{
         padding: '8px 12px',
         border: `1px solid ${focused ? '#337ab7' : '#ddd'}`,
@@ -366,7 +370,7 @@ function FormWidgets(handle: Handle) {
         </label>
         <select
           value={selectValue}
-          on={{
+          mix={events({
             change: (e: any) => {
               selectValue = e.target.value
               handle.update()
@@ -380,7 +384,7 @@ function FormWidgets(handle: Handle) {
               e.currentTarget.style.borderColor = '#ddd'
               e.currentTarget.style.outline = 'none'
             },
-          }}
+          })}
           style={{
             padding: '6px 12px',
             border: '1px solid #ddd',
@@ -404,7 +408,7 @@ function FormWidgets(handle: Handle) {
             type="checkbox"
             id={`checkbox-${idx}`}
             checked={checkboxValues.has(`checkbox-${idx}`)}
-            on={{
+            mix={events({
               change: (e: any) => {
                 if (e.target.checked) {
                   checkboxValues.add(`checkbox-${idx}`)
@@ -420,7 +424,7 @@ function FormWidgets(handle: Handle) {
               blur: (e: any) => {
                 e.currentTarget.style.outline = ''
               },
-            }}
+            })}
           />
           <label for={`checkbox-${idx}`} style={{ fontSize: '14px', cursor: 'pointer' }}>
             {label}
@@ -435,7 +439,7 @@ function FormWidgets(handle: Handle) {
               name="radio-group"
               value={`radio${idx + 1}`}
               checked={radioValue === `radio${idx + 1}`}
-              on={{
+              mix={events({
                 change: (e: any) => {
                   radioValue = e.target.value
                   handle.update()
@@ -447,7 +451,7 @@ function FormWidgets(handle: Handle) {
                 blur: (e: any) => {
                   e.currentTarget.style.outline = ''
                 },
-              }}
+              })}
               style={{ marginRight: '8px' }}
             />
             {label}
@@ -470,7 +474,7 @@ function FormWidgets(handle: Handle) {
           <input
             type="checkbox"
             checked={toggleValue}
-            on={{
+            mix={events({
               change: (e: any) => {
                 toggleValue = e.target.checked
                 handle.update()
@@ -482,7 +486,7 @@ function FormWidgets(handle: Handle) {
               blur: (e: any) => {
                 e.currentTarget.style.outline = ''
               },
-            }}
+            })}
             style={{ opacity: 0, width: 0, height: 0 }}
           />
           <span
@@ -584,7 +588,7 @@ function Dashboard(handle: Handle) {
           id="switchToTable"
           class="btn btn-primary"
           type="button"
-          on={{ click: onSwitchToTable }}
+          mix={events({ click: onSwitchToTable })}
         >
           Switch to Table
         </button>
@@ -671,7 +675,7 @@ function Dashboard(handle: Handle) {
               id="sortDashboardAsc"
               class="btn btn-primary"
               type="button"
-              on={{ click: sortDashboardAsc }}
+              mix={events({ click: sortDashboardAsc })}
               style={{ padding: '4px 8px', fontSize: '12px' }}
             >
               Sort ↑
@@ -680,7 +684,7 @@ function Dashboard(handle: Handle) {
               id="sortDashboardDesc"
               class="btn btn-primary"
               type="button"
-              on={{ click: sortDashboardDesc }}
+              mix={events({ click: sortDashboardDesc })}
               style={{ padding: '4px 8px', fontSize: '12px' }}
             >
               Sort ↓
@@ -845,22 +849,22 @@ function App(handle: Handle) {
                   <td class="col-md-1">{rowId}</td>
                   <td class="col-md-4">
                     <a
-                      on={{
+                      mix={events({
                         click: () => {
                           setSelected(rowId)
                         },
-                      }}
+                      })}
                     >
                       {row.label}
                     </a>
                   </td>
                   <td class="col-md-1">
                     <a
-                      on={{
+                      mix={events({
                         click: () => {
                           setRows(remove(rows, rowId))
                         },
-                      }}
+                      })}
                     >
                       <span class="glyphicon glyphicon-remove" aria-hidden="true" />
                     </a>
