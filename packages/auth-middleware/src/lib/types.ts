@@ -8,13 +8,13 @@ export interface AuthFailure {
 }
 
 export interface AuthenticatedAuth<principal = unknown, scheme extends string = string> {
-  authenticated: true
+  ok: true
   principal: principal
   scheme: scheme
 }
 
 export interface UnauthenticatedAuth {
-  authenticated: false
+  ok: false
   error?: AuthFailure
 }
 
