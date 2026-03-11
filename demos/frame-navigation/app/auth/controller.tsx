@@ -78,8 +78,7 @@ let loginBodyStyle = css({
   fontFamily:
     'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
   color: '#0f172a',
-  background:
-    'radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 28%), #f8fafc',
+  background: 'radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 28%), #f8fafc',
 })
 
 let loginShellStyle = css({

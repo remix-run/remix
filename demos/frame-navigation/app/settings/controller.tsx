@@ -45,9 +45,7 @@ type SettingsPageProps = {
 
 function renderSettingsPage(activeItem: SettingsNavItem, content: RemixNode, init?: ResponseInit) {
   return render(
-    <SettingsShellOrFragment activeItem={activeItem}>
-      {content}
-    </SettingsShellOrFragment>,
+    <SettingsShellOrFragment activeItem={activeItem}>{content}</SettingsShellOrFragment>,
     init,
   )
 }
