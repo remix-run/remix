@@ -14,7 +14,7 @@ interface BookstoreAuthSession {
   userId: number
 }
 
-export function bookstoreAuth(): Middleware {
+export function loadAuth(): Middleware {
   return auth({
     schemes: [
       sessionAuth<User, BookstoreAuthSession>({
