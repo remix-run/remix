@@ -47,5 +47,3 @@ export function createSocialLoginRouter(options?: SocialLoginRouterOptions) {
 
   return router
 }
-
-export let router = createSocialLoginRouter()
