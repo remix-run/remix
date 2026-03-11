@@ -8,18 +8,14 @@ on:
       - '.github/workflows/file-storage-integration.yaml'
       - 'packages/file-storage/**'
       - 'packages/file-storage-s3/**'
-      - 'packages/remix/package.json'
-      - 'packages/remix/src/file-storage/s3.ts'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
   pull_request:
     paths:
       - '.github/workflows/file-storage-integration.yaml'
       - 'packages/file-storage/**'
       - 'packages/file-storage-s3/**'
-      - 'packages/remix/package.json'
-      - 'packages/remix/src/file-storage/s3.ts'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
 
 jobs:

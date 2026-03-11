@@ -10,7 +10,7 @@ on:
       - 'packages/data-table-postgres/**'
       - 'packages/data-table-mysql/**'
       - 'packages/data-table-sqlite/**'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
   pull_request:
     paths:
@@ -19,7 +19,7 @@ on:
       - 'packages/data-table-postgres/**'
       - 'packages/data-table-mysql/**'
       - 'packages/data-table-sqlite/**'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
 
 jobs:

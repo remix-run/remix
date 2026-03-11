@@ -40,6 +40,7 @@ We currently publish the following packages:
 - [component](packages/component): UI components for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
+- [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation

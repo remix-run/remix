@@ -373,6 +373,22 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/cors-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/csrf-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -397,7 +413,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-
   packages/data-schema:
     dependencies:
       '@standard-schema/spec':
@@ -945,6 +960,9 @@ importers:
       '@remix-run/cop-middleware':
         specifier: workspace:^
         version: link:../cop-middleware
+      '@remix-run/cors-middleware':
+        specifier: workspace:^
+        version: link:../cors-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
