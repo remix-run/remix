@@ -142,7 +142,7 @@ function ensureControlledReflection(
   }
 
   node._controlledState = state
-  scheduler.enqueueTasks([
+  scheduler.enqueueCommitPhase([
     () => {
       if (state.disposed) return
       node._dom.addEventListener('input', state.onInput)
@@ -268,7 +268,7 @@ function bindNodeMixRuntime(
       parent: parent ?? (node._dom.parentNode as ParentNode),
       key: node.key,
       enqueueUpdate(done) {
-        scheduler.enqueueTasks([
+        scheduler.enqueueWork([
           () => {
             if (state?.aborted) {
               done(getMixinRuntimeSignal(state))
@@ -461,7 +461,7 @@ function diffHost(
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    scheduler.enqueueTasks([
+    scheduler.enqueueCommitPhase([
       () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
     ])
   }
@@ -1103,7 +1103,6 @@ export function renderComponent(
 ): Node | null | undefined {
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
-
   let newCursor = diffVNodes(
     currContent,
     content,
@@ -1121,7 +1120,6 @@ export function renderComponent(
   next._parent = vParent
 
   let committed = next as CommittedComponentNode
-
   handle.setScheduleUpdate(() => {
     scheduler.enqueue(committed, domParent)
   })
@@ -1693,7 +1691,7 @@ function reclaimPersistedMixinNode(
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    scheduler.enqueueTasks([
+    scheduler.enqueueCommitPhase([
       () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
     ])
   }

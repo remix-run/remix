@@ -127,6 +127,7 @@ type AnyMixinRunnerResult = ReturnType<AnyMixinRunner>
 type AnyMixinSetupResult = ReturnType<AnyMixinType> | AnyMixinRunnerResult
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
 type ScopedAnyMixinHandle = AnyMixinHandle & {
+  queueCommitTask(task: () => void): void
   setActiveScope(scope?: symbol): void
   dispatchScopedEvent(scope: symbol, event: Event): void
   releaseScope(scope: symbol): void
@@ -221,8 +222,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
-        handle.dispatchScopedEvent(entry.scope, new Event('remove'))
-        handle.releaseScope(entry.scope)
+        queueMixinRemove(handle, entry.scope)
       }
       let scope = Symbol('mixin-scope')
       handle.setActiveScope(scope)
@@ -238,7 +238,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       state.runners[index] = entry
       let binding = state.binding
       if (binding?.node) {
-        dispatchMixinInsert(handle, entry.scope, binding.node, binding.parent, binding.key)
+        queueMixinInsert(handle, entry.scope, binding.node, binding.parent, binding.key)
       }
     }
 
@@ -300,19 +300,12 @@ export function teardownMixins(state?: MixinRuntimeState) {
   state.binding = undefined
   prepareMixinRemoval(state)
   cancelPendingMixinRemoval(state)
-  dispatchMixinRemoveEvent(state)
   let handle = state.handle as ScopedAnyMixinHandle | undefined
   if (handle) {
-    for (let entry of state.runners) {
-      handle.releaseScope(entry.scope)
-    }
+    handle.queueCommitTask(() => finalizeMixinTeardown(state))
+    return
   }
-  state.runners.length = 0
-  state.aborted = true
-  state.controller?.abort()
-  state.pendingRemoval = undefined
-  state.removePrepared = true
-  state.handle = undefined
+  finalizeMixinTeardown(state)
 }
 
 export function bindMixinRuntime(
@@ -330,9 +323,9 @@ export function bindMixinRuntime(
   if (!handle) return
   for (let entry of state.runners) {
     if (options?.dispatchReclaimed) {
-      dispatchMixinReclaimed(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
+      queueMixinReclaimed(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
     } else {
-      dispatchMixinInsert(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
+      queueMixinInsert(handle, entry.scope, nextNode, nextBinding.parent, nextBinding.key)
     }
   }
 }
@@ -521,6 +514,10 @@ class MixinHandleImpl
     ])
   }
 
+  queueCommitTask(task: () => void): void {
+    this.#options.scheduler.enqueueCommitPhase([task])
+  }
+
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
@@ -638,6 +635,37 @@ function dispatchMixinBeforeRemove(
   handle.dispatchScopedEvent(scope, event)
 }
 
+function queueMixinInsert(
+  handle: ScopedAnyMixinHandle,
+  scope: symbol,
+  node: Element,
+  parent: ParentNode,
+  key?: string,
+) {
+  handle.queueCommitTask(() => {
+    dispatchMixinInsert(handle, scope, node, parent, key)
+  })
+}
+
+function queueMixinReclaimed(
+  handle: ScopedAnyMixinHandle,
+  scope: symbol,
+  node: Element,
+  parent: ParentNode,
+  key?: string,
+) {
+  handle.queueCommitTask(() => {
+    dispatchMixinReclaimed(handle, scope, node, parent, key)
+  })
+}
+
+function queueMixinRemove(handle: ScopedAnyMixinHandle, scope: symbol) {
+  handle.queueCommitTask(() => {
+    handle.dispatchScopedEvent(scope, new Event('remove'))
+    handle.releaseScope(scope)
+  })
+}
+
 function dispatchMixinRemoveEvent(state?: MixinRuntimeState) {
   let runners = state?.runners
   if (!runners?.length) return
@@ -646,6 +674,22 @@ function dispatchMixinRemoveEvent(state?: MixinRuntimeState) {
   for (let entry of runners) {
     handle.dispatchScopedEvent(entry.scope, new Event('remove'))
   }
+}
+
+function finalizeMixinTeardown(state: MixinRuntimeState) {
+  dispatchMixinRemoveEvent(state)
+  let handle = state.handle as ScopedAnyMixinHandle | undefined
+  if (handle) {
+    for (let entry of state.runners) {
+      handle.releaseScope(entry.scope)
+    }
+  }
+  state.runners.length = 0
+  state.aborted = true
+  state.controller?.abort()
+  state.pendingRemoval = undefined
+  state.removePrepared = true
+  state.handle = undefined
 }
 
 function dispatchMixinUpdateEvent(

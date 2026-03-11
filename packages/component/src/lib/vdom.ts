@@ -108,7 +108,7 @@ export function createRangeRoot(
         _rangeEnd: end,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
       }
-      scheduler.enqueueTasks([
+      scheduler.enqueueWork([
         () => {
           diffVNodes(
             vroot,
@@ -135,7 +135,7 @@ export function createRangeRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, parent, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, parent, scheduler, styles)])
       scheduler.dequeue()
     },
 
@@ -186,7 +186,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
 
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
-      scheduler.enqueueTasks([
+      scheduler.enqueueWork([
         () => {
           diffVNodes(
             vroot,
@@ -213,7 +213,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, container, scheduler, styles)])
       scheduler.dequeue()
     },
 
