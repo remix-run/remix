@@ -1,0 +1,68 @@
+{
+  "name": "@remix-run/data-table-mssql",
+  "version": "0.0.0",
+  "description": "MSSQL adapter for remix/data-table",
+  "author": "Isaac Cloos <cloosisaac@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/data-table-mssql"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table-mssql#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/data-table": "workspace:*",
+    "@types/mssql": "^9.1.8",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "mssql": "^12.2.0"
+  },
+  "dependencies": {
+    "@remix-run/data-table": "workspace:^"
+  },
+  "peerDependencies": {
+    "mssql": "^12.2.0"
+  },
+  "peerDependenciesMeta": {
+    "mssql": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/adapter.test.ts ./src/lib/sql-compiler.test.ts",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "orm",
+    "mssql",
+    "database",
+    "sql"
+  ]
+}

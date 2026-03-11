@@ -35,14 +35,7 @@ export async function hasMigrationJournal(
   tableName: string,
 ): Promise<boolean> {
   try {
-    await adapter.execute({
-      operation: {
-        kind: 'raw',
-        sql: rawSql('select 1 from ' + tableName + ' limit 1'),
-      },
-    })
-
-    return true
+    return await adapter.hasTable({ name: tableName })
   } catch {
     return false
   }

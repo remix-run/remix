@@ -33,6 +33,7 @@
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
+    "./data-table-mssql": "./src/data-table-mssql.ts",
     "./data-table-mysql": "./src/data-table-mysql.ts",
     "./data-table-postgres": "./src/data-table-postgres.ts",
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
@@ -138,6 +139,10 @@
       "./data-table": {
         "types": "./dist/data-table.d.ts",
         "default": "./dist/data-table.js"
+      },
+      "./data-table-mssql": {
+        "types": "./dist/data-table-mssql.d.ts",
+        "default": "./dist/data-table-mssql.js"
       },
       "./data-table-mysql": {
         "types": "./dist/data-table-mysql.d.ts",
@@ -343,6 +348,7 @@
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/data-schema": "workspace:^",
     "@remix-run/data-table": "workspace:^",
+    "@remix-run/data-table-mssql": "workspace:^",
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",
     "@remix-run/data-table-sqlite": "workspace:^",
