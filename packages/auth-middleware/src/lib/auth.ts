@@ -23,7 +23,7 @@ export function auth(options: AuthOptions): Middleware {
 
       if (result.status === 'success') {
         context.set(Auth, {
-          authenticated: true,
+          ok: true,
           principal: result.principal,
           scheme: scheme.name,
         } satisfies AuthValue)
@@ -38,7 +38,7 @@ export function auth(options: AuthOptions): Middleware {
       }
 
       context.set(Auth, {
-        authenticated: false,
+        ok: false,
         error: createFailure(scheme, result),
       } satisfies AuthValue)
 
@@ -46,7 +46,7 @@ export function auth(options: AuthOptions): Middleware {
     }
 
     context.set(Auth, {
-      authenticated: false,
+      ok: false,
     } satisfies AuthValue)
 
     return next()

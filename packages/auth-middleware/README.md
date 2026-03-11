@@ -45,7 +45,7 @@ router.map('/private', {
     let auth = context.get(Auth)
 
     return Response.json({
-      userId: auth.authenticated ? auth.principal.id : null,
+      userId: auth.ok ? auth.principal.id : null,
     })
   },
 })
@@ -53,8 +53,8 @@ router.map('/private', {
 
 `auth()` resolves auth state and stores it at `context.get(Auth)`:
 
-- `{ authenticated: true, principal, scheme }`
-- `{ authenticated: false, error? }`
+- `{ ok: true, principal, scheme }`
+- `{ ok: false, error? }`
 
 When implementing custom schemes, return `null` or `undefined` (or no return
 value) from `authenticate()` to skip that scheme.
@@ -120,7 +120,7 @@ let router = createRouter({
 router.get(routes.home, ({ get }) => {
   let auth = get(Auth)
 
-  if (auth.authenticated) {
+  if (auth.ok) {
     return new Response(`Welcome back via ${auth.scheme}`)
   }
 
@@ -131,11 +131,11 @@ router.get(routes.home, ({ get }) => {
 router.map(routes.api.profile, {
   middleware: [
     requireAuth({
-      onFailure(_context, authState) {
+      onFailure(_context, auth) {
         return Response.json(
           {
-            error: authState.error?.message ?? 'Unauthorized',
-            code: authState.error?.code ?? 'missing_credentials',
+            error: auth.error?.message ?? 'Unauthorized',
+            code: auth.error?.code ?? 'missing_credentials',
           },
           { status: 401 },
         )
@@ -146,8 +146,8 @@ router.map(routes.api.profile, {
     let auth = get(Auth)
 
     return Response.json({
-      authenticatedWith: auth.authenticated ? auth.scheme : null,
-      principal: auth.authenticated ? auth.principal : null,
+      authenticatedWith: auth.ok ? auth.scheme : null,
+      principal: auth.ok ? auth.principal : null,
     })
   },
 })
@@ -159,7 +159,7 @@ router.map(routes.api.integrations, {
     let auth = get(Auth)
 
     return Response.json({
-      principal: auth.authenticated ? auth.principal : null,
+      principal: auth.ok ? auth.principal : null,
     })
   },
 })
@@ -177,8 +177,8 @@ router.map(routes.app.dashboard, {
   action({ get }) {
     let auth = get(Auth)
 
-    if (!auth.authenticated) {
-      throw new Error('Expected authenticated state after requireAuth()')
+    if (!auth.ok) {
+      throw new Error('Expected ok auth state after requireAuth()')
     }
 
     return new Response(`Dashboard for ${JSON.stringify(auth.principal)}`)
@@ -196,7 +196,7 @@ router.map(routes.api.bearerOnly, {
 
     return Response.json({
       mode: 'bearer-only',
-      scheme: auth.authenticated ? auth.scheme : null,
+      scheme: auth.ok ? auth.scheme : null,
     })
   },
 })
@@ -211,7 +211,7 @@ router.map(routes.api.apiKeyOnly, {
 
     return Response.json({
       mode: 'api-key-only',
-      scheme: auth.authenticated ? auth.scheme : null,
+      scheme: auth.ok ? auth.scheme : null,
     })
   },
 })

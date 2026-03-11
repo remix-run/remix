@@ -78,11 +78,11 @@ describe('requireAuth middleware', () => {
           ],
         }),
         requireAuth({
-          async onFailure(context, authState) {
+          async onFailure(context, auth) {
             return Response.json(
               {
                 path: context.url.pathname,
-                error: authState.error?.message,
+                error: auth.error?.message,
               },
               { status: 401 },
             )
