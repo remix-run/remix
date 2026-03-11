@@ -58,16 +58,13 @@ import {
   teardownMixins,
   type MixinRuntimeState,
 } from './mixin.ts'
+import { nextComponentId, nextPersistedRemovalToken } from './runtime.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 // Internal diffing flags (modeled after Preact)
 const INSERT_VNODE = 1 << 0
 const MATCHED = 1 << 1
-
-let idCounter = 0
-let persistedRemovalToken = 0
-let persistedMixinNodes = new Set<CommittedHostNode>()
 
 // Compute SVG context for a node based on its parent and type.
 // Returns true if the node is within an SVG subtree, false otherwise.
@@ -87,28 +84,34 @@ function getHostProps(node: HostNode | CommittedHostNode): ElementProps {
   return node._mixedProps ?? node.props
 }
 
-function markNodePersistedByMixins(node: CommittedHostNode, domParent: ParentNode, token: number) {
+function markNodePersistedByMixins(
+  node: CommittedHostNode,
+  domParent: ParentNode,
+  token: number,
+  scheduler: Scheduler,
+) {
   node._persistedByMixins = true
   node._persistedParentByMixins = domParent
   node._persistedRemovalToken = token
-  persistedMixinNodes.add(node)
+  scheduler.runtime.persistedMixinNodes.add(node)
   bindMixinRuntime(node._mixState as MixinRuntimeState | undefined, undefined)
 }
 
-function unmarkNodePersistedByMixins(node: CommittedHostNode) {
+function unmarkNodePersistedByMixins(node: CommittedHostNode, scheduler: Scheduler) {
   node._persistedByMixins = false
   node._persistedParentByMixins = undefined
   node._persistedRemovalToken = undefined
-  persistedMixinNodes.delete(node)
+  scheduler.runtime.persistedMixinNodes.delete(node)
 }
 
 function findMatchingPersistedMixinNode(
   type: string,
   key: string | undefined,
   domParent: ParentNode,
+  scheduler: Scheduler,
 ): CommittedHostNode | null {
   if (key == null) return null
-  for (let node of persistedMixinNodes) {
+  for (let node of scheduler.runtime.persistedMixinNodes) {
     if (node._persistedParentByMixins !== domParent) continue
     if (node.type !== type) continue
     if (node.key !== key) continue
@@ -331,13 +334,38 @@ function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
   return null
 }
 
+function setNodeRange(node: VNode, first: Node | null, last: Node | null): void {
+  node._range = { first, last }
+}
+
+function syncLeafRange(node: VNode, dom: Node): void {
+  setNodeRange(node, dom, dom)
+}
+
+function syncFrameRange(node: VNode): void {
+  setNodeRange(node, node._rangeStart ?? null, node._rangeEnd ?? null)
+}
+
+function syncComponentRange(node: VNode): void {
+  let first = findFirstDomAnchor(node._content)
+  let last = findLastDomAnchor(node._content)
+  setNodeRange(node, first, last)
+}
+
+function syncChildrenRange(node: VNode): void {
+  let first = Array.isArray(node._children) ? findFirstDomAnchor(node._children[0]) : null
+  let last = Array.isArray(node._children)
+    ? findLastDomAnchor(node._children[node._children.length - 1])
+    : null
+  setNodeRange(node, first, last)
+}
+
 export function diffVNodes(
   curr: VNode | null,
   next: VNode,
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
@@ -353,7 +381,6 @@ export function diffVNodes(
       domParent,
       frame,
       scheduler,
-      styles,
       vParent,
       rootTarget,
       anchor,
@@ -362,7 +389,7 @@ export function diffVNodes(
   }
 
   if (curr.type !== next.type) {
-    replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+    replace(curr, next, domParent, frame, scheduler, vParent, rootTarget, anchor)
     return rootCursor
   }
 
@@ -372,12 +399,12 @@ export function diffVNodes(
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
-    diffHost(curr, next, frame, scheduler, styles, vParent, rootTarget)
+    diffHost(curr, next, frame, scheduler, vParent, rootTarget)
     return rootCursor
   }
 
   if (isCommittedComponentNode(curr) && isComponentNode(next)) {
-    diffComponent(curr, next, frame, scheduler, styles, domParent, vParent, rootTarget)
+    diffComponent(curr, next, frame, scheduler, domParent, vParent, rootTarget)
     return rootCursor
   }
 
@@ -388,17 +415,17 @@ export function diffVNodes(
       domParent,
       frame,
       scheduler,
-      styles,
       vParent,
       rootTarget,
       undefined,
       anchor,
     )
+    syncChildrenRange(next)
     return rootCursor
   }
 
   if (curr.type === Frame && next.type === Frame) {
-    diffFrame(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+    diffFrame(curr, next, domParent, frame, scheduler, vParent, rootTarget, anchor)
     return rootCursor
   }
 
@@ -411,7 +438,6 @@ function replace(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
@@ -423,8 +449,8 @@ function replace(
   if (currAnchor && currAnchor.parentNode === domParent) {
     anchor = currAnchor
   }
-  insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
-  remove(curr, domParent, scheduler, styles)
+  insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor)
+  remove(curr, domParent, scheduler)
 }
 
 function diffHost(
@@ -432,7 +458,6 @@ function diffHost(
   next: HostNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
 ) {
@@ -452,14 +477,14 @@ function diffHost(
     }
     if (curr._children.length > 0) {
       for (let child of curr._children) {
-        cleanupDescendants(child, scheduler, styles)
+        cleanupDescendants(child, scheduler)
       }
     }
   } else {
     if (currContentMode === 'innerHTML') {
       curr._dom.innerHTML = ''
     }
-    diffChildren(curr._children, nextChildren, curr._dom, frame, scheduler, styles, next, rootTarget)
+    diffChildren(curr._children, nextChildren, curr._dom, frame, scheduler, next, rootTarget)
   }
   diffHostProps(currProps, nextProps, curr._dom)
 
@@ -472,7 +497,8 @@ function diffHost(
   ensureControlledReflection(next as CommittedHostNode, scheduler)
   syncControlledReflection(next as CommittedHostNode, nextProps)
 
-  bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+  bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+  syncLeafRange(next, curr._dom)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
     scheduler.enqueueTasks([
       () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
@@ -489,6 +515,7 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
 
   ensureControlledReflection(committedNode, scheduler)
   syncControlledReflection(committedNode, props)
+  syncLeafRange(node, dom)
 }
 
 function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
@@ -497,6 +524,7 @@ function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
   }
   next._dom = curr._dom
   next._parent = vParent
+  syncLeafRange(next, curr._dom)
 }
 
 function insert(
@@ -504,12 +532,12 @@ function insert(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
   cursor?: Node | null,
 ): Node | null | undefined {
+  let doc = (domParent as Node).ownerDocument ?? scheduler.runtime.document
   node._parent = vParent // set parent for initial render context lookups
   node._svg = getSvgContext(vParent, node.type)
 
@@ -544,6 +572,7 @@ function insert(
           // cursor becomes the first part (node._text), remainder is returned for next vnode
           let remainder = cursor.splitText(node._text.length)
           node._dom = cursor
+          syncLeafRange(node, cursor)
           return remainder
         }
         // Genuine mismatch - correct it
@@ -551,12 +580,14 @@ function insert(
         cursor.data = node._text
       }
       node._dom = cursor
+      syncLeafRange(node, cursor)
       return cursor.nextSibling
     }
-    let dom = document.createTextNode(node._text)
+    let dom = doc.createTextNode(node._text)
     node._dom = dom
     node._parent = vParent
     doInsert(dom)
+    syncLeafRange(node, dom)
     return cursor
   }
 
@@ -588,7 +619,6 @@ function insert(
           targetHead,
           frame,
           scheduler,
-          styles,
           node,
           rootTarget,
           childCursor,
@@ -596,15 +626,24 @@ function insert(
         diffHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
         node._children = nextChildren
-        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, scheduler.runtime.styleManager)
+        syncLeafRange(node, targetHead)
         return cursor
       }
     }
 
     // Check for matching mixin-persisted node that can be reclaimed
-    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
+    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent, scheduler)
     if (persistedNode) {
-      reclaimPersistedMixinNode(persistedNode, node, frame, scheduler, styles, vParent, rootTarget)
+      reclaimPersistedMixinNode(
+        persistedNode,
+        node,
+        frame,
+        scheduler,
+        scheduler.runtime.styleManager,
+        vParent,
+        rootTarget,
+      )
       return cursor
     }
 
@@ -627,7 +666,6 @@ function insert(
             cursor,
             frame,
             scheduler,
-            styles,
             node,
             rootTarget,
             childCursor,
@@ -636,7 +674,13 @@ function insert(
 
         setupHostNode(node, cursor, scheduler)
         node._children = nextChildren
-        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        bindNodeMixRuntime(
+          node as CommittedHostNode,
+          frame,
+          scheduler,
+          scheduler.runtime.styleManager,
+        )
+        syncLeafRange(node, cursor)
         if (isHeadManagedHostNode(node)) {
           let targetHead = getDocumentHead(domParent)
           if (targetHead && cursor.parentNode !== targetHead) {
@@ -661,20 +705,25 @@ function insert(
               let childCursor = nextSibling.firstChild
               diffChildren(
                 null,
-                nextChildren,
-                nextSibling,
-                frame,
-                scheduler,
-                styles,
-                node,
-                rootTarget,
-                childCursor,
+              nextChildren,
+              nextSibling,
+              frame,
+              scheduler,
+              node,
+              rootTarget,
+              childCursor,
               )
             }
 
             setupHostNode(node, nextSibling, scheduler)
             node._children = nextChildren
-            bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+            bindNodeMixRuntime(
+              node as CommittedHostNode,
+              frame,
+              scheduler,
+              scheduler.runtime.styleManager,
+            )
+            syncLeafRange(node, nextSibling)
             if (isHeadManagedHostNode(node)) {
               let targetHead = getDocumentHead(domParent)
               if (targetHead && nextSibling.parentNode !== targetHead) {
@@ -690,19 +739,26 @@ function insert(
       }
     }
     let dom = node._svg
-      ? document.createElementNS(SVG_NS, node.type)
-      : document.createElement(node.type)
+      ? doc.createElementNS(SVG_NS, node.type)
+      : doc.createElement(node.type)
     diffHostProps({}, hostProps, dom)
 
     if (contentMode === 'innerHTML') {
       dom.innerHTML = hostProps.innerHTML as string
     } else {
-      diffChildren(null, nextChildren, dom, frame, scheduler, styles, node, rootTarget)
+      diffChildren(null, nextChildren, dom, frame, scheduler, node, rootTarget)
     }
 
     setupHostNode(node, dom, scheduler)
     node._children = nextChildren
-    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
+    bindNodeMixRuntime(
+      node as CommittedHostNode,
+      frame,
+      scheduler,
+      scheduler.runtime.styleManager,
+      false,
+      domParent,
+    )
     if (isHeadManagedHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
@@ -724,13 +780,13 @@ function insert(
         domParent,
         frame,
         scheduler,
-        styles,
         vParent,
         rootTarget,
         anchor,
         cursor,
       )
     }
+    syncChildrenRange(node)
     return cursor
   }
 
@@ -740,7 +796,6 @@ function insert(
       node,
       frame,
       scheduler,
-      styles,
       domParent,
       vParent,
       rootTarget,
@@ -754,7 +809,8 @@ function insert(
       node,
       domParent,
       frame,
-      styles,
+      scheduler,
+      scheduler.runtime.styleManager,
       vParent,
       anchor,
       cursor,
@@ -770,7 +826,6 @@ function diffFrame(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
@@ -782,8 +837,8 @@ function diffFrame(
 
   if (currName !== nextName) {
     let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
-    remove(curr, domParent, scheduler, styles)
-    insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
+    remove(curr, domParent, scheduler)
+    insert(next, domParent, frame, scheduler, vParent, rootTarget, replaceAnchor)
     return
   }
 
@@ -791,8 +846,8 @@ function diffFrame(
   // so pending streams from the old src cannot take over the new src.
   if (currSrc !== nextSrc && !curr._frameResolved) {
     let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
-    remove(curr, domParent, scheduler, styles)
-    insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
+    remove(curr, domParent, scheduler)
+    insert(next, domParent, frame, scheduler, vParent, rootTarget, replaceAnchor)
     return
   }
 
@@ -803,6 +858,7 @@ function diffFrame(
   next._frameResolveToken = curr._frameResolveToken
   next._frameResolved = curr._frameResolved
   next._parent = vParent
+  syncFrameRange(next)
 
   if (currSrc !== nextSrc) {
     let frameInstance = next._frameInstance as FrameInstance | undefined
@@ -828,7 +884,6 @@ export function renderComponent(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   rootTarget: EventTarget,
   vParent?: VNode,
   anchor?: Node,
@@ -843,7 +898,6 @@ export function renderComponent(
     domParent,
     frame,
     scheduler,
-    styles,
     next,
     rootTarget,
     anchor,
@@ -852,6 +906,7 @@ export function renderComponent(
   next._content = content
   next._handle = handle
   next._parent = vParent
+  syncComponentRange(next)
 
   let committed = next as CommittedComponentNode
 
@@ -869,7 +924,6 @@ function diffComponent(
   next: ComponentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   domParent: ParentNode,
   vParent: VNode,
   rootTarget: EventTarget,
@@ -881,7 +935,7 @@ function diffComponent(
     if (componentId) {
       vParent._pendingHydrationComponentId = undefined
     } else {
-      componentId = `c${++idCounter}`
+      componentId = nextComponentId(scheduler.runtime)
     }
     next._handle = createComponent({
       id: componentId,
@@ -905,7 +959,6 @@ function diffComponent(
       domParent,
       frame,
       scheduler,
-      styles,
       rootTarget,
       vParent,
       anchor,
@@ -921,7 +974,6 @@ function diffComponent(
     domParent,
     frame,
     scheduler,
-    styles,
     rootTarget,
     vParent,
     anchor,
@@ -932,17 +984,17 @@ function diffComponent(
 type TeardownMode = 'cleanup' | 'remove'
 
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
-function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleManager): void {
-  teardownNode(node, 'cleanup', document.body ?? document, scheduler, styles)
+function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
+  let doc = scheduler.runtime.document
+  teardownNode(node, 'cleanup', doc.body ?? doc, scheduler)
 }
 
 export function remove(
   node: VNode,
   domParent: ParentNode,
   scheduler: Scheduler,
-  styles: StyleManager,
 ) {
-  teardownNode(node, 'remove', domParent, scheduler, styles)
+  teardownNode(node, 'remove', domParent, scheduler)
 }
 
 function teardownNode(
@@ -950,7 +1002,6 @@ function teardownNode(
   mode: TeardownMode,
   domParent: ParentNode,
   scheduler: Scheduler,
-  styles: StyleManager,
 ) {
   if (isCommittedTextNode(node)) {
     if (mode === 'remove') {
@@ -960,19 +1011,19 @@ function teardownNode(
   }
 
   if (isCommittedHostNode(node)) {
-    teardownHostNode(node, mode, domParent, scheduler, styles)
+    teardownHostNode(node, mode, domParent, scheduler)
     return
   }
 
   if (isFragmentNode(node)) {
     for (let child of node._children) {
-      teardownNode(child, mode, domParent, scheduler, styles)
+      teardownNode(child, mode, domParent, scheduler)
     }
     return
   }
 
   if (isCommittedComponentNode(node)) {
-    teardownNode(node._content, mode, domParent, scheduler, styles)
+    teardownNode(node._content, mode, domParent, scheduler)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
     return
@@ -992,44 +1043,42 @@ function teardownHostNode(
   mode: TeardownMode,
   domParent: ParentNode,
   scheduler: Scheduler,
-  styles: StyleManager,
 ) {
   if (mode === 'remove') {
     if (node._persistedByMixins) return
 
     let persistedRemoval = prepareMixinRemoval(node._mixState as MixinRuntimeState | undefined)
     if (persistedRemoval) {
-      let token = ++persistedRemovalToken
-      markNodePersistedByMixins(node, domParent, token)
+      let token = nextPersistedRemovalToken(scheduler.runtime)
+      markNodePersistedByMixins(node, domParent, token, scheduler)
       void persistedRemoval
         .catch(() => {})
         .finally(() => {
           if (!node._persistedByMixins) return
           if (node._persistedRemovalToken !== token) return
-          unmarkNodePersistedByMixins(node)
-          finalizeHostNodeTeardown(node, 'remove', scheduler, styles)
+          unmarkNodePersistedByMixins(node, scheduler)
+          finalizeHostNodeTeardown(node, 'remove', scheduler)
         })
       return
     }
   }
 
-  finalizeHostNodeTeardown(node, mode, scheduler, styles)
+  finalizeHostNodeTeardown(node, mode, scheduler)
 }
 
 function finalizeHostNodeTeardown(
   node: CommittedHostNode,
   mode: TeardownMode,
   scheduler: Scheduler,
-  styles: StyleManager,
 ) {
   if (isHeadHostNode(node)) {
     let childMode: TeardownMode = mode === 'remove' ? 'remove' : 'cleanup'
     for (let child of node._children) {
-      teardownNode(child, childMode, node._dom, scheduler, styles)
+      teardownNode(child, childMode, node._dom, scheduler)
     }
   } else {
     for (let child of node._children) {
-      teardownNode(child, 'cleanup', node._dom, scheduler, styles)
+      teardownNode(child, 'cleanup', node._dom, scheduler)
     }
   }
 
@@ -1047,7 +1096,6 @@ function diffChildren(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   cursor?: Node | null,
@@ -1088,7 +1136,6 @@ function diffChildren(
         domParent,
         frame,
         scheduler,
-        styles,
         vParent,
         rootTarget,
         anchor,
@@ -1113,7 +1160,6 @@ function diffChildren(
         domParent,
         frame,
         scheduler,
-        styles,
         vParent,
         rootTarget,
         anchor,
@@ -1124,7 +1170,7 @@ function diffChildren(
     if (currLength > nextLength) {
       for (let i = nextLength; i < currLength; i++) {
         let node = curr[i]
-        if (node) remove(node, domParent, scheduler, styles)
+        if (node) remove(node, domParent, scheduler)
       }
     }
 
@@ -1233,7 +1279,7 @@ function diffChildren(
     for (let i = 0; i < oldChildrenLength; i++) {
       let oldVNode = oldChildren[i]
       if (oldVNode && ((oldVNode._flags ?? 0) & MATCHED) === 0) {
-        remove(oldVNode, domParent, scheduler, styles)
+        remove(oldVNode, domParent, scheduler)
       }
     }
   }
@@ -1257,7 +1303,6 @@ function diffChildren(
       domParent,
       frame,
       scheduler,
-      styles,
       vParent,
       rootTarget,
       anchor,
@@ -1309,7 +1354,7 @@ function reclaimPersistedMixinNode(
   rootTarget: EventTarget,
 ): void {
   cancelPendingMixinRemoval(persistedNode._mixState as MixinRuntimeState | undefined)
-  unmarkNodePersistedByMixins(persistedNode)
+  unmarkNodePersistedByMixins(persistedNode, scheduler)
 
   newNode._dom = persistedNode._dom
   newNode._parent = vParent
@@ -1336,7 +1381,7 @@ function reclaimPersistedMixinNode(
     }
     if (persistedNode._children.length > 0) {
       for (let child of persistedNode._children) {
-        cleanupDescendants(child, scheduler, styles)
+        cleanupDescendants(child, scheduler)
       }
     }
   } else {
@@ -1349,7 +1394,6 @@ function reclaimPersistedMixinNode(
       persistedNode._dom,
       frame,
       scheduler,
-      styles,
       newNode,
       rootTarget,
     )
@@ -1358,6 +1402,7 @@ function reclaimPersistedMixinNode(
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
   newNode._children = nextChildren
+  syncLeafRange(newNode, persistedNode._dom)
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {

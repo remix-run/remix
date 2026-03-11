@@ -26,6 +26,7 @@ export function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
 
 export function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
   if (!node) return null
+  if (node._range?.first) return node._range.first
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
@@ -41,6 +42,7 @@ export function findFirstDomAnchor(node: VNode | null | undefined): Node | null 
 
 export function findLastDomAnchor(node: VNode | null | undefined): Node | null {
   if (!node) return null
+  if (node._range?.last) return node._range.last
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findLastDomAnchor(node._content)

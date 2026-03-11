@@ -1,6 +1,7 @@
 import type { ComponentHandle, Component } from './component.ts'
 import { Fragment, Frame } from './component.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
+import type { DomRange } from './runtime.ts'
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
@@ -23,6 +24,7 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _parent?: VNode
   _children?: VNode[]
   _dom?: unknown
+  _range?: DomRange
   _controller?: AbortController
   _mixState?: unknown
   _controlledState?: unknown

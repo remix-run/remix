@@ -9,6 +9,7 @@ import {
 } from '../shared.ts'
 import type { Benchmark, Row } from '../shared.ts'
 import { type Handle, createRoot, on } from '@remix-run/component'
+import { TargetedBenchFixtures, benchFrameInit } from './targeted-fixtures.tsx'
 
 export const name = 'remix'
 
@@ -882,5 +883,10 @@ function App(handle: Handle) {
 }
 
 let el = document.getElementById('app')!
-let root = createRoot(el)
-root.render(<App />)
+let root = createRoot(el, { frameInit: benchFrameInit })
+root.render(
+  <>
+    <App />
+    <TargetedBenchFixtures />
+  </>,
+)

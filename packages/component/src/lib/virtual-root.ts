@@ -2,6 +2,7 @@ import type { FrameHandle } from './component.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
+import { createRendererRuntime, type RendererRuntime } from './runtime.ts'
 import type { StyleManager } from './style/index.ts'
 import { toVNode } from './to-vnode.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
@@ -21,7 +22,7 @@ export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
 type CreateVirtualRootInit = {
   container: ParentNode
   frame?: FrameHandle
-  createFrame?: (scheduler: Scheduler, styleManager: StyleManager) => FrameHandle
+  createFrame?: (scheduler: Scheduler, runtime: RendererRuntime) => FrameHandle
   scheduler?: Scheduler
   styleManager?: StyleManager
   anchor?: Node
@@ -32,14 +33,14 @@ type CreateVirtualRootInit = {
 
 export function createVirtualRoot(init: CreateVirtualRootInit): VirtualRoot {
   let vroot: VNode | null = null
-  let styles = init.styleManager ?? defaultStyleManager
+  let doc = init.scheduler?.runtime.document ?? ((init.container as Node).ownerDocument ?? document)
+  let styles = init.scheduler?.runtime.styleManager ?? init.styleManager ?? defaultStyleManager
+  let runtime = init.scheduler?.runtime ?? createRendererRuntime(doc, styles)
   let hydrationCursor = init.hydrationCursor
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
-  let scheduler =
-    init.scheduler ??
-    createScheduler((init.container as Node).ownerDocument ?? document, eventTarget, styles)
-  let frame = init.frame ?? init.createFrame?.(scheduler, styles)
+  let scheduler = init.scheduler ?? createScheduler(runtime, eventTarget)
+  let frame = init.frame ?? init.createFrame?.(scheduler, runtime)
   if (!frame) {
     throw new Error('Expected frame handle')
   }
@@ -74,7 +75,6 @@ export function createVirtualRoot(init: CreateVirtualRootInit): VirtualRoot {
             init.container,
             frame,
             scheduler,
-            styles,
             vParent,
             eventTarget,
             init.anchor,
@@ -93,7 +93,7 @@ export function createVirtualRoot(init: CreateVirtualRootInit): VirtualRoot {
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, init.container, scheduler, styles)])
+      scheduler.enqueueTasks([() => removeVNode(current, init.container, scheduler)])
       scheduler.dequeue()
     },
 

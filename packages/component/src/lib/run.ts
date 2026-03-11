@@ -2,6 +2,7 @@ import { createFrame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import type { FrameContent } from './component.ts'
+import { createRendererRuntime } from './runtime.ts'
 
 type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
 type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
@@ -20,7 +21,8 @@ export type AppRuntime = EventTarget & {
 export function run(doc: Document, init: RunInit): AppRuntime {
   let styleManager = defaultStyleManager
   let errorTarget = new EventTarget()
-  let scheduler = createScheduler(doc, errorTarget, styleManager)
+  let runtime = createRendererRuntime(doc, styleManager)
+  let scheduler = createScheduler(runtime, errorTarget)
 
   let resolveFrame: ResolveFrame = init.resolveFrame ?? (() => '<p>resolve frame unimplemented</p>')
 

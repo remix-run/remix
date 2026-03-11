@@ -172,10 +172,53 @@ interface BenchmarkResult {
 
 interface Operation {
   name: string
+  frameworks?: string[]
   setup?: (page: Page) => Promise<void>
   action: (page: Page) => Promise<TimingResult>
   teardown?: (page: Page) => Promise<void>
 }
+
+let clickAndMeasureSource = String.raw`({ clickSelector, waitForSelector }) =>
+  new Promise((resolve, reject) => {
+    let element = document.querySelector(clickSelector)
+    if (!(element instanceof Element)) {
+      reject(new Error('Selector not found: ' + clickSelector))
+      return
+    }
+
+    let start = performance.now()
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    let finish = () => {
+      let scripting = performance.now() - start
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve({
+            scripting,
+            total: performance.now() - start,
+          })
+        })
+      })
+    }
+
+    if (!waitForSelector || document.querySelector(waitForSelector)) {
+      queueMicrotask(finish)
+      return
+    }
+
+    let observer = new MutationObserver(() => {
+      if (!document.querySelector(waitForSelector)) return
+      observer.disconnect()
+      queueMicrotask(finish)
+    })
+
+    observer.observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    })
+  })`
 
 // Dispatch a click inside the page and measure handler time plus next-paint time.
 // Keeping the action in-page avoids Playwright/headless timing gaps and focuses the
@@ -184,36 +227,22 @@ interface Operation {
 async function clickAndMeasure(
   page: Page,
   selector: string,
+  options: {
+    waitForSelector?: string
+  } = {},
 ): Promise<TimingResult> {
   // Start Chrome DevTools Profiler
   let cdp = await page.context().newCDPSession(page)
   await cdp.send('Profiler.enable')
   await cdp.send('Profiler.start')
 
-  let timing = (await page.evaluate((clickSelector) => {
-    return new Promise<TimingResult>((resolve, reject) => {
-      let element = document.querySelector(clickSelector)
-      if (!(element instanceof Element)) {
-        reject(new Error(`Selector not found: ${clickSelector}`))
-        return
-      }
-
-      let start = performance.now()
-      element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-
-      queueMicrotask(() => {
-        let scripting = performance.now() - start
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            resolve({
-              scripting,
-              total: performance.now() - start,
-            })
-          })
-        })
-      })
-    })
-  }, selector)) as TimingResult
+  let timing = (await page.evaluate(
+    ({ source, args }) => globalThis.eval(`(${source})`)(args),
+    {
+      source: clickAndMeasureSource,
+      args: { clickSelector: selector, waitForSelector: options.waitForSelector },
+    },
+  )) as TimingResult
 
   // Stop profiler and get results
   let result = await cdp.send('Profiler.stop')
@@ -422,6 +451,56 @@ const operations: Operation[] = [
       await click(page, '#switchToTable')
       await clear(page)
     },
+  },
+  {
+    name: 'keyedMoveDense',
+    frameworks: ['remix'],
+    setup: (page) => click(page, '#resetKeyedMoveDense'),
+    action: (page) => clickAndMeasure(page, '#keyedMoveDense'),
+  },
+  {
+    name: 'fragmentPrepend',
+    frameworks: ['remix'],
+    setup: (page) => click(page, '#resetFragmentPrepend'),
+    action: (page) =>
+      clickAndMeasure(page, '#fragmentPrepend', {
+        waitForSelector: '#fragmentPrependTarget [data-fragment-index=\"59\"]',
+      }),
+  },
+  {
+    name: 'rangeRootPatch',
+    frameworks: ['remix'],
+    setup: (page) => click(page, '#resetRangeRootPatch'),
+    action: (page) =>
+      clickAndMeasure(page, '#rangeRootPatch', {
+        waitForSelector: '#rangeRootPatchHost strong',
+      }),
+  },
+  {
+    name: 'frameReloadStable',
+    frameworks: ['remix'],
+    setup: async (page) => {
+      await click(page, '#resetFrameReloadStable')
+      await page.waitForSelector('#frameReloadStableContent[data-version=\"0\"]', {
+        state: 'attached',
+      })
+    },
+    action: (page) =>
+      clickAndMeasure(page, '#frameReloadStable', {
+        waitForSelector: '#frameReloadStableContent[data-version=\"1\"]',
+      }),
+  },
+  {
+    name: 'persistedHostReclaim',
+    frameworks: ['remix'],
+    setup: async (page) => {
+      await click(page, '#resetPersistedHostReclaim')
+      await click(page, '#removePersistedHost')
+    },
+    action: (page) =>
+      clickAndMeasure(page, '#persistedHostReclaim', {
+        waitForSelector: '#persistedHostNode',
+      }),
   },
 ]
 
@@ -739,6 +818,10 @@ async function benchmarkFramework(
     benchmarkFilter.length > 0
       ? operations.filter((op) => benchmarkFilter.some((filter) => op.name.includes(filter)))
       : operations
+
+  filteredOperations = filteredOperations.filter(
+    (operation) => !operation.frameworks || operation.frameworks.includes(framework),
+  )
 
   for (let operation of filteredOperations) {
     let scriptingTimes: number[] = []

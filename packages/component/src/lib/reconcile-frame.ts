@@ -3,6 +3,7 @@ import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
 import { createFrame } from './frame.ts'
 import { invariant } from './invariant.ts'
 import type { StyleManager } from './style/index.ts'
+import type { Scheduler } from './scheduler.ts'
 import { createRangeRoot } from './vdom.ts'
 import type { VNode } from './vnode.ts'
 
@@ -10,6 +11,7 @@ export function insertFrame(
   node: VNode,
   domParent: ParentNode,
   frame: FrameHandle,
+  scheduler: Scheduler,
   styles: StyleManager,
   vParent: VNode,
   anchor?: Node,
@@ -33,6 +35,7 @@ export function insertFrame(
       node._frameResolveController = undefined
       node._frameFallbackRoot = undefined
       node._frameResolved = true
+      node._range = { first: start, last: end }
 
       let frameId = getFrameIdFromComment(start)
       let marker = frameId ? runtime.data.f?.[frameId] : undefined
@@ -63,8 +66,9 @@ export function insertFrame(
     }
   }
 
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
+  let doc = (domParent as Node).ownerDocument ?? scheduler.runtime.document
+  let start = doc.createComment(` rmx:f:${randomFrameId()} `)
+  let end = doc.createComment(' /rmx:f ')
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
     : (dom: Node) => domParent.appendChild(dom)
@@ -75,9 +79,11 @@ export function insertFrame(
   node._rangeStart = start
   node._rangeEnd = end
   node._parent = vParent
+  node._range = { first: start, last: end }
 
   let fallbackRoot = createRangeRoot([start, end], {
     frame,
+    scheduler,
     styleManager: styles,
   })
   fallbackRoot.render(node.props?.fallback ?? null)
@@ -142,6 +148,7 @@ export function disposeFrameResources(node: VNode): void {
   node._frameResolveController = undefined
   node._frameFallbackRoot?.dispose()
   node._frameFallbackRoot = undefined
+  node._range = undefined
 
   let frameInstance = node._frameInstance as FrameInstance | undefined
   if (frameInstance) {
@@ -223,6 +230,7 @@ export function removeFrameDomRange(node: VNode, domParent: ParentNode): void {
 
   node._rangeStart = undefined
   node._rangeEnd = undefined
+  node._range = undefined
 }
 
 export function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {

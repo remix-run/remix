@@ -3,8 +3,7 @@ import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import { findNextSiblingDomAnchor, setActiveSchedulerUpdateParents } from './reconcile-anchors.ts'
 import { renderComponent } from './reconcile.ts'
-import { defaultStyleManager } from './diff-props.ts'
-import type { StyleManager } from './style/index.ts'
+import type { RendererRuntime } from './runtime.ts'
 
 type EmptyFn = () => void
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
@@ -20,11 +19,10 @@ export type SchedulerPhaseEvent = Event & {
 }
 
 export function createScheduler(
-  doc: Document,
+  runtime: RendererRuntime,
   rootTarget: EventTarget,
-  styles: StyleManager = defaultStyleManager,
 ) {
-  let documentState = createDocumentState(doc)
+  let documentState = createDocumentState(runtime.document)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let commitTasks: EmptyFn[] = []
   let flushScheduled = false
@@ -32,6 +30,7 @@ export function createScheduler(
   let resetScheduled = false
   let phaseEvents = new EventTarget()
   let scheduler: {
+    runtime: RendererRuntime
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
     enqueueTasks(newTasks: EmptyFn[]): void
     addEventListener(
@@ -109,7 +108,6 @@ export function createScheduler(
             domParent,
             handle.frame,
             scheduler,
-            styles,
             rootTarget,
             vParent,
             anchor,
@@ -183,6 +181,7 @@ export function createScheduler(
   }
 
   scheduler = {
+    runtime,
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
       scheduled.set(vnode, domParent)
       scheduleFlush()

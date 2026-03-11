@@ -2,6 +2,7 @@ import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { defaultStyleManager, resetStyleState } from './diff-props.ts'
 import { invariant } from './invariant.ts'
+import type { RendererRuntime } from './runtime.ts'
 import type { Scheduler } from './scheduler.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { createVirtualRoot, type VirtualRoot, type VirtualRootEventMap } from './virtual-root.ts'
@@ -36,7 +37,7 @@ export function createRangeRoot(
   [start, end]: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
-  let styleManager = options.styleManager ?? defaultStyleManager
+  let styleManager = options.scheduler?.runtime.styleManager ?? options.styleManager ?? defaultStyleManager
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
@@ -50,13 +51,13 @@ export function createRangeRoot(
     anchor: end,
     hydrationCursor: start.nextSibling,
     nextHydrationCursor: null,
-    createFrame(scheduler, frameStyleManager) {
+    createFrame(scheduler, runtime) {
       return createRootFrameHandle({
         src: options.frameInit?.src,
         resolveFrame: options.frameInit?.resolveFrame,
         loadModule: options.frameInit?.loadModule,
         scheduler,
-        styleManager: frameStyleManager,
+        runtime,
       })
     },
     createParentVNode() {
@@ -72,7 +73,7 @@ export function createRangeRoot(
 }
 
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let styleManager = options.styleManager ?? defaultStyleManager
+  let styleManager = options.scheduler?.runtime.styleManager ?? options.styleManager ?? defaultStyleManager
 
   return createVirtualRoot({
     container,
@@ -80,13 +81,13 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
     scheduler: options.scheduler,
     styleManager,
     hydrationCursor: container.innerHTML.trim() !== '' ? container.firstChild : undefined,
-    createFrame(scheduler, frameStyleManager) {
+    createFrame(scheduler, runtime) {
       return createRootFrameHandle({
         src: options.frameInit?.src,
         resolveFrame: options.frameInit?.resolveFrame,
         loadModule: options.frameInit?.loadModule,
         scheduler,
-        styleManager: frameStyleManager,
+        runtime,
       })
     },
     createParentVNode() {
@@ -100,7 +101,7 @@ function createRootFrameHandle(init: {
   resolveFrame?: (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   scheduler: Scheduler
-  styleManager: StyleManager
+  runtime: RendererRuntime
 }): FrameHandle {
   let resolveFrame =
     init.resolveFrame ??
@@ -123,7 +124,7 @@ function createRootFrameHandle(init: {
       resolveFrame,
       pendingClientEntries: new Map(),
       scheduler: init.scheduler,
-      styleManager: init.styleManager,
+      styleManager: init.runtime.styleManager,
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
