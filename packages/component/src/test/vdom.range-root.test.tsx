@@ -247,6 +247,58 @@ describe('createRangeRoot', () => {
       expect(container.innerHTML).toBe('<!--start--><span>A</span><span>B</span><!--end-->')
     })
 
+    it('patches keyed fragment children in place across range-root updates', () => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      container.appendChild(start)
+      container.appendChild(end)
+
+      let root = createRangeRoot([start, end])
+      root.render(
+        <>
+          <div key="alpha" data-id="alpha">
+            alpha
+          </div>
+          <div key="beta" data-id="beta">
+            beta
+          </div>
+          <p key="tail" data-id="tail">
+            tail
+          </p>
+        </>,
+      )
+      root.flush()
+
+      let beta = container.querySelector('[data-id="beta"]')
+      invariant(beta)
+
+      root.render(
+        <>
+          <span key="head" data-id="head">
+            head
+          </span>
+          <div key="beta" data-id="beta">
+            beta-updated
+          </div>
+          <span key="gamma" data-id="gamma">
+            gamma
+          </span>
+          <strong key="tail" data-id="tail">
+            tail-updated
+          </strong>
+        </>,
+      )
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<!--start--><span data-id="head">head</span><div data-id="beta">beta-updated</div><span data-id="gamma">gamma</span><strong data-id="tail">tail-updated</strong><!--end-->',
+      )
+      expect(container.querySelector('[data-id="beta"]')).toBe(beta)
+      expect(container.firstChild).toBe(start)
+      expect(container.lastChild).toBe(end)
+    })
+
     it('renders null then content', () => {
       let container = document.createElement('div')
       let start = document.createComment('start')

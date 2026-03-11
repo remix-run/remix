@@ -473,6 +473,42 @@ describe('vnode rendering (keys)', () => {
       expect(buttons.length).toBe(3)
     })
 
+    it('reorders a dense keyed host list without remounting nodes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function List() {
+        return ({ values }: { values: number[] }) => (
+          <ul>
+            {values.map((value) => (
+              <li key={value} data-id={value}>
+                {value}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+
+      let values = [1, 2, 3, 4, 5, 6]
+      root.render(<List values={values} />)
+
+      let before = new Map(
+        Array.from(container.querySelectorAll('li')).map((node) => [node.getAttribute('data-id'), node]),
+      )
+
+      values = [2, 4, 6, 1, 3, 5]
+      root.render(<List values={values} />)
+
+      let items = Array.from(container.querySelectorAll('li'))
+      expect(items.map((node) => node.getAttribute('data-id'))).toEqual(['2', '4', '6', '1', '3', '5'])
+      expect(items[0]).toBe(before.get('2'))
+      expect(items[1]).toBe(before.get('4'))
+      expect(items[2]).toBe(before.get('6'))
+      expect(items[3]).toBe(before.get('1'))
+      expect(items[4]).toBe(before.get('3'))
+      expect(items[5]).toBe(before.get('5'))
+    })
+
     it('handles keys in fragments without breaking updates', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
