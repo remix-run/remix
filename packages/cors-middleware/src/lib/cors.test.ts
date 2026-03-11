@@ -147,6 +147,35 @@ describe('cors middleware', () => {
     assert.equal(blockedResponse.headers.get('Access-Control-Allow-Origin'), null)
   })
 
+  it('matches regex origins consistently across repeated requests', async () => {
+    let router = createRouter({
+      middleware: [cors({ origin: /\.trusted\.example$/g })],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let firstResponse = await router.fetch('https://remix.run/', {
+      headers: {
+        Origin: 'https://api.trusted.example',
+      },
+    })
+
+    let secondResponse = await router.fetch('https://remix.run/', {
+      headers: {
+        Origin: 'https://api.trusted.example',
+      },
+    })
+
+    assert.equal(
+      firstResponse.headers.get('Access-Control-Allow-Origin'),
+      'https://api.trusted.example',
+    )
+    assert.equal(
+      secondResponse.headers.get('Access-Control-Allow-Origin'),
+      'https://api.trusted.example',
+    )
+  })
+
   it('supports explicit allowed headers and max-age for preflight requests', async () => {
     let router = createRouter({
       middleware: [
@@ -174,6 +203,33 @@ describe('cors middleware', () => {
 
     let vary = Vary.from(response.headers.get('Vary'))
     assert.ok(!vary.has('Access-Control-Request-Headers'))
+  })
+
+  it('adds Vary for function-based allowed header resolvers', async () => {
+    let router = createRouter({
+      middleware: [
+        cors({
+          allowedHeaders: () => ['Authorization'],
+        }),
+      ],
+    })
+
+    router.get('/', () => new Response('ok'))
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'x-api-key',
+      },
+    })
+
+    assert.equal(response.status, 204)
+    assert.equal(response.headers.get('Access-Control-Allow-Headers'), 'Authorization')
+
+    let vary = Vary.from(response.headers.get('Vary'))
+    assert.ok(vary.has('Access-Control-Request-Headers'))
   })
 
   it('sets Access-Control-Allow-Private-Network when requested', async () => {

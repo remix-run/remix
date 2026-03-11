@@ -268,7 +268,7 @@ async function resolveAllowedOrigin(
   }
 
   if (origin instanceof RegExp) {
-    return origin.test(requestOrigin) ? requestOrigin : null
+    return matchesOriginPattern(origin, requestOrigin) ? requestOrigin : null
   }
 
   for (let allowed of origin) {
@@ -280,12 +280,17 @@ async function resolveAllowedOrigin(
       return requestOrigin
     }
 
-    if (allowed instanceof RegExp && allowed.test(requestOrigin)) {
+    if (allowed instanceof RegExp && matchesOriginPattern(allowed, requestOrigin)) {
       return requestOrigin
     }
   }
 
   return null
+}
+
+function matchesOriginPattern(pattern: RegExp, requestOrigin: string): boolean {
+  let normalizedPattern = new RegExp(pattern.source, pattern.flags)
+  return normalizedPattern.test(requestOrigin)
 }
 
 function normalizeResolvedOrigin(
@@ -327,8 +332,21 @@ async function resolveAllowedHeaders(
 
       return {
         headerValue: headerValue === '' ? null : headerValue,
-        varyOnRequestHeaders: false,
+        varyOnRequestHeaders: true,
       }
+    }
+
+    let requestedHeaders = context.headers.get('Access-Control-Request-Headers')
+    if (requestedHeaders == null || requestedHeaders.trim() === '') {
+      return {
+        headerValue: null,
+        varyOnRequestHeaders: true,
+      }
+    }
+
+    return {
+      headerValue: requestedHeaders,
+      varyOnRequestHeaders: true,
     }
   }
 
