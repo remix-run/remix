@@ -3,10 +3,10 @@ import type { Session } from '@remix-run/session'
 
 import { getOAuthProviderRuntime } from './provider.ts'
 import type {
-  AuthSessionRecord,
   CallbackOptions,
   OAuthProvider,
   OAuthTransaction,
+  SessionAuthData,
 } from './types.ts'
 import {
   createRedirectResponse,
@@ -18,7 +18,7 @@ import {
 export function callback<
   profile,
   provider extends string,
-  session_auth extends AuthSessionRecord = AuthSessionRecord<provider>,
+  session_auth extends SessionAuthData = SessionAuthData,
 >(
   provider: OAuthProvider<profile, provider>,
   options: CallbackOptions<profile, provider, session_auth>,
