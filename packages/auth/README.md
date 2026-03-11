@@ -391,6 +391,17 @@ In this example, `verify()` returns the authenticated user object or `null`. `lo
 
 `writeSession(session, result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist. In most apps that should be a small record like `{ userId }`, not the full user object.
 
+## Session Lifecycle
+
+The successful auth flow always follows the same order:
+
+1. `login()` stores the OAuth transaction under `__auth` when you start an OAuth redirect flow
+2. successful credentials login or OAuth callback rotates the session id
+3. `writeSession(session, result, context)` writes your app-defined auth data
+4. `onSuccess(result, context)` runs after the session write, if you provided it
+5. otherwise the handler redirects to the resolved success location
+6. `sessionAuth()` later reads the written session data and resolves request identity into `context.get(Auth)`
+
 ## Callback Handling
 
 Use `callback()` on the provider callback route to validate the stored transaction, exchange the authorization code, fetch the provider profile, and persist the session auth record.

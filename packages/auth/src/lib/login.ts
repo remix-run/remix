@@ -7,6 +7,7 @@ import type {
   OAuthLoginOptions,
   OAuthProvider,
 } from './types.ts'
+import { completeAuthSession } from './session-flow.ts'
 import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
 
 export function login<profile>(
@@ -83,14 +84,14 @@ async function loginWithCredentialsProvider(
       return new Response('Invalid credentials', { status: 401 })
     }
 
-    session.regenerateId(true)
-    await options.writeSession(session, result, context)
-
-    if (options.onSuccess) {
-      return options.onSuccess(result, context)
-    }
-
-    return createRedirectResponse(options.successRedirectTo ?? '/')
+    return await completeAuthSession({
+      session,
+      result,
+      context,
+      writeSession: options.writeSession,
+      onSuccess: options.onSuccess,
+      successRedirectTo: options.successRedirectTo ?? '/',
+    })
   } catch (error) {
     if (options.onError) {
       return options.onError(error, context)

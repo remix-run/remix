@@ -4,6 +4,7 @@ import { afterEach, describe, it } from 'node:test'
 import { auth, Auth, requireAuth, sessionAuth } from '@remix-run/auth-middleware'
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/form-data-middleware'
 import { Session } from '@remix-run/session'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
@@ -58,8 +59,8 @@ describe('login()', () => {
       ['u1', { id: 'u1', email: 'mj@example.com' }],
     ])
     let provider = credentials({
-      async parse(context) {
-        let formData = await context.request.formData()
+      parse(context) {
+        let formData = context.get(FormData)
         return {
           email: String(formData.get('email') ?? ''),
           password: String(formData.get('password') ?? ''),
@@ -96,12 +97,15 @@ describe('login()', () => {
 
     router.post(
       '/login',
-      login(provider, {
-        writeSession(session, user) {
-          session.set('auth', { userId: user.id })
-        },
-        successRedirectTo: '/dashboard',
-      }),
+      {
+        middleware: [formData()],
+        action: login(provider, {
+          writeSession(session, user) {
+            session.set('auth', { userId: user.id })
+          },
+          successRedirectTo: '/dashboard',
+        }),
+      },
     )
     router.get('/dashboard', {
       middleware: [requireAuth()],
@@ -141,8 +145,8 @@ describe('login()', () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
     let provider = credentials({
-      async parse(context) {
-        let formData = await context.request.formData()
+      parse(context) {
+        let formData = context.get(FormData)
         return {
           email: String(formData.get('email') ?? ''),
           password: String(formData.get('password') ?? ''),
@@ -158,11 +162,14 @@ describe('login()', () => {
 
     router.post(
       '/login',
-      login(provider, {
-        writeSession() {
-        },
-        failureRedirectTo: '/login',
-      }),
+      {
+        middleware: [formData()],
+        action: login(provider, {
+          writeSession() {
+          },
+          failureRedirectTo: '/login',
+        }),
+      },
     )
 
     let response = await router.fetch(
@@ -189,8 +196,8 @@ describe('login()', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
     let provider = credentials({
-      async parse(context) {
-        let formData = await context.request.formData()
+      parse(context) {
+        let formData = context.get(FormData)
         return {
           email: String(formData.get('email') ?? ''),
         }
@@ -202,17 +209,20 @@ describe('login()', () => {
 
     router.post(
       '/login',
-      login(provider, {
-        writeSession(session, user) {
-          session.set('auth', { userId: user.id })
-        },
-        onSuccess(_user, context) {
-          let session = context.get(Session)
-          return Response.json({
-            auth: session.get('auth'),
-          })
-        },
-      }),
+      {
+        middleware: [formData()],
+        action: login(provider, {
+          writeSession(session, user) {
+            session.set('auth', { userId: user.id })
+          },
+          onSuccess(_user, context) {
+            let session = context.get(Session)
+            return Response.json({
+              auth: session.get('auth'),
+            })
+          },
+        }),
+      },
     )
 
     let response = await router.fetch(
@@ -230,5 +240,108 @@ describe('login()', () => {
     assert.deepEqual(await response.json(), {
       auth: { userId: 'u1' },
     })
+  })
+
+  it('uses onError when writeSession throws for credentials providers', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+    let provider = credentials({
+      parse(context) {
+        let formData = context.get(FormData)
+        return {
+          email: String(formData.get('email') ?? ''),
+        }
+      },
+      verify(input) {
+        return { id: 'u1', email: input.email }
+      },
+    })
+
+    router.post(
+      '/login',
+      {
+        middleware: [formData()],
+        action: login(provider, {
+          writeSession() {
+            throw new Error('write failed')
+          },
+          onError(error) {
+            return Response.json(
+              {
+                error: error instanceof Error ? error.message : 'unknown',
+              },
+              { status: 500 },
+            )
+          },
+        }),
+      },
+    )
+
+    let response = await router.fetch(
+      new Request('https://app.example.com/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email: 'mj@example.com',
+        }),
+      }),
+    )
+
+    assert.equal(response.status, 500)
+    assert.deepEqual(await response.json(), {
+      error: 'write failed',
+    })
+  })
+
+  it('redirects to failureRedirectTo when writeSession throws for credentials providers', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+    let provider = credentials({
+      parse(context) {
+        let formData = context.get(FormData)
+        return {
+          email: String(formData.get('email') ?? ''),
+        }
+      },
+      verify(input) {
+        return { id: 'u1', email: input.email }
+      },
+    })
+
+    router.post(
+      '/login',
+      {
+        middleware: [formData()],
+        action: login(provider, {
+          writeSession() {
+            throw new Error('write failed')
+          },
+          failureRedirectTo: '/login',
+        }),
+      },
+    )
+
+    let response = await router.fetch(
+      new Request('https://app.example.com/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email: 'mj@example.com',
+        }),
+      }),
+    )
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/login')
   })
 })
