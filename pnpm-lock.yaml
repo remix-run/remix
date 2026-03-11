@@ -78,6 +78,9 @@ importers:
       esbuild:
         specifier: 'catalog:'
         version: 0.25.12
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1016,6 +1019,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      '@remix-run/testing':
+        specifier: workspace:^
+        version: link:../testing
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

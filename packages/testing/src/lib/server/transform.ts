@@ -45,15 +45,20 @@ export async function transformFile(filePath: string): Promise<string> {
   }
 }
 
-export async function bundleFile(filePath: string): Promise<string> {
-  if (bundleCache.has(filePath)) {
-    return bundleCache.get(filePath)!
+export async function bundleFile(
+  filePath: string,
+  opts: { absWorkingDir?: string } = {},
+): Promise<string> {
+  let cacheKey = [filePath, opts.absWorkingDir ?? ''].join(':')
+  if (bundleCache.has(cacheKey)) {
+    return bundleCache.get(cacheKey)!
   }
 
   try {
     let result = await esbuild.build({
       ...esbuildOpts,
       entryPoints: [filePath],
+      absWorkingDir: opts.absWorkingDir,
       bundle: true,
       external: ['remix/*', '@remix-run/*'],
       write: false,

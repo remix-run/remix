@@ -91,11 +91,18 @@ router.get(routes.pkg, async ({ url }) => {
   // TODO: use params.package once the router's catch-all param extraction is fixed —
   // currently it only returns the first character of the matched segment
   let pkg = url.pathname.slice('/_pkg/'.length)
-  if (!pkg.startsWith('remix/') && !pkg.startsWith('@remix-run/')) {
-    return new Response('Forbidden', { status: 403 })
+
+  // remix/* comes from the user's project
+  if (pkg.startsWith('remix/')) {
+    return render.js(await bundleFile(pkg))
   }
-  let resolved = fileURLToPath(import.meta.resolve(pkg))
-  return render.js(await bundleFile(resolved))
+
+  // @remix-run/* comes from the testing package itself
+  if (pkg.startsWith('@remix-run/')) {
+    return render.js(await bundleFile(pkg, { absWorkingDir: serverDir }))
+  }
+
+  return new Response('Forbidden', { status: 403 })
 })
 
 export async function startServer(

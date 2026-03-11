@@ -22,10 +22,17 @@ let remixPackageJsonPath = path.join(remixDir, 'package.json')
 
 const SOURCE_FOLDER = 'src'
 
+type BinEntry = {
+  binName: string
+  devPath: string
+  distPath: string
+}
+
 type RemixRunPackage = {
   name: string
   version: string
   exports: ExportEntry[]
+  bins: BinEntry[]
 }
 
 type ExportEntry = {
@@ -79,8 +86,22 @@ async function getRemixRunPackages() {
       name: packageName,
       version: packageJson.version,
       exports: [],
+      bins: [],
     }
     remixRunPackages.push(remixRunPackage)
+
+    // Collect bin entries
+    if (packageJson.bin && typeof packageJson.bin === 'object') {
+      let publishBins = packageJson.publishConfig?.bin ?? {}
+      for (let [binName, devBinPath] of Object.entries(packageJson.bin)) {
+        let distBinPath = publishBins[binName] ?? (devBinPath as string).replace('/src/', '/dist/').replace(/\.ts$/, '.js')
+        remixRunPackage.bins.push({
+          binName,
+          devPath: `./node_modules/${packageName}/${(devBinPath as string).replace(/^\.\//, '')}`,
+          distPath: `./node_modules/${packageName}/${distBinPath.replace(/^\.\//, '')}`,
+        })
+      }
+    }
 
     let shortName = packageName.replace('@remix-run/', '')
 
@@ -168,6 +189,17 @@ async function updateRemixPackage() {
 
   for (let packageInfo of remixRunPackages) {
     remixPackageJson.dependencies[packageInfo.name] = 'workspace:^'
+  }
+
+  // Collect and set bin entries from all @remix-run/* packages
+  let allBins = remixRunPackages.flatMap((pkg) => pkg.bins)
+  if (allBins.length > 0) {
+    remixPackageJson.bin = {}
+    remixPackageJson.publishConfig.bin = {}
+    for (let bin of allBins) {
+      remixPackageJson.bin[bin.binName] = bin.devPath
+      remixPackageJson.publishConfig.bin[bin.binName] = bin.distPath
+    }
   }
 
   await fs.writeFile(

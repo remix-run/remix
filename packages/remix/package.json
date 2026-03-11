@@ -72,6 +72,7 @@
     "./session/memory-storage": "./src/session/memory-storage.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
+    "./testing": "./src/testing.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -292,7 +293,14 @@
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
       },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      },
       "./package.json": "./package.json"
+    },
+    "bin": {
+      "remix-test": "./node_modules/@remix-run/testing/dist/cli.js"
     }
   },
   "devDependencies": {
@@ -331,7 +339,8 @@
     "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/file-storage-s3": "workspace:^"
+    "@remix-run/file-storage-s3": "workspace:^",
+    "@remix-run/testing": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -339,5 +348,8 @@
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
+  },
+  "bin": {
+    "remix-test": "./node_modules/@remix-run/testing/src/cli.ts"
   }
 }
