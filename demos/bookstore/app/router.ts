@@ -44,7 +44,7 @@ middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
-middleware.push(bookstoreAuth)
+middleware.push(bookstoreAuth())
 
 await initializeBookstoreDatabase()
 
