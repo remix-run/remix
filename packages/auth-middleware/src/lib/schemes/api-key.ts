@@ -1,13 +1,13 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import type { AuthScheme } from '../types.ts'
 
-export interface ApiKeyOptions<principal> {
+export interface ApiKeyOptions<identity> {
   name?: string
   headerName?: string
-  verify: (key: string, context: RequestContext) => principal | null | Promise<principal | null>
+  verify: (key: string, context: RequestContext) => identity | null | Promise<identity | null>
 }
 
-export function apiKey<principal>(options: ApiKeyOptions<principal>): AuthScheme<principal> {
+export function apiKey<identity>(options: ApiKeyOptions<identity>): AuthScheme<identity> {
   let name = options.name ?? 'api-key'
   let headerName = options.headerName ?? 'X-API-Key'
 
@@ -28,8 +28,8 @@ export function apiKey<principal>(options: ApiKeyOptions<principal>): AuthScheme
         }
       }
 
-      let principal = await options.verify(key, context)
-      if (principal == null) {
+      let identity = await options.verify(key, context)
+      if (identity == null) {
         return {
           status: 'failure',
           code: 'invalid_credentials',
@@ -39,7 +39,7 @@ export function apiKey<principal>(options: ApiKeyOptions<principal>): AuthScheme
 
       return {
         status: 'success',
-        principal,
+        identity,
       }
     },
   }

@@ -24,7 +24,7 @@ export function auth(options: AuthOptions): Middleware {
       if (result.status === 'success') {
         context.set(Auth, {
           ok: true,
-          principal: result.principal,
+          identity: result.identity,
           scheme: scheme.name,
         } satisfies AuthValue)
 

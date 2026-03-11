@@ -3,18 +3,18 @@ import type { AuthScheme } from '../types.ts'
 
 const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
 
-export interface BearerOptions<principal> {
+export interface BearerOptions<identity> {
   name?: string
   headerName?: string
   scheme?: string
   verify: (
     token: string,
     context: RequestContext,
-  ) => principal | null | Promise<principal | null>
+  ) => identity | null | Promise<identity | null>
   challenge?: string
 }
 
-export function bearer<principal>(options: BearerOptions<principal>): AuthScheme<principal> {
+export function bearer<identity>(options: BearerOptions<identity>): AuthScheme<identity> {
   let name = options.name ?? 'bearer'
   let headerName = options.headerName ?? 'Authorization'
   let scheme = options.scheme ?? 'Bearer'
@@ -53,9 +53,9 @@ export function bearer<principal>(options: BearerOptions<principal>): AuthScheme
         }
       }
 
-      let principal = await options.verify(token, context)
+      let identity = await options.verify(token, context)
 
-      if (principal == null) {
+      if (identity == null) {
         return {
           status: 'failure',
           code: 'invalid_credentials',
@@ -66,7 +66,7 @@ export function bearer<principal>(options: BearerOptions<principal>): AuthScheme
 
       return {
         status: 'success',
-        principal,
+        identity,
       }
     },
   }
