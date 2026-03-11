@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { navigate, startNavigationListener } from '../lib/navigate.ts'
+import { navigate, startNavigationListener } from '../lib/navigation.ts'
 
 describe('navigate', () => {
   afterEach(() => {

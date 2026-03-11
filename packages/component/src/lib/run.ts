@@ -5,7 +5,7 @@ import type { FrameHandle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame } from './frame.ts'
-import { startNavigationListener } from './navigate.ts'
+import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
 export type RunInit = {

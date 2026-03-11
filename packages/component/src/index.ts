@@ -64,4 +64,4 @@ export { tween, easings } from './lib/tween.ts'
 export type { TweenOptions, BezierCurve } from './lib/tween.ts'
 
 // -- Navigation --
-export { navigate } from './lib/navigate.ts'
+export { navigate } from './lib/navigation.ts'
