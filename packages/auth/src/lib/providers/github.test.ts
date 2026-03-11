@@ -62,8 +62,8 @@ describe('github provider', () => {
       router.get(
         '/auth/github/callback',
         callback(provider, {
-          createSessionAuth(result) {
-            return { subjectId: String(result.profile.id) }
+          writeSession(session, result) {
+            session.set('auth', { userId: String(result.profile.id) })
           },
           onSuccess(result) {
             return Response.json(result)

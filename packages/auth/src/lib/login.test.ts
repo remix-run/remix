@@ -80,10 +80,10 @@ describe('login()', () => {
           schemes: [
             sessionAuth({
               read(session) {
-                return session.get('auth') as { subjectId: string } | null
+                return session.get('auth') as { userId: string } | null
               },
               verify(value) {
-                return users.get(value.subjectId) ?? null
+                return users.get(value.userId) ?? null
               },
               invalidate(session) {
                 session.unset('auth')
@@ -97,8 +97,8 @@ describe('login()', () => {
     router.post(
       '/login',
       login(provider, {
-        createSessionAuth(user) {
-          return { subjectId: user.id }
+        writeSession(session, user) {
+          session.set('auth', { userId: user.id })
         },
         successRedirectTo: '/dashboard',
       }),
@@ -159,8 +159,7 @@ describe('login()', () => {
     router.post(
       '/login',
       login(provider, {
-        createSessionAuth() {
-          return { subjectId: 'u1' }
+        writeSession() {
         },
         failureRedirectTo: '/login',
       }),
@@ -204,10 +203,10 @@ describe('login()', () => {
     router.post(
       '/login',
       login(provider, {
-        createSessionAuth(user) {
-          return { subjectId: user.id }
+        writeSession(session, user) {
+          session.set('auth', { userId: user.id })
         },
-        onSuccess(_user, _sessionAuth, context) {
+        onSuccess(_user, context) {
           let session = context.get(Session)
           return Response.json({
             auth: session.get('auth'),
@@ -229,7 +228,7 @@ describe('login()', () => {
     )
 
     assert.deepEqual(await response.json(), {
-      auth: { subjectId: 'u1' },
+      auth: { userId: 'u1' },
     })
   })
 })

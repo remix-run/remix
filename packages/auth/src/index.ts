@@ -37,5 +37,4 @@ export type {
   OAuthProvider,
   OAuthResult,
   OAuthTokens,
-  SessionAuthData,
 } from './lib/types.ts'

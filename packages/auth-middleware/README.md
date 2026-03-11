@@ -330,10 +330,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { subjectId: string } | null
+            return session.get('auth') as { userId: string } | null
           },
           verify(value) {
-            return users.getById(value.subjectId)
+            return users.getById(value.userId)
           },
           invalidate(session) {
             session.unset('auth')
@@ -352,7 +352,7 @@ router.get(routes.app.dashboard, {
 
     return Response.json({
       auth,
-      sessionSubjectId: session.get('auth')?.subjectId ?? null,
+      sessionUserId: session.get('auth')?.userId ?? null,
     })
   },
 })
@@ -367,11 +367,11 @@ Options:
 - `code` (default: `'invalid_credentials'`)
 - `message` (default: `'Invalid session'`)
 
-If you want OIDC providers, Google, GitHub, Facebook, or credentials-based browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
+If you want session-backed browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth). That package covers generic OIDC, thin wrappers like Google/Microsoft/Okta/Auth0, custom GitHub/Facebook OAuth helpers, and credentials-based login.
 
 ## Related Packages
 
-- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser login and OAuth helpers that persist session auth records
+- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser login helpers for OIDC, custom OAuth providers, and credentials flows
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
 - [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers like redirects
 

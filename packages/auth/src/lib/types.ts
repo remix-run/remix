@@ -1,8 +1,5 @@
 import type { RequestContext } from '@remix-run/fetch-router'
-
-export interface SessionAuthData {
-  [key: string]: unknown
-}
+import type { Session } from '@remix-run/session'
 
 export interface OAuthTokens {
   accessToken: string
@@ -93,49 +90,36 @@ export interface CredentialsProvider<input, result, provider extends string = st
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
-export interface LoginOptions<result, session_auth extends SessionAuthData = SessionAuthData> {
-  sessionKey?: string
-  createSessionAuth(
+export interface LoginOptions<result> {
+  writeSession(
+    session: Session,
     result: result,
     context: RequestContext,
-  ): session_auth | Promise<session_auth>
+  ): void | Promise<void>
   successRedirectTo?: string | URL
   failureRedirectTo?: string | URL
-  onSuccess?(
-    result: result,
-    sessionAuth: session_auth,
-    context: RequestContext,
-  ): Response | Promise<Response>
+  onSuccess?(result: result, context: RequestContext): Response | Promise<Response>
   onFailure?(context: RequestContext): Response | Promise<Response>
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 
 export interface OAuthLoginOptions {
-  sessionKey?: string
   transactionKey?: string
   returnToParam?: string
   failureRedirectTo?: string | URL
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 
-export interface CallbackOptions<
-  profile,
-  provider extends string,
-  session_auth extends SessionAuthData = SessionAuthData,
-> {
-  sessionKey?: string
+export interface CallbackOptions<profile, provider extends string> {
   transactionKey?: string
-  createSessionAuth(
+  writeSession(
+    session: Session,
     result: OAuthResult<profile, provider>,
     context: RequestContext,
-  ): session_auth | Promise<session_auth>
+  ): void | Promise<void>
   successRedirectTo?: string | URL
   failureRedirectTo?: string | URL
-  onSuccess?(
-    result: OAuthResult<profile, provider>,
-    sessionAuth: session_auth,
-    context: RequestContext,
-  ): Response | Promise<Response>
+  onSuccess?(result: OAuthResult<profile, provider>, context: RequestContext): Response | Promise<Response>
   onFailure?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 

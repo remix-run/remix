@@ -214,8 +214,8 @@ describe('oidc provider', () => {
       router.get(
         '/auth/oidc/callback',
         callback(provider, {
-          createSessionAuth(result) {
-            return { subjectId: result.account.providerAccountId }
+          writeSession(session, result) {
+            session.set('auth', { userId: result.account.providerAccountId })
           },
           onSuccess(result) {
             return Response.json(result)
@@ -292,8 +292,8 @@ describe('oidc provider', () => {
       router.get(
         '/auth/oidc/callback',
         callback(provider, {
-          createSessionAuth(result) {
-            return { subjectId: result.account.providerAccountId }
+          writeSession(session, result) {
+            session.set('auth', { userId: result.account.providerAccountId })
           },
           onFailure(error) {
             return Response.json(

@@ -71,7 +71,8 @@ let passwordProvider = credentials({
     }
   },
   verify({ email, password }) {
-    return users.verifyPassword(email, password)
+    let user = users.verifyPassword(email, password)
+    return user
   },
 })
 
@@ -83,10 +84,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { subjectId: string } | null
+            return session.get('auth') as { userId: string } | null
           },
           verify(value) {
-            return users.getById(value.subjectId)
+            return users.getById(value.userId)
           },
           invalidate(session) {
             session.unset('auth')
@@ -106,9 +107,9 @@ router.get(routes.auth.google.login, login(googleProvider))
 router.get(
   routes.auth.google.callback,
   callback(googleProvider, {
-    async createSessionAuth(result) {
+    async writeSession(session, result) {
       let user = await users.upsertFromGoogle(result.profile)
-      return { subjectId: user.id }
+      session.set('auth', { userId: user.id })
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -118,8 +119,8 @@ router.get(
 router.post(routes.auth.session.login.action, {
   middleware: [formData()],
   action: login(passwordProvider, {
-    async createSessionAuth(user) {
-      return { subjectId: user.id }
+    async writeSession(session, user) {
+      session.set('auth', { userId: user.id })
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -154,23 +155,28 @@ router.get(routes.app.dashboard, {
 })
 ```
 
-This package writes an auth record to `context.get(Session)` by default:
+This package manages the OAuth transaction in `context.get(Session)` and lets your app decide what authenticated session data to persist:
 
-- OAuth and credentials logins store app-defined session data under `auth`
-- OAuth transactions use the internal `__auth` session key
+- `login()` and `callback()` store the OAuth transaction under `__auth`
+- your `writeSession(session, result, context)` hook writes app-defined auth data, often under `auth`
 - `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(credentials(...))`
+- examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
 
 ## OIDC Providers
 
 Use `oidc()` for any standards-compliant OpenID Connect provider. The `google()`, `microsoft()`, `okta()`, and `auth0()` helpers are thin wrappers on top of the same OIDC runtime.
 
 ```ts
-import { auth0, login, microsoft, oidc, okta } from 'remix/auth'
+import { auth0, google, login, microsoft, oidc, okta } from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
   auth: {
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
     company: {
       login: '/login/company',
       callback: '/auth/company/callback',
@@ -188,6 +194,12 @@ let routes = route({
       callback: '/auth/auth0/callback',
     },
   },
+})
+
+let googleProvider = google({
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
 })
 
 let companyProvider = oidc({
@@ -222,6 +234,7 @@ let auth0Provider = auth0({
   redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
 })
 
+router.get(routes.auth.google.login, login(googleProvider))
 router.get(routes.auth.company.login, login(companyProvider))
 router.get(routes.auth.microsoft.login, login(microsoftProvider))
 router.get(routes.auth.okta.login, login(oktaProvider))
@@ -234,21 +247,19 @@ Notes:
 - pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
 - default OIDC scopes are `openid profile email`
 - wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
+- `google()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
 
-## OAuth Providers
+## Custom OAuth Providers
 
-Use the built-in provider helpers when you want a standard browser redirect flow.
+Use the built-in provider helpers when you want a standard browser redirect flow
+for providers that need behavior beyond the generic OIDC runtime.
 
 ```ts
-import { facebook, github, google, login } from 'remix/auth'
+import { facebook, github, login } from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
   auth: {
-    google: {
-      login: '/login/google',
-      callback: '/auth/google/callback',
-    },
     github: {
       login: '/login/github',
       callback: '/auth/github/callback',
@@ -258,12 +269,6 @@ let routes = route({
       callback: '/auth/facebook/callback',
     },
   },
-})
-
-let googleProvider = google({
-  clientId: env.GOOGLE_CLIENT_ID,
-  clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
 })
 
 let githubProvider = github({
@@ -278,14 +283,12 @@ let facebookProvider = facebook({
   redirectUri: new URL(routes.auth.facebook.callback.href(), env.APP_ORIGIN),
 })
 
-router.get(routes.auth.google.login, login(googleProvider))
 router.get(routes.auth.github.login, login(githubProvider))
 router.get(routes.auth.facebook.login, login(facebookProvider))
 ```
 
 Default scopes:
 
-- Google: `openid email profile`
 - GitHub: `read:user user:email`
 - Facebook: `public_profile email`
 
@@ -306,6 +309,9 @@ let routes = route({
       login: form('/login'),
     },
   },
+  app: {
+    dashboard: '/dashboard',
+  },
 })
 
 let passwordProvider = credentials({
@@ -317,22 +323,26 @@ let passwordProvider = credentials({
     }
   },
   verify({ email, password }) {
-    return users.verifyPassword(email, password)
+    let user = users.verifyPassword(email, password)
+    return user
   },
 })
 
 router.post(routes.auth.session.login.action, {
   middleware: [formData()],
   action: login(passwordProvider, {
-    async createSessionAuth(user) {
-      return { subjectId: user.id }
+    async writeSession(session, user) {
+      session.set('auth', { userId: user.id })
     },
+    successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
   }),
 })
 ```
 
-`createSessionAuth(result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist.
+In this example, `verify()` returns the authenticated user object or `null`. `login()` passes that user object to `writeSession(session, user, context)`, which is why the example can read `user.id` there and write it into the session directly.
+
+`writeSession(session, result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist. In most apps that should be a small record like `{ userId }`, not the full user object.
 
 ## Callback Handling
 
@@ -365,9 +375,9 @@ let githubProvider = github({
 router.get(
   routes.auth.github.callback,
   callback(githubProvider, {
-    async createSessionAuth(result) {
+    async writeSession(session, result) {
       let user = await users.upsertFromGitHub(result.profile)
-      return { subjectId: user.id }
+      session.set('auth', { userId: user.id })
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
@@ -375,7 +385,7 @@ router.get(
 )
 ```
 
-`callback()` exposes the normalized provider result to `createSessionAuth()` and `onSuccess()`, including:
+`callback()` exposes the normalized provider result to `writeSession()` and `onSuccess()`, including:
 
 - `result.provider`
 - `result.account`
@@ -397,10 +407,10 @@ let router = createRouter({
       schemes: [
         sessionAuth({
           read(session) {
-            return session.get('auth') as { subjectId: string } | null
+            return session.get('auth') as { userId: string } | null
           },
           verify(value) {
-            return users.getById(value.subjectId)
+            return users.getById(value.userId)
           },
         }),
       ],
