@@ -166,6 +166,10 @@ function syncControlledReflection(node: CommittedHostNode, props: ElementProps):
   state.pendingRestoreVersion++
 }
 
+function shouldTrackControlledReflection(props: ElementProps): boolean {
+  return hasControlledValueProp(props) || hasControlledCheckedProp(props)
+}
+
 function scheduleControlledRestore(
   node: CommittedHostNode,
   state: ControlledReflectionState,
@@ -240,6 +244,13 @@ function resolveNodeMixProps(
   scheduler: Scheduler,
   state?: MixinRuntimeState,
 ): ElementProps {
+  let mix = node.props.mix
+  if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
+    node._mixState = undefined
+    node._mixedProps = node.props
+    return node.props
+  }
+
   let resolved = resolveMixedProps({
     hostType: node.type,
     frame,
@@ -250,6 +261,30 @@ function resolveNodeMixProps(
   node._mixState = resolved.state
   node._mixedProps = resolved.props
   return resolved.props
+}
+
+function enqueueMixinBindingUpdate(
+  this: MixinRuntimeBinding,
+  done: (signal: AbortSignal) => void,
+): void {
+  let node = this.target as CommittedHostNode
+  let state = node._mixState as MixinRuntimeState | undefined
+  this.scheduler.enqueueWork([
+    () => {
+      if (state?.aborted) {
+        done(getMixinRuntimeSignal(state))
+        return
+      }
+
+      dispatchMixinBeforeUpdate(state)
+      let prevProps = getHostProps(node)
+      let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
+      diffHostProps(prevProps, nextProps, this.node)
+
+      dispatchMixinCommit(state)
+      done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
+    },
+  ])
 }
 
 function bindNodeMixRuntime(
@@ -267,24 +302,10 @@ function bindNodeMixRuntime(
       node: node._dom,
       parent: parent ?? (node._dom.parentNode as ParentNode),
       key: node.key,
-      enqueueUpdate(done) {
-        scheduler.enqueueWork([
-          () => {
-            if (state?.aborted) {
-              done(getMixinRuntimeSignal(state))
-              return
-            }
-
-            dispatchMixinBeforeUpdate(state)
-            let prevProps = getHostProps(node)
-            let nextProps = resolveNodeMixProps(node, frame, scheduler, state)
-            diffHostProps(prevProps, nextProps, node._dom)
-
-            dispatchMixinCommit(state)
-            done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
-          },
-        ])
-      },
+      target: node,
+      frame,
+      scheduler,
+      enqueueUpdate: enqueueMixinBindingUpdate,
     },
     { dispatchReclaimed: reclaimed },
   )
@@ -442,8 +463,10 @@ function diffHost(
   next._controller = curr._controller
   next._controlledState = curr._controlledState
 
-  ensureControlledReflection(next as CommittedHostNode, scheduler)
-  syncControlledReflection(next as CommittedHostNode, nextProps)
+  if (next._controlledState || shouldTrackControlledReflection(nextProps)) {
+    ensureControlledReflection(next as CommittedHostNode, scheduler)
+    syncControlledReflection(next as CommittedHostNode, nextProps)
+  }
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
@@ -460,8 +483,10 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
-  ensureControlledReflection(committedNode, scheduler)
-  syncControlledReflection(committedNode, props)
+  if (shouldTrackControlledReflection(props)) {
+    ensureControlledReflection(committedNode, scheduler)
+    syncControlledReflection(committedNode, props)
+  }
 }
 
 function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
@@ -1293,13 +1318,20 @@ function diffChildren(
   // Warn when duplicate keys are present among siblings. Duplicate keys are
   // still processed (last one wins), but they make keyed diffing ambiguous.
   let hasKeys = false
-  let seenKeys = new Set<string>()
-  let duplicateKeys = new Set<string>()
+  let seenKeys: Set<string> | undefined
+  let duplicateKeys: Set<string> | undefined
   for (let i = 0; i < nextLength; i++) {
     let node = next[i]
     if (node && node.key != null) {
       hasKeys = true
+      if (!seenKeys) {
+        seenKeys = new Set([node.key])
+        continue
+      }
       if (seenKeys.has(node.key)) {
+        if (!duplicateKeys) {
+          duplicateKeys = new Set()
+        }
         duplicateKeys.add(node.key)
       } else {
         seenKeys.add(node.key)
@@ -1307,7 +1339,7 @@ function diffChildren(
     }
   }
 
-  if (duplicateKeys.size > 0) {
+  if (duplicateKeys?.size) {
     let quotedKeys = Array.from(duplicateKeys, (key) => `"${key}"`)
     console.warn(
       `Duplicate keys detected in siblings: ${quotedKeys.join(', ')}. Keys should be unique.`,
