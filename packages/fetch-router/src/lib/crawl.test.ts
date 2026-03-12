@@ -200,6 +200,19 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/blog/', '/blog/post-1'])
   })
 
+  it('throws on non-2xx responses', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Not Found', { status: 404, statusText: 'Not Found' }))
+
+    await assert.rejects(
+      async () => {
+        for await (let _ of crawl(router)) {
+        }
+      },
+      { message: 'Crawl failed: 404 Not Found (/)' },
+    )
+  })
+
   it('does not visit the same path twice', async () => {
     let router = createRouter()
     router.get('/', () => html('<a href="/shared">Shared</a>'))

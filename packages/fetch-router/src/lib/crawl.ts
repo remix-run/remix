@@ -38,6 +38,11 @@ export async function* crawl(
     visited.add(pathname)
 
     let response = await router.fetch(new Request(`${BASE_URL}${pathname}`))
+
+    if (!response.ok) {
+      throw new Error(`Crawl failed: ${response.status} ${response.statusText} (${pathname})`)
+    }
+
     let isHtml = response.headers.get('Content-Type')?.includes('text/html')
     let toQueue: string[] = []
 
