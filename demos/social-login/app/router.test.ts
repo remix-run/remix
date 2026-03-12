@@ -4,18 +4,50 @@ import { describe, it } from 'node:test'
 import { createRequest, createTestRouter, getSessionId, mockFetch } from '../router-helpers.ts'
 
 describe('social login demo router', () => {
-  it('renders the logged-out home page with social login buttons', async () => {
+  it('renders the logged-out home page with password and social login options', async () => {
     let { router } = createTestRouter()
 
     let response = await router.fetch('https://demo.example.com/')
     let html = await response.text()
 
     assert.equal(response.status, 200)
-    assert.match(html, /Social login with first-party request handlers/)
-    assert.match(html, /Continue with Google/)
-    assert.match(html, /Continue with GitHub/)
-    assert.match(html, /Continue with Facebook/)
+    assert.match(html, /Remix Auth demo powered by Google, GitHub, and Facebook\./)
+    assert.match(html, /Login to your account/)
+    assert.match(html, />Login<\/button>/)
+    assert.match(html, /Login with Google/)
+    assert.match(html, /Login with GitHub/)
+    assert.match(html, /Login with Facebook/)
+    assert.match(html, /demo@example.com/)
+    assert.match(html, /\.env\.example/)
+    assert.match(html, /GOOGLE_CLIENT_ID/)
+    assert.match(html, /Create a GitHub OAuth app/)
+    assert.match(html, /\/auth\/facebook\/callback/)
     assert.doesNotMatch(html, /Log out/)
+  })
+
+  it('signs in with the seeded email and password account', async () => {
+    let { router } = createTestRouter()
+
+    let loginResponse = await router.fetch(
+      createRequest('https://demo.example.com/login', undefined, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email: 'demo@example.com',
+          password: 'password123',
+        }).toString(),
+      }),
+    )
+    let homeResponse = await router.fetch(createRequest('https://demo.example.com/', loginResponse))
+    let html = await homeResponse.text()
+
+    assert.equal(loginResponse.status, 302)
+    assert.equal(loginResponse.headers.get('Location'), '/')
+    assert.match(html, /Demo User/)
+    assert.match(html, /Signed in with Email and password/)
+    assert.match(html, /demo@example.com/)
   })
 
   it('redirects to Google when the Google login button is used', async () => {
@@ -70,9 +102,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.status, 302)
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /Google Person/)
-      assert.match(html, /google@example.com/)
       assert.match(html, /Signed in with Google/)
-      assert.match(html, /google-user-1/)
+      assert.match(html, /https:\/\/example\.com\/google-avatar\.png/)
+      assert.doesNotMatch(html, /google@example.com/)
     } finally {
       restoreFetch()
     }
@@ -119,9 +151,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.status, 302)
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /GitHub Person/)
-      assert.match(html, /github@example.com/)
       assert.match(html, /Signed in with GitHub/)
-      assert.match(html, /42/)
+      assert.match(html, /https:\/\/example\.com\/github-avatar\.png/)
+      assert.doesNotMatch(html, /github@example.com/)
     } finally {
       restoreFetch()
     }
@@ -171,9 +203,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.status, 302)
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /Facebook Person/)
-      assert.match(html, /facebook@example.com/)
       assert.match(html, /Signed in with Facebook/)
-      assert.match(html, /fb_7/)
+      assert.match(html, /https:\/\/example\.com\/facebook-avatar\.png/)
+      assert.doesNotMatch(html, /facebook@example.com/)
     } finally {
       restoreFetch()
     }
@@ -226,7 +258,7 @@ describe('social login demo router', () => {
       assert.notEqual(loggedOutSessionId, null)
       assert.notEqual(loggedOutSessionId, authenticatedSessionId)
       assert.doesNotMatch(html, /Logout Person/)
-      assert.match(html, /Continue with Google/)
+      assert.match(html, /Login to your account/)
     } finally {
       restoreFetch()
     }

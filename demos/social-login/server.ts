@@ -1,13 +1,22 @@
 import * as http from 'node:http'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { createRequestListener } from 'remix/node-fetch-server'
 
+import { getSocialLoginConfig } from './app/config.ts'
+import { getSocialProviderStates } from './app/middleware/auth.ts'
 import { createSocialLoginRouter } from './app/router.ts'
+import { socialLoginDatabaseFilePath } from './app/data/setup.ts'
 
-let router = createSocialLoginRouter()
+let config = getSocialLoginConfig()
+let providerStates = getSocialProviderStates(config)
+let router = createSocialLoginRouter({ config })
+let demoRoot = path.dirname(fileURLToPath(import.meta.url))
+let relativeDatabasePath = path.relative(demoRoot, socialLoginDatabaseFilePath)
 
 let server = http.createServer(
-  createRequestListener(async (request) => {
+  createRequestListener(async request => {
     try {
       return await router.fetch(request)
     } catch (error) {
@@ -21,11 +30,19 @@ let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`Social login demo is running on http://localhost:${port}`)
+  console.log(`SQLite database: ${relativeDatabasePath}`)
   console.log('')
-  console.log('Configure these environment variables to enable all providers:')
-  console.log('  GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET')
-  console.log('  GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET')
-  console.log('  FACEBOOK_CLIENT_ID / FACEBOOK_CLIENT_SECRET')
+  console.log('Auth providers:')
+  console.log('  Email and password: enabled (demo@example.com / password123)')
+
+  for (let provider of providerStates) {
+    if (provider.configured) {
+      console.log(`  ${provider.label}: enabled`)
+    } else {
+      console.log(`  ${provider.label}: disabled (missing ${provider.missingEnv.join(' and ')})`)
+    }
+  }
+
   console.log('')
 })
 
