@@ -50,11 +50,31 @@ export async function* crawl(
     n()
   }
 
-  function enqueue(pathname: string) {
-    if (!visited.has(pathname)) {
-      visited.add(pathname)
-      queue.push(pathname)
+  enqueue(paths)
+
+  while (true) {
+    // Dispatch up to concurrency limit
+    while (active < concurrency && queue.length > 0) {
+      fetchOne(queue.shift()!)
     }
+
+    if (error) throw error
+    if (results.length > 0) {
+      yield results.shift()!
+      continue
+    }
+    if (active === 0 && queue.length === 0) break
+
+    await gate
+  }
+
+  function enqueue(pathnames: string[]) {
+    pathnames.forEach((p) => {
+      if (!visited.has(p)) {
+        visited.add(p)
+        queue.push(p)
+      }
+    })
   }
 
   async function fetchOne(pathname: string) {
@@ -83,11 +103,11 @@ export async function* crawl(
         let elements = parse(await cloned.text())
 
         // Always queue referenced assets (CSS, JS, images)
-        extractAssetPaths(elements, pathname).forEach(enqueue)
+        enqueue(extractAssetPaths(elements, pathname))
 
         // Only follow navigation links when spider mode is enabled
         if (spider) {
-          extractLinkPaths(elements, pathname).forEach(enqueue)
+          enqueue(extractLinkPaths(elements, pathname))
         }
       } else {
         results.push({ pathname, filepath: pathname, response })
@@ -98,21 +118,6 @@ export async function* crawl(
       active--
       bump()
     }
-  }
-
-  for (let p of paths) enqueue(p)
-
-  while (true) {
-    // Dispatch up to concurrency limit
-    while (active < concurrency && queue.length > 0) {
-      fetchOne(queue.shift()!)
-    }
-
-    if (error) throw error
-    if (results.length > 0) { yield results.shift()!; continue }
-    if (active === 0 && queue.length === 0) break
-
-    await gate
   }
 }
 
