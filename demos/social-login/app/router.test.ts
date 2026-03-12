@@ -11,7 +11,7 @@ describe('social login demo router', () => {
     let html = await response.text()
 
     assert.equal(response.status, 200)
-    assert.match(html, /Remix Auth demo powered by Google, GitHub, and Facebook\./)
+    assert.match(html, /Remix Auth Demo/)
     assert.match(html, /Login to your account/)
     assert.match(html, />Login<\/button>/)
     assert.match(html, /Login with Google/)

@@ -3,6 +3,9 @@ import type { AuthScheme } from '../types.ts'
 
 const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
 
+/**
+ * Options for creating a bearer-token auth scheme.
+ */
 export interface BearerOptions<identity> {
   name?: string
   headerName?: string
@@ -14,6 +17,12 @@ export interface BearerOptions<identity> {
   challenge?: string
 }
 
+/**
+ * Creates an auth scheme that reads bearer tokens from a request header.
+ *
+ * @param options Header parsing and token verification options.
+ * @returns An auth scheme for use with `auth()`.
+ */
 export function bearer<identity>(options: BearerOptions<identity>): AuthScheme<identity> {
   let name = options.name ?? 'bearer'
   let headerName = options.headerName ?? 'Authorization'

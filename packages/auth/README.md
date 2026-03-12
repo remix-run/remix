@@ -1,16 +1,15 @@
 # auth
 
-Browser login, OAuth, and OIDC helpers for Remix. This package handles provider redirects, callback validation, and session-backed login flows for standards-based identity providers, common social providers, and email/password authentication.
+Browser login, OAuth, and OIDC helpers for Remix. This package handles redirect-based sign-in flows, callback processing, and session-backed authentication for standards-based identity providers, common social providers, and email/password login.
 
 ## Features
 
-- **OIDC Core + Wrappers** - Use `createOIDCAuthProvider()` directly or `createGoogleAuthProvider()`, `createMicrosoftAuthProvider()`, `createOktaAuthProvider()`, and `createAuth0AuthProvider()` as thin wrappers
-- **OAuth Provider Helpers** - Use `createGitHubAuthProvider()` and `createFacebookAuthProvider()` for common browser login flows that need custom provider logic
-- **Credentials Login** - Add email/password authentication with the same session contract as OAuth
-- **Explicit Session Writes** - Use `writeSession(session, result, context)` to persist exactly the auth data your app needs
-- **Request Handler Factories** - Use `login()` and `callback()` to build browser auth request handlers without repeating protocol code
-- **Success and Failure Hooks** - Customize successful logins and failures with `onSuccess`, `onFailure`, `onError`, `successRedirectTo`, and `failureRedirectTo`
-- **Session-First Design** - Store a small auth record in the session and load the full identity later with `sessionAuth()`
+- **Standards-based browser auth** - Handle authorization code flows, PKCE, callback validation, and profile loading for OAuth and OpenID Connect providers
+- **Built-in provider support** - Start quickly with Google, Microsoft, Okta, Auth0, GitHub, and Facebook, or connect another OpenID Connect provider
+- **Credentials flows** - Support email/password and other direct form-based login flows with the same session model as social login
+- **Session-backed authentication** - Persist a small auth record in the session and load the full identity later on normal app requests
+- **Explicit app control** - Decide exactly what to write into the session, where to redirect after login, and how to handle success and failure cases
+- **Shared request-handler model** - Build login and callback handlers without repeating protocol code across routes
 
 ## Installation
 
@@ -26,7 +25,12 @@ import { createRouter } from 'remix/fetch-router'
 import type { RequestContext } from 'remix/fetch-router'
 import { form, route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
-import { callback, createCredentialsAuthProvider, createGoogleAuthProvider, login } from 'remix/auth'
+import {
+  callback,
+  createCredentialsAuthProvider,
+  createGoogleAuthProvider,
+  login,
+} from 'remix/auth'
 import { formData } from 'remix/form-data-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
@@ -202,12 +206,99 @@ On failures:
 - OAuth login uses `onError(error, context)` when starting the redirect flow fails
 - OAuth callbacks use `onFailure(error, context)` for invalid state, provider errors, token exchange failures, profile fetch failures, or `writeSession()` failures
 
+## Supported Auth Providers
+
+- [OpenID Connect](https://openid.net) (works with any OpenID Connect auth provider)
+- [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect) provider
+- [Microsoft OAuth 2.0 and OIDC](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols)
+- [Okta OAuth 2.0 and OpenID Connect](https://developer.okta.com/docs/concepts/oauth-openid/)
+- [Auth0 OpenID Connect Protocol](https://auth0.com/docs/authenticate/protocols/openid-connect-protocol)
+- [GitHub OAuth apps](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+- [Facebook Login](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/)
+- App-defined credentials flows like email and password
+
+## Creating Your Own Provider
+
+For most custom providers, use `createOIDCAuthProvider()`. That is the public extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint.
+
+```ts
+import { callback, createOIDCAuthProvider, login } from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    company: {
+      login: '/login/company',
+      callback: '/auth/company/callback',
+    },
+  },
+  app: {
+    dashboard: '/dashboard',
+  },
+})
+
+let companyProvider = createOIDCAuthProvider({
+  name: 'company',
+  issuer: 'https://sso.acme.com',
+  clientId: 'acme-web',
+  clientSecret: 'acme-web-secret',
+  redirectUri: new URL(routes.auth.company.callback.href(), 'https://app.acme.com'),
+  authorizationParams: {
+    prompt: 'login',
+  },
+  mapProfile({ claims }) {
+    return {
+      id: claims.sub,
+      email: claims.email ?? null,
+      name: claims.name ?? claims.preferred_username ?? 'Unknown user',
+    }
+  },
+})
+
+router.get(routes.auth.company.login, login(companyProvider))
+
+router.get(
+  routes.auth.company.callback,
+  callback(companyProvider, {
+    async writeSession(session, result) {
+      let user = await users.upsertFromCompanySSO(result.profile)
+      session.set('auth', { userId: user.id })
+    },
+    successRedirectTo: routes.app.dashboard.href(),
+  }),
+)
+```
+
+When you build your own provider with `createOIDCAuthProvider()`:
+
+- set `name` to the identifier you want to see later as `result.provider`
+- set `issuer`, `clientId`, `clientSecret`, and `redirectUri`
+- use `authorizationParams` for provider-specific query params like `prompt`, `audience`, or `access_type`
+- use `mapProfile()` to normalize the provider claims into the profile shape your app wants to consume in `writeSession()`
+- use `metadata` if you want to skip discovery entirely, or `discoveryUrl` if the metadata document lives somewhere other than `/.well-known/openid-configuration`
+
+That is the recommended path for Microsoft Entra tenants, Keycloak, Zitadel, Cognito, GitLab, and other standards-based providers that are not already wrapped by a built-in helper.
+
+If the provider is not OIDC and is not one of the built-in helpers, `remix/auth` does not yet expose a public generic custom OAuth provider factory. In that case:
+
+- prefer `createOIDCAuthProvider()` if the provider supports OIDC at all
+- use a built-in helper like `createGitHubAuthProvider()` or `createFacebookAuthProvider()` when it matches your provider
+
+Contributions are welcome if you want to add another provider to Remix itself. [Submit a pull request](https://github.com/remix-run/remix/pulls) if you'd like to add one.
+
 ## OIDC Providers
 
 Use `createOIDCAuthProvider()` for any standards-compliant OpenID Connect provider. The `createGoogleAuthProvider()`, `createMicrosoftAuthProvider()`, `createOktaAuthProvider()`, and `createAuth0AuthProvider()` helpers are thin wrappers on top of the same OIDC runtime.
 
 ```ts
-import { createAuth0AuthProvider, createGoogleAuthProvider, login, createMicrosoftAuthProvider, createOIDCAuthProvider, createOktaAuthProvider } from 'remix/auth'
+import {
+  createAuth0AuthProvider,
+  createGoogleAuthProvider,
+  login,
+  createMicrosoftAuthProvider,
+  createOIDCAuthProvider,
+  createOktaAuthProvider,
+} from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
