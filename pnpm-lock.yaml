@@ -1086,6 +1086,8 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/script-handler/bench: {}
+
   packages/session:
     devDependencies:
       '@types/node':
