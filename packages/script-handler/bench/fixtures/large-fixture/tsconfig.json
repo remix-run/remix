@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@remix-run/component",
+    "paths": {
+      "#packages/*": ["./packages/*"],
+      "@remix-run/component": ["../../../../component/src/index.ts"],
+      "@remix-run/component/jsx-runtime": ["../../../../component/src/jsx-runtime.ts"],
+      "@remix-run/component/jsx-dev-runtime": ["../../../../component/src/jsx-dev-runtime.ts"]
+    }
+  },
+  "include": ["project", "packages"],
+  "exclude": []
+}

@@ -1,6 +1,7 @@
 catalog:
   '@types/node': ^24.6.0
   '@typescript/native-preview': 7.0.0-dev.20251125.1
+  esbuild: ^0.25.0
   playwright: ^1.53.1
   tsx: ^4.20.6
   typescript: ^5.9.3
@@ -20,6 +21,7 @@ packages:
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
   - packages/route-pattern/bench
+  - packages/script-handler/bench
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - scripts

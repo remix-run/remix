@@ -1,0 +1,8 @@
+{
+  "name": "script-handler-large-fixture",
+  "private": true,
+  "imports": {
+    "#packages/*": "../packages/*"
+  },
+  "type": "module"
+}

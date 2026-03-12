@@ -66,6 +66,7 @@
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
+    "./script-handler": "./src/script-handler.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
     "./session-storage-memcache": "./src/session-storage-memcache.ts",
@@ -271,6 +272,10 @@
         "types": "./dist/route-pattern/specificity.d.ts",
         "default": "./dist/route-pattern/specificity.js"
       },
+      "./script-handler": {
+        "types": "./dist/script-handler.d.ts",
+        "default": "./dist/script-handler.js"
+      },
       "./session": {
         "types": "./dist/session.d.ts",
         "default": "./dist/session.js"
@@ -339,6 +344,7 @@
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
+    "@remix-run/script-handler": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/data-schema": "workspace:^",

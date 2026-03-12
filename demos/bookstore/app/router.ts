@@ -11,6 +11,7 @@ import { routes } from './routes.ts'
 import { initializeBookstoreDatabase } from './data/setup.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
+import { scriptHandler } from './utils/scripts.ts'
 
 import adminController from './admin.tsx'
 import accountController from './account.tsx'
@@ -23,6 +24,7 @@ import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
 import { loadDatabase } from './middleware/database.ts'
+import { loadScriptEntry } from './middleware/script-entry.ts'
 
 let middleware = []
 
@@ -43,10 +45,17 @@ middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
 middleware.push(loadDatabase())
+middleware.push(loadScriptEntry())
 
 await initializeBookstoreDatabase()
 
 export let router = createRouter({ middleware })
+
+router.get(routes.scripts, async ({ request, params }) => {
+  if (!params.path) return new Response('Not found', { status: 404 })
+  let script = await scriptHandler.handle(request, params.path)
+  return script ?? new Response('Not found', { status: 404 })
+})
 
 router.get(routes.uploads, uploadsAction)
 router.map(routes.fragments, fragmentsController)
