@@ -31,82 +31,43 @@ export async function* crawl(
   let queue = new Set(paths)
   let visited = new Set<string>()
 
-  for (let urlPath of queue) {
-    if (visited.has(urlPath)) {
+  for (let pathname of queue) {
+    if (visited.has(pathname)) {
       continue
     }
-    visited.add(urlPath)
+    visited.add(pathname)
 
-    let response = await router.fetch(new Request(`${BASE_URL}${urlPath}`))
+    let response = await router.fetch(new Request(`${BASE_URL}${pathname}`))
     let isHtml = response.headers.get('Content-Type')?.includes('text/html')
     let toQueue: string[] = []
 
     if (isHtml) {
-      // Pass a clone so we can read the body for parsing
-      yield { pathname: urlPath, filepath: getHtmlFilepath(urlPath), response: response.clone() }
+      let cloned = response.clone()
+      yield {
+        pathname,
+        // / -> /index.html, /about -> /about/index.html, /about/ -> /about/index.html
+        // Always put `index.html` files into directories - this leads to the best
+        // support with and without trailing slashes on github pages:
+        // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
+        filepath: pathname.replace(/\/?$/, '/index.html'),
+        response,
+      }
 
-      let elements = parse(await response.text())
+      let elements = parse(await cloned.text())
 
       // Always queue referenced assets (CSS, JS, images)
-      toQueue.push(...extractAssetPaths(elements, urlPath))
+      toQueue.push(...extractAssetPaths(elements, pathname))
 
       // Only follow navigation links when spider mode is enabled
       if (spider) {
-        toQueue.push(...extractLinkPaths(elements, urlPath))
+        toQueue.push(...extractLinkPaths(elements, pathname))
       }
     } else {
-      yield { pathname: urlPath, filepath: urlPath, response }
+      yield { pathname, filepath: pathname, response }
     }
 
-    for (let path of toQueue) {
-      if (!visited.has(path)) {
-        queue.add(path)
-      }
-    }
+    toQueue.filter((p) => !visited.has(p)).forEach((p) => queue.add(p))
   }
-}
-
-// Always put `index.html` files into directories - this leads to the best
-// support with and without trailing slashes on github pages:
-// https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
-function getHtmlFilepath(urlPath: string): string {
-  // / -> /index.html, /about -> /about/index.html, /about/ -> /about/index.html
-  return urlPath.replace(/\/?$/, '/index.html')
-}
-
-function isNonNavigable(href: string): boolean {
-  return (
-    href.startsWith('#') ||
-    href.startsWith('mailto:') ||
-    href.startsWith('tel:') ||
-    href.startsWith('javascript:') ||
-    href.startsWith('data:')
-  )
-}
-
-
-function resolveHref(href: string, baseUrl: string): string | null {
-  // Absolute URL — extract pathname
-  if (/^https?:\/\//.test(href) || href.startsWith('//')) {
-    try {
-      return new URL(href).pathname
-    } catch {
-      return null
-    }
-  }
-
-  // Relative URL — resolve against the current page's path
-  try {
-    return new URL(href, `${BASE_URL}${baseUrl}`).pathname
-  } catch {
-    return null
-  }
-}
-
-const rel = (el: HTMLElement) => el.getAttribute('rel')?.split(/\s+/) || []
-
-function isRelativeUrl(href: string): boolean {
-  return !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
 }
 
 function extractAssetPaths(elements: HTMLElement[], baseUrl: string): string[] {
@@ -141,4 +102,40 @@ function extractLinkPaths(elements: HTMLElement[], baseUrl: string): string[] {
     .filter(isRelativeUrl)
     .map((href) => resolveHref(href, baseUrl))
     .filter((href): href is string => href != null)
+}
+
+function rel(el: HTMLElement) {
+  return el.getAttribute('rel')?.split(/\s+/) || []
+}
+
+function isNonNavigable(href: string): boolean {
+  return (
+    href.startsWith('#') ||
+    href.startsWith('mailto:') ||
+    href.startsWith('tel:') ||
+    href.startsWith('javascript:') ||
+    href.startsWith('data:')
+  )
+}
+
+function isRelativeUrl(href: string): boolean {
+  return !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
+}
+
+function resolveHref(href: string, baseUrl: string): string | null {
+  // Absolute URL — extract pathname
+  if (/^https?:\/\//.test(href) || href.startsWith('//')) {
+    try {
+      return new URL(href).pathname
+    } catch {
+      return null
+    }
+  }
+
+  // Relative URL — resolve against the current page's path
+  try {
+    return new URL(href, `${BASE_URL}${baseUrl}`).pathname
+  } catch {
+    return null
+  }
 }
