@@ -88,7 +88,7 @@ If you want to play around with the bleeding edge, we also build the latest `mai
 pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```
 
 ## Contributing
