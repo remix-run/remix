@@ -78,6 +78,10 @@ async function loadTypedocJson(opts: {
         gitRevision: opts.tag,
         // exclude test files via the build config
         tsconfig: 'tsconfig.build.json',
+        validation: {
+          // Don't warn for referenced but not exported types
+          notExported: false,
+        },
       },
     })
     let reflection = await app.convert()
