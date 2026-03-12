@@ -113,7 +113,8 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
 function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
-  let mergedClassName = classAttr && className ? `${classAttr} ${className}` : classAttr || className
+  let mergedClassName =
+    classAttr && className ? `${classAttr} ${className}` : classAttr || className
   return mergedClassName || undefined
 }
 
