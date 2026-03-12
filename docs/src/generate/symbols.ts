@@ -21,6 +21,8 @@ export const MDN_SYMBOLS = {
   FormData: 'https://developer.mozilla.org/en-US/docs/Web/API/FormData',
   Headers: 'https://developer.mozilla.org/en-US/docs/Web/API/Headers',
   JSON: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON',
+  Promise:
+    'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise',
   ReadableStream: 'https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream',
   ReadableStreamDefaultReader:
     'https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader',
