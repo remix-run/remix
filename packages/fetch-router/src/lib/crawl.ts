@@ -20,58 +20,99 @@ export interface CrawlOptions {
    * @default true
    */
   spider?: boolean
+  /**
+   * Maximum number of concurrent requests.
+   * @default 1
+   */
+  concurrency?: number
 }
 
 export async function* crawl(
   router: { fetch(request: Request): Promise<Response> },
   options: CrawlOptions = {},
 ): AsyncIterableIterator<CrawlResult> {
-  let { paths = ['/'], spider = true } = options
+  let { paths = ['/'], spider = true, concurrency = 1 } = options
 
-  let queue = new Set(paths)
+  // Array queue (vs Set) so concurrent fetches can push discovered paths to the
+  // tail while the dispatch loop reads from the head
+  let queue: string[] = []
   let visited = new Set<string>()
+  let results: CrawlResult[] = []
+  let active = 0
+  let error: unknown
 
-  for (let pathname of queue) {
-    if (visited.has(pathname)) {
-      continue
+  // Resettable gate — lets the generator sleep until a fetch completes
+  let notify: () => void = () => {}
+  let gate = new Promise<void>((r) => (notify = r))
+  function bump() {
+    let n = notify
+    gate = new Promise<void>((r) => (notify = r))
+    n()
+  }
+
+  function enqueue(pathname: string) {
+    if (!visited.has(pathname)) {
+      visited.add(pathname)
+      queue.push(pathname)
     }
-    visited.add(pathname)
+  }
 
-    let response = await router.fetch(new Request(`${BASE_URL}${pathname}`))
+  async function fetchOne(pathname: string) {
+    active++
+    try {
+      let response = await router.fetch(new Request(`${BASE_URL}${pathname}`))
 
-    if (!response.ok) {
-      throw new Error(`Crawl failed: ${response.status} ${response.statusText} (${pathname})`)
-    }
-
-    let isHtml = response.headers.get('Content-Type')?.includes('text/html')
-    let toQueue: string[] = []
-
-    if (isHtml) {
-      let cloned = response.clone()
-      yield {
-        pathname,
-        // / -> /index.html, /about -> /about/index.html, /about/ -> /about/index.html
-        // Always put `index.html` files into directories - this leads to the best
-        // support with and without trailing slashes on github pages:
-        // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
-        filepath: pathname.replace(/\/?$/, '/index.html'),
-        response,
+      if (!response.ok) {
+        throw new Error(`Crawl failed: ${response.status} ${response.statusText} (${pathname})`)
       }
 
-      let elements = parse(await cloned.text())
+      let isHtml = response.headers.get('Content-Type')?.includes('text/html')
 
-      // Always queue referenced assets (CSS, JS, images)
-      toQueue.push(...extractAssetPaths(elements, pathname))
+      if (isHtml) {
+        let cloned = response.clone()
+        results.push({
+          pathname,
+          // / -> /index.html, /about -> /about/index.html, /about/ -> /about/index.html
+          // Always put `index.html` files into directories - this leads to the best
+          // support with and without trailing slashes on github pages:
+          // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
+          filepath: pathname.replace(/\/?$/, '/index.html'),
+          response,
+        })
 
-      // Only follow navigation links when spider mode is enabled
-      if (spider) {
-        toQueue.push(...extractLinkPaths(elements, pathname))
+        let elements = parse(await cloned.text())
+
+        // Always queue referenced assets (CSS, JS, images)
+        extractAssetPaths(elements, pathname).forEach(enqueue)
+
+        // Only follow navigation links when spider mode is enabled
+        if (spider) {
+          extractLinkPaths(elements, pathname).forEach(enqueue)
+        }
+      } else {
+        results.push({ pathname, filepath: pathname, response })
       }
-    } else {
-      yield { pathname, filepath: pathname, response }
+    } catch (e) {
+      error = e
+    } finally {
+      active--
+      bump()
+    }
+  }
+
+  for (let p of paths) enqueue(p)
+
+  while (true) {
+    // Dispatch up to concurrency limit
+    while (active < concurrency && queue.length > 0) {
+      fetchOne(queue.shift()!)
     }
 
-    toQueue.filter((p) => !visited.has(p)).forEach((p) => queue.add(p))
+    if (error) throw error
+    if (results.length > 0) { yield results.shift()!; continue }
+    if (active === 0 && queue.length === 0) break
+
+    await gate
   }
 }
 

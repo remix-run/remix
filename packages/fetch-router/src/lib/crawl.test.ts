@@ -213,6 +213,36 @@ describe('crawl(router)', () => {
     )
   })
 
+  it('fetches pages concurrently when concurrency > 1', async () => {
+    let router = createRouter()
+    let inflight = 0
+    let maxInflight = 0
+
+    function slowHtml(content: string): Promise<Response> {
+      inflight++
+      maxInflight = Math.max(maxInflight, inflight)
+      return new Promise((resolve) =>
+        setTimeout(() => {
+          inflight--
+          resolve(html(content))
+        }, 20),
+      )
+    }
+
+    router.get('/', () => slowHtml('<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a>'))
+    router.get('/a', () => slowHtml('<html></html>'))
+    router.get('/b', () => slowHtml('<html></html>'))
+    router.get('/c', () => slowHtml('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router, { concurrency: 3 })) {
+      visited.push(pathname)
+    }
+
+    assert.deepEqual(visited.toSorted(), ['/', '/a', '/b', '/c'])
+    assert.ok(maxInflight > 1, `expected concurrent requests, got max inflight: ${maxInflight}`)
+  })
+
   it('does not visit the same path twice', async () => {
     let router = createRouter()
     router.get('/', () => html('<a href="/shared">Shared</a>'))
