@@ -356,6 +356,12 @@ code {
   @media (max-width: 640px) {
     font-size: calc(var(--p-size) * 0.9);
   }
+
+  :not(a):not(pre) > & {
+    background: var(--surface-level-4-color);
+    border-radius: 2px;
+    padding: 2px 3px;
+  }
 }
 
 /* Styling */
