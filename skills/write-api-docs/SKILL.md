@@ -1,6 +1,6 @@
 ---
 name: write-api-docs
-description: Write or audit public API docs for Remix packages. Use when adding or tightening JSDoc on exported functions, classes, interfaces, type aliases, or option objects, especially when the task requires identifying the true public surface from package exports and making the result pass this repo's ESLint rules.
+description: Write or audit public API docs for Remix packages. Use when adding or tightening JSDoc on exported functions, classes, interfaces, type aliases, or option objects.
 ---
 
 # Write API Docs
