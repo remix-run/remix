@@ -1,4 +1,9 @@
-import { createFacebookAuthProvider, createGitHubAuthProvider, createGoogleAuthProvider } from 'remix/auth'
+import { createCredentialsAuthProvider } from 'remix/auth'
+import {
+  createFacebookAuthProvider,
+  createGitHubAuthProvider,
+  createGoogleAuthProvider,
+} from 'remix/auth'
 import type {
   FacebookProfile,
   GitHubProfile,
@@ -8,18 +13,23 @@ import type {
 } from 'remix/auth'
 import { auth, sessionAuth } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
+import type { Database as DataTableDatabase } from 'remix/data-table'
 
 import type { SocialLoginConfig } from '../config.ts'
+import { authAccounts, users, type User } from '../data/schema.ts'
+import { routes } from '../routes.ts'
 import type { Session } from '../utils/session.ts'
+import { AppDatabase } from './database.ts'
 
 export type SocialProviderName = 'google' | 'github' | 'facebook'
+export type LoginMethod = SocialProviderName | 'password'
 
-export interface SocialUser {
-  provider: SocialProviderName
-  providerAccountId: string
-  name: string | null
+export interface AuthenticatedUser {
+  id: number
   email: string | null
+  name: string | null
   avatarUrl: string | null
+  loginMethod: LoginMethod
 }
 
 export interface SocialProviderState {
@@ -29,25 +39,63 @@ export interface SocialProviderState {
   missingEnv: string[]
 }
 
+interface SocialLoginSession {
+  userId: number
+  loginMethod: LoginMethod
+}
+
 type SocialProvider =
   | OAuthProvider<GoogleProfile, 'google'>
   | OAuthProvider<GitHubProfile, 'github'>
   | OAuthProvider<FacebookProfile, 'facebook'>
 
-type SocialAuthResult =
+export type SocialAuthResult =
   | OAuthResult<GoogleProfile, 'google'>
   | OAuthResult<GitHubProfile, 'github'>
   | OAuthResult<FacebookProfile, 'facebook'>
 
+interface SocialProfileData {
+  email?: string
+  name?: string
+  avatarUrl?: string
+}
+
+export let passwordProvider = createCredentialsAuthProvider({
+  parse(context) {
+    let formData = context.get(FormData)
+
+    return {
+      email: normalizeEmail(formData.get('email')?.toString() ?? ''),
+      password: formData.get('password')?.toString() ?? '',
+    }
+  },
+  async verify({ email, password }, context) {
+    let db = context.get(AppDatabase)
+    let user = email === '' ? null : await db.findOne(users, { where: { email } })
+
+    if (!user || user.password !== password) {
+      return null
+    }
+
+    return user
+  },
+})
+
 export function loadAuth(): Middleware {
   return auth({
     schemes: [
-      sessionAuth<SocialUser, SocialUser>({
+      sessionAuth<AuthenticatedUser, SocialLoginSession>({
         read(session) {
-          return parseSocialUser(session.get('auth'))
+          return parseSocialLoginSession(session.get('auth'))
         },
-        verify(value) {
-          return value
+        async verify(value, context) {
+          let user = await context.get(AppDatabase).find(users, value.userId)
+
+          if (user == null) {
+            return null
+          }
+
+          return toAuthenticatedUser(user, value.loginMethod)
         },
         invalidate(session) {
           clearAuthenticatedSession(session)
@@ -74,6 +122,14 @@ export function getProviderLabel(name: SocialProviderName): string {
     case 'facebook':
       return 'Facebook'
   }
+}
+
+export function getLoginMethodLabel(method: LoginMethod): string {
+  if (method === 'password') {
+    return 'Email and password'
+  }
+
+  return getProviderLabel(method)
 }
 
 export function getProviderUnavailableMessage(
@@ -115,7 +171,7 @@ export function createGoogleProvider(
   return createGoogleAuthProvider({
     clientId: config.googleClientId,
     clientSecret: config.googleClientSecret,
-    redirectUri: new URL('/auth/google/callback', origin),
+    redirectUri: new URL(routes.auth.google.callback.href(), origin),
   })
 }
 
@@ -130,7 +186,7 @@ export function createGitHubProvider(
   return createGitHubAuthProvider({
     clientId: config.githubClientId,
     clientSecret: config.githubClientSecret,
-    redirectUri: new URL('/auth/github/callback', origin),
+    redirectUri: new URL(routes.auth.github.callback.href(), origin),
   })
 }
 
@@ -145,41 +201,86 @@ export function createFacebookProvider(
   return createFacebookAuthProvider({
     clientId: config.facebookClientId,
     clientSecret: config.facebookClientSecret,
-    redirectUri: new URL('/auth/facebook/callback', origin),
+    redirectUri: new URL(routes.auth.facebook.callback.href(), origin),
   })
 }
 
-export function createAuthenticatedUser(result: SocialAuthResult): SocialUser {
-  switch (result.provider) {
-    case 'google':
-      return {
-        provider: 'google',
-        providerAccountId: result.account.providerAccountId,
-        name: result.profile.name ?? null,
-        email: result.profile.email ?? null,
-        avatarUrl: result.profile.picture ?? null,
+export async function upsertSocialUser(
+  db: DataTableDatabase,
+  result: SocialAuthResult,
+): Promise<User> {
+  let now = Date.now()
+  let profile = getSocialProfileData(result)
+
+  return db.transaction(async tx => {
+    let account = await tx.findOne(authAccounts, {
+      where: {
+        provider: result.provider,
+        provider_account_id: result.account.providerAccountId,
+      },
+    })
+
+    if (account != null) {
+      let user = await tx.find(users, account.user_id)
+
+      if (user == null) {
+        throw new Error('Linked social account is missing its user record.')
       }
-    case 'github':
-      return {
-        provider: 'github',
-        providerAccountId: result.account.providerAccountId,
-        name: result.profile.name ?? result.profile.login ?? null,
-        email: result.profile.email ?? null,
-        avatarUrl: result.profile.avatar_url ?? null,
-      }
-    case 'facebook':
-      return {
-        provider: 'facebook',
-        providerAccountId: result.account.providerAccountId,
-        name: result.profile.name ?? null,
-        email: result.profile.email ?? null,
-        avatarUrl: result.profile.picture?.data?.url ?? null,
-      }
-  }
+
+      let nextUser = await tx.update(users, user.id, {
+        ...createUserPatch(profile),
+        updated_at: now,
+      })
+
+      await tx.update(authAccounts, account.id, {
+        ...createAuthAccountPatch(profile),
+        updated_at: now,
+      })
+
+      return nextUser
+    }
+
+    let existingUser =
+      profile.email == null ? null : await tx.findOne(users, { where: { email: profile.email } })
+
+    let user =
+      existingUser == null
+        ? await tx.create(
+            users,
+            {
+              ...createUserPatch(profile),
+              created_at: now,
+              updated_at: now,
+            },
+            { returnRow: true },
+          )
+        : await tx.update(users, existingUser.id, {
+            ...createUserPatch(profile),
+            updated_at: now,
+          })
+
+    await tx.create(authAccounts, {
+      user_id: user.id,
+      provider: result.provider,
+      provider_account_id: result.account.providerAccountId,
+      ...createAuthAccountPatch(profile),
+      created_at: now,
+      updated_at: now,
+    })
+
+    return user
+  })
 }
 
-export function writeAuthenticatedSession(session: Session, user: SocialUser): void {
-  session.set('auth', user)
+export function writeAuthenticatedSession(
+  session: Session,
+  user: Pick<User, 'id'>,
+  loginMethod: LoginMethod,
+): void {
+  session.set('auth', {
+    userId: user.id,
+    loginMethod,
+  })
 }
 
 export function clearAuthenticatedSession(session: Session): void {
@@ -195,6 +296,42 @@ function createProviderState(name: SocialProviderName, config: SocialLoginConfig
     configured: missingEnv.length === 0,
     missingEnv,
   }
+}
+
+function createUserPatch(profile: SocialProfileData): Partial<User> {
+  let next: Partial<User> = {}
+
+  if (profile.email !== undefined) {
+    next.email = profile.email
+  }
+
+  if (profile.name !== undefined) {
+    next.name = profile.name
+  }
+
+  if (profile.avatarUrl !== undefined) {
+    next.avatar_url = profile.avatarUrl
+  }
+
+  return next
+}
+
+function createAuthAccountPatch(profile: SocialProfileData) {
+  let next: Record<string, string> = {}
+
+  if (profile.email !== undefined) {
+    next.email = profile.email
+  }
+
+  if (profile.name !== undefined) {
+    next.name = profile.name
+  }
+
+  if (profile.avatarUrl !== undefined) {
+    next.avatar_url = profile.avatarUrl
+  }
+
+  return next
 }
 
 function getMissingProviderEnv(name: SocialProviderName, config: SocialLoginConfig): string[] {
@@ -215,58 +352,89 @@ function getMissingProviderEnv(name: SocialProviderName, config: SocialLoginConf
         ['FACEBOOK_CLIENT_SECRET', config.facebookClientSecret],
       ])
   }
-
-  return []
 }
 
 function getMissingValues(entries: [string, string | undefined][]): string[] {
   return entries.flatMap(([name, value]) => (value ? [] : [name]))
 }
 
-function parseSocialUser(value: unknown): SocialUser | null {
+function getSocialProfileData(result: SocialAuthResult): SocialProfileData {
+  switch (result.provider) {
+    case 'google':
+      return {
+        email: normalizeOptionalString(result.profile.email),
+        name: normalizeOptionalString(result.profile.name),
+        avatarUrl: normalizeOptionalString(result.profile.picture),
+      }
+    case 'github':
+      return {
+        email: normalizeOptionalString(result.profile.email),
+        name: normalizeOptionalString(result.profile.name ?? result.profile.login),
+        avatarUrl: normalizeOptionalString(result.profile.avatar_url),
+      }
+    case 'facebook':
+      return {
+        email: normalizeOptionalString(result.profile.email),
+        name: normalizeOptionalString(result.profile.name),
+        avatarUrl: normalizeOptionalString(result.profile.picture?.data?.url),
+      }
+  }
+}
+
+function parseSocialLoginSession(value: unknown): SocialLoginSession | null {
   if (typeof value !== 'object' || value == null) {
     return null
   }
 
-  let provider = readProvider((value as { provider?: unknown }).provider)
-  let providerAccountId = readString((value as { providerAccountId?: unknown }).providerAccountId)
+  let userId = readInteger((value as { userId?: unknown }).userId)
+  let loginMethod = readLoginMethod((value as { loginMethod?: unknown }).loginMethod)
 
-  if (provider == null || providerAccountId == null) {
+  if (userId == null || loginMethod == null) {
     return null
   }
 
   return {
-    provider,
-    providerAccountId,
-    name: readNullableString((value as { name?: unknown }).name),
-    email: readNullableString((value as { email?: unknown }).email),
-    avatarUrl: readNullableString((value as { avatarUrl?: unknown }).avatarUrl),
+    userId,
+    loginMethod,
   }
 }
 
-function readProvider(value: unknown): SocialProviderName | null {
-  switch (value) {
-    case 'google':
-    case 'github':
-    case 'facebook':
-      return value
-    default:
-      return null
+function toAuthenticatedUser(user: User, loginMethod: LoginMethod): AuthenticatedUser {
+  return {
+    id: user.id,
+    email: normalizeOptionalString(user.email) ?? null,
+    name: normalizeOptionalString(user.name) ?? null,
+    avatarUrl: normalizeOptionalString(user.avatar_url) ?? null,
+    loginMethod,
   }
 }
 
-function readString(value: unknown): string | null {
-  if (typeof value !== 'string' || value === '') {
+function readInteger(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
     return null
   }
 
   return value
 }
 
-function readNullableString(value: unknown): string | null {
-  if (value == null) {
-    return null
+function readLoginMethod(value: unknown): LoginMethod | null {
+  switch (value) {
+    case 'google':
+    case 'github':
+    case 'facebook':
+    case 'password':
+      return value
+    default:
+      return null
   }
+}
 
-  return typeof value === 'string' && value !== '' ? value : null
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function normalizeOptionalString(value: string | null | undefined): string | undefined {
+  let trimmed = value?.trim()
+
+  return trimmed ? trimmed : undefined
 }

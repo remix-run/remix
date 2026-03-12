@@ -1,6 +1,6 @@
 # Social Login Demo
 
-A small Remix app that demonstrates social login with the new auth stack. It uses `remix/auth` for Google, GitHub, and Facebook login flows, `remix/auth-middleware` to resolve request identity from the session, and standard `fetch-router` middleware for sessions, compression, logging, and static files.
+A one-page Remix app that shows the new auth stack working against a real SQLite database. It combines `remix/auth`, `remix/auth-middleware`, `remix/data-table`, `remix/data-table/migrations`, `remix/data-table-sqlite`, and standard router middleware without any AsyncLocalStorage helper.
 
 ## Running the Demo
 
@@ -13,7 +13,9 @@ pnpm start
 
 Then visit http://localhost:44100
 
-Fill [`/.env.example`](./.env.example) into `.env` with the provider credentials for any login buttons you want to enable:
+## Environment Setup
+
+Social login is optional. Copy [`.env.example`](./.env.example) to `.env` and fill in whichever provider credentials you want to enable:
 
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
@@ -22,7 +24,7 @@ Fill [`/.env.example`](./.env.example) into `.env` with the provider credentials
 - `FACEBOOK_CLIENT_ID`
 - `FACEBOOK_CLIENT_SECRET`
 
-The demo uses Node's built-in `.env` loading to read that file on startup. If `.env` is missing, the app still boots and prints a console message explaining how to create it. Unconfigured providers stay disabled in the UI.
+The demo uses Node's built-in `.env` loading to read that file on startup. If `.env` is missing, the app still boots, the email/password flow still works, and the console explains how to create the file.
 
 Register these callback URLs with your provider apps:
 
@@ -30,12 +32,27 @@ Register these callback URLs with your provider apps:
 - GitHub: `http://localhost:44100/auth/github/callback`
 - Facebook: `http://localhost:44100/auth/facebook/callback`
 
-If a provider is not configured, the home page still renders and explains which environment variables are missing.
+## Local Account
+
+The demo seeds one local user into SQLite on first boot:
+
+- `demo@example.com`
+- `password123`
+
+## Database and Migrations
+
+- The SQLite file is stored at `data/social-login.sqlite`
+- Migration files live in `data/migrations`
+- On startup, the app loads migrations from `data/migrations`, runs pending migrations, and seeds the local email/password account if the database is empty
 
 ## Code Highlights
 
-- [`app/router.ts`](app/router.ts) composes the demo out of standard Remix middleware: request logging in development, compression, static file serving, sessions, and global auth loading.
-- [`app/middleware/auth.ts`](app/middleware/auth.ts) is the auth bridge. It uses `sessionAuth()` to resolve the current user from the session, creates provider helpers for Google, GitHub, and Facebook, and normalizes provider callback results into one app-specific `SocialUser` shape.
-- [`app/auth.tsx`](app/auth.tsx) shows how to use `login()` and `callback()` as request handler factories while still handling missing configuration and callback failures in app code.
-- [`app/home.tsx`](app/home.tsx) renders a single page that switches between logged-out and logged-in states by reading `context.get(Auth)` directly in the request handler.
-- [`app/router.test.ts`](app/router.test.ts) covers the login buttons, each provider callback flow, and logout session rotation without depending on real OAuth services.
+- [`app/router.ts`](./app/router.ts) composes the app out of `formData()`, sessions, request-scoped database loading, and global auth loading.
+- [`app/data/setup.ts`](./app/data/setup.ts) bootstraps SQLite with `better-sqlite3`, `remix/data-table`, and `remix/data-table/migrations`.
+- [`data/migrations/20260311170000_create_social_login_schema.ts`](./data/migrations/20260311170000_create_social_login_schema.ts) defines the `users` and `auth_accounts` tables.
+- [`app/middleware/database.ts`](./app/middleware/database.ts) stores the database handle in request context with `context.set(...)` and `context.get(...)`.
+- [`app/middleware/auth.ts`](./app/middleware/auth.ts) contains the demo auth stack in one place: `loadAuth()`, the email/password credentials provider, social provider creation, and the social-account upsert logic.
+- [`app/auth.tsx`](./app/auth.tsx) uses `login()` and `callback()` from `remix/auth` for both the local password flow and the Google/GitHub/Facebook flows.
+- [`app/home.tsx`](./app/home.tsx) renders the whole app from one request handler and switches between the signed-out and signed-in states by reading `context.get(Auth)`.
+- [`app/router.test.ts`](./app/router.test.ts) covers password login, all three OAuth callback flows, and logout session rotation.
+- [`app/data/setup.test.ts`](./app/data/setup.test.ts) verifies that migrations are applied and the seeded user is created only once.

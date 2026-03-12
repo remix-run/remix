@@ -17,9 +17,7 @@ export function Document() {
 export function Layout() {
   return ({ children }: { children?: RemixNode }) => (
     <Document>
-      <div class="page-shell">
-        <main class="page-frame">{children}</main>
-      </div>
+      <main class="page-shell">{children}</main>
     </Document>
   )
 }

@@ -1,17 +1,17 @@
 import type { BuildAction } from 'remix/fetch-router'
-import type { RemixNode } from 'remix/component'
 import { Auth } from 'remix/auth-middleware'
 import type { Auth as RequestAuth } from 'remix/auth-middleware'
 
 import type { SocialLoginConfig } from './config.ts'
 import { Layout } from './layout.tsx'
-import { routes } from './routes.ts'
 import {
+  getLoginMethodLabel,
   getProviderLabel,
   getSocialProviderStates,
+  type AuthenticatedUser,
   type SocialProviderState,
-  type SocialUser,
 } from './middleware/auth.ts'
+import { routes } from './routes.ts'
 import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
 
@@ -21,26 +21,30 @@ export function createHomeAction(
   return {
     action({ get }) {
       let session = get(Session)
-      let auth = get(Auth) as RequestAuth<SocialUser, string>
+      let auth = get(Auth) as RequestAuth<AuthenticatedUser, string>
       let error = session.get('error')
       let user = auth.ok ? auth.identity : null
       let providers = getSocialProviderStates(config)
 
       return render(
         <Layout>
-          <section class="hero">
-            <p class="eyebrow">Remix Auth Demo</p>
-            <h1>Social login with first-party request handlers</h1>
-            <p class="lede">
-              This demo uses <code>login()</code>, <code>callback()</code>, <code>auth()</code>,
-              and <code>sessionAuth()</code> to move from Google, GitHub, and Facebook into
-              request-scoped identity.
-            </p>
+          <section class="page-stage">
+            <section class="hero page-hero stack-sm">
+              <h1>Remix Auth demo powered by Google, GitHub, and Facebook.</h1>
+              <p class="lede">
+                Sign in with the seeded local account or connect a social provider. The demo keeps
+                users in SQLite and resolves request identity from <code>context.get(Auth)</code>.
+              </p>
+            </section>
+
+            <section class="content-stage">
+              {typeof error === 'string' ? <div class="notice notice-error">{error}</div> : null}
+
+              {user ? <SignedInState user={user} /> : <SignedOutState providers={providers} />}
+
+              <SetupGuide providers={providers} />
+            </section>
           </section>
-
-          {typeof error === 'string' ? <div class="notice notice-error">{error}</div> : null}
-
-          {user ? <SignedInState user={user} /> : <SignedOutState providers={providers} />}
         </Layout>,
         {
           headers: {
@@ -53,93 +57,216 @@ export function createHomeAction(
 }
 
 function SignedOutState() {
-  return ({ providers }: { providers: SocialProviderState[] }) => {
-    let unavailableProviders = providers.filter(provider => !provider.configured)
-
-    return (
-      <section class="panel stack-lg">
-        <div>
-          <h2>Choose a provider</h2>
-          <p class="muted">
-            Each button starts an OAuth flow with <code>remix/auth</code>. After the callback, the
-            demo stores a compact auth record in the session and resolves it on later requests with{' '}
-            <code>sessionAuth()</code>.
-          </p>
-        </div>
-
-        <div class="provider-list">
-          {providers.map(provider => {
-            let href = getProviderLoginHref(provider.name)
-            let className = `provider-button provider-${provider.name}`
-
-            return (
-              <div class="provider-card">
-                {provider.configured ? (
-                  <a href={href} class={className}>
-                    Continue with {provider.label}
-                  </a>
-                ) : (
-                  <button type="button" class={className} disabled>
-                    Continue with {provider.label}
-                  </button>
-                )}
-                {provider.configured ? (
-                  <p class="provider-copy">Configured and ready for local OAuth testing.</p>
-                ) : (
-                  <p class="provider-copy">
-                    Set {provider.missingEnv.join(' and ')} to enable {provider.label}.
-                  </p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {unavailableProviders.length > 0 ? (
-          <div class="setup-card">
-            <h3>Local setup</h3>
+  return ({ providers }: { providers: SocialProviderState[] }) => (
+    <section class="panel auth-card auth-split">
+        <div class="credentials-pane stack-lg">
+          <div class="stack-sm">
+            <p class="eyebrow">Welcome back</p>
+            <h2>Login to your account</h2>
             <p class="muted">
-              Register these callback URLs with your provider apps while developing on port 44100.
+              Use the seeded local account or any configured social provider. The session stores a
+              compact auth record, and <code>sessionAuth()</code> resolves the current user on
+              later requests.
             </p>
-            <ul class="callback-list">
-              <li>
-                Google: <code>{routes.auth.google.callback.href()}</code>
-              </li>
-              <li>
-                GitHub: <code>{routes.auth.github.callback.href()}</code>
-              </li>
-              <li>
-                Facebook: <code>{routes.auth.facebook.callback.href()}</code>
-              </li>
-            </ul>
           </div>
-        ) : null}
+
+          <form method="POST" action={routes.auth.login.action.href()} class="credentials-form">
+            <div class="form-grid">
+              <label class="field">
+                <span class="field-label">Email</span>
+                <input
+                  class="field-input"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  placeholder="demo@example.com"
+                  required
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">Password</span>
+                <input
+                  class="field-input"
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="password123"
+                  required
+                />
+              </label>
+            </div>
+
+            <button type="submit" class="primary-button">
+              Login
+            </button>
+          </form>
+
+          <div class="demo-account">
+            <p class="demo-account-label">Seeded local account</p>
+            <p class="muted">
+              <strong>demo@example.com</strong> / <strong>password123</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <aside class="social-pane stack-lg">
+          <div class="stack-sm">
+            <p class="eyebrow">You can</p>
+            <h2>Login with</h2>
+            <p class="muted">Use any configured provider to create or resume a local account.</p>
+          </div>
+
+          <div class="provider-list">
+            {providers.map(provider => {
+              let href = getProviderLoginHref(provider.name)
+              let className = `provider-button provider-${provider.name}`
+
+              return provider.configured ? (
+                <a href={href} class={className}>
+                  <span class="provider-mark">
+                    <img
+                      class={`provider-icon provider-icon-${provider.name}`}
+                      src={getProviderIconHref(provider.name)}
+                      alt=""
+                    />
+                  </span>
+                  <span class="provider-body">
+                    <span class="provider-title">Login with {provider.label}</span>
+                  </span>
+                </a>
+              ) : (
+                <button type="button" class={className} disabled>
+                  <span class="provider-mark">
+                    <img
+                      class={`provider-icon provider-icon-${provider.name}`}
+                      src={getProviderIconHref(provider.name)}
+                      alt=""
+                    />
+                  </span>
+                  <span class="provider-body">
+                    <span class="provider-title">Login with {provider.label}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </aside>
       </section>
-    )
-  }
+  )
 }
 
-function SignedInState() {
-  return ({ user }: { user: SocialUser }) => (
-    <section class="panel stack-lg">
-      <div class="identity-row">
-        <Avatar user={user} />
+function SetupGuide() {
+  return ({ providers }: { providers: SocialProviderState[] }) => (
+    <section class="setup-section stack-lg">
+      <div class="setup-card setup-overview-card stack-lg">
         <div class="stack-sm">
-          <p class="eyebrow">Signed in with {getProviderLabel(user.provider)}</p>
-          <h2>{user.name ?? user.email ?? 'Authenticated user'}</h2>
+          <p class="eyebrow">Demo setup</p>
+          <h2>Configure local and social authentication</h2>
           <p class="muted">
-            The current request was authenticated from the session, and the app is reading the
-            resolved identity from <code>context.get(Auth)</code>.
+            Copy <code>.env.example</code> to .env, paste whichever client IDs and
+            client secrets you want to test, then restart the server. The seeded email/password
+            login works even if every social provider stays disabled.
           </p>
+        </div>
+
+        <div class="setup-columns">
+          <div class="stack-sm">
+            <h3>Boot the demo</h3>
+            <ol class="setup-list">
+              <li>Copy <code>.env.example</code> to .env in `demos/social-login`.</li>
+              <li>Fill in any provider client ID and secret pairs you want to enable.</li>
+              <li>Register the callback URLs below with each provider app.</li>
+              <li>Run <code>pnpm start</code> and open the home page.</li>
+            </ol>
+          </div>
+
+          <div class="stack-sm">
+            <h3>Local account</h3>
+            <p class="muted">
+              The demo seeds one local user into SQLite the first time it boots.
+            </p>
+            <div class="demo-account demo-account-inline">
+              <p class="demo-account-label">Seeded local account</p>
+              <p class="muted">
+                <strong>demo@example.com</strong> / <strong>password123</strong>
+              </p>
+            </div>
+          </div>
+
+          <div class="stack-sm">
+            <h3>.env variables</h3>
+            <pre class="env-snippet"><code>{getEnvExampleText()}</code></pre>
+          </div>
         </div>
       </div>
 
-      <dl class="details-grid">
-        <Detail label="Provider" value={getProviderLabel(user.provider)} />
-        <Detail label="Provider account" value={user.providerAccountId} />
-        <Detail label="Email" value={user.email ?? 'Not provided'} />
-        <Detail label="Avatar URL" value={user.avatarUrl ?? 'Not provided'} />
+      <div class="setup-provider-grid">
+        {providers.map(provider => (
+          <ProviderSetupCard provider={provider} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ProviderSetupCard() {
+  return ({ provider }: { provider: SocialProviderState }) => (
+    <article class="setup-card setup-provider-card stack-sm">
+      <div class="setup-provider-header">
+        <div class="stack-sm">
+          <p class="eyebrow">{provider.label}</p>
+          <h3>{getProviderSetupHeading(provider.name)}</h3>
+        </div>
+        <span class={`setup-status ${provider.configured ? 'setup-status-ready' : ''}`}>
+          {provider.configured ? 'Enabled' : 'Needs .env'}
+        </span>
+      </div>
+
+      <p class="muted">{getProviderSetupDescription(provider.name)}</p>
+
+      <dl class="setup-definition-list">
+        <div>
+          <dt>Environment variables</dt>
+          <dd>{getProviderEnvVars(provider.name).map(name => <code>{name}</code>)}</dd>
+        </div>
+        <div>
+          <dt>Callback URL</dt>
+          <dd>
+            <code>{getProviderCallbackHref(provider.name)}</code>
+          </dd>
+        </div>
+        {provider.name === 'github' ? (
+          <div>
+            <dt>Homepage URL</dt>
+            <dd>
+              <code>{routes.home.href()}</code>
+            </dd>
+          </div>
+        ) : null}
       </dl>
+    </article>
+  )
+}
+
+function SignedInState() {
+  return ({ user }: { user: AuthenticatedUser }) => (
+    <section class="panel auth-card stack-lg">
+      <div class="signed-in-header">
+        <p class="eyebrow">Authenticated session</p>
+        <span class="status-pill">Signed in</span>
+      </div>
+
+      <div class="identity-row">
+        <Avatar user={user} />
+        <div class="stack-sm">
+          <p class="eyebrow">Signed in with {getLoginMethodLabel(user.loginMethod)}</p>
+          <h2>{user.name ?? user.email ?? 'Authenticated user'}</h2>
+        </div>
+      </div>
 
       <form method="POST" action={routes.auth.logout.href()}>
         <button type="submit" class="logout-button">
@@ -151,7 +278,7 @@ function SignedInState() {
 }
 
 function Avatar() {
-  return ({ user }: { user: SocialUser }) => {
+  return ({ user }: { user: AuthenticatedUser }) => {
     if (user.avatarUrl) {
       return <img class="avatar" src={user.avatarUrl} alt="Authenticated user avatar" />
     }
@@ -160,13 +287,15 @@ function Avatar() {
   }
 }
 
-function Detail() {
-  return ({ label, value }: { label: string; value: RemixNode }) => (
-    <div class="detail-card">
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  )
+function getProviderIconHref(name: SocialProviderState['name']): string {
+  switch (name) {
+    case 'google':
+      return '/icons/google.svg'
+    case 'github':
+      return '/icons/github.svg'
+    case 'facebook':
+      return '/icons/facebook.svg'
+  }
 }
 
 function getProviderLoginHref(name: SocialProviderState['name']): string {
@@ -178,12 +307,65 @@ function getProviderLoginHref(name: SocialProviderState['name']): string {
     case 'facebook':
       return routes.auth.facebook.login.href()
   }
-
-  return routes.home.href()
 }
 
-function getInitials(user: SocialUser): string {
-  let source = user.name ?? user.email ?? getProviderLabel(user.provider)
+function getProviderCallbackHref(name: SocialProviderState['name']): string {
+  switch (name) {
+    case 'google':
+      return routes.auth.google.callback.href()
+    case 'github':
+      return routes.auth.github.callback.href()
+    case 'facebook':
+      return routes.auth.facebook.callback.href()
+  }
+}
+
+function getProviderEnvVars(name: SocialProviderState['name']): string[] {
+  switch (name) {
+    case 'google':
+      return ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
+    case 'github':
+      return ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET']
+    case 'facebook':
+      return ['FACEBOOK_CLIENT_ID', 'FACEBOOK_CLIENT_SECRET']
+  }
+}
+
+function getProviderSetupHeading(name: SocialProviderState['name']): string {
+  switch (name) {
+    case 'google':
+      return 'Create a Google web OAuth client'
+    case 'github':
+      return 'Create a GitHub OAuth app'
+    case 'facebook':
+      return 'Create a Meta app with Facebook Login'
+  }
+}
+
+function getProviderSetupDescription(name: SocialProviderState['name']): string {
+  switch (name) {
+    case 'google':
+      return 'Create a Web application OAuth client in Google Cloud, add the callback URL as an authorized redirect URI, then copy the client ID and client secret into `.env`.'
+    case 'github':
+      return 'Create an OAuth App in GitHub settings, set the homepage URL and authorization callback URL, then copy the client ID and client secret into `.env`.'
+    case 'facebook':
+      return 'Create a Meta app, add the Facebook Login product, set the valid OAuth redirect URI, then copy the App ID and App Secret into `.env` as the Facebook client credentials.'
+  }
+}
+
+function getEnvExampleText(): string {
+  return [
+    'GOOGLE_CLIENT_ID=',
+    'GOOGLE_CLIENT_SECRET=',
+    'GITHUB_CLIENT_ID=',
+    'GITHUB_CLIENT_SECRET=',
+    'FACEBOOK_CLIENT_ID=',
+    'FACEBOOK_CLIENT_SECRET=',
+  ].join('\n')
+}
+
+function getInitials(user: AuthenticatedUser): string {
+  let source = user.name ?? user.email ?? getLoginMethodLabel(user.loginMethod)
   let parts = source.split(/\s+/).filter(Boolean)
   let initials = parts.slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('')
 
