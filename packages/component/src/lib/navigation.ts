@@ -11,27 +11,19 @@ type SourceElementNavigateEvent = NavigateEvent & {
 }
 
 type NavigationOptions = {
-  src?: string | null
-  target?: string | null
+  src?: string
+  target?: string
   history?: 'push' | 'replace'
 }
 
 export async function navigate(href: string, options?: NavigationOptions) {
-  let navigation = getNavigation()
-  let state = {
-    target: options?.target ?? undefined,
-    src: options?.src ?? href,
-    $rmx: true,
-  } satisfies NavigationState
-  let transition = navigation.navigate(href, {
-    state,
-    history: options?.history,
-  })
+  let state = { target: options?.target, src: options?.src ?? href, $rmx: true }
+  let transition = window.navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
 
 export function startNavigationListener(signal: AbortSignal) {
-  let navigation = getNavigation()
+  let navigation = window.navigation
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, $rmx: true },
@@ -50,6 +42,8 @@ export function startNavigationListener(signal: AbortSignal) {
       let frame = namedFrame ?? topFrame
 
       event.intercept({
+        scroll: 'after-transition',
+        focusReset: 'after-transition',
         async handler() {
           if (event.navigationType !== 'traverse') {
             navigation.updateCurrentEntry({ state })
@@ -69,9 +63,38 @@ function isRuntimeNavigation(info: unknown): info is NavigationState {
 }
 
 function getRuntimeNavigationState(event: NavigateEvent): NavigationState | undefined {
-  let state = event.destination.getState()
-  if (isRuntimeNavigation(state)) return state
+  if (event.navigationType === 'traverse') {
+    return getTraverseNavigationState(event)
+  }
 
+  let sourceState = getSourceElementNavigationState(event)
+  if (sourceState) return sourceState
+
+  let destinationState = event.destination.getState()
+  if (isRuntimeNavigation(destinationState)) return destinationState
+}
+
+function getTraverseNavigationState(event: NavigateEvent): NavigationState | undefined {
+  let destinationState = event.destination.getState()
+  if (isRuntimeNavigation(destinationState)) {
+    return destinationState
+  }
+
+  // Safari returns `null` for destination.getState(), even though its in the
+  // navigation.entries(), so we do its job for it and look it up.
+  let navigation = window.navigation
+  let matchingEntry = navigation.entries().find((entry) => entry.key === event.destination.key)
+  if (matchingEntry) {
+    let state = matchingEntry.getState()
+    if (isRuntimeNavigation(state)) {
+      return state
+    }
+  }
+
+  return undefined
+}
+
+function getSourceElementNavigationState(event: NavigateEvent): NavigationState | undefined {
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
   if (!(sourceElement instanceof Element)) return
@@ -82,13 +105,5 @@ function getRuntimeNavigationState(event: NavigateEvent): NavigationState | unde
     target: sourceElement.getAttribute('rmx-target') ?? undefined,
     src: sourceElement.getAttribute('rmx-src') ?? event.destination.url,
     $rmx: true,
-  }
-}
-
-function getNavigation(): Navigation {
-  let navigation = window.navigation
-  if (!navigation) {
-    throw new Error('Navigation API is not available')
-  }
-  return navigation
+  } satisfies NavigationState
 }
