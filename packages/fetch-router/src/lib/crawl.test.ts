@@ -134,20 +134,6 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/'])
   })
 
-  it('supports a custom filter function', async () => {
-    let router = createRouter()
-    router.get('/', () => html('<a href="/allowed">OK</a><a href="/blocked">No</a>'))
-    router.get('/allowed', () => html('<html></html>'))
-
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, {
-      filter: (href) => href !== '/blocked',
-    })) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/', '/allowed'])
-  })
-
   it('skips non-navigable href schemes', async () => {
     let router = createRouter()
     router.get('/', () =>
@@ -227,50 +213,4 @@ describe('crawl(router)', () => {
     assert.equal(visitCount['/shared'], 1)
   })
 
-  it('calls variants and queues the returned paths', async () => {
-    let router = createRouter()
-    router.get('/source', () => html('<html></html>'))
-    router.get(
-      '/source.md',
-      () => new Response('# Home', { headers: { 'Content-Type': 'text/plain' } }),
-    )
-
-    debugger
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, {
-      paths: ['/source'],
-      variants: (pathname) => (!pathname.endsWith('.md') ? [`${pathname}.md`] : []),
-    })) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/source', '/source.md'])
-  })
-
-  it('supports async variants', async () => {
-    let router = createRouter()
-    router.get('/', () => html('<html></html>'))
-    router.get('/async-variant', () => new Response(''))
-
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, {
-      variants: async (pathname) => {
-        await Promise.resolve()
-        return pathname === '/' ? ['/async-variant'] : undefined
-      },
-    })) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/', '/async-variant'])
-  })
-
-  it('handles variants that return undefined', async () => {
-    let router = createRouter()
-    router.get('/', () => html('<html></html>'))
-
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, { variants: () => undefined })) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/'])
-  })
 })

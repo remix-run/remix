@@ -20,24 +20,6 @@ export interface CrawlOptions {
    * @default true
    */
   spider?: boolean
-  /**
-   * Controls which discovered href values are added to the crawl queue. Receives the raw href value
-   * as found in the HTML (after non-navigable schemes like `mailto:` and `#` are excluded).
-   * Return `true` to crawl the URL, `false` to skip it. Defaults to crawling any non-absolute URLs
-   *
-   * @default Only non-absolute href values (i.e. those not starting with `http://`, `https://`, or `//`)
-   * @example Include same-origin absolute URLs:
-   * ```ts
-   * filter: (href) => !href.startsWith('http') || href.startsWith('https://mysite.com')
-   * ```
-   */
-  filter?(href: string): boolean
-  /**
-   * Called for each crawled URL to produce additional path variants to queue.
-   * Useful for paths that have known alternate representations without explicit links,
-   * e.g. returning `[pathname + '.md']` to also fetch the markdown source of each page.
-   */
-  variants?(pathname: string): string[] | undefined | Promise<string[] | undefined>
 }
 
 export function crawl(
@@ -47,14 +29,11 @@ export function crawl(
   return runCrawl((request) => router.fetch(request), options)
 }
 
-const defaultFilter = (href: string): boolean =>
-  !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
-
 export async function* runCrawl(
   fetchFn: (request: Request) => Promise<Response>,
   options: CrawlOptions,
 ): AsyncIterableIterator<CrawlResult> {
-  let { paths = ['/'], spider = true, filter = defaultFilter, variants } = options
+  let { paths = ['/'], spider = true } = options
 
   let queue = new Set(paths)
   let visited = new Set<string>()
@@ -76,22 +55,14 @@ export async function* runCrawl(
       let elements = parse(await response.text())
 
       // Always queue referenced assets (CSS, JS, images)
-      toQueue.push(...extractAssetPaths(elements, urlPath, filter))
+      toQueue.push(...extractAssetPaths(elements, urlPath))
 
       // Only follow navigation links when spider mode is enabled
       if (spider) {
-        toQueue.push(...extractLinkPaths(elements, urlPath, filter))
+        toQueue.push(...extractLinkPaths(elements, urlPath))
       }
     } else {
       yield { pathname: urlPath, filepath: urlPath, response }
-    }
-
-    // Queue any path variants returned by the variants callback
-    if (variants) {
-      let variantPaths = await variants(urlPath)
-      if (variantPaths) {
-        toQueue.push(...variantPaths)
-      }
     }
 
     for (let path of toQueue) {
@@ -144,11 +115,11 @@ function resolveHref(href: string, baseUrl: string): string | null {
 
 const rel = (el: HTMLElement) => el.getAttribute('rel')?.split(/\s+/) || []
 
-function extractAssetPaths(
-  elements: HTMLElement[],
-  baseUrl: string,
-  filter: (href: string) => boolean,
-): string[] {
+function isRelativeUrl(href: string): boolean {
+  return !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
+}
+
+function extractAssetPaths(elements: HTMLElement[], baseUrl: string): string[] {
   let linkAttrs = elements
     .filter(
       (el) =>
@@ -166,22 +137,18 @@ function extractAssetPaths(
   return [...linkAttrs, ...srcAttrs]
     .filter((href): href is string => href != null)
     .filter((href) => !isNonNavigable(href))
-    .filter(filter)
+    .filter(isRelativeUrl)
     .map((href) => resolveHref(href, baseUrl))
     .filter((href): href is string => href != null)
 }
 
-function extractLinkPaths(
-  elements: HTMLElement[],
-  baseUrl: string,
-  filter: (href: string) => boolean,
-): string[] {
+function extractLinkPaths(elements: HTMLElement[], baseUrl: string): string[] {
   return elements
     .filter((el) => el.name === 'a' && !rel(el).includes('nofollow'))
     .map((el) => el.getAttribute('href'))
     .filter((href): href is string => href != null)
     .filter((href) => !isNonNavigable(href))
-    .filter(filter)
+    .filter(isRelativeUrl)
     .map((href) => resolveHref(href, baseUrl))
     .filter((href): href is string => href != null)
 }
