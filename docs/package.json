@@ -6,7 +6,6 @@
     "@remix-run/ui": "workspace:*",
     "front-matter": "^4.0.2",
     "marked": "^17.0.1",
-    "node-html-parser": "^7.0.2",
     "prettier": "^3.5.3",
     "remix": "workspace:*",
     "semver": "^7.7.3"
