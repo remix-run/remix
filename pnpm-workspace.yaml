@@ -14,6 +14,7 @@ packages:
   - packages/assets/bench
   - packages/cli/bootstrap
   - packages/cli/test/fixtures/*
+  - packages/fetch-router/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/ui/demos

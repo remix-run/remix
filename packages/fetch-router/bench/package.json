@@ -1,0 +1,17 @@
+{
+  "name": "fetch-router-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "pnpm run --filter \".\" --sequential \"/^bench:/\"",
+    "bench:concurrency": "node src/crawl-concurrency.ts",
+    "bench:parse-html": "vitest bench --run"
+  },
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:^",
+    "node-html-parser": "^7.1.0"
+  },
+  "devDependencies": {
+    "vitest": "4.0.15"
+  }
+}

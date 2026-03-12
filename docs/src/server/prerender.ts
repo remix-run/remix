@@ -2,12 +2,11 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { parse } from 'node-html-parser'
 import * as semver from 'semver'
-import { type Router } from 'remix/fetch-router'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
 import { routes } from './routes.ts'
+import { crawl } from 'remix/fetch-router'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -34,99 +33,38 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-await spider(
-  docsRouter,
-  outputDir,
-  new Set([
-    '/',
-    '/api.json',
-    ...(versions
-      ?.filter((v) => v.crawl)
-      .flatMap((v) => [`/${v.version}/api.json`, `/${v.version}/`]) || []),
-  ]),
-)
-
-// Spider the website served by router, beginning at /
-async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'])) {
-  await fs.mkdir(outputDir, { recursive: true })
-
-  // Track URLs we have already downloaded to avoid loops
-  let downloadedUrls = new Set<string>()
-
-  for (let urlPath of urlQueue) {
-    if (urlPath && !downloadedUrls.has(urlPath)) {
-      let { downloadedUrl, discoveredUrls } = await crawl(router, urlPath, outputDir)
-      downloadedUrls.add(downloadedUrl)
-      discoveredUrls
-        .filter((href) => !downloadedUrls.has(href))
-        .forEach((href) => urlQueue.add(href))
-    }
+// First pass: spider the site and collect fragment/markdown variant paths
+let paths = [
+  '/',
+  '/api.json',
+  ...(versions
+    ?.filter((v) => v.crawl)
+    .flatMap((v) => [`/${v.version}/api.json`, `/${v.version}/`]) || []),
+]
+let variantPaths: string[] = []
+for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
+  await writeResult(pathname, filepath, response)
+  let url = `http://localhost${pathname}`
+  let match = routes.docs.match(url)
+  if (match && !routes.markdown.match(url)) {
+    variantPaths.push(routes.fragment.href(match.params))
+    variantPaths.push(routes.markdown.href(match.params))
   }
-
-  console.log(`\nCrawling complete!`)
 }
 
-async function crawl(router: Router, urlPath: string, outputDir: string) {
-  let response
-  try {
-    response = await router.fetch(new Request(`http://localhost${urlPath}`))
-    if (!response.ok) {
-      throw new Error(`Error fetching ${urlPath}: ${response.status} ${response.statusText}`)
-    }
-  } catch (error) {
-    console.error('Error fetching', urlPath)
-    throw error
-  }
+// Second pass: fetch variant paths without spidering
+for await (let { pathname, filepath, response } of crawl(docsRouter, {
+  paths: variantPaths,
+  spider: false,
+})) {
+  await writeResult(pathname, filepath, response)
+}
 
-  let isHtmlFile = response.headers.get('Content-Type')?.includes('text/html')
-
-  // Always put `index.html` files into directories - this leads to the best
-  // support with and without trailing slashes on github pages:
-  // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
-  let outputPath = isHtmlFile
-    ? path.join(outputDir, urlPath, 'index.html')
-    : path.join(outputDir, urlPath)
-
-  console.log(`Crawled ${urlPath} -> ./${path.relative(process.cwd(), outputPath)}`)
-
+async function writeResult(pathname: string, filepath: string, response: Response) {
+  let outputPath = path.join(outputDir, filepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
-
-  if (isHtmlFile) {
-    let html = await response.text()
-    await fs.writeFile(outputPath, html, 'utf-8')
-
-    // Parse HTML files for other resources/links to add to queue
-    return {
-      downloadedUrl: urlPath,
-      discoveredUrls: parse(html)
-        .querySelectorAll('a:not([rel="nofollow"]),link:not([rel="preload"]):not([rel="prefetch"])')
-        .map((link) => link.getAttribute('href'))
-        .filter((href) => href && !isAbsoluteUrl(href))
-        .map((href) => resolveRelativeLink(href!, urlPath))
-        .flatMap((href) => {
-          let match = routes.docs.match(`http://localhost${href}`)
-          return match ? [href, routes.markdown.href(match.params)] : [href]
-        }),
-    }
-  } else {
-    let content = await response.arrayBuffer()
-    await fs.writeFile(outputPath, new Uint8Array(content))
-    return { downloadedUrl: urlPath, discoveredUrls: [] }
-  }
-}
-
-function isAbsoluteUrl(href: string): boolean {
-  return href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')
-}
-
-function resolveRelativeLink(link: string, url: string): string {
-  if (link.startsWith('/')) {
-    return link
-  }
-
-  // Handle relative paths like '../' or 'page'
-  let base = url.endsWith('/') ? url : path.dirname(url)
-  return path.posix.join(base, link)
+  await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
+  console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
 }
 
 async function getVersionsToBuild(): Promise<ServerContext['versions']> {
