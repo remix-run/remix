@@ -2,12 +2,15 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
 export interface BenchFixture {
-  root: string
-  workspaceRoot: string
+  roots: Array<{
+    prefix?: string
+    directory: string
+    entryPoints?: readonly string[]
+  }>
   entryPoint: string
   stats: {
     projectModules: number
-    workspaceModules: number
+    packageModules: number
   }
 }
 
@@ -22,23 +25,28 @@ async function readLargeFixture(): Promise<BenchFixture> {
   let repoRoot = path.resolve(import.meta.dirname, '../../..')
   let fixtureRoot = path.resolve(import.meta.dirname, 'fixtures/large-fixture')
   let projectRoot = path.join(fixtureRoot, 'project')
+  let packagesRoot = path.join(fixtureRoot, 'packages')
+  let componentRoot = path.join(repoRoot, 'packages/component/src')
   let entryPoint = 'app/entry.tsx'
 
   return {
-    root: projectRoot,
-    workspaceRoot: repoRoot,
+    roots: [
+      { directory: projectRoot, entryPoints: [entryPoint] },
+      { prefix: 'packages', directory: packagesRoot },
+      { prefix: '@remix-run/component', directory: componentRoot },
+    ],
     entryPoint,
     stats: {
       projectModules: await countSourceModules(projectRoot),
-      workspaceModules: await countSourceModules(path.join(fixtureRoot, 'packages')),
+      packageModules: await countSourceModules(packagesRoot),
     },
   }
 }
 
-async function countSourceModules(root: string): Promise<number> {
+async function countSourceModules(directory: string): Promise<number> {
   let total = 0
-  for (let entry of await fs.readdir(root, { withFileTypes: true })) {
-    let fullPath = path.join(root, entry.name)
+  for (let entry of await fs.readdir(directory, { withFileTypes: true })) {
+    let fullPath = path.join(directory, entry.name)
     if (entry.isDirectory()) {
       total += await countSourceModules(fullPath)
       continue

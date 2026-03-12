@@ -66,8 +66,7 @@ describe('HTTP method handling', () => {
 
   it('handles GET requests', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -77,8 +76,7 @@ describe('HTTP method handling', () => {
 
   it('handles HEAD requests (same status, no body)', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await head(handler, '/scripts/app/entry.ts')
@@ -90,8 +88,7 @@ describe('HTTP method handling', () => {
 
   it('returns null for POST requests', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await post(handler, '/scripts/app/entry.ts')
@@ -100,8 +97,7 @@ describe('HTTP method handling', () => {
 
   it('returns null for PUT requests', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let url = 'http://localhost/scripts/app/entry.ts'
@@ -128,8 +124,7 @@ describe('entry point routing', () => {
 
   it('returns 200 for a path matching an exact entryPoints entry', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -139,8 +134,7 @@ describe('entry point routing', () => {
 
   it('returns null for a path not matching any entryPoints pattern', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/lib/internal.ts')
@@ -148,7 +142,10 @@ describe('entry point routing', () => {
   })
 
   it('supports glob patterns for entryPoints', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/*.ts'], root: dir, base: '/scripts' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/*.ts'] }],
+      base: '/scripts',
+    })
     let res1 = await get(handler, '/scripts/app/entry.ts')
     let res2 = await get(handler, '/scripts/app/other.ts')
     assert.ok(res1)
@@ -159,8 +156,7 @@ describe('entry point routing', () => {
 
   it('returns null for a path matching glob but not an actual entryPoints glob', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/other.ts')
@@ -169,8 +165,7 @@ describe('entry point routing', () => {
 
   it('returns null for an empty path', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await handler.handle(new Request('http://localhost/scripts/'), '')
@@ -202,8 +197,7 @@ describe('response content', () => {
 
   it('returns application/javascript content-type', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -213,8 +207,7 @@ describe('response content', () => {
 
   it('strips TypeScript type annotations from output', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -225,8 +218,7 @@ describe('response content', () => {
 
   it('preserves the function logic in output', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -261,8 +253,7 @@ describe('TSX transpilation', () => {
 
   it('transpiles TSX files to valid JavaScript', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/component.tsx'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/component.tsx'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/component.tsx')
@@ -351,8 +342,7 @@ describe('tsconfig.json and package.json config', () => {
 
   it('uses tsconfig jsxImportSource and rewrites package imports', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/component.tsx'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/component.tsx'] }],
       base: '/scripts',
     })
 
@@ -397,8 +387,7 @@ describe('cache headers', () => {
 
   it('serves entry points with Cache-Control: no-cache', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -408,8 +397,7 @@ describe('cache headers', () => {
 
   it('serves entry points with an ETag header', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -421,8 +409,7 @@ describe('cache headers', () => {
 
   it('serves internal modules with Cache-Control: immutable', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
     // First fetch entry to build the graph and get the dep URL
@@ -446,8 +433,7 @@ describe('cache headers', () => {
 
   it('internal modules have no ETag header (immutable, never revalidated)', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
     let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
@@ -478,8 +464,7 @@ describe('ETag and 304 Not Modified', () => {
 
   it('returns 304 when If-None-Match matches the ETag', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let first = await get(handler, '/scripts/app/entry.ts')
@@ -496,8 +481,7 @@ describe('ETag and 304 Not Modified', () => {
 
   it('returns 200 when If-None-Match does not match', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts', { 'If-None-Match': 'W/"stale"' })
@@ -507,8 +491,7 @@ describe('ETag and 304 Not Modified', () => {
 
   it('304 response has no body', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let first = await get(handler, '/scripts/app/entry.ts')
@@ -539,8 +522,7 @@ describe('internal module hash validation', () => {
 
   it('returns null for a wrong hash on an internal module', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     await get(handler, '/scripts/app/entry.ts') // build the graph
@@ -550,8 +532,7 @@ describe('internal module hash validation', () => {
 
   it('returns null for a non-existent file with a hash', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/nonexistent.ts.@abc123')
@@ -560,8 +541,7 @@ describe('internal module hash validation', () => {
 
   it('returns 200 for an internal module with the correct hash', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let entryRes = await get(handler, '/scripts/app/entry.ts')
@@ -578,8 +558,7 @@ describe('internal module hash validation', () => {
 
   it('returns 500 when an internal module has a compilation error', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let entryRes = await get(handler, '/scripts/app/entry.ts')
@@ -624,8 +603,7 @@ describe('import rewriting', () => {
 
   it('rewrites relative imports to content-addressed URLs', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -637,8 +615,7 @@ describe('import rewriting', () => {
 
   it('leaves https:// URL imports unrewritten', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -666,8 +643,7 @@ describe('entry point import URL rewriting', () => {
 
   it('uses stable no-hash URL when importing a configured entry point', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/a.ts', 'app/b.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/a.ts', 'app/b.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/a.ts')
@@ -685,8 +661,7 @@ describe('entry point import URL rewriting', () => {
 
   it('uses content-addressed URL when importing a non-entry module', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/a.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/a.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/a.ts')
@@ -700,8 +675,7 @@ describe('entry point import URL rewriting', () => {
 
   it('preloads() uses stable URL for entry point deps', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/a.ts', 'app/b.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/a.ts', 'app/b.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/a.ts')
@@ -732,8 +706,7 @@ describe('external specifiers', () => {
 
   it('leaves externals unrewritten', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: ['react'],
     })
@@ -745,8 +718,7 @@ describe('external specifiers', () => {
 
   it('still rewrites non-external relative imports', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: ['react'],
     })
@@ -761,8 +733,7 @@ describe('external specifiers', () => {
 
   it('supports a single string for external (not just array)', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: 'react',
     })
@@ -790,14 +761,16 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'a/dep.ts', 'export const x = 1')
     await write(dir, 'a/entry.ts', 'import { x } from "./dep.ts"\nexport { x }')
 
-    let handlerA = createScriptHandler({ entryPoints: ['a/entry.ts'], root: dir, base: '/scripts' })
+    let handlerA = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['a/entry.ts'] }],
+      base: '/scripts',
+    })
     let resA1 = await get(handlerA, '/scripts/a/entry.ts')
     assert.ok(resA1)
     let bodyA1 = await resA1.text()
 
     let handlerA2 = createScriptHandler({
-      entryPoints: ['a/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['a/entry.ts'] }],
       base: '/scripts',
     })
     let resA2 = await get(handlerA2, '/scripts/a/entry.ts')
@@ -811,7 +784,10 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'b/dep.ts', 'export const x = 1')
     await write(dir, 'b/entry.ts', 'import { x } from "./dep.ts"\nexport { x }')
 
-    let handler = createScriptHandler({ entryPoints: ['b/entry.ts'], root: dir, base: '/scripts' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['b/entry.ts'] }],
+      base: '/scripts',
+    })
     let res1 = await get(handler, '/scripts/b/entry.ts')
     assert.ok(res1)
     let body1 = await res1.text()
@@ -823,7 +799,10 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'b/dep.ts', 'export const x = 999')
 
     // New handler to get fresh compilation
-    let handler2 = createScriptHandler({ entryPoints: ['b/entry.ts'], root: dir, base: '/scripts' })
+    let handler2 = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['b/entry.ts'] }],
+      base: '/scripts',
+    })
     let res2 = await get(handler2, '/scripts/b/entry.ts')
     assert.ok(res2)
     let body2 = await res2.text()
@@ -839,7 +818,10 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'c/mid.ts', 'import { v } from "./leaf.ts"\nexport const w = v + 1')
     await write(dir, 'c/entry.ts', 'import { w } from "./mid.ts"\nexport const z = w')
 
-    let handler1 = createScriptHandler({ entryPoints: ['c/entry.ts'], root: dir, base: '/scripts' })
+    let handler1 = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['c/entry.ts'] }],
+      base: '/scripts',
+    })
     let res1 = await get(handler1, '/scripts/c/entry.ts')
     assert.ok(res1)
     let body1 = await res1.text()
@@ -850,7 +832,10 @@ describe('content-addressed URL determinism', () => {
     // Change the leaf (deepest dep)
     await write(dir, 'c/leaf.ts', 'export const v = 42')
 
-    let handler2 = createScriptHandler({ entryPoints: ['c/entry.ts'], root: dir, base: '/scripts' })
+    let handler2 = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['c/entry.ts'] }],
+      base: '/scripts',
+    })
     let res2 = await get(handler2, '/scripts/c/entry.ts')
     assert.ok(res2)
     let body2 = await res2.text()
@@ -889,8 +874,7 @@ describe('circular dependency handling', () => {
 
   it('successfully compiles a module graph with circular deps', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cycle/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cycle/entry.ts')
@@ -900,8 +884,7 @@ describe('circular dependency handling', () => {
 
   it('modules in a cycle share the same hash', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cycle/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
     let entryRes = await get(handler, '/scripts/cycle/entry.ts')
@@ -933,8 +916,7 @@ describe('circular dependency handling', () => {
 
   it('cycle hash changes when a cycle member changes', async () => {
     let handler1 = createScriptHandler({
-      entryPoints: ['cycle/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
     let res1 = await get(handler1, '/scripts/cycle/entry.ts')
@@ -952,8 +934,7 @@ describe('circular dependency handling', () => {
     )
 
     let handler2 = createScriptHandler({
-      entryPoints: ['cycle/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
     let res2 = await get(handler2, '/scripts/cycle/entry.ts')
@@ -1005,8 +986,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 with error message when entry point is module.exports CJS', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cjs/module-exports.js'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cjs/module-exports.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/module-exports.js')
@@ -1018,8 +998,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 for exports.foo CJS pattern', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cjs/exports-dot.js'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cjs/exports-dot.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/exports-dot.js')
@@ -1029,8 +1008,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 for bracketed module exports syntax', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cjs/module-bracket.js'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cjs/module-bracket.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/module-bracket.js')
@@ -1040,8 +1018,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 for exports assignment syntax', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cjs/exports-assignment.js'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cjs/exports-assignment.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/exports-assignment.js')
@@ -1051,8 +1028,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 for require member syntax', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['cjs/require-member.js'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['cjs/require-member.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/require-member.js')
@@ -1062,8 +1038,7 @@ describe('CommonJS detection', () => {
 
   it('returns 500 when an entry point imports a CJS dependency', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/imports-cjs.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/imports-cjs.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/imports-cjs.ts')
@@ -1075,8 +1050,7 @@ describe('CommonJS detection', () => {
 
   it('serves ESM entry points successfully (control case)', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -1086,8 +1060,7 @@ describe('CommonJS detection', () => {
 
   it('serves modules with shadowed require successfully', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/shadowed-require.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/shadowed-require.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/shadowed-require.ts')
@@ -1097,8 +1070,7 @@ describe('CommonJS detection', () => {
 
   it('serves modules with suspicious text in strings and comments successfully', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/suspicious-text.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/suspicious-text.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/suspicious-text.ts')
@@ -1134,8 +1106,7 @@ describe('preloads()', () => {
 
   it('returns an array of URLs', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/entry.ts')
@@ -1145,8 +1116,7 @@ describe('preloads()', () => {
 
   it('includes the entry point URL first (without hash)', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/entry.ts')
@@ -1159,8 +1129,7 @@ describe('preloads()', () => {
 
   it('includes all transitive dependencies', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/entry.ts')
@@ -1174,8 +1143,7 @@ describe('preloads()', () => {
 
   it('preload URLs for deps use content-addressed format', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/entry.ts')
@@ -1187,8 +1155,7 @@ describe('preloads()', () => {
 
   it('all preload URLs resolve successfully', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let urls = await handler.preloads('app/entry.ts')
@@ -1204,8 +1171,7 @@ describe('preloads()', () => {
 
   it('returns the same preload URLs across repeated calls when sources are unchanged', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
@@ -1217,8 +1183,7 @@ describe('preloads()', () => {
 
   it('returns a fresh array for each preloads call', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
@@ -1233,8 +1198,7 @@ describe('preloads()', () => {
 
   it('returns updated preload URLs after a dependency changes', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
@@ -1258,8 +1222,7 @@ describe('preloads()', () => {
     await write(dir, 'app/entry.ts', 'export const x =')
 
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     await assert.rejects(() => handler.preloads('app/entry.ts'))
@@ -1269,11 +1232,78 @@ describe('preloads()', () => {
     await write(dir, 'app/c.ts', 'export const c =')
 
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     await assert.rejects(() => handler.preloads('app/entry.ts'))
+  })
+
+  it('accepts public paths for prefixed roots', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      `
+      import { a } from './a.ts'
+      import { b } from './b.ts'
+      export { a, b }
+    `,
+    )
+    await write(dir, 'app/c.ts', 'export const c = "c"')
+
+    let handler = createScriptHandler({
+      roots: [{ prefix: 'app', directory: path.join(dir, 'app'), entryPoints: ['entry.ts'] }],
+      base: '/scripts',
+    })
+
+    let urls = await handler.preloads('app/entry.ts')
+    assert.equal(urls[0], '/scripts/app/entry.ts')
+    assert.ok(urls.some((url) => /\/scripts\/app\/a\.ts\.@/.test(url)))
+  })
+
+  it('accepts absolute file paths for configured entry points', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      `
+      import { a } from './a.ts'
+      import { b } from './b.ts'
+      export { a, b }
+    `,
+    )
+    await write(dir, 'app/c.ts', 'export const c = "c"')
+
+    let handler = createScriptHandler({
+      roots: [{ prefix: 'app', directory: path.join(dir, 'app'), entryPoints: ['entry.ts'] }],
+      base: '/scripts',
+    })
+
+    let publicUrls = await handler.preloads('app/entry.ts')
+    let absoluteUrls = await handler.preloads(path.join(dir, 'app/entry.ts'))
+    assert.deepEqual(absoluteUrls, publicUrls)
+  })
+
+  it('throws for absolute file paths outside configured roots', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+
+    await assert.rejects(
+      () => handler.preloads(path.join(os.tmpdir(), 'outside-entry.ts')),
+      /outside all configured roots/,
+    )
+  })
+
+  it('throws for absolute file paths that are not configured entry points', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+
+    await assert.rejects(
+      () => handler.preloads(path.join(dir, 'app/a.ts')),
+      /does not match any configured entry points/,
+    )
   })
 })
 
@@ -1295,8 +1325,7 @@ describe('source maps', () => {
 
   it("adds sourceMappingURL comment when sourceMaps: 'external'", async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1308,8 +1337,7 @@ describe('source maps', () => {
 
   it('does NOT add sourceMappingURL when sourceMaps is not set', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -1320,8 +1348,7 @@ describe('source maps', () => {
 
   it('serves entry point source map at .map path', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1341,8 +1368,7 @@ describe('source maps', () => {
 
   it('serves internal module source map at .@hash.map path', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1364,8 +1390,7 @@ describe('source maps', () => {
 
   it('returns 404 for source map request when sourceMaps is disabled', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     await get(handler, '/scripts/app/entry.ts')
@@ -1379,8 +1404,7 @@ describe('source maps', () => {
 
   it('entry point source map URL has no hash token', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1395,8 +1419,7 @@ describe('source maps', () => {
 
   it('internal module source map URL has a hash token', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1417,8 +1440,7 @@ describe('source maps', () => {
 
   it('when entry point is also a dep, its import URL has no hash token', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts', 'app/dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts', 'app/dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1437,14 +1459,12 @@ describe('source maps', () => {
 
   it('sourceMaps flag is reflected in the content hash (different ETags)', async () => {
     let withMaps = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
     let withoutMaps = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
     let resWith = await get(withMaps, '/scripts/app/entry-with-dep.ts')
@@ -1458,14 +1478,12 @@ describe('source maps', () => {
 
   it('sourceMaps flag changes internal module URL tokens', async () => {
     let withMaps = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
     let withoutMaps = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
     let bodyWith = await (await get(withMaps, '/scripts/app/entry-with-dep.ts'))!.text()
@@ -1478,8 +1496,7 @@ describe('source maps', () => {
 
   it("embeds data URL comment when sourceMaps: 'inline'", async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
@@ -1494,8 +1511,7 @@ describe('source maps', () => {
 
   it('inline source map data URL contains valid JSON', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
@@ -1511,8 +1527,7 @@ describe('source maps', () => {
 
   it('external source maps default to virtual source paths', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
@@ -1545,8 +1560,7 @@ describe('source maps', () => {
     let depPath = await fs.realpath(path.join(dir, 'app/dep.ts'))
 
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
       sourceMapSourcePaths: 'absolute',
@@ -1577,8 +1591,7 @@ describe('source maps', () => {
 
   it('inline source maps default to virtual source paths', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
@@ -1605,8 +1618,7 @@ describe('source maps', () => {
     let depPath = await fs.realpath(path.join(dir, 'app/dep.ts'))
 
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
       sourceMapSourcePaths: 'absolute',
@@ -1631,8 +1643,7 @@ describe('source maps', () => {
 
   it("returns 404 for .map request when sourceMaps: 'inline'", async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
@@ -1648,8 +1659,7 @@ describe('source maps', () => {
   it('all three sourceMaps modes produce distinct ETags', async () => {
     let makeHandler = (sourceMaps?: 'inline' | 'external') =>
       createScriptHandler({
-        entryPoints: ['app/entry-with-dep.ts'],
-        root: dir,
+        roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
         base: '/scripts',
         sourceMaps,
       })
@@ -1672,8 +1682,7 @@ describe('source maps', () => {
   it('all three sourceMaps modes produce distinct internal module URL tokens', async () => {
     let makeHandler = (sourceMaps?: 'inline' | 'external') =>
       createScriptHandler({
-        entryPoints: ['app/entry-with-dep.ts'],
-        root: dir,
+        roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
         base: '/scripts',
         sourceMaps,
       })
@@ -1700,14 +1709,12 @@ describe('source maps', () => {
 
   it('sourceMapSourcePaths affects inline ETags', async () => {
     let virtualHandler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
     let absoluteHandler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
       sourceMapSourcePaths: 'absolute',
@@ -1721,14 +1728,12 @@ describe('source maps', () => {
 
   it('sourceMapSourcePaths affects external internal-module URL tokens', async () => {
     let virtualHandler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
     let absoluteHandler = createScriptHandler({
-      entryPoints: ['app/entry-with-dep.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
       sourceMapSourcePaths: 'absolute',
@@ -1744,68 +1749,202 @@ describe('source maps', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Workspace root
+// Configured roots
 // ---------------------------------------------------------------------------
 
-describe('workspace root', () => {
-  let workspaceDir: string
+describe('configured roots', () => {
+  let fixtureDir: string
   let projectDir: string
+  let sharedDir: string
   before(async () => {
-    workspaceDir = await makeTmpDir()
-    projectDir = path.join(workspaceDir, 'project')
+    fixtureDir = await makeTmpDir()
+    projectDir = path.join(fixtureDir, 'project')
+    sharedDir = path.join(fixtureDir, 'shared')
     await fs.mkdir(path.join(projectDir, 'app'), { recursive: true })
-    await fs.mkdir(path.join(workspaceDir, 'shared'), { recursive: true })
+    await fs.mkdir(sharedDir, { recursive: true })
 
-    // Entry is at project/app/entry.ts; shared is at workspaceDir/shared/utils.ts.
-    // Going ../../shared/utils.ts from project/app/ reaches workspaceDir/shared/utils.ts.
     await write(
-      workspaceDir,
+      fixtureDir,
       'project/app/entry.ts',
       'import { util } from "../../shared/utils.ts"\nexport { util }',
     )
-    await write(workspaceDir, 'shared/utils.ts', 'export const util = "shared"')
+    await write(fixtureDir, 'shared/entry.ts', 'import { util } from "./utils.ts"\nexport { util }')
+    await write(fixtureDir, 'shared/utils.ts', 'export const util = "shared"')
   })
   after(async () => {
-    await fs.rm(workspaceDir, { recursive: true, force: true })
+    await fs.rm(fixtureDir, { recursive: true, force: true })
   })
 
-  it('rewrites workspace package imports with __@workspace/ prefix', async () => {
+  it('rewrites imports using the configured root prefix', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: projectDir,
-      workspaceRoot: workspaceDir,
+      roots: [
+        { directory: projectDir, entryPoints: ['app/entry.ts'] },
+        { prefix: 'shared', directory: sharedDir },
+      ],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
-      body.includes('/scripts/__@workspace/'),
-      `workspace import should have __@workspace/ prefix, got:\n${body}`,
+      body.includes('/scripts/shared/utils.ts.@'),
+      `configured-root import should use the shared prefix, got:\n${body}`,
     )
   })
 
-  it('serves workspace modules at __@workspace/ URLs', async () => {
+  it('serves prefixed-root modules at their configured URLs', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: projectDir,
-      workspaceRoot: workspaceDir,
+      roots: [
+        { directory: projectDir, entryPoints: ['app/entry.ts'] },
+        { prefix: 'shared', directory: sharedDir },
+      ],
       base: '/scripts',
     })
     let entryRes = await get(handler, '/scripts/app/entry.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
-    let match = entryBody.match(/\/scripts\/__@workspace\/(shared\/utils\.ts)\.@([a-z0-9]+)/)
-    assert.ok(match, `expected workspace URL, got:\n${entryBody}`)
+    let match = entryBody.match(/\/scripts\/shared\/utils\.ts\.@([a-z0-9]+)/)
+    assert.ok(match, `expected prefixed root URL, got:\n${entryBody}`)
 
-    let wsModulePath = `__@workspace/${match[1]}.@${match[2]}`
+    let modulePath = `shared/utils.ts.@${match[1]}`
     let wsRes = await handler.handle(
-      new Request(`http://localhost/scripts/${wsModulePath}`),
-      wsModulePath,
+      new Request(`http://localhost/scripts/${modulePath}`),
+      modulePath,
     )
     assert.ok(wsRes)
     assert.equal(wsRes.status, 200)
+  })
+
+  it('serves entry points from prefixed roots when configured', async () => {
+    let handler = createScriptHandler({
+      roots: [
+        { directory: projectDir, entryPoints: ['app/entry.ts'] },
+        { prefix: 'shared', directory: sharedDir, entryPoints: ['entry.ts'] },
+      ],
+      base: '/scripts',
+    })
+
+    let res = await get(handler, '/scripts/shared/entry.ts')
+    assert.ok(res)
+    assert.equal(res.status, 200)
+    let body = await res.text()
+    assert.ok(body.includes('/scripts/shared/utils.ts.@'))
+  })
+
+  it('serves entry points from roots with multi-segment prefixes', async () => {
+    await write(fixtureDir, 'shared/entry.ts', 'export const fallback = "shared"')
+    await write(fixtureDir, 'shared/ui/utils.ts', 'export const util = "ui"')
+    await write(
+      fixtureDir,
+      'shared/ui/entry.ts',
+      'import { util } from "./utils.ts"\nexport { util }',
+    )
+
+    let handler = createScriptHandler({
+      roots: [
+        { directory: projectDir, entryPoints: ['app/entry.ts'] },
+        {
+          prefix: 'packages/ui',
+          directory: path.join(fixtureDir, 'shared/ui'),
+          entryPoints: ['entry.ts'],
+        },
+      ],
+      base: '/scripts',
+    })
+
+    let res = await get(handler, '/scripts/packages/ui/entry.ts')
+    assert.ok(res)
+    assert.equal(res.status, 200)
+    let body = await res.text()
+    assert.ok(body.includes('/scripts/packages/ui/utils.ts.@'))
+  })
+
+  it('does not treat prefixed-root modules as entry points unless configured', async () => {
+    let handler = createScriptHandler({
+      roots: [
+        { directory: projectDir, entryPoints: ['app/entry.ts'] },
+        { prefix: 'shared', directory: sharedDir },
+      ],
+      base: '/scripts',
+    })
+
+    let res = await get(handler, '/scripts/shared/utils.ts')
+    assert.equal(res, null)
+  })
+
+  it('returns 500 when a resolved import falls outside all configured roots', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: projectDir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+
+    let res = await get(handler, '/scripts/app/entry.ts')
+    assert.ok(res)
+    assert.equal(res.status, 500)
+    assert.match(await res.text(), /outside all configured roots/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Root configuration validation
+// ---------------------------------------------------------------------------
+
+describe('root configuration validation', () => {
+  it('requires at least one configured root', () => {
+    assert.throws(
+      () =>
+        createScriptHandler({
+          roots: [],
+          base: '/scripts',
+        }),
+      /at least one configured root/,
+    )
+  })
+
+  it('rejects duplicate normalized prefixes', () => {
+    assert.throws(
+      () =>
+        createScriptHandler({
+          roots: [
+            { prefix: ' packages/ ', directory: 'project-a' },
+            { prefix: 'packages', directory: 'project-b' },
+          ],
+          base: '/scripts',
+        }),
+      /Duplicate configured root prefix "packages"/,
+    )
+  })
+
+  it('rejects multiple prefixless roots after normalization', () => {
+    assert.throws(
+      () =>
+        createScriptHandler({
+          roots: [{ directory: 'project-a' }, { prefix: '   ', directory: 'project-b' }],
+          base: '/scripts',
+        }),
+      /Only one configured root may omit prefix/,
+    )
+  })
+
+  it('rejects invalid prefix shapes', () => {
+    assert.throws(
+      () =>
+        createScriptHandler({
+          roots: [{ prefix: 'packages\\ui', directory: 'project-a' }],
+          base: '/scripts',
+        }),
+      /must use "\/" separators/,
+    )
+
+    assert.throws(
+      () =>
+        createScriptHandler({
+          roots: [{ prefix: '../packages', directory: 'project-a' }],
+          base: '/scripts',
+        }),
+      /cannot contain "\." or "\.\." segments/,
+    )
   })
 })
 
@@ -1826,8 +1965,7 @@ describe('base path', () => {
 
   it('uses the configured base for rewritten import URLs', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -1838,8 +1976,7 @@ describe('base path', () => {
 
   it('normalizes a trailing slash in base', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts/',
     })
     let res = await get(handler, '/scripts/app/entry.ts')
@@ -1849,7 +1986,10 @@ describe('base path', () => {
   })
 
   it('normalizes a missing leading slash in base', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/entry.ts'], root: dir, base: 'scripts' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: 'scripts',
+    })
     let res = await get(handler, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
@@ -1857,7 +1997,10 @@ describe('base path', () => {
   })
 
   it('supports root base when set to slash', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/entry.ts'], root: dir, base: '/' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/',
+    })
     let res = await handler.handle(new Request('http://localhost/app/entry.ts'), 'app/entry.ts')
     assert.ok(res)
     let body = await res.text()
@@ -1866,7 +2009,10 @@ describe('base path', () => {
   })
 
   it('supports root base when set to an empty string', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/entry.ts'], root: dir, base: '' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '',
+    })
     let res = await handler.handle(new Request('http://localhost/app/entry.ts'), 'app/entry.ts')
     assert.ok(res)
     let body = await res.text()
@@ -1875,7 +2021,10 @@ describe('base path', () => {
   })
 
   it('uses root base for preload URLs without double slashes', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/entry.ts'], root: dir, base: '' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '',
+    })
     let preloadUrls = await handler.preloads('app/entry.ts')
     assert.equal(preloadUrls[0], '/app/entry.ts')
     assert.match(preloadUrls[1]!, /^\/app\/dep\.ts\.@[a-z0-9]+$/)
@@ -1900,14 +2049,20 @@ describe('multi-level dependency graph', () => {
   })
 
   it('correctly compiles a 4-level deep dependency chain', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/l0.ts'], root: dir, base: '/scripts' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
+      base: '/scripts',
+    })
     let res = await get(handler, '/scripts/app/l0.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('each level has its own content-addressed URL', async () => {
-    let handler = createScriptHandler({ entryPoints: ['app/l0.ts'], root: dir, base: '/scripts' })
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
+      base: '/scripts',
+    })
 
     let r0 = await get(handler, '/scripts/app/l0.ts')
     assert.ok(r0)
@@ -1938,7 +2093,10 @@ describe('multi-level dependency graph', () => {
   })
 
   it('changing a leaf dep invalidates all ancestor hashes', async () => {
-    let handler1 = createScriptHandler({ entryPoints: ['app/l0.ts'], root: dir, base: '/scripts' })
+    let handler1 = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
+      base: '/scripts',
+    })
     let res1 = await get(handler1, '/scripts/app/l0.ts')
     assert.ok(res1)
     let body1 = await res1.text()
@@ -1947,7 +2105,10 @@ describe('multi-level dependency graph', () => {
 
     await write(dir, 'app/l3.ts', 'export const v3 = "changed"')
 
-    let handler2 = createScriptHandler({ entryPoints: ['app/l0.ts'], root: dir, base: '/scripts' })
+    let handler2 = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
+      base: '/scripts',
+    })
     let res2 = await get(handler2, '/scripts/app/l0.ts')
     assert.ok(res2)
     let body2 = await res2.text()
@@ -1976,8 +2137,7 @@ describe('multiple entry points', () => {
 
   it('serves all configured entry points', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
     let resA = await get(handler, '/scripts/app/entry-a.ts')
@@ -1990,8 +2150,7 @@ describe('multiple entry points', () => {
 
   it('returns null for a path that is not in the entry points list', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/app/not-entry.ts')
@@ -2025,8 +2184,7 @@ describe('shared dependencies across entry points', () => {
 
   it('both entry points produce the same hash for their shared dep', async () => {
     let handler = createScriptHandler({
-      entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'],
-      root: dir,
+      roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
 

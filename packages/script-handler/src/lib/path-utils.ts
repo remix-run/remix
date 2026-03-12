@@ -1,49 +1,122 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 
+export interface ResolvedScriptRoot {
+  prefix: string | null
+  directory: string
+}
+
+export interface ResolvedRootMatch<root extends ResolvedScriptRoot = ResolvedScriptRoot> {
+  resolvedRoot: root
+  relativePath: string
+  publicPath: string
+}
+
 export function toPosixPath(p: string): string {
   return p.split(path.sep).join('/')
 }
 
-export function absolutePathToUrlSegmentFromResolvedRoots(
-  absolutePath: string,
-  root: string,
-  workspaceRoot: string | null,
-): { segment: string; namespace: 'root' | 'workspace' } | null {
-  if (absolutePath.startsWith(root + path.sep) || absolutePath === root) {
-    let relative = path.relative(root, absolutePath)
-    return { segment: toPosixPath(relative), namespace: 'root' }
+export function normalizeRootPrefix(prefix?: string): string | null {
+  if (prefix == null) return null
+
+  let normalized = prefix.trim().replace(/^\/+/, '').replace(/\/+$/, '').replace(/\/+/g, '/')
+  if (normalized === '') return null
+  if (normalized.includes('\\')) {
+    throw new Error(`Invalid root prefix "${prefix}". Prefixes must use "/" separators.`)
   }
 
-  if (
-    workspaceRoot &&
-    (absolutePath.startsWith(workspaceRoot + path.sep) || absolutePath === workspaceRoot)
-  ) {
-    let relative = path.relative(workspaceRoot, absolutePath)
-    return { segment: toPosixPath(relative), namespace: 'workspace' }
+  let segments = normalized.split('/')
+  if (segments.some((segment) => segment === '.' || segment === '..')) {
+    throw new Error(
+      `Invalid root prefix "${prefix}". Prefixes cannot contain "." or ".." segments.`,
+    )
+  }
+
+  return normalized
+}
+
+export function joinPublicPath(prefix: string | null, relativePath: string): string {
+  let normalizedRelativePath = toPosixPath(relativePath)
+  if (prefix == null) return normalizedRelativePath
+  return normalizedRelativePath === '' ? prefix : `${prefix}/${normalizedRelativePath}`
+}
+
+function isPathInsideDirectory(absolutePath: string, directory: string): boolean {
+  return absolutePath === directory || absolutePath.startsWith(directory + path.sep)
+}
+
+function matchesPrefixBoundary(publicPath: string, prefix: string): boolean {
+  return publicPath === prefix || publicPath.startsWith(`${prefix}/`)
+}
+
+export function resolveAbsolutePathFromResolvedRoots<root extends ResolvedScriptRoot>(
+  absolutePath: string,
+  roots: readonly root[],
+): ResolvedRootMatch<root> | null {
+  for (let resolvedRoot of roots) {
+    if (!isPathInsideDirectory(absolutePath, resolvedRoot.directory)) continue
+
+    let relativePath = toPosixPath(path.relative(resolvedRoot.directory, absolutePath))
+    return {
+      resolvedRoot,
+      relativePath,
+      publicPath: joinPublicPath(resolvedRoot.prefix, relativePath),
+    }
   }
 
   return null
 }
 
-export function absolutePathToUrlSegment(
+export function resolvePublicPathFromResolvedRoots<root extends ResolvedScriptRoot>(
+  publicPath: string,
+  roots: readonly root[],
+): ResolvedRootMatch<root> | null {
+  let normalizedPublicPath = publicPath.replace(/^\/+/, '')
+
+  for (let resolvedRoot of roots) {
+    if (resolvedRoot.prefix == null) continue
+    if (!matchesPrefixBoundary(normalizedPublicPath, resolvedRoot.prefix)) continue
+
+    return {
+      resolvedRoot,
+      relativePath:
+        normalizedPublicPath === resolvedRoot.prefix
+          ? ''
+          : normalizedPublicPath.slice(resolvedRoot.prefix.length + 1),
+      publicPath: normalizedPublicPath,
+    }
+  }
+
+  let fallbackRoot = roots.find((resolvedRoot) => resolvedRoot.prefix == null)
+  if (!fallbackRoot) return null
+
+  return {
+    resolvedRoot: fallbackRoot,
+    relativePath: normalizedPublicPath,
+    publicPath: normalizedPublicPath,
+  }
+}
+
+export function absolutePathToPublicPath(
   absolutePath: string,
-  root: string,
-  workspaceRoot: string | null,
-): { segment: string; namespace: 'root' | 'workspace' } | null {
+  roots: readonly ResolvedScriptRoot[],
+): string | null {
   let realPath: string
-  let realRoot: string
-  let realWorkspaceRoot: string | null
+  let realRoots: ResolvedScriptRoot[]
 
   try {
     realPath = fs.realpathSync(absolutePath)
-    realRoot = fs.realpathSync(root)
-    realWorkspaceRoot = workspaceRoot ? fs.realpathSync(workspaceRoot) : null
+    realRoots = roots.map((resolvedRoot) => ({
+      ...resolvedRoot,
+      directory: fs.realpathSync(resolvedRoot.directory),
+    }))
   } catch {
     realPath = path.normalize(absolutePath)
-    realRoot = path.normalize(root)
-    realWorkspaceRoot = workspaceRoot ? path.normalize(workspaceRoot) : null
+    realRoots = roots.map((resolvedRoot) => ({
+      ...resolvedRoot,
+      directory: path.normalize(resolvedRoot.directory),
+    }))
   }
 
-  return absolutePathToUrlSegmentFromResolvedRoots(realPath, realRoot, realWorkspaceRoot)
+  return resolveAbsolutePathFromResolvedRoots(realPath, realRoots)?.publicPath ?? null
 }

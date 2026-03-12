@@ -6,7 +6,7 @@ import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
 import MagicString from 'magic-string'
 import { hashContent } from './hash.ts'
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
-import { absolutePathToUrlSegmentFromResolvedRoots } from './path-utils.ts'
+import { resolveAbsolutePathFromResolvedRoots, type ResolvedScriptRoot } from './path-utils.ts'
 
 let lexerReady = lexerInit
 
@@ -32,13 +32,12 @@ interface RawModule {
   // Original source text, used when computing cycleHash for circular dep groups.
   sourceText: string
   deps: string[]
-  imports: Array<{ start: number; end: number; depPath: string }>
+  imports: Array<{ start: number; end: number; depPath: string; specifier: string }>
 }
 
 export interface ModuleGraphOptions {
   base: string
-  root: string
-  workspaceRoot: string | null
+  roots: readonly ResolvedScriptRoot[]
   external: string[]
   sourceMaps: 'inline' | 'external' | undefined
   sourceMapSourcePaths: 'virtual' | 'absolute'
@@ -50,7 +49,7 @@ export interface ModuleGraphStore {
   raw: Map<string, RawModule>
   rawInFlight: Map<string, Promise<RawModule>>
   compiled: Map<string, ModuleCompileResult>
-  urlSegments: Map<string, { segment: string; namespace: 'root' | 'workspace' } | null>
+  publicPaths: Map<string, string | null>
   clear(): void
   get(p: string): ModuleCompileResult | undefined
 }
@@ -59,17 +58,17 @@ export function createModuleGraphStore(): ModuleGraphStore {
   let raw = new Map<string, RawModule>()
   let rawInFlight = new Map<string, Promise<RawModule>>()
   let compiled = new Map<string, ModuleCompileResult>()
-  let urlSegments = new Map<string, { segment: string; namespace: 'root' | 'workspace' } | null>()
+  let publicPaths = new Map<string, string | null>()
   return {
     raw,
     rawInFlight,
     compiled,
-    urlSegments,
+    publicPaths,
     clear() {
       raw.clear()
       rawInFlight.clear()
       compiled.clear()
-      urlSegments.clear()
+      publicPaths.clear()
     },
     get(p) {
       return compiled.get(p)
@@ -162,13 +161,16 @@ async function _compileRaw(
         )
       : new Map<string, string>()
 
-  let rawImports: Array<{ start: number; end: number; depPath: string }> = []
+  let rawImports: Array<{ start: number; end: number; depPath: string; specifier: string }> = []
   let depsSet = new Set<string>()
 
   for (let { specifier, start, end } of toResolve) {
     let depPath = resolvedPaths.get(specifier)
     if (!depPath) continue
-    rawImports.push({ start, end, depPath })
+    if (resolveAbsolutePathFromResolvedRoots(depPath, opts.roots) == null) {
+      throw new UnconfiguredRootError(absolutePath, specifier, depPath)
+    }
+    rawImports.push({ start, end, depPath, specifier })
     depsSet.add(depPath)
   }
 
@@ -203,16 +205,9 @@ async function _compileRaw(
 function getSourceMapSourcePath(absolutePath: string, opts: ModuleGraphOptions): string {
   if (opts.sourceMapSourcePaths === 'absolute') return absolutePath
 
-  let urlSegment = absolutePathToUrlSegmentFromResolvedRoots(
-    absolutePath,
-    opts.root,
-    opts.workspaceRoot,
-  )
-  if (!urlSegment) return absolutePath
-
-  let relativePath =
-    urlSegment.namespace === 'workspace' ? `__@workspace/${urlSegment.segment}` : urlSegment.segment
-  return joinBasePath(opts.base, relativePath)
+  let publicPath = resolveAbsolutePathFromResolvedRoots(absolutePath, opts.roots)?.publicPath
+  if (!publicPath) return absolutePath
+  return joinBasePath(opts.base, publicPath)
 }
 
 function getSourceMapModeSentinel(opts: ModuleGraphOptions): string {
@@ -307,22 +302,19 @@ function tarjanSCC(nodes: string[], edges: Map<string, string[]>): string[][] {
   return sccs
 }
 
-function getUrlSegment(
+function getPublicPath(
   absolutePath: string,
   store: ModuleGraphStore,
   opts: ModuleGraphOptions,
-): { segment: string; namespace: 'root' | 'workspace' } | null {
-  if (store.urlSegments.has(absolutePath)) {
-    return store.urlSegments.get(absolutePath) ?? null
+): string | null {
+  if (store.publicPaths.has(absolutePath)) {
+    return store.publicPaths.get(absolutePath) ?? null
   }
 
-  let urlSegment = absolutePathToUrlSegmentFromResolvedRoots(
-    absolutePath,
-    opts.root,
-    opts.workspaceRoot,
-  )
-  store.urlSegments.set(absolutePath, urlSegment)
-  return urlSegment
+  let publicPath =
+    resolveAbsolutePathFromResolvedRoots(absolutePath, opts.roots)?.publicPath ?? null
+  store.publicPaths.set(absolutePath, publicPath)
+  return publicPath
 }
 
 // Pass 2 for a singleton (no cycle): rewrite imports with dep hashes, compute compiledHash.
@@ -339,19 +331,14 @@ async function finalizeModule(
     let depResult = store.compiled.get(depPath)
     if (!depResult) continue
 
-    let urlSegment = getUrlSegment(depPath, store, opts)
-    if (!urlSegment) continue
-
-    let relativePath =
-      urlSegment.namespace === 'workspace'
-        ? `__@workspace/${urlSegment.segment}`
-        : urlSegment.segment
+    let publicPath = getPublicPath(depPath, store, opts)
+    if (!publicPath) continue
 
     // Entry point deps use their stable no-hash URL so the browser's module map
     // deduplicates them correctly against the <script> tag reference in HTML.
     let urlPath = opts.isEntryPoint(depPath)
-      ? joinBasePath(opts.base, relativePath)
-      : joinBasePath(opts.base, `${relativePath}.@${depResult.compiledHash}`)
+      ? joinBasePath(opts.base, publicPath)
+      : joinBasePath(opts.base, `${publicPath}.@${depResult.compiledHash}`)
 
     ms.overwrite(start, end, urlPath)
   }
@@ -366,14 +353,10 @@ async function finalizeModule(
       let encoded = Buffer.from(raw.sourcemap).toString('base64')
       finalCode = compiledCode + `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
     } else if (opts.sourceMaps === 'external') {
-      let urlSegment = getUrlSegment(absolutePath, store, opts)
-      if (urlSegment) {
+      let publicPath = getPublicPath(absolutePath, store, opts)
+      if (publicPath) {
         let tokenSuffix = opts.isEntryPoint(absolutePath) ? '' : `.@${compiledHash}`
-        let relativePath =
-          urlSegment.namespace === 'workspace'
-            ? `__@workspace/${urlSegment.segment}${tokenSuffix}.map`
-            : `${urlSegment.segment}${tokenSuffix}.map`
-        let mapPath = joinBasePath(opts.base, relativePath)
+        let mapPath = joinBasePath(opts.base, `${publicPath}${tokenSuffix}.map`)
         finalCode = compiledCode + `\n//# sourceMappingURL=${mapPath}`
       }
     }
@@ -440,25 +423,17 @@ async function finalizeCycle(
     let ms = new MagicString(raw.rawCode)
 
     for (let { start, end, depPath } of raw.imports) {
-      let urlSegment = getUrlSegment(depPath, store, opts)
-      if (!urlSegment) continue
+      let publicPath = getPublicPath(depPath, store, opts)
+      if (!publicPath) continue
 
       let urlPath: string
       if (opts.isEntryPoint(depPath)) {
-        let relativePath =
-          urlSegment.namespace === 'workspace'
-            ? `__@workspace/${urlSegment.segment}`
-            : urlSegment.segment
-        urlPath = joinBasePath(opts.base, relativePath)
+        urlPath = joinBasePath(opts.base, publicPath)
       } else {
         // Deps within the cycle share the cycleHash; external deps use their own hash.
         let token = sccSet.has(depPath) ? cycleHash : store.compiled.get(depPath)?.compiledHash
         if (!token) continue
-        let relativePath =
-          urlSegment.namespace === 'workspace'
-            ? `__@workspace/${urlSegment.segment}.@${token}`
-            : `${urlSegment.segment}.@${token}`
-        urlPath = joinBasePath(opts.base, relativePath)
+        urlPath = joinBasePath(opts.base, `${publicPath}.@${token}`)
       }
 
       ms.overwrite(start, end, urlPath)
@@ -472,14 +447,10 @@ async function finalizeCycle(
         let encoded = Buffer.from(raw.sourcemap).toString('base64')
         finalCode = compiledCode + `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (opts.sourceMaps === 'external') {
-        let urlSegment = getUrlSegment(absolutePath, store, opts)
-        if (urlSegment) {
+        let publicPath = getPublicPath(absolutePath, store, opts)
+        if (publicPath) {
           let tokenSuffix = opts.isEntryPoint(absolutePath) ? '' : `.@${cycleHash}`
-          let relativePath =
-            urlSegment.namespace === 'workspace'
-              ? `__@workspace/${urlSegment.segment}${tokenSuffix}.map`
-              : `${urlSegment.segment}${tokenSuffix}.map`
-          let mapPath = joinBasePath(opts.base, relativePath)
+          let mapPath = joinBasePath(opts.base, `${publicPath}${tokenSuffix}.map`)
           finalCode = compiledCode + `\n//# sourceMappingURL=${mapPath}`
         }
       }
@@ -602,6 +573,23 @@ export class CjsModuleError extends Error {
         `Please use an ESM-compatible package.`,
     )
     this.name = 'CjsModuleError'
+    this.absolutePath = absolutePath
+  }
+}
+
+export class UnconfiguredRootError extends Error {
+  importerPath: string
+  specifier: string
+  absolutePath: string
+
+  constructor(importerPath: string, specifier: string, absolutePath: string) {
+    super(
+      `Resolved import "${specifier}" in ${importerPath} points to ${absolutePath}, which is outside all configured roots.\n\n` +
+        `Add a matching script-handler root or mark this import as external.`,
+    )
+    this.name = 'UnconfiguredRootError'
+    this.importerPath = importerPath
+    this.specifier = specifier
     this.absolutePath = absolutePath
   }
 }

@@ -42,9 +42,7 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getLargeFixture()
       return async function run() {
-        let handler = createBenchHandler(fixture.root, fixture.entryPoint, {
-          workspaceRoot: fixture.workspaceRoot,
-        })
+        let handler = createBenchHandler(fixture.roots)
         await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
       }
     },
@@ -54,9 +52,7 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / warm entry',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.root, fixture.entryPoint, {
-        workspaceRoot: fixture.workspaceRoot,
-      })
+      let handler = createBenchHandler(fixture.roots)
       await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
       return async function run() {
         await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
@@ -68,29 +64,27 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / warm preloads',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.root, fixture.entryPoint, {
-        workspaceRoot: fixture.workspaceRoot,
-      })
+      let handler = createBenchHandler(fixture.roots)
       let initialUrls = await handler.preloads(fixture.entryPoint)
       assert.ok(initialUrls.length > 0, 'expected preload URLs for checked-in fixture')
       assert.ok(
-        initialUrls.some((url) => url.includes('/__@workspace/')),
-        'expected workspace preload URLs',
+        initialUrls.some((url) => url.includes('/packages/')),
+        'expected package preload URLs',
       )
       assert.ok(
-        initialUrls.some((url) =>
-          url.includes(
-            '/__@workspace/packages/script-handler/bench/fixtures/large-fixture/packages/ui/',
-          ),
-        ),
+        initialUrls.some((url) => url.includes('/@remix-run/component/')),
+        'expected component package preload URLs',
+      )
+      assert.ok(
+        initialUrls.some((url) => url.includes('/packages/ui/')),
         'expected checked-in fixture package preload URLs',
       )
       return async function run() {
         let urls = await handler.preloads(fixture.entryPoint)
         assert.ok(urls.length > 0, 'expected warm preload URLs')
         assert.ok(
-          urls.some((url) => url.includes('/__@workspace/')),
-          'expected workspace URLs',
+          urls.some((url) => url.includes('/packages/')),
+          'expected package URLs',
         )
       }
     },
@@ -100,15 +94,17 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / internal module burst',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.root, fixture.entryPoint, {
-        workspaceRoot: fixture.workspaceRoot,
-      })
+      let handler = createBenchHandler(fixture.roots)
       let preloadUrls = await handler.preloads(fixture.entryPoint)
       let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
       assert.ok(internalUrls.length > 0, 'expected hashed internal module URLs')
       assert.ok(
-        internalUrls.some((url) => url.includes('/__@workspace/')),
-        'expected hashed workspace URLs',
+        internalUrls.some((url) => url.includes('/packages/')),
+        'expected hashed package URLs',
+      )
+      assert.ok(
+        internalUrls.some((url) => url.includes('/@remix-run/component/')),
+        'expected hashed component package URLs',
       )
       return async function run() {
         await Promise.all(internalUrls.map((url) => readHandledResponse(handler, url)))
@@ -121,8 +117,7 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getLargeFixture()
       return async function run() {
-        let handler = createBenchHandler(fixture.root, fixture.entryPoint, {
-          workspaceRoot: fixture.workspaceRoot,
+        let handler = createBenchHandler(fixture.roots, {
           sourceMaps: 'external',
         })
         await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
@@ -132,13 +127,11 @@ let benchmarks: Benchmark[] = [
 ]
 
 function createBenchHandler(
-  root: string,
-  entryPoint: string,
+  roots: ScriptHandlerOptions['roots'],
   overrides: Partial<ScriptHandlerOptions> = {},
 ): ScriptHandler {
   let options: ScriptHandlerOptions = {
-    entryPoints: [entryPoint],
-    root,
+    roots,
     base: scriptBase,
     ...overrides,
   }
@@ -289,7 +282,7 @@ let options = parseArgOptions()
 
 let fixture = await getLargeFixture()
 console.log(
-  `Fixture modules: project=${fixture.stats.projectModules}, workspace=${fixture.stats.workspaceModules}`,
+  `Fixture modules: project=${fixture.stats.projectModules}, packages=${fixture.stats.packageModules}`,
 )
 
 runBenchmarks(options).then(

@@ -3,7 +3,13 @@ import assert from 'node:assert/strict'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
-import { toPosixPath, absolutePathToUrlSegment } from './path-utils.ts'
+import {
+  absolutePathToPublicPath,
+  normalizeRootPrefix,
+  resolveAbsolutePathFromResolvedRoots,
+  resolvePublicPathFromResolvedRoots,
+  toPosixPath,
+} from './path-utils.ts'
 
 describe('toPosixPath', () => {
   it('returns the path unchanged on POSIX systems', () => {
@@ -11,8 +17,6 @@ describe('toPosixPath', () => {
   })
 
   it('splits on path.sep and joins with forward slashes', () => {
-    // On POSIX, path.sep === '/' so splitting on it doesn't affect backslashes.
-    // toPosixPath is a no-op on POSIX — it only converts on Windows.
     let sep = '\\'
     let p = `foo${sep}bar${sep}baz.ts`
     let result = p.split(sep).join('/')
@@ -28,88 +32,126 @@ describe('toPosixPath', () => {
   })
 })
 
-describe('absolutePathToUrlSegment', () => {
+describe('normalizeRootPrefix', () => {
+  it('returns null when prefix is omitted', () => {
+    assert.equal(normalizeRootPrefix(), null)
+  })
+
+  it('treats empty or whitespace-only prefix as no prefix', () => {
+    assert.equal(normalizeRootPrefix(''), null)
+    assert.equal(normalizeRootPrefix('   '), null)
+  })
+
+  it('trims and strips leading or trailing slashes', () => {
+    assert.equal(normalizeRootPrefix(' /packages/ui/ '), 'packages/ui')
+  })
+
+  it('rejects backslashes', () => {
+    assert.throws(() => normalizeRootPrefix('packages\\ui'))
+  })
+
+  it('rejects dot segments', () => {
+    assert.throws(() => normalizeRootPrefix('./packages'))
+    assert.throws(() => normalizeRootPrefix('../packages'))
+  })
+})
+
+describe('root path resolution', () => {
   let tmpDir: string
-  let root: string
-  let workspaceRoot: string
+  let appRoot: string
+  let packagesRoot: string
+  let roots: Array<{ prefix: string | null; directory: string }>
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'path-utils-test-'))
-    root = path.join(tmpDir, 'project')
-    workspaceRoot = tmpDir
-    await fs.mkdir(path.join(root, 'app/utils'), { recursive: true })
-    await fs.mkdir(path.join(tmpDir, 'packages/shared/src'), { recursive: true })
-    // Create actual files so realpathSync works
-    await fs.writeFile(path.join(root, 'app/utils/helper.ts'), '')
-    await fs.writeFile(path.join(tmpDir, 'packages/shared/src/index.ts'), '')
+    appRoot = path.join(tmpDir, 'project')
+    packagesRoot = path.join(tmpDir, 'packages')
+    await fs.mkdir(path.join(appRoot, 'app/utils'), { recursive: true })
+    await fs.mkdir(path.join(packagesRoot, 'shared/src'), { recursive: true })
+    await fs.writeFile(path.join(appRoot, 'app/utils/helper.ts'), '')
+    await fs.writeFile(path.join(packagesRoot, 'shared/src/index.ts'), '')
+    roots = [
+      { prefix: 'packages', directory: packagesRoot },
+      { prefix: null, directory: appRoot },
+    ]
   })
 
   after(async () => {
     await fs.rm(tmpDir, { recursive: true, force: true })
   })
 
-  describe('root namespace', () => {
-    it('returns root segment for a file directly in root', async () => {
-      let filePath = path.join(root, 'app/utils/helper.ts')
-      let result = absolutePathToUrlSegment(filePath, root, null)
+  describe('resolveAbsolutePathFromResolvedRoots', () => {
+    it('returns the public path for a file directly in the fallback root', () => {
+      let filePath = path.join(appRoot, 'app/utils/helper.ts')
+      let result = resolveAbsolutePathFromResolvedRoots(filePath, roots)
       assert.ok(result)
-      assert.equal(result.namespace, 'root')
-      assert.equal(result.segment, 'app/utils/helper.ts')
+      assert.equal(result.publicPath, 'app/utils/helper.ts')
+      assert.equal(result.relativePath, 'app/utils/helper.ts')
+      assert.equal(result.resolvedRoot.prefix, null)
     })
 
-    it('produces a POSIX path segment regardless of OS', async () => {
-      let filePath = path.join(root, 'app/utils/helper.ts')
-      let result = absolutePathToUrlSegment(filePath, root, null)
+    it('returns a prefixed public path for a file inside a prefixed root', () => {
+      let filePath = path.join(packagesRoot, 'shared/src/index.ts')
+      let result = resolveAbsolutePathFromResolvedRoots(filePath, roots)
       assert.ok(result)
-      assert.ok(!result.segment.includes('\\'), 'segment should not contain backslashes')
+      assert.equal(result.publicPath, 'packages/shared/src/index.ts')
+      assert.equal(result.relativePath, 'shared/src/index.ts')
+      assert.equal(result.resolvedRoot.prefix, 'packages')
     })
 
-    it('returns root segment when workspaceRoot is provided but file is in root', async () => {
-      let filePath = path.join(root, 'app/utils/helper.ts')
-      let result = absolutePathToUrlSegment(filePath, root, workspaceRoot)
-      assert.ok(result)
-      assert.equal(result.namespace, 'root')
+    it('returns null when the file is outside every configured root', () => {
+      let outsideFile = path.join(os.tmpdir(), 'outside.ts')
+      let result = resolveAbsolutePathFromResolvedRoots(outsideFile, roots)
+      assert.equal(result, null)
     })
   })
 
-  describe('workspace namespace', () => {
-    it('returns workspace segment for a file outside root but inside workspaceRoot', async () => {
-      let filePath = path.join(tmpDir, 'packages/shared/src/index.ts')
-      let result = absolutePathToUrlSegment(filePath, root, workspaceRoot)
+  describe('resolvePublicPathFromResolvedRoots', () => {
+    it('matches prefixed roots before the fallback root', () => {
+      let result = resolvePublicPathFromResolvedRoots('packages/shared/src/index.ts', roots)
       assert.ok(result)
-      assert.equal(result.namespace, 'workspace')
-      assert.equal(result.segment, 'packages/shared/src/index.ts')
+      assert.equal(result.resolvedRoot.prefix, 'packages')
+      assert.equal(result.relativePath, 'shared/src/index.ts')
     })
 
-    it('returns null when file is outside root and workspaceRoot is null', async () => {
-      let filePath = path.join(tmpDir, 'packages/shared/src/index.ts')
-      let result = absolutePathToUrlSegment(filePath, root, null)
-      assert.equal(result, null)
+    it('uses the fallback root when no prefix matches', () => {
+      let result = resolvePublicPathFromResolvedRoots('app/utils/helper.ts', roots)
+      assert.ok(result)
+      assert.equal(result.resolvedRoot.prefix, null)
+      assert.equal(result.relativePath, 'app/utils/helper.ts')
     })
 
-    it('returns null when file is outside both root and workspaceRoot', async () => {
+    it('requires prefix matches to respect segment boundaries', () => {
+      let result = resolvePublicPathFromResolvedRoots('packages-ui/button.ts', roots)
+      assert.ok(result)
+      assert.equal(result.resolvedRoot.prefix, null)
+      assert.equal(result.relativePath, 'packages-ui/button.ts')
+    })
+  })
+
+  describe('absolutePathToPublicPath', () => {
+    it('returns the normalized public path for files in a prefixed root', () => {
+      let filePath = path.join(packagesRoot, 'shared/src/index.ts')
+      assert.equal(absolutePathToPublicPath(filePath, roots), 'packages/shared/src/index.ts')
+    })
+
+    it('returns null when the file is outside configured roots', () => {
       let outsideFile = path.join(os.tmpdir(), 'outside.ts')
-      // Don't need the file to exist; will fall back to path.normalize
-      let result = absolutePathToUrlSegment(outsideFile, root, workspaceRoot)
-      assert.equal(result, null)
+      assert.equal(absolutePathToPublicPath(outsideFile, roots), null)
     })
   })
 
   describe('symlinks', () => {
-    it('resolves symlinked files to their real path for segment computation', async () => {
-      let realFile = path.join(root, 'app/utils/helper.ts')
-      let linkPath = path.join(root, 'app/utils/helper-link.ts')
+    it('resolves symlinked files to their real path for public path computation', async () => {
+      let realFile = path.join(appRoot, 'app/utils/helper.ts')
+      let linkPath = path.join(appRoot, 'app/utils/helper-link.ts')
       try {
         await fs.symlink(realFile, linkPath)
       } catch {
-        // skip if symlinks aren't supported
         return
       }
 
-      // The symlink points into root, so should resolve as root namespace
-      let result = absolutePathToUrlSegment(linkPath, root, null)
-      assert.ok(result)
-      assert.equal(result.namespace, 'root')
+      assert.equal(absolutePathToPublicPath(linkPath, roots), 'app/utils/helper.ts')
 
       await fs.rm(linkPath, { force: true })
     })

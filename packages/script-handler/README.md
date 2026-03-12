@@ -7,10 +7,10 @@ Compile browser JavaScript/TypeScript modules on demand and serve them from a Fe
 - **On-Demand Compilation** - Transpile browser modules as they are requested
 - **Content-Addressed Imports** - Rewrite internal imports to stable hashed URLs
 - **Cache-Friendly Delivery** - Entry points revalidate while internal modules are immutable
+- **Module Preloads** - Generate preload URLs for an entry point's transitive dependencies
 - **Source Maps** - Serve inline or external sourcemaps for browser debugging
 - **Virtual Source Paths** - Keep sourcemap sources co-located and avoid leaking filesystem paths
-- **Module Preloads** - Generate preload URLs for an entry point's transitive dependencies
-- **Workspace Support** - Serve modules outside `root` with `workspaceRoot`
+- **Multiple Roots** - Serve modules from multiple root directories with explicit public prefixes
 
 ## Installation
 
@@ -28,8 +28,12 @@ import { createScriptHandler } from 'remix/script-handler'
 
 let scripts = createScriptHandler({
   base: '/scripts',
-  root: path.resolve(import.meta.dirname, '..'),
-  entryPoints: ['app/assets/*.tsx'],
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+  ],
 })
 ```
 
@@ -50,8 +54,12 @@ Enable sourcemaps with either `'external'` or `'inline'`:
 ```ts
 let scripts = createScriptHandler({
   base: '/scripts',
-  root: path.resolve(import.meta.dirname, '..'),
-  entryPoints: ['app/assets/*.tsx'],
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+  ],
   sourceMaps: 'external',
 })
 ```
@@ -61,8 +69,12 @@ By default, sourcemap `sources` use the handler path instead of the original fil
 ```ts
 let scripts = createScriptHandler({
   base: '/scripts',
-  root: path.resolve(import.meta.dirname, '..'),
-  entryPoints: ['app/assets/*.tsx'],
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+  ],
   sourceMaps: 'external',
   sourceMapSourcePaths: 'virtual',
 })
@@ -75,8 +87,12 @@ If you want sourcemaps to point to real files on disk instead, you can opt into 
 ```ts
 let scripts = createScriptHandler({
   base: '/scripts',
-  root: path.resolve(import.meta.dirname, '..'),
-  entryPoints: ['app/assets/*.tsx'],
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+  ],
   sourceMaps: 'external',
   sourceMapSourcePaths: 'absolute',
 })
@@ -91,18 +107,29 @@ let preloadUrls = await scripts.preloads('app/assets/entry.tsx')
 // ["/scripts/app/assets/entry.tsx", "/scripts/app/assets/utils.ts.@abc123"]
 ```
 
-## Workspace Packages
+The primary input is the public module path relative to `base`. Absolute file paths also work if the file belongs to a configured root and matches that root's `entryPoints`.
 
-If your entry points import modules outside `root`, provide a `workspaceRoot`. Workspace modules are served under the `__@workspace/` namespace:
+## Multiple Roots
+
+Each configured root can optionally expose a public `prefix`. Roots without a `prefix` act as the fallback directory:
 
 ```ts
 let scripts = createScriptHandler({
   base: '/scripts',
-  root: path.resolve(import.meta.dirname, '../..'),
-  workspaceRoot: path.resolve(import.meta.dirname, '../../../..'),
-  entryPoints: ['app/assets/*.tsx'],
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '../..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+    {
+      prefix: 'packages',
+      directory: path.resolve(import.meta.dirname, '../../../../packages'),
+    },
+  ],
 })
 ```
+
+With this setup, imports from the second root are served at paths like `/scripts/packages/component/src/index.ts.@abc123`.
 
 ## License
 

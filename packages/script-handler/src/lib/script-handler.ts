@@ -1,8 +1,11 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import picomatch from 'picomatch'
-import { absolutePathToUrlSegmentFromResolvedRoots } from './path-utils.ts'
-import type { ModuleCompileResult, ModuleGraphStore } from './module-graph.ts'
+import {
+  normalizeRootPrefix,
+  resolveAbsolutePathFromResolvedRoots,
+  resolvePublicPathFromResolvedRoots,
+} from './path-utils.ts'
 import {
   buildGraph,
   collectTransitiveDeps,
@@ -10,13 +13,22 @@ import {
   CjsModuleError,
   isCompiledGraphFresh,
 } from './module-graph.ts'
+import type { ResolvedScriptRoot } from './path-utils.ts'
+import type { ModuleCompileResult, ModuleGraphStore } from './module-graph.ts'
 import { generateETag, matchesETag } from './etag.ts'
 
+export interface ScriptHandlerRoot {
+  /** Public URL prefix under `base` (e.g. `'packages'`) */
+  prefix?: string
+  /** Filesystem directory for this served tree */
+  directory: string
+  /** Declared entry point paths or glob patterns relative to this directory */
+  entryPoints?: readonly string[]
+}
+
 export interface ScriptHandlerOptions {
-  /** Declared entry point paths or glob patterns */
-  entryPoints: readonly string[]
-  /** Project root directory — module paths are resolved relative to this */
-  root: string
+  /** Configured source roots that may be served by this handler */
+  roots: readonly ScriptHandlerRoot[]
   /**
    * URL base path where the handler is mounted (e.g. `'/scripts'`).
    * All rewritten import URLs in compiled modules will be relative to this base.
@@ -36,8 +48,6 @@ export interface ScriptHandlerOptions {
   sourceMapSourcePaths?: 'virtual' | 'absolute'
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string | string[]
-  /** Monorepo root for packages outside `root` (e.g. `'../..'`) */
-  workspaceRoot?: string
 }
 
 export interface ScriptHandler {
@@ -48,7 +58,9 @@ export interface ScriptHandler {
   handle(request: Request, path: string): Promise<Response | null>
   /**
    * Returns preload URLs for all transitive deps of the given entry point, ordered
-   * shallowest-first. Call this when rendering HTML to populate `<link rel="modulepreload">`.
+   * shallowest-first. Pass either the public entry-point path relative to `base` or an
+   * absolute file path for a configured entry point. Call this when rendering HTML to
+   * populate `<link rel="modulepreload">`.
    *
    * Blocks until the module graph is fully built. Not calling `preloads()` is valid —
    * modules are compiled on-demand as the browser requests them.
@@ -59,6 +71,11 @@ export interface ScriptHandler {
 interface PreloadCacheEntry {
   compiledHash: string
   promise: Promise<string[]>
+}
+
+interface NormalizedScriptRoot extends ResolvedScriptRoot {
+  entryPoints: readonly string[]
+  entryPointMatchers: Array<ReturnType<typeof picomatch>>
 }
 
 /**
@@ -77,10 +94,9 @@ interface PreloadCacheEntry {
  *
  * @example
  * ```ts
- * const scripts = createScriptHandler({
+ * let scripts = createScriptHandler({
  *   base: '/scripts',
- *   root: import.meta.dirname,
- *   entryPoints: ['app/entry.tsx'],
+ *   roots: [{ directory: import.meta.dirname, entryPoints: ['app/entry.tsx'] }],
  * })
  *
  * route('/scripts/*path', ({ request, params }) => scripts.handle(request, params.path))
@@ -100,10 +116,44 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     return normalized || '/'
   }
 
-  let root = realpathOrFallback(path.resolve(process.cwd(), options.root))
-  let workspaceRoot = options.workspaceRoot
-    ? realpathOrFallback(path.resolve(options.root, options.workspaceRoot))
-    : null
+  function toAbsolutePath(directory: string, relativePath: string): string {
+    return relativePath === '' ? directory : path.join(directory, ...relativePath.split('/'))
+  }
+
+  function normalizeRoots(configuredRoots: readonly ScriptHandlerRoot[]): NormalizedScriptRoot[] {
+    if (configuredRoots.length === 0) {
+      throw new Error('createScriptHandler() requires at least one configured root.')
+    }
+
+    let seenPrefixes = new Set<string>()
+    let fallbackRoots = 0
+
+    return configuredRoots.map((configuredRoot) => {
+      let prefix = normalizeRootPrefix(configuredRoot.prefix)
+      if (prefix == null) {
+        fallbackRoots++
+        if (fallbackRoots > 1) {
+          throw new Error('Only one configured root may omit prefix.')
+        }
+      } else if (seenPrefixes.has(prefix)) {
+        throw new Error(`Duplicate configured root prefix "${prefix}".`)
+      } else {
+        seenPrefixes.add(prefix)
+      }
+
+      let directory = realpathOrFallback(path.resolve(process.cwd(), configuredRoot.directory))
+      let entryPoints = configuredRoot.entryPoints ?? []
+
+      return {
+        prefix,
+        directory,
+        entryPoints,
+        entryPointMatchers: entryPoints.map((entryPoint) => picomatch(entryPoint, { dot: true })),
+      }
+    })
+  }
+
+  let roots = normalizeRoots(options.roots)
   let sourceMaps = options.sourceMaps
   let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'virtual'
   let externalRaw = options.external
@@ -112,28 +162,29 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     : externalRaw
       ? [externalRaw]
       : []
-
-  let entryPointPatterns = options.entryPoints
   let base = normalizeBase(options.base)
-
-  let entryPointMatchers = entryPointPatterns.map((p) => picomatch(p, { dot: true }))
-
-  function isEntryPoint(relativePath: string): boolean {
-    return entryPointMatchers.some((m) => m(relativePath))
-  }
 
   let store: ModuleGraphStore = createModuleGraphStore()
   let graphBuilds = new Map<string, Promise<ModuleCompileResult>>()
   let preloadCache = new Map<string, PreloadCacheEntry>()
-  let urlSegmentCache = new Map<
-    string,
-    { segment: string; namespace: 'root' | 'workspace' } | null
-  >()
+  let publicPathCache = new Map<string, string | null>()
+
+  function isEntryPointInRoot(resolvedRoot: NormalizedScriptRoot, relativePath: string): boolean {
+    return resolvedRoot.entryPointMatchers.some((matcher) => matcher(relativePath))
+  }
+
+  function resolveAbsolutePath(absolutePath: string) {
+    return resolveAbsolutePathFromResolvedRoots(absolutePath, roots)
+  }
+
+  function resolvePublicPath(modulePath: string) {
+    return resolvePublicPathFromResolvedRoots(modulePath, roots)
+  }
 
   function isEntryPointAbsolute(absolutePath: string): boolean {
-    let relative = path.relative(root, absolutePath)
-    if (relative.startsWith('..')) return false
-    return isEntryPoint(relative.split(path.sep).join('/'))
+    let resolved = resolveAbsolutePath(absolutePath)
+    if (!resolved) return false
+    return isEntryPointInRoot(resolved.resolvedRoot, resolved.relativePath)
   }
 
   function toModuleUrl(relativePath: string): string {
@@ -143,8 +194,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
   function createModuleGraphOptions() {
     return {
       base,
-      root,
-      workspaceRoot,
+      roots,
       external,
       sourceMaps,
       sourceMapSourcePaths,
@@ -152,14 +202,14 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     }
   }
 
-  function getUrlSegment(absolutePath: string) {
-    if (urlSegmentCache.has(absolutePath)) {
-      return urlSegmentCache.get(absolutePath) ?? null
+  function getPublicPath(absolutePath: string) {
+    if (publicPathCache.has(absolutePath)) {
+      return publicPathCache.get(absolutePath) ?? null
     }
 
-    let urlSegment = absolutePathToUrlSegmentFromResolvedRoots(absolutePath, root, workspaceRoot)
-    urlSegmentCache.set(absolutePath, urlSegment)
-    return urlSegment
+    let publicPath = resolveAbsolutePath(absolutePath)?.publicPath ?? null
+    publicPathCache.set(absolutePath, publicPath)
+    return publicPath
   }
 
   function getPreloadUrls(absolutePath: string): string[] {
@@ -167,17 +217,14 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     let urls: string[] = []
 
     for (let [depPath, depResult] of allDeps) {
-      let urlSegment = getUrlSegment(depPath)
-      if (!urlSegment) continue
-
-      let relativePath =
-        urlSegment.namespace === 'workspace'
-          ? `__@workspace/${urlSegment.segment}`
-          : urlSegment.segment
+      let publicPath = getPublicPath(depPath)
+      if (!publicPath) {
+        throw new Error(`Compiled module ${depPath} is outside all configured roots.`)
+      }
 
       let url = isEntryPointAbsolute(depPath)
-        ? toModuleUrl(relativePath)
-        : toModuleUrl(`${relativePath}.@${depResult.compiledHash}`)
+        ? toModuleUrl(publicPath)
+        : toModuleUrl(`${publicPath}.@${depResult.compiledHash}`)
 
       urls.push(url)
     }
@@ -185,19 +232,28 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     return urls
   }
 
-  function absolutePathFromModulePath(
-    modulePath: string,
-  ): { absolutePath: string; isWorkspace: boolean } | null {
-    let rest = modulePath.replace(/^\/+/, '')
-    if (rest.length === 0) return null
+  function resolvePreloadEntryPoint(entryPoint: string): {
+    absolutePath: string
+    resolvedRoot: NormalizedScriptRoot
+    relativePath: string
+  } {
+    let resolved = path.isAbsolute(entryPoint)
+      ? resolveAbsolutePath(realpathOrFallback(entryPoint))
+      : resolvePublicPath(entryPoint)
 
-    if (rest.startsWith('__@workspace/')) {
-      if (!workspaceRoot) return null
-      let relative = rest.slice('__@workspace/'.length)
-      return { absolutePath: path.join(workspaceRoot, ...relative.split('/')), isWorkspace: true }
+    if (!resolved) {
+      throw new Error(`Entry point "${entryPoint}" is outside all configured roots.`)
     }
 
-    return { absolutePath: path.join(root, ...rest.split('/')), isWorkspace: false }
+    if (!isEntryPointInRoot(resolved.resolvedRoot, resolved.relativePath)) {
+      throw new Error(`Entry point "${entryPoint}" does not match any configured entry points.`)
+    }
+
+    return {
+      absolutePath: toAbsolutePath(resolved.resolvedRoot.directory, resolved.relativePath),
+      resolvedRoot: resolved.resolvedRoot,
+      relativePath: resolved.relativePath,
+    }
   }
 
   async function buildGraphCached(absolutePath: string): Promise<ModuleCompileResult> {
@@ -350,10 +406,10 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
       let normalizedPath = tokenMatch ? withoutMap.slice(0, -tokenMatch[0].length) : withoutMap
       if (normalizedPath.length === 0) return null
 
-      let resolved = absolutePathFromModulePath(normalizedPath)
+      let resolved = resolvePublicPath(normalizedPath)
       if (!resolved) return null
 
-      let { absolutePath, isWorkspace } = resolved
+      let absolutePath = toAbsolutePath(resolved.resolvedRoot.directory, resolved.relativePath)
       let ifNoneMatch = request.headers.get('If-None-Match')
 
       if (requestedToken !== null) {
@@ -365,18 +421,13 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
         )
       }
 
-      // Entry point request (no .@token) — must match a configured entry point.
-      // Workspace modules are never entry points; they always require a token.
-      if (isWorkspace) return null
-      let relative = path.relative(root, absolutePath)
-      let posix = relative.split(path.sep).join('/')
-      if (!isEntryPoint(posix)) return null
+      if (!isEntryPointInRoot(resolved.resolvedRoot, resolved.relativePath)) return null
 
       return handleEntryPointRequest(absolutePath, isSourceMapRequest, ifNoneMatch, request.method)
     },
 
     async preloads(entryPoint) {
-      let absolutePath = path.join(root, ...entryPoint.split('/'))
+      let { absolutePath } = resolvePreloadEntryPoint(entryPoint)
       let existing = preloadCache.get(absolutePath)
       let cached = store.get(absolutePath)
       if (
