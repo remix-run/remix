@@ -91,9 +91,6 @@ function isNonNavigable(href: string): boolean {
   )
 }
 
-function hasRelValue(el: HTMLElement, value: string): boolean {
-  return el.getAttribute('rel')?.split(/\s+/).includes(value) || false
-}
 
 function resolveHref(href: string, baseUrl: string): string | null {
   // Absolute URL — extract pathname
