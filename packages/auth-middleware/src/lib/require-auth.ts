@@ -2,6 +2,12 @@ import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import type { RequireAuthOptions, UnauthenticatedAuth } from './types.ts'
 import { Auth } from './types.ts'
 
+/**
+ * Enforces that `auth()` has already resolved a successful auth state for the current request.
+ *
+ * @param options Failure handling and default response options for unauthenticated requests.
+ * @returns Middleware that allows authenticated requests through and rejects anonymous ones.
+ */
 export function requireAuth(options: RequireAuthOptions = {}): Middleware {
   let status = options.status ?? 401
   let body = options.body ?? 'Unauthorized'

@@ -10,16 +10,37 @@ import type {
 import { completeAuthSession } from './session-flow.ts'
 import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
 
+/**
+ * Creates a request handler that starts an OAuth or OIDC login redirect flow.
+ *
+ * @param provider The OAuth or OIDC provider to redirect to.
+ * @param options Options for transaction storage, error handling, and return-to behavior.
+ * @returns A request handler for the provider login route.
+ */
 export function login<profile>(
   provider: OAuthProvider<profile>,
   options?: OAuthLoginOptions,
 ): RequestHandler
 
+/**
+ * Creates a request handler that verifies submitted credentials and persists session state.
+ *
+ * @param provider The credentials provider that parses and verifies the submitted input.
+ * @param options Options for writing session data and handling success or failure.
+ * @returns A request handler for the credentials login route.
+ */
 export function login<input, result>(
   provider: CredentialsProvider<input, result>,
   options: LoginOptions<result>,
 ): RequestHandler
 
+/**
+ * Creates a login request handler for either OAuth/OIDC redirects or credentials submissions.
+ *
+ * @param provider The provider to use for the login flow.
+ * @param options Options for the selected provider type.
+ * @returns A request handler for a login route.
+ */
 export function login(
   provider: OAuthProvider<any> | CredentialsProvider<any, any>,
   options: any = {},

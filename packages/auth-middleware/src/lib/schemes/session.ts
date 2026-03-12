@@ -3,6 +3,9 @@ import { Session } from '@remix-run/session'
 
 import type { AuthFailure, AuthScheme } from '../types.ts'
 
+/**
+ * Options for creating a session-backed auth scheme.
+ */
 export interface SessionAuthOptions<
   identity,
   session_value = unknown,
@@ -19,6 +22,12 @@ export interface SessionAuthOptions<
   message?: string
 }
 
+/**
+ * Creates an auth scheme that resolves identity from session data loaded by `session()`.
+ *
+ * @param options Session reading, verification, and invalidation hooks.
+ * @returns An auth scheme for use with `auth()`.
+ */
 export function sessionAuth<
   identity,
   session_value = unknown,

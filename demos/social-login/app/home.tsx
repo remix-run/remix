@@ -30,7 +30,7 @@ export function createHomeAction(
         <Layout>
           <section class="page-stage">
             <section class="hero page-hero stack-sm">
-              <h1>Remix Auth demo powered by Google, GitHub, and Facebook.</h1>
+              <h1>Remix Auth Demo</h1>
               <p class="lede">
                 Sign in with the seeded local account or connect a social provider. The demo keeps
                 users in SQLite and resolves request identity from <code>context.get(Auth)</code>.

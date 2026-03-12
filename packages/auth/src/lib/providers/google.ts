@@ -15,6 +15,9 @@ const GOOGLE_METADATA: OIDCMetadata = {
   userinfo_endpoint: GOOGLE_USERINFO_ENDPOINT,
 }
 
+/**
+ * Options for creating the built-in Google auth provider.
+ */
 export interface GoogleOptions {
   clientId: string
   clientSecret: string
@@ -22,8 +25,17 @@ export interface GoogleOptions {
   scopes?: string[]
 }
 
+/**
+ * Profile claims returned by the built-in Google auth provider.
+ */
 export interface GoogleProfile extends OIDCProfile {}
 
+/**
+ * Creates a Google auth provider backed by the shared OIDC runtime.
+ *
+ * @param options Google OAuth client settings for your application.
+ * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ */
 export function createGoogleAuthProvider(options: GoogleOptions): OAuthProvider<GoogleProfile, 'google'> {
   return createOIDCAuthProvider({
     ...options,
