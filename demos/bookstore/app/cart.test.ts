@@ -1,8 +1,14 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { router } from './router.ts'
-import { getSessionCookie, requestWithSession, assertContains } from '../test/helpers.ts'
+import {
+  assertContains,
+  createTestRouter,
+  getSessionCookie,
+  requestWithSession,
+} from '../test/helpers.ts'
+
+let router = createTestRouter()
 
 describe('cart handlers', () => {
   it('POST /cart/api/add adds book to cart', async () => {

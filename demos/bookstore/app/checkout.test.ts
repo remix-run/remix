@@ -1,13 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { router } from './router.ts'
 import {
   assertContains,
+  createTestRouter,
   getSessionCookie,
   loginAsCustomer,
   requestWithSession,
 } from '../test/helpers.ts'
+
+let router = createTestRouter()
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
