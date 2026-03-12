@@ -63,6 +63,7 @@
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
+    "./script-handler": "./src/script-handler.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
     "./session-storage-memcache": "./src/session-storage-memcache.ts",
@@ -70,7 +71,6 @@
     "./session/cookie-storage": "./src/session/cookie-storage.ts",
     "./session/fs-storage": "./src/session/fs-storage.ts",
     "./session/memory-storage": "./src/session/memory-storage.ts",
-    "./script-handler": "./src/script-handler.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
     "./package.json": "./package.json"
@@ -257,6 +257,10 @@
         "types": "./dist/route-pattern/specificity.d.ts",
         "default": "./dist/route-pattern/specificity.js"
       },
+      "./script-handler": {
+        "types": "./dist/script-handler.d.ts",
+        "default": "./dist/script-handler.js"
+      },
       "./session": {
         "types": "./dist/session.d.ts",
         "default": "./dist/session.js"
@@ -284,10 +288,6 @@
       "./session/memory-storage": {
         "types": "./dist/session/memory-storage.d.ts",
         "default": "./dist/session/memory-storage.js"
-      },
-      "./script-handler": {
-        "types": "./dist/script-handler.d.ts",
-        "default": "./dist/script-handler.js"
       },
       "./static-middleware": {
         "types": "./dist/static-middleware.d.ts",
