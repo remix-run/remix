@@ -97,7 +97,7 @@ Boot the client with `run`. It finds all client entries in the page, loads their
 ```tsx
 import { run } from '@remix-run/component'
 
-let app = run(document, {
+let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]

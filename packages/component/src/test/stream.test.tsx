@@ -257,6 +257,37 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe('<div><span>Count: 42</span><br /><span>Double: 84</span></div>')
     })
+
+    it('exposes the current and top frame src during SSR', async () => {
+      let seen:
+        | {
+            frameSrc: string
+            topFrameSrc: string
+            sameFrame: boolean
+          }
+        | undefined
+
+      function Inspect(handle: Handle) {
+        seen = {
+          frameSrc: handle.frame.src,
+          topFrameSrc: handle.frames.top.src,
+          sameFrame: handle.frame === handle.frames.top,
+        }
+
+        return () => <div>{handle.frames.top.src}</div>
+      }
+
+      let html = await drain(
+        renderToStream(<Inspect />, { frameSrc: 'https://example.com/dashboard' }),
+      )
+
+      expect(seen).toEqual({
+        frameSrc: 'https://example.com/dashboard',
+        topFrameSrc: 'https://example.com/dashboard',
+        sameFrame: true,
+      })
+      expect(html).toBe('<div>https://example.com/dashboard</div>')
+    })
   })
 
   describe('special props', () => {
@@ -795,8 +826,8 @@ describe('stream', () => {
     })
   })
 
-  describe('head managed content', () => {
-    it('hoists title elements to head', async () => {
+  describe('head-like elements outside explicit head', () => {
+    it('renders title elements in place', async () => {
       let stream = renderToStream(
         <html>
           <body>
@@ -806,12 +837,10 @@ describe('stream', () => {
         </html>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<html><head><title>Page Title</title></head><body><div>Content</div></body></html>',
-      )
+      expect(html).toBe('<html><body><title>Page Title</title><div>Content</div></body></html>')
     })
 
-    it('hoists meta elements to head', async () => {
+    it('renders meta elements in place', async () => {
       let stream = renderToStream(
         <div>
           <meta name="description" content="Test page" />
@@ -819,12 +848,10 @@ describe('stream', () => {
         </div>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<head><meta name="description" content="Test page" /></head><div><h1>Hello</h1></div>',
-      )
+      expect(html).toBe('<div><meta name="description" content="Test page" /><h1>Hello</h1></div>')
     })
 
-    it('hoists link elements to head', async () => {
+    it('renders link elements in place', async () => {
       let stream = renderToStream(
         <div>
           <link rel="stylesheet" href="/styles.css" />
@@ -832,12 +859,10 @@ describe('stream', () => {
         </div>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<head><link rel="stylesheet" href="/styles.css" /></head><div><p>Content</p></div>',
-      )
+      expect(html).toBe('<div><link rel="stylesheet" href="/styles.css" /><p>Content</p></div>')
     })
 
-    it('collects multiple head elements', async () => {
+    it('renders multiple head-like elements in place', async () => {
       let stream = renderToStream(
         <div>
           <title>My App</title>
@@ -849,11 +874,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><title>My App</title><meta charset="utf-8" /><link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width" /></head><div><p>Hello</p></div>',
+        '<div><title>My App</title><meta charset="utf-8" /><p>Hello</p><link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width" /></div>',
       )
     })
 
-    it('hoists head elements from components', async () => {
+    it('renders head-like elements from components in place', async () => {
       function SEO(handle: Handle) {
         return () => (
           <>
@@ -871,11 +896,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><title>Component Title</title><meta name="description" content="Component Description" /></head><div><main>Content</main></div>',
+        '<div><title>Component Title</title><meta name="description" content="Component Description" /><main>Content</main></div>',
       )
     })
 
-    it('merges head elements with existing head tag', async () => {
+    it('keeps bare head-like elements out of an explicit head tag', async () => {
       let stream = renderToStream(
         <html>
           <head>
@@ -890,11 +915,11 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<html><head><meta charset="utf-8" /><title>Body Title</title><link rel="stylesheet" href="/app.css" /></head><body><div>Content</div></body></html>',
+        '<html><head><meta charset="utf-8" /></head><body><title>Body Title</title><link rel="stylesheet" href="/app.css" /><div>Content</div></body></html>',
       )
     })
 
-    it('hoists structured data scripts to head', async () => {
+    it('renders structured data scripts in place', async () => {
       let structuredData = {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -909,7 +934,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Test Product"}</script></head><div><h1>Product Page</h1></div>',
+        '<div><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Test Product"}</script><h1>Product Page</h1></div>',
       )
     })
 
@@ -927,7 +952,7 @@ describe('stream', () => {
       )
     })
 
-    it('hoists only ld+json scripts when mixed with regular scripts', async () => {
+    it('renders ld+json scripts in place when mixed with regular scripts', async () => {
       let stream = renderToStream(
         <div>
           <script type="text/javascript" innerHTML="console.log('Regular script')" />
@@ -941,7 +966,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<head><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script></head><div><script type="text/javascript">console.log(\'Regular script\')</script><script>console.log(\'Another regular script\')</script><h1>Mixed Scripts Page</h1></div>',
+        '<div><script type="text/javascript">console.log(\'Regular script\')</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script><script>console.log(\'Another regular script\')</script><h1>Mixed Scripts Page</h1></div>',
       )
     })
   })
@@ -1649,6 +1674,113 @@ describe('stream', () => {
       // Stream should complete
       let done = await chunks.next()
       expect(done.done).toBe(true)
+    })
+
+    it('preserves top frame src across nested SSR frame renders', async () => {
+      let seen = new Map<
+        string,
+        {
+          frameSrc: string
+          topFrameSrc: string
+          sameFrame: boolean
+        }
+      >()
+      let resolveFrameContexts: Array<{
+        src: string
+        currentFrameSrc: string
+        topFrameSrc: string
+      }> = []
+
+      function Inspect(handle: Handle) {
+        return ({ label }: { label: string }) => {
+          seen.set(label, {
+            frameSrc: handle.frame.src,
+            topFrameSrc: handle.frames.top.src,
+            sameFrame: handle.frame === handle.frames.top,
+          })
+
+          return <div data-label={label}>{handle.frame.src}</div>
+        }
+      }
+
+      async function resolveFrame(
+        src: string,
+        _target?: string,
+        context?: { currentFrameSrc: string; topFrameSrc: string },
+      ) {
+        invariant(context)
+        resolveFrameContexts.push({ src, ...context })
+
+        if (src === '/settings') {
+          return renderToStream(
+            <section>
+              <Inspect label="settings" />
+              <Frame src="/settings/profile" />
+            </section>,
+            {
+              frameSrc: new URL(src, context.currentFrameSrc),
+              topFrameSrc: context.topFrameSrc,
+              resolveFrame,
+            },
+          )
+        }
+
+        if (src === '/settings/profile') {
+          return renderToStream(<Inspect label="profile" />, {
+            frameSrc: new URL(src, context.currentFrameSrc),
+            topFrameSrc: context.topFrameSrc,
+            resolveFrame,
+          })
+        }
+
+        throw new Error(`Unexpected frame src: ${src}`)
+      }
+
+      let html = await drain(
+        renderToStream(
+          <main>
+            <Inspect label="root" />
+            <Frame src="/settings" />
+          </main>,
+          {
+            frameSrc: 'https://example.com/app',
+            resolveFrame,
+          },
+        ),
+      )
+
+      expect(html).toContain('https://example.com/app')
+      expect(html).toContain('https://example.com/settings')
+      expect(html).toContain('https://example.com/settings/profile')
+
+      expect(resolveFrameContexts).toEqual([
+        {
+          src: '/settings',
+          currentFrameSrc: 'https://example.com/app',
+          topFrameSrc: 'https://example.com/app',
+        },
+        {
+          src: '/settings/profile',
+          currentFrameSrc: 'https://example.com/settings',
+          topFrameSrc: 'https://example.com/app',
+        },
+      ])
+
+      expect(seen.get('root')).toEqual({
+        frameSrc: 'https://example.com/app',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: true,
+      })
+      expect(seen.get('settings')).toEqual({
+        frameSrc: 'https://example.com/settings',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
+      expect(seen.get('profile')).toEqual({
+        frameSrc: 'https://example.com/settings/profile',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
     })
 
     it('handles blocking descendant frames returned from resolveFrame', async () => {

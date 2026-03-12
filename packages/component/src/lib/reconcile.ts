@@ -142,7 +142,7 @@ function ensureControlledReflection(
   }
 
   node._controlledState = state
-  scheduler.enqueueTasks([
+  scheduler.enqueueCommitPhase([
     () => {
       if (state.disposed) return
       node._dom.addEventListener('input', state.onInput)
@@ -268,7 +268,7 @@ function bindNodeMixRuntime(
       parent: parent ?? (node._dom.parentNode as ParentNode),
       key: node.key,
       enqueueUpdate(done) {
-        scheduler.enqueueTasks([
+        scheduler.enqueueWork([
           () => {
             if (state?.aborted) {
               done(getMixinRuntimeSignal(state))
@@ -292,18 +292,6 @@ function bindNodeMixRuntime(
 
 function isHeadHostNode(node: HostNode): boolean {
   return node.type.toLowerCase() === 'head'
-}
-
-function isHeadManagedHostNode(node: HostNode): boolean {
-  let tag = node.type.toLowerCase()
-  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
-    return true
-  }
-  if (tag === 'script') {
-    let props = getHostProps(node)
-    return props.type === 'application/ld+json'
-  }
-  return false
 }
 
 function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
@@ -402,8 +390,6 @@ function replace(
   anchor?: Node,
 ) {
   // Use curr's DOM position (most accurate) when it belongs to this parent.
-  // Hoisted head nodes live under document.head and cannot be used as anchors
-  // for body/range insertions.
   let currAnchor = findFirstDomAnchor(curr)
   if (currAnchor && currAnchor.parentNode === domParent) {
     anchor = currAnchor
@@ -461,7 +447,7 @@ function diffHost(
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
   if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    scheduler.enqueueTasks([
+    scheduler.enqueueCommitPhase([
       () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
     ])
   }
@@ -621,12 +607,6 @@ function insert(
 
         setupHostNode(node, cursor, scheduler)
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
-        if (isHeadManagedHostNode(node)) {
-          let targetHead = getDocumentHead(domParent)
-          if (targetHead && cursor.parentNode !== targetHead) {
-            targetHead.appendChild(cursor)
-          }
-        }
         return nextCursor
       } else {
         // Type mismatch - try single-advance retry to handle browser extension injections
@@ -658,12 +638,6 @@ function insert(
 
             setupHostNode(node, nextSibling, scheduler)
             bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
-            if (isHeadManagedHostNode(node)) {
-              let targetHead = getDocumentHead(domParent)
-              if (targetHead && nextSibling.parentNode !== targetHead) {
-                targetHead.appendChild(nextSibling)
-              }
-            }
             return nextCursor
           }
         }
@@ -686,16 +660,7 @@ function insert(
 
     setupHostNode(node, dom, scheduler)
     bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
-    if (isHeadManagedHostNode(node)) {
-      let targetHead = getDocumentHead(domParent)
-      if (targetHead) {
-        targetHead.appendChild(dom)
-      } else {
-        doInsert(dom)
-      }
-    } else {
-      doInsert(dom)
-    }
+    doInsert(dom)
     return cursor
   }
 
@@ -847,6 +812,7 @@ function insertFrame(
           name: getFrameName(node),
           src,
           marker: frameId && marker ? { ...marker, id: frameId } : undefined,
+          errorTarget: runtime.errorTarget,
           loadModule: runtime.loadModule,
           resolveFrame: runtime.resolveFrame,
           pendingClientEntries: runtime.pendingClientEntries,
@@ -892,6 +858,7 @@ function insertFrame(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     src: getFrameSrc(node),
+    errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
     resolveFrame: runtime.resolveFrame,
     pendingClientEntries: runtime.pendingClientEntries,
@@ -1101,7 +1068,6 @@ export function renderComponent(
 ): Node | null | undefined {
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
-
   let newCursor = diffVNodes(
     currContent,
     content,
@@ -1119,7 +1085,6 @@ export function renderComponent(
   next._parent = vParent
 
   let committed = next as CommittedComponentNode
-
   handle.setScheduleUpdate(() => {
     scheduler.enqueue(committed, domParent)
   })
@@ -1691,7 +1656,7 @@ function reclaimPersistedMixinNode(
 
   bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    scheduler.enqueueTasks([
+    scheduler.enqueueCommitPhase([
       () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
     ])
   }

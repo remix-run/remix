@@ -48,7 +48,7 @@ Use `run` to start the client. It scans the document for client entry markers, l
 ```tsx
 import { run } from '@remix-run/component'
 
-let app = run(document, {
+let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]

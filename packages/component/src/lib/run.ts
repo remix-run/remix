@@ -1,31 +1,49 @@
-import { createFrame } from './frame.ts'
+import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { defaultStyleManager } from './diff-props.ts'
-import type { FrameContent } from './component.ts'
-
-type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
-type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
+import type { FrameHandle } from './component.ts'
+import { createComponentErrorEvent } from './error-event.ts'
+import type { ComponentErrorEvent } from './error-event.ts'
+import type { LoadModule, ResolveFrame } from './frame.ts'
+import { startNavigationListener } from './navigation.ts'
+import { TypedEventTarget } from './typed-event-target.ts'
 
 export type RunInit = {
   loadModule: LoadModule
   resolveFrame?: ResolveFrame
 }
 
-export type AppRuntime = EventTarget & {
+export type AppRuntimeEventMap = {
+  error: ComponentErrorEvent
+}
+
+export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   ready(): Promise<void>
   flush(): void
   dispose(): void
 }
 
-export function run(doc: Document, init: RunInit): AppRuntime {
+let topFrame: Frame
+export function getTopFrame(): FrameHandle {
+  if (!topFrame) throw new Error('app runtime not initialized')
+  return topFrame.handle
+}
+
+let namedFrames = new Map<string, FrameHandle>()
+export function getNamedFrame(name: string): FrameHandle {
+  return namedFrames.get(name) ?? getTopFrame()
+}
+
+export function run(init: RunInit): AppRuntime {
   let styleManager = defaultStyleManager
-  let errorTarget = new EventTarget()
-  let scheduler = createScheduler(doc, errorTarget, styleManager)
+  let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
+  let scheduler = createScheduler(document, errorTarget, styleManager)
 
   let resolveFrame: ResolveFrame = init.resolveFrame ?? (() => '<p>resolve frame unimplemented</p>')
 
-  let frame = createFrame(doc, {
-    src: doc.location?.href ?? '/',
+  topFrame = createFrame(document, {
+    src: document.location.href,
+    errorTarget,
     loadModule: init.loadModule,
     resolveFrame,
     pendingClientEntries: new Map(),
@@ -35,12 +53,22 @@ export function run(doc: Document, init: RunInit): AppRuntime {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: new Map(),
+    namedFrames,
+  })
+
+  let appController = new AbortController()
+  startNavigationListener(appController.signal)
+  let readyPromise = topFrame.ready().catch((error) => {
+    errorTarget.dispatchEvent(createComponentErrorEvent(error))
+    throw error
   })
 
   return Object.assign(errorTarget, {
-    ready: () => frame.ready(),
-    flush: () => frame.flush(),
-    dispose: () => frame.dispose(),
+    ready: () => readyPromise,
+    flush: () => topFrame.flush(),
+    dispose: () => {
+      appController.abort()
+      topFrame.dispose()
+    },
   })
 }

@@ -1,4 +1,5 @@
 import { createDocumentState } from './document-state.ts'
+import { createComponentErrorEvent } from './error-event.ts'
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import {
@@ -29,13 +30,18 @@ export function createScheduler(
 ) {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
-  let commitTasks: EmptyFn[] = []
+  let workTasks: EmptyFn[] = []
+  let commitPhaseTasks: EmptyFn[] = []
+  let postCommitTasks: EmptyFn[] = []
   let flushScheduled = false
+  let flushing = false
   let cascadingUpdateCount = 0
   let resetScheduled = false
   let phaseEvents = new EventTarget()
   let scheduler: {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
+    enqueueWork(newTasks: EmptyFn[]): void
+    enqueueCommitPhase(newTasks: EmptyFn[]): void
     enqueueTasks(newTasks: EmptyFn[]): void
     addEventListener(
       type: SchedulerPhaseType,
@@ -52,7 +58,7 @@ export function createScheduler(
 
   function dispatchError(error: unknown) {
     console.error(error)
-    rootTarget.dispatchEvent(new ErrorEvent('error', { error }))
+    rootTarget.dispatchEvent(createComponentErrorEvent(error))
   }
 
   function scheduleCounterReset() {
@@ -67,69 +73,85 @@ export function createScheduler(
   }
 
   function flush() {
-    flushScheduled = false
+    if (flushing) return
+    flushing = true
+    try {
+      while (true) {
+        flushScheduled = false
 
-    let batch = new Map(scheduled)
-    scheduled.clear()
+        let batch = new Map(scheduled)
+        scheduled.clear()
 
-    let hasWork = batch.size > 0 || commitTasks.length > 0
-    if (!hasWork) return
+        let hasWork =
+          batch.size > 0 ||
+          workTasks.length > 0 ||
+          commitPhaseTasks.length > 0 ||
+          postCommitTasks.length > 0
+        if (!hasWork) return
 
-    cascadingUpdateCount++
-    scheduleCounterReset()
+        cascadingUpdateCount++
+        scheduleCounterReset()
 
-    if (cascadingUpdateCount > MAX_CASCADING_UPDATES) {
-      let error = new Error('handle.update() infinite loop detected')
-      dispatchError(error)
-      return
-    }
-
-    documentState.capture()
-
-    let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
-    setActiveSchedulerUpdateParents(updateParents)
-    dispatchPhaseEvent('beforeUpdate', updateParents)
-
-    if (batch.size > 0) {
-      let vnodes = Array.from(batch)
-      let noScheduledAncestor = new Set<VNode>()
-
-      for (let [vnode, domParent] of vnodes) {
-        if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
-        let handle = vnode._handle
-        let curr = vnode._content
-        let vParent = vnode._parent!
-        // Calculate anchor at render time from current vdom position (never stale).
-        // Needed for fragment self-updates that add children - without this, new children
-        // would be appended after siblings. The keyed diff has placement logic, but unkeyed
-        // diff relies on anchor for correct positioning.
-        let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
-        try {
-          renderComponent(
-            handle,
-            curr,
-            vnode,
-            domParent,
-            handle.frame,
-            scheduler,
-            styles,
-            rootTarget,
-            vParent,
-            anchor,
-          )
-        } catch (error) {
+        if (cascadingUpdateCount > MAX_CASCADING_UPDATES) {
+          let error = new Error('handle.update() infinite loop detected')
           dispatchError(error)
+          return
         }
+
+        documentState.capture()
+
+        let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
+        setActiveSchedulerUpdateParents(updateParents)
+        dispatchPhaseEvent('beforeUpdate', updateParents)
+
+        if (batch.size > 0) {
+          let vnodes = Array.from(batch)
+          let noScheduledAncestor = new Set<VNode>()
+
+          for (let [vnode, domParent] of vnodes) {
+            if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
+            let handle = vnode._handle
+            let curr = vnode._content
+            let vParent = vnode._parent!
+            // Calculate anchor at render time from current vdom position (never stale).
+            // Needed for fragment self-updates that add children - without this, new children
+            // would be appended after siblings. The keyed diff has placement logic, but unkeyed
+            // diff relies on anchor for correct positioning.
+            let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
+            try {
+              renderComponent(
+                handle,
+                curr,
+                vnode,
+                domParent,
+                handle.frame,
+                scheduler,
+                styles,
+                rootTarget,
+                vParent,
+                anchor,
+              )
+            } catch (error) {
+              dispatchError(error)
+            }
+          }
+        }
+
+        flushTaskQueue(workTasks)
+        setActiveSchedulerUpdateParents(undefined)
+
+        // Restore selection before commit-phase lifecycle work so mixins see
+        // the final DOM state but still run before commit listeners and user tasks.
+        documentState.restore()
+
+        flushTaskQueue(commitPhaseTasks)
+        dispatchPhaseEvent('commit', updateParents)
+        flushTaskQueue(postCommitTasks)
       }
+    } finally {
+      setActiveSchedulerUpdateParents(undefined)
+      flushing = false
     }
-    setActiveSchedulerUpdateParents(undefined)
-
-    // restore before user tasks so users can move focus/selection etc.
-    documentState.restore()
-
-    dispatchPhaseEvent('commit', updateParents)
-
-    flushTaskQueue(commitTasks)
   }
 
   function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
@@ -151,7 +173,7 @@ export function createScheduler(
   }
 
   function scheduleFlush() {
-    if (flushScheduled) return
+    if (flushScheduled || flushing) return
     flushScheduled = true
     queueMicrotask(flush)
   }
@@ -191,8 +213,18 @@ export function createScheduler(
       scheduleFlush()
     },
 
+    enqueueWork(newTasks: EmptyFn[]): void {
+      workTasks.push(...newTasks)
+      scheduleFlush()
+    },
+
+    enqueueCommitPhase(newTasks: EmptyFn[]): void {
+      commitPhaseTasks.push(...newTasks)
+      scheduleFlush()
+    },
+
     enqueueTasks(newTasks: EmptyFn[]): void {
-      commitTasks.push(...newTasks)
+      postCommitTasks.push(...newTasks)
       scheduleFlush()
     },
 

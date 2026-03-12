@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
-    "types": ["node"],
+    "types": ["node", "dom-navigation"],
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,

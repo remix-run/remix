@@ -10,7 +10,6 @@ import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import { createFileResponse } from 'remix/response/file'
 import { openLazyFile } from 'remix/fs'
-import { ClientRouter } from '../client/client-router.tsx'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
@@ -101,13 +100,7 @@ export function createRouter(versions?: ServerContext['versions']) {
           }
         }
 
-        return respond.fragment(
-          request,
-          <>
-            {node}
-            <ClientRouter />
-          </>,
-        )
+        return respond.fragment(request, node)
       },
       async markdown({ request, params }) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)

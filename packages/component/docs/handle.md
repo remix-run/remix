@@ -219,6 +219,8 @@ function KeyboardTracker(handle: Handle) {
 
 The root frame for the current runtime tree. This is useful when nested components need to reload the entire page/frame tree instead of only their nearest frame.
 
+When server rendering with `renderToStream()`, pass the `frameSrc` option to populate `handle.frames.top.src` during SSR. For nested frame renders, also pass `topFrameSrc` to keep the top-frame URL fixed while `handle.frame.src` changes per frame.
+
 ```tsx
 function RefreshAllButton(handle: Handle) {
   return () => (

@@ -1,6 +1,6 @@
 import { run } from 'remix/component'
 
-let app = run(document, {
+let app = run({
   async loadModule(moduleUrl: string, name: string) {
     let mod = await import(moduleUrl)
     if (!mod) {
