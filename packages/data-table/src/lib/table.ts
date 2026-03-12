@@ -13,49 +13,88 @@ import type { Pretty } from './types.ts'
  */
 export { columnMetadataKey, tableMetadataKey } from './references.ts'
 
+/**
+ * Column builder map used when declaring a table.
+ */
 export type TableColumnsDefinition = Record<string, ColumnBuilder<any>>
 
+/**
+ * Validation lifecycle operations.
+ */
 export type TableValidationOperation = 'create' | 'update'
+/**
+ * Write lifecycle operations.
+ */
 export type TableWriteOperation = TableValidationOperation
+/**
+ * All lifecycle operations exposed by table hooks.
+ */
 export type TableLifecycleOperation = TableWriteOperation | 'delete' | 'read'
 
+/**
+ * Single validation issue reported by table hooks.
+ */
 export type ValidationIssue = {
   message: string
   path?: Array<string | number>
 }
 
+/**
+ * Validation failure returned from table hooks.
+ */
 export type ValidationFailure = {
   issues: ReadonlyArray<ValidationIssue>
 }
 
+/**
+ * Context passed to the `validate` hook.
+ */
 export type TableValidationContext<row extends Record<string, unknown>> = {
   operation: TableValidationOperation
   tableName: string
   value: Partial<row>
 }
 
+/**
+ * Result returned from the `validate` hook.
+ */
 export type TableValidationResult<row extends Record<string, unknown>> =
   | { value: Partial<row> }
   | ValidationFailure
 
+/**
+ * Validation hook that runs before writes.
+ */
 export type TableValidate<row extends Record<string, unknown>> = (
   context: TableValidationContext<row>,
 ) => TableValidationResult<row>
 
+/**
+ * Context passed to the `beforeWrite` hook.
+ */
 export type TableBeforeWriteContext<row extends Record<string, unknown>> = {
   operation: TableWriteOperation
   tableName: string
   value: Partial<row>
 }
 
+/**
+ * Result returned from the `beforeWrite` hook.
+ */
 export type TableBeforeWriteResult<row extends Record<string, unknown>> =
   | { value: Partial<row> }
   | ValidationFailure
 
+/**
+ * Hook invoked before a row write executes.
+ */
 export type TableBeforeWrite<row extends Record<string, unknown>> = (
   context: TableBeforeWriteContext<row>,
 ) => TableBeforeWriteResult<row>
 
+/**
+ * Context passed to the `afterWrite` hook.
+ */
 export type TableAfterWriteContext<row extends Record<string, unknown>> = {
   operation: TableWriteOperation
   tableName: string
@@ -64,10 +103,16 @@ export type TableAfterWriteContext<row extends Record<string, unknown>> = {
   insertId?: unknown
 }
 
+/**
+ * Hook invoked after a row write completes.
+ */
 export type TableAfterWrite<row extends Record<string, unknown>> = (
   context: TableAfterWriteContext<row>,
 ) => void
 
+/**
+ * Context passed to the `beforeDelete` hook.
+ */
 export type TableBeforeDeleteContext = {
   tableName: string
   where: ReadonlyArray<Predicate<string>>
@@ -76,10 +121,19 @@ export type TableBeforeDeleteContext = {
   offset?: number
 }
 
+/**
+ * Result returned from the `beforeDelete` hook.
+ */
 export type TableBeforeDeleteResult = void | ValidationFailure
 
+/**
+ * Hook invoked before a delete operation executes.
+ */
 export type TableBeforeDelete = (context: TableBeforeDeleteContext) => TableBeforeDeleteResult
 
+/**
+ * Context passed to the `afterDelete` hook.
+ */
 export type TableAfterDeleteContext = {
   tableName: string
   where: ReadonlyArray<Predicate<string>>
@@ -89,8 +143,14 @@ export type TableAfterDeleteContext = {
   affectedRows: number
 }
 
+/**
+ * Hook invoked after a delete operation completes.
+ */
 export type TableAfterDelete = (context: TableAfterDeleteContext) => void
 
+/**
+ * Context passed to the `afterRead` hook.
+ */
 export type TableAfterReadContext<row extends Record<string, unknown>> = {
   tableName: string
   /**
@@ -99,10 +159,16 @@ export type TableAfterReadContext<row extends Record<string, unknown>> = {
   value: Partial<row>
 }
 
+/**
+ * Result returned from the `afterRead` hook.
+ */
 export type TableAfterReadResult<row extends Record<string, unknown>> =
   | { value: Partial<row> }
   | ValidationFailure
 
+/**
+ * Hook invoked after a row is read.
+ */
 export type TableAfterRead<row extends Record<string, unknown>> = (
   context: TableAfterReadContext<row>,
 ) => TableAfterReadResult<row>
@@ -126,8 +192,14 @@ type NormalizePrimaryKey<
     ? readonly [primaryKey]
     : DefaultPrimaryKey<columns>
 
+/**
+ * Timestamp configuration accepted by `table()`.
+ */
 export type TimestampOptions = boolean | { createdAt?: string; updatedAt?: string }
 
+/**
+ * Resolved timestamp column names for a table.
+ */
 export type TimestampConfig = {
   createdAt: string
   updatedAt: string
@@ -153,6 +225,9 @@ type TableMetadata<
   validate?: TableValidate<TableRowFromColumns<columns>>
 }
 
+/**
+ * Typed reference to a table column.
+ */
 export type ColumnReference<
   tableName extends string,
   columnName extends string,
@@ -164,8 +239,14 @@ export type ColumnReference<
   }
 }
 
+/**
+ * Any column reference.
+ */
 export type AnyColumn = ColumnReference<string, string>
 
+/**
+ * Column reference narrowed by a qualified column name string.
+ */
 export type ColumnReferenceForQualifiedName<qualifiedName extends string> = AnyColumn & {
   [columnMetadataKey]: {
     qualifiedName: qualifiedName
@@ -180,6 +261,9 @@ type TableRowFromColumns<columns extends TableColumnsDefinition> = Pretty<{
   [column in keyof columns & string]: ColumnOutput<columns[column]>
 }>
 
+/**
+ * Fully-typed table object returned by `table()`.
+ */
 export type Table<
   name extends string,
   columns extends TableColumnsDefinition,
@@ -188,6 +272,9 @@ export type Table<
   [tableMetadataKey]: TableMetadata<name, columns, primaryKey>
 } & TableColumnReferences<name, columns>
 
+/**
+ * Table-like object with erased concrete column types.
+ */
 export type AnyTable = TableMetadataLike<
   string,
   TableColumnsDefinition,
@@ -209,30 +296,54 @@ export type AnyTable = TableMetadataLike<
   }
 } & Record<string, unknown>
 
+/**
+ * Name of a concrete table.
+ */
 export type TableName<table extends AnyTable> = table[typeof tableMetadataKey]['name']
 
+/**
+ * Column builder map for a concrete table.
+ */
 export type TableColumns<table extends AnyTable> = table[typeof tableMetadataKey]['columns']
 
+/**
+ * Primary-key column list for a concrete table.
+ */
 export type TablePrimaryKey<table extends AnyTable> = table[typeof tableMetadataKey]['primaryKey']
 
 export type TableTimestamps<table extends AnyTable> = table[typeof tableMetadataKey]['timestamps']
 
+/**
+ * Row shape produced by a concrete table.
+ */
 export type TableRow<table extends AnyTable> = TableRowFromColumns<TableColumns<table>>
 
+/**
+ * Row shape with loaded relations merged in.
+ */
 export type TableRowWith<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
 > = Pretty<TableRow<table> & loaded>
 
+/**
+ * Unqualified column names for a concrete table.
+ */
 export type TableColumnName<table extends AnyTable> = keyof TableColumns<table> & string
 
 export type QualifiedTableColumnName<table extends AnyTable> =
   `${TableName<table>}.${TableColumnName<table>}`
 
+/**
+ * Column input accepted for a concrete table.
+ */
 export type TableColumnInput<table extends AnyTable> = ColumnInput<
   TableColumnName<table> | QualifiedTableColumnName<table>
 >
 
+/**
+ * Plain metadata snapshot of a table.
+ */
 export type TableReference<table extends AnyTable = AnyTable> = {
   kind: 'table'
   name: TableName<table>
@@ -376,15 +487,27 @@ export function getTableTimestamps<table extends AnyTable>(table: table): TableT
   return table[tableMetadataKey].timestamps as TableTimestamps<table>
 }
 
+/**
+ * Sort direction accepted by `orderBy`.
+ */
 export type OrderDirection = 'asc' | 'desc'
 
+/**
+ * Normalized `orderBy` clause.
+ */
 export type OrderByClause = {
   column: string
   direction: OrderDirection
 }
 
+/**
+ * Cardinality of a relation.
+ */
 export type RelationCardinality = 'one' | 'many'
 
+/**
+ * Supported relation kinds.
+ */
 export type RelationKind = 'hasMany' | 'hasOne' | 'belongsTo' | 'hasManyThrough'
 
 export type RelationResult<relation extends AnyRelation> =
@@ -394,6 +517,9 @@ export type RelationResult<relation extends AnyRelation> =
       : TableRowWith<target, loaded> | null
     : never
 
+/**
+ * Named relation map for a source table.
+ */
 export type RelationMapForTable<table extends AnyTable> = Record<
   string,
   Relation<table, AnyTable, RelationCardinality, any>
@@ -403,25 +529,40 @@ export type LoadedRelationMap<relations extends RelationMapForTable<any>> = Pret
   [name in keyof relations]: RelationResult<relations[name]>
 }>
 
+/**
+ * Column or column list used to join relations.
+ */
 export type KeySelector<table extends AnyTable> =
   | (keyof TableRow<table> & string)
   | readonly (keyof TableRow<table> & string)[]
 
+/**
+ * Options for defining a `hasMany` relation.
+ */
 export type HasManyOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<target>
   targetKey?: KeySelector<source>
 }
 
+/**
+ * Options for defining a `hasOne` relation.
+ */
 export type HasOneOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<target>
   targetKey?: KeySelector<source>
 }
 
+/**
+ * Options for defining a `belongsTo` relation.
+ */
 export type BelongsToOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<source>
   targetKey?: KeySelector<target>
 }
 
+/**
+ * Options for defining a `hasManyThrough` relation.
+ */
 export type HasManyThroughOptions<source extends AnyTable, target extends AnyTable> = {
   through: Relation<source, AnyTable, RelationCardinality, any>
   throughForeignKey?: KeySelector<target>
@@ -442,6 +583,9 @@ export type ThroughRelationMetadata = {
   throughTargetKey: string[]
 }
 
+/**
+ * Relation descriptor used by query loading.
+ */
 export type Relation<
   source extends AnyTable,
   target extends AnyTable,
@@ -471,6 +615,9 @@ export type Relation<
   ): Relation<source, target, cardinality, loaded & LoadedRelationMap<relations>>
 }
 
+/**
+ * Relation descriptor with erased table types.
+ */
 export type AnyRelation = Relation<AnyTable, AnyTable, RelationCardinality, any>
 
 export type CreateTableOptions<
@@ -834,6 +981,9 @@ export function timestamps(): Record<
   }
 }
 
+/**
+ * Primary-key input accepted by `find()`, `update()`, and similar helpers.
+ */
 export type PrimaryKeyInput<table extends AnyTable> =
   TablePrimaryKey<table> extends readonly [infer column extends string]
     ? column extends keyof TableColumns<table> & string

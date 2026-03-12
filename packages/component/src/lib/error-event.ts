@@ -1,3 +1,6 @@
+/**
+ * Error event shape emitted by the component runtime.
+ */
 export type ComponentErrorEvent = ErrorEvent & {
   readonly error: unknown
 }

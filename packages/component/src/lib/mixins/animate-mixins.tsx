@@ -259,6 +259,12 @@ let animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementPr
   }
 })
 
+/**
+ * Animates an element when it is inserted into the DOM.
+ *
+ * @param config Entrance animation configuration.
+ * @returns A mixin descriptor for the target element.
+ */
 export function animateEntrance<target extends EventTarget = Element>(
   config: AnimationConfig = true,
 ): MixinDescriptor<target, [AnimationConfig], ElementProps> {
@@ -269,6 +275,12 @@ export function animateEntrance<target extends EventTarget = Element>(
   >
 }
 
+/**
+ * Animates an element when it is removed from the DOM.
+ *
+ * @param config Exit animation configuration.
+ * @returns A mixin descriptor for the target element.
+ */
 export function animateExit<target extends EventTarget = Element>(
   config: AnimationConfig = true,
 ): MixinDescriptor<target, [AnimationConfig], ElementProps> {

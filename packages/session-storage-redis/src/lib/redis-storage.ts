@@ -3,6 +3,9 @@ import type { SessionStorage } from '@remix-run/session'
 
 type SessionData = ReturnType<typeof createSession>['data']
 
+/**
+ * Minimal Redis client contract required by `createRedisSessionStorage`.
+ */
 export interface RedisSessionStorageClient {
   get(key: string): Promise<string | null> | string | null
   set(key: string, value: string): Promise<unknown> | unknown
@@ -11,6 +14,9 @@ export interface RedisSessionStorageClient {
   expire?(key: string, ttlSeconds: number): Promise<unknown> | unknown
 }
 
+/**
+ * Options for Redis-backed session storage.
+ */
 export interface RedisSessionStorageOptions {
   /**
    * Prefix for session keys in Redis.

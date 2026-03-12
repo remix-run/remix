@@ -129,6 +129,12 @@ type IssueDescriptor = {
   values?: Record<string, unknown>
 }
 
+/**
+ * Creates a sync Standard Schema-compatible schema from a validation function.
+ *
+ * @param validator Validator that returns either a parsed value or validation issues.
+ * @returns A chainable schema object.
+ */
 export function createSchema<input, output>(
   validator: (
     value: unknown,
@@ -272,10 +278,29 @@ function createIssueFromContext(context: ValidationContext, descriptor: IssueDes
   return createIssue(message, path)
 }
 
+/**
+ * Creates a Standard Schema issue object.
+ *
+ * @param message Human-readable validation message.
+ * @param path Optional issue path within the input value.
+ * @returns A Standard Schema issue.
+ */
 export function createIssue(message: string, path: Issue['path']): Issue {
   return !path || path.length === 0 ? { message } : { message, path }
 }
 
+/**
+ * Creates a Standard Schema failure result with a single issue.
+ *
+ * @param message Human-readable validation message.
+ * @param path Optional issue path within the input value.
+ * @param options Optional issue metadata used for localized error mapping.
+ * @param options.code Optional error code passed to the error map.
+ * @param options.values Optional values passed to the error map.
+ * @param options.input Optional input value passed to the error map.
+ * @param options.parseOptions Optional parse options used for localization and error mapping.
+ * @returns A failure result containing one issue.
+ */
 export function fail(
   message: string,
   path: Issue['path'],

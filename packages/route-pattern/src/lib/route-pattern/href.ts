@@ -6,6 +6,9 @@ import type { Split, SplitPattern } from '../types/split.ts'
 import type { Simplify } from '../types/utils.ts'
 
 // todo: `Split<source>` return { hostname: "" } instead of { hostname: undefined } which causes issues
+/**
+ * Tuple of arguments accepted by `RoutePattern.href()` for a given pattern.
+ */
 export type HrefArgs<source extends string> = _HrefArgs<ParseHrefParams<source>>
 // prettier-ignore
 type _HrefArgs<params> =
@@ -117,6 +120,9 @@ type HrefErrorDetails =
       pattern: RoutePattern
     }
 
+/**
+ * Error thrown when a route pattern cannot generate an href from the supplied args.
+ */
 export class HrefError extends Error {
   details: HrefErrorDetails
 

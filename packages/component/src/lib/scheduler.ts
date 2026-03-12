@@ -14,6 +14,9 @@ type EmptyFn = () => void
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
 
+/**
+ * Scheduler API used by the reconciler and frame runtime.
+ */
 export type Scheduler = ReturnType<typeof createScheduler>
 
 // Protect against infinite cascading updates (e.g. handle.update() during render)
@@ -23,6 +26,14 @@ export type SchedulerPhaseEvent = Event & {
   parents: ParentNode[]
 }
 
+/**
+ * Creates the DOM update scheduler used by the component runtime.
+ *
+ * @param doc Document associated with the rendered tree.
+ * @param rootTarget Event target that receives runtime errors.
+ * @param styles Style manager used during reconciliation.
+ * @returns A scheduler instance.
+ */
 export function createScheduler(
   doc: Document,
   rootTarget: EventTarget,

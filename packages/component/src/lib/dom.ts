@@ -21,6 +21,9 @@ export interface LayoutAnimationConfig {
   easing?: string
 }
 
+/**
+ * Shared host-element props accepted by all built-in DOM element types.
+ */
 export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode

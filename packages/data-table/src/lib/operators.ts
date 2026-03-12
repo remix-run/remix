@@ -56,6 +56,9 @@ export type Predicate<column extends string = string> =
       predicates: Predicate<column>[]
     }
 
+/**
+ * Object shorthand accepted in `where` clauses.
+ */
 export type WhereObject<column extends string = string> = Partial<Record<column, unknown>>
 
 /**

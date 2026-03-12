@@ -2,6 +2,9 @@ import { RoutePattern } from './route-pattern.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
 
+/**
+ * Matcher implementation that checks patterns in insertion order and sorts matches by specificity.
+ */
 export class ArrayMatcher<data> implements Matcher<data> {
   readonly ignoreCase: boolean
   #patterns: Array<{ pattern: RoutePattern; data: data }> = []

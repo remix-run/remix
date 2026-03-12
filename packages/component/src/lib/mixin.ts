@@ -65,6 +65,9 @@ type MixinHandleEventMap<node extends EventTarget = Element> = {
   commit: MixinUpdateEvent<node>
 }
 
+/**
+ * Runtime handle passed to mixin setup functions.
+ */
 export type MixinHandle<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
@@ -90,6 +93,9 @@ type MixinRuntimeType<
     ) => void | null | RemixElement | MixinElement<node, props>)
   | void
 
+/**
+ * Public mixin setup function signature.
+ */
 export type MixinType<
   node extends EventTarget = Element,
   args extends unknown[] = [],
@@ -103,6 +109,9 @@ export type MixinType<
     ) => void | null | RemixElement | MixinElement<node, props>)
   | void
 
+/**
+ * Serializable descriptor stored in the `mix` prop.
+ */
 export type MixinDescriptor<
   node extends EventTarget = Element,
   args extends unknown[] = [],
@@ -113,6 +122,9 @@ export type MixinDescriptor<
   readonly __node?: (node: node) => void
 }
 
+/**
+ * Accepted value shape for the `mix` prop.
+ */
 export type MixValue<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
@@ -185,6 +197,12 @@ export type MixinRuntimeState = {
 
 let mixinHandleId = 0
 
+/**
+ * Creates a typed mixin factory that can be passed through the `mix` prop.
+ *
+ * @param type Mixin setup function.
+ * @returns A function that captures mixin arguments and returns a descriptor.
+ */
 export function createMixin<
   node extends EventTarget = Element,
   args extends unknown[] = [],

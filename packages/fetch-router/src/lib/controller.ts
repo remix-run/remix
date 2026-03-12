@@ -5,6 +5,9 @@ import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
+/**
+ * Controller object that mirrors a route map with matching action handlers.
+ */
 export type Controller<routes extends RouteMap> = {
   actions: ControllerActions<routes>
   middleware?: Middleware[]

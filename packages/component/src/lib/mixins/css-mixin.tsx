@@ -16,6 +16,9 @@ type StyleManagerLike = {
 
 let clientStyleCache: StyleCache = new Map()
 
+/**
+ * Applies generated class names for CSS object styles.
+ */
 export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle) => {
   let activeSelector = ''
   let currentStyles: CSSProps = {}

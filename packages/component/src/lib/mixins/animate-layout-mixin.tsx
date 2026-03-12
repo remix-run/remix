@@ -248,6 +248,12 @@ let animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementPr
   }
 })
 
+/**
+ * Animates layout changes for an element using FLIP-style transforms.
+ *
+ * @param config Layout animation configuration.
+ * @returns A mixin descriptor for the target element.
+ */
 export function animateLayout<target extends EventTarget = Element>(
   config: LayoutConfig = true,
 ): MixinDescriptor<target, [LayoutConfig?], ElementProps> {

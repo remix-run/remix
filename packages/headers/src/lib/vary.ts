@@ -1,5 +1,8 @@
 import { type HeaderValue } from './header-value.ts'
 
+/**
+ * Object form for constructing a `Vary` header value.
+ */
 export interface VaryInit {
   /**
    * The request header names that determine cache eligibility.

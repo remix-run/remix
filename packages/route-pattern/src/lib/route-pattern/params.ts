@@ -1,6 +1,9 @@
 import type { Split, SplitPattern } from '../types/split'
 import type { Simplify } from '../types/utils'
 
+/**
+ * Extracted route params for a route-pattern source string.
+ */
 export type Params<source extends string> = Simplify<Omit<ParseParams<Split<source>>, '*'>>
 
 // prettier-ignore

@@ -88,6 +88,9 @@ type ParseErrorType =
   | 'dangling escape'
   | 'invalid protocol'
 
+/**
+ * Error thrown when a route pattern cannot be parsed.
+ */
 export class ParseError extends Error {
   type: ParseErrorType
   source: string

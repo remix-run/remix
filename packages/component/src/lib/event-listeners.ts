@@ -1,3 +1,6 @@
+/**
+ * Event type with `currentTarget` narrowed to the dispatched target.
+ */
 export type Dispatched<event extends Event, target extends EventTarget> = Omit<
   event,
   'currentTarget'
@@ -109,6 +112,13 @@ export type EventMap<target extends EventTarget> = (
   GlobalEventHandlersEventMap & Record<string, Event>
 )
 
+/**
+ * Adds typed event listeners and reentry abort signals to a target.
+ *
+ * @param target Event target to attach listeners to.
+ * @param signal Lifetime signal used to remove all listeners.
+ * @param listeners Listener map keyed by event type.
+ */
 export function addEventListeners<target extends EventTarget>(
   target: target,
   signal: AbortSignal,

@@ -21,6 +21,9 @@ type LinkCurrentProps = ElementProps & {
 
 let nativeLinkHostTypes = new Set(['a', 'area'])
 
+/**
+ * Adds client-side navigation behavior to anchor-like elements.
+ */
 export let link = createMixin<
   HTMLElement,
   [href: string, options?: NavigationOptions],

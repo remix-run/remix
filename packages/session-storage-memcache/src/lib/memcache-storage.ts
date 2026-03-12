@@ -7,6 +7,9 @@ const MAX_MEMCACHE_KEY_LENGTH = 250
 const HASH_LENGTH = 64
 type SessionData = ReturnType<typeof createSession>['data']
 
+/**
+ * Options for Memcache-backed session storage.
+ */
 export interface MemcacheSessionStorageOptions {
   /**
    * Whether to reuse session IDs sent from the client that are not found in storage.

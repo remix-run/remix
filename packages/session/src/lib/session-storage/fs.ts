@@ -5,6 +5,9 @@ import * as path from 'node:path'
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
+/**
+ * Options for filesystem-backed session storage.
+ */
 export interface FsSessionStorageOptions {
   /**
    * Whether to reuse session IDs sent from the client that are not found in storage.

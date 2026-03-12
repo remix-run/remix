@@ -16,6 +16,9 @@ declare global {
   }
 }
 
+/**
+ * Event emitted by the `pressEvents` mixin for pointer and keyboard presses.
+ */
 export class PressEvent extends Event {
   clientX: number
   clientY: number
@@ -184,6 +187,9 @@ type PressEventsMixin = typeof basePressEvents & {
   readonly cancel: typeof pressCancelEventType
 }
 
+/**
+ * Normalizes pointer and keyboard input into press lifecycle events.
+ */
 export let pressEvents: PressEventsMixin = Object.assign(basePressEvents, {
   press: pressEventType,
   down: pressDownEventType,
