@@ -22,7 +22,9 @@ describe('link mixin', () => {
 
   it('adds href and runtime attributes to anchors', () => {
     let { container } = render(
-      <a mix={link('/login', { src: '/partials/login', target: 'auth' })}>Login</a>,
+      <a mix={link('/login', { src: '/partials/login', target: 'auth', resetScroll: false })}>
+        Login
+      </a>,
     )
 
     let anchor = container.querySelector('a')
@@ -30,6 +32,7 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('href')).toBe('/login')
     expect(anchor.getAttribute('rmx-target')).toBe('auth')
     expect(anchor.getAttribute('rmx-src')).toBe('/partials/login')
+    expect(anchor.getAttribute('rmx-reset-scroll')).toBe('false')
     expect(anchor.getAttribute('role')).toBeNull()
   })
 
@@ -73,7 +76,7 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/login', $rmx: true },
+      state: { target: 'auth', src: '/login', resetScroll: true, $rmx: true },
       history: undefined,
     })
   })
@@ -89,8 +92,24 @@ describe('link mixin', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
       history: 'replace',
+    })
+  })
+
+  it('passes resetScroll=false through for non-anchor navigation', () => {
+    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
+    vi.stubGlobal('navigation', { navigate: navigateMock })
+
+    let { container } = render(<button mix={link('/login', { resetScroll: false })}>Login</button>)
+
+    let button = container.querySelector('button')
+    invariant(button)
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      history: undefined,
     })
   })
 
@@ -133,7 +152,7 @@ describe('link mixin', () => {
 
     expect(navigateMock).toHaveBeenCalledTimes(1)
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: undefined, src: '/login', $rmx: true },
+      state: { target: undefined, src: '/login', resetScroll: true, $rmx: true },
       history: undefined,
     })
   })

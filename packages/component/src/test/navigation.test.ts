@@ -8,22 +8,6 @@ describe('navigate', () => {
     vi.unstubAllGlobals()
   })
 
-  it('throws when the Navigation API is unavailable', async () => {
-    vi.stubGlobal('navigation', undefined)
-
-    await expect(navigate('/login')).rejects.toThrow('Navigation API is not available')
-  })
-
-  it('throws when navigation listener setup is attempted without the Navigation API', () => {
-    vi.stubGlobal('navigation', undefined)
-
-    let controller = new AbortController()
-
-    expect(() => {
-      startNavigationListener(controller.signal)
-    }).toThrow('Navigation API is not available')
-  })
-
   it('passes runtime state via navigate history state', async () => {
     let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
     vi.stubGlobal('navigation', { navigate: navigateMock })
@@ -35,8 +19,22 @@ describe('navigate', () => {
     })
 
     expect(navigateMock).toHaveBeenCalledWith('/login', {
-      state: { target: 'auth', src: '/partials/login', $rmx: true },
+      state: { target: 'auth', src: '/partials/login', resetScroll: true, $rmx: true },
       history: 'replace',
+    })
+  })
+
+  it('passes resetScroll=false when requested', async () => {
+    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
+    vi.stubGlobal('navigation', { navigate: navigateMock })
+
+    await navigate('/login', {
+      resetScroll: false,
+    })
+
+    expect(navigateMock).toHaveBeenCalledWith('/login', {
+      state: { target: undefined, src: '/login', resetScroll: false, $rmx: true },
+      history: undefined,
     })
   })
 

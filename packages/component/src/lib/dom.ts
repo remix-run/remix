@@ -1136,6 +1136,7 @@ export interface PartialAnchorHTMLProps<eventTarget extends EventTarget>
   // Non-standard Attributes
   'rmx-target'?: Trackable<string | undefined>
   'rmx-src'?: Trackable<string | undefined>
+  'rmx-reset-scroll'?: Trackable<string | undefined>
 }
 
 export type AnchorAriaRoles =

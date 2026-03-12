@@ -3,6 +3,7 @@ import { getTopFrame, getNamedFrame } from './run.ts'
 type NavigationState = {
   target: string | undefined
   src: string
+  resetScroll: boolean
   $rmx: true
 }
 
@@ -14,10 +15,16 @@ export type NavigationOptions = {
   src?: string
   target?: string
   history?: 'push' | 'replace'
+  resetScroll?: boolean
 }
 
 export async function navigate(href: string, options?: NavigationOptions) {
-  let state = { target: options?.target, src: options?.src ?? href, $rmx: true }
+  let state = {
+    target: options?.target,
+    src: options?.src ?? href,
+    resetScroll: options?.resetScroll !== false,
+    $rmx: true,
+  } satisfies NavigationState
   let transition = window.navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
@@ -26,7 +33,7 @@ export function startNavigationListener(signal: AbortSignal) {
   let navigation = window.navigation
 
   navigation.updateCurrentEntry({
-    state: { target: undefined, src: window.location.href, $rmx: true },
+    state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
   })
 
   navigation.addEventListener(
@@ -42,8 +49,6 @@ export function startNavigationListener(signal: AbortSignal) {
       let frame = namedFrame ?? topFrame
 
       event.intercept({
-        scroll: 'after-transition',
-        focusReset: 'after-transition',
         async handler() {
           if (event.navigationType !== 'traverse') {
             navigation.updateCurrentEntry({ state })
@@ -51,6 +56,11 @@ export function startNavigationListener(signal: AbortSignal) {
 
           frame.src = frame === topFrame ? event.destination.url : state.src
           await frame.reload()
+
+          let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
+          if (state.resetScroll && isNewEntry) {
+            window.scrollTo(0, 0)
+          }
         },
       })
     },
@@ -104,6 +114,7 @@ function getSourceElementNavigationState(event: NavigateEvent): NavigationState 
   return {
     target: sourceElement.getAttribute('rmx-target') ?? undefined,
     src: sourceElement.getAttribute('rmx-src') ?? event.destination.url,
+    resetScroll: sourceElement.getAttribute('rmx-reset-scroll') !== 'false',
     $rmx: true,
   } satisfies NavigationState
 }

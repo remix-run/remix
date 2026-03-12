@@ -36,6 +36,7 @@ export let link = createMixin<
           href={href}
           {...(options?.target == null ? {} : { 'rmx-target': options.target })}
           {...(options?.src == null ? {} : { 'rmx-src': options.src })}
+          {...(options?.resetScroll === false ? { 'rmx-reset-scroll': 'false' } : {})}
         />
       )
     }
