@@ -10,7 +10,7 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
-type NavigationOptions = {
+export type NavigationOptions = {
   src?: string
   target?: string
   history?: 'push' | 'replace'

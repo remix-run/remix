@@ -48,7 +48,6 @@ export { addEventListeners } from './lib/event-listeners.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched } from './lib/mixins/on-mixin.tsx'
 export { link } from './lib/mixins/link-mixin.tsx'
-export type { LinkOptions } from './lib/mixins/link-mixin.tsx'
 export { keysEvents } from './lib/mixins/keys-mixin.tsx'
 export { pressEvents } from './lib/mixins/press-mixin.tsx'
 export type { PressEvent } from './lib/mixins/press-mixin.tsx'
@@ -67,3 +66,4 @@ export type { TweenOptions, BezierCurve } from './lib/tween.ts'
 
 // -- Navigation --
 export { navigate } from './lib/navigation.ts'
+export type { NavigationOptions } from './lib/navigation.ts'

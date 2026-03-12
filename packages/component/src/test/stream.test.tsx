@@ -837,9 +837,7 @@ describe('stream', () => {
         </html>,
       )
       let html = await drain(stream)
-      expect(html).toBe(
-        '<html><body><title>Page Title</title><div>Content</div></body></html>',
-      )
+      expect(html).toBe('<html><body><title>Page Title</title><div>Content</div></body></html>')
     })
 
     it('renders meta elements in place', async () => {
