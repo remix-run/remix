@@ -22,16 +22,9 @@ export interface CrawlOptions {
   spider?: boolean
 }
 
-export function crawl(
+export async function* crawl(
   router: { fetch(request: Request): Promise<Response> },
   options: CrawlOptions = {},
-): AsyncIterableIterator<CrawlResult> {
-  return runCrawl((request) => router.fetch(request), options)
-}
-
-export async function* runCrawl(
-  fetchFn: (request: Request) => Promise<Response>,
-  options: CrawlOptions,
 ): AsyncIterableIterator<CrawlResult> {
   let { paths = ['/'], spider = true } = options
 
@@ -44,7 +37,7 @@ export async function* runCrawl(
     }
     visited.add(urlPath)
 
-    let response = await fetchFn(new Request(`${BASE_URL}${urlPath}`))
+    let response = await router.fetch(new Request(`${BASE_URL}${urlPath}`))
     let isHtml = response.headers.get('Content-Type')?.includes('text/html')
     let toQueue: string[] = []
 
