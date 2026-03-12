@@ -410,13 +410,22 @@ function replace(
   rootTarget: EventTarget,
   anchor?: Node,
 ) {
-  // Use curr's DOM position (most accurate) when it belongs to this parent.
   let currAnchor = findFirstDomAnchor(curr)
   if (currAnchor && currAnchor.parentNode === domParent) {
-    anchor = currAnchor
+    let replacementAnchor = document.createComment('rmx:replace')
+    domParent.insertBefore(replacementAnchor, currAnchor)
+    try {
+      remove(curr, domParent, scheduler, styles)
+      insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replacementAnchor)
+    } finally {
+      replacementAnchor.parentNode?.removeChild(replacementAnchor)
+    }
+    return
   }
-  insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+
+  let replacementAnchor = findNextSiblingDomAnchor(curr, vParent) ?? anchor
   remove(curr, domParent, scheduler, styles)
+  insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replacementAnchor)
 }
 
 function diffHost(
