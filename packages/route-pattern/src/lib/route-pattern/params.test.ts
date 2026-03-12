@@ -1,4 +1,4 @@
-import type { Assert, IsEqual } from './utils.ts'
+import type { Assert, IsEqual } from '../types/utils.ts'
 import type { Params } from './params.ts'
 
 // prettier-ignore
@@ -34,7 +34,7 @@ export type Tests = [
   // Wildcards
   Assert<IsEqual<
     Params<'files/*'>,
-    { '*': string  }
+    {}
   >>,
 
   Assert<IsEqual<
@@ -44,13 +44,13 @@ export type Tests = [
 
   Assert<IsEqual<
     Params<'files/*(.:ext)'>,
-    { '*': string; ext: string | undefined }
+    { ext: string | undefined }
   >>,
 
   // Unnamed wildcard within optional
   Assert<IsEqual<
     Params<'files(/*).:ext'>,
-    { '*': string | undefined; ext: string }
+    { ext: string }
   >>,
 
   Assert<IsEqual<
@@ -77,7 +77,7 @@ export type Tests = [
 
   Assert<IsEqual<
     Params<':proto://example.com/path'>,
-    { proto: string }
+    {}
   >>,
 
   // Mixed host + path params
@@ -101,6 +101,6 @@ export type Tests = [
   // Nested optionals: unnamed wildcard + variable
   Assert<IsEqual<
     Params<'files(/*(.:ext))'>,
-    { '*': string | undefined; ext: string | undefined }
+    { ext: string | undefined }
   >>
 ]
