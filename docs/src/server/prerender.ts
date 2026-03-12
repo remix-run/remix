@@ -42,23 +42,16 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-async function writeResult(pathname: string, filepath: string, response: Response) {
-  let outputPath = path.join(outputDir, filepath)
-  await fs.mkdir(path.dirname(outputPath), { recursive: true })
-  await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
-  console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
-}
-
-// First pass: spider the site and collect fragment/markdown variant paths for docs pages
+// First pass: spider the site and collect fragment/markdown variant paths
+let paths = ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])]
 let variantPaths: string[] = []
-for await (let { pathname, filepath, response } of crawl(docsRouter, {
-  paths: ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])],
-})) {
+for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
   await writeResult(pathname, filepath, response)
   let url = `http://localhost${pathname}`
   let match = routes.docs.match(url)
   if (match && !routes.markdown.match(url)) {
-    variantPaths.push(routes.fragment.href(match.params), routes.markdown.href(match.params))
+    variantPaths.push(routes.fragment.href(match.params))
+    variantPaths.push(routes.markdown.href(match.params))
   }
 }
 
@@ -68,6 +61,13 @@ for await (let { pathname, filepath, response } of crawl(docsRouter, {
   spider: false,
 })) {
   await writeResult(pathname, filepath, response)
+}
+
+async function writeResult(pathname: string, filepath: string, response: Response) {
+  let outputPath = path.join(outputDir, filepath)
+  await fs.mkdir(path.dirname(outputPath), { recursive: true })
+  await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
+  console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
 }
 
 async function getVersionsToBuild(
