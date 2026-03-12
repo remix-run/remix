@@ -7,7 +7,7 @@ import * as semver from 'semver'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
 import { routes } from './routes.ts'
-import type { CrawlOptions } from 'remix/fetch-router'
+import { crawl } from 'remix/fetch-router'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -42,26 +42,32 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-let crawlOpts: CrawlOptions = {
-  // Crawl the root path and any requested version paths
-  paths: ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])],
-  // Crawl fragment and markdown variants of docs pages
-  variants(path) {
-    let url = `http://localhost${path}`
-    let match = routes.docs.match(url)
-    if (match && !routes.markdown.match(url)) {
-      return [routes.fragment.href(match.params), routes.markdown.href(match.params)]
-    }
-  },
-}
-
-for await (let result of docsRouter.crawl(crawlOpts)) {
-  // Output files
-  let { pathname, filepath, response } = result
+async function writeResult(pathname: string, filepath: string, response: Response) {
   let outputPath = path.join(outputDir, filepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
   await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
   console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
+}
+
+// First pass: spider the site and collect fragment/markdown variant paths for docs pages
+let variantPaths: string[] = []
+for await (let { pathname, filepath, response } of crawl(docsRouter, {
+  paths: ['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])],
+})) {
+  await writeResult(pathname, filepath, response)
+  let url = `http://localhost${pathname}`
+  let match = routes.docs.match(url)
+  if (match && !routes.markdown.match(url)) {
+    variantPaths.push(routes.fragment.href(match.params), routes.markdown.href(match.params))
+  }
+}
+
+// Second pass: fetch variant paths without spidering
+for await (let { pathname, filepath, response } of crawl(docsRouter, {
+  paths: variantPaths,
+  spider: false,
+})) {
+  await writeResult(pathname, filepath, response)
 }
 
 async function getVersionsToBuild(
