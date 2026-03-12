@@ -76,8 +76,8 @@ function normalizePropName(name: string, isSvg: boolean): { ns?: string; attr: s
   if (name.startsWith('aria-') || name.startsWith('data-')) return { attr: name }
 
   // DOM property -> HTML mappings
+  if (name === 'className') return { attr: 'class' }
   if (!isSvg) {
-    if (name === 'className') return { attr: 'class' }
     if (name === 'htmlFor') return { attr: 'for' }
     if (name === 'tabIndex') return { attr: 'tabindex' }
     if (name === 'acceptCharset') return { attr: 'accept-charset' }

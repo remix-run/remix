@@ -1,3 +1,5 @@
-Add support for executing both data manipulation operations and data migration operations in the sqlite adapter (`execute` for `DataManipulationOperation`, `migrate` for `DataMigrationOperation`), including adapter-level DDL execution support for migrations.
+Add first-class migration execution support to the sqlite adapter. It now compiles and executes `DataMigrationOperation` plans for `remix/data-table/migrations`, including create/alter/drop table and index flows, migration journal writes, and adapter-managed DDL execution for migrations.
 
-SQL compilation remains adapter-owned while sharing common helpers from `remix/data-table/sql-helpers`.
+Normal reads/writes continue through `execute(...)`, while migration/DDL work runs through `migrate(...)`.
+
+SQL compilation remains adapter-owned and can share helpers from `remix/data-table/sql-helpers`.

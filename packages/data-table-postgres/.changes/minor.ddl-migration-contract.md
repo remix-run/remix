@@ -1,3 +1,5 @@
-Add support for executing both data manipulation operations and data migration operations in the postgres adapter (`execute` for `DataManipulationOperation`, `migrate` for `DataMigrationOperation`), including adapter-level migration locking support.
+Add first-class migration execution support to the postgres adapter. It now compiles and executes `DataMigrationOperation` plans for `remix/data-table/migrations`, including create/alter/drop table and index flows, migration journal writes, and adapter-managed migration locking.
 
-SQL compilation remains adapter-owned while sharing common helpers from `remix/data-table/sql-helpers`.
+Normal reads/writes continue through `execute(...)`, while migration/DDL work runs through `migrate(...)`.
+
+SQL compilation remains adapter-owned and can share helpers from `remix/data-table/sql-helpers`.

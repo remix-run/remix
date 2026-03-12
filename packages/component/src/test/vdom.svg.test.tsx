@@ -11,7 +11,7 @@ describe('vnode rendering', () => {
       let { render } = createRoot(container)
 
       render(
-        <svg viewBox="0 0 24 24" fill="none">
+        <svg viewBox="0 0 24 24" fill="none" class="icon">
           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
@@ -26,6 +26,7 @@ describe('vnode rendering', () => {
 
       // Attribute casing: preserve exceptions and kebab-case general SVG attrs
       expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
+      expect(svg.getAttribute('class')).toBe('icon')
       expect(path.getAttribute('stroke-linecap')).toBe('round')
       expect(path.getAttribute('stroke-linejoin')).toBe('round')
     })

@@ -794,8 +794,8 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   if (name.startsWith('aria-') || name.startsWith('data-')) return name
 
   // HTML mappings
+  if (name === 'className') return 'class'
   if (!isSvg) {
-    if (name === 'className') return 'class'
     if (name === 'htmlFor') return 'for'
     if (name === 'tabIndex') return 'tabindex'
     if (name === 'acceptCharset') return 'accept-charset'
