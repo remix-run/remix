@@ -15,6 +15,9 @@ const GITHUB_USER_ENDPOINT = 'https://api.github.com/user'
 const GITHUB_USER_EMAILS_ENDPOINT = 'https://api.github.com/user/emails'
 const DEFAULT_GITHUB_SCOPES = ['read:user', 'user:email']
 
+/**
+ * Options for creating the built-in GitHub auth provider.
+ */
 export interface GitHubOptions {
   clientId: string
   clientSecret: string
@@ -22,6 +25,9 @@ export interface GitHubOptions {
   scopes?: string[]
 }
 
+/**
+ * Profile fields returned by the built-in GitHub auth provider.
+ */
 export interface GitHubProfile {
   id: number
   login: string
@@ -31,6 +37,9 @@ export interface GitHubProfile {
   html_url?: string
 }
 
+/**
+ * Email records returned by GitHub's `/user/emails` endpoint.
+ */
 export interface GitHubEmail {
   email: string
   primary: boolean
@@ -38,6 +47,12 @@ export interface GitHubEmail {
   visibility?: string | null
 }
 
+/**
+ * Creates a GitHub OAuth App provider.
+ *
+ * @param options GitHub OAuth client settings for your application.
+ * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ */
 export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<GitHubProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 

@@ -2,12 +2,21 @@ import type { RequestContext } from '@remix-run/fetch-router'
 
 import type { CredentialsProvider } from './types.ts'
 
+/**
+ * Options for building a credentials-based auth provider.
+ */
 export interface CredentialsOptions<input, result, provider extends string = 'password'> {
   name?: provider
   parse(context: RequestContext): input | Promise<input>
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
+/**
+ * Creates a credentials provider for direct form-based authentication.
+ *
+ * @param options Options for parsing submitted credentials and verifying them.
+ * @returns A provider that can be passed to `login()`.
+ */
 export function createCredentialsAuthProvider<input, result, provider extends string = 'password'>(
   options: CredentialsOptions<input, result, provider>,
 ): CredentialsProvider<input, result, provider> {

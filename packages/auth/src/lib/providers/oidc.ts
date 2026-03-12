@@ -19,11 +19,20 @@ import { createCodeChallenge } from '../utils.ts'
 
 const DEFAULT_OIDC_SCOPES = ['openid', 'profile', 'email']
 
+/**
+ * Public alias for the generic OIDC provider options.
+ */
 export type OIDCOptions<
   profile extends OIDCProfile = OIDCProfile,
   provider extends string = 'oidc',
 > = OIDCOptionsShape<profile, provider>
 
+/**
+ * Creates an OpenID Connect provider backed by discovery metadata or explicit endpoints.
+ *
+ * @param options OIDC settings, client credentials, and optional profile mapping hooks.
+ * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ */
 export function createOIDCAuthProvider<
   profile extends OIDCProfile = OIDCProfile,
   provider extends string = 'oidc',
@@ -73,7 +82,7 @@ export function createOIDCAuthProvider<
         code: getAuthorizationCode(context),
         codeVerifier: transaction.codeVerifier,
       })
-      let claims = await fetchOIDCProfile(name, metadata, tokens, context)
+      let claims = await fetchOIDCProfile(name, metadata, tokens)
       let profile = await mapOIDCProfile(options, claims, tokens, metadata, context)
 
       return {
@@ -106,7 +115,6 @@ async function fetchOIDCProfile(
   name: string,
   metadata: OIDCMetadata,
   tokens: OAuthTokens,
-  _context: RequestContext,
 ): Promise<OIDCProfile> {
   if (metadata.userinfo_endpoint == null || metadata.userinfo_endpoint.length === 0) {
     throw new Error(`OIDC provider "${name}" did not publish a userinfo_endpoint.`)

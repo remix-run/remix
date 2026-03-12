@@ -11,6 +11,13 @@ import {
   resolveRedirectTarget,
 } from './utils.ts'
 
+/**
+ * Creates a request handler for an OAuth or OIDC callback route.
+ *
+ * @param provider The provider that initiated the login flow.
+ * @param options Options for writing session data and handling callback success or failure.
+ * @returns A request handler for the provider callback route.
+ */
 export function callback<profile, provider extends string>(
   provider: OAuthProvider<profile, provider>,
   options: CallbackOptions<profile, provider>,

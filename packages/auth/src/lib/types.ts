@@ -1,6 +1,9 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import type { Session } from '@remix-run/session'
 
+/**
+ * OAuth and OIDC tokens returned from a successful authorization code exchange.
+ */
 export interface OAuthTokens {
   accessToken: string
   refreshToken?: string
@@ -10,11 +13,17 @@ export interface OAuthTokens {
   idToken?: string
 }
 
+/**
+ * Stable account identifier for a provider-backed identity.
+ */
 export interface OAuthAccount<provider extends string = string> {
   provider: provider
   providerAccountId: string
 }
 
+/**
+ * OpenID Connect discovery metadata.
+ */
 export interface OIDCMetadata {
   issuer: string
   authorization_endpoint: string
@@ -27,6 +36,9 @@ export interface OIDCMetadata {
   code_challenge_methods_supported?: string[]
 }
 
+/**
+ * Base OpenID Connect claims shape used by the OIDC helpers.
+ */
 export interface OIDCProfile {
   sub: string
   name?: string
@@ -50,6 +62,9 @@ export interface OIDCProfile {
   [key: string]: unknown
 }
 
+/**
+ * Normalized result returned by OAuth and OIDC callback handlers.
+ */
 export interface OAuthResult<profile, provider extends string = string> {
   provider: provider
   account: OAuthAccount<provider>
@@ -57,11 +72,17 @@ export interface OAuthResult<profile, provider extends string = string> {
   tokens: OAuthTokens
 }
 
+/**
+ * Public shape for an OAuth or OIDC provider used by `login()` and `callback()`.
+ */
 export interface OAuthProvider<profile, provider extends string = string> {
   kind: 'oauth'
   name: provider
 }
 
+/**
+ * Options for creating a generic OpenID Connect provider.
+ */
 export interface OIDCOptions<
   profile extends OIDCProfile = OIDCProfile,
   provider extends string = 'oidc',
@@ -83,6 +104,9 @@ export interface OIDCOptions<
   }): profile | Promise<profile>
 }
 
+/**
+ * Public shape for a credentials-based provider used by `login()`.
+ */
 export interface CredentialsProvider<input, result, provider extends string = string> {
   kind: 'credentials'
   name: provider
@@ -90,6 +114,9 @@ export interface CredentialsProvider<input, result, provider extends string = st
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
+/**
+ * Options for handling a successful credentials login.
+ */
 export interface LoginOptions<result> {
   writeSession(
     session: Session,
@@ -103,6 +130,9 @@ export interface LoginOptions<result> {
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 
+/**
+ * Options for starting an OAuth or OIDC login redirect flow.
+ */
 export interface OAuthLoginOptions {
   transactionKey?: string
   returnToParam?: string
@@ -110,6 +140,9 @@ export interface OAuthLoginOptions {
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 
+/**
+ * Options for handling an OAuth or OIDC callback request.
+ */
 export interface CallbackOptions<profile, provider extends string> {
   transactionKey?: string
   writeSession(

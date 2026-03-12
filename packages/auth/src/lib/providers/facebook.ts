@@ -14,6 +14,9 @@ const FACEBOOK_TOKEN_ENDPOINT = 'https://graph.facebook.com/oauth/access_token'
 const FACEBOOK_PROFILE_ENDPOINT = 'https://graph.facebook.com/me?fields=id,name,email,picture'
 const DEFAULT_FACEBOOK_SCOPES = ['public_profile', 'email']
 
+/**
+ * Options for creating the built-in Facebook auth provider.
+ */
 export interface FacebookOptions {
   clientId: string
   clientSecret: string
@@ -21,12 +24,18 @@ export interface FacebookOptions {
   scopes?: string[]
 }
 
+/**
+ * Nested picture payload returned by Facebook profile responses.
+ */
 export interface FacebookPicture {
   data: {
     url: string
   }
 }
 
+/**
+ * Profile fields returned by the built-in Facebook auth provider.
+ */
 export interface FacebookProfile {
   id: string
   name?: string
@@ -34,6 +43,12 @@ export interface FacebookProfile {
   picture?: FacebookPicture
 }
 
+/**
+ * Creates a Facebook Login provider.
+ *
+ * @param options Facebook OAuth client settings for your application.
+ * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ */
 export function createFacebookAuthProvider(options: FacebookOptions): OAuthProvider<FacebookProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 

@@ -8,6 +8,12 @@ import type {
 } from './types.ts'
 import { Auth } from './types.ts'
 
+/**
+ * Loads auth state for the current request by running each configured auth scheme in order.
+ *
+ * @param options Auth scheme configuration for the middleware.
+ * @returns Middleware that resolves auth state into `context.get(Auth)`.
+ */
 export function auth(options: AuthOptions): Middleware {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
