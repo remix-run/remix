@@ -1,4 +1,4 @@
-import { describe, it, before, after } from 'node:test'
+import { describe, it, before, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import * as fsSync from 'node:fs'
 import * as os from 'node:os'
@@ -49,6 +49,12 @@ async function parseInlineSourceMap(response: Response): Promise<any> {
   let match = body.match(/sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)/)
   assert.ok(match, `expected inline source map data URL, got:\n${body}`)
   return JSON.parse(Buffer.from(match[1], 'base64').toString('utf-8'))
+}
+
+async function assertInternalServerError(response: Response): Promise<void> {
+  assert.equal(response.status, 500)
+  assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+  assert.equal(await response.text(), 'Internal Server Error')
 }
 
 // ---------------------------------------------------------------------------
@@ -573,9 +579,113 @@ describe('internal module hash validation', () => {
 
     let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
-    assert.equal(depRes.status, 500)
-    let depBody = await depRes.text()
-    assert.match(depBody, /^Compilation error: /)
+    await assertInternalServerError(depRes)
+  })
+
+  it('calls onError when an internal module has a compilation error', async () => {
+    await write(dir, 'app/dep.ts', 'export const y = 2')
+
+    let baselineHandler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+    let entryRes = await get(baselineHandler, '/scripts/app/entry.ts')
+    assert.ok(entryRes)
+    let body = await entryRes.text()
+
+    let match = body.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
+    assert.ok(match, `expected dep URL in entry body, got:\n${body}`)
+
+    let receivedError: unknown
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    await write(dir, 'app/dep.ts', 'export const y =')
+
+    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    assert.ok(depRes)
+    await assertInternalServerError(depRes)
+    assert.ok(receivedError instanceof Error)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Error handling
+// ---------------------------------------------------------------------------
+
+describe('error handling', () => {
+  let dir: string
+  before(async () => {
+    dir = await makeTmpDir()
+    await write(dir, 'app/broken.ts', 'export const value =')
+  })
+  after(async () => {
+    await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('returns a generic 500 response for entry point compilation errors', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
+      base: '/scripts',
+    })
+    let res = await get(handler, '/scripts/app/broken.ts')
+    assert.ok(res)
+    await assertInternalServerError(res)
+  })
+
+  it('calls onError when an entry point compilation error occurs', async () => {
+    let receivedError: unknown
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
+      base: '/scripts',
+      onError(error) {
+        receivedError = error
+      },
+    })
+    let res = await get(handler, '/scripts/app/broken.ts')
+    assert.ok(res)
+    await assertInternalServerError(res)
+    assert.ok(receivedError instanceof Error)
+  })
+
+  it('uses a custom response returned from onError', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
+      base: '/scripts',
+      onError() {
+        return new Response('Custom error response', { status: 418 })
+      },
+    })
+    let res = await get(handler, '/scripts/app/broken.ts')
+    assert.ok(res)
+    assert.equal(res.status, 418)
+    assert.equal(await res.text(), 'Custom error response')
+  })
+
+  it('returns a generic 500 response when onError throws', async () => {
+    let errorMock = mock.method(console, 'error', () => {})
+
+    try {
+      let handler = createScriptHandler({
+        roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
+        base: '/scripts',
+        onError() {
+          throw new Error('error handler failed')
+        },
+      })
+      let res = await get(handler, '/scripts/app/broken.ts')
+      assert.ok(res)
+      await assertInternalServerError(res)
+      assert.equal(errorMock.mock.calls.length, 1)
+      assert.match(String(errorMock.mock.calls[0].arguments[0]), /error handler/)
+    } finally {
+      errorMock.mock.restore()
+    }
   })
 })
 
@@ -742,6 +852,28 @@ describe('external specifiers', () => {
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes("'react'") || body.includes('"react"'))
+  })
+})
+
+describe('unresolved imports', () => {
+  let dir: string
+  before(async () => {
+    dir = await makeTmpDir()
+    await write(dir, 'app/entry.ts', `import { missing } from './missing.ts'\nexport { missing }`)
+  })
+  after(async () => {
+    await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('returns 500 when an import cannot be resolved', async () => {
+    let handler = createScriptHandler({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+
+    let res = await get(handler, '/scripts/app/entry.ts')
+    assert.ok(res)
+    await assertInternalServerError(res)
   })
 })
 
@@ -985,16 +1117,14 @@ describe('CommonJS detection', () => {
     await fs.rm(dir, { recursive: true, force: true })
   })
 
-  it('returns 500 with error message when entry point is module.exports CJS', async () => {
+  it('returns a generic 500 when entry point is module.exports CJS', async () => {
     let handler = createScriptHandler({
       roots: [{ directory: dir, entryPoints: ['cjs/module-exports.js'] }],
       base: '/scripts',
     })
     let res = await get(handler, '/scripts/cjs/module-exports.js')
     assert.ok(res)
-    assert.equal(res.status, 500)
-    let body = await res.text()
-    assert.ok(body.includes('CommonJS'), 'error should mention CommonJS')
+    await assertInternalServerError(res)
   })
 
   it('returns 500 for exports.foo CJS pattern', async () => {
@@ -1044,9 +1174,7 @@ describe('CommonJS detection', () => {
     })
     let res = await get(handler, '/scripts/app/imports-cjs.ts')
     assert.ok(res)
-    assert.equal(res.status, 500)
-    let body = await res.text()
-    assert.ok(body.includes('CommonJS'))
+    await assertInternalServerError(res)
   })
 
   it('serves ESM entry points successfully (control case)', async () => {
@@ -1885,8 +2013,7 @@ describe('configured roots', () => {
 
     let res = await get(handler, '/scripts/app/entry.ts')
     assert.ok(res)
-    assert.equal(res.status, 500)
-    assert.match(await res.text(), /outside all configured roots/)
+    await assertInternalServerError(res)
   })
 })
 

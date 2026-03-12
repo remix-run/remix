@@ -10,25 +10,22 @@ import {
   buildGraph,
   collectTransitiveDeps,
   createModuleGraphStore,
-  CjsModuleError,
   isCompiledGraphFresh,
 } from './module-graph.ts'
 import type { ResolvedScriptRoot } from './path-utils.ts'
 import type { ModuleCompileResult, ModuleGraphStore } from './module-graph.ts'
 import { generateETag, matchesETag } from './etag.ts'
 
-export interface ScriptHandlerRoot {
-  /** Public URL prefix under `base` (e.g. `'packages'`) */
-  prefix?: string
-  /** Filesystem directory for this served tree */
-  directory: string
-  /** Declared entry point paths or glob patterns relative to this directory */
-  entryPoints?: readonly string[]
-}
-
 export interface ScriptHandlerOptions {
   /** Configured source roots that may be served by this handler */
-  roots: readonly ScriptHandlerRoot[]
+  roots: ReadonlyArray<{
+    /** Public URL prefix under `base` (e.g. `'packages'`) */
+    prefix?: string
+    /** Filesystem directory for this served tree */
+    directory: string
+    /** Declared entry point paths or glob patterns relative to this directory */
+    entryPoints?: readonly string[]
+  }>
   /**
    * URL base path where the handler is mounted (e.g. `'/scripts'`).
    * All rewritten import URLs in compiled modules will be relative to this base.
@@ -48,6 +45,11 @@ export interface ScriptHandlerOptions {
   sourceMapSourcePaths?: 'virtual' | 'absolute'
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string | string[]
+  /**
+   * Handles unexpected compilation errors. Return a `Response` to override the default
+   * `500 Internal Server Error` response, or return nothing to use the default.
+   */
+  onError?: (error: unknown) => void | Response | Promise<void | Response>
 }
 
 export interface ScriptHandler {
@@ -112,7 +114,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     return relativePath === '' ? directory : path.join(directory, ...relativePath.split('/'))
   }
 
-  function normalizeRoots(configuredRoots: readonly ScriptHandlerRoot[]): NormalizedScriptRoot[] {
+  function normalizeRoots(configuredRoots: ScriptHandlerOptions['roots']): NormalizedScriptRoot[] {
     if (configuredRoots.length === 0) {
       throw new Error('createScriptHandler() requires at least one configured root.')
     }
@@ -158,6 +160,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
       ? [externalRaw]
       : []
   let base = normalizeBase(options.base)
+  let onError = options.onError ?? defaultErrorHandler
 
   let store: ModuleGraphStore = createModuleGraphStore()
   let graphBuilds = new Map<string, Promise<ModuleCompileResult>>()
@@ -305,19 +308,24 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     })
   }
 
-  function responseForCompileError(error: unknown): Response {
-    if (error instanceof CjsModuleError) {
-      return new Response(error.message, {
-        status: 500,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      })
-    }
-
-    let message = error instanceof Error ? error.message : String(error)
-    return new Response(`Compilation error: ${message}`, {
+  function internalServerError(): Response {
+    return new Response('Internal Server Error', {
       status: 500,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })
+  }
+
+  function defaultErrorHandler(error: unknown): void {
+    console.error(error)
+  }
+
+  async function responseForError(error: unknown): Promise<Response> {
+    try {
+      return (await onError(error)) ?? internalServerError()
+    } catch (error) {
+      console.error(`There was an error in the script handler error handler: ${error}`)
+      return internalServerError()
+    }
   }
 
   function isNotFoundError(error: unknown): boolean {
@@ -354,7 +362,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
       })
     } catch (error) {
       if (isNotFoundError(error)) return null
-      return responseForCompileError(error)
+      return responseForError(error)
     }
   }
 
@@ -384,7 +392,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
         immutable: false,
       })
     } catch (error) {
-      return responseForCompileError(error)
+      return responseForError(error)
     }
   }
 

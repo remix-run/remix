@@ -1,18 +1,17 @@
 import * as path from 'node:path'
-import * as fs from 'node:fs'
 
 export interface ResolvedScriptRoot {
   prefix: string | null
   directory: string
 }
 
-export interface ResolvedRootMatch<root extends ResolvedScriptRoot = ResolvedScriptRoot> {
+interface ResolvedRootMatch<root extends ResolvedScriptRoot = ResolvedScriptRoot> {
   resolvedRoot: root
   relativePath: string
   publicPath: string
 }
 
-export function toPosixPath(p: string): string {
+function toPosixPath(p: string): string {
   return p.split(path.sep).join('/')
 }
 
@@ -35,7 +34,7 @@ export function normalizeRootPrefix(prefix?: string): string | null {
   return normalized
 }
 
-export function joinPublicPath(prefix: string | null, relativePath: string): string {
+function joinPublicPath(prefix: string | null, relativePath: string): string {
   let normalizedRelativePath = toPosixPath(relativePath)
   if (prefix == null) return normalizedRelativePath
   return normalizedRelativePath === '' ? prefix : `${prefix}/${normalizedRelativePath}`
@@ -95,17 +94,4 @@ export function resolvePublicPathFromResolvedRoots<root extends ResolvedScriptRo
     relativePath: normalizedPublicPath,
     publicPath: normalizedPublicPath,
   }
-}
-
-export function absolutePathToPublicPath(
-  absolutePath: string,
-  roots: readonly ResolvedScriptRoot[],
-): string | null {
-  let realPath = fs.realpathSync(absolutePath)
-  let realRoots = roots.map((resolvedRoot) => ({
-    ...resolvedRoot,
-    directory: fs.realpathSync(resolvedRoot.directory),
-  }))
-
-  return resolveAbsolutePathFromResolvedRoots(realPath, realRoots)?.publicPath ?? null
 }

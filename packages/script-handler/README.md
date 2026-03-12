@@ -9,8 +9,6 @@ Compile browser JavaScript/TypeScript modules on demand and serve them from a Fe
 - **Cache-Friendly Delivery** - Entry points revalidate while internal modules are immutable
 - **Module Preloads** - Generate preload URLs for an entry point's transitive dependencies
 - **Source Maps** - Serve inline or external sourcemaps for browser debugging
-- **Virtual Source Paths** - Keep sourcemap sources co-located and avoid leaking filesystem paths
-- **Multiple Roots** - Serve modules from multiple root directories with explicit public prefixes
 
 ## Installation
 
@@ -46,6 +44,8 @@ router.get('/scripts/*path', ({ request, params }) => {
 ```
 
 Entry points are served at stable URLs like `/scripts/app/assets/entry.tsx`. Internal modules are rewritten to content-addressed URLs like `/scripts/app/assets/button.tsx.@abc123`.
+
+Unexpected compilation errors return a generic `500 Internal Server Error` response by default so internal details are not exposed to the browser.
 
 ## Source Maps
 
@@ -130,6 +130,27 @@ let scripts = createScriptHandler({
 ```
 
 With this setup, imports from the second root are served at paths like `/scripts/packages/component/src/index.ts.@abc123`.
+
+## Error Handling
+
+Use `onError` to report unexpected compilation failures or provide a custom response:
+
+```ts
+let scripts = createScriptHandler({
+  base: '/scripts',
+  roots: [
+    {
+      directory: path.resolve(import.meta.dirname, '..'),
+      entryPoints: ['app/assets/*.tsx'],
+    },
+  ],
+  onError(error) {
+    console.error(error)
+  },
+})
+```
+
+If `onError` returns nothing, the handler responds with `500 Internal Server Error`. Return a `Response` from `onError` to override that fallback.
 
 ## License
 

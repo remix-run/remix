@@ -35,7 +35,7 @@ interface RawModule {
   imports: Array<{ start: number; end: number; depPath: string; specifier: string }>
 }
 
-export interface ModuleGraphOptions {
+interface ModuleGraphOptions {
   base: string
   roots: readonly ResolvedScriptRoot[]
   external: string[]
@@ -130,7 +130,8 @@ async function _compileRaw(
   if (!outputFile) throw new Error(`esbuild produced no output for ${absolutePath}`)
 
   let rawCode = outputFile.text.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
-  if (mayContainCommonJS && isCommonJS(rawCode)) throw new CjsModuleError(absolutePath)
+  if (mayContainCommonJS && isCommonJS(rawCode))
+    throw new Error(getCommonJsModuleErrorMessage(absolutePath))
   let rawSourcemap = opts.sourceMaps
     ? (buildResult.outputFiles.find((file) => file.path.endsWith('.map'))?.text ?? null)
     : null
@@ -166,9 +167,11 @@ async function _compileRaw(
 
   for (let { specifier, start, end } of toResolve) {
     let depPath = resolvedPaths.get(specifier)
-    if (!depPath) continue
+    if (!depPath) {
+      throw new Error(getUnresolvedImportErrorMessage(absolutePath, specifier))
+    }
     if (resolveAbsolutePathFromResolvedRoots(depPath, opts.roots) == null) {
-      throw new UnconfiguredRootError(absolutePath, specifier, depPath)
+      throw new Error(getUnconfiguredRootErrorMessage(absolutePath, specifier, depPath))
     }
     rawImports.push({ start, end, depPath, specifier })
     depsSet.add(depPath)
@@ -561,35 +564,30 @@ export async function isCompiledGraphFresh(
   return true
 }
 
-export class CjsModuleError extends Error {
-  absolutePath: string
-
-  constructor(absolutePath: string) {
-    super(
-      `CommonJS module detected: ${absolutePath}\n\n` +
-        `This package uses CommonJS (require/module.exports) which is not supported.\n` +
-        `Please use an ESM-compatible package.`,
-    )
-    this.name = 'CjsModuleError'
-    this.absolutePath = absolutePath
-  }
+function getCommonJsModuleErrorMessage(absolutePath: string): string {
+  return (
+    `CommonJS module detected: ${absolutePath}\n\n` +
+    `This module uses CommonJS (require/module.exports) which is not supported.\n` +
+    `Please use an ESM-compatible module.`
+  )
 }
 
-export class UnconfiguredRootError extends Error {
-  importerPath: string
-  specifier: string
-  absolutePath: string
+function getUnconfiguredRootErrorMessage(
+  importerPath: string,
+  specifier: string,
+  absolutePath: string,
+): string {
+  return (
+    `Resolved import "${specifier}" in ${importerPath} points to ${absolutePath}, which is outside all configured roots.\n\n` +
+    `Add a matching script-handler root, or mark this import as external.`
+  )
+}
 
-  constructor(importerPath: string, specifier: string, absolutePath: string) {
-    super(
-      `Resolved import "${specifier}" in ${importerPath} points to ${absolutePath}, which is outside all configured roots.\n\n` +
-        `Add a matching script-handler root or mark this import as external.`,
-    )
-    this.name = 'UnconfiguredRootError'
-    this.importerPath = importerPath
-    this.specifier = specifier
-    this.absolutePath = absolutePath
-  }
+function getUnresolvedImportErrorMessage(importerPath: string, specifier: string): string {
+  return (
+    `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
+    `Ensure it resolves to a file within a configured root, or mark this import as external.`
+  )
 }
 
 async function batchResolveSpecifiers(
@@ -599,15 +597,11 @@ async function batchResolveSpecifiers(
   let result = new Map<string, string>()
   if (specifiers.length === 0) return result
 
-  try {
-    let resolved = await resolveWithEsbuild(specifiers, importerDir)
-    for (let { specifier, absolutePath } of resolved) {
-      if (absolutePath) {
-        result.set(specifier, fs.realpathSync(absolutePath))
-      }
+  let resolved = await resolveWithEsbuild(specifiers, importerDir)
+  for (let { specifier, absolutePath } of resolved) {
+    if (absolutePath) {
+      result.set(specifier, fs.realpathSync(absolutePath))
     }
-  } catch {
-    // Resolution failed — return empty map, imports will be left unrewritten.
   }
 
   return result
@@ -646,6 +640,9 @@ async function resolveWithEsbuild(
             )
             for (let i = 0; i < specifiers.length; i++) {
               let r = results[i]
+              if (r?.errors.length) {
+                throw new Error(getUnresolvedImportErrorMessage(importerDir, specifiers[i]))
+              }
               let absolutePath =
                 r && !r.external && r.path && path.isAbsolute(r.path) ? r.path : null
               resolved.push({ specifier: specifiers[i], absolutePath })
