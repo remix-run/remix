@@ -70,6 +70,7 @@
     "./session/cookie-storage": "./src/session/cookie-storage.ts",
     "./session/fs-storage": "./src/session/fs-storage.ts",
     "./session/memory-storage": "./src/session/memory-storage.ts",
+    "./script-handler": "./src/script-handler.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
     "./package.json": "./package.json"
@@ -284,6 +285,10 @@
         "types": "./dist/session/memory-storage.d.ts",
         "default": "./dist/session/memory-storage.js"
       },
+      "./script-handler": {
+        "types": "./dist/script-handler.d.ts",
+        "default": "./dist/script-handler.js"
+      },
       "./static-middleware": {
         "types": "./dist/static-middleware.d.ts",
         "default": "./dist/static-middleware.js"
@@ -322,6 +327,7 @@
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
+    "@remix-run/script-handler": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/data-schema": "workspace:^",

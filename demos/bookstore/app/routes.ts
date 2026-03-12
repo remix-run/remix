@@ -1,7 +1,9 @@
 import { del, get, post, put, route, form, resources } from 'remix/fetch-router/routes'
 
+export const scriptsBase = '/scripts'
+
 export let routes = route({
-  assets: '/assets/*path',
+  scripts: `${scriptsBase}/*path`,
   uploads: '/uploads/*key',
   fragments: route('fragments', {
     cartButton: get('/cart-button/:bookId'),
