@@ -474,9 +474,7 @@ export async function buildGraph(
   store: ModuleGraphStore,
   opts: ModuleGraphOptions,
 ): Promise<ModuleCompileResult> {
-  try {
-    absolutePath = fs.realpathSync(absolutePath)
-  } catch {}
+  absolutePath = fs.realpathSync(absolutePath)
 
   // Pass 1: transpile the full transitive closure.
   await buildRawGraph(absolutePath, store, opts)
@@ -605,11 +603,7 @@ async function batchResolveSpecifiers(
     let resolved = await resolveWithEsbuild(specifiers, importerDir)
     for (let { specifier, absolutePath } of resolved) {
       if (absolutePath) {
-        let realPath = absolutePath
-        try {
-          realPath = fs.realpathSync(absolutePath)
-        } catch {}
-        result.set(specifier, realPath)
+        result.set(specifier, fs.realpathSync(absolutePath))
       }
     }
   } catch {

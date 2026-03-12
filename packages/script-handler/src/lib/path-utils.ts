@@ -101,22 +101,11 @@ export function absolutePathToPublicPath(
   absolutePath: string,
   roots: readonly ResolvedScriptRoot[],
 ): string | null {
-  let realPath: string
-  let realRoots: ResolvedScriptRoot[]
-
-  try {
-    realPath = fs.realpathSync(absolutePath)
-    realRoots = roots.map((resolvedRoot) => ({
-      ...resolvedRoot,
-      directory: fs.realpathSync(resolvedRoot.directory),
-    }))
-  } catch {
-    realPath = path.normalize(absolutePath)
-    realRoots = roots.map((resolvedRoot) => ({
-      ...resolvedRoot,
-      directory: path.normalize(resolvedRoot.directory),
-    }))
-  }
+  let realPath = fs.realpathSync(absolutePath)
+  let realRoots = roots.map((resolvedRoot) => ({
+    ...resolvedRoot,
+    directory: fs.realpathSync(resolvedRoot.directory),
+  }))
 
   return resolveAbsolutePathFromResolvedRoots(realPath, realRoots)?.publicPath ?? null
 }

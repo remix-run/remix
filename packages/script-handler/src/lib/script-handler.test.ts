@@ -1,5 +1,6 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
@@ -1287,11 +1288,14 @@ describe('preloads()', () => {
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-
-    await assert.rejects(
-      () => handler.preloads(path.join(os.tmpdir(), 'outside-entry.ts')),
-      /outside all configured roots/,
-    )
+    let outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'script-handler-outside-'))
+    let outsideEntry = path.join(outsideDir, 'outside-entry.ts')
+    try {
+      await fs.writeFile(outsideEntry, 'export const outside = true')
+      await assert.rejects(() => handler.preloads(outsideEntry), /outside all configured roots/)
+    } finally {
+      await fs.rm(outsideDir, { recursive: true, force: true })
+    }
   })
 
   it('throws for absolute file paths that are not configured entry points', async () => {
@@ -1556,8 +1560,8 @@ describe('source maps', () => {
   })
 
   it('external source maps support absolute source paths', async () => {
-    let entryPath = await fs.realpath(path.join(dir, 'app/entry-with-dep.ts'))
-    let depPath = await fs.realpath(path.join(dir, 'app/dep.ts'))
+    let entryPath = fsSync.realpathSync(path.join(dir, 'app/entry-with-dep.ts'))
+    let depPath = fsSync.realpathSync(path.join(dir, 'app/dep.ts'))
 
     let handler = createScriptHandler({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
@@ -1614,8 +1618,8 @@ describe('source maps', () => {
   })
 
   it('inline source maps support absolute source paths', async () => {
-    let entryPath = await fs.realpath(path.join(dir, 'app/entry-with-dep.ts'))
-    let depPath = await fs.realpath(path.join(dir, 'app/dep.ts'))
+    let entryPath = fsSync.realpathSync(path.join(dir, 'app/entry-with-dep.ts'))
+    let depPath = fsSync.realpathSync(path.join(dir, 'app/dep.ts'))
 
     let handler = createScriptHandler({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],

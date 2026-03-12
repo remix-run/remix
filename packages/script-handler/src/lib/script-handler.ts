@@ -103,14 +103,6 @@ interface NormalizedScriptRoot extends ResolvedScriptRoot {
  * ```
  */
 export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandler {
-  function realpathOrFallback(p: string): string {
-    try {
-      return fs.realpathSync(p)
-    } catch {
-      return p
-    }
-  }
-
   function normalizeBase(base: string): string {
     let normalized = `/${base}`.replace(/^\/+/, '/').replace(/\/+$/, '')
     return normalized || '/'
@@ -127,8 +119,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
 
     let seenPrefixes = new Set<string>()
     let fallbackRoots = 0
-
-    return configuredRoots.map((configuredRoot) => {
+    let normalizedRoots = configuredRoots.map((configuredRoot) => {
       let prefix = normalizeRootPrefix(configuredRoot.prefix)
       if (prefix == null) {
         fallbackRoots++
@@ -141,7 +132,11 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
         seenPrefixes.add(prefix)
       }
 
-      let directory = realpathOrFallback(path.resolve(process.cwd(), configuredRoot.directory))
+      return { configuredRoot, prefix }
+    })
+
+    return normalizedRoots.map(({ configuredRoot, prefix }) => {
+      let directory = fs.realpathSync(path.resolve(process.cwd(), configuredRoot.directory))
       let entryPoints = configuredRoot.entryPoints ?? []
 
       return {
@@ -238,7 +233,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     relativePath: string
   } {
     let resolved = path.isAbsolute(entryPoint)
-      ? resolveAbsolutePath(realpathOrFallback(entryPoint))
+      ? resolveAbsolutePath(fs.realpathSync(entryPoint))
       : resolvePublicPath(entryPoint)
 
     if (!resolved) {

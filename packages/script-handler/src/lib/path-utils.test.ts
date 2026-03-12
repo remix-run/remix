@@ -135,8 +135,9 @@ describe('root path resolution', () => {
       assert.equal(absolutePathToPublicPath(filePath, roots), 'packages/shared/src/index.ts')
     })
 
-    it('returns null when the file is outside configured roots', () => {
-      let outsideFile = path.join(os.tmpdir(), 'outside.ts')
+    it('returns null when the file is outside configured roots', async () => {
+      let outsideFile = path.join(tmpDir, 'outside.ts')
+      await fs.writeFile(outsideFile, '')
       assert.equal(absolutePathToPublicPath(outsideFile, roots), null)
     })
   })
