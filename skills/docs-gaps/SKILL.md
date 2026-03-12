@@ -18,6 +18,6 @@ Generate docs via `pnpm run docs` and look for warnings of the following formats
 - `WARN: missing comment for API: {API}`
 - `WARN: missing comment for signature: {signature}`
 
-For each of these, review the source code and add an appropriate JSDoc comment at the definition-site of that API/signature.
+For each of these, review the source code and add an appropriate JSDoc comment at the definition-site of that API/signature (refer to the guidelines in the [`jsdoc` skill](../jsdoc/SKILL.md)).
 
 Repeat until all warnings for the current package are gone. Commit these changes.
