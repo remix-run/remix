@@ -40,6 +40,13 @@ export interface CrawlOptions {
   variants?(pathname: string): string[] | undefined | Promise<string[] | undefined>
 }
 
+export function crawl(
+  router: { fetch(request: Request): Promise<Response> },
+  options: CrawlOptions = {},
+): AsyncIterableIterator<CrawlResult> {
+  return runCrawl((request) => router.fetch(request), options)
+}
+
 const defaultFilter = (href: string): boolean =>
   !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')
 
