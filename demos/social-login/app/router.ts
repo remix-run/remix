@@ -1,5 +1,6 @@
 import type { Cookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
 import { compression } from 'remix/compression-middleware'
 import { logger } from 'remix/logger-middleware'
@@ -8,10 +9,14 @@ import { staticFiles } from 'remix/static-middleware'
 
 import { createAuthController } from './auth.tsx'
 import { getSocialLoginConfig, type SocialLoginConfig } from './config.ts'
+import { initializeSocialLoginDatabase } from './data/setup.ts'
 import { createHomeAction } from './home.tsx'
 import { loadAuth } from './middleware/auth.ts'
+import { loadDatabase } from './middleware/database.ts'
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
+
+await initializeSocialLoginDatabase()
 
 export interface SocialLoginRouterOptions {
   config?: SocialLoginConfig
@@ -37,7 +42,9 @@ export function createSocialLoginRouter(options?: SocialLoginRouterOptions) {
       lastModified: false,
     }),
   )
+  middleware.push(formData())
   middleware.push(sessionMiddleware(cookie, storage))
+  middleware.push(loadDatabase())
   middleware.push(loadAuth())
 
   let router = createRouter({ middleware })

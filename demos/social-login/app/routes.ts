@@ -1,8 +1,9 @@
-import { get, post, route } from 'remix/fetch-router/routes'
+import { form, get, post, route } from 'remix/fetch-router/routes'
 
 export let routes = route({
   home: get('/'),
   auth: {
+    login: form('login'),
     google: {
       login: get('/auth/google/login'),
       callback: get('/auth/google/callback'),
