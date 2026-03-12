@@ -1,7 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { router } from './router.ts'
+import { createTestRouter } from '../test/helpers.ts'
+
+let router = createTestRouter()
 
 describe('router', () => {
   it('responds to basic GET request', async () => {
