@@ -25,11 +25,21 @@ let DEFAULT_RETRY: ResolvedRetryPolicy = {
 }
 
 export interface RedisJobStorageClient {
+  /**
+   * Sends a raw Redis command and returns the decoded result.
+   */
   sendCommand(command: string[]): Promise<unknown>
 }
 
 export interface RedisJobStorageOptions {
+  /**
+   * Redis client or compatible adapter used to execute commands.
+   */
   redis: RedisJobStorageClient
+
+  /**
+   * Prefix applied to all Redis keys managed by the storage. Defaults to `"job:"`.
+   */
   prefix?: string
 }
 
