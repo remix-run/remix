@@ -1,6 +1,6 @@
 # auth-middleware
 
-Pluggable authentication middleware for Remix `fetch-router`. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior.
+Pluggable authentication middleware for Remix. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior.
 
 ## Features
 
@@ -268,10 +268,7 @@ router.map(routes.app.dashboard, {
 
 // Mode E: route-level auth profile differences
 router.map(routes.api.bearerOnly, {
-  middleware: [
-    auth({ schemes: [bearerScheme] }),
-    requireAuth(),
-  ],
+  middleware: [auth({ schemes: [bearerScheme] }), requireAuth()],
   action({ get }) {
     let auth = get(Auth)
 
@@ -283,10 +280,7 @@ router.map(routes.api.bearerOnly, {
 })
 
 router.map(routes.api.apiKeyOnly, {
-  middleware: [
-    auth({ schemes: [apiKeyScheme] }),
-    requireAuth(),
-  ],
+  middleware: [auth({ schemes: [apiKeyScheme] }), requireAuth()],
   action({ get }) {
     let auth = get(Auth)
 
