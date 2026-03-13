@@ -10,11 +10,11 @@ import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { createCredentialsAuthProvider } from './providers/credentials.ts'
-import { login } from './login.ts'
+import { createAuthLoginRequestHandler } from './login.ts'
 import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest } from './test-utils.ts'
 
-describe('login()', () => {
+describe('createAuthLoginRequestHandler()', () => {
   afterEach(() => {
     globalThis.fetch = fetch
   })
@@ -31,7 +31,7 @@ describe('login()', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/google', login(provider))
+    router.get('/login/google', createAuthLoginRequestHandler(provider))
 
     let response = await router.fetch('https://app.example.com/login/google?returnTo=/dashboard')
     let location = new URL(response.headers.get('Location')!)
@@ -99,7 +99,7 @@ describe('login()', () => {
       '/login',
       {
         middleware: [formData()],
-        action: login(provider, {
+        action: createAuthLoginRequestHandler(provider, {
           writeSession(session, user) {
             session.set('auth', { userId: user.id })
           },
@@ -164,7 +164,7 @@ describe('login()', () => {
       '/login',
       {
         middleware: [formData()],
-        action: login(provider, {
+        action: createAuthLoginRequestHandler(provider, {
           writeSession() {
           },
           failureRedirectTo: '/login',
@@ -211,7 +211,7 @@ describe('login()', () => {
       '/login',
       {
         middleware: [formData()],
-        action: login(provider, {
+        action: createAuthLoginRequestHandler(provider, {
           writeSession(session, user) {
             session.set('auth', { userId: user.id })
           },
@@ -264,7 +264,7 @@ describe('login()', () => {
       '/login',
       {
         middleware: [formData()],
-        action: login(provider, {
+        action: createAuthLoginRequestHandler(provider, {
           writeSession() {
             throw new Error('write failed')
           },
@@ -320,7 +320,7 @@ describe('login()', () => {
       '/login',
       {
         middleware: [formData()],
-        action: login(provider, {
+        action: createAuthLoginRequestHandler(provider, {
           writeSession() {
             throw new Error('write failed')
           },

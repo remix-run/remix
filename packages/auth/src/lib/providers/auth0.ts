@@ -25,7 +25,7 @@ export interface Auth0AuthProviderOptions
  * Creates an Auth0 provider backed by the shared OIDC runtime.
  *
  * @param options Auth0 domain and client settings for your application.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createAuth0AuthProvider(options: Auth0AuthProviderOptions): OAuthProvider<Auth0AuthProfile, 'auth0'> {
   let issuer = createAuth0Issuer(options.domain)

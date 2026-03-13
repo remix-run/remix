@@ -27,7 +27,7 @@ export interface MicrosoftAuthProviderOptions
  * Creates a Microsoft identity platform provider backed by the shared OIDC runtime.
  *
  * @param options Microsoft client settings and optional tenant selection.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createMicrosoftAuthProvider(
   options: MicrosoftAuthProviderOptions,

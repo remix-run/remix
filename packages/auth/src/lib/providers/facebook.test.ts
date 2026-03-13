@@ -6,8 +6,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { callback } from '../callback.ts'
-import { login } from '../login.ts'
+import { createAuthCallbackRequestHandler } from '../callback.ts'
+import { createAuthLoginRequestHandler } from '../login.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 import { createFacebookAuthProvider } from './facebook.ts'
 
@@ -24,7 +24,7 @@ describe('facebook provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/facebook', login(provider))
+    router.get('/login/facebook', createAuthLoginRequestHandler(provider))
 
     let response = await router.fetch('https://app.example.com/login/facebook')
     let location = new URL(response.headers.get('Location')!)
@@ -57,7 +57,7 @@ describe('facebook provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/facebook', login(provider))
+    router.get('/login/facebook', createAuthLoginRequestHandler(provider))
 
     let response = await router.fetch('https://app.example.com/login/facebook')
     let location = new URL(response.headers.get('Location')!)
@@ -105,10 +105,10 @@ describe('facebook provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/facebook', login(provider))
+      router.get('/login/facebook', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/facebook/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.profile.id })
           },
@@ -186,10 +186,10 @@ describe('facebook provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/facebook', login(provider))
+      router.get('/login/facebook', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/facebook/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.profile.id })
           },

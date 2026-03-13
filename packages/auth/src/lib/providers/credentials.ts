@@ -1,10 +1,10 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
 /**
- * Public shape for a credentials-based provider used by `login()`.
+ * Public shape for a credentials-based provider used by `createAuthLoginRequestHandler()`.
  */
 export interface CredentialsAuthProvider<input, result, provider extends string = string> {
-  /** Discriminator used by `login()` to select the credentials flow. */
+  /** Discriminator used by `createAuthLoginRequestHandler()` to select the credentials flow. */
   kind: 'credentials'
   /** Provider name used for session metadata and diagnostics. */
   name: provider
@@ -30,7 +30,7 @@ export interface CredentialsAuthProviderOptions<input, result, provider extends 
  * Creates a credentials provider for direct form-based authentication.
  *
  * @param options Options for parsing submitted credentials and verifying them.
- * @returns A provider that can be passed to `login()`.
+ * @returns A provider that can be passed to `createAuthLoginRequestHandler()`.
  */
 export function createCredentialsAuthProvider<input, result, provider extends string = 'password'>(
   options: CredentialsAuthProviderOptions<input, result, provider>,

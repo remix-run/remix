@@ -6,8 +6,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { callback } from '../callback.ts'
-import { login } from '../login.ts'
+import { createAuthCallbackRequestHandler } from '../callback.ts'
+import { createAuthLoginRequestHandler } from '../login.ts'
 import { createGitHubAuthProvider } from './github.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 
@@ -25,7 +25,7 @@ describe('github provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/github', login(provider))
+    router.get('/login/github', createAuthLoginRequestHandler(provider))
 
     let response = await router.fetch('https://app.example.com/login/github')
     let location = new URL(response.headers.get('Location')!)
@@ -90,10 +90,10 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', login(provider))
+      router.get('/login/github', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/github/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: String(result.profile.id) })
           },
@@ -177,10 +177,10 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', login(provider))
+      router.get('/login/github', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/github/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: String(result.profile.id) })
           },
@@ -248,10 +248,10 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', login(provider))
+      router.get('/login/github', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/github/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: String(result.profile.id) })
           },
@@ -314,10 +314,10 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', login(provider))
+      router.get('/login/github', createAuthLoginRequestHandler(provider))
       router.get(
         '/auth/github/callback',
-        callback(provider, {
+        createAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: String(result.profile.id) })
           },

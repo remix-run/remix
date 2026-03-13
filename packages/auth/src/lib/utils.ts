@@ -43,7 +43,10 @@ export function getRequiredSearchParam(context: RequestContext, name: string): s
   return value
 }
 
-export function getSession(context: RequestContext, source: 'login()' | 'callback()'): Session {
+export function getSession(
+  context: RequestContext,
+  source: 'createAuthLoginRequestHandler()' | 'createAuthCallbackRequestHandler()',
+): Session {
   if (!context.has(Session)) {
     throw new Error(`Session not found. Make sure session() middleware runs before ${source}.`)
   }
