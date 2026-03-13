@@ -1,5 +1,7 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
 import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
 import type { Middleware } from 'remix/fetch-router'
 import type { Database as DataTableDatabase } from 'remix/data-table'
 
@@ -29,13 +31,23 @@ interface SocialProfileData {
 
 type SocialProfilePatch = Pick<Partial<User>, 'email' | 'name' | 'avatar_url'>
 
+let credentialsTextField = f.field(s.defaulted(s.string(), ''))
+let credentialsSchema = f.object({
+  email: credentialsTextField,
+  password: credentialsTextField,
+})
+let socialLoginSessionSchema = s.object({
+  userId: s.number().refine(Number.isInteger, 'Expected an integer userId'),
+  loginMethod: s.enum_(['google', 'github', 'x', 'password'] as const),
+})
+
 export let passwordProvider = createCredentialsAuthProvider({
   parse(context) {
-    let formData = context.get(FormData)
+    let { email, password } = s.parse(credentialsSchema, context.get(FormData))
 
     return {
-      email: normalizeEmail(formData.get('email')?.toString() ?? ''),
-      password: formData.get('password')?.toString() ?? '',
+      email: normalizeEmail(email),
+      password,
     }
   },
   async verify({ email, password }, context) {
@@ -198,21 +210,13 @@ function getSocialProfileData(result: SocialAuthResult): SocialProfileData {
 }
 
 function parseSocialLoginSession(value: unknown): SocialLoginSession | null {
-  if (typeof value !== 'object' || value == null) {
+  let result = s.parseSafe(socialLoginSessionSchema, value)
+
+  if (!result.success) {
     return null
   }
 
-  let userId = readInteger((value as { userId?: unknown }).userId)
-  let loginMethod = readLoginMethod((value as { loginMethod?: unknown }).loginMethod)
-
-  if (userId == null || loginMethod == null) {
-    return null
-  }
-
-  return {
-    userId,
-    loginMethod,
-  }
+  return result.value
 }
 
 function toAuthenticatedUser(user: User, loginMethod: LoginMethod): AuthenticatedUser {
@@ -222,26 +226,6 @@ function toAuthenticatedUser(user: User, loginMethod: LoginMethod): Authenticate
     name: normalizeOptionalString(user.name) ?? null,
     avatarUrl: normalizeOptionalString(user.avatar_url) ?? null,
     loginMethod,
-  }
-}
-
-function readInteger(value: unknown): number | null {
-  if (typeof value !== 'number' || !Number.isInteger(value)) {
-    return null
-  }
-
-  return value
-}
-
-function readLoginMethod(value: unknown): LoginMethod | null {
-  switch (value) {
-    case 'google':
-    case 'github':
-    case 'x':
-    case 'password':
-      return value
-    default:
-      return null
   }
 }
 
