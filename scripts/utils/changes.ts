@@ -1,6 +1,5 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import * as semver from 'semver'
 import {
   getAllPackageDirNames,
   getPackageFile,
@@ -12,6 +11,7 @@ import {
   getGitTag,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
+import { inc, major, prerelease, type ReleaseType } from './semver.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
 type BumpType = (typeof bumpTypes)[number]
@@ -77,11 +77,11 @@ export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
  * Extracts the prerelease identifier from a version string (e.g., "alpha" from "3.0.0-alpha.5")
  */
 function getPrereleaseIdentifier(version: string): string | null {
-  let prerelease = semver.prerelease(version)
-  if (prerelease === null || prerelease.length === 0) {
+  let parts = prerelease(version)
+  if (parts === null || parts.length === 0) {
     return null
   }
-  return typeof prerelease[0] === 'string' ? prerelease[0] : null
+  return typeof parts[0] === 'string' ? parts[0] : null
 }
 
 /**
@@ -101,7 +101,7 @@ function getNextVersion(
 
     if (currentPrereleaseId === targetChannel) {
       // Same channel - just bump the counter
-      let nextVersion = semver.inc(currentVersion, 'prerelease', targetChannel)
+      let nextVersion = inc(currentVersion, 'prerelease', targetChannel)
       if (nextVersion == null) {
         throw new Error(`Invalid prerelease increment: ${currentVersion}`)
       }
@@ -111,7 +111,7 @@ function getNextVersion(
       // Apply the bump type to get the base version, then add prerelease suffix
       let baseVersion = isCurrentPrerelease
         ? currentVersion.replace(/-.*$/, '') // Strip existing prerelease suffix
-        : semver.inc(currentVersion, bumpType as semver.ReleaseType)
+        : inc(currentVersion, bumpType as ReleaseType)
 
       if (baseVersion == null) {
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
@@ -127,7 +127,7 @@ function getNextVersion(
       return baseVersion
     } else {
       // Normal stable release
-      let nextVersion = semver.inc(currentVersion, bumpType as semver.ReleaseType)
+      let nextVersion = inc(currentVersion, bumpType as ReleaseType)
       if (nextVersion == null) {
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
@@ -190,7 +190,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let packageJsonPath = getPackageFile(packageDirName, 'package.json')
   let packageJson = readJson(packageJsonPath)
   let currentVersion = packageJson.version as string
-  let majorVersion = semver.major(currentVersion)
+  let majorVersion = major(currentVersion)
   let isV1Plus = majorVersion >= 1
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
