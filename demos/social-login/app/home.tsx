@@ -15,6 +15,8 @@ import { routes } from './routes.ts'
 import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
 
+let localDemoOrigin = 'http://127.0.0.1:44100'
+
 export function createHomeAction(
   config: SocialLoginConfig,
 ): BuildAction<'GET', typeof routes.home> {
@@ -183,7 +185,7 @@ function SetupGuide() {
               <li>Fill in any provider client ID and secret pairs you want to enable.</li>
               <li>Register the callback URLs below with each provider app.</li>
               <li>
-                Run <code>pnpm start</code> and open the home page.
+                Run <code>pnpm start</code> and open <code>{localDemoOrigin}/</code>.
               </li>
             </ol>
           </div>
@@ -251,7 +253,7 @@ function ProviderSetupCard() {
           <div>
             <dt>Homepage URL</dt>
             <dd>
-              <code>{routes.home.href()}</code>
+              <code>{localDemoOrigin}/</code>
             </dd>
           </div>
         ) : null}
@@ -320,11 +322,11 @@ function getProviderLoginHref(name: SocialProviderState['name']): string {
 function getProviderCallbackHref(name: SocialProviderState['name']): string {
   switch (name) {
     case 'google':
-      return routes.auth.google.callback.href()
+      return `${localDemoOrigin}${routes.auth.google.callback.href()}`
     case 'github':
-      return routes.auth.github.callback.href()
+      return `${localDemoOrigin}${routes.auth.github.callback.href()}`
     case 'x':
-      return routes.auth.x.callback.href()
+      return `${localDemoOrigin}${routes.auth.x.callback.href()}`
   }
 }
 
@@ -363,8 +365,8 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           >
             Web application OAuth client in Google Cloud
           </a>
-          , add the callback URL as an authorized redirect URI, then copy the client ID and client
-          secret into .env.
+          , add <code>{getProviderCallbackHref('google')}</code> as an authorized redirect URI,
+          then copy the client ID and client secret into .env.
         </>
       )
     case 'github':
@@ -378,8 +380,9 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           >
             OAuth App in GitHub settings
           </a>
-          , set the homepage URL and authorization callback URL, then copy the client ID and client
-          secret into .env.
+          , set <code>{localDemoOrigin}/</code> as the homepage URL and{' '}
+          <code>{getProviderCallbackHref('github')}</code> as the authorization callback URL, then
+          copy the client ID and client secret into .env.
         </>
       )
     case 'x':
@@ -401,7 +404,9 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           >
             Sign in with X
           </a>
-          , set the callback URL, then copy the client ID and client secret into .env.
+          , register <code>{getProviderCallbackHref('x')}</code> as the callback URL, then copy the
+          client ID and client secret into .env. Open the demo at <code>{localDemoOrigin}/</code>{' '}
+          when you test the X flow.
         </>
       )
   }
