@@ -1,7 +1,7 @@
 import type { RequestContext, RequestHandler } from '@remix-run/fetch-router'
 import type { Session } from '@remix-run/session'
 
-import type { CredentialsProvider } from './credentials.ts'
+import type { CredentialsAuthProvider } from './providers/credentials.ts'
 import { getOAuthProviderRuntime } from './provider.ts'
 import type { OAuthProvider } from './provider.ts'
 import { completeAuthSession } from './session-flow.ts'
@@ -63,7 +63,7 @@ export function login<profile>(
  * @returns A request handler for the credentials login route.
  */
 export function login<input, result>(
-  provider: CredentialsProvider<input, result>,
+  provider: CredentialsAuthProvider<input, result>,
   options: LoginOptions<result>,
 ): RequestHandler
 
@@ -75,7 +75,7 @@ export function login<input, result>(
  * @returns A request handler for a login route.
  */
 export function login(
-  provider: OAuthProvider<any> | CredentialsProvider<any, any>,
+  provider: OAuthProvider<any> | CredentialsAuthProvider<any, any>,
   options: any = {},
 ): RequestHandler {
   if (provider.kind === 'oauth') {
@@ -117,7 +117,7 @@ async function loginWithOAuthProvider(
 }
 
 async function loginWithCredentialsProvider(
-  provider: CredentialsProvider<any, any>,
+  provider: CredentialsAuthProvider<any, any>,
   options: LoginOptions<any>,
   context: Parameters<RequestHandler>[0],
 ): Promise<Response> {

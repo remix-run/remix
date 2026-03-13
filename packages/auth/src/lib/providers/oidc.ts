@@ -19,7 +19,7 @@ const DEFAULT_OIDC_SCOPES = ['openid', 'profile', 'email']
 /**
  * OpenID Connect discovery metadata.
  */
-export interface OIDCMetadata {
+export interface OIDCAuthProviderMetadata {
   /** Issuer identifier for the OIDC provider. */
   issuer: string
   /** Authorization endpoint used to start the browser login flow. */
@@ -43,7 +43,7 @@ export interface OIDCMetadata {
 /**
  * Base OpenID Connect claims shape used by the OIDC helpers.
  */
-export interface OIDCProfile {
+export interface OIDCAuthProviderProfile {
   /** Stable subject identifier for the authenticated user. */
   sub: string
   /** Full display name for the authenticated user. */
@@ -89,8 +89,8 @@ export interface OIDCProfile {
 /**
  * Options for creating a generic OpenID Connect provider.
  */
-export interface OIDCOptions<
-  profile extends OIDCProfile = OIDCProfile,
+export interface OIDCAuthProviderOptions<
+  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
   provider extends string = 'oidc',
 > {
   /** Provider name exposed in callback results and persisted transactions. */
@@ -108,14 +108,14 @@ export interface OIDCOptions<
   /** Optional override for the discovery document URL. */
   discoveryUrl?: string | URL
   /** Optional inline discovery metadata used instead of fetching it. */
-  metadata?: OIDCMetadata
+  metadata?: OIDCAuthProviderMetadata
   /** Additional authorization parameters appended to the login redirect. */
   authorizationParams?: Record<string, string | undefined>
   /** Maps raw OIDC claims into an application-specific profile shape. */
   mapProfile?(input: {
-    claims: OIDCProfile
+    claims: OIDCAuthProviderProfile
     tokens: OAuthTokens
-    metadata: OIDCMetadata
+    metadata: OIDCAuthProviderMetadata
     context: RequestContext
   }): profile | Promise<profile>
 }
@@ -127,14 +127,14 @@ export interface OIDCOptions<
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
 export function createOIDCAuthProvider<
-  profile extends OIDCProfile = OIDCProfile,
+  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
   provider extends string = 'oidc',
->(options: OIDCOptions<profile, provider>): OAuthProvider<profile, provider> {
+>(options: OIDCAuthProviderOptions<profile, provider>): OAuthProvider<profile, provider> {
   let name = options.name ?? ('oidc' as provider)
   let scopes = options.scopes ?? DEFAULT_OIDC_SCOPES
-  let metadataPromise: Promise<OIDCMetadata> | undefined
+  let metadataPromise: Promise<OIDCAuthProviderMetadata> | undefined
 
-  function getMetadata(): Promise<OIDCMetadata> {
+  function getMetadata(): Promise<OIDCAuthProviderMetadata> {
     if (options.metadata != null) {
       return Promise.resolve(validateOIDCMetadata(options.metadata, name))
     }
@@ -192,10 +192,10 @@ export function createOIDCAuthProvider<
 }
 
 async function discoverOIDCMetadata(
-  options: OIDCOptions<any, any>,
+  options: OIDCAuthProviderOptions<any, any>,
   name: string,
-): Promise<OIDCMetadata> {
-  let metadata = await fetchJson<OIDCMetadata>(
+): Promise<OIDCAuthProviderMetadata> {
+  let metadata = await fetchJson<OIDCAuthProviderMetadata>(
     options.discoveryUrl ?? createDiscoveryURL(options.issuer),
     {},
     `Failed to load OIDC metadata for "${name}".`,
@@ -206,14 +206,14 @@ async function discoverOIDCMetadata(
 
 async function fetchOIDCProfile(
   name: string,
-  metadata: OIDCMetadata,
+  metadata: OIDCAuthProviderMetadata,
   tokens: OAuthTokens,
-): Promise<OIDCProfile> {
+): Promise<OIDCAuthProviderProfile> {
   if (metadata.userinfo_endpoint == null || metadata.userinfo_endpoint.length === 0) {
     throw new Error(`OIDC provider "${name}" did not publish a userinfo_endpoint.`)
   }
 
-  let claims = await fetchJson<OIDCProfile>(
+  let claims = await fetchJson<OIDCAuthProviderProfile>(
     metadata.userinfo_endpoint,
     {
       headers: {
@@ -232,13 +232,13 @@ async function fetchOIDCProfile(
 }
 
 async function mapOIDCProfile<
-  profile extends OIDCProfile = OIDCProfile,
+  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
   provider extends string = 'oidc',
 >(
-  options: OIDCOptions<profile, provider>,
-  claims: OIDCProfile,
+  options: OIDCAuthProviderOptions<profile, provider>,
+  claims: OIDCAuthProviderProfile,
   tokens: OAuthTokens,
-  metadata: OIDCMetadata,
+  metadata: OIDCAuthProviderMetadata,
   context: RequestContext,
 ): Promise<profile> {
   if (options.mapProfile == null) {
@@ -267,7 +267,7 @@ function toURLString(value: string | URL): string {
   return typeof value === 'string' ? value : value.toString()
 }
 
-function validateOIDCMetadata(metadata: OIDCMetadata, name: string): OIDCMetadata {
+function validateOIDCMetadata(metadata: OIDCAuthProviderMetadata, name: string): OIDCAuthProviderMetadata {
   if (typeof metadata.issuer !== 'string' || metadata.issuer.length === 0) {
     throw new Error(`OIDC metadata for "${name}" did not include an issuer.`)
   }

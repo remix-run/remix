@@ -17,7 +17,7 @@ const DEFAULT_GITHUB_SCOPES = ['read:user', 'user:email']
 /**
  * Options for creating the built-in GitHub auth provider.
  */
-export interface GitHubOptions {
+export interface GitHubAuthProviderOptions {
   /** OAuth client identifier for your GitHub OAuth App. */
   clientId: string
   /** OAuth client secret for your GitHub OAuth App. */
@@ -31,7 +31,7 @@ export interface GitHubOptions {
 /**
  * Profile fields returned by the built-in GitHub auth provider.
  */
-export interface GitHubProfile {
+export interface GitHubAuthProviderProfile {
   /** Stable GitHub user identifier. */
   id: number
   /** GitHub login handle. */
@@ -49,7 +49,7 @@ export interface GitHubProfile {
 /**
  * Email records returned by GitHub's `/user/emails` endpoint.
  */
-export interface GitHubEmail {
+export interface GitHubAuthProviderEmail {
   /** Email address returned by the `/user/emails` endpoint. */
   email: string
   /** Indicates whether this email is the primary address. */
@@ -66,7 +66,7 @@ export interface GitHubEmail {
  * @param options GitHub OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<GitHubProfile, 'github'> {
+export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProviderProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {
@@ -82,7 +82,7 @@ export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<GitHubProfile, 'github'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<GitHubAuthProviderProfile, 'github'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: GITHUB_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -94,7 +94,7 @@ export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<
           Accept: 'application/json',
         },
       })
-      let profile = await fetchJson<GitHubProfile>(
+      let profile = await fetchJson<GitHubAuthProviderProfile>(
         GITHUB_USER_ENDPOINT,
         {
           headers: createGitHubHeaders(tokens.accessToken),
@@ -104,7 +104,7 @@ export function createGitHubAuthProvider(options: GitHubOptions): OAuthProvider<
       profile = validateGitHubProfile(profile)
 
       if (profile.email == null) {
-        let emails = await fetchJson<GitHubEmail[]>(
+        let emails = await fetchJson<GitHubAuthProviderEmail[]>(
           GITHUB_USER_EMAILS_ENDPOINT,
           {
             headers: createGitHubHeaders(tokens.accessToken),
@@ -139,7 +139,7 @@ function createGitHubHeaders(accessToken: string): HeadersInit {
   }
 }
 
-function pickGitHubEmail(emails: GitHubEmail[]): string | undefined {
+function pickGitHubEmail(emails: GitHubAuthProviderEmail[]): string | undefined {
   let primaryVerified = emails.find(email => email.primary && email.verified)
   if (primaryVerified != null) {
     return primaryVerified.email
@@ -153,7 +153,7 @@ function pickGitHubEmail(emails: GitHubEmail[]): string | undefined {
   return emails[0]?.email
 }
 
-function validateGitHubProfile(profile: GitHubProfile): GitHubProfile {
+function validateGitHubProfile(profile: GitHubAuthProviderProfile): GitHubAuthProviderProfile {
   if (!Number.isInteger(profile.id)) {
     throw new Error('GitHub profile did not include a valid id.')
   }

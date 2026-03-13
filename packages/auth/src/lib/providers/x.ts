@@ -17,7 +17,7 @@ const DEFAULT_X_SCOPES = ['tweet.read', 'users.read']
 /**
  * Options for creating the built-in X auth provider.
  */
-export interface XOptions {
+export interface XAuthProviderOptions {
   /** OAuth client identifier for your X application. */
   clientId: string
   /** OAuth client secret for your X application. */
@@ -31,7 +31,7 @@ export interface XOptions {
 /**
  * Profile fields returned by the built-in X auth provider.
  */
-export interface XProfile {
+export interface XAuthProviderProfile {
   /** Stable X user identifier. */
   id: string
   /** Display name returned by X. */
@@ -49,7 +49,7 @@ export interface XProfile {
 }
 
 interface XProfileResponse {
-  data: XProfile
+  data: XAuthProviderProfile
 }
 
 /**
@@ -58,7 +58,7 @@ interface XProfileResponse {
  * @param options X client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createXAuthProvider(options: XOptions): OAuthProvider<XProfile, 'x'> {
+export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvider<XAuthProviderProfile, 'x'> {
   let scopes = options.scopes ?? DEFAULT_X_SCOPES
 
   return createOAuthProvider('x', {
@@ -75,7 +75,7 @@ export function createXAuthProvider(options: XOptions): OAuthProvider<XProfile, 
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<XProfile, 'x'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<XAuthProviderProfile, 'x'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: X_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -111,7 +111,7 @@ function createAccount(provider: 'x', providerAccountId: string): OAuthAccount<'
   return { provider, providerAccountId }
 }
 
-function validateXProfile(response: XProfileResponse): XProfile {
+function validateXProfile(response: XProfileResponse): XAuthProviderProfile {
   let profile = response.data
 
   if (typeof profile?.id !== 'string' || profile.id.length === 0) {
