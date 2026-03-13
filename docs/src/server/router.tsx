@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as semver from 'semver'
-import { Frame, type RemixNode } from 'remix/component'
+import { type RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
@@ -62,6 +62,17 @@ export function createRouter(versions?: ServerContext['versions']) {
         return respond.file(request, filePath, params.asset)
       },
       async docs({ request, params }) {
+        // Docs page
+        let docFile = docFiles.find((file) => file.urlPath === params.slug)
+        let node: RemixNode
+
+        if (!docFile) {
+          node = <NotFound slug={params.slug} />
+        } else {
+          let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
+          node = <div innerHTML={html} />
+        }
+
         return await respond.document(
           request,
           <ServerPage
@@ -72,7 +83,7 @@ export function createRouter(versions?: ServerContext['versions']) {
               activeVersion: params.version,
             }}
           >
-            <Frame src={routes.fragment.href({ version: params.version, slug: params.slug })} />
+            {node}
           </ServerPage>,
         )
       },
@@ -80,28 +91,9 @@ export function createRouter(versions?: ServerContext['versions']) {
         return respond.document(
           request,
           <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
-            <Frame src={routes.fragment.href({ version: params.version })} />
+            <Home />
           </ServerPage>,
         )
-      },
-      async fragment({ request, url, params }) {
-        let node: RemixNode
-
-        if (!params.slug) {
-          // Home page
-          node = <Home />
-        } else {
-          // Docs page
-          let docFile = docFiles.find((file) => file.urlPath === params.slug)
-          if (!docFile) {
-            node = <NotFound slug={params.slug} />
-          } else {
-            let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
-            node = <div innerHTML={html} />
-          }
-        }
-
-        return respond.fragment(request, node)
       },
       async markdown({ request, params }) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
