@@ -12,6 +12,7 @@ export class AssertionError extends Error {
   }
 }
 
+// Strict deep equality — uses === at primitive leaves (no type coercion).
 function isDeepEqual(a: any, b: any): boolean {
   if (a === b) return true
   if (a == null || b == null) return false
@@ -38,7 +39,7 @@ export let assert = {
         message: message || `Expected ${value} to be truthy`,
         actual: value,
         expected: true,
-        operator: 'ok',
+        operator: '==',
       })
     }
   },
@@ -49,7 +50,7 @@ export let assert = {
         message: message || `${actual} !== ${expected}`,
         actual,
         expected,
-        operator: 'equal',
+        operator: 'strictEqual',
       })
     }
   },
@@ -60,7 +61,7 @@ export let assert = {
         message: message || `${actual} === ${expected}`,
         actual,
         expected,
-        operator: 'notEqual',
+        operator: 'notStrictEqual',
       })
     }
   },
@@ -71,7 +72,36 @@ export let assert = {
         message: message || `Objects not deeply equal`,
         actual,
         expected,
-        operator: 'deepEqual',
+        operator: 'deepStrictEqual',
+      })
+    }
+  },
+
+  notDeepEqual<T>(actual: T, expected: T, message?: string) {
+    if (isDeepEqual(actual, expected)) {
+      throw new AssertionError({
+        message: message || `Objects are deeply equal`,
+        actual,
+        expected,
+        operator: 'notDeepStrictEqual',
+      })
+    }
+  },
+
+  fail(message?: string) {
+    throw new AssertionError({
+      message: message || 'Test failed',
+      operator: 'fail',
+    })
+  },
+
+  match(string: string, regexp: RegExp, message?: string) {
+    if (!regexp.test(string)) {
+      throw new AssertionError({
+        message: message || `${string} does not match ${regexp}`,
+        actual: string,
+        expected: regexp,
+        operator: 'match',
       })
     }
   },
@@ -159,4 +189,4 @@ export let assert = {
   },
 }
 
-export const { ok, equal, notEqual, deepEqual, throws, rejects } = assert
+export const { ok, equal, notEqual, deepEqual, notDeepEqual, fail, match, throws, rejects } = assert

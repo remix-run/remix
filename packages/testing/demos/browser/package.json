@@ -8,6 +8,7 @@
     "test": "remix-test 'fixtures/*.test.{ts,tsx}'"
   },
   "dependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/component": "workspace:*",
     "@remix-run/testing": "workspace:*",
     "esbuild": "catalog:",
