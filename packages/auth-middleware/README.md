@@ -1,6 +1,6 @@
 # auth-middleware
 
-Pluggable authentication middleware for Remix. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior.
+Pluggable authentication middleware for Remix. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior. Use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) for browser login flows; this package is the request-time half that loads auth state and protects routes.
 
 ## Features
 

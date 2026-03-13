@@ -17,6 +17,22 @@ Browser login, OAuth, and OIDC helpers for Remix. This package handles redirect-
 npm i remix
 ```
 
+## How The Packages Fit Together
+
+`remix/auth` handles browser login flows. It creates request handlers for login and callback routes, manages OAuth and OIDC transactions, and lets your app decide what to write into the session on success.
+
+`remix/auth-middleware` handles request-time authentication. It loads auth state into `context.get(Auth)`, protects routes with `requireAuth()`, and resolves the full identity for later requests.
+
+`sessionAuth()` is the bridge between the two. `writeSession()` stores a small auth record in the session during login, and `sessionAuth()` turns that record back into the current user on normal app requests.
+
+## Choosing a Provider
+
+Prefer `createOIDCAuthProvider()` when the provider supports OpenID Connect. The built-in `createGoogleAuthProvider()`, `createMicrosoftAuthProvider()`, `createOktaAuthProvider()`, and `createAuth0AuthProvider()` helpers are thin OIDC wrappers with provider-specific defaults.
+
+Use `createGitHubAuthProvider()`, `createFacebookAuthProvider()`, and `createXAuthProvider()` for the built-in custom OAuth providers that are not modeled as OIDC wrappers.
+
+Use `createCredentialsAuthProvider()` for email/password or any other direct form-based login flow that should share the same session model as social login.
+
 ## Usage
 
 ```ts
