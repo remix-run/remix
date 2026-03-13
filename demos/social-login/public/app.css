@@ -508,6 +508,24 @@ strong {
   padding: 0 28px;
 }
 
+.profile-dump-section {
+  padding: 0 28px;
+}
+
+.profile-dump {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius-lg);
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--text);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .avatar {
   width: 88px;
   height: 88px;
@@ -558,7 +576,8 @@ strong {
   .credentials-pane,
   .social-pane,
   .signed-in-header,
-  .identity-row {
+  .identity-row,
+  .profile-dump-section {
     padding-left: 18px;
     padding-right: 18px;
   }

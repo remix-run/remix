@@ -5,13 +5,21 @@ import type { Auth as RequestAuth } from 'remix/auth-middleware'
 import type { SocialLoginConfig } from './config.ts'
 import { Layout } from './layout.tsx'
 import {
-  getLoginMethodLabel,
-  getProviderLabel,
-  getSocialProviderStates,
   type AuthenticatedUser,
-  type SocialProviderState,
 } from './middleware/auth.ts'
 import { routes } from './routes.ts'
+import {
+  getLoginMethodLabel,
+  getProviderCallbackHref,
+  getProviderEnvVars,
+  getProviderIconHref,
+  getProviderLabel,
+  getProviderLoginHref,
+  getProviderSetupHeading,
+  getSocialProviderStates,
+  type SocialProviderName,
+  type SocialProviderState,
+} from './social-providers.ts'
 import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
 
@@ -58,8 +66,12 @@ export function createHomeAction(
   }
 }
 
+interface SignedOutStateProps {
+  providers: SocialProviderState[]
+}
+
 function SignedOutState() {
-  return ({ providers }: { providers: SocialProviderState[] }) => (
+  return ({ providers }: SignedOutStateProps) => (
     <section class="panel auth-card auth-split">
       <div class="credentials-pane stack-lg">
         <div class="stack-sm">
@@ -67,8 +79,8 @@ function SignedOutState() {
           <h2>Login to your account</h2>
           <p class="muted">
             Use the seeded local account or any configured social provider. The session stores a
-            compact auth record, and <code>createSessionAuthScheme()</code> resolves the current user on later
-            requests.
+            compact auth record, and <code>createSessionAuthScheme()</code> resolves the current
+            user on later requests.
           </p>
         </div>
 
@@ -122,47 +134,18 @@ function SignedOutState() {
           <p class="muted">Use any configured provider to create or resume a local account.</p>
         </div>
 
-        <div class="provider-list">
-          {providers.map((provider) => {
-            let href = getProviderLoginHref(provider.name)
-            let className = `provider-button provider-${provider.name}`
-
-            return provider.configured ? (
-              <a href={href} class={className}>
-                <span class="provider-mark">
-                  <img
-                    class={`provider-icon provider-icon-${provider.name}`}
-                    src={getProviderIconHref(provider.name)}
-                    alt=""
-                  />
-                </span>
-                <span class="provider-body">
-                  <span class="provider-title">Login with {provider.label}</span>
-                </span>
-              </a>
-            ) : (
-              <button type="button" class={className} disabled>
-                <span class="provider-mark">
-                  <img
-                    class={`provider-icon provider-icon-${provider.name}`}
-                    src={getProviderIconHref(provider.name)}
-                    alt=""
-                  />
-                </span>
-                <span class="provider-body">
-                  <span class="provider-title">Login with {provider.label}</span>
-                </span>
-              </button>
-            )
-          })}
-        </div>
+        <div class="provider-list">{providers.map(renderProviderButton)}</div>
       </aside>
     </section>
   )
 }
 
+interface SetupGuideProps {
+  providers: SocialProviderState[]
+}
+
 function SetupGuide() {
-  return ({ providers }: { providers: SocialProviderState[] }) => (
+  return ({ providers }: SetupGuideProps) => (
     <section class="setup-section">
       <div class="setup-card setup-guide-card stack-lg">
         <div class="stack-sm">
@@ -170,8 +153,8 @@ function SetupGuide() {
           <h2>Configure local and social authentication</h2>
           <p class="muted">
             Copy <code>.env.example</code> to .env, paste whichever client IDs and client secrets
-            you want to test, then restart the server. The seeded email/password login works even if
-            every social provider stays disabled.
+            you want to test, then restart the server. The seeded email/password login works even
+            if every social provider stays disabled.
           </p>
         </div>
 
@@ -207,17 +190,94 @@ function SetupGuide() {
           </div>
         </section>
 
-        {providers.map((provider) => (
-          <ProviderSetupSection provider={provider} />
-        ))}
+        {providers.map(renderProviderSetupSection)}
       </div>
     </section>
   )
 }
 
-function ProviderSetupSection() {
-  return ({ provider }: { provider: SocialProviderState }) => (
-    <section class="setup-topic stack-sm">
+interface SignedInStateProps {
+  user: AuthenticatedUser
+}
+
+function SignedInState() {
+  return ({ user }: SignedInStateProps) => (
+    <section class="panel auth-card stack-lg">
+      <div class="signed-in-header">
+        <p class="eyebrow">Authenticated session</p>
+        <span class="status-pill">Signed in</span>
+      </div>
+
+      <div class="identity-row">
+        <Avatar user={user} />
+        <div class="stack-sm">
+          <p class="eyebrow">Signed in with {getLoginMethodLabel(user.loginMethod)}</p>
+          <h2>{user.name ?? user.email ?? 'Authenticated user'}</h2>
+        </div>
+      </div>
+
+      <div class="profile-dump-section stack-sm">
+        <p class="muted">
+          The following JSON is the resolved auth profile that this request received from{' '}
+          <code>context.get(Auth)</code>.
+        </p>
+        <pre class="profile-dump">{JSON.stringify(user, null, 2)}</pre>
+      </div>
+
+      <form method="POST" action={routes.auth.logout.href()}>
+        <button type="submit" class="logout-button">
+          Log out
+        </button>
+      </form>
+    </section>
+  )
+}
+
+function Avatar() {
+  return ({ user }: SignedInStateProps) => {
+    if (user.avatarUrl) {
+      return <img class="avatar" src={user.avatarUrl} alt="Authenticated user avatar" />
+    }
+
+    return <div class="avatar avatar-fallback">{getInitials(user)}</div>
+  }
+}
+
+function renderProviderButton(provider: SocialProviderState) {
+  let className = `provider-button provider-${provider.name}`
+  let body = (
+    <>
+      <span class="provider-mark">
+        <img
+          class={`provider-icon provider-icon-${provider.name}`}
+          src={getProviderIconHref(provider.name)}
+          alt=""
+        />
+      </span>
+      <span class="provider-body">
+        <span class="provider-title">Login with {provider.label}</span>
+      </span>
+    </>
+  )
+
+  if (provider.configured) {
+    return (
+      <a key={provider.name} href={getProviderLoginHref(provider.name)} class={className}>
+        {body}
+      </a>
+    )
+  }
+
+  return (
+    <button key={provider.name} type="button" class={className} disabled>
+      {body}
+    </button>
+  )
+}
+
+function renderProviderSetupSection(provider: SocialProviderState) {
+  return (
+    <section key={provider.name} class="setup-topic stack-sm">
       <div class="setup-provider-header">
         <div class="stack-sm">
           <h3>{getProviderSetupHeading(provider.name)}</h3>
@@ -233,7 +293,7 @@ function ProviderSetupSection() {
         <div>
           <dt>Environment variables</dt>
           <dd>
-            {getProviderEnvVars(provider.name).map((name) => (
+            {getProviderEnvVars(provider.name).map(name => (
               <code>{name}</code>
             ))}
           </dd>
@@ -241,7 +301,7 @@ function ProviderSetupSection() {
         <div>
           <dt>Callback URL</dt>
           <dd>
-            <code>{getProviderCallbackHref(provider.name)}</code>
+            <code>{getProviderCallbackHref(provider.name, localDemoOrigin)}</code>
           </dd>
         </div>
         {provider.name === 'github' ? (
@@ -257,97 +317,7 @@ function ProviderSetupSection() {
   )
 }
 
-function SignedInState() {
-  return ({ user }: { user: AuthenticatedUser }) => (
-    <section class="panel auth-card stack-lg">
-      <div class="signed-in-header">
-        <p class="eyebrow">Authenticated session</p>
-        <span class="status-pill">Signed in</span>
-      </div>
-
-      <div class="identity-row">
-        <Avatar user={user} />
-        <div class="stack-sm">
-          <p class="eyebrow">Signed in with {getLoginMethodLabel(user.loginMethod)}</p>
-          <h2>{user.name ?? user.email ?? 'Authenticated user'}</h2>
-        </div>
-      </div>
-
-      <form method="POST" action={routes.auth.logout.href()}>
-        <button type="submit" class="logout-button">
-          Log out
-        </button>
-      </form>
-    </section>
-  )
-}
-
-function Avatar() {
-  return ({ user }: { user: AuthenticatedUser }) => {
-    if (user.avatarUrl) {
-      return <img class="avatar" src={user.avatarUrl} alt="Authenticated user avatar" />
-    }
-
-    return <div class="avatar avatar-fallback">{getInitials(user)}</div>
-  }
-}
-
-function getProviderIconHref(name: SocialProviderState['name']): string {
-  switch (name) {
-    case 'google':
-      return '/icons/google.svg'
-    case 'github':
-      return '/icons/github.svg'
-    case 'x':
-      return '/icons/x.svg'
-  }
-}
-
-function getProviderLoginHref(name: SocialProviderState['name']): string {
-  switch (name) {
-    case 'google':
-      return routes.auth.google.login.href()
-    case 'github':
-      return routes.auth.github.login.href()
-    case 'x':
-      return routes.auth.x.login.href()
-  }
-}
-
-function getProviderCallbackHref(name: SocialProviderState['name']): string {
-  switch (name) {
-    case 'google':
-      return `${localDemoOrigin}${routes.auth.google.callback.href()}`
-    case 'github':
-      return `${localDemoOrigin}${routes.auth.github.callback.href()}`
-    case 'x':
-      return `${localDemoOrigin}${routes.auth.x.callback.href()}`
-  }
-}
-
-function getProviderEnvVars(name: SocialProviderState['name']): string[] {
-  switch (name) {
-    case 'google':
-      return ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
-    case 'github':
-      return ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET']
-    case 'x':
-      return ['X_CLIENT_ID', 'X_CLIENT_SECRET']
-  }
-}
-
-function getProviderSetupHeading(name: SocialProviderState['name']): string {
-  switch (name) {
-    case 'google':
-      return 'Create a Google web OAuth client'
-    case 'github':
-      return 'Create a GitHub OAuth app'
-    case 'x':
-      return 'Create an X app'
-  }
-}
-
-function renderProviderSetupDescription(name: SocialProviderState['name']) {
+function renderProviderSetupDescription(name: SocialProviderName) {
   switch (name) {
     case 'google':
       return (
@@ -360,8 +330,8 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           >
             Web application OAuth client in Google Cloud
           </a>
-          , add <code>{getProviderCallbackHref('google')}</code> as an authorized redirect URI,
-          then copy the client ID and client secret into .env.
+          , add <code>{getProviderCallbackHref('google', localDemoOrigin)}</code> as an authorized
+          redirect URI, then copy the client ID and client secret into .env.
         </>
       )
     case 'github':
@@ -376,8 +346,8 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
             OAuth App in GitHub settings
           </a>
           , set <code>{localDemoOrigin}/</code> as the homepage URL and{' '}
-          <code>{getProviderCallbackHref('github')}</code> as the authorization callback URL, then
-          copy the client ID and client secret into .env.
+          <code>{getProviderCallbackHref('github', localDemoOrigin)}</code> as the authorization
+          callback URL, then copy the client ID and client secret into .env.
         </>
       )
     case 'x':
@@ -399,9 +369,9 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           >
             Sign in with X
           </a>
-          , register <code>{getProviderCallbackHref('x')}</code> as the callback URL, then copy the
-          client ID and client secret into .env. Open the demo at <code>{localDemoOrigin}/</code>{' '}
-          when you test the X flow.
+          , register <code>{getProviderCallbackHref('x', localDemoOrigin)}</code> as the callback
+          URL, then copy the client ID and client secret into .env. Open the demo at{' '}
+          <code>{localDemoOrigin}/</code> when you test the X flow.
         </>
       )
   }

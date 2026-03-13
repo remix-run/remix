@@ -55,7 +55,8 @@ The demo seeds one local user into SQLite on first boot:
 - [`app/data/setup.ts`](./app/data/setup.ts) bootstraps SQLite with `better-sqlite3`, `remix/data-table`, and `remix/data-table/migrations`.
 - [`data/migrations/20260311170000_create_social_login_schema.ts`](./data/migrations/20260311170000_create_social_login_schema.ts) defines the `users` and `auth_accounts` tables.
 - [`app/middleware/database.ts`](./app/middleware/database.ts) stores the database handle in request context with `context.set(...)` and `context.get(...)`.
-- [`app/middleware/auth.ts`](./app/middleware/auth.ts) contains the demo auth stack in one place: `loadAuth()`, the email/password credentials provider, social provider creation, and the social-account upsert logic.
+- [`app/social-providers.ts`](./app/social-providers.ts) centralizes provider labels, routes, icons, env vars, and provider construction for Google, GitHub, and X.
+- [`app/middleware/auth.ts`](./app/middleware/auth.ts) focuses on the session auth scheme, the email/password credentials provider, and social-account upsert logic.
 - [`app/auth.tsx`](./app/auth.tsx) uses `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()` from `remix/auth` for both the local password flow and the Google/GitHub/X flows.
 - [`app/home.tsx`](./app/home.tsx) renders the whole app from one request handler and switches between the signed-out and signed-in states by reading `context.get(Auth)`.
 - [`app/router.test.ts`](./app/router.test.ts) covers password login, all three OAuth callback flows, and logout session rotation.

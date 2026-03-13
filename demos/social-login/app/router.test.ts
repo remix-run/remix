@@ -47,6 +47,7 @@ describe('social login demo router', () => {
     assert.equal(loginResponse.headers.get('Location'), '/')
     assert.match(html, /Demo User/)
     assert.match(html, /Signed in with Email and password/)
+    assert.match(html, /resolved auth profile/)
     assert.match(html, /demo@example.com/)
   })
 
@@ -103,8 +104,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /Google Person/)
       assert.match(html, /Signed in with Google/)
+      assert.match(html, /resolved auth profile/)
+      assert.match(html, /google@example\.com/)
       assert.match(html, /https:\/\/example\.com\/google-avatar\.png/)
-      assert.doesNotMatch(html, /google@example.com/)
     } finally {
       restoreFetch()
     }
@@ -152,8 +154,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /GitHub Person/)
       assert.match(html, /Signed in with GitHub/)
+      assert.match(html, /resolved auth profile/)
+      assert.match(html, /github@example\.com/)
       assert.match(html, /https:\/\/example\.com\/github-avatar\.png/)
-      assert.doesNotMatch(html, /github@example.com/)
     } finally {
       restoreFetch()
     }
@@ -205,8 +208,9 @@ describe('social login demo router', () => {
       assert.equal(callbackResponse.headers.get('Location'), '/')
       assert.match(html, /X Person/)
       assert.match(html, /Signed in with X/)
+      assert.match(html, /resolved auth profile/)
+      assert.match(html, /"loginMethod": "x"/)
       assert.match(html, /https:\/\/example\.com\/x-avatar\.png/)
-      assert.doesNotMatch(html, /xperson/)
     } finally {
       restoreFetch()
     }
