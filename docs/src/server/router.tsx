@@ -50,6 +50,7 @@ export function createRouter(versions?: ServerContext['versions']) {
       })
     },
   }
+
   router.map(routes, {
     actions: {
       assets: ({ request, params }) => {

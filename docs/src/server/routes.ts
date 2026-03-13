@@ -2,7 +2,7 @@ import { route } from 'remix/fetch-router/routes'
 
 export const routes = route({
   assets: '/(:version/)assets/*asset',
-  docs: '/(:version/)api/*slug',
+  docs: '/(:version/)api/*slug/',
   home: '/(:version/)',
   markdown: '/(:version/)api/*slug.md',
 })
