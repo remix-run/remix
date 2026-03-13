@@ -164,6 +164,9 @@ export type MixinRuntimeBinding = {
   node: Element
   parent: ParentNode
   key?: string
+  target: unknown
+  frame: FrameHandle
+  scheduler: Scheduler
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 

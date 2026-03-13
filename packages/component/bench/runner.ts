@@ -17,6 +17,7 @@ interface SavedArgs {
   headless: boolean
   table: boolean
   profile: boolean
+  allocProfile: boolean
   framework: string[]
   benchmark: string[]
 }
@@ -48,6 +49,7 @@ let { values: args } = parseArgs({
     headless: { type: 'boolean', default: false },
     table: { type: 'boolean', default: false },
     profile: { type: 'boolean', default: false },
+    'alloc-profile': { type: 'boolean', default: false },
     framework: {
       type: 'string',
       multiple: true,
@@ -64,6 +66,9 @@ if (isRepeat) {
   let savedArgs = loadLastArgs()
   if (savedArgs) {
     args = { ...args, ...savedArgs }
+    if ('allocProfile' in savedArgs) {
+      args['alloc-profile'] = savedArgs.allocProfile
+    }
     console.log('Repeating with saved options:', savedArgs)
   } else {
     console.error('No previous run found. Run a benchmark first.')
@@ -78,6 +83,7 @@ if (isRepeat) {
     headless: args.headless!,
     table: args.table!,
     profile: args.profile!,
+    allocProfile: args['alloc-profile']!,
     framework: args.framework || [],
     benchmark: args.benchmark || [],
   })
@@ -89,6 +95,7 @@ let warmupRuns = parseInt(args.warmups!, 10)
 let headless = args.headless!
 let useTable = args.table!
 let showProfile = args.profile!
+let showAllocProfile = args['alloc-profile']!
 let frameworkFilter = args.framework || []
 let benchmarkFilter = args.benchmark || []
 
@@ -98,10 +105,17 @@ interface FunctionProfile {
   percentage: number
 }
 
+interface AllocationProfile {
+  name: string
+  bytes: number
+  percentage: number
+}
+
 interface TimingResult {
   scripting: number
   total: number
   profile?: FunctionProfile[]
+  allocProfile?: AllocationProfile[]
 }
 
 interface BenchmarkResult {
@@ -117,6 +131,8 @@ interface Operation {
   action: (page: Page) => Promise<TimingResult>
   teardown?: (page: Page) => Promise<void>
 }
+
+const EVENT_TIMING_TIMEOUT_MS = 5000
 
 // Click an element and measure time until next paint using Event Timing API
 // Also captures Chrome DevTools Profiler data for detailed function-level analysis
@@ -147,34 +163,74 @@ async function clickAndMeasure(
 
   // Start Chrome DevTools Profiler
   let cdp = await page.context().newCDPSession(page)
-  await cdp.send('Profiler.enable')
-  await cdp.send('Profiler.start')
+  if (showProfile) {
+    await cdp.send('Profiler.enable')
+    await cdp.send('Profiler.start')
+  }
+  if (showAllocProfile) {
+    await cdp.send('HeapProfiler.enable')
+    await cdp.send('HeapProfiler.startSampling', {
+      samplingInterval: 32768,
+      includeObjectsCollectedByMajorGC: true,
+      includeObjectsCollectedByMinorGC: true,
+    })
+  }
 
   // Use Playwright's click which fires real pointer events
   await page.click(selector)
 
-  // Wait for paint and retrieve the timing result
-  let timing = (await page.evaluate(`
-    new Promise(function(resolve) {
-      function check() {
-        if (window.__benchResult !== null) {
-          resolve(window.__benchResult);
-        } else {
-          requestAnimationFrame(check);
-        }
-      }
-      requestAnimationFrame(check);
-    })
-  `)) as TimingResult
+  let timing: TimingResult
+  let cpuProfileResult: any
+  let allocProfileResult: any
+  try {
+    let operationLabel = operationName ?? 'unknown'
+    timing = (await page.evaluate(`
+      new Promise(function(resolve, reject) {
+        var timeoutMs = ${EVENT_TIMING_TIMEOUT_MS}
+        var selector = ${JSON.stringify(selector)}
+        var operationName = ${JSON.stringify(operationLabel)}
+        var timeoutId = setTimeout(function() {
+          if (window.__benchObserver) {
+            window.__benchObserver.disconnect()
+          }
+          reject(new Error(
+            'Timed out waiting for Event Timing click entry after ' +
+            timeoutMs +
+            'ms (selector="' +
+            selector +
+            '", operation="' +
+            operationName +
+            '")'
+          ))
+        }, timeoutMs)
 
-  // Stop profiler and get results
-  let result = await cdp.send('Profiler.stop')
-  await cdp.send('Profiler.disable')
+        function check() {
+          if (window.__benchResult !== null) {
+            clearTimeout(timeoutId)
+            resolve(window.__benchResult)
+            return
+          }
+          requestAnimationFrame(check)
+        }
+
+        requestAnimationFrame(check)
+      })
+    `)) as TimingResult
+  } finally {
+    if (showProfile) {
+      cpuProfileResult = await cdp.send('Profiler.stop').catch(() => null)
+      await cdp.send('Profiler.disable').catch(() => undefined)
+    }
+    if (showAllocProfile) {
+      allocProfileResult = await cdp.send('HeapProfiler.stopSampling').catch(() => null)
+      await cdp.send('HeapProfiler.disable').catch(() => undefined)
+    }
+  }
 
   // Process profiling data
   let profileData: FunctionProfile[] | undefined
-  if (showProfile && result && result.profile) {
-    let profile = result.profile as any
+  if (showProfile && cpuProfileResult && cpuProfileResult.profile) {
+    let profile = cpuProfileResult.profile as any
     let nodes = profile.nodes || []
     let samples = profile.samples || []
     let timeDeltas = profile.timeDeltas || []
@@ -214,7 +270,12 @@ async function clickAndMeasure(
       .slice(0, 30)
   }
 
-  return { ...timing, profile: profileData }
+  let allocProfileData: AllocationProfile[] | undefined
+  if (showAllocProfile && allocProfileResult && allocProfileResult.profile) {
+    allocProfileData = buildAllocationProfile(allocProfileResult.profile as any)
+  }
+
+  return { ...timing, profile: profileData, allocProfile: allocProfileData }
 }
 
 // Wait for the main thread to be idle (no pending tasks)
@@ -530,6 +591,44 @@ function aggregateProfiles(
   return aggregated.sort((a, b) => b.time - a.time).slice(0, 30)
 }
 
+function aggregateAllocationProfiles(profiles: AllocationProfile[][]): AllocationProfile[] | null {
+  if (profiles.length === 0) return null
+
+  let functionMap = new Map<string, number[]>()
+  for (let profile of profiles) {
+    for (let func of profile) {
+      if (!functionMap.has(func.name)) {
+        functionMap.set(func.name, [])
+      }
+      functionMap.get(func.name)!.push(func.bytes)
+    }
+  }
+
+  let aggregated: AllocationProfile[] = []
+  for (let [name, bytes] of functionMap.entries()) {
+    let sorted = [...bytes].sort((a, b) => a - b)
+    let median = sorted[Math.floor(sorted.length / 2)]
+
+    let percentages: number[] = []
+    for (let profile of profiles) {
+      let func = profile.find((f) => f.name === name)
+      if (func) {
+        percentages.push(func.percentage)
+      }
+    }
+    let avgPercentage =
+      percentages.length > 0 ? percentages.reduce((a, b) => a + b, 0) / percentages.length : 0
+
+    aggregated.push({
+      name,
+      bytes: median,
+      percentage: avgPercentage,
+    })
+  }
+
+  return aggregated.sort((a, b) => b.bytes - a.bytes).slice(0, 30)
+}
+
 // Print profiling table
 function printProfileTable(profile: FunctionProfile[], operationName: string): void {
   if (profile.length === 0) return
@@ -548,13 +647,38 @@ function printProfileTable(profile: FunctionProfile[], operationName: string): v
   console.log('═'.repeat(90))
 }
 
+function printAllocationProfileTable(profile: AllocationProfile[], operationName: string): void {
+  if (profile.length === 0) return
+
+  console.log(`\n${operationName}`)
+  console.log('🧠 Top functions by allocated heap (median):')
+  console.log('═'.repeat(100))
+  console.log(
+    `${'Function'.padEnd(68)} ${'Bytes'.padStart(14)} ${'KB'.padStart(10)} ${'%'.padStart(8)}`,
+  )
+  console.log('─'.repeat(100))
+  for (let item of profile) {
+    let name = item.name.length > 66 ? '...' + item.name.slice(-63) : item.name
+    let kb = item.bytes / 1024
+    console.log(
+      `${name.padEnd(68)} ${item.bytes.toFixed(0).padStart(14)} ${kb.toFixed(2).padStart(10)} ${item.percentage.toFixed(1).padStart(7)}%`,
+    )
+  }
+  console.log('═'.repeat(100))
+}
+
 // Run benchmark for a single framework
 async function benchmarkFramework(
   page: Page,
   framework: string,
-): Promise<{ results: BenchmarkResult[]; profiles: Map<string, FunctionProfile[][]> }> {
+): Promise<{
+  results: BenchmarkResult[]
+  profiles: Map<string, FunctionProfile[][]>
+  allocProfiles: Map<string, AllocationProfile[][]>
+}> {
   let results: BenchmarkResult[] = []
   let profiles = new Map<string, FunctionProfile[][]>()
+  let allocProfiles = new Map<string, AllocationProfile[][]>()
 
   let url = `${BASE_URL}/${framework}/index.html`
 
@@ -568,6 +692,7 @@ async function benchmarkFramework(
     let scriptingTimes: number[] = []
     let totalTimes: number[] = []
     let runProfiles: FunctionProfile[][] = []
+    let runAllocProfiles: AllocationProfile[][] = []
 
     // Reload page before each operation to reset all JS state (idCounter, etc.)
     await page.goto(url)
@@ -586,6 +711,9 @@ async function benchmarkFramework(
       if (showProfile && timing.profile) {
         runProfiles.push(timing.profile)
       }
+      if (showAllocProfile && timing.allocProfile) {
+        runAllocProfiles.push(timing.allocProfile)
+      }
     }
 
     results.push({
@@ -598,11 +726,14 @@ async function benchmarkFramework(
     if (showProfile && runProfiles.length > 0) {
       profiles.set(operation.name, runProfiles)
     }
+    if (showAllocProfile && runAllocProfiles.length > 0) {
+      allocProfiles.set(operation.name, runAllocProfiles)
+    }
 
     process.stdout.write('.')
   }
 
-  return { results, profiles }
+  return { results, profiles, allocProfiles }
 }
 
 // ANSI color codes
@@ -801,6 +932,7 @@ async function main(): Promise<void> {
 
     let allResults: BenchmarkResult[] = []
     let allProfiles = new Map<string, FunctionProfile[][]>()
+    let allAllocProfiles = new Map<string, AllocationProfile[][]>()
 
     // Load previous remix results if remix is being benchmarked
     let hasRemix = frameworks.includes('remix')
@@ -819,12 +951,16 @@ async function main(): Promise<void> {
 
     for (let framework of frameworks) {
       process.stdout.write(`  ${framework}: `)
-      let { results, profiles } = await benchmarkFramework(page, framework)
+      let { results, profiles, allocProfiles } = await benchmarkFramework(page, framework)
       allResults.push(...results)
       // Store profiles keyed by framework-operation name
       for (let [operationName, runProfiles] of profiles.entries()) {
         let key = `${framework}-${operationName}`
         allProfiles.set(key, runProfiles)
+      }
+      for (let [operationName, runAllocProfiles] of allocProfiles.entries()) {
+        let key = `${framework}-${operationName}`
+        allAllocProfiles.set(key, runAllocProfiles)
       }
       console.log(' done')
     }
@@ -849,6 +985,14 @@ async function main(): Promise<void> {
         }
       }
     }
+    if (showAllocProfile && allAllocProfiles.size > 0) {
+      for (let [key, runAllocProfiles] of allAllocProfiles.entries()) {
+        let aggregated = aggregateAllocationProfiles(runAllocProfiles)
+        if (aggregated) {
+          printAllocationProfileTable(aggregated, key)
+        }
+      }
+    }
 
     // Print benchmark results after profiles
     printResults(allResults)
@@ -869,3 +1013,37 @@ main().catch((error) => {
   console.error('Benchmark failed:', error)
   process.exit(1)
 })
+
+function buildAllocationProfile(rawProfile: any): AllocationProfile[] {
+  let bytesByName = new Map<string, number>()
+  let totalBytes = 0
+
+  function walk(node: any) {
+    if (!node || typeof node !== 'object') return
+
+    let selfSize = Number(node.selfSize || 0)
+    let name =
+      node.callFrame?.functionName || node.callFrame?.url || node.callFrame?.scriptId || 'unknown'
+    if (!name.includes('node_modules')) {
+      let current = bytesByName.get(name) || 0
+      bytesByName.set(name, current + selfSize)
+      totalBytes += selfSize
+    }
+
+    let children = Array.isArray(node.children) ? node.children : []
+    for (let child of children) {
+      walk(child)
+    }
+  }
+
+  walk(rawProfile.head)
+
+  return Array.from(bytesByName.entries())
+    .map(([name, bytes]) => ({
+      name,
+      bytes,
+      percentage: totalBytes > 0 ? (bytes / totalBytes) * 100 : 0,
+    }))
+    .sort((a, b) => b.bytes - a.bytes)
+    .slice(0, 30)
+}
