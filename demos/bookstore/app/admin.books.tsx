@@ -272,12 +272,12 @@ export default {
         title,
         author,
         description,
-        price: parseFloat(price),
+        price: parseFloat(price ?? '0'),
         genre,
         cover_url: cover ?? '/images/placeholder.jpg',
         image_urls: JSON.stringify([]),
         isbn,
-        published_year: parseInt(publishedYear, 10),
+        published_year: parseInt(publishedYear ?? '2024', 10),
         in_stock: inStock,
       })
 
@@ -430,11 +430,11 @@ export default {
         title,
         author,
         description,
-        price: parseFloat(price),
+        price: parseFloat(price ?? '0'),
         genre,
         cover_url,
         isbn,
-        published_year: parseInt(publishedYear, 10),
+        published_year: parseInt(publishedYear ?? '2024', 10),
         in_stock: inStock,
       })
 

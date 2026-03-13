@@ -110,8 +110,9 @@ export default {
           let formData = get(FormData)
           let { email, password } = s.parse(loginSchema, formData)
           let returnTo = url.searchParams.get('returnTo') ?? undefined
+          let normalizedEmail = normalizeEmail(email ?? '')
 
-          let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+          let user = await db.findOne(users, { where: { email: normalizedEmail } })
           if (!user || user.password !== password) {
             session.flash('error', 'Invalid email or password. Please try again.')
             return redirect(routes.auth.login.index.href(undefined, { returnTo }))
@@ -171,9 +172,10 @@ export default {
           let session = get(Session)
           let formData = get(FormData)
           let { email, name, password } = s.parse(registrationSchema, formData)
+          let normalizedEmail = normalizeEmail(email ?? '')
 
           // Check if user already exists
-          if (await db.findOne(users, { where: { email: normalizeEmail(email) } })) {
+          if (await db.findOne(users, { where: { email: normalizedEmail } })) {
             return render(
               <Document>
                 <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
@@ -199,7 +201,7 @@ export default {
           let user = await db.create(
             users,
             {
-              email,
+              email: normalizedEmail,
               password,
               name,
             },
@@ -250,7 +252,8 @@ export default {
         async action({ db, get }) {
           let formData = get(FormData)
           let { email } = s.parse(forgotPasswordSchema, formData)
-          let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+          let normalizedEmail = normalizeEmail(email ?? '')
+          let user = await db.findOne(users, { where: { email: normalizedEmail } })
           let token = undefined as string | undefined
 
           if (user) {

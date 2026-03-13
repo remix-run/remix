@@ -87,7 +87,7 @@ export default {
             return new Response('Book not found', { status: 404 })
           }
 
-          let nextQuantity = parseInt(quantity, 10)
+          let nextQuantity = parseInt(quantity ?? '1', 10)
 
           session.set('cart', updateCartItem(getCurrentCart(), book.id, nextQuantity))
 
