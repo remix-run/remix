@@ -5,7 +5,7 @@ export type {
   JobWriteOptions,
   JobFailureInput,
   ListFailedJobsInput,
-  ReplayFailedJobInput,
+  RetryFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
 } from './lib/storage.ts'

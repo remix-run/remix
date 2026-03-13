@@ -5,7 +5,7 @@ import type {
   JobWriteOptions,
   JobFailureInput,
   ListFailedJobsInput,
-  ReplayFailedJobInput,
+  RetryFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
 } from '@remix-run/job/storage'
@@ -19,7 +19,7 @@ import {
   HEARTBEAT_JOB_SCRIPT,
   LIST_FAILED_JOBS_SCRIPT,
   PRUNE_JOBS_SCRIPT,
-  REPLAY_FAILED_JOB_SCRIPT,
+  RETRY_FAILED_JOB_SCRIPT,
 } from './generated-lua.ts'
 
 let DEFAULT_PREFIX = 'job:'
@@ -139,18 +139,18 @@ export function createRedisJobStorage(
 
       return jobs
     },
-    async replayFailedJob(
-      input: ReplayFailedJobInput,
+    async retryFailedJob(
+      input: RetryFailedJobInput,
       _options?: JobWriteOptions,
     ): Promise<{ jobId: string } | null> {
-      let replayedJobId = crypto.randomUUID()
+      let retriedJobId = crypto.randomUUID()
       let now = Date.now()
       let result = await evalScript(
         redis,
-        REPLAY_FAILED_JOB_SCRIPT,
+        RETRY_FAILED_JOB_SCRIPT,
         [
           keys.job(input.jobId),
-          keys.job(replayedJobId),
+          keys.job(retriedJobId),
           keys.jobsDue,
           keys.jobsCompleted,
           keys.jobsFailed,
@@ -158,21 +158,21 @@ export function createRedisJobStorage(
         ],
         [
           input.jobId,
-          replayedJobId,
+          retriedJobId,
           String(now),
           String(input.runAt ?? now),
           input.priority == null ? '' : String(input.priority),
           input.queue ?? '',
         ],
       )
-      let replayed = asString(result)
+      let retried = asString(result)
 
-      if (replayed === '') {
+      if (retried === '') {
         return null
       }
 
       return {
-        jobId: replayed,
+        jobId: retried,
       }
     },
     async prune(input: PruneJobsInput, _options?: JobWriteOptions): Promise<PruneJobsResult> {

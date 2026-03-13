@@ -131,26 +131,26 @@ export interface ListFailedJobsInput {
 }
 
 /**
- * Parameters for replaying a failed job into a new queued job.
+ * Parameters for retrying a failed job by enqueuing a new job.
  */
-export interface ReplayFailedJobInput {
+export interface RetryFailedJobInput {
   /**
    * Identifier of the failed source job.
    */
   jobId: string
 
   /**
-   * Optional new run time for the replayed job.
+   * Optional new run time for the new job.
    */
   runAt?: number
 
   /**
-   * Optional priority override for the replayed job.
+   * Optional priority override for the new job.
    */
   priority?: number
 
   /**
-   * Optional queue override for the replayed job.
+   * Optional queue override for the new job.
    */
   queue?: string
 }
@@ -243,10 +243,10 @@ export interface JobStorage<transaction = never> {
   listFailedJobs(input: ListFailedJobsInput): Promise<JobRecord[]>
 
   /**
-   * Replays a failed job into a new queued job while preserving the original failed record.
+   * Retries a failed job into a new queued job while preserving the original failed record.
    */
-  replayFailedJob(
-    input: ReplayFailedJobInput,
+  retryFailedJob(
+    input: RetryFailedJobInput,
     options?: JobWriteOptions<transaction>,
   ): Promise<{ jobId: string } | null>
 

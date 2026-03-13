@@ -165,21 +165,21 @@ export interface FailedJobQueryOptions {
 }
 
 /**
- * Options for replaying a failed job into a new queued job.
+ * Options for retrying a failed job by enqueuing a new job.
  */
-export interface ReplayFailedJobOptions<transaction = never> {
+export interface RetryFailedJobOptions<transaction = never> {
   /**
-   * Absolute time when the replayed job should run.
+   * Absolute time when the new job should run.
    */
   runAt?: Date
 
   /**
-   * Priority override for the replayed job.
+   * Priority override for the new job.
    */
   priority?: number
 
   /**
-   * Queue override for the replayed job.
+   * Queue override for the new job.
    */
   queue?: string
 
@@ -190,11 +190,11 @@ export interface ReplayFailedJobOptions<transaction = never> {
 }
 
 /**
- * Result returned after replaying a failed job.
+ * Result returned after retrying a failed job.
  */
-export interface ReplayFailedJobResult {
+export interface RetryFailedJobResult {
   /**
-   * Identifier of the newly enqueued replayed job.
+   * Identifier of the newly enqueued retry job.
    */
   jobId: string
 }
@@ -447,7 +447,7 @@ export type SchedulerEnqueueInput<defs extends JobDefinitions> = {
 /**
  * Scheduler hook callback names.
  */
-export type SchedulerHookName = 'onEnqueue' | 'onCancel' | 'onReplayFailedJob' | 'onPrune'
+export type SchedulerHookName = 'onEnqueue' | 'onCancel' | 'onRetryFailedJob' | 'onPrune'
 
 /**
  * Error event emitted when a scheduler hook throws.
@@ -508,23 +508,23 @@ export interface SchedulerCancelEvent<transaction = never> {
 }
 
 /**
- * Event emitted after replaying a failed job.
+ * Event emitted after retrying a failed job.
  */
-export interface SchedulerReplayFailedJobEvent<transaction = never> {
+export interface SchedulerRetryFailedJobEvent<transaction = never> {
   /**
    * Identifier of the failed source job.
    */
   jobId: string
 
   /**
-   * Options passed to {@link JobScheduler.replayFailedJob}.
+   * Options passed to {@link JobScheduler.retryFailedJob}.
    */
-  options?: ReplayFailedJobOptions<transaction>
+  options?: RetryFailedJobOptions<transaction>
 
   /**
-   * Result of the replay operation.
+   * Result of the retry.
    */
-  result: ReplayFailedJobResult
+  result: RetryFailedJobResult
 }
 
 /**
@@ -557,9 +557,9 @@ export interface SchedulerHooks<defs extends JobDefinitions, transaction = never
   onCancel?(event: SchedulerCancelEvent<transaction>): void | Promise<void>
 
   /**
-   * Runs after a failed job is replayed.
+   * Runs after a failed job is retried.
    */
-  onReplayFailedJob?(event: SchedulerReplayFailedJobEvent<transaction>): void | Promise<void>
+  onRetryFailedJob?(event: SchedulerRetryFailedJobEvent<transaction>): void | Promise<void>
 
   /**
    * Runs after terminal jobs are pruned.
@@ -771,12 +771,12 @@ export interface JobScheduler<defs extends JobDefinitions, transaction = never> 
   listFailedJobs(options?: FailedJobQueryOptions): Promise<JobRecord[]>
 
   /**
-   * Replays a failed job by inserting a new queued job and preserving the original failed record.
+   * Retries a failed job by inserting a new queued job and preserving the original failed record.
    */
-  replayFailedJob(
+  retryFailedJob(
     jobId: string,
-    options?: ReplayFailedJobOptions<transaction>,
-  ): Promise<ReplayFailedJobResult>
+    options?: RetryFailedJobOptions<transaction>,
+  ): Promise<RetryFailedJobResult>
 
   /**
    * Deletes terminal jobs that match a retention policy.
