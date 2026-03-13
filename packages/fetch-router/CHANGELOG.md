@@ -2,6 +2,29 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.18.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove `context.storage`, `context.session`, `context.sessionStarted`, `context.formData`, and `context.files` from `@remix-run/fetch-router`, and rename `createStorageKey(...)` to `createContextKey(...)`.
+
+  `RequestContext` now provides request-scoped context methods directly (`context.get(key)`, `context.set(key, value)`, and `context.has(key)`), using keys created with `createContextKey(...)` or constructors like `Session` and `FormData`.
+
+  Session middleware now stores the request session with `context.set(Session, session)`, and form-data middleware now stores parsed form data with `context.set(FormData, formData)`. Uploaded files are read from `context.get(FormData)` using `get(...)`/`getAll(...)`.
+
+  `RequestContext` is now generic only over route params (`RequestContext<{ id: string }>`), and no longer accepts a request-method generic (`RequestContext<'GET', ...>`).
+
+- BREAKING CHANGE: `router.map()` controllers for route maps now require a single shape: an object with an `actions` property and optional `middleware`.
+
+  Migration: Wrap existing controller objects in `actions`. Nested route maps must also use nested controllers with `{ actions, middleware? }`.
+
+### Patch Changes
+
+- The `Action`/`BuildAction` object form accepted by `router.get(...)`, `router.post(...)`, and `router.map(...)` now uses `{ action, middleware? }`, so you can omit `middleware` entirely instead of writing `middleware: []` when you do not need route middleware.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.19.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.19.1)
+
 ## v0.17.0
 
 ### Minor Changes

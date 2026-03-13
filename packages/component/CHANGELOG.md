@@ -2,6 +2,250 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v0.6.0
+
+### Minor Changes
+
+- BREAKING CHANGE: remove legacy host-element `on` prop support in `@remix-run/component`.
+
+  Use the `on()` mixin instead:
+
+  - Old: `<button on={{ click() {} }} />`
+  - New: `<button mix={[on('click', () => {})]} />`
+
+  This change removes built-in host `on` handling from runtime, typing, and host-prop composition. Component-level `handle.on(...)` remains supported.
+
+- BREAKING CHANGE: remove legacy host-element `css` prop runtime support in `@remix-run/component`.
+
+  Use the `css(...)` mixin instead:
+
+  - Old: `<div css={{ color: 'red' }} />`
+  - New: `<div mix={[css({ color: 'red' })]} />`
+
+  This aligns styling behavior with the new mixin composition model.
+
+- BREAKING CHANGE: remove legacy host-element `animate` prop runtime support in `@remix-run/component`.
+
+  Use animation mixins instead:
+
+  - Old: `<div animate={{ enter: true, exit: true, layout: true }} />`
+  - New: `<div mix={[animateEntrance(), animateExit(), animateLayout()]} />`
+
+  This aligns animation behavior with the new mixin composition model.
+
+- BREAKING CHANGE: remove legacy host-element `connect` prop support in `@remix-run/component`.
+
+  Use the `ref(...)` mixin instead:
+
+  - Old: `<div connect={(node, signal) => {}} />`
+  - New: `<div mix={[ref((node, signal) => {})]} />`
+
+  This aligns element reference and teardown behavior with the mixin composition model.
+
+- BREAKING CHANGE: the `@remix-run/interaction` package has been removed.
+
+  `handle.on(...)` APIs were also removed from component and mixin handles.
+
+  Before/after migration:
+
+  **Interaction package APIs:**
+
+  - Before: `defineInteraction(...)`, `createContainer(...)`, `on(target, listeners)` from `@remix-run/interaction`.
+  - After: use component APIs (`createMixin(...)`, `on(...)`, `addEventListeners(...)`) from `@remix-run/component`.
+
+  ```ts
+  // Before
+  import { on } from '@remix-run/interaction'
+
+  let dispose = on(window, {
+    resize() {
+      console.log('resized')
+    },
+  })
+
+  // After
+  import { addEventListeners } from '@remix-run/component'
+
+  let controller = new AbortController()
+  addEventListeners(window, controller.signal, {
+    resize() {
+      console.log('resized')
+    },
+  })
+  ```
+
+  **Component handle API:**
+
+  - Before: `handle.on(target, listeners)`.
+  - After: `addEventListeners(target, handle.signal, listeners)`.
+
+  ```tsx
+  // Before
+  function KeyboardTracker(handle: Handle) {
+    handle.on(document, {
+      keydown(event) {
+        console.log(event.key)
+      },
+    })
+    return () => null
+  }
+
+  // After
+  import { addEventListeners } from '@remix-run/component'
+
+  function KeyboardTracker(handle: Handle) {
+    addEventListeners(document, handle.signal, {
+      keydown(event) {
+        console.log(event.key)
+      },
+    })
+    return () => null
+  }
+  ```
+
+  **Custom interaction patterns:**
+
+  - Before: `defineInteraction(...)` + interaction setup function.
+  - After: event mixins (`createMixin(...)`) that compose `on(...)` listeners and dispatch typed custom events.
+
+  ```tsx
+  // Before
+  import { defineInteraction, type Interaction } from '@remix-run/interaction'
+
+  export let tempo = defineInteraction('my:tempo', Tempo)
+
+  function Tempo(handle: Interaction) {
+    handle.on(handle.target, {
+      click() {
+        handle.target.dispatchEvent(new TempoEvent(bmp))
+      },
+    })
+  }
+
+  // App consumption (before, JSX)
+  function TempoButtonBefore() {
+    return () => (
+      <button
+        on={{
+          [tempo](event) {
+            console.log(event.bpm)
+          },
+        }}
+      />
+    )
+  }
+
+  // After
+  import { createMixin, on } from '@remix-run/component'
+
+  export let tempo = 'my:tempo' as const
+
+  export let tempoEvents = createMixin<HTMLElement>((handle) => {
+    return () => (
+      <handle.element
+        mix={[
+          on('click', (event) => {
+            event.currentTarget.dispatchEvent(new TempoEvent(bpm))
+          }),
+        ]}
+      />
+    )
+  })
+
+  // App consumption (after)
+  function TempoButton() {
+    return () => (
+      <button
+        mix={[
+          tempoEvents(),
+          on(tempo, (event) => {
+            console.log(event.detail.bpm)
+          }),
+        ]}
+      />
+    )
+  }
+  ```
+
+  **TypedEventTarget**
+
+  `TypedEventTarget` is now exported from `@remix-run/component`.
+
+- BREAKING CHANGE: `renderToStream()`, hydration, client updates, and frame reloads no longer hoist bare `title`, `meta`, `link`, `style`, or `script[type="application/ld+json"]` elements into `document.head`. Render head content inside an explicit `<head>` instead, or pass values like `title` to a layout component that renders the head.
+
+  This removes ordering-sensitive head manipulation from server rendering and client reconciliation. We originally explored this behavior in the spirit of React's head "float" work, but Remix Component's async model is centered on routes and frames rather than async components, so layouts can render head content explicitly without needing to discover and reorder tags from deep in the tree.
+
+- Add the new host `mix` prop and mixin authoring APIs in `@remix-run/component`.
+
+  New exports include:
+
+  - `createMixin`
+  - `MixinDescriptor`, `MixinHandle`, `MixinType`, `MixValue`
+  - `on(...)`
+  - `ref(...)`
+  - `css(...)`
+
+  This enables reusable host behaviors and composable element capabilities without bespoke host props.
+
+- Add new interaction mixins for normalized user input events:
+
+  - `pressEvents(...)` for pointer/keyboard "press" interactions
+  - `keysEvents(...)` for keyboard key state events
+
+  These helpers provide a consistent mixin-based interaction model for input handling.
+
+- Add mixin-first animation APIs for host elements:
+
+  - `animateEntrance(...)`
+  - `animateExit(...)`
+  - `animateLayout(...)`
+
+  These APIs move entrance/exit/layout animation behavior to composable mixins that can be combined with other host behaviors.
+
+- Allow the `mix` prop to accept either a single mixin descriptor or an array of mixin descriptors.
+
+  This lets one-off mixins use `mix={...}` while preserving array support for composed mixins, and component render props now normalize `mix` to an array or `undefined` so wrapper components can compose `mix` values without special casing single descriptors.
+
+- Allow client `resolveFrame(...)` callbacks to return `RemixNode` content in addition to HTML strings and streams.
+
+  This lets apps render local frame fallback and recovery UI directly from the client runtime without manually serializing HTML, and frame updates now clear previously rendered HTML before mounting the new node-based content.
+
+- Automatically intercept anchor and area navigations through the Navigation API, with `rmx-target` to target mounted frames, `rmx-src` to override the fetched frame source, and `rmx-document` to opt back into full-document navigation.
+
+- Add imperative frame-navigation runtime APIs and a `link(href, { src, target, history })` mixin for declarative client navigations.
+
+  `run()` now initializes from `run({ loadModule, resolveFrame })`, the package exports `navigate(href, { src, target, history })` and `link(href, { src, target, history })`, and components can target mounted frames via `handle.frames.top` and `handle.frames.get(name)`. The `link()` mixin adds `href`/`rmx-*` attributes to anchors and gives buttons and other elements accessible link semantics with click and keyboard navigation behavior.
+
+- Allow `resolveFrame(src, signal, target)` to receive the named frame target for targeted reloads.
+
+  This makes it easier to distinguish targeted frame navigations when forwarding frame requests through app-specific fetch logic.
+
+- Add SSR frame source context for nested frame rendering.
+
+  `renderToStream()` now accepts `frameSrc` and `topFrameSrc`, `resolveFrame()` receives a `ResolveFrameContext`, and server-rendered components can read stable `handle.frame.src` and `handle.frames.top.src` values across nested frame renders.
+
+### Patch Changes
+
+- Preserve browser-managed live state when frame DOM diffing updates interactive elements.
+
+  This keeps reloads from clobbering current UI state for reflected and form-like cases such as `details[open]`, `dialog[open]`, `input.checked`, editable input values, `textarea` values, `<select>` selection, and open popovers when the incoming HTML only changes serialized defaults.
+
+- Forward hydrated client entry, frame reload, and `ready()` initialization errors to the top-level runtime target returned by `run()`, and type that runtime as a `TypedEventTarget` with an `error` event whose `.error` value is `unknown`.
+
+  This lets `app.addEventListener('error', ...)` observe bubbling DOM errors captured by hydrated client entry roots, frame reload failures such as rejected `resolveFrame()` calls, and initialization failures that reject `app.ready()`, while also giving TypeScript-aware consumers the concrete event names and safer payload types exposed by `run()` and root listeners.
+
+- Run mixin `insert`, `remove`, and `reclaimed` lifecycle events in the scheduler's commit phase instead of dispatching them inline during DOM diffing.
+
+  This lets `ref(...)` and other insert-driven mixins safely call `handle.update()` during initial mount, and it makes mixin lifecycle timing line up with commit-phase DOM state before normal queued tasks run.
+
+- Fix SVG `className` prop normalization to render as `class` in both client DOM updates and SSR stream output.
+
+  Also add SVG regression coverage to prevent accidental `class-name` output.
+
+- Resolve nested SVG click targets back to their enclosing anchor or area element so frame navigation still intercepts normal link clicks inside inline SVG content.
+
+- Skip frame-navigation interception for native anchor and area elements with a `download` attribute so browsers can handle file downloads normally without needing `rmx-document`.
+
 ## v0.5.0
 
 ### Minor Changes
