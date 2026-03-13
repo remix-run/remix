@@ -1,14 +1,11 @@
 import { parse } from '@remix-run/data-schema'
 
-import type { DueSchedule, PersistedCronSchedule } from './storage.ts'
 import type {
   CreateJobWorkerOptions,
-  CronSchedule,
   JobDefinitions,
   JobRecord,
   JobWorker,
   PrunePolicy,
-  RetryPolicy,
   WorkerHookName,
   WorkerHooks,
   WorkerJobCompleteEvent,
@@ -18,13 +15,11 @@ import type {
   WorkerOptions,
   WorkerPruneEvent,
 } from './types.ts'
-import { getCronDispatchCount, getNextCronRunAt } from './cron.ts'
-import { computeRetryAt, normalizeRetryPolicy } from './retry.ts'
+import { computeRetryAt } from './retry.ts'
 
 let DEFAULT_CONCURRENCY = 10
 let DEFAULT_POLL_INTERVAL_MS = 1000
 let DEFAULT_LEASE_MS = 30000
-let DEFAULT_CRON_TICK_MS = 30000
 let DEFAULT_RETENTION_INTERVAL_MS = 60000
 let DEFAULT_RETENTION_LIMIT = 500
 
@@ -40,7 +35,6 @@ export function createJobWorker<
   options: CreateJobWorkerOptions<defs>,
 ): JobWorker {
   let jobs = options.jobs
-  let jobNames = createJobNameMap(jobs)
   let storage = options.storage
   let hooks = options
   let workerOptions = normalizeWorkerOptions(options.worker)
@@ -52,10 +46,7 @@ export function createJobWorker<
 
   let loopAbort = new AbortController()
   let workLoopPromise: Promise<void> | undefined
-  let cronLoopPromise: Promise<void> | undefined
   let retentionLoopPromise: Promise<void> | undefined
-
-  let cronSchedules = options.cron ?? []
 
   async function start(): Promise<void> {
     if (running) {
@@ -67,14 +58,6 @@ export function createJobWorker<
     }
 
     running = true
-
-    await storage.replaceSchedules(
-      cronSchedules.map((schedule) => toPersistedSchedule(schedule, Date.now(), jobNames)),
-    )
-
-    if (cronSchedules.length > 0) {
-      cronLoopPromise = runCronLoop()
-    }
 
     if (workerOptions.retention != null) {
       retentionLoopPromise = runRetentionLoop()
@@ -97,7 +80,7 @@ export function createJobWorker<
       controller.abort(new Error('Worker stopped'))
     }
 
-    await Promise.all([workLoopPromise, cronLoopPromise, retentionLoopPromise])
+    await Promise.all([workLoopPromise, retentionLoopPromise])
   }
 
   async function drain(timeoutMs = 30000): Promise<void> {
@@ -139,23 +122,6 @@ export function createJobWorker<
     }
   }
 
-  async function runCronLoop(): Promise<void> {
-    while (running) {
-      let dueSchedules = await storage.claimDueSchedules({
-        now: Date.now(),
-        workerId: workerOptions.workerId,
-        leaseMs: workerOptions.leaseMs,
-        limit: 25,
-      })
-
-      for (let schedule of dueSchedules) {
-        await processSchedule(schedule)
-      }
-
-      await sleep(workerOptions.cronTickMs, loopAbort.signal)
-    }
-  }
-
   async function runRetentionLoop(): Promise<void> {
     if (workerOptions.retention == null) {
       return
@@ -183,56 +149,6 @@ export function createJobWorker<
 
       await sleep(retention.intervalMs, loopAbort.signal)
     }
-  }
-
-  async function processSchedule(schedule: DueSchedule): Promise<void> {
-    let now = Date.now()
-    let definition = jobs[schedule.name]
-
-    if (definition == null) {
-      await storage.advanceSchedule({
-        scheduleId: schedule.id,
-        nextRunAt: getNextCronRunAt(schedule.schedule, now, schedule.timezone),
-        now,
-        workerId: workerOptions.workerId,
-      })
-      return
-    }
-
-    let payload = parse(definition.schema, schedule.payload)
-    let dispatchCount = getCronDispatchCount(
-      schedule.schedule,
-      schedule.timezone,
-      schedule.catchUp,
-      schedule.nextRunAt,
-      now,
-    )
-    let dispatchIndex = 0
-
-    while (dispatchIndex < dispatchCount) {
-      let now = Date.now()
-      let retry = normalizeRetryPolicy(definition.retry, schedule.retry)
-
-      await storage.enqueue({
-        name: schedule.name,
-        queue: schedule.queue,
-        payload,
-        runAt: now,
-        priority: 0,
-        retry,
-        createdAt: now,
-      })
-      dispatchIndex += 1
-    }
-
-    let nextRunAt = getNextCronRunAt(schedule.schedule, now, schedule.timezone)
-
-    await storage.advanceSchedule({
-      scheduleId: schedule.id,
-      nextRunAt,
-      now,
-      workerId: workerOptions.workerId,
-    })
   }
 
   async function processJob(job: JobRecord): Promise<void> {
@@ -392,7 +308,6 @@ type NormalizedWorkerOptions = {
   pollIntervalMs: number
   leaseMs: number
   heartbeatMs: number
-  cronTickMs: number
   retention?: {
     policy: PrunePolicy
     intervalMs: number
@@ -415,7 +330,6 @@ function normalizeWorkerOptions(options?: WorkerOptions): NormalizedWorkerOption
       Math.max(1000, Math.floor(leaseMs / 2)),
       1,
     ),
-    cronTickMs: normalizeWholeNumber(options?.cronTickMs, DEFAULT_CRON_TICK_MS, 1),
     retention,
   }
 }
@@ -430,49 +344,6 @@ function normalizeRetentionOptions(options: WorkerOptions['retention']): Normali
     intervalMs: normalizeWholeNumber(options.intervalMs, DEFAULT_RETENTION_INTERVAL_MS, 1),
     limit: normalizeWholeNumber(options.limit, DEFAULT_RETENTION_LIMIT, 1),
   }
-}
-
-function toPersistedSchedule<defs extends JobDefinitions>(
-  schedule: CronSchedule<defs>,
-  now: number,
-  jobNames: WeakMap<object, string>,
-): PersistedCronSchedule {
-  let timeZone = schedule.options.timezone ?? 'UTC'
-  let retry = normalizeRetryPolicy(undefined, schedule.options.retry as RetryPolicy | undefined)
-  let jobName = resolveJobName(schedule.job, jobNames)
-
-  return {
-    id: schedule.options.id,
-    schedule: schedule.schedule,
-    timezone: timeZone,
-    queue: schedule.options.queue ?? 'default',
-    name: jobName,
-    payload: schedule.payload,
-    retry,
-    catchUp: schedule.options.catchUp ?? 'one',
-    nextRunAt: getNextCronRunAt(schedule.schedule, now - 60000, timeZone),
-  }
-}
-
-function createJobNameMap<defs extends JobDefinitions>(jobs: defs): WeakMap<object, string> {
-  let jobNames = new WeakMap<object, string>()
-
-  for (let name in jobs) {
-    let definition = jobs[name]
-    jobNames.set(definition, name)
-  }
-
-  return jobNames
-}
-
-function resolveJobName(value: object, jobNames: WeakMap<object, string>): string {
-  let jobName = jobNames.get(value)
-
-  if (jobName == null) {
-    throw new Error('Unknown job definition passed to cron schedule')
-  }
-
-  return jobName
 }
 
 function normalizeWholeNumber(value: unknown, fallback: number, minValue: number): number {

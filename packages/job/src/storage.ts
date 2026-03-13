@@ -1,7 +1,5 @@
 export type {
   ClaimDueJobsInput,
-  ClaimDueSchedulesInput,
-  DueSchedule,
   EnqueueJobInput,
   JobStorage,
   JobWriteOptions,
@@ -10,5 +8,4 @@ export type {
   ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
-  PersistedCronSchedule,
 } from './lib/storage.ts'

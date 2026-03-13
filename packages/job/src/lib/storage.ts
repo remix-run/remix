@@ -1,4 +1,4 @@
-import type { CatchUpPolicy, JobRecord, ResolvedRetryPolicy } from './types.ts'
+import type { JobRecord, ResolvedRetryPolicy } from './types.ts'
 
 /**
  * Persisted fields required to enqueue a job in storage.
@@ -116,81 +116,6 @@ export interface JobFailureInput {
 }
 
 /**
- * Persisted cron schedule state stored by a job storage adapter.
- */
-export interface PersistedCronSchedule {
-  /**
-   * Stable schedule identifier.
-   */
-  id: string
-
-  /**
-   * Cron expression describing when the schedule fires.
-   */
-  schedule: string
-
-  /**
-   * IANA time zone used to evaluate the cron expression.
-   */
-  timezone: string
-
-  /**
-   * Queue used for dispatched jobs.
-   */
-  queue: string
-
-  /**
-   * Registered job name dispatched by the schedule.
-   */
-  name: string
-
-  /**
-   * Parsed payload dispatched each time the schedule fires.
-   */
-  payload: unknown
-
-  /**
-   * Normalized retry policy applied to scheduled jobs.
-   */
-  retry: ResolvedRetryPolicy
-
-  /**
-   * Catch-up behavior used when the worker falls behind.
-   */
-  catchUp: CatchUpPolicy
-
-  /**
-   * Next scheduled run time in milliseconds.
-   */
-  nextRunAt: number
-}
-
-/**
- * Parameters used when claiming due cron schedules.
- */
-export interface ClaimDueSchedulesInput {
-  /**
-   * Current timestamp in milliseconds.
-   */
-  now: number
-
-  /**
-   * Worker identifier claiming the schedules.
-   */
-  workerId: string
-
-  /**
-   * Lease duration in milliseconds for claimed schedules.
-   */
-  leaseMs: number
-
-  /**
-   * Maximum number of schedules to claim.
-   */
-  limit: number
-}
-
-/**
  * Filters when listing failed jobs from storage.
  */
 export interface ListFailedJobsInput {
@@ -278,21 +203,6 @@ export interface PruneJobsResult {
    * Number of canceled jobs deleted.
    */
   canceled: number
-}
-
-/**
- * Claimed cron schedule plus its active lease metadata.
- */
-export interface DueSchedule extends PersistedCronSchedule {
-  /**
-   * Worker identifier that currently owns the schedule lease.
-   */
-  lockedBy: string
-
-  /**
-   * Timestamp in milliseconds when the schedule lease expires.
-   */
-  lockedUntil: number
 }
 
 /**
@@ -403,38 +313,4 @@ export interface JobStorage<transaction = never> {
    */
   fail(input: JobFailureInput): Promise<void>
 
-  /**
-   * Replaces the entire persisted cron schedule set with the supplied schedules.
-   */
-  replaceSchedules(input: PersistedCronSchedule[]): Promise<void>
-
-  /**
-   * Claims due cron schedules for a worker and assigns them a lease.
-   */
-  claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]>
-
-  /**
-   * Advances a claimed cron schedule to its next run time.
-   */
-  advanceSchedule(input: {
-    /**
-     * Identifier of the claimed schedule.
-     */
-    scheduleId: string
-
-    /**
-     * Next run time in milliseconds.
-     */
-    nextRunAt: number
-
-    /**
-     * Current timestamp in milliseconds.
-     */
-    now: number
-
-    /**
-     * Worker identifier advancing the schedule.
-     */
-    workerId: string
-  }): Promise<void>
 }

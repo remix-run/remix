@@ -1,9 +1,6 @@
 export { createJobScheduler, createJobs } from './lib/scheduler.ts'
 export type {
   CancelOptions,
-  CatchUpPolicy,
-  CronSchedule,
-  CronScheduleOptions,
   CreateJobSchedulerOptions,
   CreateJobWorkerOptions,
   FailedJobQueryOptions,
