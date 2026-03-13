@@ -712,10 +712,14 @@ function List(handle: Handle) {
 - [Frames](./docs/frames.md)
 - [Styling](./docs/styling.md)
 - [Events](./docs/events.md)
+- [Interactions](./docs/interactions.md)
 - [Context](./docs/context.md)
 - [Composition](./docs/composition.md)
 - [Patterns](./docs/patterns.md)
 - [Testing](./docs/testing.md)
-- [Animation](./docs/animate.md)
+- Animations
+  - [spring](./docs/spring.md)
+  - [tween](./docs/tween.md)
+- [Server Rendering](./docs/server-rendering.md)
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

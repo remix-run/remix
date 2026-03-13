@@ -70,10 +70,11 @@ async function loadTypedocJson(opts: {
 
     let outPath = path.resolve(process.cwd(), opts.typedocDir)
     await app.renderer.render(reflection!, outPath)
-    info(`HTML docs generated at: ${outPath}`)
 
     let jsonPath = path.join(outPath, 'api.json')
     await app.application.generateJson(reflection, jsonPath)
+
+    info(`HTML docs generated at: ${outPath}`)
     info(`JSON docs generated at: ${jsonPath}`)
 
     return reflection

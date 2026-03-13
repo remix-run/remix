@@ -9,7 +9,7 @@ import {
   type DocumentedInterfaceFunction,
   type DocumentedType,
 } from './documented-api.ts'
-import { debug, verbose, warn } from './utils.ts'
+import { debug, info, verbose, warn } from './utils.ts'
 
 export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: string) {
   for (let comment of comments) {
@@ -40,7 +40,7 @@ const p = (content: string) => `${content}`
 const pre = async (content: string, lang = 'ts') => {
   if (content.includes('(...)')) {
     // Prettier chokes on the ellipsis syntax in function signatures
-    warn(
+    info(
       'Skipping formatting for code block with ellipsis syntax: ',
       content.substring(0, 50) + '...',
     )
