@@ -1,28 +1,12 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
-import {
-  createGitHubAuthProvider,
-  createGoogleAuthProvider,
-  createXAuthProvider,
-} from 'remix/auth'
-import type {
-  GitHubAuthProfile,
-  GoogleAuthProfile,
-  OAuthProvider,
-  OAuthResult,
-  XAuthProfile,
-} from 'remix/auth'
 import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
 import type { Database as DataTableDatabase } from 'remix/data-table'
 
-import type { SocialLoginConfig } from '../config.ts'
 import { authAccounts, users, type User } from '../data/schema.ts'
-import { routes } from '../routes.ts'
+import type { LoginMethod, SocialAuthResult } from '../social-providers.ts'
 import type { Session } from '../utils/session.ts'
 import { AppDatabase } from './database.ts'
-
-export type SocialProviderName = 'google' | 'github' | 'x'
-export type LoginMethod = SocialProviderName | 'password'
 
 export interface AuthenticatedUser {
   id: number
@@ -32,33 +16,18 @@ export interface AuthenticatedUser {
   loginMethod: LoginMethod
 }
 
-export interface SocialProviderState {
-  name: SocialProviderName
-  label: string
-  configured: boolean
-  missingEnv: string[]
-}
-
 interface SocialLoginSession {
   userId: number
   loginMethod: LoginMethod
 }
-
-type SocialProvider =
-  | OAuthProvider<GoogleAuthProfile, 'google'>
-  | OAuthProvider<GitHubAuthProfile, 'github'>
-  | OAuthProvider<XAuthProfile, 'x'>
-
-export type SocialAuthResult =
-  | OAuthResult<GoogleAuthProfile, 'google'>
-  | OAuthResult<GitHubAuthProfile, 'github'>
-  | OAuthResult<XAuthProfile, 'x'>
 
 interface SocialProfileData {
   email?: string
   name?: string
   avatarUrl?: string
 }
+
+type SocialProfilePatch = Pick<Partial<User>, 'email' | 'name' | 'avatar_url'>
 
 export let passwordProvider = createCredentialsAuthProvider({
   parse(context) {
@@ -105,114 +74,15 @@ export function loadAuth(): Middleware {
   })
 }
 
-export function getSocialProviderStates(config: SocialLoginConfig): SocialProviderState[] {
-  return [
-    createProviderState('google', config),
-    createProviderState('github', config),
-    createProviderState('x', config),
-  ]
-}
-
-export function getProviderLabel(name: SocialProviderName): string {
-  switch (name) {
-    case 'google':
-      return 'Google'
-    case 'github':
-      return 'GitHub'
-    case 'x':
-      return 'X'
-  }
-}
-
-export function getLoginMethodLabel(method: LoginMethod): string {
-  if (method === 'password') {
-    return 'Email and password'
-  }
-
-  return getProviderLabel(method)
-}
-
-export function getProviderUnavailableMessage(
-  name: SocialProviderName,
-  config: SocialLoginConfig,
-): string {
-  let missingEnv = getMissingProviderEnv(name, config)
-
-  if (missingEnv.length === 0) {
-    return `${getProviderLabel(name)} login is not configured.`
-  }
-
-  return `${getProviderLabel(name)} login is not configured. Set ${missingEnv.join(' and ')}.`
-}
-
-export function createSocialAuthProvider(
-  name: SocialProviderName,
-  origin: string,
-  config: SocialLoginConfig,
-): SocialProvider | null {
-  switch (name) {
-    case 'google':
-      return createGoogleProvider(origin, config)
-    case 'github':
-      return createGitHubProvider(origin, config)
-    case 'x':
-      return createXProvider(origin, config)
-  }
-}
-
-export function createGoogleProvider(
-  origin: string,
-  config: SocialLoginConfig,
-): OAuthProvider<GoogleAuthProfile, 'google'> | null {
-  if (!config.googleClientId || !config.googleClientSecret) {
-    return null
-  }
-
-  return createGoogleAuthProvider({
-    clientId: config.googleClientId,
-    clientSecret: config.googleClientSecret,
-    redirectUri: new URL(routes.auth.google.callback.href(), origin),
-  })
-}
-
-export function createGitHubProvider(
-  origin: string,
-  config: SocialLoginConfig,
-): OAuthProvider<GitHubAuthProfile, 'github'> | null {
-  if (!config.githubClientId || !config.githubClientSecret) {
-    return null
-  }
-
-  return createGitHubAuthProvider({
-    clientId: config.githubClientId,
-    clientSecret: config.githubClientSecret,
-    redirectUri: new URL(routes.auth.github.callback.href(), origin),
-  })
-}
-
-export function createXProvider(
-  origin: string,
-  config: SocialLoginConfig,
-): OAuthProvider<XAuthProfile, 'x'> | null {
-  if (!config.xClientId || !config.xClientSecret) {
-    return null
-  }
-
-  return createXAuthProvider({
-    clientId: config.xClientId,
-    clientSecret: config.xClientSecret,
-    redirectUri: new URL(routes.auth.x.callback.href(), origin),
-  })
-}
-
 export async function upsertSocialUser(
   db: DataTableDatabase,
   result: SocialAuthResult,
 ): Promise<User> {
   let now = Date.now()
   let profile = getSocialProfileData(result)
+  let profilePatch = createSocialProfilePatch(profile)
 
-  return db.transaction(async tx => {
+  return db.transaction(async (tx) => {
     let account = await tx.findOne(authAccounts, {
       where: {
         provider: result.provider,
@@ -228,12 +98,12 @@ export async function upsertSocialUser(
       }
 
       let nextUser = await tx.update(users, user.id, {
-        ...createUserPatch(profile),
+        ...profilePatch,
         updated_at: now,
       })
 
       await tx.update(authAccounts, account.id, {
-        ...createAuthAccountPatch(profile),
+        ...profilePatch,
         updated_at: now,
       })
 
@@ -248,14 +118,14 @@ export async function upsertSocialUser(
         ? await tx.create(
             users,
             {
-              ...createUserPatch(profile),
+              ...profilePatch,
               created_at: now,
               updated_at: now,
             },
             { returnRow: true },
           )
         : await tx.update(users, existingUser.id, {
-            ...createUserPatch(profile),
+            ...profilePatch,
             updated_at: now,
           })
 
@@ -263,7 +133,7 @@ export async function upsertSocialUser(
       user_id: user.id,
       provider: result.provider,
       provider_account_id: result.account.providerAccountId,
-      ...createAuthAccountPatch(profile),
+      ...profilePatch,
       created_at: now,
       updated_at: now,
     })
@@ -287,19 +157,8 @@ export function clearAuthenticatedSession(session: Session): void {
   session.unset('auth')
 }
 
-function createProviderState(name: SocialProviderName, config: SocialLoginConfig): SocialProviderState {
-  let missingEnv = getMissingProviderEnv(name, config)
-
-  return {
-    name,
-    label: getProviderLabel(name),
-    configured: missingEnv.length === 0,
-    missingEnv,
-  }
-}
-
-function createUserPatch(profile: SocialProfileData): Partial<User> {
-  let next: Partial<User> = {}
+function createSocialProfilePatch(profile: SocialProfileData): SocialProfilePatch {
+  let next: SocialProfilePatch = {}
 
   if (profile.email !== undefined) {
     next.email = profile.email
@@ -314,48 +173,6 @@ function createUserPatch(profile: SocialProfileData): Partial<User> {
   }
 
   return next
-}
-
-function createAuthAccountPatch(profile: SocialProfileData) {
-  let next: Record<string, string> = {}
-
-  if (profile.email !== undefined) {
-    next.email = profile.email
-  }
-
-  if (profile.name !== undefined) {
-    next.name = profile.name
-  }
-
-  if (profile.avatarUrl !== undefined) {
-    next.avatar_url = profile.avatarUrl
-  }
-
-  return next
-}
-
-function getMissingProviderEnv(name: SocialProviderName, config: SocialLoginConfig): string[] {
-  switch (name) {
-    case 'google':
-      return getMissingValues([
-        ['GOOGLE_CLIENT_ID', config.googleClientId],
-        ['GOOGLE_CLIENT_SECRET', config.googleClientSecret],
-      ])
-    case 'github':
-      return getMissingValues([
-        ['GITHUB_CLIENT_ID', config.githubClientId],
-        ['GITHUB_CLIENT_SECRET', config.githubClientSecret],
-      ])
-    case 'x':
-      return getMissingValues([
-        ['X_CLIENT_ID', config.xClientId],
-        ['X_CLIENT_SECRET', config.xClientSecret],
-      ])
-  }
-}
-
-function getMissingValues(entries: [string, string | undefined][]): string[] {
-  return entries.flatMap(([name, value]) => (value ? [] : [name]))
 }
 
 function getSocialProfileData(result: SocialAuthResult): SocialProfileData {

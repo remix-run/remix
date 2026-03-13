@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { createRequestListener } from 'remix/node-fetch-server'
 
 import { getSocialLoginConfig } from './app/config.ts'
-import { getSocialProviderStates } from './app/middleware/auth.ts'
 import { createSocialLoginRouter } from './app/router.ts'
 import { socialLoginDatabaseFilePath } from './app/data/setup.ts'
+import { getSocialProviderStates } from './app/social-providers.ts'
 
 let config = getSocialLoginConfig()
 let providerStates = getSocialProviderStates(config)

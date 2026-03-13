@@ -7,16 +7,19 @@ import type { SocialLoginConfig } from './config.ts'
 import { routes } from './routes.ts'
 import {
   clearAuthenticatedSession,
-  createSocialAuthProvider,
-  getLoginMethodLabel,
-  getProviderUnavailableMessage,
   passwordProvider,
-  type SocialAuthResult,
-  type SocialProviderName,
   upsertSocialUser,
   writeAuthenticatedSession,
 } from './middleware/auth.ts'
 import { AppDatabase } from './middleware/database.ts'
+import {
+  createSocialAuthProvider,
+  getLoginMethodLabel,
+  getProviderUnavailableMessage,
+  type SocialAuthResult,
+  type SocialProvider,
+  type SocialProviderName,
+} from './social-providers.ts'
 import { Session } from './utils/session.ts'
 
 export function createAuthController(config: SocialLoginConfig): Controller<typeof routes.auth> {
@@ -73,54 +76,59 @@ function createSocialLoginAction(
   name: SocialProviderName,
   config: SocialLoginConfig,
 ): RequestHandler {
-  return context => {
-    let provider = createSocialAuthProvider(name, context.url.origin, config)
-
-    if (provider == null) {
-      return redirectWithError(context, getProviderUnavailableMessage(name, config))
-    }
-
-    return createAuthLoginRequestHandler(provider, {
-      onError(error, failureContext) {
-        return redirectWithError(
-          failureContext,
-          `${getLoginMethodLabel(name)} login failed. ${getErrorMessage(error)}`,
-        )
-      },
-    })(context)
-  }
+  return context =>
+    withConfiguredSocialProvider(context, name, config, provider =>
+      createAuthLoginRequestHandler(provider, {
+        onError(error, failureContext) {
+          return redirectWithError(
+            failureContext,
+            `${getLoginMethodLabel(name)} login failed. ${getErrorMessage(error)}`,
+          )
+        },
+      })(context),
+    )
 }
 
 function createSocialCallbackAction(
   name: SocialProviderName,
   config: SocialLoginConfig,
 ): RequestHandler {
-  return context => {
-    let provider = createSocialAuthProvider(name, context.url.origin, config)
+  return context =>
+    withConfiguredSocialProvider(context, name, config, provider =>
+      createAuthCallbackRequestHandler(provider, {
+        async writeSession(session, result, callbackContext) {
+          let user = await upsertSocialUser(
+            callbackContext.get(AppDatabase),
+            result as SocialAuthResult,
+          )
+          writeAuthenticatedSession(session, user, result.provider)
+        },
+        onSuccess() {
+          return redirect(routes.home.href())
+        },
+        onFailure(error, failureContext) {
+          return redirectWithError(
+            failureContext,
+            `${getLoginMethodLabel(name)} login failed. ${getErrorMessage(error)}`,
+          )
+        },
+      })(context),
+    )
+}
 
-    if (provider == null) {
-      return redirectWithError(context, getProviderUnavailableMessage(name, config))
-    }
+function withConfiguredSocialProvider(
+  context: RequestContext,
+  name: SocialProviderName,
+  config: SocialLoginConfig,
+  action: (provider: SocialProvider) => Response | Promise<Response>,
+): Response | Promise<Response> {
+  let provider = createSocialAuthProvider(name, context.url.origin, config)
 
-    return createAuthCallbackRequestHandler(provider, {
-      async writeSession(session, result, callbackContext) {
-        let user = await upsertSocialUser(
-          callbackContext.get(AppDatabase),
-          result as SocialAuthResult,
-        )
-        writeAuthenticatedSession(session, user, result.provider)
-      },
-      onSuccess() {
-        return redirect(routes.home.href())
-      },
-      onFailure(error, failureContext) {
-        return redirectWithError(
-          failureContext,
-          `${getLoginMethodLabel(name)} login failed. ${getErrorMessage(error)}`,
-        )
-      },
-    })(context)
+  if (provider == null) {
+    return redirectWithError(context, getProviderUnavailableMessage(name, config))
   }
+
+  return action(provider)
 }
 
 function redirectWithError(context: RequestContext, message: string): Response {
