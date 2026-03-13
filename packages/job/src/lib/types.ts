@@ -865,24 +865,6 @@ export interface JobWorker {
 }
 
 /**
- * Options for constructing a scheduler.
- */
-export type CreateJobSchedulerOptions<
-  defs extends JobDefinitions,
-  transaction = never,
-> = {
-  /**
-   * Registered job definitions keyed by name.
-   */
-  jobs: defs
-
-  /**
-   * Storage adapter used for all scheduler reads and writes.
-   */
-  storage: JobStorage<transaction>
-} & SchedulerHooks<defs, transaction>
-
-/**
  * Options for constructing a worker.
  */
 export type CreateJobWorkerOptions<defs extends JobDefinitions> = {

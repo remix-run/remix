@@ -1,7 +1,6 @@
 export { createJobScheduler, createJobs } from './lib/scheduler.ts'
 export type {
   CancelOptions,
-  CreateJobSchedulerOptions,
   CreateJobWorkerOptions,
   FailedJobQueryOptions,
   EnqueueOptions,
