@@ -41,7 +41,7 @@ export interface FacebookAuthProviderPicture {
 /**
  * Profile fields returned by the built-in Facebook auth provider.
  */
-export interface FacebookAuthProviderProfile {
+export interface FacebookAuthProfile {
   /** Stable Facebook user identifier. */
   id: string
   /** Display name returned by Facebook, when available. */
@@ -58,7 +58,7 @@ export interface FacebookAuthProviderProfile {
  * @param options Facebook OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProviderProfile, 'facebook'> {
+export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 
   return createOAuthProvider('facebook', {
@@ -75,7 +75,7 @@ export function createFacebookAuthProvider(options: FacebookAuthProviderOptions)
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<FacebookAuthProviderProfile, 'facebook'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: FACEBOOK_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -84,7 +84,7 @@ export function createFacebookAuthProvider(options: FacebookAuthProviderOptions)
         code: getAuthorizationCode(context),
         codeVerifier: transaction.codeVerifier,
       })
-      let profile = await fetchJson<FacebookAuthProviderProfile>(
+      let profile = await fetchJson<FacebookAuthProfile>(
         FACEBOOK_PROFILE_ENDPOINT,
         {
           headers: {
@@ -112,7 +112,7 @@ function createAccount(
   return { provider, providerAccountId }
 }
 
-function validateFacebookProfile(profile: FacebookAuthProviderProfile): FacebookAuthProviderProfile {
+function validateFacebookProfile(profile: FacebookAuthProfile): FacebookAuthProfile {
   if (typeof profile.id !== 'string' || profile.id.length === 0) {
     throw new Error('Facebook profile did not include a valid id.')
   }

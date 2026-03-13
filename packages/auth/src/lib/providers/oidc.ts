@@ -43,7 +43,7 @@ export interface OIDCAuthProviderMetadata {
 /**
  * Base OpenID Connect claims shape used by the OIDC helpers.
  */
-export interface OIDCAuthProviderProfile {
+export interface OIDCAuthProfile {
   /** Stable subject identifier for the authenticated user. */
   sub: string
   /** Full display name for the authenticated user. */
@@ -90,7 +90,7 @@ export interface OIDCAuthProviderProfile {
  * Options for creating a generic OpenID Connect provider.
  */
 export interface OIDCAuthProviderOptions<
-  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
+  profile extends OIDCAuthProfile = OIDCAuthProfile,
   provider extends string = 'oidc',
 > {
   /** Provider name exposed in callback results and persisted transactions. */
@@ -113,7 +113,7 @@ export interface OIDCAuthProviderOptions<
   authorizationParams?: Record<string, string | undefined>
   /** Maps raw OIDC claims into an application-specific profile shape. */
   mapProfile?(input: {
-    claims: OIDCAuthProviderProfile
+    claims: OIDCAuthProfile
     tokens: OAuthTokens
     metadata: OIDCAuthProviderMetadata
     context: RequestContext
@@ -127,7 +127,7 @@ export interface OIDCAuthProviderOptions<
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
 export function createOIDCAuthProvider<
-  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
+  profile extends OIDCAuthProfile = OIDCAuthProfile,
   provider extends string = 'oidc',
 >(options: OIDCAuthProviderOptions<profile, provider>): OAuthProvider<profile, provider> {
   let name = options.name ?? ('oidc' as provider)
@@ -208,12 +208,12 @@ async function fetchOIDCProfile(
   name: string,
   metadata: OIDCAuthProviderMetadata,
   tokens: OAuthTokens,
-): Promise<OIDCAuthProviderProfile> {
+): Promise<OIDCAuthProfile> {
   if (metadata.userinfo_endpoint == null || metadata.userinfo_endpoint.length === 0) {
     throw new Error(`OIDC provider "${name}" did not publish a userinfo_endpoint.`)
   }
 
-  let claims = await fetchJson<OIDCAuthProviderProfile>(
+  let claims = await fetchJson<OIDCAuthProfile>(
     metadata.userinfo_endpoint,
     {
       headers: {
@@ -232,11 +232,11 @@ async function fetchOIDCProfile(
 }
 
 async function mapOIDCProfile<
-  profile extends OIDCAuthProviderProfile = OIDCAuthProviderProfile,
+  profile extends OIDCAuthProfile = OIDCAuthProfile,
   provider extends string = 'oidc',
 >(
   options: OIDCAuthProviderOptions<profile, provider>,
-  claims: OIDCAuthProviderProfile,
+  claims: OIDCAuthProfile,
   tokens: OAuthTokens,
   metadata: OIDCAuthProviderMetadata,
   context: RequestContext,

@@ -5,11 +5,11 @@ import {
   createXAuthProvider,
 } from 'remix/auth'
 import type {
-  GitHubAuthProviderProfile,
-  GoogleAuthProviderProfile,
+  GitHubAuthProfile,
+  GoogleAuthProfile,
   OAuthProvider,
   OAuthResult,
-  XAuthProviderProfile,
+  XAuthProfile,
 } from 'remix/auth'
 import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
@@ -45,14 +45,14 @@ interface SocialLoginSession {
 }
 
 type SocialProvider =
-  | OAuthProvider<GoogleAuthProviderProfile, 'google'>
-  | OAuthProvider<GitHubAuthProviderProfile, 'github'>
-  | OAuthProvider<XAuthProviderProfile, 'x'>
+  | OAuthProvider<GoogleAuthProfile, 'google'>
+  | OAuthProvider<GitHubAuthProfile, 'github'>
+  | OAuthProvider<XAuthProfile, 'x'>
 
 export type SocialAuthResult =
-  | OAuthResult<GoogleAuthProviderProfile, 'google'>
-  | OAuthResult<GitHubAuthProviderProfile, 'github'>
-  | OAuthResult<XAuthProviderProfile, 'x'>
+  | OAuthResult<GoogleAuthProfile, 'google'>
+  | OAuthResult<GitHubAuthProfile, 'github'>
+  | OAuthResult<XAuthProfile, 'x'>
 
 interface SocialProfileData {
   email?: string
@@ -163,7 +163,7 @@ export function createSocialAuthProvider(
 export function createGoogleProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<GoogleAuthProviderProfile, 'google'> | null {
+): OAuthProvider<GoogleAuthProfile, 'google'> | null {
   if (!config.googleClientId || !config.googleClientSecret) {
     return null
   }
@@ -178,7 +178,7 @@ export function createGoogleProvider(
 export function createGitHubProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<GitHubAuthProviderProfile, 'github'> | null {
+): OAuthProvider<GitHubAuthProfile, 'github'> | null {
   if (!config.githubClientId || !config.githubClientSecret) {
     return null
   }
@@ -193,7 +193,7 @@ export function createGitHubProvider(
 export function createXProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<XAuthProviderProfile, 'x'> | null {
+): OAuthProvider<XAuthProfile, 'x'> | null {
   if (!config.xClientId || !config.xClientSecret) {
     return null
   }
