@@ -15,6 +15,7 @@ export interface ExchangeAuthorizationCodeOptions {
   redirectUri: string | URL
   code: string
   codeVerifier: string
+  clientAuthentication?: 'request-body' | 'basic'
   headers?: HeadersInit
 }
 
@@ -58,21 +59,32 @@ export function createAuthorizationURL(
 export async function exchangeAuthorizationCode(
   options: ExchangeAuthorizationCodeOptions,
 ): Promise<OAuthTokens> {
+  let clientAuthentication = options.clientAuthentication ?? 'request-body'
+  let params = new URLSearchParams({
+    code: options.code,
+    code_verifier: options.codeVerifier,
+    grant_type: 'authorization_code',
+    redirect_uri: toURLString(options.redirectUri),
+  })
+
+  if (clientAuthentication === 'request-body') {
+    params.set('client_id', options.clientId)
+    params.set('client_secret', options.clientSecret)
+  }
+
   let response = await fetch(options.tokenEndpoint, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
+      ...(clientAuthentication === 'basic'
+        ? {
+            Authorization: `Basic ${encodeBasicAuth(options.clientId, options.clientSecret)}`,
+          }
+        : undefined),
       ...options.headers,
     },
-    body: new URLSearchParams({
-      client_id: options.clientId,
-      client_secret: options.clientSecret,
-      code: options.code,
-      code_verifier: options.codeVerifier,
-      grant_type: 'authorization_code',
-      redirect_uri: toURLString(options.redirectUri),
-    }),
+    body: params,
   })
   let json = await readJson(response)
 
@@ -181,4 +193,8 @@ async function readJson(response: Response): Promise<unknown> {
 
 function toURLString(value: string | URL): string {
   return typeof value === 'string' ? value : value.toString()
+}
+
+function encodeBasicAuth(clientId: string, clientSecret: string): string {
+  return btoa(`${clientId}:${clientSecret}`)
 }

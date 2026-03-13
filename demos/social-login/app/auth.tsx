@@ -52,10 +52,10 @@ export function createAuthController(config: SocialLoginConfig): Controller<type
           callback: createSocialCallbackAction('github', config),
         },
       },
-      facebook: {
+      x: {
         actions: {
-          login: createSocialLoginAction('facebook', config),
-          callback: createSocialCallbackAction('facebook', config),
+          login: createSocialLoginAction('x', config),
+          callback: createSocialCallbackAction('x', config),
         },
       },
       logout({ get }) {

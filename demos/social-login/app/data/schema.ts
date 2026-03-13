@@ -1,7 +1,7 @@
 import { column as c, table } from 'remix/data-table'
 import type { TableRow } from 'remix/data-table'
 
-export type SocialProviderName = 'google' | 'github' | 'facebook'
+export type SocialProviderName = 'google' | 'github' | 'x'
 
 export let users = table({
   name: 'users',
@@ -51,7 +51,7 @@ export let authAccounts = table({
   columns: {
     id: c.integer(),
     user_id: c.integer(),
-    provider: c.enum(['google', 'github', 'facebook']),
+    provider: c.enum(['google', 'github', 'x']),
     provider_account_id: c.text(),
     email: c.text(),
     name: c.text(),

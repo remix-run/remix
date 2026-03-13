@@ -16,12 +16,12 @@ describe('social login demo router', () => {
     assert.match(html, />Login<\/button>/)
     assert.match(html, /Login with Google/)
     assert.match(html, /Login with GitHub/)
-    assert.match(html, /Login with Facebook/)
+    assert.match(html, /Login with X/)
     assert.match(html, /demo@example.com/)
     assert.match(html, /\.env\.example/)
     assert.match(html, /GOOGLE_CLIENT_ID/)
     assert.match(html, /Create a GitHub OAuth app/)
-    assert.match(html, /\/auth\/facebook\/callback/)
+    assert.match(html, /\/auth\/x\/callback/)
     assert.doesNotMatch(html, /Log out/)
   })
 
@@ -159,27 +159,28 @@ describe('social login demo router', () => {
     }
   })
 
-  it('completes the Facebook login flow and shows the resolved user', async () => {
+  it('completes the X login flow and shows the resolved user', async () => {
     let restoreFetch = mockFetch(async input => {
       let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
-      if (url === 'https://graph.facebook.com/oauth/access_token') {
+      if (url === 'https://api.x.com/2/oauth2/token') {
         return Response.json({
-          access_token: 'facebook-token',
+          access_token: 'x-token',
           token_type: 'bearer',
-          expires_in: 3600,
+          scope: 'tweet.read users.read',
         })
       }
 
-      if (url === 'https://graph.facebook.com/me?fields=id,name,email,picture') {
+      if (
+        url ===
+        'https://api.x.com/2/users/me?user.fields=profile_image_url,verified,description,url'
+      ) {
         return Response.json({
-          id: 'fb_7',
-          name: 'Facebook Person',
-          email: 'facebook@example.com',
-          picture: {
-            data: {
-              url: 'https://example.com/facebook-avatar.png',
-            },
+          data: {
+            id: 'x_7',
+            name: 'X Person',
+            username: 'xperson',
+            profile_image_url: 'https://example.com/x-avatar.png',
           },
         })
       }
@@ -189,11 +190,11 @@ describe('social login demo router', () => {
 
     try {
       let { router } = createTestRouter()
-      let loginResponse = await router.fetch('https://demo.example.com/auth/facebook/login')
+      let loginResponse = await router.fetch('https://demo.example.com/auth/x/login')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
       let callbackResponse = await router.fetch(
         createRequest(
-          `https://demo.example.com/auth/facebook/callback?code=facebook-code&state=${state}`,
+          `https://demo.example.com/auth/x/callback?code=x-code&state=${state}`,
           loginResponse,
         ),
       )
@@ -202,10 +203,10 @@ describe('social login demo router', () => {
 
       assert.equal(callbackResponse.status, 302)
       assert.equal(callbackResponse.headers.get('Location'), '/')
-      assert.match(html, /Facebook Person/)
-      assert.match(html, /Signed in with Facebook/)
-      assert.match(html, /https:\/\/example\.com\/facebook-avatar\.png/)
-      assert.doesNotMatch(html, /facebook@example.com/)
+      assert.match(html, /X Person/)
+      assert.match(html, /Signed in with X/)
+      assert.match(html, /https:\/\/example\.com\/x-avatar\.png/)
+      assert.doesNotMatch(html, /xperson/)
     } finally {
       restoreFetch()
     }

@@ -301,8 +301,8 @@ function getProviderIconHref(name: SocialProviderState['name']): string {
       return '/icons/google.svg'
     case 'github':
       return '/icons/github.svg'
-    case 'facebook':
-      return '/icons/facebook.svg'
+    case 'x':
+      return '/icons/x.svg'
   }
 }
 
@@ -312,8 +312,8 @@ function getProviderLoginHref(name: SocialProviderState['name']): string {
       return routes.auth.google.login.href()
     case 'github':
       return routes.auth.github.login.href()
-    case 'facebook':
-      return routes.auth.facebook.login.href()
+    case 'x':
+      return routes.auth.x.login.href()
   }
 }
 
@@ -323,8 +323,8 @@ function getProviderCallbackHref(name: SocialProviderState['name']): string {
       return routes.auth.google.callback.href()
     case 'github':
       return routes.auth.github.callback.href()
-    case 'facebook':
-      return routes.auth.facebook.callback.href()
+    case 'x':
+      return routes.auth.x.callback.href()
   }
 }
 
@@ -334,8 +334,8 @@ function getProviderEnvVars(name: SocialProviderState['name']): string[] {
       return ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
     case 'github':
       return ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET']
-    case 'facebook':
-      return ['FACEBOOK_CLIENT_ID', 'FACEBOOK_CLIENT_SECRET']
+    case 'x':
+      return ['X_CLIENT_ID', 'X_CLIENT_SECRET']
   }
 }
 
@@ -345,8 +345,8 @@ function getProviderSetupHeading(name: SocialProviderState['name']): string {
       return 'Create a Google web OAuth client'
     case 'github':
       return 'Create a GitHub OAuth app'
-    case 'facebook':
-      return 'Create a Meta app with Facebook Login'
+    case 'x':
+      return 'Create an X app'
   }
 }
 
@@ -382,27 +382,26 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
           secret into .env.
         </>
       )
-    case 'facebook':
+    case 'x':
       return (
         <>
-          Create a new{' '}
+          Create an{' '}
           <a
-            href="https://developers.facebook.com/apps/"
+            href="https://docs.x.com/fundamentals/developer-portal"
             target="_blank"
             rel="noreferrer"
           >
-            Meta app
+            app in the X Developer Portal
           </a>
-          , add the{' '}
+          , enable{' '}
           <a
-            href="https://developers.facebook.com/docs/facebook-login/"
+            href="https://docs.x.com/x-for-websites/log-in-with-x/guides/browser-sign-in-flow"
             target="_blank"
             rel="noreferrer"
           >
-            Facebook Login product
+            Sign in with X
           </a>
-          , set the valid OAuth redirect URI, then copy the App ID and App Secret into .env as the
-          Facebook client credentials.
+          , set the callback URL, then copy the client ID and client secret into .env.
         </>
       )
   }
@@ -414,8 +413,8 @@ function getEnvExampleText(): string {
     'GOOGLE_CLIENT_SECRET=',
     'GITHUB_CLIENT_ID=',
     'GITHUB_CLIENT_SECRET=',
-    'FACEBOOK_CLIENT_ID=',
-    'FACEBOOK_CLIENT_SECRET=',
+    'X_CLIENT_ID=',
+    'X_CLIENT_SECRET=',
   ].join('\n')
 }
 

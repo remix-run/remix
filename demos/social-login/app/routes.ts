@@ -12,9 +12,9 @@ export let routes = route({
       login: get('/auth/github/login'),
       callback: get('/auth/github/callback'),
     },
-    facebook: {
-      login: get('/auth/facebook/login'),
-      callback: get('/auth/facebook/callback'),
+    x: {
+      login: get('/auth/x/login'),
+      callback: get('/auth/x/callback'),
     },
     logout: post('/logout'),
   },
