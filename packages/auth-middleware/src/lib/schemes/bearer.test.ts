@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { RequestContext } from '@remix-run/fetch-router'
 
-import { createBearerAuthScheme } from './bearer.ts'
+import { createBearerTokenAuthScheme } from './bearer.ts'
 
 function createContext(headers?: HeadersInit): RequestContext {
   return new RequestContext(
@@ -17,7 +17,7 @@ describe('bearer scheme', () => {
   it('authenticates valid bearer tokens', async () => {
     let observedToken = ''
 
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       async verify(token) {
         observedToken = token
         return { id: 'u1' }
@@ -34,7 +34,7 @@ describe('bearer scheme', () => {
   })
 
   it('skips when the auth header is missing', async () => {
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       verify() {
         return { id: 'u1' }
       },
@@ -46,7 +46,7 @@ describe('bearer scheme', () => {
   })
 
   it('skips when a different auth scheme is provided', async () => {
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       verify() {
         return { id: 'u1' }
       },
@@ -58,7 +58,7 @@ describe('bearer scheme', () => {
   })
 
   it('fails when the auth header format is malformed', async () => {
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       verify() {
         return { id: 'u1' }
       },
@@ -75,7 +75,7 @@ describe('bearer scheme', () => {
   })
 
   it('fails when token verification fails', async () => {
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       verify() {
         return null
       },
@@ -92,7 +92,7 @@ describe('bearer scheme', () => {
   })
 
   it('supports custom header, scheme, and challenge settings', async () => {
-    let scheme = createBearerAuthScheme({
+    let scheme = createBearerTokenAuthScheme({
       headerName: 'X-Auth',
       scheme: 'Token',
       challenge: 'Token realm="internal"',
