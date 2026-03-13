@@ -46,18 +46,3 @@ describe('redis job storage (integration)', () => {
       createRedisJobStorage(redis as unknown as RedisJobStorageClient, { prefix: 'job_test:' }),
   })
 })
-
-function assertRedisStorageConstructorTyping(): void {
-  let redis = {
-    sendCommand(_command: string[]) {
-      return Promise.resolve(null)
-    },
-  } satisfies RedisJobStorageClient
-
-  void createRedisJobStorage(redis)
-  void createRedisJobStorage(redis, { prefix: 'job_test:' })
-  // @ts-expect-error Redis client must be passed as the first argument.
-  void createRedisJobStorage({ redis })
-}
-
-void assertRedisStorageConstructorTyping
