@@ -59,103 +59,103 @@ export function createHomeAction(
 function SignedOutState() {
   return ({ providers }: { providers: SocialProviderState[] }) => (
     <section class="panel auth-card auth-split">
-        <div class="credentials-pane stack-lg">
-          <div class="stack-sm">
-            <p class="eyebrow">Welcome back</p>
-            <h2>Login to your account</h2>
-            <p class="muted">
-              Use the seeded local account or any configured social provider. The session stores a
-              compact auth record, and <code>sessionAuth()</code> resolves the current user on
-              later requests.
-            </p>
-          </div>
-
-          <form method="POST" action={routes.auth.login.action.href()} class="credentials-form">
-            <div class="form-grid">
-              <label class="field">
-                <span class="field-label">Email</span>
-                <input
-                  class="field-input"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  placeholder="demo@example.com"
-                  required
-                />
-              </label>
-              <label class="field">
-                <span class="field-label">Password</span>
-                <input
-                  class="field-input"
-                  type="password"
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="password123"
-                  required
-                />
-              </label>
-            </div>
-
-            <button type="submit" class="primary-button">
-              Login
-            </button>
-          </form>
-
-          <div class="demo-account">
-            <p class="demo-account-label">Seeded local account</p>
-            <p class="muted">
-              <strong>demo@example.com</strong> / <strong>password123</strong>
-            </p>
-          </div>
+      <div class="credentials-pane stack-lg">
+        <div class="stack-sm">
+          <p class="eyebrow">Welcome back</p>
+          <h2>Login to your account</h2>
+          <p class="muted">
+            Use the seeded local account or any configured social provider. The session stores a
+            compact auth record, and <code>sessionAuth()</code> resolves the current user on later
+            requests.
+          </p>
         </div>
 
-        <div class="auth-divider">
-          <span>OR</span>
+        <form method="POST" action={routes.auth.login.action.href()} class="credentials-form">
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">Email</span>
+              <input
+                class="field-input"
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="demo@example.com"
+                required
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">Password</span>
+              <input
+                class="field-input"
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                placeholder="password123"
+                required
+              />
+            </label>
+          </div>
+
+          <button type="submit" class="primary-button">
+            Login
+          </button>
+        </form>
+
+        <div class="demo-account">
+          <p class="demo-account-label">Seeded local account</p>
+          <p class="muted">
+            <strong>demo@example.com</strong> / <strong>password123</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="auth-divider">
+        <span>OR</span>
+      </div>
+
+      <aside class="social-pane stack-lg">
+        <div class="stack-sm">
+          <p class="eyebrow">You can</p>
+          <h2>Login with</h2>
+          <p class="muted">Use any configured provider to create or resume a local account.</p>
         </div>
 
-        <aside class="social-pane stack-lg">
-          <div class="stack-sm">
-            <p class="eyebrow">You can</p>
-            <h2>Login with</h2>
-            <p class="muted">Use any configured provider to create or resume a local account.</p>
-          </div>
+        <div class="provider-list">
+          {providers.map((provider) => {
+            let href = getProviderLoginHref(provider.name)
+            let className = `provider-button provider-${provider.name}`
 
-          <div class="provider-list">
-            {providers.map(provider => {
-              let href = getProviderLoginHref(provider.name)
-              let className = `provider-button provider-${provider.name}`
-
-              return provider.configured ? (
-                <a href={href} class={className}>
-                  <span class="provider-mark">
-                    <img
-                      class={`provider-icon provider-icon-${provider.name}`}
-                      src={getProviderIconHref(provider.name)}
-                      alt=""
-                    />
-                  </span>
-                  <span class="provider-body">
-                    <span class="provider-title">Login with {provider.label}</span>
-                  </span>
-                </a>
-              ) : (
-                <button type="button" class={className} disabled>
-                  <span class="provider-mark">
-                    <img
-                      class={`provider-icon provider-icon-${provider.name}`}
-                      src={getProviderIconHref(provider.name)}
-                      alt=""
-                    />
-                  </span>
-                  <span class="provider-body">
-                    <span class="provider-title">Login with {provider.label}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </aside>
-      </section>
+            return provider.configured ? (
+              <a href={href} class={className}>
+                <span class="provider-mark">
+                  <img
+                    class={`provider-icon provider-icon-${provider.name}`}
+                    src={getProviderIconHref(provider.name)}
+                    alt=""
+                  />
+                </span>
+                <span class="provider-body">
+                  <span class="provider-title">Login with {provider.label}</span>
+                </span>
+              </a>
+            ) : (
+              <button type="button" class={className} disabled>
+                <span class="provider-mark">
+                  <img
+                    class={`provider-icon provider-icon-${provider.name}`}
+                    src={getProviderIconHref(provider.name)}
+                    alt=""
+                  />
+                </span>
+                <span class="provider-body">
+                  <span class="provider-title">Login with {provider.label}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </aside>
+    </section>
   )
 }
 
@@ -167,9 +167,9 @@ function SetupGuide() {
           <p class="eyebrow">Demo setup</p>
           <h2>Configure local and social authentication</h2>
           <p class="muted">
-            Copy <code>.env.example</code> to .env, paste whichever client IDs and
-            client secrets you want to test, then restart the server. The seeded email/password
-            login works even if every social provider stays disabled.
+            Copy <code>.env.example</code> to .env, paste whichever client IDs and client secrets
+            you want to test, then restart the server. The seeded email/password login works even if
+            every social provider stays disabled.
           </p>
         </div>
 
@@ -177,18 +177,20 @@ function SetupGuide() {
           <div class="stack-sm">
             <h3>Boot the demo</h3>
             <ol class="setup-list">
-              <li>Copy <code>.env.example</code> to .env in `demos/social-login`.</li>
+              <li>
+                Copy <code>.env.example</code> to .env in `demos/social-login`.
+              </li>
               <li>Fill in any provider client ID and secret pairs you want to enable.</li>
               <li>Register the callback URLs below with each provider app.</li>
-              <li>Run <code>pnpm start</code> and open the home page.</li>
+              <li>
+                Run <code>pnpm start</code> and open the home page.
+              </li>
             </ol>
           </div>
 
           <div class="stack-sm">
             <h3>Local account</h3>
-            <p class="muted">
-              The demo seeds one local user into SQLite the first time it boots.
-            </p>
+            <p class="muted">The demo seeds one local user into SQLite the first time it boots.</p>
             <div class="demo-account demo-account-inline">
               <p class="demo-account-label">Seeded local account</p>
               <p class="muted">
@@ -199,13 +201,15 @@ function SetupGuide() {
 
           <div class="stack-sm">
             <h3>.env variables</h3>
-            <pre class="env-snippet"><code>{getEnvExampleText()}</code></pre>
+            <pre class="env-snippet">
+              <code>{getEnvExampleText()}</code>
+            </pre>
           </div>
         </div>
       </div>
 
       <div class="setup-provider-grid">
-        {providers.map(provider => (
+        {providers.map((provider) => (
           <ProviderSetupCard provider={provider} />
         ))}
       </div>
@@ -226,12 +230,16 @@ function ProviderSetupCard() {
         </span>
       </div>
 
-      <p class="muted">{getProviderSetupDescription(provider.name)}</p>
+      <p class="muted">{renderProviderSetupDescription(provider.name)}</p>
 
       <dl class="setup-definition-list">
         <div>
           <dt>Environment variables</dt>
-          <dd>{getProviderEnvVars(provider.name).map(name => <code>{name}</code>)}</dd>
+          <dd>
+            {getProviderEnvVars(provider.name).map((name) => (
+              <code>{name}</code>
+            ))}
+          </dd>
         </div>
         <div>
           <dt>Callback URL</dt>
@@ -342,14 +350,61 @@ function getProviderSetupHeading(name: SocialProviderState['name']): string {
   }
 }
 
-function getProviderSetupDescription(name: SocialProviderState['name']): string {
+function renderProviderSetupDescription(name: SocialProviderState['name']) {
   switch (name) {
     case 'google':
-      return 'Create a Web application OAuth client in Google Cloud, add the callback URL as an authorized redirect URI, then copy the client ID and client secret into `.env`.'
+      return (
+        <>
+          Create a{' '}
+          <a
+            href="https://developers.google.com/identity/protocols/oauth2/web-server"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Web application OAuth client in Google Cloud
+          </a>
+          , add the callback URL as an authorized redirect URI, then copy the client ID and client
+          secret into .env.
+        </>
+      )
     case 'github':
-      return 'Create an OAuth App in GitHub settings, set the homepage URL and authorization callback URL, then copy the client ID and client secret into `.env`.'
+      return (
+        <>
+          Create an{' '}
+          <a
+            href="https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
+            target="_blank"
+            rel="noreferrer"
+          >
+            OAuth App in GitHub settings
+          </a>
+          , set the homepage URL and authorization callback URL, then copy the client ID and client
+          secret into .env.
+        </>
+      )
     case 'facebook':
-      return 'Create a Meta app, add the Facebook Login product, set the valid OAuth redirect URI, then copy the App ID and App Secret into `.env` as the Facebook client credentials.'
+      return (
+        <>
+          Create a new{' '}
+          <a
+            href="https://developers.facebook.com/apps/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Meta app
+          </a>
+          , add the{' '}
+          <a
+            href="https://developers.facebook.com/docs/facebook-login/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Facebook Login product
+          </a>
+          , set the valid OAuth redirect URI, then copy the App ID and App Secret into .env as the
+          Facebook client credentials.
+        </>
+      )
   }
 }
 
@@ -367,7 +422,10 @@ function getEnvExampleText(): string {
 function getInitials(user: AuthenticatedUser): string {
   let source = user.name ?? user.email ?? getLoginMethodLabel(user.loginMethod)
   let parts = source.split(/\s+/).filter(Boolean)
-  let initials = parts.slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('')
+  let initials = parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
 
   return initials || 'U'
 }

@@ -91,6 +91,17 @@ strong {
   line-height: 1.58;
 }
 
+.muted a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.18em;
+}
+
+.muted a:hover {
+  opacity: 0.78;
+}
+
 .page-hero .lede {
   max-width: 44rem;
   color: rgba(255, 255, 255, 0.82);
