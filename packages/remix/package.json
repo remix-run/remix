@@ -408,7 +408,10 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
-    "@remix-run/test": "workspace:^"
+    "@remix-run/test": "workspace:^",
+    "@remix-run/job": "workspace:^",
+    "@remix-run/job-data-table": "workspace:^",
+    "@remix-run/job-redis": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
