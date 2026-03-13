@@ -20,32 +20,23 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./checks": "./src/checks.ts",
-    "./coerce": "./src/coerce.ts",
-    "./lazy": "./src/lazy.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./checks": {
+      "types": "./dist/checks.d.ts",
+      "default": "./dist/checks.js"
+    },
+    "./coerce": {
+      "types": "./dist/coerce.d.ts",
+      "default": "./dist/coerce.js"
+    },
+    "./lazy": {
+      "types": "./dist/lazy.d.ts",
+      "default": "./dist/lazy.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./checks": {
-        "types": "./dist/checks.d.ts",
-        "default": "./dist/checks.js"
-      },
-      "./coerce": {
-        "types": "./dist/coerce.d.ts",
-        "default": "./dist/coerce.js"
-      },
-      "./lazy": {
-        "types": "./dist/lazy.d.ts",
-        "default": "./dist/lazy.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@types/node": "catalog:",
