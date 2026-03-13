@@ -11,15 +11,21 @@ import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeRet
  * Options for handling a successful credentials login.
  */
 export interface LoginOptions<result> {
+  /** Writes application-defined auth state into the session after successful login. */
   writeSession(
     session: Session,
     result: result,
     context: RequestContext,
   ): void | Promise<void>
+  /** Redirect target used when login succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
+  /** Redirect target used when login fails and `onFailure` is not provided. */
   failureRedirectTo?: string | URL
+  /** Custom success response builder for a completed credentials login. */
   onSuccess?(result: result, context: RequestContext): Response | Promise<Response>
+  /** Custom failure response builder for rejected credentials. */
   onFailure?(context: RequestContext): Response | Promise<Response>
+  /** Custom error response builder for unexpected login errors. */
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 
@@ -27,9 +33,13 @@ export interface LoginOptions<result> {
  * Options for starting an OAuth or OIDC login redirect flow.
  */
 export interface OAuthLoginOptions {
+  /** Session key used to store the in-progress OAuth transaction. */
   transactionKey?: string
+  /** Query parameter used to capture a post-login return target. */
   returnToParam?: string
+  /** Redirect target used when login setup fails and `onError` is not provided. */
   failureRedirectTo?: string | URL
+  /** Custom error response builder for unexpected OAuth login setup errors. */
   onError?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 

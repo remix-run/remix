@@ -5,12 +5,16 @@ import { Auth, type UnauthenticatedAuth } from './auth.ts'
  * Options for enforcing authentication on a route.
  */
 export interface RequireAuthOptions {
+  /** Custom response builder for unauthenticated requests. */
   onFailure?: (
     context: RequestContext,
     auth: UnauthenticatedAuth,
   ) => Response | Promise<Response>
+  /** HTTP status used by the default failure response. */
   status?: number
+  /** Response body used by the default failure response. */
   body?: BodyInit | null
+  /** Response headers used by the default failure response. */
   headers?: HeadersInit
 }
 

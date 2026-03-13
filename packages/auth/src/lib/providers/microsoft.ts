@@ -6,8 +6,11 @@ import { createOIDCAuthProvider, type OIDCOptions, type OIDCProfile } from './oi
  * Profile claims returned by the built-in Microsoft auth provider.
  */
 export interface MicrosoftProfile extends OIDCProfile {
+  /** Microsoft tenant identifier, when available. */
   tid?: string
+  /** Stable Microsoft object identifier, when available. */
   oid?: string
+  /** Preferred username returned by Microsoft, when available. */
   preferred_username?: string
 }
 
@@ -16,6 +19,7 @@ export interface MicrosoftProfile extends OIDCProfile {
  */
 export interface MicrosoftOptions
   extends Omit<OIDCOptions<MicrosoftProfile, 'microsoft'>, 'name' | 'issuer'> {
+  /** Tenant segment used to build the Microsoft issuer URL. */
   tenant?: 'common' | 'organizations' | 'consumers' | string
 }
 

@@ -15,18 +15,24 @@ import {
  * Options for handling an OAuth or OIDC callback request.
  */
 export interface CallbackOptions<profile, provider extends string> {
+  /** Session key used to read and clear the in-progress OAuth transaction. */
   transactionKey?: string
+  /** Writes application-defined auth state into the session after a successful callback. */
   writeSession(
     session: Session,
     result: OAuthResult<profile, provider>,
     context: RequestContext,
   ): void | Promise<void>
+  /** Redirect target used when callback succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
+  /** Redirect target used when callback fails and `onFailure` is not provided. */
   failureRedirectTo?: string | URL
+  /** Custom success response builder for a completed OAuth callback. */
   onSuccess?(
     result: OAuthResult<profile, provider>,
     context: RequestContext,
   ): Response | Promise<Response>
+  /** Custom failure response builder for callback validation or provider errors. */
   onFailure?(error: unknown, context: RequestContext): Response | Promise<Response>
 }
 

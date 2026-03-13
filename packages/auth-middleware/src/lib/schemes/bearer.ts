@@ -7,13 +7,18 @@ const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
  * Options for creating a bearer-token auth scheme.
  */
 export interface BearerTokenAuthSchemeOptions<identity> {
+  /** Method name exposed on the resolved auth state. */
   name?: string
+  /** Request header that carries the bearer token. */
   headerName?: string
+  /** Authorization scheme prefix expected in the header value. */
   scheme?: string
+  /** Verifies a parsed bearer token and returns the resolved identity on success. */
   verify: (
     token: string,
     context: RequestContext,
   ) => identity | null | Promise<identity | null>
+  /** Challenge value returned when the scheme rejects credentials. */
   challenge?: string
 }
 

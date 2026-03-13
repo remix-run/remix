@@ -17,9 +17,13 @@ const DEFAULT_FACEBOOK_SCOPES = ['public_profile', 'email']
  * Options for creating the built-in Facebook auth provider.
  */
 export interface FacebookOptions {
+  /** OAuth client identifier for your Facebook Login app. */
   clientId: string
+  /** OAuth client secret for your Facebook Login app. */
   clientSecret: string
+  /** Callback URL registered with Facebook Login. */
   redirectUri: string | URL
+  /** Requested scopes for the Facebook login flow. */
   scopes?: string[]
 }
 
@@ -27,7 +31,9 @@ export interface FacebookOptions {
  * Nested picture payload returned by Facebook profile responses.
  */
 export interface FacebookPicture {
+  /** Nested image payload returned by Facebook. */
   data: {
+    /** Resolved picture URL for the authenticated user. */
     url: string
   }
 }
@@ -36,9 +42,13 @@ export interface FacebookPicture {
  * Profile fields returned by the built-in Facebook auth provider.
  */
 export interface FacebookProfile {
+  /** Stable Facebook user identifier. */
   id: string
+  /** Display name returned by Facebook, when available. */
   name?: string
+  /** Email address returned by Facebook, when available. */
   email?: string
+  /** Nested profile picture payload returned by Facebook, when available. */
   picture?: FacebookPicture
 }
 

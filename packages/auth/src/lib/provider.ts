@@ -4,11 +4,17 @@ import type { RequestContext } from '@remix-run/fetch-router'
  * OAuth and OIDC tokens returned from a successful authorization code exchange.
  */
 export interface OAuthTokens {
+  /** Access token returned by the provider. */
   accessToken: string
+  /** Refresh token returned by the provider, when available. */
   refreshToken?: string
+  /** Token type returned by the provider, such as `Bearer`. */
   tokenType?: string
+  /** Expiration time derived from the provider token response, when available. */
   expiresAt?: Date
+  /** Scopes granted to the current access token, when provided by the provider. */
   scope?: string[]
+  /** OpenID Connect ID token returned by the provider, when available. */
   idToken?: string
 }
 
@@ -16,7 +22,9 @@ export interface OAuthTokens {
  * Stable account identifier for a provider-backed identity.
  */
 export interface OAuthAccount<provider extends string = string> {
+  /** Provider name that issued the account identifier. */
   provider: provider
+  /** Stable provider-specific account identifier for the authenticated user. */
   providerAccountId: string
 }
 
@@ -24,9 +32,13 @@ export interface OAuthAccount<provider extends string = string> {
  * Normalized result returned by OAuth and OIDC callback handlers.
  */
 export interface OAuthResult<profile, provider extends string = string> {
+  /** Provider name that completed the callback flow. */
   provider: provider
+  /** Stable provider-backed account identity for the authenticated user. */
   account: OAuthAccount<provider>
+  /** Normalized profile data returned by the provider. */
   profile: profile
+  /** Tokens returned by the provider for the completed authorization flow. */
   tokens: OAuthTokens
 }
 
@@ -34,7 +46,9 @@ export interface OAuthResult<profile, provider extends string = string> {
  * Public shape for an OAuth or OIDC provider used by `login()` and `callback()`.
  */
 export interface OAuthProvider<profile, provider extends string = string> {
+  /** Discriminator used by `login()` to select the OAuth flow. */
   kind: 'oauth'
+  /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
 }
 

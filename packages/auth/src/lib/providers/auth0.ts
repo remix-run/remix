@@ -6,7 +6,9 @@ import { createOIDCAuthProvider, type OIDCOptions, type OIDCProfile } from './oi
  * Profile claims returned by the built-in Auth0 auth provider.
  */
 export interface Auth0Profile extends OIDCProfile {
+  /** Auth0 nickname claim, when available. */
   nickname?: string
+  /** Auth0 string timestamp describing the last profile update, when available. */
   updated_at?: string
 }
 
@@ -15,6 +17,7 @@ export interface Auth0Profile extends OIDCProfile {
  */
 export interface Auth0Options
   extends Omit<OIDCOptions<Auth0Profile, 'auth0'>, 'name' | 'issuer'> {
+  /** Auth0 tenant domain used to derive the issuer URL. */
   domain: string
 }
 

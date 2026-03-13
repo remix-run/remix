@@ -18,9 +18,13 @@ const DEFAULT_X_SCOPES = ['tweet.read', 'users.read']
  * Options for creating the built-in X auth provider.
  */
 export interface XOptions {
+  /** OAuth client identifier for your X application. */
   clientId: string
+  /** OAuth client secret for your X application. */
   clientSecret: string
+  /** Callback URL registered with X. */
   redirectUri: string | URL
+  /** Requested scopes for the X login flow. */
   scopes?: string[]
 }
 
@@ -28,12 +32,19 @@ export interface XOptions {
  * Profile fields returned by the built-in X auth provider.
  */
 export interface XProfile {
+  /** Stable X user identifier. */
   id: string
+  /** Display name returned by X. */
   name: string
+  /** X username returned by the provider. */
   username: string
+  /** Profile image URL returned by X, when available. */
   profile_image_url?: string
+  /** Indicates whether the account is verified, when available. */
   verified?: boolean
+  /** Bio text returned by X, when available. */
   description?: string
+  /** Profile URL returned by X, when available. */
   url?: string
 }
 
