@@ -38,7 +38,7 @@ export default {
           let session = get(Session)
           let error = session.get('error')
           let formAction = routes.auth.login.action.href(undefined, {
-            returnTo: url.searchParams.get('returnTo'),
+            returnTo: url.searchParams.get('returnTo') ?? undefined,
           })
 
           return render(
@@ -109,7 +109,7 @@ export default {
           let session = get(Session)
           let formData = get(FormData)
           let { email, password } = s.parse(loginSchema, formData)
-          let returnTo = url.searchParams.get('returnTo')
+          let returnTo = url.searchParams.get('returnTo') ?? undefined
 
           let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
           if (!user || user.password !== password) {

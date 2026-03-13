@@ -728,6 +728,9 @@ importers:
         specifier: workspace:^
         version: link:../multipart-parser
     devDependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

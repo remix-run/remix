@@ -3,6 +3,9 @@ import { compression } from 'remix/compression-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'
 import { css } from 'remix/component'
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
+import * as coerce from 'remix/data-schema/coerce'
 
 import { routes } from './routes.ts'
 import { MessageStream } from './assets/message-stream.tsx'
@@ -26,15 +29,17 @@ middleware.push(
 
 export let router = createRouter({ middleware })
 
+const messageLimitSchema = f.object({
+  limit: f.field(s.optional(coerce.number())),
+})
+
 // The assets route is handled by the static files middleware above
 let { assets, ...pageRoutes } = routes
 
 router.map(pageRoutes, {
   actions: {
     home(context) {
-      let limitParam = context.url.searchParams.get('limit')
-      let limit = limitParam ? parseInt(limitParam, 10) : null
-      if (!limit || !isFinite(limit)) limit = null
+      let limit = getMessageLimit(context.url)
 
       return render(
         <Layout>
@@ -182,9 +187,7 @@ router.map(pageRoutes, {
     },
 
     messages(context) {
-      let limitParam = context.url.searchParams.get('limit')
-      let limit = limitParam ? parseInt(limitParam, 10) : null
-      if (!limit || !isFinite(limit)) limit = null
+      let limit = getMessageLimit(context.url)
 
       let stream = new ReadableStream({
         start(controller) {
@@ -236,3 +239,13 @@ router.map(pageRoutes, {
     },
   },
 })
+
+function getMessageLimit(url: URL): number | null {
+  let result = s.parseSafe(messageLimitSchema, url.searchParams)
+
+  if (!result.success || !result.value.limit) {
+    return null
+  }
+
+  return result.value.limit
+}
