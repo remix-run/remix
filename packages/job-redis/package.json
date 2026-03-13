@@ -53,7 +53,8 @@
     "check:scripts": "node ./scripts/generate-lua.ts --check",
     "generate:scripts": "node ./scripts/generate-lua.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "pnpm run check:scripts && node --disable-warning=ExperimentalWarning --test",
+    "test": "pnpm run check:scripts && node --disable-warning=ExperimentalWarning --test ./src/lib/storage.test.ts",
+    "test:integration": "pnpm run check:scripts && node --disable-warning=ExperimentalWarning --test ./src/lib/storage.integration.test.ts",
     "typecheck": "pnpm run check:scripts && tsgo --noEmit"
   },
   "keywords": [

@@ -98,7 +98,7 @@ jobs:
         env:
           JOB_REDIS_INTEGRATION: '1'
           JOB_REDIS_URL: redis://127.0.0.1:6379
-        run: node --disable-warning=ExperimentalWarning --test './packages/job-redis/src/lib/storage.integration.test.ts'
+        run: pnpm --filter @remix-run/job-redis run test:integration
 
   postgres-integration:
     name: Postgres Integration
@@ -137,9 +137,9 @@ jobs:
 
       - name: Run postgres integration tests
         env:
-          JOB_DATA_TABLE_INTEGRATION: '1'
-          JOB_DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/storage.postgres.integration.test.ts'
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
+        run: pnpm --filter @remix-run/job-data-table run test:integration:postgres
 
   mysql-integration:
     name: MySQL Integration
@@ -177,9 +177,9 @@ jobs:
 
       - name: Run mysql integration tests
         env:
-          JOB_DATA_TABLE_INTEGRATION: '1'
-          JOB_DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/storage.mysql.integration.test.ts'
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
+        run: pnpm --filter @remix-run/job-data-table run test:integration:mysql
 
   sqlite-integration:
     name: SQLite Integration
@@ -205,4 +205,6 @@ jobs:
         run: pnpm rebuild better-sqlite3
 
       - name: Run sqlite integration tests
-        run: node --disable-warning=ExperimentalWarning --test './packages/job-data-table/src/lib/storage.sqlite.test.ts'
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+        run: pnpm --filter @remix-run/job-data-table run test:integration:sqlite

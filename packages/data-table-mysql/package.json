@@ -56,6 +56,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
+    "test:integration": "remix-test --glob.test 'src/lib/adapter.integration.test.ts'",
     "test:coverage": "remix-test --coverage",
     "typecheck": "tsgo --noEmit"
   },

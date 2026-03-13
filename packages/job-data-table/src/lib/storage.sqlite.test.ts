@@ -13,7 +13,7 @@ import {
   setupJobStorageSchema,
 } from './test/schema.ts'
 
-let integrationEnabled = canOpenSqliteDatabase()
+let integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1' && canOpenSqliteDatabase()
 
 describe('data-table job storage (sqlite)', () => {
   let sqlite: BetterSqliteDatabase
