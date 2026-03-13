@@ -151,6 +151,11 @@ strong {
   gap: 18px;
 }
 
+.stack-md {
+  display: grid;
+  gap: 14px;
+}
+
 .stack-sm {
   display: grid;
   gap: 6px;
@@ -383,10 +388,21 @@ strong {
   width: min(980px, 100%);
 }
 
-.setup-overview-card {
+.setup-guide-card {
   width: 100%;
   background: rgba(244, 249, 248, 0.94);
   box-shadow: 0 22px 48px rgba(15, 23, 42, 0.1);
+}
+
+.setup-topic {
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.setup-guide-card > .stack-sm,
+.setup-columns .stack-sm,
+.setup-provider-header .stack-sm {
+  gap: 12px;
 }
 
 .setup-columns {
@@ -396,10 +412,14 @@ strong {
   align-items: start;
 }
 
-.setup-columns h3,
-.setup-provider-card h3 {
+.setup-columns h4,
+.setup-topic h3 {
   margin: 0;
   line-height: 1.2;
+}
+
+.setup-columns h4 {
+  font-size: 1rem;
 }
 
 .setup-list {
@@ -412,18 +432,6 @@ strong {
 
 .demo-account-inline {
   background: white;
-}
-
-.setup-provider-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  width: 100%;
-  align-items: start;
-}
-
-.setup-provider-card {
-  background: rgba(255, 255, 255, 0.96);
 }
 
 .setup-provider-header {
@@ -528,8 +536,7 @@ strong {
     grid-template-columns: 1fr;
   }
 
-  .setup-columns,
-  .setup-provider-grid {
+  .setup-columns {
     grid-template-columns: 1fr;
   }
 
