@@ -1,7 +1,5 @@
 import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
-import { createMysqlDatabaseAdapter } from '@remix-run/data-table-mysql'
-import { createPool, type Pool } from 'mysql2/promise'
 
 import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'
 
@@ -11,6 +9,8 @@ import {
   resetJobStorageSchema,
   setupJobStorageSchema,
 } from './test/schema.ts'
+
+import type { Pool } from 'mysql2/promise'
 
 let integrationEnabled =
   process.env.JOB_DATA_TABLE_INTEGRATION === '1' &&
@@ -25,7 +25,12 @@ describe('data-table job storage (mysql integration)', () => {
       return
     }
 
-    pool = createPool(process.env.JOB_DATA_TABLE_MYSQL_URL as string)
+    let [{ createMysqlDatabaseAdapter }, mysql] = await Promise.all([
+      import('@remix-run/data-table-mysql'),
+      import('mysql2/promise'),
+    ])
+
+    pool = mysql.createPool(process.env.JOB_DATA_TABLE_MYSQL_URL as string)
     database = createDatabase(createMysqlDatabaseAdapter(pool))
     await setupJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
