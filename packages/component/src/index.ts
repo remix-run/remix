@@ -1,3 +1,5 @@
+/// <reference types="dom-navigation" preserve="true" />
+
 // -- Roots --
 export { run } from './lib/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './lib/run.ts'
