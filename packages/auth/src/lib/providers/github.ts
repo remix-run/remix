@@ -31,7 +31,7 @@ export interface GitHubAuthProviderOptions {
 /**
  * Profile fields returned by the built-in GitHub auth provider.
  */
-export interface GitHubAuthProviderProfile {
+export interface GitHubAuthProfile {
   /** Stable GitHub user identifier. */
   id: number
   /** GitHub login handle. */
@@ -66,7 +66,7 @@ export interface GitHubAuthProviderEmail {
  * @param options GitHub OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProviderProfile, 'github'> {
+export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {
@@ -82,7 +82,7 @@ export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OA
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<GitHubAuthProviderProfile, 'github'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<GitHubAuthProfile, 'github'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: GITHUB_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -94,7 +94,7 @@ export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OA
           Accept: 'application/json',
         },
       })
-      let profile = await fetchJson<GitHubAuthProviderProfile>(
+      let profile = await fetchJson<GitHubAuthProfile>(
         GITHUB_USER_ENDPOINT,
         {
           headers: createGitHubHeaders(tokens.accessToken),
@@ -153,7 +153,7 @@ function pickGitHubEmail(emails: GitHubAuthProviderEmail[]): string | undefined 
   return emails[0]?.email
 }
 
-function validateGitHubProfile(profile: GitHubAuthProviderProfile): GitHubAuthProviderProfile {
+function validateGitHubProfile(profile: GitHubAuthProfile): GitHubAuthProfile {
   if (!Number.isInteger(profile.id)) {
     throw new Error('GitHub profile did not include a valid id.')
   }

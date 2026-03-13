@@ -1,11 +1,11 @@
 import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider, type OIDCAuthProviderOptions, type OIDCAuthProviderProfile } from './oidc.ts'
+import { createOIDCAuthProvider, type OIDCAuthProviderOptions, type OIDCAuthProfile } from './oidc.ts'
 
 /**
  * Profile claims returned by the built-in Microsoft auth provider.
  */
-export interface MicrosoftAuthProviderProfile extends OIDCAuthProviderProfile {
+export interface MicrosoftAuthProfile extends OIDCAuthProfile {
   /** Microsoft tenant identifier, when available. */
   tid?: string
   /** Stable Microsoft object identifier, when available. */
@@ -18,7 +18,7 @@ export interface MicrosoftAuthProviderProfile extends OIDCAuthProviderProfile {
  * Options for creating the built-in Microsoft auth provider.
  */
 export interface MicrosoftAuthProviderOptions
-  extends Omit<OIDCAuthProviderOptions<MicrosoftAuthProviderProfile, 'microsoft'>, 'name' | 'issuer'> {
+  extends Omit<OIDCAuthProviderOptions<MicrosoftAuthProfile, 'microsoft'>, 'name' | 'issuer'> {
   /** Tenant segment used to build the Microsoft issuer URL. */
   tenant?: 'common' | 'organizations' | 'consumers' | string
 }
@@ -31,7 +31,7 @@ export interface MicrosoftAuthProviderOptions
  */
 export function createMicrosoftAuthProvider(
   options: MicrosoftAuthProviderOptions,
-): OAuthProvider<MicrosoftAuthProviderProfile, 'microsoft'> {
+): OAuthProvider<MicrosoftAuthProfile, 'microsoft'> {
   return createOIDCAuthProvider({
     ...options,
     name: 'microsoft',

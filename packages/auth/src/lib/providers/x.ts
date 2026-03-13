@@ -31,7 +31,7 @@ export interface XAuthProviderOptions {
 /**
  * Profile fields returned by the built-in X auth provider.
  */
-export interface XAuthProviderProfile {
+export interface XAuthProfile {
   /** Stable X user identifier. */
   id: string
   /** Display name returned by X. */
@@ -49,7 +49,7 @@ export interface XAuthProviderProfile {
 }
 
 interface XProfileResponse {
-  data: XAuthProviderProfile
+  data: XAuthProfile
 }
 
 /**
@@ -58,7 +58,7 @@ interface XProfileResponse {
  * @param options X client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvider<XAuthProviderProfile, 'x'> {
+export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvider<XAuthProfile, 'x'> {
   let scopes = options.scopes ?? DEFAULT_X_SCOPES
 
   return createOAuthProvider('x', {
@@ -75,7 +75,7 @@ export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvide
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<XAuthProviderProfile, 'x'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<XAuthProfile, 'x'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: X_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -111,7 +111,7 @@ function createAccount(provider: 'x', providerAccountId: string): OAuthAccount<'
   return { provider, providerAccountId }
 }
 
-function validateXProfile(response: XProfileResponse): XAuthProviderProfile {
+function validateXProfile(response: XProfileResponse): XAuthProfile {
   let profile = response.data
 
   if (typeof profile?.id !== 'string' || profile.id.length === 0) {

@@ -11,22 +11,22 @@ export { createOktaAuthProvider } from './lib/providers/okta.ts'
 export { createXAuthProvider } from './lib/providers/x.ts'
 
 export type { CredentialsAuthProviderOptions } from './lib/providers/credentials.ts'
-export type { Auth0AuthProviderOptions, Auth0AuthProviderProfile } from './lib/providers/auth0.ts'
+export type { Auth0AuthProviderOptions, Auth0AuthProfile } from './lib/providers/auth0.ts'
 export type {
   FacebookAuthProviderOptions,
   FacebookAuthProviderPicture,
-  FacebookAuthProviderProfile,
+  FacebookAuthProfile,
 } from './lib/providers/facebook.ts'
 export type {
   GitHubAuthProviderEmail,
   GitHubAuthProviderOptions,
-  GitHubAuthProviderProfile,
+  GitHubAuthProfile,
 } from './lib/providers/github.ts'
-export type { GoogleAuthProviderOptions, GoogleAuthProviderProfile } from './lib/providers/google.ts'
-export type { MicrosoftAuthProviderOptions, MicrosoftAuthProviderProfile } from './lib/providers/microsoft.ts'
-export type { OIDCAuthProviderMetadata, OIDCAuthProviderOptions, OIDCAuthProviderProfile } from './lib/providers/oidc.ts'
-export type { OktaAuthProviderOptions, OktaAuthProviderProfile } from './lib/providers/okta.ts'
-export type { XAuthProviderOptions, XAuthProviderProfile } from './lib/providers/x.ts'
+export type { GoogleAuthProviderOptions, GoogleAuthProfile } from './lib/providers/google.ts'
+export type { MicrosoftAuthProviderOptions, MicrosoftAuthProfile } from './lib/providers/microsoft.ts'
+export type { OIDCAuthProviderMetadata, OIDCAuthProviderOptions, OIDCAuthProfile } from './lib/providers/oidc.ts'
+export type { OktaAuthProviderOptions, OktaAuthProfile } from './lib/providers/okta.ts'
+export type { XAuthProviderOptions, XAuthProfile } from './lib/providers/x.ts'
 
 export type {
   OAuthAccount,
