@@ -18,11 +18,6 @@ export type RetryStrategy = 'fixed' | 'exponential'
 export type JitterStrategy = 'none' | 'full'
 
 /**
- * How cron schedules catch up after falling behind.
- */
-export type CatchUpPolicy = 'none' | 'one' | 'all'
-
-/**
  * Persisted lifecycle state for a job.
  */
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled'
@@ -270,36 +265,6 @@ export interface PruneResult {
 }
 
 /**
- * Options for a persisted cron schedule.
- */
-export interface CronScheduleOptions {
-  /**
-   * Stable identifier for the schedule. Reusing an ID updates the same schedule.
-   */
-  id: string
-
-  /**
-   * Queue name used for jobs dispatched by this schedule. Defaults to `"default"`.
-   */
-  queue?: string
-
-  /**
-   * IANA time zone used to interpret the cron expression. Defaults to `"UTC"`.
-   */
-  timezone?: string
-
-  /**
-   * Retry overrides applied to jobs dispatched by this schedule.
-   */
-  retry?: RetryPolicy
-
-  /**
-   * Catch-up behavior when the worker falls behind schedule.
-   */
-  catchUp?: CatchUpPolicy
-}
-
-/**
  * Persisted job state returned by storage and scheduler APIs.
  */
 export interface JobRecord {
@@ -478,34 +443,6 @@ export type SchedulerEnqueueInput<defs extends JobDefinitions> = {
     payload: Infer<defs[name]['schema']>
   }
 }[JobName<defs>]
-
-/**
- * Declarative cron schedule bound to a specific job definition.
- */
-export type CronSchedule<
-  defs extends JobDefinitions,
-  name extends JobName<defs> = JobName<defs>,
-> = {
-  /**
-   * Cron expression describing when the job should run.
-   */
-  schedule: string
-
-  /**
-   * The job definition to enqueue when the schedule fires.
-   */
-  job: JobReference<defs, name>
-
-  /**
-   * Payload dispatched each time the schedule fires.
-   */
-  payload: Infer<defs[name]['schema']>
-
-  /**
-   * Schedule persistence and dispatch options.
-   */
-  options: CronScheduleOptions
-}
 
 /**
  * Scheduler hook callback names.
@@ -892,7 +829,7 @@ export interface WorkerOptions {
   pollIntervalMs?: number
 
   /**
-   * Lease duration in milliseconds for claimed jobs and schedules. Defaults to `30000`.
+   * Lease duration in milliseconds for claimed jobs. Defaults to `30000`.
    */
   leaseMs?: number
 
@@ -900,11 +837,6 @@ export interface WorkerOptions {
    * Interval in milliseconds between job heartbeats. Defaults to half the lease duration.
    */
   heartbeatMs?: number
-
-  /**
-   * Delay in milliseconds between cron schedule checks. Defaults to `30000`.
-   */
-  cronTickMs?: number
 
   /**
    * Optional background retention loop configuration.
@@ -917,7 +849,7 @@ export interface WorkerOptions {
  */
 export interface JobWorker {
   /**
-   * Starts polling for jobs and cron schedules.
+   * Starts polling for jobs.
    */
   start(): Promise<void>
 
@@ -968,9 +900,4 @@ export type CreateJobWorkerOptions<defs extends JobDefinitions> = {
    * Worker runtime settings.
    */
   worker?: WorkerOptions
-
-  /**
-   * Declarative cron schedules to reconcile on worker startup.
-   */
-  cron?: Array<CronSchedule<defs>>
 } & WorkerHooks

@@ -5,8 +5,6 @@ import type { Database } from '@remix-run/data-table'
 import type { Migration } from '@remix-run/data-table/migrations'
 import type {
   ClaimDueJobsInput,
-  ClaimDueSchedulesInput,
-  DueSchedule,
   EnqueueJobInput,
   JobStorage,
   JobWriteOptions,
@@ -15,7 +13,6 @@ import type {
   ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
-  PersistedCronSchedule,
 } from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
@@ -24,7 +21,6 @@ let DEFAULT_TABLE_PREFIX = 'job_'
 type StorageTables = {
   jobs: string
   dedupe: string
-  schedules: string
 }
 
 export interface DataTableJobStorageOptions {
@@ -34,14 +30,14 @@ export interface DataTableJobStorageOptions {
   db: Database
 
   /**
-   * Prefix applied to the jobs, dedupe, and schedules tables. Defaults to `"job_"`.
+   * Prefix applied to the jobs and dedupe tables. Defaults to `"job_"`.
    */
   tablePrefix?: string
 }
 
 export interface DataTableJobStorageMigrationOptions {
   /**
-   * Prefix applied to the jobs, dedupe, and schedules tables. Defaults to `"job_"`.
+   * Prefix applied to the jobs and dedupe tables. Defaults to `"job_"`.
    */
   tablePrefix?: string
 }
@@ -471,152 +467,6 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
         )
       })
     },
-    replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
-      return runOperation(() =>
-        options.db.transaction(async (database) => {
-          let desiredScheduleIds = Array.from(new Set(input.map((schedule) => schedule.id)))
-
-          for (let schedule of input) {
-            let existingRows = await database.exec(
-              rawSql(`select next_run_at from ${tables.schedules} where id = ? limit 1`, [schedule.id]),
-            )
-            let existing = existingRows.rows?.[0]
-
-            if (existing != null) {
-              let existingNextRunAt = parseInteger(existing.next_run_at, schedule.nextRunAt)
-              let nextRunAt = Math.min(existingNextRunAt, schedule.nextRunAt)
-
-              await database.exec(
-                rawSql(
-                  [
-                    `update ${tables.schedules} set `,
-                    'cron = ?, timezone = ?, queue = ?, name = ?, payload_json = ?, retry_json = ?, ',
-                    'catch_up = ?, next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? ',
-                    'where id = ?',
-                  ].join(''),
-                  [
-                    schedule.schedule,
-                    schedule.timezone,
-                    schedule.queue,
-                    schedule.name,
-                    JSON.stringify(schedule.payload),
-                    JSON.stringify(schedule.retry),
-                    schedule.catchUp,
-                    nextRunAt,
-                    Date.now(),
-                    schedule.id,
-                  ],
-                ),
-              )
-              continue
-            }
-
-            await database.exec(
-              rawSql(
-                [
-                  `insert into ${tables.schedules} (`,
-                  'id, cron, timezone, queue, name, payload_json, retry_json, catch_up, ',
-                  'next_run_at, updated_at',
-                  ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                ].join(''),
-                [
-                  schedule.id,
-                  schedule.schedule,
-                  schedule.timezone,
-                  schedule.queue,
-                  schedule.name,
-                  JSON.stringify(schedule.payload),
-                  JSON.stringify(schedule.retry),
-                  schedule.catchUp,
-                  schedule.nextRunAt,
-                  Date.now(),
-                ],
-              ),
-            )
-          }
-
-          if (desiredScheduleIds.length === 0) {
-            await database.exec(rawSql(`delete from ${tables.schedules}`))
-            return
-          }
-
-          let desiredScheduleInClause = createInClause(desiredScheduleIds.length)
-          await database.exec(
-            rawSql(
-              `delete from ${tables.schedules} where id not in ${desiredScheduleInClause}`,
-              desiredScheduleIds,
-            ),
-          )
-        }),
-      )
-    },
-    claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]> {
-      return runOperation(() =>
-        options.db.transaction(async (database) => {
-          let dueIds = await database.exec(
-            rawSql(
-              [
-                `select id from ${tables.schedules} where next_run_at <= ? `,
-                'and (locked_until is null or locked_until <= ?) ',
-                'order by next_run_at asc limit ?',
-              ].join(''),
-              [input.now, input.now, input.limit],
-            ),
-          )
-
-          let dueSchedules: DueSchedule[] = []
-
-          for (let row of dueIds.rows ?? []) {
-            if (typeof row.id !== 'string') {
-              continue
-            }
-
-            let update = await database.exec(
-              rawSql(
-                [
-                  `update ${tables.schedules} set locked_by = ?, locked_until = ?, updated_at = ? `,
-                  'where id = ? and next_run_at <= ? and (locked_until is null or locked_until <= ?)',
-                ].join(''),
-                [input.workerId, input.now + input.leaseMs, input.now, row.id, input.now, input.now],
-              ),
-            )
-
-            if ((update.affectedRows ?? 0) === 0) {
-              continue
-            }
-
-            let scheduleRows = await database.exec(
-              rawSql(`select * from ${tables.schedules} where id = ? limit 1`, [row.id]),
-            )
-            let scheduleRow = scheduleRows.rows?.[0]
-
-            if (scheduleRow != null) {
-              dueSchedules.push(toDueSchedule(scheduleRow))
-            }
-          }
-
-          return dueSchedules
-        }),
-      )
-    },
-    advanceSchedule(input: {
-      scheduleId: string
-      nextRunAt: number
-      now: number
-      workerId: string
-    }): Promise<void> {
-      return runOperation(async () => {
-        await options.db.exec(
-          rawSql(
-            [
-              `update ${tables.schedules} set next_run_at = ?, locked_by = null, locked_until = null, updated_at = ? `,
-              'where id = ? and locked_by = ?',
-            ].join(''),
-            [input.nextRunAt, input.now, input.scheduleId, input.workerId],
-          ),
-        )
-      })
-    },
   }
 }
 
@@ -624,7 +474,6 @@ type JobStorageSchema = {
   tables: StorageTables
   jobsTable: ReturnType<typeof table>
   dedupeTable: ReturnType<typeof table>
-  schedulesTable: ReturnType<typeof table>
 }
 
 function createJobStorageSchema(tablePrefix?: string): JobStorageSchema {
@@ -632,7 +481,6 @@ function createJobStorageSchema(tablePrefix?: string): JobStorageSchema {
   let tables: StorageTables = {
     jobs: `${prefix}jobs`,
     dedupe: `${prefix}dedupe`,
-    schedules: `${prefix}schedules`,
   }
 
   let jobsTable = table({
@@ -670,30 +518,10 @@ function createJobStorageSchema(tablePrefix?: string): JobStorageSchema {
     primaryKey: 'dedupe_key',
   })
 
-  let schedulesTable = table({
-    name: tables.schedules,
-    columns: {
-      id: column.varchar(191).notNull(),
-      cron: column.text().notNull(),
-      timezone: column.text().notNull(),
-      queue: column.varchar(191).notNull(),
-      name: column.text().notNull(),
-      payload_json: column.text().notNull(),
-      retry_json: column.text().notNull(),
-      catch_up: column.text().notNull(),
-      next_run_at: column.bigint().notNull(),
-      locked_by: column.text().nullable(),
-      locked_until: column.bigint().nullable(),
-      updated_at: column.bigint().notNull(),
-    },
-    primaryKey: 'id',
-  })
-
   return {
     tables,
     jobsTable,
     dedupeTable,
-    schedulesTable,
   }
 }
 
@@ -714,7 +542,6 @@ export function createDataTableJobStorageMigration(
     async up({ schema }) {
       await schema.createTable(storageSchema.jobsTable, { ifNotExists: true })
       await schema.createTable(storageSchema.dedupeTable, { ifNotExists: true })
-      await schema.createTable(storageSchema.schedulesTable, { ifNotExists: true })
 
       await schema.createIndex(storageSchema.jobsTable, ['status', 'queue', 'run_at', 'priority', 'created_at'], {
         name: `${storageSchema.tables.jobs}_due_idx`,
@@ -740,13 +567,8 @@ export function createDataTableJobStorageMigration(
         name: `${storageSchema.tables.dedupe}_expires_idx`,
         ifNotExists: true,
       })
-      await schema.createIndex(storageSchema.schedulesTable, ['next_run_at', 'locked_until'], {
-        name: `${storageSchema.tables.schedules}_due_idx`,
-        ifNotExists: true,
-      })
     },
     async down({ schema }) {
-      await schema.dropTable(storageSchema.schedulesTable, { ifExists: true })
       await schema.dropTable(storageSchema.dedupeTable, { ifExists: true })
       await schema.dropTable(storageSchema.jobsTable, { ifExists: true })
     },
@@ -797,22 +619,6 @@ function toJobRecord(row: Record<string, unknown>): JobRecord {
   }
 }
 
-function toDueSchedule(row: Record<string, unknown>): DueSchedule {
-  return {
-    id: readString(row.id),
-    schedule: readString(row.cron),
-    timezone: readString(row.timezone),
-    queue: readString(row.queue),
-    name: readString(row.name),
-    payload: parseJson(row.payload_json, {}),
-    retry: parseRetry(row.retry_json),
-    catchUp: readCatchUp(row.catch_up),
-    nextRunAt: parseInteger(row.next_run_at, 0),
-    lockedBy: readString(row.locked_by),
-    lockedUntil: parseInteger(row.locked_until, 0),
-  }
-}
-
 function parseRetry(value: unknown): ResolvedRetryPolicy {
   let parsed = parseJson(value, null)
 
@@ -849,14 +655,6 @@ function readStatus(value: unknown): JobRecord['status'] {
   }
 
   throw new Error(`Invalid job status "${String(value)}"`)
-}
-
-function readCatchUp(value: unknown): DueSchedule['catchUp'] {
-  if (value === 'none' || value === 'one' || value === 'all') {
-    return value
-  }
-
-  return 'one'
 }
 
 function readString(value: unknown): string {

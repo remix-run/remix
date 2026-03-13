@@ -1,7 +1,5 @@
 import type {
   ClaimDueJobsInput,
-  ClaimDueSchedulesInput,
-  DueSchedule,
   EnqueueJobInput,
   JobStorage,
   JobWriteOptions,
@@ -10,7 +8,6 @@ import type {
   ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
-  PersistedCronSchedule,
 } from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
@@ -47,7 +44,7 @@ export interface RedisJobStorageOptions {
  * Creates a Redis-backed `JobStorage` implementation.
  *
  * @param options Storage configuration
- * @returns A `JobStorage` that persists jobs and schedules in Redis
+ * @returns A `JobStorage` that persists jobs in Redis
  */
 export function createRedisJobStorage(options: RedisJobStorageOptions): JobStorage {
   let redis = options.redis
@@ -253,76 +250,6 @@ export function createRedisJobStorage(options: RedisJobStorageOptions): JobStora
         ],
       )
     },
-    async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
-      let desiredScheduleIds = new Set(input.map((schedule) => schedule.id))
-      let existingScheduleIds = await zrange(redis, keys.schedulesDue, 0, -1)
-
-      for (let scheduleId of existingScheduleIds) {
-        if (desiredScheduleIds.has(scheduleId)) {
-          continue
-        }
-
-        await redis.sendCommand(['DEL', keys.schedule(scheduleId)])
-        await redis.sendCommand(['ZREM', keys.schedulesDue, scheduleId])
-      }
-
-      for (let schedule of input) {
-        await evalScript(
-          redis,
-          UPSERT_SCHEDULE_SCRIPT,
-          [keys.schedule(schedule.id), keys.schedulesDue],
-          [
-            schedule.id,
-            schedule.schedule,
-            schedule.timezone,
-            schedule.queue,
-            schedule.name,
-            JSON.stringify(schedule.payload),
-            JSON.stringify(schedule.retry),
-            schedule.catchUp,
-            String(schedule.nextRunAt),
-            String(Date.now()),
-          ],
-        )
-      }
-    },
-    async claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]> {
-      if (input.limit <= 0) {
-        return []
-      }
-
-      let result = await evalScript(
-        redis,
-        CLAIM_DUE_SCHEDULES_SCRIPT,
-        [keys.schedulesDue, keys.schedulePrefix],
-        [String(input.now), input.workerId, String(input.leaseMs), String(input.limit)],
-      )
-      let scheduleIds = readArray(result)
-      let schedules: DueSchedule[] = []
-
-      for (let scheduleId of scheduleIds) {
-        let schedule = await getSchedule(redis, keys, scheduleId)
-
-        if (schedule != null) {
-          schedules.push(schedule)
-        }
-      }
-
-      return schedules
-    },
-    async advanceSchedule(input: {
-      scheduleId: string
-      nextRunAt: number
-      now: number
-      workerId: string
-    }): Promise<void> {
-      await evalScript(
-        redis,
-        ADVANCE_SCHEDULE_SCRIPT,
-        [keys.schedule(input.scheduleId), keys.schedulesDue],
-        [input.scheduleId, input.workerId, String(input.nextRunAt), String(input.now)],
-      )
-    },
   }
 }
 
@@ -331,11 +258,8 @@ type StorageKeys = {
   jobsCompleted: string
   jobsFailed: string
   jobsCanceled: string
-  schedulesDue: string
   jobPrefix: string
-  schedulePrefix: string
   job: (id: string) => string
-  schedule: (id: string) => string
   dedupe: (key: string) => string
 }
 
@@ -345,14 +269,9 @@ function createKeys(prefix: string): StorageKeys {
     jobsCompleted: `${prefix}jobs:completed`,
     jobsFailed: `${prefix}jobs:failed`,
     jobsCanceled: `${prefix}jobs:canceled`,
-    schedulesDue: `${prefix}schedules:due`,
     jobPrefix: `${prefix}job:`,
-    schedulePrefix: `${prefix}schedule:`,
     job(id: string): string {
       return `${prefix}job:${id}`
-    },
-    schedule(id: string): string {
-      return `${prefix}schedule:${id}`
     },
     dedupe(key: string): string {
       return `${prefix}dedupe:${key}`
@@ -374,33 +293,9 @@ async function getJobRecord(
   return toJobRecord(hash)
 }
 
-async function getSchedule(
-  redis: RedisJobStorageClient,
-  keys: StorageKeys,
-  scheduleId: string,
-): Promise<DueSchedule | null> {
-  let hash = await hgetall(redis, keys.schedule(scheduleId))
-
-  if (Object.keys(hash).length === 0) {
-    return null
-  }
-
-  return toDueSchedule(hash)
-}
-
 async function hgetall(redis: RedisJobStorageClient, key: string): Promise<Record<string, string>> {
   let result = await redis.sendCommand(['HGETALL', key])
   return toHashRecord(result)
-}
-
-async function zrange(
-  redis: RedisJobStorageClient,
-  key: string,
-  start: number,
-  end: number,
-): Promise<string[]> {
-  let result = await redis.sendCommand(['ZRANGE', key, String(start), String(end)])
-  return readArray(result)
 }
 
 async function evalScript(
@@ -433,22 +328,6 @@ function toJobRecord(hash: Record<string, string>): JobRecord {
   }
 }
 
-function toDueSchedule(hash: Record<string, string>): DueSchedule {
-  return {
-    id: readRequiredString(hash.id, 'id'),
-    schedule: readRequiredString(hash.schedule, 'schedule'),
-    timezone: readRequiredString(hash.timezone, 'timezone'),
-    queue: readRequiredString(hash.queue, 'queue'),
-    name: readRequiredString(hash.name, 'name'),
-    payload: parseJson(hash.payload, {}),
-    retry: parseRetry(hash.retry),
-    catchUp: readCatchUp(hash.catchUp),
-    nextRunAt: readNumber(hash.nextRunAt, 0),
-    lockedBy: readRequiredString(hash.lockedBy, 'lockedBy'),
-    lockedUntil: readNumber(hash.lockedUntil, 0),
-  }
-}
-
 function readJobStatus(value: string | undefined): JobRecord['status'] {
   if (
     value === 'queued' ||
@@ -461,14 +340,6 @@ function readJobStatus(value: string | undefined): JobRecord['status'] {
   }
 
   throw new Error(`Invalid job status "${String(value)}"`)
-}
-
-function readCatchUp(value: string | undefined): DueSchedule['catchUp'] {
-  if (value === 'none' || value === 'one' || value === 'all') {
-    return value
-  }
-
-  return 'one'
 }
 
 function parseRetry(value: string | undefined): ResolvedRetryPolicy {
@@ -1059,108 +930,4 @@ deleted = deleted + canceledCount
 canceledDeleted = canceledDeleted + canceledCount
 
 return {deleted, completedDeleted, failedDeleted, canceledDeleted}
-`
-
-let UPSERT_SCHEDULE_SCRIPT = `
-local scheduleKey = KEYS[1]
-local dueKey = KEYS[2]
-
-local currentNextRunAt = tonumber(redis.call('HGET', scheduleKey, 'nextRunAt') or '-1')
-local requestedNextRunAt = tonumber(ARGV[9])
-
-if currentNextRunAt ~= nil and currentNextRunAt >= 0 and currentNextRunAt < requestedNextRunAt then
-  requestedNextRunAt = currentNextRunAt
-end
-
-redis.call(
-  'HSET',
-  scheduleKey,
-  'id', ARGV[1],
-  'schedule', ARGV[2],
-  'timezone', ARGV[3],
-  'queue', ARGV[4],
-  'name', ARGV[5],
-  'payload', ARGV[6],
-  'retry', ARGV[7],
-  'catchUp', ARGV[8],
-  'nextRunAt', tostring(requestedNextRunAt),
-  'lockedBy', '',
-  'lockedUntil', '0',
-  'updatedAt', ARGV[10]
-)
-
-redis.call('ZADD', dueKey, requestedNextRunAt, ARGV[1])
-
-return tostring(requestedNextRunAt)
-`
-
-let CLAIM_DUE_SCHEDULES_SCRIPT = `
-local dueKey = KEYS[1]
-local schedulePrefix = KEYS[2]
-local now = tonumber(ARGV[1])
-local workerId = ARGV[2]
-local leaseMs = tonumber(ARGV[3])
-local limit = tonumber(ARGV[4])
-
-if limit <= 0 then
-  return {}
-end
-
-local scanLimit = math.max(limit * 8, limit)
-local candidates = redis.call('ZRANGEBYSCORE', dueKey, '-inf', now, 'LIMIT', 0, scanLimit)
-local claimed = {}
-
-for _, scheduleId in ipairs(candidates) do
-  if #claimed >= limit then
-    break
-  end
-
-  local scheduleKey = schedulePrefix .. scheduleId
-  local values = redis.call('HMGET', scheduleKey, 'nextRunAt', 'lockedUntil')
-  local nextRunAt = tonumber(values[1] or '0')
-  local lockedUntil = tonumber(values[2] or '0')
-
-  if nextRunAt <= now and lockedUntil <= now then
-    local nextLock = now + leaseMs
-
-    redis.call(
-      'HSET',
-      scheduleKey,
-      'lockedBy', workerId,
-      'lockedUntil', tostring(nextLock),
-      'updatedAt', tostring(now)
-    )
-    redis.call('ZADD', dueKey, nextLock, scheduleId)
-
-    table.insert(claimed, scheduleId)
-  end
-end
-
-return claimed
-`
-
-let ADVANCE_SCHEDULE_SCRIPT = `
-local scheduleKey = KEYS[1]
-local dueKey = KEYS[2]
-local scheduleId = ARGV[1]
-local workerId = ARGV[2]
-local nextRunAt = ARGV[3]
-local now = ARGV[4]
-
-local lockedBy = redis.call('HGET', scheduleKey, 'lockedBy')
-if lockedBy ~= workerId then
-  return 0
-end
-
-redis.call(
-  'HSET',
-  scheduleKey,
-  'nextRunAt', nextRunAt,
-  'lockedBy', '',
-  'lockedUntil', '0',
-  'updatedAt', now
-)
-redis.call('ZADD', dueKey, nextRunAt, scheduleId)
-
-return 1
 `

@@ -6,7 +6,6 @@ Data Table-backed storage adapter for `remix/job`.
 
 - **Durable SQL queue** - Store jobs in PostgreSQL, MySQL, or SQLite
 - **Lease-based processing** - Supports worker failover and retries
-- **Cron persistence** - Stores recurring schedule state
 - **Built-in migration** - Provisions job tables/indexes through `data-table` migrations
 
 ## Installation
