@@ -98,10 +98,11 @@ function getShikiExtension(
               // See Shiki styles in docs.css for activation
               dark: 'github-dark',
             },
+            includeExplanation: true,
             transformers: [
               // Insert cross-links to known APIs
               {
-                span(node) {
+                span(node, line, col) {
                   // We only enhance single-symbol spans of word characters,
                   // skipping spans for parens, braces, etc
                   if (
@@ -123,6 +124,11 @@ function getShikiExtension(
                   if (symbol === apiName) return
                   // Don't link to anything in the ignore list
                   if (IGNORE_SYMBOLS.has(symbol)) return
+
+                  // We don't want to auto link parameter names, function names, etc.
+                  // The things we do want to link (mostly type annotations) don't seem
+                  // to have an explanation so we use that to decide when to link
+                  if (this.tokens[line]?.[col]?.explanation != null) return
 
                   let linkEl: Element | undefined
                   if (docFilesLookup.has(symbol)) {

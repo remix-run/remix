@@ -401,17 +401,30 @@ function getApiMethod(fullName: string, node: typedoc.SignatureReflection): Meth
   }
 
   let returnType = node.type ? node.type.toString() : 'void'
+
+  let typeParams = ''
+  if (node.typeParameters && node.typeParameters.length > 0) {
+    let typeParamStrs = node.typeParameters.map(
+      (tp) => tp.name + (tp.type ? ` extends ${tp.type.toString()}` : ''),
+    )
+    typeParams = `<${typeParamStrs.join(', ')}>`
+  }
+
   let signatureParams = parameters.map((p) => `${p.name}: ${p.type}`).join(', ')
 
   let signature: string
   if (node.parent.kind === typedoc.ReflectionKind.Function) {
-    signature = `function ${node.name}(${signatureParams}): ${returnType}`
+    signature = `function ${node.name}${typeParams}(${signatureParams}): ${returnType}`
   } else if (node.parent.kind === typedoc.ReflectionKind.Interface) {
-    signature = [`interface ${node.name} {`, `(${signatureParams}): ${returnType}`, `}`].join('\n')
+    signature = [
+      `interface ${node.name} {`,
+      `${typeParams}(${signatureParams}): ${returnType}`,
+      `}`,
+    ].join('\n')
   } else if (node.parent.kind === typedoc.ReflectionKind.Constructor) {
     signature = `constructor(${signatureParams}): ${returnType}`
   } else if (node.parent.kind === typedoc.ReflectionKind.Method) {
-    signature = `${node.name}(${signatureParams}): ${returnType}`
+    signature = `${node.name}${typeParams}(${signatureParams}): ${returnType}`
   } else {
     invariant(
       false,
