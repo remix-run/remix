@@ -28,7 +28,7 @@ Do not rely on `Closes #<number>` to close another PR. GitHub closing keywords c
 - Run:
 
 ```bash
-./skills/supersede-pr/scripts/close_superseded_pr.ts <old_pr> <new_pr>
+scripts/close_superseded_pr.ts <old_pr> <new_pr>
 ```
 
 - This adds a comment (`Superseded by #<new_pr>.`) and closes the old PR.
