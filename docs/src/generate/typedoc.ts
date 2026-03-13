@@ -5,7 +5,6 @@ import { debug, getApiNameFromFullName, info, invariant, verbose, warn } from '.
 type Maps = {
   comments: Map<string, typedoc.Reflection> // full name => TypeDoc Reflection
   apisToDocument: Set<string> // APIs we should generate docs for
-  apisMissingComments: Map<string, typedoc.Reflection> // APIs picked up by TypeDoc but missing JSDoc comments
 }
 
 export async function loadTypeDoc(opts: {
@@ -18,31 +17,13 @@ export async function loadTypeDoc(opts: {
   // determine which APIs we want to generate documentation for
   let project = await loadTypedocJson(opts)
 
-  let { comments, apisToDocument, apisMissingComments } = createLookupMaps(project)
+  let { comments, apisToDocument } = createLookupMaps(project)
 
   // Prefer `remix` package exports over other package exports
   getDuplicateAPIs(apisToDocument).forEach((name) => apisToDocument.delete(name))
-  getDuplicateAPIs(new Set(apisMissingComments.keys())).forEach((name) =>
-    apisMissingComments.delete(name),
-  )
 
   // Remove aliased APIs and only document the canonicals
   getAliasedAPIs(comments).forEach((name) => apisToDocument.delete(name))
-
-  // Warn for APIs missing comments that aren't covered by any entry in apisToDocument.
-  // We defer this until after duplicate/alias handling so we don't warn about non-remix
-  // package exports or alias entries whose canonical counterpart is already documented.
-  let documentedShortNames = new Set(
-    [...apisToDocument].map((fullName) => getApiNameFromFullName(fullName)),
-  )
-  for (let [fullName, reflection] of apisMissingComments) {
-    if (reflection.kind === typedoc.ReflectionKind.Module) {
-      continue
-    }
-    if (!documentedShortNames.has(getApiNameFromFullName(fullName))) {
-      warn(`missing comment for API: ${fullName} (${typedoc.ReflectionKind[reflection.kind]})`)
-    }
-  }
 
   return { comments, apisToDocument }
 }
@@ -106,7 +87,6 @@ async function loadTypedocJson(opts: {
 export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
   let comments = new Map<string, typedoc.Reflection>()
   let apisToDocument = new Set<string>()
-  let apisMissingComments = new Map<string, typedoc.Reflection>()
 
   // Reflections we want to traverse through to find documented APIs
   let traverseKinds = new Set<typedoc.ReflectionKind>([
@@ -123,7 +103,7 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
 
   recurse(reflection)
 
-  return { comments, apisToDocument, apisMissingComments }
+  return { comments, apisToDocument }
 
   function recurse(node: typedoc.Reflection, alias?: string) {
     node.traverse((child) => {
@@ -167,8 +147,6 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
       ) {
         apisToDocument.add(apiName)
         logApi(`commenting`)
-      } else if (child.kind !== typedoc.ReflectionKind.Module) {
-        apisMissingComments.set(apiName, child)
       }
 
       // No need to traverse past signatures, do that when we generate the comment
