@@ -32,8 +32,10 @@
     }
   },
   "devDependencies": {
+    "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },

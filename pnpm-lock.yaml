@@ -294,6 +294,12 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
