@@ -32,7 +32,7 @@ function main(): void {
     let current = ''
 
     try {
-      current = readFileSync(outputFile, 'utf8')
+      current = normalizeContents(readFileSync(outputFile, 'utf8'))
     } catch {
       throw new Error(`Generated Lua scripts are missing. Run \`${command}\`.`)
     }
@@ -66,7 +66,11 @@ function buildGeneratedModule(): string {
 }
 
 function readLuaFile(fileName: string): string {
-  return readFileSync(path.join(scriptDir, fileName), 'utf8').replace(/\r\n/g, '\n')
+  return normalizeContents(readFileSync(path.join(scriptDir, fileName), 'utf8'))
+}
+
+function normalizeContents(contents: string): string {
+  return contents.replace(/\r\n/g, '\n')
 }
 
 main()
