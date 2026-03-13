@@ -1,0 +1,228 @@
+# job
+
+Background job scheduler for Remix with retries, delayed jobs, and pluggable storage adapters.
+
+## Features
+
+- **Typed jobs** - Validate payloads with `remix/data-schema`
+- **Retry support** - Fixed or exponential retry with optional jitter
+- **Delayed jobs** - Schedule work for later execution
+- **Storage agnostic** - Works with pluggable storage adapters
+
+## Installation
+
+```sh
+npm i remix
+```
+
+## Usage
+
+```ts
+import * as s from 'remix/data-schema'
+import { createJobs, createJobScheduler } from 'remix/job'
+import { createDataTableJobStorage } from 'remix/job-data-table'
+
+let jobs = createJobs({
+  sendEmail: {
+    schema: s.object({ to: s.string(), subject: s.string() }),
+    async handle(payload) {
+      await sendEmail(payload.to, payload.subject)
+    },
+  },
+})
+
+let storage = createDataTableJobStorage(db)
+let scheduler = createJobScheduler(jobs, storage)
+
+let enqueued = await scheduler.enqueue(jobs.sendEmail, {
+  to: 'a@example.com',
+  subject: 'Hello',
+})
+
+// enqueue returns { jobId, deduped } for follow-up operations like cancel
+await scheduler.cancel(enqueued.jobId)
+```
+
+## Avoiding Duplicate Jobs
+
+Use `dedupeKey` and `dedupeTtlMs` to prevent duplicate enqueues for the same logical work.
+
+```ts
+let dedupeKey = 'send-email:a@example.com:welcome'
+
+let first = await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'a@example.com', subject: 'Welcome' },
+  {
+    dedupeKey,
+    dedupeTtlMs: 5 * 60 * 1000, // 5 minutes
+  },
+)
+
+let second = await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'a@example.com', subject: 'Welcome' },
+  {
+    dedupeKey,
+    dedupeTtlMs: 5 * 60 * 1000,
+  },
+)
+
+// second.deduped === true
+// second.jobId === first.jobId
+```
+
+## Retrying Jobs
+
+Use `priority` to run more important jobs first, and `retry` to control retry behavior after failures.
+
+- `priority`: Relative ordering for due jobs in the same queue (`10` runs before `1`). Defaults to `0`.
+- `retry.maxAttempts`: Total attempts before marking the job as failed (includes the first attempt). Defaults to `5`.
+- `retry.strategy`: Backoff strategy, either `'fixed'` or `'exponential'`. Defaults to `'exponential'`.
+- `retry.baseDelayMs`: Base retry delay in milliseconds. Defaults to `1000`.
+- `retry.maxDelayMs`: Maximum retry delay cap in milliseconds. Defaults to `300000`.
+- `retry.jitter`: Delay randomization strategy (`'none'` or `'full'`). Defaults to `'full'`.
+
+Jitter helps avoid synchronized retry bursts. If many jobs fail at the same time and all retry after the same delay, they can create a traffic spike against your database or third-party APIs. Randomizing retry delays spreads retries out and smooths load.
+
+```ts
+await scheduler.enqueue(
+  jobs.sendEmail,
+  { to: 'vip@example.com', subject: 'Important update' },
+  {
+    priority: 10,
+    retry: {
+      maxAttempts: 5,
+      strategy: 'exponential',
+      baseDelayMs: 1000,
+      maxDelayMs: 60_000,
+      jitter: 'full',
+    },
+  },
+)
+```
+
+## Retrying Failed Jobs
+
+When a job exhausts retries, it remains in storage with `status: 'failed'` and can be inspected or retried.
+
+```ts
+let failedJobs = await scheduler.listFailedJobs({
+  queue: 'default',
+  limit: 20,
+})
+
+for (let job of failedJobs) {
+  console.error('failed job', job.id, job.lastError)
+}
+
+let retried = await scheduler.retryFailedJob(failedJobs[0].id, {
+  priority: 10,
+})
+```
+
+## Retention and Pruning
+
+Use `scheduler.prune(...)` to delete old terminal jobs (`completed`, `failed`, `canceled`).
+
+```ts
+let pruned = await scheduler.prune({
+  policy: {
+    completedOlderThanMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+    failedOlderThanMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+  },
+  limit: 500,
+})
+
+console.log('deleted jobs', pruned.deleted)
+```
+
+## Worker Retention Loop
+
+You can also run retention pruning automatically from the worker process.
+
+This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs are cleaned up continuously without a separate maintenance task. Use this when you want predictable storage growth and simpler operations in production.
+
+```ts
+let worker = createJobWorker(jobs, storage, {
+  retention: {
+    policy: {
+      completedOlderThanMs: 7 * 24 * 60 * 60 * 1000,
+    },
+    intervalMs: 60_000,
+    limit: 500,
+  },
+})
+```
+
+## Observability Hooks
+
+Scheduler and worker hooks let you emit logs/metrics without changing job logic.
+
+```ts
+let scheduler = createJobScheduler(jobs, storage, {
+  onEnqueue(event) {
+    metrics.count('job.enqueue', 1, { job: event.jobName })
+  },
+  onPrune(event) {
+    metrics.count('job.pruned', event.result.deleted)
+  },
+})
+
+let worker = createJobWorker(jobs, storage, {
+  onJobComplete(event) {
+    metrics.timing('job.duration', event.durationMs, { job: event.job.name })
+  },
+  onJobFailed(event) {
+    logger.error('failed job', event.job.id, event.error)
+  },
+})
+```
+
+## Transactional Scheduler Writes
+
+When your storage supports transactions (e.g. `remix/job-data-table`), scheduler writes can participate in your application transaction.
+
+```ts
+await db.transaction(async (transaction) => {
+  await db.query(orders).insert({ id: 'order-1' })
+
+  let enqueued = await scheduler.enqueue(
+    jobs.sendEmail,
+    { to: 'a@example.com', subject: 'Order received' },
+    { transaction },
+  )
+
+  await scheduler.cancel(enqueued.jobId, { transaction })
+})
+```
+
+## Production Deployment
+
+Run workers as a dedicated, always-on deployment in production.
+
+- Run your web app and job workers as separate processes.
+- Keep worker replicas at `>= 1` (do not scale workers to zero).
+- Queued jobs only execute while at least one worker process is running.
+- Use the same storage backend for both the web app and worker processes.
+
+```ts
+import { createJobWorker } from 'remix/job/worker'
+import { storage, jobs } from './jobs'
+
+let worker = createJobWorker(jobs, storage, {
+  concurrency: 10,
+  pollIntervalMs: 1000,
+})
+
+await worker.start()
+```
+
+## Related Packages
+
+- [`remix/job-data-table`](https://github.com/remix-run/remix/tree/main/packages/job-data-table): SQL storage for PostgreSQL, MySQL, and SQLite
+- [`remix/job-redis`](https://github.com/remix-run/remix/tree/main/packages/job-redis): Redis storage
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

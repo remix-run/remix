@@ -1,0 +1,78 @@
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { getTableName } from '@remix-run/data-table'
+
+import type { Database } from '@remix-run/data-table'
+
+import { createDataTableJobStorage, createDataTableJobStorageMigration } from './storage.ts'
+
+describe('createDataTableJobStorageMigration', () => {
+  it('creates prefixed tables and indexes', async () => {
+    let migration = createDataTableJobStorageMigration({ tablePrefix: 'custom_' })
+    let calls: string[] = []
+
+    let schema = {
+      async createTable(tableInput: Parameters<typeof getTableName>[0]) {
+        calls.push(`createTable:${getTableName(tableInput)}`)
+      },
+      async createIndex(
+        tableInput: Parameters<typeof getTableName>[0],
+        columns: string | string[],
+        options?: { name?: string },
+      ) {
+        let indexed = Array.isArray(columns) ? columns.join(',') : columns
+        calls.push(`createIndex:${getTableName(tableInput)}:${indexed}:${options?.name ?? ''}`)
+      },
+      async dropTable() {},
+    } as never
+
+    await migration.up({ db: {} as never, schema })
+
+    assert.deepEqual(calls, [
+      'createTable:custom_jobs',
+      'createTable:custom_dedupe',
+      'createIndex:custom_jobs:status,queue,run_at,priority,created_at:custom_jobs_due_idx',
+      'createIndex:custom_jobs:status,locked_until:custom_jobs_lock_idx',
+      'createIndex:custom_jobs:status,completed_at:custom_jobs_completed_idx',
+      'createIndex:custom_jobs:status,failed_at:custom_jobs_failed_idx',
+      'createIndex:custom_jobs:status,canceled_at:custom_jobs_canceled_idx',
+      'createIndex:custom_dedupe:expires_at:custom_dedupe_expires_idx',
+    ])
+  })
+
+  it('drops prefixed tables in reverse dependency order', async () => {
+    let migration = createDataTableJobStorageMigration({ tablePrefix: 'custom_' })
+    let calls: string[] = []
+    let schema = {
+      async createTable() {},
+      async createIndex() {},
+      async dropTable(tableInput: Parameters<typeof getTableName>[0]) {
+        calls.push(`dropTable:${getTableName(tableInput)}`)
+      },
+    } as never
+
+    await migration.down({ db: {} as never, schema })
+
+    assert.deepEqual(calls, [
+      'dropTable:custom_dedupe',
+      'dropTable:custom_jobs',
+    ])
+  })
+
+  it('throws for invalid table prefixes', () => {
+    assert.throws(() => {
+      createDataTableJobStorageMigration({ tablePrefix: 'job-test' })
+    }, /tablePrefix may only contain letters, numbers, and underscores/)
+  })
+})
+
+function assertDataTableStorageConstructorTyping(): void {
+  let db = {} as Database
+
+  void createDataTableJobStorage(db)
+  void createDataTableJobStorage(db, { tablePrefix: 'custom_' })
+  // @ts-expect-error Database must be passed as the first argument.
+  void createDataTableJobStorage({ db })
+}
+
+void assertDataTableStorageConstructorTyping

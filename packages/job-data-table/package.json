@@ -1,0 +1,68 @@
+{
+  "name": "@remix-run/job-data-table",
+  "version": "0.0.0",
+  "description": "Data Table storage for remix/job",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/job-data-table"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/job-data-table#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/data-table": "workspace:^",
+    "@remix-run/job": "workspace:^"
+  },
+  "devDependencies": {
+    "@remix-run/data-table-mysql": "workspace:*",
+    "@remix-run/data-table-postgres": "workspace:*",
+    "@remix-run/data-table-sqlite": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "catalog:",
+    "@types/pg": "^8.15.6",
+    "@typescript/native-preview": "catalog:",
+    "better-sqlite3": "^12.4.1",
+    "mysql2": "^3.15.2",
+    "pg": "^8.16.3"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/lib/storage.test.ts",
+    "test:integration": "node --disable-warning=ExperimentalWarning --test ./src/lib/storage.postgres.integration.test.ts ./src/lib/storage.mysql.integration.test.ts ./src/lib/storage.sqlite.test.ts",
+    "test:integration:mysql": "node --disable-warning=ExperimentalWarning --test ./src/lib/storage.mysql.integration.test.ts",
+    "test:integration:postgres": "node --disable-warning=ExperimentalWarning --test ./src/lib/storage.postgres.integration.test.ts",
+    "test:integration:sqlite": "node --disable-warning=ExperimentalWarning --test ./src/lib/storage.sqlite.test.ts",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "job",
+    "queue",
+    "scheduler",
+    "database",
+    "sql"
+  ]
+}
