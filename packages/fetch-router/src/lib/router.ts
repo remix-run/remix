@@ -196,7 +196,8 @@ export function createRouter(options?: RouterOptions): Router {
     if (isActionObject(action)) {
       return {
         handler: action.action,
-        middleware: action.middleware && action.middleware.length > 0 ? action.middleware : undefined,
+        middleware:
+          action.middleware && action.middleware.length > 0 ? action.middleware : undefined,
       }
     }
 
