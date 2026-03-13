@@ -54,9 +54,10 @@ export function createRouter(versions?: ServerContext['versions']) {
     actions: {
       assets: ({ request, params }) => {
         // Replicate `staticFiles` middleware but allowing for a dynamic version param
+        let devPath = path.join(DEV_CSS_DIR, params.asset)
         let filePath =
-          process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
-            ? path.join(DEV_CSS_DIR, params.asset)
+          process.env.NODE_ENV === 'development' && fs.existsSync(devPath)
+            ? devPath
             : path.join(ASSETS_DIR, params.asset)
         return respond.file(request, filePath, params.asset)
       },

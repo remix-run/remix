@@ -46,6 +46,12 @@
 - **Accessible navigation**: Always use proper `<a>` elements for navigation links. Never use JavaScript `onclick` handlers on non-interactive elements like `<tr>`, `<div>`, or `<span>` for navigation. Links should be keyboard accessible and work with screen readers.
 - **Clean shutdown**: Demo servers should handle `SIGINT` and `SIGTERM` signals to exit cleanly when Ctrl+C is pressed. Close the server and call `process.exit(0)`.
 
+## Documentation
+
+- API documentation is handled by scripts in the docs/ directory
+- We use `typedoc` to process the source code, and then generate markdown files from the typedoc output
+- Markdown API documentation files be generated via `pnpm run docs` in the docs/ directory
+
 ## Changes and Releases
 
 - **Automated releases**: When changes are pushed to `main`, the [release-pr workflow](/.github/workflows/release-pr.yaml) automatically opens/updates a "Release" PR. The [publish workflow](/.github/workflows/publish.yaml) runs on every push to `main` and publishes when no change files are present (i.e., after merging the Release PR).

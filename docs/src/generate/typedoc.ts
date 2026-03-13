@@ -59,6 +59,10 @@ async function loadTypedocJson(opts: {
         gitRevision: opts.tag,
         // exclude test files via the build config
         tsconfig: 'tsconfig.build.json',
+        validation: {
+          // Don't warn for referenced but not exported types
+          notExported: false,
+        },
       },
     })
     let reflection = await app.convert()
@@ -66,10 +70,11 @@ async function loadTypedocJson(opts: {
 
     let outPath = path.resolve(process.cwd(), opts.typedocDir)
     await app.renderer.render(reflection!, outPath)
-    info(`HTML docs generated at: ${outPath}`)
 
     let jsonPath = path.join(outPath, 'api.json')
     await app.application.generateJson(reflection, jsonPath)
+
+    info(`HTML docs generated at: ${outPath}`)
     info(`JSON docs generated at: ${jsonPath}`)
 
     return reflection
@@ -121,7 +126,7 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
           ].join(' '),
         )
 
-      // Reference types are aliases - stick them off into a separate map for post-processing
+      // Recurse into reference types
       if (child.isReference()) {
         logApi(`reference to ${child.getTargetReflectionDeep().getFriendlyFullName()}`)
         let ref = child.getTargetReflection()
@@ -136,7 +141,11 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
       }
 
       // Grab APIs with JSDoc comments that we should generate docs for
-      if (child.comment) {
+      // We don't need comments for types since those can stand alone in the docs
+      if (
+        child.comment ||
+        [typedoc.ReflectionKind.Interface, typedoc.ReflectionKind.TypeAlias].includes(child.kind)
+      ) {
         apisToDocument.add(apiName)
         logApi(`commenting`)
       }

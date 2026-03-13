@@ -47,8 +47,10 @@ export type DocumentedFunction = BaseDocumentedAPI & {
 // Documented class API
 export type DocumentedClass = BaseDocumentedAPI & {
   type: 'class'
+  signature: string
   constructor: Method | undefined
   properties: ParameterOrProperty[] | undefined
+  accessors: ParameterOrProperty[] | undefined
   methods: Method[] | undefined
   example: string | undefined
 }
@@ -58,6 +60,7 @@ export type DocumentedInterface = BaseDocumentedAPI & {
   type: 'interface'
   signature: string
   properties: ParameterOrProperty[] | undefined
+  accessors: ParameterOrProperty[] | undefined
   methods: Method[] | undefined
 }
 
@@ -120,18 +123,40 @@ function getDocumentedFunction(
 ): DocumentedFunction {
   let method = getApiMethod(fullName, node)
   invariant(method, `Failed to get method for function: ${node.getFriendlyFullName()}`)
+  let methods = [method]
+  let signature = method.signature
+  let parameters = method.parameters
+
+  // For overloaded functions, collect all signatures and merge parameters
+  if (node.parent.signatures && node.parent.signatures.length > 1) {
+    methods = node.parent.signatures
+      .map((s) => getApiMethod(fullName, s))
+      .filter((m): m is Method => m != null)
+
+    signature = methods.map((m) => m.signature).join('\n\n')
+
+    // Deduplicate parameters across overloads by name (first occurrence wins)
+    methods
+      .flatMap((m) => m.parameters)
+      .forEach((param) => {
+        if (!parameters.some((p) => p.name === param.name)) {
+          parameters.push(param)
+        }
+      })
+  }
+
   return {
     type: 'function',
     path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
     name: method.name,
-    aliases: getApiAliases(node.comment!),
-    description: method.description,
-    signature: method.signature,
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
+    signature,
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
-    parameters: method.parameters,
+    parameters,
     returns: method.returns,
   }
 }
@@ -153,19 +178,25 @@ function getDocumentedClass(
   let constructor: Method | undefined
   node.traverse((child) => {
     if (child.isDeclaration() && child.kind === typedoc.ReflectionKind.Constructor) {
+      invariant(
+        child.getAllSignatures().length === 1,
+        `Docs only support one constructor signature at the moment: ${child.getFriendlyFullName()}`,
+      )
       let signature = child.getAllSignatures()[0]
       invariant(signature, `Missing constructor signature for class: ${node.getFriendlyFullName()}`)
       constructor = getApiMethod(fullName, signature)
     }
   })
 
-  let { properties, methods } = getApiPropertiesAndMethods(
+  let { properties, accessors, methods } = getApiPropertiesAndMethods(
     fullName,
     node,
     new Set([typedoc.ReflectionKind.Constructor]),
   )
 
   let name = getApiNameFromFullName(fullName)
+  let classDecl = node.toString().replace(/^Class /, 'class ')
+  let signature = `${classDecl} {\n${getClassBodySignature(node)}}`
 
   return {
     type: 'class',
@@ -177,16 +208,43 @@ function getDocumentedClass(
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
+    signature,
     constructor,
     properties,
+    accessors,
     methods,
   }
 }
 
-function getChildrenSignature(node: typedoc.DeclarationReflection): string {
+function getClassBodySignature(node: typedoc.DeclarationReflection): string {
+  let constructorLine
+  let propertiesLine
+  let accessorsLine
+  let methodsLine
+
+  constructorLine = getChildrenSignature(node, (c) => c.kind === typedoc.ReflectionKind.Constructor)
+  propertiesLine = getChildrenSignature(node, (c) => c.kind === typedoc.ReflectionKind.Property)
+  accessorsLine = getChildrenSignature(node, (c) => c.kind === typedoc.ReflectionKind.Accessor)
+  methodsLine = getChildrenSignature(node, (c) => c.kind === typedoc.ReflectionKind.Method)
+
+  return [
+    constructorLine,
+    propertiesLine ? ['  // Properties', propertiesLine].join('\n') : undefined,
+    accessorsLine ? ['  // Accessors', accessorsLine].join('\n') : undefined,
+    methodsLine ? ['  // Methods', methodsLine].join('\n') : undefined,
+  ]
+    .flat()
+    .filter(Boolean)
+    .join('\n')
+}
+
+function getChildrenSignature(
+  node: typedoc.DeclarationReflection,
+  predicate?: (c: typedoc.Reflection) => boolean,
+): string {
   let childrenSignature = ''
   node.traverse((c) => {
-    if (c.isTypeParameter()) {
+    if (c.isTypeParameter() || predicate?.(c) === false) {
       return
     }
     if (c.kind === typedoc.ReflectionKind.Property) {
@@ -195,10 +253,21 @@ function getChildrenSignature(node: typedoc.DeclarationReflection): string {
         childSignature = childSignature.replace(/: /, '?: ')
       }
       childrenSignature += `  ${childSignature}\n`
+    } else if (c.kind === typedoc.ReflectionKind.Accessor && c.isDeclaration() && c.getSignature) {
+      let type = c.getSignature.type?.toString() ?? 'unknown'
+      childrenSignature += `  get ${c.name}(): ${type}\n`
     } else if (c.kind === typedoc.ReflectionKind.Method && c.isDeclaration()) {
-      let method = getApiMethod(c.name, c.getAllSignatures()[0])
-      invariant(method, `Failed to get method for type/interface: ${c.getFriendlyFullName()}`)
-      childrenSignature += `  ${method.signature}\n`
+      c.getAllSignatures().forEach((signature) => {
+        let method = getApiMethod(c.name, signature)
+        invariant(method, `Failed to get method signature: ${c.getFriendlyFullName()}`)
+        childrenSignature += `  ${method.signature}\n`
+      })
+    } else if (c.kind === typedoc.ReflectionKind.Constructor && c.isDeclaration()) {
+      c.getAllSignatures().forEach((signature) => {
+        let method = getApiMethod(c.name, signature)
+        invariant(method, `Failed to get constructor signature: ${c.getFriendlyFullName()}`)
+        childrenSignature += `  ${method.signature}\n`
+      })
     }
   })
   return childrenSignature
@@ -208,7 +277,7 @@ function getDocumentedInterface(
   fullName: string,
   node: typedoc.DeclarationReflection,
 ): DocumentedInterface {
-  let { properties, methods } = getApiPropertiesAndMethods(fullName, node)
+  let { properties, accessors, methods } = getApiPropertiesAndMethods(fullName, node)
 
   let signature = node.toString().replace(/^Interface/, 'interface')
   let childrenSignature = getChildrenSignature(node)
@@ -221,10 +290,11 @@ function getDocumentedInterface(
     path: getApiFilePath(fullName, 'interface'),
     source: node.sources?.[0]?.url,
     name: getApiNameFromFullName(fullName),
-    aliases: getApiAliases(node.comment!),
-    description: getApiDescription(node.comment!),
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
     signature,
     properties,
+    accessors,
     methods,
   }
 }
@@ -261,8 +331,8 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
     path: getApiFilePath(fullName, 'type'),
     source: node.sources?.[0]?.url,
     name,
-    aliases: getApiAliases(node.comment!),
-    description: getApiDescription(node.comment!),
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
     signature,
   }
 }
@@ -304,9 +374,11 @@ function getApiPropertiesAndMethods(
   handledTypes: Set<typedoc.ReflectionKind> = new Set(),
 ): {
   properties: ParameterOrProperty[]
+  accessors: ParameterOrProperty[]
   methods: Method[]
 } {
   let properties: ParameterOrProperty[] = []
+  let accessors: ParameterOrProperty[] = []
   let methods: Method[] = []
   node.traverse((child) => {
     if (child.isDeclaration()) {
@@ -316,17 +388,17 @@ function getApiPropertiesAndMethods(
           properties.push(property)
         }
       } else if (child.kind === typedoc.ReflectionKind.Accessor) {
-        let property = getApiParameterOrProperty(child.getSignature)
-        if (property) {
-          properties.push(property)
+        let accessor = getApiParameterOrProperty(child.getSignature)
+        if (accessor) {
+          accessors.push(accessor)
         }
       } else if (child.kind === typedoc.ReflectionKind.Method) {
-        let signature = child.getAllSignatures()[0]
-        invariant(`Missing method signature for class: ${child.getFriendlyFullName()}`)
-        let method = getApiMethod(fullName, signature)
-        if (method) {
-          methods.push(method)
-        }
+        child.getAllSignatures().forEach((signature) => {
+          let method = getApiMethod(fullName, signature)
+          if (method) {
+            methods.push(method)
+          }
+        })
       } else if (!handledTypes.has(child.kind)) {
         unimplemented(
           `class child kind: ${typedoc.ReflectionKind[child.kind]} ${node.getFriendlyFullName()}`,
@@ -334,7 +406,7 @@ function getApiPropertiesAndMethods(
       }
     }
   })
-  return { properties, methods }
+  return { properties, accessors, methods }
 }
 
 function getApiMethod(fullName: string, node: typedoc.SignatureReflection): Method | undefined {
@@ -353,24 +425,31 @@ function getApiMethod(fullName: string, node: typedoc.SignatureReflection): Meth
     }
   })
 
-  if (!node.comment) {
-    warn(`missing comment for signature: ${node.getFriendlyFullName()}`)
-  } else if (!node.comment.summary) {
-    warn(`missing summary for signature: ${node.getFriendlyFullName()}`)
+  let returnType = node.type ? node.type.toString() : 'void'
+
+  let typeParams = ''
+  if (node.typeParameters && node.typeParameters.length > 0) {
+    let typeParamStrs = node.typeParameters.map(
+      (tp) => tp.name + (tp.type ? ` extends ${tp.type.toString()}` : ''),
+    )
+    typeParams = `<${typeParamStrs.join(', ')}>`
   }
 
-  let returnType = node.type ? node.type.toString() : 'void'
   let signatureParams = parameters.map((p) => `${p.name}: ${p.type}`).join(', ')
 
   let signature: string
   if (node.parent.kind === typedoc.ReflectionKind.Function) {
-    signature = `function ${node.name}(${signatureParams}): ${returnType}`
+    signature = `function ${node.name}${typeParams}(${signatureParams}): ${returnType}`
   } else if (node.parent.kind === typedoc.ReflectionKind.Interface) {
-    signature = [`interface ${node.name} {`, `(${signatureParams}): ${returnType}`, `}`].join('\n')
+    signature = [
+      `interface ${node.name} {`,
+      `${typeParams}(${signatureParams}): ${returnType}`,
+      `}`,
+    ].join('\n')
   } else if (node.parent.kind === typedoc.ReflectionKind.Constructor) {
-    signature = `constructor${node.name}(${signatureParams}): ${returnType}`
+    signature = `constructor(${signatureParams}): ${returnType}`
   } else if (node.parent.kind === typedoc.ReflectionKind.Method) {
-    signature = `${node.name}(${signatureParams}): ${returnType}`
+    signature = `${node.name}${typeParams}(${signatureParams}): ${returnType}`
   } else {
     invariant(
       false,

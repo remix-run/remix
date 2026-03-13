@@ -22,3 +22,17 @@ let app = run({
 app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
+
+window.navigation.addEventListener('navigate', () => {
+  let toggle = document.getElementById('nav-toggle') as HTMLInputElement | null
+  if (toggle) {
+    toggle.checked = false
+  }
+
+  let transition = window.navigation.transition
+  if (transition) {
+    let overlay = document.getElementById('nav-overlay')
+    overlay?.classList.add('active')
+    transition.finished.finally(() => overlay?.classList.remove('active'))
+  }
+})
