@@ -17,6 +17,14 @@ type EventType<target extends Element> = Extract<AddEventType<target>, string>
 type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
   Parameters<AddEventListenerFor<target, type>>[0]
 >
+type OnTuple<target extends Element, type extends EventType<target>> = [
+  type: type,
+  handler: ListenerFor<target, type>,
+  captureBoolean?: boolean,
+]
+type OnArgs<target extends Element> = {
+  [type in EventType<target>]: OnTuple<target, type>
+}[EventType<target>]
 
 const onMixin = createMixin<
   Element,
@@ -72,18 +80,24 @@ const onMixin = createMixin<
  * @returns A mixin descriptor for the target element.
  */
 export function on<
-  target extends Element = Element,
-  type extends EventType<target> = EventType<target>,
->(
-  type: type,
-  handler: ListenerFor<target, type>,
-  captureBoolean?: boolean,
-): MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps> {
+  target extends Element,
+  type extends EventType<target>,
+>(...args: OnTuple<target, type>): MixinDescriptor<target, OnTuple<target, type>, ElementProps>
+export function on<target extends Element>(...args: OnArgs<target>): MixinDescriptor<
+  target,
+  OnArgs<target>,
+  ElementProps
+>
+export function on(
+  ...args: [type: string, handler: SignaledListener<any>, captureBoolean?: boolean]
+): any {
+  let [type, handler, captureBoolean] = args
+
   // Keep this typed wrapper so JSX host context can infer event/currentTarget
   // from `type`, rather than exposing the raw `string` + `Event` runtime signature.
   return onMixin(
-    type as string,
-    handler as unknown as SignaledListener<Event>,
+    type,
+    handler as SignaledListener<Event>,
     captureBoolean,
-  ) as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
+  )
 }
