@@ -50,6 +50,7 @@ export function createRouter(versions?: ServerContext['versions']) {
       })
     },
   }
+
   router.map(routes, {
     actions: {
       assets: ({ request, params }) => {
@@ -86,6 +87,11 @@ export function createRouter(versions?: ServerContext['versions']) {
             {node}
           </ServerPage>,
         )
+      },
+      docsRedirect({ request, params }) {
+        let url = new URL(request.url)
+        url.pathname += '/'
+        return Response.redirect(url, 301)
       },
       async home({ request, params }) {
         return respond.document(

@@ -74,6 +74,9 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
   try {
     response = await router.fetch(new Request(`http://localhost${urlPath}`))
     if (!response.ok) {
+      if (response.status >= 300 && response.status < 400) {
+        return { downloadedUrl: urlPath, discoveredUrls: [] }
+      }
       throw new Error(`Error fetching ${urlPath}: ${response.status} ${response.statusText}`)
     }
   } catch (error) {
