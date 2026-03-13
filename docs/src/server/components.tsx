@@ -83,6 +83,9 @@ function Layout() {
         </label>
       </div>
       <div class="container">
+        <main class="main">
+          <div class="content">{children}</div>
+        </main>
         <div class="sidebar">
           <header>
             <a href={routes.home.href({ version: undefined })} class="logo">
@@ -101,9 +104,7 @@ function Layout() {
             <Nav />
           </nav>
         </div>
-        <main class="main">
-          <div class="content">{children}</div>
-        </main>
+        <div id="nav-overlay" aria-hidden="true" />
       </div>
     </>
   )
@@ -126,47 +127,29 @@ export function VersionDropdown(handle: Handle) {
     <NavDropdown title="Version" open={activeVersion != null}>
       <ul>
         <li>
-          {...navVersions.map((version) => (
-            <VersionLink
-              version={version}
-              latest={
-                (versions.length === 0 || version.version === versions[0]?.version) &&
-                !activeVersion
-              }
-              active={!slug && version.version === activeVersion}
-            />
-          ))}
+          {...navVersions.map((version) => {
+            let latest =
+              (versions.length === 0 || version.version === versions[0]?.version) && !activeVersion
+            let active = !slug && version.version === activeVersion
+            let href = routes.home.href({ version: !latest ? version.version : undefined })
+            return (
+              <>
+                <a
+                  href={href}
+                  class={active ? 'active' : undefined}
+                  rel={!latest && !version.crawl ? 'nofollow' : undefined}
+                >
+                  {version.version}
+                </a>
+                {latest ? <span> (latest)</span> : null}
+                <br />
+              </>
+            )
+          })}
         </li>
       </ul>
     </NavDropdown>
   )
-}
-
-function VersionLink() {
-  return ({
-    version,
-    latest,
-    active,
-  }: {
-    version: { version: string; crawl: boolean }
-    latest: boolean
-    active: boolean
-  }) => {
-    let href = routes.home.href({ version: !latest ? version.version : undefined })
-    return (
-      <>
-        <a
-          href={href}
-          class={active ? 'active' : undefined}
-          rel={!latest && !version.crawl ? 'nofollow' : undefined}
-        >
-          {version.version}
-        </a>
-        {latest ? <span> (latest)</span> : null}
-        <br />
-      </>
-    )
-  }
 }
 
 type ApiTypes = {
@@ -272,7 +255,10 @@ function RemixLogoLight(handle: Handle) {
     return (
       <div class="light">
         <img
-          src={routes.assets.href({ version: activeVersion, asset: 'remix-wordmark-lightmode.svg' })}
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'remix-wordmark-lightmode.svg',
+          })}
           alt="Remix"
           style="width: 100%; height: 100%;"
         />

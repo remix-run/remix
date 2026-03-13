@@ -132,6 +132,47 @@
   display: none;
 }
 
+/* Navigation progress bar */
+#nav-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 200;
+  overflow: hidden;
+
+  &.active {
+    display: block;
+
+    body:has(&) .main {
+      opacity: 0.4;
+      transition: opacity 0.15s ease;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 50%;
+      height: 100%;
+      background: var(--text-link-color);
+      animation: nav-progress 1s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes nav-progress {
+  0% {
+    left: -50%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
 .container {
   display: flex;
   min-height: 100vh;
@@ -140,6 +181,8 @@
     width: 380px;
     overflow-y: auto;
     position: fixed;
+    top: 0;
+    left: 0;
     height: 100vh;
     z-index: 100;
 
