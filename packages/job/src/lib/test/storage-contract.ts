@@ -40,13 +40,9 @@ export function runJobStorageContract<transaction = never>(
         },
       })
       let scheduler = createJobScheduler(jobs, storage)
-      let worker = createJobWorker({
-        jobs,
-        storage,
-        worker: {
-          pollIntervalMs: 10,
-          leaseMs: 100,
-        },
+      let worker = createJobWorker(jobs, storage, {
+        pollIntervalMs: 10,
+        leaseMs: 100,
       })
 
       await scheduler.enqueue(jobs.email, { id: 'one' })
@@ -72,13 +68,9 @@ export function runJobStorageContract<transaction = never>(
         },
       })
       let scheduler = createJobScheduler(jobs, storage)
-      let worker = createJobWorker({
-        jobs,
-        storage,
-        worker: {
-          pollIntervalMs: 10,
-          leaseMs: 100,
-        },
+      let worker = createJobWorker(jobs, storage, {
+        pollIntervalMs: 10,
+        leaseMs: 100,
       })
 
       let result = await scheduler.enqueue(jobs.flaky, { id: 'one' }, {
@@ -112,13 +104,9 @@ export function runJobStorageContract<transaction = never>(
         },
       })
       let scheduler = createJobScheduler(jobs, storage)
-      let worker = createJobWorker({
-        jobs,
-        storage,
-        worker: {
-          pollIntervalMs: 10,
-          leaseMs: 100,
-        },
+      let worker = createJobWorker(jobs, storage, {
+        pollIntervalMs: 10,
+        leaseMs: 100,
       })
 
       await scheduler.enqueue(jobs.delayed, { id: 'd1' }, { delay: 35 })
@@ -210,13 +198,9 @@ export function runJobStorageContract<transaction = never>(
         },
       })
       let scheduler = createJobScheduler(jobs, storage)
-      let worker = createJobWorker({
-        jobs,
-        storage,
-        worker: {
-          pollIntervalMs: 10,
-          leaseMs: 100,
-        },
+      let worker = createJobWorker(jobs, storage, {
+        pollIntervalMs: 10,
+        leaseMs: 100,
       })
 
       let enqueued = await scheduler.enqueue(jobs.alwaysFail, { id: 'f1' }, {

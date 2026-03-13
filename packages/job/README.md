@@ -144,17 +144,13 @@ You can also run retention pruning automatically from the worker process.
 This runs periodic pruning in the same always-on process that executes jobs, so old terminal jobs are cleaned up continuously without a separate maintenance task. Use this when you want predictable storage growth and simpler operations in production.
 
 ```ts
-let worker = createJobWorker({
-  jobs,
-  storage,
-  worker: {
-    retention: {
-      policy: {
-        completedOlderThanMs: 7 * 24 * 60 * 60 * 1000,
-      },
-      intervalMs: 60_000,
-      limit: 500,
+let worker = createJobWorker(jobs, storage, {
+  retention: {
+    policy: {
+      completedOlderThanMs: 7 * 24 * 60 * 60 * 1000,
     },
+    intervalMs: 60_000,
+    limit: 500,
   },
 })
 ```
@@ -173,9 +169,7 @@ let scheduler = createJobScheduler(jobs, storage, {
   },
 })
 
-let worker = createJobWorker({
-  jobs,
-  storage,
+let worker = createJobWorker(jobs, storage, {
   onJobComplete(event) {
     metrics.timing('job.duration', event.durationMs, { job: event.job.name })
   },
@@ -216,13 +210,9 @@ Run workers as a dedicated, always-on deployment in production.
 import { createJobWorker } from 'remix/job/worker'
 import { storage, jobs } from './jobs'
 
-let worker = createJobWorker({
-  jobs,
-  storage,
-  worker: {
-    concurrency: 10,
-    pollIntervalMs: 1000,
-  },
+let worker = createJobWorker(jobs, storage, {
+  concurrency: 10,
+  pollIntervalMs: 1000,
 })
 
 await worker.start()

@@ -865,21 +865,6 @@ export interface JobWorker {
 }
 
 /**
- * Options for constructing a worker.
+ * Optional settings and hooks for `createJobWorker(...)`.
  */
-export type CreateJobWorkerOptions<defs extends JobDefinitions> = {
-  /**
-   * Registered job definitions keyed by name.
-   */
-  jobs: defs
-
-  /**
-   * Storage adapter used to claim, run, and mutate jobs.
-   */
-  storage: JobStorage
-
-  /**
-   * Worker runtime settings.
-   */
-  worker?: WorkerOptions
-} & WorkerHooks
+export type CreateJobWorkerOptions = WorkerOptions & WorkerHooks
