@@ -32,7 +32,7 @@ let jobs = createJobs({
 })
 
 let storage = createDataTableJobStorage({ db })
-let scheduler = createJobScheduler({ jobs, storage })
+let scheduler = createJobScheduler(jobs, storage)
 
 let enqueued = await scheduler.enqueue(jobs.sendEmail, {
   to: 'a@example.com',
@@ -164,9 +164,7 @@ let worker = createJobWorker({
 Scheduler and worker hooks let you emit logs/metrics without changing job logic.
 
 ```ts
-let scheduler = createJobScheduler({
-  jobs,
-  storage,
+let scheduler = createJobScheduler(jobs, storage, {
   onEnqueue(event) {
     metrics.count('job.enqueue', 1, { job: event.jobName })
   },

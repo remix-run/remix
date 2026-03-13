@@ -39,7 +39,7 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, storage })
+      let scheduler = createJobScheduler(jobs, storage)
       let worker = createJobWorker({
         jobs,
         storage,
@@ -71,7 +71,7 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, storage })
+      let scheduler = createJobScheduler(jobs, storage)
       let worker = createJobWorker({
         jobs,
         storage,
@@ -111,7 +111,7 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, storage })
+      let scheduler = createJobScheduler(jobs, storage)
       let worker = createJobWorker({
         jobs,
         storage,
@@ -136,7 +136,7 @@ export function runJobStorageContract<transaction = never>(
           async handle() {},
         },
       })
-      let scheduler = createJobScheduler({ jobs, storage })
+      let scheduler = createJobScheduler(jobs, storage)
 
       let first = await scheduler.enqueue(jobs.email, { id: 'a' }, {
         dedupeKey: 'email:a',
@@ -209,7 +209,7 @@ export function runJobStorageContract<transaction = never>(
           },
         },
       })
-      let scheduler = createJobScheduler({ jobs, storage })
+      let scheduler = createJobScheduler(jobs, storage)
       let worker = createJobWorker({
         jobs,
         storage,
