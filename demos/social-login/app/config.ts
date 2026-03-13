@@ -7,8 +7,8 @@ export interface SocialLoginConfig {
   googleClientSecret?: string
   githubClientId?: string
   githubClientSecret?: string
-  facebookClientId?: string
-  facebookClientSecret?: string
+  xClientId?: string
+  xClientSecret?: string
 }
 
 let didLoadDemoEnv = false
@@ -24,8 +24,8 @@ export function getSocialLoginConfig(source: NodeJS.ProcessEnv = process.env): S
     googleClientSecret: readEnv(source.GOOGLE_CLIENT_SECRET),
     githubClientId: readEnv(source.GITHUB_CLIENT_ID),
     githubClientSecret: readEnv(source.GITHUB_CLIENT_SECRET),
-    facebookClientId: readEnv(source.FACEBOOK_CLIENT_ID),
-    facebookClientSecret: readEnv(source.FACEBOOK_CLIENT_SECRET),
+    xClientId: readEnv(source.X_CLIENT_ID),
+    xClientSecret: readEnv(source.X_CLIENT_SECRET),
   }
 }
 

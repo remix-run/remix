@@ -1,15 +1,15 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
 import {
-  createFacebookAuthProvider,
   createGitHubAuthProvider,
   createGoogleAuthProvider,
+  createXAuthProvider,
 } from 'remix/auth'
 import type {
-  FacebookProfile,
   GitHubProfile,
   GoogleProfile,
   OAuthProvider,
   OAuthResult,
+  XProfile,
 } from 'remix/auth'
 import { auth, sessionAuth } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
@@ -21,7 +21,7 @@ import { routes } from '../routes.ts'
 import type { Session } from '../utils/session.ts'
 import { AppDatabase } from './database.ts'
 
-export type SocialProviderName = 'google' | 'github' | 'facebook'
+export type SocialProviderName = 'google' | 'github' | 'x'
 export type LoginMethod = SocialProviderName | 'password'
 
 export interface AuthenticatedUser {
@@ -47,12 +47,12 @@ interface SocialLoginSession {
 type SocialProvider =
   | OAuthProvider<GoogleProfile, 'google'>
   | OAuthProvider<GitHubProfile, 'github'>
-  | OAuthProvider<FacebookProfile, 'facebook'>
+  | OAuthProvider<XProfile, 'x'>
 
 export type SocialAuthResult =
   | OAuthResult<GoogleProfile, 'google'>
   | OAuthResult<GitHubProfile, 'github'>
-  | OAuthResult<FacebookProfile, 'facebook'>
+  | OAuthResult<XProfile, 'x'>
 
 interface SocialProfileData {
   email?: string
@@ -109,7 +109,7 @@ export function getSocialProviderStates(config: SocialLoginConfig): SocialProvid
   return [
     createProviderState('google', config),
     createProviderState('github', config),
-    createProviderState('facebook', config),
+    createProviderState('x', config),
   ]
 }
 
@@ -119,8 +119,8 @@ export function getProviderLabel(name: SocialProviderName): string {
       return 'Google'
     case 'github':
       return 'GitHub'
-    case 'facebook':
-      return 'Facebook'
+    case 'x':
+      return 'X'
   }
 }
 
@@ -155,8 +155,8 @@ export function createSocialAuthProvider(
       return createGoogleProvider(origin, config)
     case 'github':
       return createGitHubProvider(origin, config)
-    case 'facebook':
-      return createFacebookProvider(origin, config)
+    case 'x':
+      return createXProvider(origin, config)
   }
 }
 
@@ -190,18 +190,18 @@ export function createGitHubProvider(
   })
 }
 
-export function createFacebookProvider(
+export function createXProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<FacebookProfile, 'facebook'> | null {
-  if (!config.facebookClientId || !config.facebookClientSecret) {
+): OAuthProvider<XProfile, 'x'> | null {
+  if (!config.xClientId || !config.xClientSecret) {
     return null
   }
 
-  return createFacebookAuthProvider({
-    clientId: config.facebookClientId,
-    clientSecret: config.facebookClientSecret,
-    redirectUri: new URL(routes.auth.facebook.callback.href(), origin),
+  return createXAuthProvider({
+    clientId: config.xClientId,
+    clientSecret: config.xClientSecret,
+    redirectUri: new URL(routes.auth.x.callback.href(), origin),
   })
 }
 
@@ -346,10 +346,10 @@ function getMissingProviderEnv(name: SocialProviderName, config: SocialLoginConf
         ['GITHUB_CLIENT_ID', config.githubClientId],
         ['GITHUB_CLIENT_SECRET', config.githubClientSecret],
       ])
-    case 'facebook':
+    case 'x':
       return getMissingValues([
-        ['FACEBOOK_CLIENT_ID', config.facebookClientId],
-        ['FACEBOOK_CLIENT_SECRET', config.facebookClientSecret],
+        ['X_CLIENT_ID', config.xClientId],
+        ['X_CLIENT_SECRET', config.xClientSecret],
       ])
   }
 }
@@ -372,11 +372,10 @@ function getSocialProfileData(result: SocialAuthResult): SocialProfileData {
         name: normalizeOptionalString(result.profile.name ?? result.profile.login),
         avatarUrl: normalizeOptionalString(result.profile.avatar_url),
       }
-    case 'facebook':
+    case 'x':
       return {
-        email: normalizeOptionalString(result.profile.email),
-        name: normalizeOptionalString(result.profile.name),
-        avatarUrl: normalizeOptionalString(result.profile.picture?.data?.url),
+        name: normalizeOptionalString(result.profile.name ?? result.profile.username),
+        avatarUrl: normalizeOptionalString(result.profile.profile_image_url),
       }
   }
 }
@@ -421,7 +420,7 @@ function readLoginMethod(value: unknown): LoginMethod | null {
   switch (value) {
     case 'google':
     case 'github':
-    case 'facebook':
+    case 'x':
     case 'password':
       return value
     default:

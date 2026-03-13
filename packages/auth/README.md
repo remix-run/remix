@@ -5,7 +5,7 @@ Browser login, OAuth, and OIDC helpers for Remix. This package handles redirect-
 ## Features
 
 - **Standards-based browser auth** - Handle authorization code flows, PKCE, callback validation, and profile loading for OAuth and OpenID Connect providers
-- **Built-in provider support** - Start quickly with Google, Microsoft, Okta, Auth0, GitHub, and Facebook, or connect another OpenID Connect provider
+- **Built-in provider support** - Start quickly with Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X, or connect another OpenID Connect provider
 - **Credentials flows** - Support email/password and other direct form-based login flows with the same session model as social login
 - **Session-backed authentication** - Persist a small auth record in the session and load the full identity later on normal app requests
 - **Explicit app control** - Decide exactly what to write into the session, where to redirect after login, and how to handle success and failure cases
@@ -215,6 +215,7 @@ On failures:
 - [Auth0 OpenID Connect Protocol](https://auth0.com/docs/authenticate/protocols/openid-connect-protocol)
 - [GitHub OAuth apps](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
 - [Facebook Login](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/)
+- [X OAuth 2.0 and Log in with X](https://docs.x.com/resources/fundamentals/authentication/guides/log-in-with-x)
 - App-defined credentials flows like email and password
 
 ## Creating Your Own Provider
@@ -282,7 +283,7 @@ That is the recommended path for Microsoft Entra tenants, Keycloak, Zitadel, Cog
 If the provider is not OIDC and is not one of the built-in helpers, `remix/auth` does not yet expose a public generic custom OAuth provider factory. In that case:
 
 - prefer `createOIDCAuthProvider()` if the provider supports OIDC at all
-- use a built-in helper like `createGitHubAuthProvider()` or `createFacebookAuthProvider()` when it matches your provider
+- use a built-in helper like `createGitHubAuthProvider()`, `createFacebookAuthProvider()`, or `createXAuthProvider()` when it matches your provider
 
 Contributions are welcome if you want to add another provider to Remix itself. [Submit a pull request](https://github.com/remix-run/remix/pulls) if you'd like to add one.
 
@@ -388,7 +389,7 @@ Notes:
 Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
 
 ```ts
-import { createFacebookAuthProvider, createGitHubAuthProvider, login } from 'remix/auth'
+import { createGitHubAuthProvider, createXAuthProvider, login } from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -397,9 +398,9 @@ let routes = route({
       login: '/login/github',
       callback: '/auth/github/callback',
     },
-    facebook: {
-      login: '/login/facebook',
-      callback: '/auth/facebook/callback',
+    x: {
+      login: '/login/x',
+      callback: '/auth/x/callback',
     },
   },
 })
@@ -410,28 +411,29 @@ let githubProvider = createGitHubAuthProvider({
   redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
 })
 
-let facebookProvider = createFacebookAuthProvider({
-  clientId: env.FACEBOOK_CLIENT_ID,
-  clientSecret: env.FACEBOOK_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.facebook.callback.href(), env.APP_ORIGIN),
+let xProvider = createXAuthProvider({
+  clientId: env.X_CLIENT_ID,
+  clientSecret: env.X_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
 })
 
 router.get(routes.auth.github.login, login(githubProvider))
-router.get(routes.auth.facebook.login, login(facebookProvider))
+router.get(routes.auth.x.login, login(xProvider))
 ```
 
 Default scopes:
 
 - GitHub: `read:user user:email`
-- Facebook: `public_profile email`
+- X: `tweet.read users.read`
 
 Pass `scopes` if you need a different set for a provider.
 
 Provider notes:
 
 - `createGitHubAuthProvider()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
-- `createFacebookAuthProvider()` fetches a fixed profile shape from `https://graph.facebook.com/me?fields=id,name,email,picture`
-- both helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
+- `createXAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://api.x.com/2/users/me`
+- `createFacebookAuthProvider()` is also available when you want the Facebook Login flow instead of X
+- these helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
 
 ## Credentials Login
 
