@@ -322,7 +322,7 @@ strong {
 }
 
 .provider-github {
-  background: linear-gradient(135deg, #f3f4f6, var(--github));
+  background: var(--github);
   color: #1f2937;
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
@@ -391,7 +391,7 @@ strong {
 
 .setup-columns {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -414,26 +414,9 @@ strong {
   background: white;
 }
 
-.env-snippet {
-  margin: 0;
-  padding: 14px 16px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: #ffffff;
-  overflow-x: auto;
-}
-
-.env-snippet code {
-  display: block;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  line-height: 1.7;
-}
-
 .setup-provider-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
   width: 100%;
   align-items: start;
@@ -481,10 +464,15 @@ strong {
 
 .setup-definition-list dd {
   margin: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
   line-height: 1.55;
+}
+
+.setup-definition-list dd code {
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .signed-in-header {
