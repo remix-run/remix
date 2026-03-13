@@ -8,7 +8,7 @@
   --border: rgba(15, 23, 42, 0.08);
   --shadow: 0 34px 80px rgba(15, 23, 42, 0.16);
   --google: #2563eb;
-  --github: #111827;
+  --github: #cbd5e1;
   --x: #111111;
   --primary: #078f5c;
   --primary-accent: #056d47;
@@ -322,8 +322,9 @@ strong {
 }
 
 .provider-github {
-  background: linear-gradient(135deg, #1f2937, var(--github));
-  color: white;
+  background: linear-gradient(135deg, #f3f4f6, var(--github));
+  color: #1f2937;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .provider-x {
@@ -347,13 +348,17 @@ strong {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
 }
 
+.provider-github .provider-mark {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
 .provider-icon {
   display: block;
   width: 15px;
   height: 15px;
 }
 
-.provider-icon-github,
 .provider-icon-x {
   filter: brightness(0) invert(1);
 }
