@@ -7,7 +7,6 @@ Redis storage adapter for `remix/job`.
 - **Low-latency queue operations** - Uses Redis sorted sets and hashes
 - **Retry and delay support** - Compatible with scheduler retry policies
 - **Lease-based workers** - Supports worker crash recovery
-- **Cron persistence** - Stores recurring schedule state in Redis
 
 ## Installation
 

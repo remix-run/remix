@@ -1,13 +1,12 @@
 # job
 
-Background job scheduler for Remix with retries, delayed jobs, cron schedules, and pluggable storage adapters.
+Background job scheduler for Remix with retries, delayed jobs, and pluggable storage adapters.
 
 ## Features
 
 - **Typed jobs** - Validate payloads with `remix/data-schema`
 - **Retry support** - Fixed or exponential retry with optional jitter
 - **Delayed jobs** - Schedule work for later execution
-- **Cron schedules** - Register recurring jobs with 5-field cron expressions
 - **Storage agnostic** - Works with pluggable storage adapters
 
 ## Installation
@@ -208,12 +207,12 @@ await db.transaction(async (transaction) => {
 
 ## Production Deployment
 
-For reliable cron scheduling, run workers as a dedicated, always-on deployment.
+Run workers as a dedicated, always-on deployment in production.
 
 - Run your web app and job workers as separate processes.
 - Keep worker replicas at `>= 1` (do not scale workers to zero).
-- Worker startup reconciles persisted schedules to match the `cron` list in code.
-- Omitting `cron` (or passing `cron: []`) clears persisted schedules.
+- Queued jobs only execute while at least one worker process is running.
+- Use the same storage backend for both the web app and worker processes.
 
 ```ts
 import { createJobWorker } from 'remix/job/worker'
@@ -222,14 +221,10 @@ import { storage, jobs } from './jobs'
 let worker = createJobWorker({
   jobs,
   storage,
-  cron: [
-    {
-      schedule: '*/5 * * * *',
-      job: jobs.sendEmail,
-      payload: { to: 'ops@example.com', subject: 'heartbeat' },
-      options: { id: 'heartbeat-email', catchUp: 'one' },
-    },
-  ],
+  worker: {
+    concurrency: 10,
+    pollIntervalMs: 1000,
+  },
 })
 
 await worker.start()

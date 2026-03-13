@@ -1,7 +1,5 @@
 import type {
   ClaimDueJobsInput,
-  ClaimDueSchedulesInput,
-  DueSchedule,
   EnqueueJobInput,
   JobStorage,
   JobWriteOptions,
@@ -10,7 +8,6 @@ import type {
   ReplayFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
-  PersistedCronSchedule,
 } from '../storage.ts'
 import type { JobRecord } from '../types.ts'
 
@@ -22,7 +19,6 @@ import type { JobRecord } from '../types.ts'
 export function createMemoryJobStorage(): JobStorage {
   let jobs = new Map<string, JobRecord & { lockedBy?: string; lockedUntil?: number }>()
   let dedupe = new Map<string, { jobId: string; expiresAt: number }>()
-  let schedules = new Map<string, PersistedCronSchedule & { lockedBy?: string; lockedUntil?: number }>()
 
   return {
     async enqueue(
@@ -288,76 +284,6 @@ export function createMemoryJobStorage(): JobStorage {
       job.lastError = input.error
       job.updatedAt = input.now
       jobs.set(job.id, job)
-    },
-    async replaceSchedules(input: PersistedCronSchedule[]): Promise<void> {
-      let desiredIds = new Set(input.map((schedule) => schedule.id))
-
-      for (let scheduleId of schedules.keys()) {
-        if (!desiredIds.has(scheduleId)) {
-          schedules.delete(scheduleId)
-        }
-      }
-
-      for (let schedule of input) {
-        let current = schedules.get(schedule.id)
-
-        schedules.set(schedule.id, {
-          ...schedule,
-          nextRunAt:
-            current == null ? schedule.nextRunAt : Math.min(current.nextRunAt, schedule.nextRunAt),
-          lockedBy: undefined,
-          lockedUntil: undefined,
-        })
-      }
-    },
-    async claimDueSchedules(input: ClaimDueSchedulesInput): Promise<DueSchedule[]> {
-      let due: DueSchedule[] = []
-      let candidates = Array.from(schedules.values())
-        .filter((schedule) => {
-          if (schedule.nextRunAt > input.now) {
-            return false
-          }
-
-          return schedule.lockedUntil == null || schedule.lockedUntil <= input.now
-        })
-        .sort((a, b) => a.nextRunAt - b.nextRunAt)
-
-      for (let schedule of candidates) {
-        if (due.length >= input.limit) {
-          break
-        }
-
-        schedule.lockedBy = input.workerId
-        schedule.lockedUntil = input.now + input.leaseMs
-
-        schedules.set(schedule.id, schedule)
-
-        due.push({
-          ...schedule,
-          lockedBy: input.workerId,
-          lockedUntil: schedule.lockedUntil,
-        })
-      }
-
-      return due
-    },
-    async advanceSchedule(input: {
-      scheduleId: string
-      nextRunAt: number
-      now: number
-      workerId: string
-    }): Promise<void> {
-      let schedule = schedules.get(input.scheduleId)
-
-      if (schedule == null || schedule.lockedBy !== input.workerId) {
-        return
-      }
-
-      schedule.nextRunAt = input.nextRunAt
-      schedule.lockedBy = undefined
-      schedule.lockedUntil = undefined
-
-      schedules.set(schedule.id, schedule)
     },
   }
 
