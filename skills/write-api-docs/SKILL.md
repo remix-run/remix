@@ -45,10 +45,15 @@ For public API, add JSDoc to:
 - exported type aliases
 - exported public constants when they are part of the API shape
 
-For option bags and result objects:
+For public interfaces:
 
-- add a JSDoc block on the interface or type alias itself
-- add property-level docs only when the meaning is not obvious from the name or when a property has important behavior constraints
+- add a JSDoc block on the interface itself
+- add a property-level JSDoc block for every property on the interface, even when the name seems obvious
+
+For public object-shaped type aliases:
+
+- prefer an `interface` when you are introducing a new public object shape
+- if an existing public type alias cannot reasonably become an interface, document the object shape as thoroughly as the syntax allows
 
 For overloads:
 
@@ -127,5 +132,6 @@ Practical implication:
 - Are all documented declarations actually reachable from a public `src/*.ts` entry file?
 - Do all public functions and methods have JSDoc with `@param` and `@returns` where required?
 - Do public interfaces and type aliases have a concise doc block explaining what they represent?
+- Does every property on every public interface have its own property-level JSDoc block?
 - Did you avoid documenting internal helpers that are not exported publicly?
 - Did `pnpm run lint` pass?
