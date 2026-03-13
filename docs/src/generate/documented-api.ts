@@ -123,6 +123,28 @@ function getDocumentedFunction(
 ): DocumentedFunction {
   let method = getApiMethod(fullName, node)
   invariant(method, `Failed to get method for function: ${node.getFriendlyFullName()}`)
+  let methods = [method]
+  let signature = method.signature
+  let parameters = method.parameters
+
+  // For overloaded functions, collect all signatures and merge parameters
+  if (node.parent.signatures && node.parent.signatures.length > 1) {
+    methods = node.parent.signatures
+      .map((s) => getApiMethod(fullName, s))
+      .filter((m): m is Method => m != null)
+
+    signature = methods.map((m) => m.signature).join('\n\n')
+
+    // Deduplicate parameters across overloads by name (first occurrence wins)
+    methods
+      .flatMap((m) => m.parameters)
+      .forEach((param) => {
+        if (!parameters.some((p) => p.name === param.name)) {
+          parameters.push(param)
+        }
+      })
+  }
+
   return {
     type: 'function',
     path: getApiFilePath(fullName, 'function'),
@@ -130,11 +152,11 @@ function getDocumentedFunction(
     name: method.name,
     aliases: node.comment ? getApiAliases(node.comment) : undefined,
     description: node.comment ? getApiDescription(node.comment) : '',
-    signature: method.signature,
+    signature,
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
-    parameters: method.parameters,
+    parameters,
     returns: method.returns,
   }
 }

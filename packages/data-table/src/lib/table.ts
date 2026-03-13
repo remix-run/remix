@@ -647,9 +647,9 @@ let defaultTimestampConfig: TimestampConfig = {
 
 /**
  * Creates a lifecycle/validation failure result with one or more issues.
- * @param messageOrIssues Either a single issue message or an array of issues.
- * @param path Optional issue path when passing a message.
- * @returns A `{ issues }` result object for `validate` and lifecycle callbacks.
+ * @param message A single issue message.
+ * @param path Optional issue path.
+ * @returns A {@link ValidationFailure} result object for `validate` and lifecycle callbacks.
  * @example
  * ```ts
  * import { column as c, fail, table } from 'remix/data-table'
@@ -662,7 +662,14 @@ let defaultTimestampConfig: TimestampConfig = {
  *   },
  *   validate({ value }) {
  *     if (!value.email) {
+ *       // Fail with a single issue message and optional path
  *       return fail('Email is required', ['email'])
+ *
+ *       // Or fail with multiple issues at once
+ *       return fail([
+ *         { message: 'Id is required', path: ['id'] },
+ *         { message: 'Email is required', path: ['email'] },
+ *       ])
  *     }
  *
  *     return { value }
@@ -671,6 +678,9 @@ let defaultTimestampConfig: TimestampConfig = {
  * ```
  */
 export function fail(message: string, path?: Array<string | number>): ValidationFailure
+/**
+ * @param issues An array of issues.
+ */
 export function fail(issues: ReadonlyArray<ValidationIssue>): ValidationFailure
 export function fail(
   messageOrIssues: string | ReadonlyArray<ValidationIssue>,
