@@ -19,45 +19,9 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
+import type { Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
-
-type Pretty<value> = {
-  [key in keyof value]: value[key]
-} & {}
-
-/**
- * Result shape returned by postgres client `query()` calls.
- */
-export type PostgresQueryResult = {
-  rows: unknown[]
-  rowCount: number | null
-}
-
-/**
- * Minimal postgres client contract used by this adapter.
- */
-export type PostgresDatabaseClient = {
-  query(text: string, values?: unknown[]): Promise<PostgresQueryResult>
-}
-
-/**
- * Postgres transaction client with optional connection release support.
- */
-export type PostgresTransactionClient = Pretty<
-  PostgresDatabaseClient & {
-    release?: () => void
-  }
->
-
-/**
- * Postgres pool-like client contract used by this adapter.
- */
-export type PostgresDatabasePool = Pretty<
-  PostgresDatabaseClient & {
-    connect?: () => Promise<PostgresTransactionClient>
-  }
->
 
 /**
  * Postgres adapter configuration.
@@ -67,9 +31,11 @@ export type PostgresDatabaseAdapterOptions = {
 }
 
 type TransactionState = {
-  client: PostgresTransactionClient
+  client: PostgresPoolClient
   releaseOnClose: boolean
 }
+
+type PostgresQueryable = PostgresPool | PostgresPoolClient
 
 /**
  * `DatabaseAdapter` implementation for postgres-compatible clients.
@@ -85,11 +51,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
-  #client: PostgresDatabasePool
+  #client: PostgresQueryable
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: PostgresDatabasePool, options?: PostgresDatabaseAdapterOptions) {
+  constructor(client: PostgresQueryable, options?: PostgresDatabaseAdapterOptions) {
     this.#client = client
     this.capabilities = {
       returning: options?.capabilities?.returning ?? true,
@@ -205,9 +171,9 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     let releaseOnClose = false
-    let transactionClient: PostgresTransactionClient
+    let transactionClient: PostgresPoolClient
 
-    if (this.#client.connect) {
+    if (isPostgresPool(this.#client)) {
       transactionClient = await this.#client.connect()
       releaseOnClose = true
     } else {
@@ -249,7 +215,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        transaction.client.release?.()
+        releasePostgresClient(transaction.client)
       }
     }
   }
@@ -272,7 +238,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        transaction.client.release?.()
+        releasePostgresClient(transaction.client)
       }
     }
   }
@@ -326,7 +292,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     await this.#client.query('select pg_advisory_unlock(hashtext($1))', ['data_table_migrations'])
   }
 
-  #resolveClient(token: TransactionToken | undefined): PostgresDatabaseClient {
+  #resolveClient(token: TransactionToken | undefined): PostgresQueryable {
     if (!token) {
       return this.#client
     }
@@ -334,7 +300,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return this.#transactionClient(token)
   }
 
-  #transactionClient(token: TransactionToken): PostgresTransactionClient {
+  #transactionClient(token: TransactionToken): PostgresPoolClient {
     let transaction = this.#transactions.get(token.id)
 
     if (!transaction) {
@@ -347,7 +313,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a postgres `DatabaseAdapter`.
- * @param client Postgres pool or client.
+ * @param client `pg` pool or pool client.
  * @param options Optional adapter capability overrides.
  * @returns A configured postgres adapter.
  * @example
@@ -362,10 +328,19 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createPostgresDatabaseAdapter(
-  client: PostgresDatabasePool,
+  client: PostgresQueryable,
   options?: PostgresDatabaseAdapterOptions,
 ): PostgresDatabaseAdapter {
   return new PostgresDatabaseAdapter(client, options)
+}
+
+function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
+  return 'connect' in client && typeof client.connect === 'function'
+}
+
+function releasePostgresClient(client: PostgresPoolClient): void {
+  let release = (client as { release?: () => void }).release
+  release?.()
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {
