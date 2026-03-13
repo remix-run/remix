@@ -24,12 +24,13 @@ export function isMultipartRequest(request: Request): boolean {
 }
 
 /**
- * Parse a multipart [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and yield each part as
- * a `MultipartPart` object. Useful in HTTP server contexts for handling incoming `multipart/*` requests.
+ * Parse a multipart [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request)
+ * and yield each part as a {@link MultipartPart} object. Useful in HTTP server contexts
+ * for handling incoming `multipart/*` requests.
  *
  * @param request The `Request` object containing multipart data
  * @param options Optional parser options, such as `maxHeaderSize` and `maxFileSize`
- * @returns An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartRequest(
   request: Request,

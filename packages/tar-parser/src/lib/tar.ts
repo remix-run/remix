@@ -212,7 +212,7 @@ export async function parseTar(
 }
 
 /**
- * Options for configuring a `TarParser`.
+ * Options for configuring a {@link TarParser}.
  */
 export type TarParserOptions = ParseTarHeaderOptions
 

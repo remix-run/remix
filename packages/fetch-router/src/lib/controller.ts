@@ -40,7 +40,7 @@ type RequestHandlerWithMiddleware<
 }
 
 /**
- * Build an `Action` type from a string, `RoutePattern`, or `Route`.
+ * Build an {@link Action} type from a string, {@link RoutePattern}, or {@link Route}.
  */
 // prettier-ignore
 export type BuildAction<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =

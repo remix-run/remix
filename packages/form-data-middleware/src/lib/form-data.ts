@@ -7,7 +7,7 @@ import {
 import type { Middleware } from '@remix-run/fetch-router'
 
 /**
- * Options for the `formData` middleware.
+ * Options for the {@link formData} middleware.
  */
 export interface FormDataOptions extends ParseFormDataOptions {
   /**

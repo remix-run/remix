@@ -13,10 +13,10 @@ function createSafeHtml(value: string): SafeHtml {
 }
 
 /**
- * Checks if a value is a `SafeHtml` string.
+ * Checks if a value is a {@link SafeHtml} string.
  *
  * @param value The value to check
- * @returns `true` if the value is a `SafeHtml` string
+ * @returns `true` if the value is a {@link SafeHtml} string
  */
 export function isSafeHtml(value: unknown): value is SafeHtml {
   return typeof value === 'object' && value != null && (value as any)[kSafeHtml] === true
@@ -116,7 +116,7 @@ function htmlHelper(strings: TemplateStringsArray, ...values: Interpolation[]): 
 }
 
 /**
- * Tagged template helper for creating `SafeHtml` values.
+ * Tagged template helper for creating {@link SafeHtml} values.
  */
 export const html = htmlHelper as SafeHtmlHelper
 

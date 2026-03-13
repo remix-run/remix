@@ -1,7 +1,7 @@
 import type { Middleware } from '@remix-run/fetch-router'
 
 /**
- * Options for the `logger` middleware.
+ * Options for the {@link logger} middleware.
  */
 export interface LoggerOptions {
   /**

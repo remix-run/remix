@@ -13,7 +13,7 @@ export function createContextKey<value>(defaultValue?: value): ContextKey<value>
 }
 
 /**
- * A type-safe key for storing and retrieving values from `RequestContext`.
+ * A type-safe key for storing and retrieving values from {@link RequestContext}.
  */
 export interface ContextKey<value> {
   /**

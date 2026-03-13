@@ -23,7 +23,7 @@ export type VirtualRootEventMap = {
 }
 
 /**
- * Root controller returned by `createRoot()` and `createRangeRoot()`.
+ * Root controller returned by {@link createRoot} and {@link createRangeRoot}.
  */
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
@@ -32,7 +32,7 @@ export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
 }
 
 /**
- * Options for creating a virtual DOM root.
+ * Options for creating a virtual DOM root with {@link createRoot} or {@link createRangeRoot}.
  */
 export type VirtualRootOptions = {
   frame?: FrameHandle

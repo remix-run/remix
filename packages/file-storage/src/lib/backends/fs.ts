@@ -8,7 +8,7 @@ import type { FileStorage, FileMetadata, ListOptions, ListResult } from '../file
 type MetadataJson = Omit<FileMetadata, 'size'>
 
 /**
- * Creates a `FileStorage` that is backed by a filesystem directory using node:fs.
+ * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
  * Important: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.
@@ -19,7 +19,7 @@ type MetadataJson = Omit<FileMetadata, 'size'>
  * same storage object.
  *
  * @param directory The directory where files are stored
- * @returns A new file storage backed by a filesystem directory
+ * @returns A new {@link FileStorage} backed by a filesystem directory
  */
 export function createFsFileStorage(directory: string): FileStorage {
   let rootDir = path.resolve(directory)

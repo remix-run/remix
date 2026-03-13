@@ -2,7 +2,7 @@ import type * as dom from './dom.d.ts'
 import type { Component, Handle, RenderFn } from './component.ts'
 
 /**
- * Any valid element type accepted by JSX or `createElement`.
+ * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
  * - `string` for host elements (e.g., 'div')
  * - `Function` for user components
  */
@@ -16,8 +16,8 @@ export type ElementType = string | Function
 export type ElementProps = Record<string, any>
 
 /**
- * A virtual element produced by JSX/`createElement` describing UI.  Carries a
- * `$rmx` brand used to distinguish it from plain objects at runtime.
+ * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
+ * describing UI. Carries a `$rmx` brand used to distinguish it from plain objects at runtime.
  */
 export interface RemixElement {
   type: ElementType

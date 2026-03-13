@@ -8,7 +8,8 @@ import { customCharsetByMimeType } from './define-mime-type.ts'
  * - All `+json` suffixed types (RFC 8259 defines JSON as UTF-8)
  * - `application/json`, `application/javascript`
  *
- * Custom charset registered via `defineMimeType()` takes precedence over built-in rules.
+ * Custom charset registered via {@link import('./define-mime-type.ts').defineMimeType}
+ * takes precedence over built-in rules.
  *
  * Note: `text/xml` is excluded because XML has built-in encoding detection.
  * Per the XML spec, documents without an encoding declaration must be UTF-8 or

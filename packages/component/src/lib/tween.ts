@@ -55,7 +55,7 @@ function cubicBezierDerivative(t: number, p1: number, p2: number): number {
 }
 
 /**
- * Cubic-bezier control points used by `tween()`.
+ * Cubic-bezier control points used by {@link tween}.
  */
 export interface BezierCurve {
   x1: number
@@ -66,7 +66,7 @@ export interface BezierCurve {
 
 // Common easing presets
 /**
- * Common cubic-bezier presets for `tween()`.
+ * Common cubic-bezier presets for {@link tween}.
  */
 export const easings = {
   linear: { x1: 0, y1: 0, x2: 1, y2: 1 },

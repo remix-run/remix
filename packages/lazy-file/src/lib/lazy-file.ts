@@ -21,7 +21,7 @@ export interface LazyContent {
 }
 
 /**
- * Options for creating a `LazyBlob`.
+ * Options for creating a {@link LazyBlob}.
  */
 export interface LazyBlobOptions {
   /**
@@ -166,7 +166,7 @@ export class LazyBlob {
 }
 
 /**
- * Options for creating a `LazyFile`.
+ * Options for creating a {@link LazyFile}.
  */
 export interface LazyFileOptions extends LazyBlobOptions {
   /**
