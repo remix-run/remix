@@ -30,9 +30,7 @@ let migrationRunner = createMigrationRunner(db.adapter, [
 
 await migrationRunner.up()
 
-let storage = createDataTableJobStorage({
-  db,
-})
+let storage = createDataTableJobStorage(db)
 ```
 
 ## Transaction-Aware Scheduler Writes

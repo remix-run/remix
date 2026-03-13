@@ -47,9 +47,6 @@ describe('data-table job storage (postgres integration)', () => {
       await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createStorage: async () =>
-      createDataTableJobStorage({
-        db: database,
-        tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-      }),
+      createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX }),
   })
 })
