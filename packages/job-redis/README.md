@@ -34,7 +34,7 @@ let jobs = createJobs({
   },
 })
 
-let storage = createRedisJobStorage({ redis })
+let storage = createRedisJobStorage(redis)
 let scheduler = createJobScheduler(jobs, storage)
 
 await scheduler.enqueue(jobs.sendEmail, {

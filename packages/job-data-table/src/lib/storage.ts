@@ -25,11 +25,6 @@ type StorageTables = {
 
 export interface DataTableJobStorageOptions {
   /**
-   * Data-table database handle used to persist job state.
-   */
-  db: Database
-
-  /**
    * Prefix applied to the jobs and dedupe tables. Defaults to `"job_"`.
    */
   tablePrefix?: string
@@ -45,11 +40,15 @@ export interface DataTableJobStorageMigrationOptions {
 /**
  * Creates a `JobStorage` implementation using `@remix-run/data-table`.
  *
- * @param options Storage configuration
+ * @param db Data-table database handle used to persist job state
+ * @param options Optional storage configuration
  * @returns A data-table-backed `JobStorage`
  */
-export function createDataTableJobStorage(options: DataTableJobStorageOptions): JobStorage<Database> {
-  let baseDb = options.db
+export function createDataTableJobStorage(
+  db: Database,
+  options: DataTableJobStorageOptions = {},
+): JobStorage<Database> {
+  let baseDb = db
   let storageSchema = createJobStorageSchema(options.tablePrefix)
   let tables = storageSchema.tables
   let runOperation = createOperationRunner(baseDb.adapter.dialect)
@@ -330,7 +329,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
       }
 
       return runOperation(() =>
-        options.db.transaction(async (database) => {
+        baseDb.transaction(async (database) => {
           await cleanupExpiredDedupe(database, tables, input.now)
 
           let queueClause = createInClause(input.queues.length)
@@ -404,7 +403,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
       now: number
     }): Promise<boolean> {
       return runOperation(async () => {
-        let result = await options.db.exec(
+        let result = await baseDb.exec(
           rawSql(
             [
               `update ${tables.jobs} set locked_until = ?, updated_at = ? `,
@@ -419,7 +418,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
     },
     complete(input: { jobId: string; workerId: string; now: number }): Promise<void> {
       return runOperation(async () => {
-        await options.db.exec(
+        await baseDb.exec(
           rawSql(
             [
               `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, `,
@@ -434,7 +433,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
     fail(input: JobFailureInput): Promise<void> {
       return runOperation(async () => {
         if (input.terminal) {
-          await options.db.exec(
+          await baseDb.exec(
             rawSql(
               [
                 `update ${tables.jobs} set status = ?, locked_by = null, locked_until = null, `,
@@ -447,7 +446,7 @@ export function createDataTableJobStorage(options: DataTableJobStorageOptions): 
           return
         }
 
-        await options.db.exec(
+        await baseDb.exec(
           rawSql(
             [
               `update ${tables.jobs} set status = ?, run_at = ?, locked_by = null, locked_until = null, `,

@@ -44,19 +44,13 @@ describe('data-table job storage (sqlite)', () => {
       await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createStorage: async () =>
-      createDataTableJobStorage({
-        db: database,
-        tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-      }),
+      createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX }),
   })
 
   it('rolls back enqueue when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let enqueuedJobId = ''
 
     await assert.rejects(
@@ -93,10 +87,7 @@ describe('data-table job storage (sqlite)', () => {
   it('rolls back cancel when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let enqueued = await storage.enqueue({
       name: 'email',
       queue: 'default',
@@ -131,10 +122,7 @@ describe('data-table job storage (sqlite)', () => {
   it('commits enqueue when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let enqueuedJobId = ''
 
     await database.transaction(async (transaction) => {
@@ -169,10 +157,7 @@ describe('data-table job storage (sqlite)', () => {
   it('commits cancel when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let enqueued = await storage.enqueue({
       name: 'email',
       queue: 'default',
@@ -202,10 +187,7 @@ describe('data-table job storage (sqlite)', () => {
   it('rolls back replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let failedJobId = await createFailedJob(storage)
     let replayedJobId = ''
 
@@ -236,10 +218,7 @@ describe('data-table job storage (sqlite)', () => {
   it('commits replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let failedJobId = await createFailedJob(storage)
     let replayedJobId = ''
 
@@ -265,10 +244,7 @@ describe('data-table job storage (sqlite)', () => {
   it('rolls back prune when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let completedJobId = await createCompletedJob(storage)
 
     await assert.rejects(
@@ -294,10 +270,7 @@ describe('data-table job storage (sqlite)', () => {
   it('commits prune when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
-    let storage = createDataTableJobStorage({
-      db: database,
-      tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-    })
+    let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let completedJobId = await createCompletedJob(storage)
 
     await database.transaction(async (transaction) => {
