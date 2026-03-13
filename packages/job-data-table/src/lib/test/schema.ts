@@ -35,7 +35,6 @@ export async function resetJobStorageSchema(
 
   let tables = getTables(tablePrefix)
 
-  await db.exec(rawSql(`delete from ${tables.schedules}`))
   await db.exec(rawSql(`delete from ${tables.dedupe}`))
   await db.exec(rawSql(`delete from ${tables.jobs}`))
 }
@@ -43,11 +42,9 @@ export async function resetJobStorageSchema(
 function getTables(prefix: string): {
   jobs: string
   dedupe: string
-  schedules: string
 } {
   return {
     jobs: `${prefix}jobs`,
     dedupe: `${prefix}dedupe`,
-    schedules: `${prefix}schedules`,
   }
 }
