@@ -15,6 +15,9 @@ export type CsrfOriginResolverResult = boolean | null | undefined
  * Resolves whether an unsafe cross-origin request should be allowed.
  */
 export interface CsrfOriginResolver {
+  /**
+   * Resolves whether an unsafe request origin should be trusted.
+   */
   (
     origin: string,
     context: RequestContext,
@@ -35,6 +38,9 @@ export type CsrfTokenResolverResult = string | null | undefined
  * Resolves the submitted CSRF token for a request.
  */
 export interface CsrfTokenResolver {
+  /**
+   * Resolves the submitted CSRF token for the current request.
+   */
   (context: RequestContext): CsrfTokenResolverResult | Promise<CsrfTokenResolverResult>
 }
 

@@ -41,6 +41,9 @@ export interface FetchProxyOptions {
  * @returns A promise that resolves to the proxied response
  */
 export interface FetchProxy {
+  /**
+   * Forwards a request to the configured proxy target.
+   */
   (input: URL | RequestInfo, init?: RequestInit): Promise<Response>
 }
 

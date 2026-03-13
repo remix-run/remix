@@ -33,12 +33,23 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
 }
 
 let topFrame: Frame
+/**
+ * Returns the top-level frame handle for the running application.
+ *
+ * @returns The top-level frame handle.
+ */
 export function getTopFrame(): FrameHandle {
   if (!topFrame) throw new Error('app runtime not initialized')
   return topFrame.handle
 }
 
 let namedFrames = new Map<string, FrameHandle>()
+/**
+ * Returns a named frame handle, falling back to the top frame when not found.
+ *
+ * @param name Name of the frame to look up.
+ * @returns The matching frame handle or the top frame.
+ */
 export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }

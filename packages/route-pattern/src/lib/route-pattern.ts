@@ -49,6 +49,9 @@ export type RoutePatternMatch<source extends string = string> = {
  * A class for matching and generating URLs based on a defined pattern.
  */
 export class RoutePattern<source extends string = string> {
+  /**
+   * Parsed route-pattern AST used for matching and href generation.
+   */
   readonly ast: AST
 
   // The `join()` method bypasses the constructor and creates a new instance directly
@@ -75,26 +78,44 @@ export class RoutePattern<source extends string = string> {
     return this.ast.protocol !== null || this.ast.hostname !== null || this.ast.port !== null
   }
 
+  /**
+   * The protocol portion of the pattern without the trailing colon.
+   */
   get protocol(): string {
     return this.ast.protocol ?? ''
   }
 
+  /**
+   * The hostname portion of the pattern.
+   */
   get hostname(): string {
     return this.ast.hostname?.source ?? ''
   }
 
+  /**
+   * The explicit port portion of the pattern.
+   */
   get port(): string {
     return this.ast.port ?? ''
   }
 
+  /**
+   * The pathname portion of the pattern without a leading slash.
+   */
   get pathname(): string {
     return this.ast.pathname.source
   }
 
+  /**
+   * The serialized search constraints without a leading `?`.
+   */
   get search(): string {
     return serializeSearch(this.ast.search) ?? ''
   }
 
+  /**
+   * The serialized route-pattern source string.
+   */
   get source(): string {
     let result = ''
 
@@ -113,10 +134,21 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
+  /**
+   * Returns the serialized route-pattern source string.
+   *
+   * @returns The pattern source.
+   */
   toString(): string {
     return this.source
   }
 
+  /**
+   * Joins this pattern with another pathname or route pattern.
+   *
+   * @param other Pattern or pathname to append.
+   * @returns A new route pattern representing the joined path.
+   */
   join<other extends string>(
     other: other | RoutePattern<other>,
   ): RoutePattern<Join<source, other>> {
@@ -136,6 +168,12 @@ export class RoutePattern<source extends string = string> {
     })
   }
 
+  /**
+   * Builds an href from this pattern and the supplied params.
+   *
+   * @param args Path params and optional search params.
+   * @returns The generated href string.
+   */
   href(...args: HrefArgs<source>): string {
     let [params, searchParams] = args
     searchParams ??= {}
@@ -242,6 +280,12 @@ export class RoutePattern<source extends string = string> {
     }
   }
 
+  /**
+   * Tests whether a URL matches this route pattern.
+   *
+   * @param url URL to test.
+   * @returns `true` when the URL matches the pattern.
+   */
   test(url: string | URL): boolean {
     return this.match(url) !== null
   }

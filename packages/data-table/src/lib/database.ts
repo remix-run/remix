@@ -1229,6 +1229,11 @@ export class QueryBuilder<
     >
   }
 
+  /**
+   * Executes the built select query and hydrates any configured eager-loaded relations.
+   *
+   * @returns Raw rows with eager-loaded relation data applied.
+   */
   async [loadRowsWithRelations](): Promise<Record<string, unknown>[]> {
     let operation = this.#toSelectOperation()
     let result = await this.#database[executeOperation](operation)

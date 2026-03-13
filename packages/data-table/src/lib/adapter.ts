@@ -193,12 +193,14 @@ export type ColumnComputed = {
   stored: boolean
 }
 
+/** Options for configuring identity column generation. */
 export type IdentityOptions = {
   always?: boolean
   start?: number
   increment?: number
 }
 
+/** Foreign-key reference metadata declared on a column. */
 export type ColumnReference = {
   table: TableRef
   columns: string[]
@@ -618,19 +620,34 @@ export type AdapterCapabilityOverrides = Pretty<Partial<AdapterCapabilities>>
  * Runtime contract implemented by concrete database adapters.
  */
 export interface DatabaseAdapter {
+  /** Database dialect name exposed by the adapter. */
   dialect: string
+  /** Feature flags describing the adapter's supported behaviors. */
   capabilities: AdapterCapabilities
+  /** Compiles a data or migration operation into executable SQL statements. */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[]
+  /** Executes a data-manipulation request. */
   execute(request: DataManipulationRequest): Promise<DataManipulationResult>
+  /** Executes a migration request. */
   migrate(request: DataMigrationRequest): Promise<DataMigrationResult>
+  /** Checks whether a table exists. */
   hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
+  /** Checks whether a column exists on a table. */
   hasColumn(table: TableRef, column: string, transaction?: TransactionToken): Promise<boolean>
+  /** Starts a new database transaction. */
   beginTransaction(options?: TransactionOptions): Promise<TransactionToken>
+  /** Commits an open transaction. */
   commitTransaction(token: TransactionToken): Promise<void>
+  /** Rolls back an open transaction. */
   rollbackTransaction(token: TransactionToken): Promise<void>
+  /** Creates a savepoint inside an open transaction. */
   createSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Rolls back to a previously created savepoint. */
   rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Releases a previously created savepoint. */
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Acquires the adapter's migration lock when supported. */
   acquireMigrationLock?(): Promise<void>
+  /** Releases the adapter's migration lock when supported. */
   releaseMigrationLock?(): Promise<void>
 }

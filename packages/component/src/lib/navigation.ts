@@ -38,6 +38,11 @@ export async function navigate(href: string, options?: NavigationOptions) {
   await transition.finished
 }
 
+/**
+ * Starts listening for Navigation API transitions and routes them through frame reloads.
+ *
+ * @param signal Abort signal used to remove the listener.
+ */
 export function startNavigationListener(signal: AbortSignal) {
   let navigation = window.navigation
 

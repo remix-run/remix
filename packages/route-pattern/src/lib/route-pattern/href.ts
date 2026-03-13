@@ -124,6 +124,9 @@ type HrefErrorDetails =
  * Error thrown when a route pattern cannot generate an href from the supplied args.
  */
 export class HrefError extends Error {
+  /**
+   * Structured details describing why href generation failed.
+   */
   details: HrefErrorDetails
 
   constructor(details: HrefErrorDetails) {
@@ -134,6 +137,12 @@ export class HrefError extends Error {
     this.details = details
   }
 
+  /**
+   * Formats an error message for the given href failure details.
+   *
+   * @param details Structured href failure details.
+   * @returns A human-readable error message.
+   */
   static message(details: HrefErrorDetails): string {
     let pattern = details.pattern.toString()
 

@@ -14,6 +14,9 @@ export type CorsOriginResolverResult = '*' | string | boolean | null | undefined
  * Resolves the allowed origin for a given request origin.
  */
 export interface CorsOriginResolver {
+  /**
+   * Resolves the allowed origin for a request with an `Origin` header.
+   */
   (
     origin: string,
     context: RequestContext,
@@ -34,6 +37,9 @@ export type CorsAllowedHeadersResolverResult = readonly string[] | null | undefi
  * Resolves the allowed request headers for a preflight request.
  */
 export interface CorsAllowedHeadersResolver {
+  /**
+   * Resolves the request headers allowed by a preflight request.
+   */
   (
     request: Request,
     context: RequestContext,

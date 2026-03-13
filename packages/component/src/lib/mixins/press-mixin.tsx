@@ -20,7 +20,14 @@ declare global {
  * Event emitted by the {@link pressEvents} mixin for pointer and keyboard presses.
  */
 export class PressEvent extends Event {
+  /**
+   * The horizontal pointer coordinate for the press event.
+   */
   clientX: number
+
+  /**
+   * The vertical pointer coordinate for the press event.
+   */
   clientY: number
 
   constructor(

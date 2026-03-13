@@ -2,7 +2,14 @@
  * Base error for all `data-table` failures.
  */
 export class DataTableError extends Error {
+  /**
+   * Stable error code identifying the failure category.
+   */
   code: string
+
+  /**
+   * Optional structured metadata attached to the failure.
+   */
   metadata?: Record<string, unknown>
 
   constructor(
@@ -24,6 +31,9 @@ export class DataTableError extends Error {
  * Thrown when input data fails schema validation.
  */
 export class DataTableValidationError extends DataTableError {
+  /**
+   * Validation issues reported by the schema validator.
+   */
   issues: ReadonlyArray<unknown>
 
   constructor(

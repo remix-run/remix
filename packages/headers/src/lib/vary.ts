@@ -91,10 +91,20 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
     }
   }
 
+  /**
+   * Iterates over normalized header names in the `Vary` set.
+   *
+   * @returns An iterator of header names.
+   */
   [Symbol.iterator](): IterableIterator<string> {
     return this.#set.values()
   }
 
+  /**
+   * Returns the serialized `Vary` header value.
+   *
+   * @returns The header value as a comma-separated string.
+   */
   toString() {
     return Array.from(this.#set).join(', ')
   }

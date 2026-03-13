@@ -20,9 +20,13 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
  * Options for server-side rendering to a byte stream.
  */
 export interface RenderToStreamOptions {
+  /** Source URL to associate with the current frame render. */
   frameSrc?: string | URL
+  /** Source URL for the top-level frame in nested frame renders. */
   topFrameSrc?: string | URL
+  /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
+  /** Callback used to resolve nested frame content during streaming SSR. */
   resolveFrame?: (
     src: string,
     target?: string,
@@ -34,7 +38,9 @@ export interface RenderToStreamOptions {
  * Context passed to `resolveFrame` during server rendering.
  */
 export interface ResolveFrameContext {
+  /** Source URL for the frame currently being resolved. */
   currentFrameSrc: string
+  /** Source URL for the top-level frame in the current render. */
   topFrameSrc: string
 }
 

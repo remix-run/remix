@@ -59,6 +59,9 @@ export interface RequestHandler<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
+  /**
+   * Handles a matched request and returns the response.
+   */
   (context: RequestContext<params>): Response | Promise<Response>
 }
 

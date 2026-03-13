@@ -19,6 +19,9 @@ export interface IfMatchInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.1)
  */
 export class IfMatch implements HeaderValue, IfMatchInit {
+  /**
+   * Entity tags carried by the header.
+   */
   tags: string[] = []
 
   constructor(init?: string | string[] | IfMatchInit) {

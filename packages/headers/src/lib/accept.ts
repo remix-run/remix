@@ -151,6 +151,11 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over media type and weight pairs in preference order.
+   *
+   * @returns An iterator of `[mediaType, weight]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, number]> {
     return this.entries()
   }

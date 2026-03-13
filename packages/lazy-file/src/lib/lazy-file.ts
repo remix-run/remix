@@ -61,6 +61,9 @@ export class LazyBlob {
     this.#content = new BlobContent(parts, options)
   }
 
+  /**
+   * The brand string exposed by `Object.prototype.toString.call()`.
+   */
   get [Symbol.toStringTag](): string {
     return 'LazyBlob'
   }
@@ -229,6 +232,9 @@ export class LazyFile {
     this.lastModified = options?.lastModified ?? Date.now()
   }
 
+  /**
+   * The brand string exposed by `Object.prototype.toString.call()`.
+   */
   get [Symbol.toStringTag](): string {
     return 'LazyFile'
   }

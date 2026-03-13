@@ -25,7 +25,14 @@ export interface RangeInit {
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.range)
  */
 export class Range implements HeaderValue, RangeInit {
+  /**
+   * The range unit, typically `bytes`.
+   */
   unit: string = ''
+
+  /**
+   * Requested byte ranges from the header.
+   */
   ranges: Array<{ start?: number; end?: number }> = []
 
   constructor(init?: string | RangeInit) {

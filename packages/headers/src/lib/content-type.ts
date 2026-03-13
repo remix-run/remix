@@ -33,8 +33,19 @@ export interface ContentTypeInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
  */
 export class ContentType implements HeaderValue, ContentTypeInit {
+  /**
+   * Multipart boundary parameter value.
+   */
   boundary?: string
+
+  /**
+   * Character set parameter value.
+   */
   charset?: string
+
+  /**
+   * Media type such as `text/html` or `application/json`.
+   */
   mediaType?: string
 
   constructor(init?: string | ContentTypeInit) {

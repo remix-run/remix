@@ -159,8 +159,19 @@ const oneMb = 1024 * oneKb
  * A streaming parser for `multipart/*` HTTP messages.
  */
 export class MultipartParser {
+  /**
+   * Boundary string used to detect part separators.
+   */
   readonly boundary: string
+
+  /**
+   * Maximum header size allowed for each multipart part.
+   */
   readonly maxHeaderSize: number
+
+  /**
+   * Maximum file size allowed for each multipart part.
+   */
   readonly maxFileSize: number
 
   #findOpeningBoundary: SearchFunction

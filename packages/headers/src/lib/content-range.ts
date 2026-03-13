@@ -33,9 +33,24 @@ export interface ContentRangeInit {
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-range)
  */
 export class ContentRange implements HeaderValue, ContentRangeInit {
+  /**
+   * The range unit, typically `bytes`.
+   */
   unit: string = ''
+
+  /**
+   * The inclusive start offset, or `null` for unsatisfied ranges.
+   */
   start: number | null = null
+
+  /**
+   * The inclusive end offset, or `null` for unsatisfied ranges.
+   */
   end: number | null = null
+
+  /**
+   * The total resource size, or `'*'` when unknown.
+   */
   size?: number | '*'
 
   constructor(init?: string | ContentRangeInit) {

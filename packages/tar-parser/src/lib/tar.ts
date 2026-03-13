@@ -29,18 +29,69 @@ export class TarParseError extends Error {
  * The parsed header of a tar entry.
  */
 export interface TarHeader {
+  /**
+   * Entry path stored in the archive.
+   */
   name: string
+
+  /**
+   * File mode parsed from the header, or `null` when unavailable.
+   */
   mode: number | null
+
+  /**
+   * Numeric user ID parsed from the header, or `null` when unavailable.
+   */
   uid: number | null
+
+  /**
+   * Numeric group ID parsed from the header, or `null` when unavailable.
+   */
   gid: number | null
+
+  /**
+   * Entry size in bytes.
+   */
   size: number
+
+  /**
+   * Last modification time parsed from the header, or `null` when unavailable.
+   */
   mtime: number | null
+
+  /**
+   * Normalized entry type such as `file` or `directory`.
+   */
   type: string
+
+  /**
+   * Linked path target for link entries, or `null` when not present.
+   */
   linkname: string | null
+
+  /**
+   * User name parsed from the header.
+   */
   uname: string
+
+  /**
+   * Group name parsed from the header.
+   */
   gname: string
+
+  /**
+   * Major device number for device entries, or `null` when unavailable.
+   */
   devmajor: number | null
+
+  /**
+   * Minor device number for device entries, or `null` when unavailable.
+   */
   devminor: number | null
+
+  /**
+   * Decoded PAX metadata attached to the entry, or `null` when none is present.
+   */
   pax: Record<string, string> | null
 }
 

@@ -217,25 +217,40 @@ export type CreateIndexOptions = NamedConstraintOptions &
  * Builder API available inside `schema.alterTable(name, table => ...)`.
  */
 export interface AlterTableBuilder {
+  /** Adds a column during an `alterTable` migration. */
   addColumn(name: string, definition: ColumnDefinition | ColumnBuilder): void
+  /** Changes an existing column during an `alterTable` migration. */
   changeColumn(name: string, definition: ColumnDefinition | ColumnBuilder): void
+  /** Renames a column during an `alterTable` migration. */
   renameColumn(from: string, to: string): void
+  /** Drops a column during an `alterTable` migration. */
   dropColumn(name: string, options?: { ifExists?: boolean }): void
+  /** Adds a primary key during an `alterTable` migration. */
   addPrimaryKey(columns: KeyColumns, options?: NamedConstraintOptions): void
+  /** Drops a primary key during an `alterTable` migration. */
   dropPrimaryKey(name: string): void
+  /** Adds a unique constraint during an `alterTable` migration. */
   addUnique(columns: KeyColumns, options?: NamedConstraintOptions): void
+  /** Drops a unique constraint during an `alterTable` migration. */
   dropUnique(name: string): void
+  /** Adds a foreign key during an `alterTable` migration. */
   addForeignKey(
     columns: KeyColumns,
     refTable: TableInput,
     refColumns?: KeyColumns,
     options?: ForeignKeyOptions,
   ): void
+  /** Drops a foreign key during an `alterTable` migration. */
   dropForeignKey(name: string): void
+  /** Adds a check constraint during an `alterTable` migration. */
   addCheck(expression: string, options?: NamedConstraintOptions): void
+  /** Drops a check constraint during an `alterTable` migration. */
   dropCheck(name: string): void
+  /** Adds an index during an `alterTable` migration. */
   addIndex(columns: IndexColumns, options?: CreateIndexOptions): void
+  /** Drops an index during an `alterTable` migration. */
   dropIndex(name: string): void
+  /** Sets the table comment during an `alterTable` migration. */
   comment(text: string): void
 }
 
@@ -243,17 +258,25 @@ export interface AlterTableBuilder {
  * DDL-focused operations mixed into the migration `db` object.
  */
 export interface MigrationSchema {
+  /** Creates a table in the migration schema. */
   createTable<table extends AnyTable>(table: table, options?: CreateTableOptions): Promise<void>
+  /** Alters an existing table in the migration schema. */
   alterTable(
     table: TableInput,
     migrate: (table: AlterTableBuilder) => void,
     options?: AlterTableOptions,
   ): Promise<void>
+  /** Renames a table in the migration schema. */
   renameTable(from: TableInput, to: string): Promise<void>
+  /** Drops a table from the migration schema. */
   dropTable(table: TableInput, options?: DropTableOptions): Promise<void>
+  /** Creates an index in the migration schema. */
   createIndex(table: TableInput, columns: IndexColumns, options?: CreateIndexOptions): Promise<void>
+  /** Drops an index from the migration schema. */
   dropIndex(table: TableInput, name: string, options?: { ifExists?: boolean }): Promise<void>
+  /** Renames an index in the migration schema. */
   renameIndex(table: TableInput, from: string, to: string): Promise<void>
+  /** Adds a foreign key in the migration schema. */
   addForeignKey(
     table: TableInput,
     columns: KeyColumns,
@@ -261,8 +284,11 @@ export interface MigrationSchema {
     refColumns?: KeyColumns,
     options?: ForeignKeyOptions,
   ): Promise<void>
+  /** Drops a foreign key in the migration schema. */
   dropForeignKey(table: TableInput, name: string): Promise<void>
+  /** Adds a check constraint in the migration schema. */
   addCheck(table: TableInput, expression: string, options?: NamedConstraintOptions): Promise<void>
+  /** Drops a check constraint in the migration schema. */
   dropCheck(table: TableInput, name: string): Promise<void>
   /**
    * Adds raw SQL to the migration plan as a migration operation.

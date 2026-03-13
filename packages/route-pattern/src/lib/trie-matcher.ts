@@ -16,7 +16,14 @@ type Param = Extract<PartPatternToken, { type: ':' | '*' }>
  * Trie-based matcher optimized for repeated route lookups.
  */
 export class TrieMatcher<data = unknown> implements Matcher<data> {
+  /**
+   * Whether pathname matching is case-insensitive.
+   */
   readonly ignoreCase: boolean
+
+  /**
+   * Trie storage used to index registered patterns.
+   */
   trie: Trie<data>
 
   /**
@@ -28,17 +35,37 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
     this.trie = new Trie({ ignoreCase: this.ignoreCase })
   }
 
+  /**
+   * Adds a pattern and associated data to the trie.
+   *
+   * @param pattern Pattern to register.
+   * @param data Data returned when the pattern matches.
+   */
   add(pattern: string | RoutePattern, data: data): void {
     pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     this.trie.insert(pattern, data)
   }
 
+  /**
+   * Returns the best matching pattern for a URL.
+   *
+   * @param url URL to match.
+   * @param compareFn Specificity comparer used to rank matches.
+   * @returns The best match, or `null` when nothing matches.
+   */
   match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.matchAll(url, compareFn)
     return matches[0] ?? null
   }
 
+  /**
+   * Returns every pattern that matches a URL.
+   *
+   * @param url URL to match.
+   * @param compareFn Specificity comparer used to sort matches.
+   * @returns All matching routes sorted by specificity.
+   */
   matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.trie.search(url)

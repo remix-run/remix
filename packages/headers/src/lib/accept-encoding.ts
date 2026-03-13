@@ -147,6 +147,11 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over encoding and weight pairs in preference order.
+   *
+   * @returns An iterator of `[encoding, weight]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, number]> {
     return this.entries()
   }

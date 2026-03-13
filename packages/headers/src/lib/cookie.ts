@@ -98,6 +98,11 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over cookie name and value pairs.
+   *
+   * @returns An iterator of `[name, value]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, string]> {
     return this.entries()
   }

@@ -20,9 +20,13 @@ export type ElementProps = Record<string, any>
  * describing UI. Carries a `$rmx` brand used to distinguish it from plain objects at runtime.
  */
 export interface RemixElement {
+  /** Host tag or component function for the element. */
   type: ElementType
+  /** Normalized props for the element. */
   props: ElementProps
+  /** Optional reconciliation key. */
   key?: any
+  /** Internal brand used to distinguish Remix elements at runtime. */
   $rmx: true
 }
 
@@ -79,6 +83,14 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  * @returns A Remix virtual element.
  */
 export function jsx(type: string, props: ElementProps, key?: string): RemixElement
+/**
+ * Creates a Remix virtual element from a component function.
+ *
+ * @param type Component function.
+ * @param props Element props.
+ * @param key Optional reconciliation key.
+ * @returns A Remix virtual element.
+ */
 export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
 export function jsx(type: any, props: any, key?: any): RemixElement {
   return { type, props: normalizeElementProps(props), key, $rmx: true }

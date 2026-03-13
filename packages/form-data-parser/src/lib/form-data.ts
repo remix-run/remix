@@ -50,6 +50,9 @@ export class FileUpload extends File {
  * @returns A value to store in `FormData`, or `void`/`null` to skip
  */
 export interface FileUploadHandler {
+  /**
+   * Transforms an uploaded file into the value stored in the parsed {@link FormData}.
+   */
   (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
 }
 

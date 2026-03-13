@@ -153,6 +153,11 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over language and weight pairs in preference order.
+   *
+   * @returns An iterator of `[language, weight]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, number]> {
     return this.entries()
   }

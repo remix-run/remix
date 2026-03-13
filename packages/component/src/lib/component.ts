@@ -115,8 +115,11 @@ export type ContextFrom<ComponentType> =
  * Context storage API exposed on component handles.
  */
 export interface Context<C> {
+  /** Replaces the current context value for this component instance. */
   set(values: C): void
+  /** Reads the context value associated with the given component type. */
   get<ComponentType>(component: ComponentType): ContextFrom<ComponentType>
+  /** Reads the context value associated with the given component key. */
   get(component: ElementType | symbol): unknown | undefined
 }
 
@@ -148,32 +151,54 @@ export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
  * Props accepted by the built-in {@link Frame} component.
  */
 export interface FrameProps {
+  /** Optional frame name used for targeted navigation and lookups. */
   name?: string
+  /** Source URL used when the frame loads or reloads its content. */
   src: string
+  /** Fallback content to render while the frame is pending. */
   fallback?: Renderable
+  /** Event handlers invoked for events dispatched from the frame element. */
   on?: Record<string, (event: Event, signal: AbortSignal) => void | Promise<void>>
 }
 
+/**
+ * Component factory function that receives setup input and returns a render function.
+ */
 export type ComponentFn<Context = NoContext, Setup = undefined, Props = Record<string, never>> = (
   handle: Handle<Context>,
   setup: Setup,
 ) => RenderFn<Props>
 
+/**
+ * Render function returned by a component factory.
+ */
 export type RenderFn<P = {}> = (props: P) => RemixNode
 
 export type { RemixNode } from './jsx.ts'
 
 // Handle is already exported as an interface above, no need to re-export
 
+/**
+ * Props accepted by the built-in {@link Fragment} component.
+ */
 export interface FragmentProps {
+  /** Child nodes to render without adding an extra host element. */
   children?: RemixNode
 }
 
+/**
+ * Mapping of built-in component names to their prop shapes.
+ */
 export interface BuiltinElements {
+  /** Props accepted by the built-in fragment component. */
   Fragment: FragmentProps
+  /** Props accepted by the built-in frame component. */
   Frame: FrameProps
 }
 
+/**
+ * Key type used to stabilize host elements and components during reconciliation.
+ */
 export type Key = string | number | bigint
 
 type ComponentConfig = {
@@ -185,6 +210,9 @@ type ComponentConfig = {
   getTopFrame?: () => FrameHandle | undefined
 }
 
+/**
+ * Runtime handle returned by {@link createComponent}.
+ */
 export type ComponentHandle = ReturnType<typeof createComponent>
 
 /**
@@ -319,6 +347,12 @@ export function Fragment() {
   return (_: FragmentProps) => null // reconciler renders
 }
 
+/**
+ * Creates a frame handle with default no-op implementations for testing and internal wiring.
+ *
+ * @param def Partial frame-handle implementation to merge with the defaults.
+ * @returns A frame handle object.
+ */
 export function createFrameHandle(
   def?: Partial<{
     src: string
