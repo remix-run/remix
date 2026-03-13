@@ -9,7 +9,7 @@
   --shadow: 0 34px 80px rgba(15, 23, 42, 0.16);
   --google: #2563eb;
   --github: #111827;
-  --facebook: #1877f2;
+  --x: #111111;
   --primary: #078f5c;
   --primary-accent: #056d47;
   --error-bg: #fff1f2;
@@ -326,8 +326,8 @@ strong {
   color: white;
 }
 
-.provider-facebook {
-  background: linear-gradient(135deg, #3b82f6, var(--facebook));
+.provider-x {
+  background: linear-gradient(135deg, #2a2a2a, var(--x));
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
@@ -354,7 +354,7 @@ strong {
 }
 
 .provider-icon-github,
-.provider-icon-facebook {
+.provider-icon-x {
   filter: brightness(0) invert(1);
 }
 

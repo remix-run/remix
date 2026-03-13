@@ -21,8 +21,8 @@ Social login is optional. Copy [`.env.example`](./.env.example) to `.env` and fi
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
-- `FACEBOOK_CLIENT_ID`
-- `FACEBOOK_CLIENT_SECRET`
+- `X_CLIENT_ID`
+- `X_CLIENT_SECRET`
 
 The demo uses Node's built-in `.env` loading to read that file on startup. If `.env` is missing, the app still boots, the email/password flow still works, and the console explains how to create the file.
 
@@ -30,7 +30,7 @@ Register these callback URLs with your provider apps:
 
 - Google: `http://localhost:44100/auth/google/callback`
 - GitHub: `http://localhost:44100/auth/github/callback`
-- Facebook: `http://localhost:44100/auth/facebook/callback`
+- X: `http://localhost:44100/auth/x/callback`
 
 ## Local Account
 
@@ -52,7 +52,7 @@ The demo seeds one local user into SQLite on first boot:
 - [`data/migrations/20260311170000_create_social_login_schema.ts`](./data/migrations/20260311170000_create_social_login_schema.ts) defines the `users` and `auth_accounts` tables.
 - [`app/middleware/database.ts`](./app/middleware/database.ts) stores the database handle in request context with `context.set(...)` and `context.get(...)`.
 - [`app/middleware/auth.ts`](./app/middleware/auth.ts) contains the demo auth stack in one place: `loadAuth()`, the email/password credentials provider, social provider creation, and the social-account upsert logic.
-- [`app/auth.tsx`](./app/auth.tsx) uses `login()` and `callback()` from `remix/auth` for both the local password flow and the Google/GitHub/Facebook flows.
+- [`app/auth.tsx`](./app/auth.tsx) uses `login()` and `callback()` from `remix/auth` for both the local password flow and the Google/GitHub/X flows.
 - [`app/home.tsx`](./app/home.tsx) renders the whole app from one request handler and switches between the signed-out and signed-in states by reading `context.get(Auth)`.
 - [`app/router.test.ts`](./app/router.test.ts) covers password login, all three OAuth callback flows, and logout session rotation.
 - [`app/data/setup.test.ts`](./app/data/setup.test.ts) verifies that migrations are applied and the seeded user is created only once.
