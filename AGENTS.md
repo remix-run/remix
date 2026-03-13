@@ -52,10 +52,6 @@
 - We use `typedoc` to process the source code, and then generate markdown files from the typedoc output
 - Markdown API documentation files be generated via `pnpm run docs` in the docs/ directory
 
-## Skills
-
-Repository-specific skills live in the `skills/` directory. Look there first before looking for external skills.
-
 ## Changes and Releases
 
 - **Automated releases**: When changes are pushed to `main`, the [release-pr workflow](/.github/workflows/release-pr.yaml) automatically opens/updates a "Release" PR. The [publish workflow](/.github/workflows/publish.yaml) runs on every push to `main` and publishes when no change files are present (i.e., after merging the Release PR).
