@@ -4,9 +4,13 @@ import type { RequestContext } from '@remix-run/fetch-router'
  * Public shape for a credentials-based provider used by `login()`.
  */
 export interface CredentialsProvider<input, result, provider extends string = string> {
+  /** Discriminator used by `login()` to select the credentials flow. */
   kind: 'credentials'
+  /** Provider name used for session metadata and diagnostics. */
   name: provider
+  /** Parses submitted credentials from the current request. */
   parse(context: RequestContext): input | Promise<input>
+  /** Verifies parsed credentials and returns the authenticated result on success. */
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 
@@ -14,8 +18,11 @@ export interface CredentialsProvider<input, result, provider extends string = st
  * Options for building a credentials-based auth provider.
  */
 export interface CredentialsOptions<input, result, provider extends string = 'password'> {
+  /** Provider name used for session metadata and diagnostics. */
   name?: provider
+  /** Parses submitted credentials from the current request. */
   parse(context: RequestContext): input | Promise<input>
+  /** Verifies parsed credentials and returns the authenticated result on success. */
   verify(input: input, context: RequestContext): result | null | Promise<result | null>
 }
 

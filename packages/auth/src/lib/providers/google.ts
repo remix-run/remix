@@ -19,9 +19,13 @@ const GOOGLE_METADATA: OIDCMetadata = {
  * Options for creating the built-in Google auth provider.
  */
 export interface GoogleOptions {
+  /** OAuth client identifier for your Google application. */
   clientId: string
+  /** OAuth client secret for your Google application. */
   clientSecret: string
+  /** Callback URL registered with Google. */
   redirectUri: string | URL
+  /** Requested scopes for the Google login flow. */
   scopes?: string[]
 }
 
