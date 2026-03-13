@@ -102,10 +102,18 @@ function getShikiExtension(
               // Insert cross-links to known APIs
               {
                 span(node) {
-                  // We only enhance single-symbol spans
-                  if (node.children.length !== 1) return
+                  // We only enhance single-symbol spans of word characters,
+                  // skipping spans for parens, braces, etc
+                  if (
+                    node.children.length !== 1 ||
+                    !('value' in node.children[0]) ||
+                    !/^[\w ]+$/i.test(node.children[0].value)
+                  ) {
+                    return
+                  }
 
-                  let symbol = 'value' in node.children[0] ? node.children[0].value : ''
+                  let symbol = node.children[0].value
+
                   // Capture leading/trailing spaces for later
                   let leadingSpaces = symbol.length - symbol.trimStart().length
                   let trailingSpaces = symbol.length - symbol.trimEnd().length
