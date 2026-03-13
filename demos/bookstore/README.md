@@ -26,16 +26,18 @@ Then visit http://localhost:44100
 ## Code Highlights
 
 - [`app/routes.ts`](app/routes.ts) shows declarative route definitions using `route()`, `form()`, and `resources()` helpers. All route URLs are generated with full type safety, so `routes.admin.books.edit.href({ bookId: '123' })` ensures you never have broken links.
-- [`app/router.ts`](app/router.ts) demonstrates how to compose middleware for cross-cutting concerns: static file serving, form data parsing, method override, sessions, and async context. Each middleware is independent and reusable.
+- [`app/router.ts`](app/router.ts) demonstrates how to compose middleware for cross-cutting concerns: static file serving, form data parsing, method override, sessions, async context, database loading, and global authentication. It exports `createBookstoreRouter()` so the server and tests can construct routers explicitly with the same middleware stack.
 - [`data/migrations/20260228090000_create_bookstore_schema.ts`](data/migrations/20260228090000_create_bookstore_schema.ts) defines the schema using `remix/data-table/migrations`.
 - [`app/middleware/database.ts`](app/middleware/database.ts) shows a request-scoped database pattern. It "checks out" a database handle at the start of each request, stores it in request context, and releases it in a `finally` block.
-- [`app/middleware/auth.ts`](app/middleware/auth.ts) provides two patterns:
-  - **`loadAuth()`** - Optionally loads the current user without requiring authentication
-  - **`requireAuth()`** - Redirects to login with a `returnTo` parameter for post-login redirect
-- [`app/middleware/admin.ts`](app/middleware/admin.ts) shows role-based authorization that returns 403 for non-admin users.
-- [`app/utils/context.ts`](app/utils/context.ts) demonstrates sharing data across the request lifecycle without prop drilling. Any code can call `getCurrentUser()` to access the authenticated user set by middleware earlier in the chain.
+- [`app/middleware/auth.ts`](app/middleware/auth.ts) shows the Remix auth stack in one place:
+  - **`loadAuth()`** installs global `auth()` middleware with a `createSessionAuthScheme()` scheme
+  - **`passwordProvider`** uses `createCredentialsAuthProvider()` to verify email/password logins against the demo database
+  - **`requireAuth()`** is a thin wrapper around `remix/auth-middleware` that redirects to login with a `returnTo` parameter for post-login redirects
+- [`app/auth.tsx`](app/auth.tsx) uses `createAuthLoginRequestHandler(passwordProvider, ...)` from `remix/auth` for the login POST action, so session rotation and session writes come from the framework abstraction instead of bespoke route code.
+- [`app/middleware/admin.ts`](app/middleware/admin.ts) shows role-based authorization layered on top of authenticated user state and returns 403 for non-admin users.
+- [`app/utils/context.ts`](app/utils/context.ts) demonstrates sharing data across the request lifecycle without prop drilling. Any code can call `getCurrentUser()` to read the user identity resolved by `context.get(Auth)`.
 - [`app/middleware/database.ts`](app/middleware/database.ts) attaches `context.db` for every request so route actions can query tables directly without AsyncLocalStorage.
-- [`app/utils/session.ts`](app/utils/session.ts) configures signed cookies and filesystem-based session storage.
+- [`app/utils/session.ts`](app/utils/session.ts) configures signed cookies and filesystem-based session storage, which the auth packages reuse for both login routes and request authentication.
 - [`app/utils/uploads.ts`](app/utils/uploads.ts) handles file uploads with `@remix-run/form-data-middleware`. The upload handler stores files and returns public URLs. [`app/uploads.tsx`](app/uploads.tsx) serves uploaded files with appropriate caching headers.
 - HTML forms only support GET and POST. [`app/components/restful-form.tsx`](app/components/restful-form.tsx) adds a hidden `_method` field for PUT and DELETE, which the `methodOverride()` middleware translates back to the original method.
 - [`app/assets/cart-button.tsx`](app/assets/cart-button.tsx) shows a button that works without JavaScript (full form submission) but upgrades to fetch-based updates when JS is available. Notice how `hydrated()` wraps a component that maintains local state (`updating`) and calls `this.update()` to re-render.

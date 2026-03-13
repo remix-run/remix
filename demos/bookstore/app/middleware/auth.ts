@@ -1,58 +1,120 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
+import { createCredentialsAuthProvider } from 'remix/auth'
+import { auth, requireAuth as requireAuthenticatedUser, createSessionAuthScheme } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 
-import { routes } from '../routes.ts'
 import { users } from '../data/schema.ts'
-import { setCurrentUser } from '../utils/context.ts'
+import type { User } from '../data/schema.ts'
+import { routes } from '../routes.ts'
 import { parseId } from '../utils/ids.ts'
-import { Session } from '../utils/session.ts'
+import type { Session } from '../utils/session.ts'
 
-/**
- * Middleware that optionally loads the current user if authenticated.
- * Does not redirect if not authenticated.
- * Attaches user (if any) to request context.
- */
-export function loadAuth(): Middleware {
-  return async ({ db, get }) => {
-    let session = get(Session)
-    let userId = parseId(session.get('userId'))
-
-    if (userId !== undefined) {
-      let user = await db.find(users, userId)
-      if (user) {
-        setCurrentUser(user)
-      }
-    }
-  }
+interface BookstoreAuthSession {
+  userId: number
 }
 
+export function loadAuth(): Middleware {
+  return auth({
+    schemes: [
+      createSessionAuthScheme<User, BookstoreAuthSession>({
+        read(session) {
+          return parseBookstoreAuthSession(session.get('auth'))
+        },
+        async verify(value, context) {
+          return (await context.db.find(users, value.userId)) ?? null
+        },
+        invalidate(session) {
+          session.unset('auth')
+        },
+      }),
+    ],
+  })
+}
+
+export let passwordProvider = createCredentialsAuthProvider({
+  parse(context) {
+    let formData = context.get(FormData)
+
+    return {
+      email: normalizeEmail(formData.get('email')?.toString() ?? ''),
+      password: formData.get('password')?.toString() ?? '',
+    }
+  },
+  async verify({ email, password }, context) {
+    let user = await context.db.findOne(users, { where: { email } })
+
+    if (!user || user.password !== password) {
+      return null
+    }
+
+    return user
+  },
+})
+
 export interface RequireAuthOptions {
-  /**
-   * Where to redirect if the user is not authenticated.
-   * Defaults to the login page.
-   */
   redirectTo?: Route
 }
 
-/**
- * Middleware that requires a user to be authenticated.
- * Redirects to login if not authenticated.
- * Attaches user to request context.
- */
 export function requireAuth(options?: RequireAuthOptions): Middleware {
-  let redirectRoute = options?.redirectTo ?? routes.auth.login.index
+  let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ db, get, url }) => {
-    let session = get(Session)
-    let userId = parseId(session.get('userId'))
-    let user = userId === undefined ? undefined : await db.find(users, userId)
+  return requireAuthenticatedUser({
+    onFailure(context) {
+      return redirect(
+        redirectTo.href(undefined, {
+          returnTo: getSafeReturnTo(context.url.searchParams.get('returnTo'))
+            ?? context.url.pathname + context.url.search,
+        }),
+      )
+    },
+  })
+}
 
-    if (!user) {
-      // Capture the current URL to redirect back to after login
-      return redirect(redirectRoute.href(undefined, { returnTo: url.pathname + url.search }), 302)
-    }
+export function writeAuthenticatedSession(session: Session, user: Pick<User, 'id'>): void {
+  session.set('auth', { userId: user.id })
+}
 
-    setCurrentUser(user)
+export function clearAuthenticatedSession(session: Session): void {
+  session.unset('auth')
+}
+
+export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {
+  return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
+}
+
+export function getLoginRedirectURL(url: URL, route: Route<any, any> = routes.auth.login.index): string {
+  return route.href(undefined, {
+    returnTo: getSafeReturnTo(url.searchParams.get('returnTo')),
+  })
+}
+
+function parseBookstoreAuthSession(value: unknown): BookstoreAuthSession | null {
+  if (typeof value !== 'object' || value == null) {
+    return null
   }
+
+  let userId = parseId((value as { userId?: unknown }).userId)
+
+  if (userId == null) {
+    return null
+  }
+
+  return { userId }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+function getSafeReturnTo(returnTo: string | null): string | undefined {
+  if (returnTo == null || returnTo === '') {
+    return undefined
+  }
+
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return undefined
+  }
+
+  return returnTo
 }

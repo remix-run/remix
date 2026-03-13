@@ -1,4 +1,24 @@
+import { createCookie } from 'remix/cookie'
 import { SetCookie, Cookie } from 'remix/headers'
+import { createMemorySessionStorage } from 'remix/session/memory-storage'
+
+import { createBookstoreRouter } from '../app/router.ts'
+
+export function createTestRouter() {
+  let sessionCookie = createCookie('session', {
+    secrets: ['s3cr3t-k3y-for-d3mo'],
+    httpOnly: true,
+    sameSite: 'Lax',
+    maxAge: 2592000,
+    path: '/',
+  })
+  let sessionStorage = createMemorySessionStorage()
+
+  return createBookstoreRouter({
+    sessionCookie,
+    sessionStorage,
+  })
+}
 
 /**
  * Extract a specific cookie value from Set-Cookie headers

@@ -1,4 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
+import { createAuthLoginRequestHandler as authenticateWithCredentials } from 'remix/auth'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
@@ -7,7 +8,13 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from './routes.ts'
 import { passwordResetTokens, users } from './data/schema.ts'
 import { Document } from './layout.tsx'
-import { loadAuth } from './middleware/auth.ts'
+import {
+  clearAuthenticatedSession,
+  getLoginRedirectURL,
+  getPostAuthRedirect,
+  passwordProvider,
+  writeAuthenticatedSession,
+} from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
 
@@ -30,16 +37,13 @@ const resetPasswordSchema = f.object({
 })
 
 export default {
-  middleware: [loadAuth()],
   actions: {
     login: {
       actions: {
         index({ get, url }) {
           let session = get(Session)
           let error = session.get('error')
-          let formAction = routes.auth.login.action.href(undefined, {
-            returnTo: url.searchParams.get('returnTo') ?? undefined,
-          })
+          let formAction = getLoginRedirectURL(url, routes.auth.login.action)
 
           return render(
             <Document>
@@ -105,24 +109,20 @@ export default {
           )
         },
 
-        async action({ db, get, url }) {
-          let session = get(Session)
-          let formData = get(FormData)
-          let { email, password } = s.parse(loginSchema, formData)
-          let returnTo = url.searchParams.get('returnTo') ?? undefined
-          let normalizedEmail = normalizeEmail(email)
-
-          let user = await db.findOne(users, { where: { email: normalizedEmail } })
-          if (!user || user.password !== password) {
+        action: authenticateWithCredentials(passwordProvider, {
+          writeSession(session, user) {
+            writeAuthenticatedSession(session, user)
+          },
+          onFailure(context) {
+            let session = context.get(Session)
             session.flash('error', 'Invalid email or password. Please try again.')
-            return redirect(routes.auth.login.index.href(undefined, { returnTo }))
-          }
 
-          session.regenerateId(true)
-          session.set('userId', user.id)
-
-          return redirect(returnTo ?? routes.account.index.href())
-        },
+            return redirect(getLoginRedirectURL(context.url))
+          },
+          onSuccess(_user, context) {
+            return redirect(getPostAuthRedirect(context.url))
+          },
+        }),
       },
     },
 
@@ -208,7 +208,8 @@ export default {
             { returnRow: true },
           )
 
-          session.set('userId', user.id)
+          session.regenerateId(true)
+          writeAuthenticatedSession(session, user)
 
           return redirect(routes.account.index.href())
         },
@@ -217,7 +218,8 @@ export default {
 
     logout({ get }) {
       let session = get(Session)
-      session.destroy()
+      clearAuthenticatedSession(session)
+      session.regenerateId(true)
       return redirect(routes.home.href())
     },
 

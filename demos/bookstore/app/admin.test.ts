@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { router } from './router.ts'
-import { loginAsCustomer, requestWithSession } from '../test/helpers.ts'
+import { createTestRouter, loginAsCustomer, requestWithSession } from '../test/helpers.ts'
+
+let router = createTestRouter()
 
 describe('admin handlers', () => {
   it('GET /admin redirects when not authenticated', async () => {
