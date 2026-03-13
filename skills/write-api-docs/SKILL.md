@@ -64,7 +64,7 @@ Keep comments short, factual, and user-facing.
 - Keep parameter names in JSDoc exactly aligned with the function signature.
 - Use `@returns` for non-void functions and include a real description.
 - For `@param`, include descriptions and do not add a hyphen before the description.
-- Specify `@param` default values in parentesis at the end of the comment, do not use `@default` tags
+- Specify `@param` default values in parenthesis at the end of the comment, do not use `@default` tags
 - Include an `@example` code block when it helps to show a use-case or pattern. Skip `@example` for simple getters, trivial constructors, or APIs whose usage is self-evident.
 - Use `{@link API}` to link to related Remix APIs when it adds value. Don't link every related API — use discretion to avoid noise.
 - Use backticks for all other unlinked code references — identifiers, HTTP methods, special values.
