@@ -19,13 +19,9 @@ describe('createJobWorker', () => {
       },
     })
     let scheduler = createJobScheduler(jobs, storage)
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 200,
-      },
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 200,
     })
 
     await scheduler.enqueue(jobs.delayed, { id: 'one' }, { delay: 40 })
@@ -53,13 +49,9 @@ describe('createJobWorker', () => {
       },
     })
     let scheduler = createJobScheduler(jobs, storage)
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 200,
-      },
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 200,
     })
 
     let enqueued = await scheduler.enqueue(jobs.flaky, { value: 'x' }, {
@@ -108,13 +100,9 @@ describe('createJobWorker', () => {
     })
     let scheduler = createJobScheduler(jobs, storage)
     let threwStartHook = false
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 100,
-      },
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 100,
       onJobStart() {
         events.push('start')
 
@@ -182,13 +170,9 @@ describe('createJobWorker', () => {
       },
     })
     let scheduler = createJobScheduler(jobs, storage)
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 100,
-      },
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 100,
       onJobComplete() {
         throw new Error('onJobComplete failed')
       },
@@ -220,19 +204,15 @@ describe('createJobWorker', () => {
     })
     let scheduler = createJobScheduler(jobs, storage)
     let pruneEvents = 0
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 100,
-        retention: {
-          policy: {
-            completedOlderThanMs: 0,
-          },
-          intervalMs: 10,
-          limit: 10,
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 100,
+      retention: {
+        policy: {
+          completedOlderThanMs: 0,
         },
+        intervalMs: 10,
+        limit: 10,
       },
       onPrune() {
         pruneEvents += 1
@@ -269,13 +249,9 @@ describe('createJobWorker', () => {
       },
     })
     let scheduler = createJobScheduler(jobs, storage)
-    let worker = createJobWorker({
-      jobs,
-      storage,
-      worker: {
-        pollIntervalMs: 10,
-        leaseMs: 100,
-      },
+    let worker = createJobWorker(jobs, storage, {
+      pollIntervalMs: 10,
+      leaseMs: 100,
       onPrune() {
         pruneEvents += 1
       },
@@ -329,30 +305,22 @@ function assertWorkerHookOptionTyping(): void {
   })
   let storage = createMemoryJobStorage()
 
-  void createJobWorker({
-    jobs,
-    storage,
+  void createJobWorker(jobs, storage, {
     onJobComplete() {},
   })
-  void createJobWorker({
-    jobs,
-    storage,
-    // @ts-expect-error Worker hooks must be top-level config properties.
+  void createJobWorker(jobs, storage, {
+    // @ts-expect-error Worker hooks must be passed directly as the third argument.
     hooks: {
       onJobComplete() {},
     },
   })
-  void createJobWorker({
-    jobs,
-    storage,
+  void createJobWorker(jobs, storage, {
+    // @ts-expect-error Worker options no longer support the nested worker config object.
     worker: {
-      // @ts-expect-error Worker options no longer support cronTickMs.
-      cronTickMs: 1000,
+      concurrency: 1,
     },
   })
-  void createJobWorker({
-    jobs,
-    storage,
+  void createJobWorker(jobs, storage, {
     // @ts-expect-error Worker config no longer supports cron schedules.
     cron: [],
   })
@@ -370,10 +338,7 @@ function assertWorkerConstructorGenericTyping(): void {
   let storage = createMemoryJobStorage()
 
   // @ts-expect-error createJobWorker no longer accepts a transaction type parameter.
-  void createJobWorker<typeof jobs, { id: string }>({
-    jobs,
-    storage,
-  })
+  void createJobWorker<typeof jobs, { id: string }>(jobs, storage)
 }
 
 void assertWorkerConstructorGenericTyping

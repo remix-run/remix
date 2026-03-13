@@ -15,6 +15,7 @@ import type {
   WorkerOptions,
   WorkerPruneEvent,
 } from './types.ts'
+import type { JobStorage } from './storage.ts'
 import { computeRetryAt } from './retry.ts'
 
 let DEFAULT_CONCURRENCY = 10
@@ -26,18 +27,18 @@ let DEFAULT_RETENTION_LIMIT = 500
 /**
  * Creates a worker loop that claims and executes jobs from storage.
  *
- * @param options Worker configuration
+ * @param jobs Registered job definitions keyed by name
+ * @param storage Storage adapter used to claim, run, and mutate jobs
+ * @param options Optional worker settings and hooks
  * @returns A `JobWorker` lifecycle controller
  */
-export function createJobWorker<
-  defs extends JobDefinitions,
->(
-  options: CreateJobWorkerOptions<defs>,
+export function createJobWorker<defs extends JobDefinitions>(
+  jobs: defs,
+  storage: JobStorage,
+  options: CreateJobWorkerOptions = {},
 ): JobWorker {
-  let jobs = options.jobs
-  let storage = options.storage
   let hooks = options
-  let workerOptions = normalizeWorkerOptions(options.worker)
+  let workerOptions = normalizeWorkerOptions(options)
 
   let running = false
   let stopped = false
