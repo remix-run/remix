@@ -143,7 +143,7 @@ function ensureControlledReflection(
   }
 
   node._controlledState = state
-  scheduler.enqueueCommitPhase([
+  scheduler.enqueueTasks([
     () => {
       if (state.disposed) return
       node._dom.addEventListener('input', state.onInput)
