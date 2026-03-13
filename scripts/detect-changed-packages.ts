@@ -1,7 +1,6 @@
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
 
 type PackageInfo = {
   dirName: string
@@ -79,7 +78,9 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   if (baseRef === '') {
-    throw new Error('Usage: node ./scripts/test-changed-packages.ts <base-ref> [head-ref] [--list]')
+    throw new Error(
+      'Usage: node ./scripts/detect-changed-packages.ts <base-ref> [head-ref] [--list]',
+    )
   }
 
   return { baseRef, headRef, listOnly }
@@ -208,11 +209,4 @@ function getSelectedPackageNames(
     .filter((packageName) => selectedPackages.has(packageName))
 }
 
-let isCliEntryPoint =
-  process.argv[1] != null &&
-  !process.execArgv.some((arg) => arg === '--test' || arg.startsWith('--test-')) &&
-  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
-
-if (isCliEntryPoint) {
-  main()
-}
+main()
