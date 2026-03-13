@@ -114,12 +114,18 @@ export function quoteTableRef(table: TableRef, quoteIdentifier: QuoteIdentifier)
  * @param value Value to serialize.
  * @param options Serialization options.
  * @param options.booleansAsIntegers When `true`, booleans render as `1`/`0`.
+ * @param options.backslashEscapes When `true`, backslashes are escaped as `\\`
+ * before single-quote doubling.  Enable this for MySQL (and MariaDB) when
+ * `NO_BACKSLASH_ESCAPES` mode is off (the default), where `\` is treated as
+ * an escape character inside string literals.  Leaving it off is correct for
+ * PostgreSQL and SQLite, which treat backslashes as ordinary characters.
  * @returns SQL literal text.
  */
 export function quoteLiteral(
   value: unknown,
   options?: {
     booleansAsIntegers?: boolean
+    backslashEscapes?: boolean
   },
 ): string {
   if (value === null) {
@@ -142,5 +148,13 @@ export function quoteLiteral(
     return quoteLiteral(value.toISOString(), options)
   }
 
-  return "'" + String(value).replace(/'/g, "''") + "'"
+  let str = String(value)
+
+  if (options?.backslashEscapes) {
+    // Escape backslashes first so that the subsequently-inserted `''` pairs
+    // are not themselves misread as `\'` by the MySQL parser.
+    str = str.replace(/\\/g, '\\\\')
+  }
+
+  return "'" + str.replace(/'/g, "''") + "'"
 }
