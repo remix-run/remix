@@ -122,14 +122,15 @@ function getSourceElementNavigationState(event: NavigateEvent): NavigationState 
   let sourceEvent = event as SourceElementNavigateEvent
   let sourceElement = sourceEvent.sourceElement
   if (!(sourceElement instanceof Element)) return
-  if (!sourceElement.matches('a, area')) return
-  if (sourceElement.hasAttribute('rmx-document')) return
-  if (sourceElement.hasAttribute('download')) return
+  let linkElement = sourceElement.closest('a, area')
+  if (!(linkElement instanceof Element)) return
+  if (linkElement.hasAttribute('rmx-document')) return
+  if (linkElement.hasAttribute('download')) return
 
   return {
-    target: sourceElement.getAttribute('rmx-target') ?? undefined,
-    src: sourceElement.getAttribute('rmx-src') ?? event.destination.url,
-    resetScroll: sourceElement.getAttribute('rmx-reset-scroll') !== 'false',
+    target: linkElement.getAttribute('rmx-target') ?? undefined,
+    src: linkElement.getAttribute('rmx-src') ?? event.destination.url,
+    resetScroll: linkElement.getAttribute('rmx-reset-scroll') !== 'false',
     $rmx: true,
   } satisfies NavigationState
 }
