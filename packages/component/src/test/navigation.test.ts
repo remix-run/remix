@@ -63,4 +63,30 @@ describe('navigate', () => {
     anchor.remove()
     controller.abort()
   })
+
+  it('does not intercept anchors marked for download', () => {
+    let navigation = Object.assign(new EventTarget(), {
+      navigate: vi.fn(() => ({ finished: Promise.resolve() })),
+      updateCurrentEntry: vi.fn(),
+    })
+    vi.stubGlobal('navigation', navigation)
+
+    let controller = new AbortController()
+    startNavigationListener(controller.signal)
+
+    let anchor = document.createElement('a')
+    anchor.href = '/report.csv'
+    anchor.setAttribute('download', '')
+    document.body.append(anchor)
+    anchor.addEventListener('click', (event) => event.preventDefault())
+
+    let clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true })
+    anchor.dispatchEvent(clickEvent)
+
+    expect(navigation.navigate).not.toHaveBeenCalled()
+    expect(clickEvent.defaultPrevented).toBe(true)
+
+    anchor.remove()
+    controller.abort()
+  })
 })

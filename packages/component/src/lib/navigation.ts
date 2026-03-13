@@ -124,6 +124,7 @@ function getSourceElementNavigationState(event: NavigateEvent): NavigationState 
   if (!(sourceElement instanceof Element)) return
   if (!sourceElement.matches('a, area')) return
   if (sourceElement.hasAttribute('rmx-document')) return
+  if (sourceElement.hasAttribute('download')) return
 
   return {
     target: sourceElement.getAttribute('rmx-target') ?? undefined,
