@@ -191,7 +191,7 @@ function SetupGuide() {
           </div>
 
           <div class="stack-sm">
-            <h3>Local account</h3>
+            <h3>Email login</h3>
             <p class="muted">The demo seeds one local user into SQLite the first time it boots.</p>
             <div class="demo-account demo-account-inline">
               <p class="demo-account-label">Seeded local account</p>
@@ -199,13 +199,6 @@ function SetupGuide() {
                 <strong>demo@example.com</strong> / <strong>password123</strong>
               </p>
             </div>
-          </div>
-
-          <div class="stack-sm">
-            <h3>.env variables</h3>
-            <pre class="env-snippet">
-              <code>{getEnvExampleText()}</code>
-            </pre>
           </div>
         </div>
       </div>
@@ -410,17 +403,6 @@ function renderProviderSetupDescription(name: SocialProviderState['name']) {
         </>
       )
   }
-}
-
-function getEnvExampleText(): string {
-  return [
-    'GOOGLE_CLIENT_ID=',
-    'GOOGLE_CLIENT_SECRET=',
-    'GITHUB_CLIENT_ID=',
-    'GITHUB_CLIENT_SECRET=',
-    'X_CLIENT_ID=',
-    'X_CLIENT_SECRET=',
-  ].join('\n')
 }
 
 function getInitials(user: AuthenticatedUser): string {
