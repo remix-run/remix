@@ -3,7 +3,7 @@ import type { RequestContext } from '@remix-run/fetch-router'
 /**
  * Public shape for a credentials-based provider used by `login()`.
  */
-export interface CredentialsProvider<input, result, provider extends string = string> {
+export interface CredentialsAuthProvider<input, result, provider extends string = string> {
   /** Discriminator used by `login()` to select the credentials flow. */
   kind: 'credentials'
   /** Provider name used for session metadata and diagnostics. */
@@ -17,7 +17,7 @@ export interface CredentialsProvider<input, result, provider extends string = st
 /**
  * Options for building a credentials-based auth provider.
  */
-export interface CredentialsOptions<input, result, provider extends string = 'password'> {
+export interface CredentialsAuthProviderOptions<input, result, provider extends string = 'password'> {
   /** Provider name used for session metadata and diagnostics. */
   name?: provider
   /** Parses submitted credentials from the current request. */
@@ -33,8 +33,8 @@ export interface CredentialsOptions<input, result, provider extends string = 'pa
  * @returns A provider that can be passed to `login()`.
  */
 export function createCredentialsAuthProvider<input, result, provider extends string = 'password'>(
-  options: CredentialsOptions<input, result, provider>,
-): CredentialsProvider<input, result, provider> {
+  options: CredentialsAuthProviderOptions<input, result, provider>,
+): CredentialsAuthProvider<input, result, provider> {
   return {
     kind: 'credentials',
     name: options.name ?? ('password' as provider),

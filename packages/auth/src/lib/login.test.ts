@@ -9,7 +9,7 @@ import { Session } from '@remix-run/session'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createCredentialsAuthProvider } from './credentials.ts'
+import { createCredentialsAuthProvider } from './providers/credentials.ts'
 import { login } from './login.ts'
 import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest } from './test-utils.ts'

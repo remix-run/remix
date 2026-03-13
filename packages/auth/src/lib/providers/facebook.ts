@@ -16,7 +16,7 @@ const DEFAULT_FACEBOOK_SCOPES = ['public_profile', 'email']
 /**
  * Options for creating the built-in Facebook auth provider.
  */
-export interface FacebookOptions {
+export interface FacebookAuthProviderOptions {
   /** OAuth client identifier for your Facebook Login app. */
   clientId: string
   /** OAuth client secret for your Facebook Login app. */
@@ -30,7 +30,7 @@ export interface FacebookOptions {
 /**
  * Nested picture payload returned by Facebook profile responses.
  */
-export interface FacebookPicture {
+export interface FacebookAuthProviderPicture {
   /** Nested image payload returned by Facebook. */
   data: {
     /** Resolved picture URL for the authenticated user. */
@@ -41,7 +41,7 @@ export interface FacebookPicture {
 /**
  * Profile fields returned by the built-in Facebook auth provider.
  */
-export interface FacebookProfile {
+export interface FacebookAuthProviderProfile {
   /** Stable Facebook user identifier. */
   id: string
   /** Display name returned by Facebook, when available. */
@@ -49,7 +49,7 @@ export interface FacebookProfile {
   /** Email address returned by Facebook, when available. */
   email?: string
   /** Nested profile picture payload returned by Facebook, when available. */
-  picture?: FacebookPicture
+  picture?: FacebookAuthProviderPicture
 }
 
 /**
@@ -58,7 +58,7 @@ export interface FacebookProfile {
  * @param options Facebook OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createFacebookAuthProvider(options: FacebookOptions): OAuthProvider<FacebookProfile, 'facebook'> {
+export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProviderProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 
   return createOAuthProvider('facebook', {
@@ -75,7 +75,7 @@ export function createFacebookAuthProvider(options: FacebookOptions): OAuthProvi
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<FacebookProfile, 'facebook'>> {
+    async authenticate(context, transaction): Promise<OAuthResult<FacebookAuthProviderProfile, 'facebook'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: FACEBOOK_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -84,7 +84,7 @@ export function createFacebookAuthProvider(options: FacebookOptions): OAuthProvi
         code: getAuthorizationCode(context),
         codeVerifier: transaction.codeVerifier,
       })
-      let profile = await fetchJson<FacebookProfile>(
+      let profile = await fetchJson<FacebookAuthProviderProfile>(
         FACEBOOK_PROFILE_ENDPOINT,
         {
           headers: {
@@ -112,7 +112,7 @@ function createAccount(
   return { provider, providerAccountId }
 }
 
-function validateFacebookProfile(profile: FacebookProfile): FacebookProfile {
+function validateFacebookProfile(profile: FacebookAuthProviderProfile): FacebookAuthProviderProfile {
   if (typeof profile.id !== 'string' || profile.id.length === 0) {
     throw new Error('Facebook profile did not include a valid id.')
   }

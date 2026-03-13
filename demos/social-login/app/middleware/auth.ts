@@ -5,11 +5,11 @@ import {
   createXAuthProvider,
 } from 'remix/auth'
 import type {
-  GitHubProfile,
-  GoogleProfile,
+  GitHubAuthProviderProfile,
+  GoogleAuthProviderProfile,
   OAuthProvider,
   OAuthResult,
-  XProfile,
+  XAuthProviderProfile,
 } from 'remix/auth'
 import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
@@ -45,14 +45,14 @@ interface SocialLoginSession {
 }
 
 type SocialProvider =
-  | OAuthProvider<GoogleProfile, 'google'>
-  | OAuthProvider<GitHubProfile, 'github'>
-  | OAuthProvider<XProfile, 'x'>
+  | OAuthProvider<GoogleAuthProviderProfile, 'google'>
+  | OAuthProvider<GitHubAuthProviderProfile, 'github'>
+  | OAuthProvider<XAuthProviderProfile, 'x'>
 
 export type SocialAuthResult =
-  | OAuthResult<GoogleProfile, 'google'>
-  | OAuthResult<GitHubProfile, 'github'>
-  | OAuthResult<XProfile, 'x'>
+  | OAuthResult<GoogleAuthProviderProfile, 'google'>
+  | OAuthResult<GitHubAuthProviderProfile, 'github'>
+  | OAuthResult<XAuthProviderProfile, 'x'>
 
 interface SocialProfileData {
   email?: string
@@ -163,7 +163,7 @@ export function createSocialAuthProvider(
 export function createGoogleProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<GoogleProfile, 'google'> | null {
+): OAuthProvider<GoogleAuthProviderProfile, 'google'> | null {
   if (!config.googleClientId || !config.googleClientSecret) {
     return null
   }
@@ -178,7 +178,7 @@ export function createGoogleProvider(
 export function createGitHubProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<GitHubProfile, 'github'> | null {
+): OAuthProvider<GitHubAuthProviderProfile, 'github'> | null {
   if (!config.githubClientId || !config.githubClientSecret) {
     return null
   }
@@ -193,7 +193,7 @@ export function createGitHubProvider(
 export function createXProvider(
   origin: string,
   config: SocialLoginConfig,
-): OAuthProvider<XProfile, 'x'> | null {
+): OAuthProvider<XAuthProviderProfile, 'x'> | null {
   if (!config.xClientId || !config.xClientSecret) {
     return null
   }

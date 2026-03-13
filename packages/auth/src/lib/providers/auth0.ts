@@ -1,11 +1,11 @@
 import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider, type OIDCOptions, type OIDCProfile } from './oidc.ts'
+import { createOIDCAuthProvider, type OIDCAuthProviderOptions, type OIDCAuthProviderProfile } from './oidc.ts'
 
 /**
  * Profile claims returned by the built-in Auth0 auth provider.
  */
-export interface Auth0Profile extends OIDCProfile {
+export interface Auth0AuthProviderProfile extends OIDCAuthProviderProfile {
   /** Auth0 nickname claim, when available. */
   nickname?: string
   /** Auth0 string timestamp describing the last profile update, when available. */
@@ -15,8 +15,8 @@ export interface Auth0Profile extends OIDCProfile {
 /**
  * Options for creating the built-in Auth0 auth provider.
  */
-export interface Auth0Options
-  extends Omit<OIDCOptions<Auth0Profile, 'auth0'>, 'name' | 'issuer'> {
+export interface Auth0AuthProviderOptions
+  extends Omit<OIDCAuthProviderOptions<Auth0AuthProviderProfile, 'auth0'>, 'name' | 'issuer'> {
   /** Auth0 tenant domain used to derive the issuer URL. */
   domain: string
 }
@@ -27,7 +27,7 @@ export interface Auth0Options
  * @param options Auth0 domain and client settings for your application.
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
-export function createAuth0AuthProvider(options: Auth0Options): OAuthProvider<Auth0Profile, 'auth0'> {
+export function createAuth0AuthProvider(options: Auth0AuthProviderOptions): OAuthProvider<Auth0AuthProviderProfile, 'auth0'> {
   let issuer = createAuth0Issuer(options.domain)
 
   return createOIDCAuthProvider({

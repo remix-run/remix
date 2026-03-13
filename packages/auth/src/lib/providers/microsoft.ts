@@ -1,11 +1,11 @@
 import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider, type OIDCOptions, type OIDCProfile } from './oidc.ts'
+import { createOIDCAuthProvider, type OIDCAuthProviderOptions, type OIDCAuthProviderProfile } from './oidc.ts'
 
 /**
  * Profile claims returned by the built-in Microsoft auth provider.
  */
-export interface MicrosoftProfile extends OIDCProfile {
+export interface MicrosoftAuthProviderProfile extends OIDCAuthProviderProfile {
   /** Microsoft tenant identifier, when available. */
   tid?: string
   /** Stable Microsoft object identifier, when available. */
@@ -17,8 +17,8 @@ export interface MicrosoftProfile extends OIDCProfile {
 /**
  * Options for creating the built-in Microsoft auth provider.
  */
-export interface MicrosoftOptions
-  extends Omit<OIDCOptions<MicrosoftProfile, 'microsoft'>, 'name' | 'issuer'> {
+export interface MicrosoftAuthProviderOptions
+  extends Omit<OIDCAuthProviderOptions<MicrosoftAuthProviderProfile, 'microsoft'>, 'name' | 'issuer'> {
   /** Tenant segment used to build the Microsoft issuer URL. */
   tenant?: 'common' | 'organizations' | 'consumers' | string
 }
@@ -30,8 +30,8 @@ export interface MicrosoftOptions
  * @returns An OAuth provider that can be passed to `login()` and `callback()`.
  */
 export function createMicrosoftAuthProvider(
-  options: MicrosoftOptions,
-): OAuthProvider<MicrosoftProfile, 'microsoft'> {
+  options: MicrosoftAuthProviderOptions,
+): OAuthProvider<MicrosoftAuthProviderProfile, 'microsoft'> {
   return createOIDCAuthProvider({
     ...options,
     name: 'microsoft',
