@@ -10,7 +10,7 @@ import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeRet
 /**
  * Options for handling a successful credentials login.
  */
-export interface LoginOptions<result> {
+export interface CredentialsAuthLoginOptions<result> {
   /** Writes application-defined auth state into the session after successful login. */
   writeSession(
     session: Session,
@@ -50,7 +50,7 @@ export interface OAuthLoginOptions {
  * @param options Options for transaction storage, error handling, and return-to behavior.
  * @returns A request handler for the provider login route.
  */
-export function login<profile>(
+export function createAuthLoginRequestHandler<profile>(
   provider: OAuthProvider<profile>,
   options?: OAuthLoginOptions,
 ): RequestHandler
@@ -62,19 +62,19 @@ export function login<profile>(
  * @param options Options for writing session data and handling success or failure.
  * @returns A request handler for the credentials login route.
  */
-export function login<input, result>(
+export function createAuthLoginRequestHandler<input, result>(
   provider: CredentialsAuthProvider<input, result>,
-  options: LoginOptions<result>,
+  options: CredentialsAuthLoginOptions<result>,
 ): RequestHandler
 
 /**
- * Creates a login request handler for either OAuth/OIDC redirects or credentials submissions.
+ * Creates an auth login request handler for either OAuth/OIDC redirects or credentials submissions.
  *
  * @param provider The provider to use for the login flow.
  * @param options Options for the selected provider type.
  * @returns A request handler for a login route.
  */
-export function login(
+export function createAuthLoginRequestHandler(
   provider: OAuthProvider<any> | CredentialsAuthProvider<any, any>,
   options: any = {},
 ): RequestHandler {
@@ -91,7 +91,7 @@ async function loginWithOAuthProvider(
   context: Parameters<RequestHandler>[0],
 ): Promise<Response> {
   try {
-    let session = getSession(context, 'login()')
+    let session = getSession(context, 'createAuthLoginRequestHandler()')
     let transaction = createOAuthTransaction(
       provider.name,
       sanitizeReturnTo(context.url.searchParams.get(options.returnToParam ?? 'returnTo')),
@@ -118,11 +118,11 @@ async function loginWithOAuthProvider(
 
 async function loginWithCredentialsProvider(
   provider: CredentialsAuthProvider<any, any>,
-  options: LoginOptions<any>,
+  options: CredentialsAuthLoginOptions<any>,
   context: Parameters<RequestHandler>[0],
 ): Promise<Response> {
   try {
-    let session = getSession(context, 'login()')
+    let session = getSession(context, 'createAuthLoginRequestHandler()')
     let input = await provider.parse(context)
     let result = await provider.verify(input, context)
 

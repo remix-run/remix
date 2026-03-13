@@ -56,7 +56,7 @@ interface XProfileResponse {
  * Creates an X auth provider using OAuth 2.0 Authorization Code with PKCE.
  *
  * @param options X client settings for your application.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvider<XAuthProfile, 'x'> {
   let scopes = options.scopes ?? DEFAULT_X_SCOPES
@@ -75,7 +75,7 @@ export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvide
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<XAuthProfile, 'x'>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<XAuthProfile, 'x'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: X_TOKEN_ENDPOINT,
         clientId: options.clientId,

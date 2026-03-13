@@ -1,5 +1,5 @@
 import type { Controller, RequestContext } from 'remix/fetch-router'
-import { callback, login } from 'remix/auth'
+import { createAuthCallbackRequestHandler, createAuthLoginRequestHandler } from 'remix/auth'
 import type { RequestHandler } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
@@ -27,7 +27,7 @@ export function createAuthController(config: SocialLoginConfig): Controller<type
           index() {
             return redirect(routes.home.href())
           },
-          action: login(passwordProvider, {
+          action: createAuthLoginRequestHandler(passwordProvider, {
             writeSession(session, user) {
               writeAuthenticatedSession(session, user, 'password')
             },
@@ -80,7 +80,7 @@ function createSocialLoginAction(
       return redirectWithError(context, getProviderUnavailableMessage(name, config))
     }
 
-    return login(provider, {
+    return createAuthLoginRequestHandler(provider, {
       onError(error, failureContext) {
         return redirectWithError(
           failureContext,
@@ -102,7 +102,7 @@ function createSocialCallbackAction(
       return redirectWithError(context, getProviderUnavailableMessage(name, config))
     }
 
-    return callback(provider, {
+    return createAuthCallbackRequestHandler(provider, {
       async writeSession(session, result, callbackContext) {
         let user = await upsertSocialUser(
           callbackContext.get(AppDatabase),

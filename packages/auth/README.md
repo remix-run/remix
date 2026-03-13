@@ -42,12 +42,12 @@ import type { RequestContext } from 'remix/fetch-router'
 import { form, route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, createSessionAuthScheme } from 'remix/auth-middleware'
 import {
-  callback,
+  createAuthCallbackRequestHandler,
   createCredentialsAuthProvider,
   createGoogleAuthProvider,
-  login,
+  createAuthLoginRequestHandler,
 } from 'remix/auth'
-import { formData } from 'remix/form-data-middleware'
+import { FormData, formData } from 'remix/form-data-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { createCookieSessionStorage } from 'remix/session/cookie-storage'
@@ -135,11 +135,11 @@ router.get(routes.auth.session.login.index, () => {
   return new Response('Login page')
 })
 
-router.get(routes.auth.google.login, login(googleProvider))
+router.get(routes.auth.google.login, createAuthLoginRequestHandler(googleProvider))
 
 router.get(
   routes.auth.google.callback,
-  callback(googleProvider, {
+  createAuthCallbackRequestHandler(googleProvider, {
     async writeSession(session, result) {
       let user = await users.upsertFromGoogle(result.profile)
       session.set('auth', { userId: user.id })
@@ -151,7 +151,7 @@ router.get(
 
 router.post(routes.auth.session.login.action, {
   middleware: [formData()],
-  action: login(passwordProvider, {
+  action: createAuthLoginRequestHandler(passwordProvider, {
     async writeSession(session, user) {
       session.set('auth', { userId: user.id })
     },
@@ -187,20 +187,20 @@ router.get(routes.app.dashboard, {
 
 This package manages the OAuth transaction in `context.get(Session)` and lets your app decide what authenticated session data to persist:
 
-- `login()` and `callback()` store the OAuth transaction under `__auth`
+- `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()` store the OAuth transaction under `__auth`
 - your `writeSession(session, result, context)` hook writes app-defined auth data, often under `auth`
 - `createSessionAuthScheme()` can read that data and resolve the full request identity into `context.get(Auth)`
-- credentials examples assume `formData()` middleware runs before `login(createCredentialsAuthProvider(...))`
+- credentials examples assume `formData()` middleware runs before `createAuthLoginRequestHandler(createCredentialsAuthProvider(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
 
 The example also uses `requireAuth()` from `remix/auth-middleware` to turn that resolved auth state into route protection. Use `auth()` to load auth state for the request, then use `requireAuth()` on routes that must reject anonymous requests. See the [`auth-middleware` README](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) for the full request-auth and route-protection API.
 
 ## Login Routes
 
-`login()` handles both browser redirect flows and direct credentials submissions:
+`createAuthLoginRequestHandler()` handles both browser redirect flows and direct credentials submissions:
 
-- `login(oauthProvider)` creates an OAuth transaction, stores it in the session under `__auth`, and redirects to the provider
-- `login(credentialsProvider, options)` parses input, verifies the submitted credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects
+- `createAuthLoginRequestHandler(oauthProvider)` creates an OAuth transaction, stores it in the session under `__auth`, and redirects to the provider
+- `createAuthLoginRequestHandler(credentialsProvider, options)` parses input, verifies the submitted credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects
 
 Both forms support redirect and hook customization for success and failure handling. The examples below are the best reference for how those pieces fit together in real routes.
 
@@ -239,7 +239,11 @@ On failures:
 For most custom providers, use `createOIDCAuthProvider()`. That is the public extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint.
 
 ```ts
-import { callback, createOIDCAuthProvider, login } from 'remix/auth'
+import {
+  createAuthCallbackRequestHandler,
+  createOIDCAuthProvider,
+  createAuthLoginRequestHandler,
+} from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -272,11 +276,11 @@ let companyProvider = createOIDCAuthProvider({
   },
 })
 
-router.get(routes.auth.company.login, login(companyProvider))
+router.get(routes.auth.company.login, createAuthLoginRequestHandler(companyProvider))
 
 router.get(
   routes.auth.company.callback,
-  callback(companyProvider, {
+  createAuthCallbackRequestHandler(companyProvider, {
     async writeSession(session, result) {
       let user = await users.upsertFromCompanySSO(result.profile)
       session.set('auth', { userId: user.id })
@@ -311,7 +315,7 @@ Use `createOIDCAuthProvider()` for any standards-compliant OpenID Connect provid
 import {
   createAuth0AuthProvider,
   createGoogleAuthProvider,
-  login,
+  createAuthLoginRequestHandler,
   createMicrosoftAuthProvider,
   createOIDCAuthProvider,
   createOktaAuthProvider,
@@ -381,11 +385,11 @@ let auth0Provider = createAuth0AuthProvider({
   redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
 })
 
-router.get(routes.auth.google.login, login(googleProvider))
-router.get(routes.auth.company.login, login(companyProvider))
-router.get(routes.auth.microsoft.login, login(microsoftProvider))
-router.get(routes.auth.okta.login, login(oktaProvider))
-router.get(routes.auth.auth0.login, login(auth0Provider))
+router.get(routes.auth.google.login, createAuthLoginRequestHandler(googleProvider))
+router.get(routes.auth.company.login, createAuthLoginRequestHandler(companyProvider))
+router.get(routes.auth.microsoft.login, createAuthLoginRequestHandler(microsoftProvider))
+router.get(routes.auth.okta.login, createAuthLoginRequestHandler(oktaProvider))
+router.get(routes.auth.auth0.login, createAuthLoginRequestHandler(auth0Provider))
 ```
 
 Notes:
@@ -405,7 +409,11 @@ Notes:
 Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
 
 ```ts
-import { createGitHubAuthProvider, createXAuthProvider, login } from 'remix/auth'
+import {
+  createGitHubAuthProvider,
+  createXAuthProvider,
+  createAuthLoginRequestHandler,
+} from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -433,8 +441,8 @@ let xProvider = createXAuthProvider({
   redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
 })
 
-router.get(routes.auth.github.login, login(githubProvider))
-router.get(routes.auth.x.login, login(xProvider))
+router.get(routes.auth.github.login, createAuthLoginRequestHandler(githubProvider))
+router.get(routes.auth.x.login, createAuthLoginRequestHandler(xProvider))
 ```
 
 Default scopes:
@@ -456,8 +464,8 @@ Provider notes:
 Use `createCredentialsAuthProvider()` when you want email/password or some other direct form-based authentication.
 
 ```ts
-import { createCredentialsAuthProvider, login } from 'remix/auth'
-import { formData } from 'remix/form-data-middleware'
+import { createCredentialsAuthProvider, createAuthLoginRequestHandler } from 'remix/auth'
+import { FormData, formData } from 'remix/form-data-middleware'
 import { form, route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -487,7 +495,7 @@ let passwordProvider = createCredentialsAuthProvider({
 
 router.post(routes.auth.session.login.action, {
   middleware: [formData()],
-  action: login(passwordProvider, {
+  action: createAuthLoginRequestHandler(passwordProvider, {
     async writeSession(session, user) {
       session.set('auth', { userId: user.id })
     },
@@ -497,7 +505,7 @@ router.post(routes.auth.session.login.action, {
 })
 ```
 
-In this example, `verify()` returns the authenticated user object or `null`. `login()` passes that user object to `writeSession(session, user, context)`, which is why the example can read `user.id` there and write it into the session directly.
+In this example, `verify()` returns the authenticated user object or `null`. `createAuthLoginRequestHandler()` passes that user object to `writeSession(session, user, context)`, which is why the example can read `user.id` there and write it into the session directly.
 
 `writeSession(session, result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist. In most apps that should be a small record like `{ userId }`, not the full user object.
 
@@ -505,7 +513,7 @@ In this example, `verify()` returns the authenticated user object or `null`. `lo
 
 The successful auth flow always follows the same order:
 
-1. `login()` stores the OAuth transaction under `__auth` when you start an OAuth redirect flow
+1. `createAuthLoginRequestHandler()` stores the OAuth transaction under `__auth` when you start an OAuth redirect flow
 2. successful credentials login or OAuth callback rotates the session id
 3. `writeSession(session, result, context)` writes your app-defined auth data
 4. `onSuccess(result, context)` runs after the session write, if you provided it
@@ -514,10 +522,10 @@ The successful auth flow always follows the same order:
 
 ## Callback Handling
 
-Use `callback()` on the provider callback route to validate the stored transaction, exchange the authorization code, fetch the provider profile, and persist the session auth record.
+Use `createAuthCallbackRequestHandler()` on the provider callback route to validate the stored transaction, exchange the authorization code, fetch the provider profile, and persist the session auth record.
 
 ```ts
-import { callback, createGitHubAuthProvider } from 'remix/auth'
+import { createAuthCallbackRequestHandler, createGitHubAuthProvider } from 'remix/auth'
 import { form, route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -542,7 +550,7 @@ let githubProvider = createGitHubAuthProvider({
 
 router.get(
   routes.auth.github.callback,
-  callback(githubProvider, {
+  createAuthCallbackRequestHandler(githubProvider, {
     async writeSession(session, result) {
       let user = await users.upsertFromGitHub(result.profile)
       session.set('auth', { userId: user.id })
@@ -553,14 +561,14 @@ router.get(
 )
 ```
 
-`callback()` exposes the normalized provider result to `writeSession()` and `onSuccess()`, including:
+`createAuthCallbackRequestHandler()` exposes the normalized provider result to `writeSession()` and `onSuccess()`, including:
 
 - `result.provider`
 - `result.account`
 - `result.profile`
 - `result.tokens`
 
-Like `login()`, `callback()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers, custom OAuth providers, and credentials-based auth.
+Like `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers, custom OAuth providers, and credentials-based auth.
 
 ## Session Integration
 
@@ -594,7 +602,7 @@ This keeps login mechanics separate from request authentication:
 - `remix/auth` creates and persists the session auth record
 - `createSessionAuthScheme()` converts that session record into `context.get(Auth)`
 - `requireAuth()` protects routes that require a signed-in user
-- `session()` middleware must run before `login()`, `callback()`, or `createSessionAuthScheme()`
+- `session()` middleware must run before `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()`, or `createSessionAuthScheme()`
 
 ## Related Packages
 

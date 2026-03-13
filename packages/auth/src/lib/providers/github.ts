@@ -64,7 +64,7 @@ export interface GitHubAuthProviderEmail {
  * Creates a GitHub OAuth App provider.
  *
  * @param options GitHub OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
@@ -82,7 +82,7 @@ export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OA
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<GitHubAuthProfile, 'github'>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<GitHubAuthProfile, 'github'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: GITHUB_TOKEN_ENDPOINT,
         clientId: options.clientId,

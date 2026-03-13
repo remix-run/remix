@@ -14,7 +14,7 @@ import {
 /**
  * Options for handling an OAuth or OIDC callback request.
  */
-export interface CallbackOptions<profile, provider extends string> {
+export interface AuthCallbackOptions<profile, provider extends string> {
   /** Session key used to read and clear the in-progress OAuth transaction. */
   transactionKey?: string
   /** Writes application-defined auth state into the session after a successful callback. */
@@ -43,9 +43,9 @@ export interface CallbackOptions<profile, provider extends string> {
  * @param options Options for writing session data and handling callback success or failure.
  * @returns A request handler for the provider callback route.
  */
-export function callback<profile, provider extends string>(
+export function createAuthCallbackRequestHandler<profile, provider extends string>(
   provider: OAuthProvider<profile, provider>,
-  options: CallbackOptions<profile, provider>,
+  options: AuthCallbackOptions<profile, provider>,
 ): RequestHandler {
   return async context => {
     let session: Session | undefined
@@ -53,7 +53,7 @@ export function callback<profile, provider extends string>(
     let transaction: OAuthTransaction | undefined
 
     try {
-      session = getSession(context, 'callback()')
+      session = getSession(context, 'createAuthCallbackRequestHandler()')
       transaction = session.get(transactionKey) as OAuthTransaction | undefined
 
       let callbackError = context.url.searchParams.get('error')
@@ -71,7 +71,7 @@ export function callback<profile, provider extends string>(
         throw new Error('Invalid OAuth state.')
       }
 
-      let result = await getOAuthProviderRuntime(provider).authenticate(context, transaction)
+      let result = await getOAuthProviderRuntime(provider).handleCallback(context, transaction)
       session.unset(transactionKey)
       return await completeAuthSession({
         session,

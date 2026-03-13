@@ -1,6 +1,6 @@
-export { callback } from './lib/callback.ts'
+export { createAuthCallbackRequestHandler } from './lib/callback.ts'
 export { createCredentialsAuthProvider } from './lib/providers/credentials.ts'
-export { login } from './lib/login.ts'
+export { createAuthLoginRequestHandler } from './lib/login.ts'
 export { createAuth0AuthProvider } from './lib/providers/auth0.ts'
 export { createFacebookAuthProvider } from './lib/providers/facebook.ts'
 export { createGitHubAuthProvider } from './lib/providers/github.ts'
@@ -35,5 +35,5 @@ export type {
   OAuthTokens,
 } from './lib/provider.ts'
 export type { CredentialsAuthProvider } from './lib/providers/credentials.ts'
-export type { LoginOptions, OAuthLoginOptions } from './lib/login.ts'
-export type { CallbackOptions } from './lib/callback.ts'
+export type { CredentialsAuthLoginOptions, OAuthLoginOptions } from './lib/login.ts'
+export type { AuthCallbackOptions } from './lib/callback.ts'
