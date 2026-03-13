@@ -60,6 +60,42 @@ describe('object', () => {
     })
   })
 
+  it('parses text fields from URLSearchParams', () => {
+    let searchParams = new URLSearchParams()
+    searchParams.set('email', 'ada@example.com')
+    searchParams.set('password', 'secret')
+
+    let result = s.parse(
+      f.object({
+        email: f.field(s.string()),
+        password: f.field(s.string().pipe(minLength(1))),
+      }),
+      searchParams,
+    )
+
+    assert.deepEqual(result, {
+      email: 'ada@example.com',
+      password: 'secret',
+    })
+  })
+
+  it('parses repeated text fields from URLSearchParams', () => {
+    let searchParams = new URLSearchParams()
+    searchParams.append('tags', 'one')
+    searchParams.append('tags', 'two')
+
+    let result = s.parse(
+      f.object({
+        tags: f.fields(s.array(s.string())),
+      }),
+      searchParams,
+    )
+
+    assert.deepEqual(result, {
+      tags: ['one', 'two'],
+    })
+  })
+
   it('parses a single file field', async () => {
     let formData = new FormData()
     let avatar = new File(['avatar'], 'avatar.png', { type: 'image/png' })
@@ -144,6 +180,22 @@ describe('object', () => {
     assert.deepEqual(result.issues[0]?.path, ['avatar'])
   })
 
+  it('reports file mismatches from URLSearchParams in the safe result', () => {
+    let searchParams = new URLSearchParams()
+    searchParams.set('avatar', 'avatar.png')
+
+    let result = s.parseSafe(
+      f.object({
+        avatar: f.file(s.instanceof_(File)),
+      }),
+      searchParams,
+    )
+
+    assert.equal(result.success, false)
+    assert.equal(result.issues[0]?.message, 'Expected file field "avatar"')
+    assert.deepEqual(result.issues[0]?.path, ['avatar'])
+  })
+
   it('prefixes nested schema issues with the parsed field path', () => {
     let formData = new FormData()
     formData.append('ages', '1')
@@ -159,5 +211,18 @@ describe('object', () => {
     assert.equal(result.success, false)
     assert.deepEqual(result.issues[0]?.path, ['ages', 1])
     assert.equal(result.issues[0]?.message, 'Expected number')
+  })
+
+  it('rejects unsupported root input values', () => {
+    let result = s.parseSafe(
+      f.object({
+        email: f.field(s.string()),
+      }),
+      { email: 'ada@example.com' },
+    )
+
+    assert.equal(result.success, false)
+    assert.equal(result.issues[0]?.message, 'Expected FormData or URLSearchParams')
+    assert.deepEqual(result.issues[0]?.path, undefined)
   })
 })

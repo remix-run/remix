@@ -3,6 +3,11 @@ import { createIssue, createSchema, fail } from '@remix-run/data-schema'
 
 type FormDataEntryKind = 'field' | 'fields' | 'file' | 'files'
 
+/**
+ * A Standard Schema-compatible input type for form-like data containers.
+ */
+export type FormDataSource = FormData | URLSearchParams
+
 type FormDataParseResult<output> = { value: output } | { issues: ReadonlyArray<Issue> }
 
 type FormDataValidationContext = {
@@ -11,10 +16,11 @@ type FormDataValidationContext = {
 }
 
 /**
- * A form-data schema entry that reads one or more values for a field and validates them.
+ * A schema entry that reads one or more values from `FormData` or `URLSearchParams` and validates
+ * them.
  */
 export interface FormDataEntrySchema<output> {
-  /** The parsing mode used to read values from the `FormData` object. */
+  /** The parsing mode used to read values from the input object. */
   kind: FormDataEntryKind
   /** The form field name to read. Defaults to the object key passed to `object()`. */
   name?: string
@@ -23,7 +29,7 @@ export interface FormDataEntrySchema<output> {
 }
 
 /**
- * Options for parsing a single text field from `FormData`.
+ * Options for parsing a single text field from `FormData` or `URLSearchParams`.
  */
 export interface FormDataFieldOptions {
   /** The form field name to read. Defaults to the object key passed to `object()`. */
@@ -31,7 +37,7 @@ export interface FormDataFieldOptions {
 }
 
 /**
- * Options for parsing repeated text fields from `FormData`.
+ * Options for parsing repeated text fields from `FormData` or `URLSearchParams`.
  */
 export interface FormDataFieldsOptions {
   /** The form field name to read. Defaults to the object key passed to `object()`. */
@@ -55,15 +61,15 @@ export interface FormDataFilesOptions {
 }
 
 /**
- * A schema-like object that describes the fields to parse from `FormData`.
+ * A schema-like object that describes the fields to parse from `FormData` or `URLSearchParams`.
  */
 export type FormDataSchema = Record<string, FormDataEntrySchema<any>>
 
 /**
- * A Standard Schema-compatible schema that validates a `FormData` object.
+ * A Standard Schema-compatible schema that validates a `FormData` or `URLSearchParams` object.
  */
 export type FormDataObjectSchema<schema extends FormDataSchema> = Schema<
-  FormData,
+  FormDataSource,
   ParsedFormData<schema>
 >
 
@@ -75,20 +81,22 @@ export type ParsedFormData<schema extends FormDataSchema> = {
 }
 
 /**
- * Creates a Standard Schema-compatible schema that reads typed values from a `FormData` object.
+ * Creates a Standard Schema-compatible schema that reads typed values from a `FormData` or
+ * `URLSearchParams` object.
  *
  * Use the returned schema with `parse()` or `parseSafe()` from `@remix-run/data-schema`.
  *
  * @param schema The form-data shape describing the fields to read and validate.
- * @returns A schema that validates a `FormData` object and produces typed output.
+ * @returns A schema that validates a `FormData` or `URLSearchParams` object and produces typed
+ * output.
  */
 export function object<schema extends FormDataSchema>(
   schema: schema,
 ): FormDataObjectSchema<schema> {
   return createSchema(function validate(value, context) {
-    if (!(value instanceof FormData)) {
-      return fail('Expected FormData', context.path, {
-        code: 'type.form_data',
+    if (!isFormDataSource(value)) {
+      return fail('Expected FormData or URLSearchParams', context.path, {
+        code: 'type.form_data_source',
         input: value,
         parseOptions: context.options,
       })
@@ -125,7 +133,7 @@ export function object<schema extends FormDataSchema>(
 }
 
 /**
- * Creates a schema entry for a single text field from `FormData`.
+ * Creates a schema entry for a single text field from `FormData` or `URLSearchParams`.
  *
  * @param schema The schema used to validate the parsed field value.
  * @param options Parsing options for the field.
@@ -143,7 +151,7 @@ export function field<schema extends Schema<any, any>>(
 }
 
 /**
- * Creates a schema entry for repeated text fields from `FormData`.
+ * Creates a schema entry for repeated text fields from `FormData` or `URLSearchParams`.
  *
  * @param schema The schema used to validate the parsed field values.
  * @param options Parsing options for the field.
@@ -197,7 +205,7 @@ export function files<schema extends Schema<any, any>>(
 }
 
 function parseField(
-  formData: FormData,
+  formData: FormDataSource,
   key: string,
   entrySchema: FormDataEntrySchema<any>,
   context: FormDataValidationContext,
@@ -295,4 +303,8 @@ function shouldAbortEarly(options?: ParseOptions): boolean {
 
 function withPath(path: NonNullable<Issue['path']>, key: PropertyKey): NonNullable<Issue['path']> {
   return path.length === 0 ? [key] : [...path, key]
+}
+
+function isFormDataSource(value: unknown): value is FormDataSource {
+  return value instanceof FormData || value instanceof URLSearchParams
 }

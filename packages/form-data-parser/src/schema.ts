@@ -6,6 +6,7 @@ export type {
   FormDataFileOptions,
   FormDataFilesOptions,
   FormDataObjectSchema,
+  FormDataSource,
   FormDataSchema,
   ParsedFormData,
 } from './lib/schema.ts'

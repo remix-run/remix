@@ -5,7 +5,8 @@ A streaming `multipart/form-data` parser that solves memory issues with file upl
 ## Features
 
 - **Drop-in replacement** for `request.formData()` with streaming file upload support
-- **Typed schema parsing** - produces Standard Schema-compatible `FormData` schemas
+- **Typed schema parsing** - produces Standard Schema-compatible `FormData` and
+  `URLSearchParams` schemas
 - **Minimal buffering** - processes file upload streams with minimal memory footprint
 - **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
 - **Smart fallback** - automatically uses native `request.formData()` for non-`multipart/form-data` requests
@@ -75,7 +76,11 @@ async function requestHandler(request: Request) {
 
 ### Schema Parsing
 
-The `schema` helpers let you build Standard Schema-compatible validators for an existing `FormData` object. This pairs well with [`remix/data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) for validating login forms, uploads, and repeated fields without manually calling `formData.get(...)` everywhere.
+The `schema` helpers let you build Standard Schema-compatible validators for an existing
+`FormData` or `URLSearchParams` object. This pairs well with
+[`remix/data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) for
+validating login forms, uploads, and repeated fields without manually calling `get(...)`
+everywhere.
 
 ```ts
 import * as f from 'remix/form-data-parser/schema'
@@ -95,7 +100,22 @@ let input = s.parse(
 )
 ```
 
-Use `fields(...)` and `files(...)` when a form field may appear more than once, and use `s.parseSafe(...)` when you want validation issues instead of throwing a `ValidationError`.
+The same schema also works with `URLSearchParams`:
+
+```ts
+let searchParams = new URL(request.url).searchParams
+
+let filters = s.parse(
+  f.object({
+    query: f.field(s.defaulted(s.optional(s.string()), '')),
+    tags: f.fields(s.array(s.string())),
+  }),
+  searchParams,
+)
+```
+
+Use `fields(...)` and `files(...)` when a field may appear more than once, and use
+`s.parseSafe(...)` when you want validation issues instead of throwing a `ValidationError`.
 
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 
