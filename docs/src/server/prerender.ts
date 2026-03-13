@@ -108,9 +108,7 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
         .map((href) => resolveRelativeLink(href!, urlPath))
         .flatMap((href) => {
           let match = routes.docs.match(`http://localhost${href}`)
-          return match
-            ? [href, routes.markdown.href(match.params), routes.fragment.href(match.params)]
-            : [href]
+          return match ? [href, routes.markdown.href(match.params)] : [href]
         }),
     }
   } else {
