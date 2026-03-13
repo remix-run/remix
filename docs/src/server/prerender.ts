@@ -50,7 +50,6 @@ for await (let { pathname, filepath, response } of crawl(docsRouter, { paths }))
   let url = `http://localhost${pathname}`
   let match = routes.docs.match(url)
   if (match && !routes.markdown.match(url)) {
-    variantPaths.push(routes.fragment.href(match.params))
     variantPaths.push(routes.markdown.href(match.params))
   }
 }
