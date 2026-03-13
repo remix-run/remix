@@ -356,6 +356,10 @@ p {
   }
 }
 
+ul {
+  margin-left: var(--spacing-small);
+}
+
 li {
   font-size: var(--p-size);
   font-weight: var(--p-font-weight);
@@ -449,6 +453,10 @@ code {
 
     @media (max-width: 640px) {
       margin-bottom: var(--spacing-xs);
+    }
+
+    ul {
+      margin-left: var(--spacing-small);
     }
   }
 
