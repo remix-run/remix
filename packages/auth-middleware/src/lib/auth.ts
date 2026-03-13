@@ -1,12 +1,98 @@
-import type { Middleware } from '@remix-run/fetch-router'
-import type {
-  Auth as AuthValue,
-  AuthFailure,
-  AuthOptions,
-  AuthScheme,
-  AuthSchemeFailure,
-} from './types.ts'
-import { Auth } from './types.ts'
+import {
+  createContextKey,
+  type Middleware,
+  type RequestContext,
+} from '@remix-run/fetch-router'
+
+/**
+ * Failure details for an unauthenticated request.
+ */
+export interface AuthFailure {
+  method?: string
+  code: 'missing_credentials' | 'invalid_credentials'
+  message: string
+  challenge?: string
+}
+
+/**
+ * Auth state for a successfully authenticated request.
+ */
+export interface AuthenticatedAuth<identity = unknown, method extends string = string> {
+  ok: true
+  identity: identity
+  method: method
+}
+
+/**
+ * Auth state for a request that did not authenticate successfully.
+ */
+export interface UnauthenticatedAuth {
+  ok: false
+  error?: AuthFailure
+}
+
+/**
+ * Request auth state stored in the router context.
+ */
+export type Auth<identity = unknown, method extends string = string> =
+  | AuthenticatedAuth<identity, method>
+  | UnauthenticatedAuth
+
+/**
+ * Context key used to read auth state with `context.get(Auth)`.
+ */
+export const Auth = createContextKey<Auth>()
+
+/**
+ * Successful result returned by an auth scheme.
+ */
+export interface AuthSchemeSuccess<identity = unknown> {
+  status: 'success'
+  identity: identity
+}
+
+/**
+ * Failure result returned by an auth scheme.
+ */
+export interface AuthSchemeFailure {
+  status: 'failure'
+  code?: AuthFailure['code']
+  message?: string
+  challenge?: string
+}
+
+/**
+ * Non-skipped results an auth scheme can return.
+ */
+export type AuthSchemeResult<identity = unknown> =
+  | AuthSchemeSuccess<identity>
+  | AuthSchemeFailure
+
+/**
+ * Full return type for an auth scheme, including skipped requests.
+ */
+export type AuthSchemeAuthenticateResult<identity = unknown> =
+  | AuthSchemeResult<identity>
+  | null
+  | undefined
+  | void
+
+/**
+ * Authentication scheme contract consumed by `auth()`.
+ */
+export interface AuthScheme<identity = unknown, method extends string = string> {
+  name: method
+  authenticate(
+    context: RequestContext,
+  ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
+}
+
+/**
+ * Options for loading auth state for each request.
+ */
+export interface AuthOptions {
+  schemes: AuthScheme[]
+}
 
 /**
  * Loads auth state for the current request by running each configured auth scheme in order.
@@ -32,7 +118,7 @@ export function auth(options: AuthOptions): Middleware {
           ok: true,
           identity: result.identity,
           method: scheme.name,
-        } satisfies AuthValue)
+        } satisfies Auth)
 
         return next()
       }
@@ -46,14 +132,14 @@ export function auth(options: AuthOptions): Middleware {
       context.set(Auth, {
         ok: false,
         error: createFailure(scheme, result),
-      } satisfies AuthValue)
+      } satisfies Auth)
 
       return next()
     }
 
     context.set(Auth, {
       ok: false,
-    } satisfies AuthValue)
+    } satisfies Auth)
 
     return next()
   }

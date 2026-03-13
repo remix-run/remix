@@ -1,6 +1,14 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type { CredentialsProvider } from './types.ts'
+/**
+ * Public shape for a credentials-based provider used by `login()`.
+ */
+export interface CredentialsProvider<input, result, provider extends string = string> {
+  kind: 'credentials'
+  name: provider
+  parse(context: RequestContext): input | Promise<input>
+  verify(input: input, context: RequestContext): result | null | Promise<result | null>
+}
 
 /**
  * Options for building a credentials-based auth provider.

@@ -1,14 +1,37 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
+import type { RequestContext, RequestHandler } from '@remix-run/fetch-router'
+import type { Session } from '@remix-run/session'
 
+import type { CredentialsProvider } from './credentials.ts'
 import { getOAuthProviderRuntime } from './provider.ts'
-import type {
-  CredentialsProvider,
-  LoginOptions,
-  OAuthLoginOptions,
-  OAuthProvider,
-} from './types.ts'
+import type { OAuthProvider } from './provider.ts'
 import { completeAuthSession } from './session-flow.ts'
 import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
+
+/**
+ * Options for handling a successful credentials login.
+ */
+export interface LoginOptions<result> {
+  writeSession(
+    session: Session,
+    result: result,
+    context: RequestContext,
+  ): void | Promise<void>
+  successRedirectTo?: string | URL
+  failureRedirectTo?: string | URL
+  onSuccess?(result: result, context: RequestContext): Response | Promise<Response>
+  onFailure?(context: RequestContext): Response | Promise<Response>
+  onError?(error: unknown, context: RequestContext): Response | Promise<Response>
+}
+
+/**
+ * Options for starting an OAuth or OIDC login redirect flow.
+ */
+export interface OAuthLoginOptions {
+  transactionKey?: string
+  returnToParam?: string
+  failureRedirectTo?: string | URL
+  onError?(error: unknown, context: RequestContext): Response | Promise<Response>
+}
 
 /**
  * Creates a request handler that starts an OAuth or OIDC login redirect flow.

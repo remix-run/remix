@@ -1,6 +1,6 @@
-import type { OIDCMetadata, OIDCProfile, OAuthProvider } from '../types.ts'
+import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider } from './oidc.ts'
+import { createOIDCAuthProvider, type OIDCMetadata, type OIDCProfile } from './oidc.ts'
 
 const GOOGLE_ISSUER = 'https://accounts.google.com'
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'

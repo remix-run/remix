@@ -1,5 +1,4 @@
-import type { OAuthProvider } from '../types.ts'
-import type { OAuthAccount, OAuthResult } from '../types.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,

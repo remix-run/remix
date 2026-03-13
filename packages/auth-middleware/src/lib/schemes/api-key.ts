@@ -1,10 +1,10 @@
 import type { RequestContext } from '@remix-run/fetch-router'
-import type { AuthScheme } from '../types.ts'
+import type { AuthScheme } from '../auth.ts'
 
 /**
  * Options for creating an API-key auth scheme.
  */
-export interface ApiKeyOptions<identity> {
+export interface APIAuthSchemeOptions<identity> {
   name?: string
   headerName?: string
   verify: (key: string, context: RequestContext) => identity | null | Promise<identity | null>
@@ -17,7 +17,7 @@ export interface ApiKeyOptions<identity> {
  * @returns An auth scheme for use with `auth()`.
  */
 export function createAPIAuthScheme<identity>(
-  options: ApiKeyOptions<identity>,
+  options: APIAuthSchemeOptions<identity>,
 ): AuthScheme<identity> {
   let name = options.name ?? 'api-key'
   let headerName = options.headerName ?? 'X-API-Key'

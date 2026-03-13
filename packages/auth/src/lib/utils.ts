@@ -1,7 +1,7 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
-import type { OAuthTransaction } from './types.ts'
+import type { OAuthTransaction } from './provider.ts'
 
 let textEncoder = new TextEncoder()
 let base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'

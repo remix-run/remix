@@ -1,12 +1,64 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type {
-  InternalOAuthProvider,
-  OAuthProvider,
-  OAuthProviderRuntime,
-  OAuthTokens,
-} from './types.ts'
-import { oauthProviderRuntime } from './types.ts'
+/**
+ * OAuth and OIDC tokens returned from a successful authorization code exchange.
+ */
+export interface OAuthTokens {
+  accessToken: string
+  refreshToken?: string
+  tokenType?: string
+  expiresAt?: Date
+  scope?: string[]
+  idToken?: string
+}
+
+/**
+ * Stable account identifier for a provider-backed identity.
+ */
+export interface OAuthAccount<provider extends string = string> {
+  provider: provider
+  providerAccountId: string
+}
+
+/**
+ * Normalized result returned by OAuth and OIDC callback handlers.
+ */
+export interface OAuthResult<profile, provider extends string = string> {
+  provider: provider
+  account: OAuthAccount<provider>
+  profile: profile
+  tokens: OAuthTokens
+}
+
+/**
+ * Public shape for an OAuth or OIDC provider used by `login()` and `callback()`.
+ */
+export interface OAuthProvider<profile, provider extends string = string> {
+  kind: 'oauth'
+  name: provider
+}
+
+export interface OAuthTransaction {
+  provider: string
+  state: string
+  codeVerifier: string
+  returnTo?: string
+}
+
+export interface OAuthProviderRuntime<profile, provider extends string = string> {
+  createAuthorizationURL(transaction: OAuthTransaction): URL | Promise<URL>
+  authenticate(
+    context: RequestContext,
+    transaction: OAuthTransaction,
+  ): Promise<OAuthResult<profile, provider>>
+}
+
+export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
+
+export type InternalOAuthProvider<profile, provider extends string = string> =
+  OAuthProvider<profile, provider> & {
+    [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
+  }
 
 export interface ExchangeAuthorizationCodeOptions {
   tokenEndpoint: string | URL

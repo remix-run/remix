@@ -1,12 +1,12 @@
 import type { RequestContext } from '@remix-run/fetch-router'
-import type { AuthScheme } from '../types.ts'
+import type { AuthScheme } from '../auth.ts'
 
 const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
 
 /**
  * Options for creating a bearer-token auth scheme.
  */
-export interface BearerOptions<identity> {
+export interface BearerTokenAuthSchemeOptions<identity> {
   name?: string
   headerName?: string
   scheme?: string
@@ -24,7 +24,7 @@ export interface BearerOptions<identity> {
  * @returns An auth scheme for use with `auth()`.
  */
 export function createBearerTokenAuthScheme<identity>(
-  options: BearerOptions<identity>,
+  options: BearerTokenAuthSchemeOptions<identity>,
 ): AuthScheme<identity> {
   let name = options.name ?? 'bearer'
   let headerName = options.headerName ?? 'Authorization'
