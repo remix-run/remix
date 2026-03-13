@@ -50,6 +50,7 @@
     "./file-storage/memory": "./src/file-storage/memory.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./form-data-parser": "./src/form-data-parser.ts",
+    "./form-data-parser/extract": "./src/form-data-parser/extract.ts",
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./html-template": "./src/html-template.ts",
@@ -206,6 +207,10 @@
       "./form-data-parser": {
         "types": "./dist/form-data-parser.d.ts",
         "default": "./dist/form-data-parser.js"
+      },
+      "./form-data-parser/extract": {
+        "types": "./dist/form-data-parser/extract.d.ts",
+        "default": "./dist/form-data-parser/extract.js"
       },
       "./fs": {
         "types": "./dist/fs.d.ts",

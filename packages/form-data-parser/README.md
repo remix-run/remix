@@ -5,6 +5,7 @@ A streaming `multipart/form-data` parser that solves memory issues with file upl
 ## Features
 
 - **Drop-in replacement** for `request.formData()` with streaming file upload support
+- **Typed extraction** - reads validated values out of `FormData` with `extractFormData()`
 - **Minimal buffering** - processes file upload streams with minimal memory footprint
 - **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
 - **Smart fallback** - automatically uses native `request.formData()` for non-`multipart/form-data` requests
@@ -71,6 +72,27 @@ async function requestHandler(request: Request) {
   }
 }
 ```
+
+### Typed Extraction
+
+The `extractFormData` helpers let you read typed text and file values from an existing `FormData` object. This pairs well with [`remix/data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) for validating login forms, uploads, and repeated fields without manually calling `formData.get(...)` everywhere.
+
+```ts
+import { instanceof_, string } from 'remix/data-schema'
+import { email, minLength } from 'remix/data-schema/checks'
+import * as coerce from 'remix/data-schema/coerce'
+import { extractFormData, field, file } from 'remix/form-data-parser/extract'
+
+let formData = await request.formData()
+
+let input = extractFormData(formData, {
+  email: field(coerce.string().pipe(email())),
+  password: field(string().pipe(minLength(8))),
+  avatar: file(instanceof_(File)),
+})
+```
+
+Use `fields(...)` and `files(...)` when a form field may appear more than once, and use `extractFormDataSafe(...)` when you want validation issues instead of throwing a `ValidationError`.
 
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 

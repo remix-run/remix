@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./extract": "./src/extract.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,10 +29,15 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./extract": {
+        "types": "./dist/extract.d.ts",
+        "default": "./dist/extract.js"
+      },
       "./package.json": "./package.json"
     }
   },
   "dependencies": {
+    "@remix-run/data-schema": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^"
   },
   "devDependencies": {
