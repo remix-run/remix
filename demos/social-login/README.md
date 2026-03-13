@@ -11,7 +11,9 @@ cp .env.example .env
 pnpm start
 ```
 
-Then visit http://localhost:44100
+Then visit:
+
+- `http://127.0.0.1:44100`
 
 ## Environment Setup
 
@@ -28,9 +30,11 @@ The demo uses Node's built-in `.env` loading to read that file on startup. If `.
 
 Register these callback URLs with your provider apps:
 
-- Google: `http://localhost:44100/auth/google/callback`
-- GitHub: `http://localhost:44100/auth/github/callback`
-- X: `http://localhost:44100/auth/x/callback`
+- Google: `http://127.0.0.1:44100/auth/google/callback`
+- GitHub: `http://127.0.0.1:44100/auth/github/callback`
+- X: `http://127.0.0.1:44100/auth/x/callback`
+
+Use `http://127.0.0.1:44100/` as the demo website URL when a provider asks for one. X requires an exact callback match and its docs specifically call out `127.0.0.1` for local development instead of `localhost`, so the demo uses the loopback address consistently for all provider instructions.
 
 ## Local Account
 

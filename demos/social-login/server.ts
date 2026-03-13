@@ -14,6 +14,7 @@ let providerStates = getSocialProviderStates(config)
 let router = createSocialLoginRouter({ config })
 let demoRoot = path.dirname(fileURLToPath(import.meta.url))
 let relativeDatabasePath = path.relative(demoRoot, socialLoginDatabaseFilePath)
+let localDemoOrigin = 'http://127.0.0.1'
 
 let server = http.createServer(
   createRequestListener(async request => {
@@ -29,7 +30,7 @@ let server = http.createServer(
 let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
-  console.log(`Social login demo is running on http://localhost:${port}`)
+  console.log(`Social login demo is running on ${localDemoOrigin}:${port}`)
   console.log(`SQLite database: ${relativeDatabasePath}`)
   console.log('')
   console.log('Auth providers:')
