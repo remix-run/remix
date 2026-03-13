@@ -1,7 +1,5 @@
 import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
-import { createPostgresDatabaseAdapter } from '@remix-run/data-table-postgres'
-import { Pool } from 'pg'
 
 import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'
 
@@ -11,6 +9,8 @@ import {
   resetJobStorageSchema,
   setupJobStorageSchema,
 } from './test/schema.ts'
+
+import type { Pool } from 'pg'
 
 let integrationEnabled =
   process.env.JOB_DATA_TABLE_INTEGRATION === '1' &&
@@ -24,6 +24,11 @@ describe('data-table job storage (postgres integration)', () => {
     if (!integrationEnabled) {
       return
     }
+
+    let [{ createPostgresDatabaseAdapter }, { Pool }] = await Promise.all([
+      import('@remix-run/data-table-postgres'),
+      import('pg'),
+    ])
 
     pool = new Pool({
       connectionString: process.env.JOB_DATA_TABLE_POSTGRES_URL,
