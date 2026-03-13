@@ -10,15 +10,15 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 import { auth } from '../auth.ts'
 import { requireAuth } from '../require-auth.ts'
 import { Auth } from '../types.ts'
-import { sessionAuth } from './session.ts'
+import { createSessionAuthScheme } from './session.ts'
 
-describe('sessionAuth scheme', () => {
+describe('createSessionAuthScheme scheme', () => {
   it('throws when Session is not available in request context', async () => {
     let router = createRouter({
       middleware: [
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read() {
                 return null
               },
@@ -37,7 +37,7 @@ describe('sessionAuth scheme', () => {
       async () => {
         await router.fetch('https://remix.run/')
       },
-      new Error('Session not found. Make sure session() middleware runs before sessionAuth().'),
+      new Error('Session not found. Make sure session() middleware runs before createSessionAuthScheme().'),
     )
   })
 
@@ -50,7 +50,7 @@ describe('sessionAuth scheme', () => {
         },
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read() {
                 return null
               },
@@ -83,7 +83,7 @@ describe('sessionAuth scheme', () => {
         },
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read(session) {
                 return session.get('auth')
               },
@@ -120,7 +120,7 @@ describe('sessionAuth scheme', () => {
         },
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read(session) {
                 return session.get('auth')
               },
@@ -142,7 +142,7 @@ describe('sessionAuth scheme', () => {
       let session = context.get(Session)
       return Response.json({
         auth: context.get(Auth),
-        sessionAuth: session.get('auth') ?? null,
+        createSessionAuthScheme: session.get('auth') ?? null,
       })
     })
 
@@ -157,7 +157,7 @@ describe('sessionAuth scheme', () => {
           message: 'Session is no longer valid',
         },
       },
-      sessionAuth: null,
+      createSessionAuthScheme: null,
     })
     assert.equal(invalidated, true)
   })
@@ -173,7 +173,7 @@ describe('sessionAuth scheme', () => {
         },
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               name: 'member-session',
               read(session) {
                 return session.get('member')
@@ -207,7 +207,7 @@ describe('sessionAuth scheme', () => {
         sessionMiddleware(cookie, storage),
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read(session) {
                 return session.get('auth')
               },
@@ -239,7 +239,7 @@ describe('sessionAuth scheme', () => {
     router.get('/inspect', ({ get }) =>
       Response.json({
         auth: get(Auth),
-        sessionAuth: get(Session).get('auth') ?? null,
+        createSessionAuthScheme: get(Session).get('auth') ?? null,
       }),
     )
 
@@ -258,7 +258,7 @@ describe('sessionAuth scheme', () => {
       auth: {
         ok: false,
       },
-      sessionAuth: null,
+      createSessionAuthScheme: null,
     })
   })
 })

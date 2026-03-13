@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 
-import { auth, Auth, requireAuth, sessionAuth } from '@remix-run/auth-middleware'
+import { auth, Auth, requireAuth, createSessionAuthScheme } from '@remix-run/auth-middleware'
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
 import { formData } from '@remix-run/form-data-middleware'
@@ -79,7 +79,7 @@ describe('login()', () => {
         sessionMiddleware(cookie, storage),
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read(session) {
                 return session.get('auth') as { userId: string } | null
               },

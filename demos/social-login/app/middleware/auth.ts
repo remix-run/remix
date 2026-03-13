@@ -11,7 +11,7 @@ import type {
   OAuthResult,
   XProfile,
 } from 'remix/auth'
-import { auth, sessionAuth } from 'remix/auth-middleware'
+import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
 import type { Middleware } from 'remix/fetch-router'
 import type { Database as DataTableDatabase } from 'remix/data-table'
 
@@ -84,7 +84,7 @@ export let passwordProvider = createCredentialsAuthProvider({
 export function loadAuth(): Middleware {
   return auth({
     schemes: [
-      sessionAuth<AuthenticatedUser, SocialLoginSession>({
+      createSessionAuthScheme<AuthenticatedUser, SocialLoginSession>({
         read(session) {
           return parseSocialLoginSession(session.get('auth'))
         },

@@ -28,7 +28,7 @@ export interface SessionAuthOptions<
  * @param options Session reading, verification, and invalidation hooks.
  * @returns An auth scheme for use with `auth()`.
  */
-export function sessionAuth<
+export function createSessionAuthScheme<
   identity,
   session_value = unknown,
   scheme extends string = 'session',
@@ -40,7 +40,7 @@ export function sessionAuth<
     async authenticate(context) {
       if (!context.has(Session)) {
         throw new Error(
-          'Session not found. Make sure session() middleware runs before sessionAuth().',
+          'Session not found. Make sure session() middleware runs before createSessionAuthScheme().',
         )
       }
 

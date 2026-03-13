@@ -1,7 +1,7 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { auth, requireAuth as requireAuthenticatedUser, sessionAuth } from 'remix/auth-middleware'
+import { auth, requireAuth as requireAuthenticatedUser, createSessionAuthScheme } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
@@ -18,7 +18,7 @@ interface BookstoreAuthSession {
 export function loadAuth(): Middleware {
   return auth({
     schemes: [
-      sessionAuth<User, BookstoreAuthSession>({
+      createSessionAuthScheme<User, BookstoreAuthSession>({
         read(session) {
           return parseBookstoreAuthSession(session.get('auth'))
         },

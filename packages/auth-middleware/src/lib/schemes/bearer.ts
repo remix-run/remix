@@ -23,7 +23,9 @@ export interface BearerOptions<identity> {
  * @param options Header parsing and token verification options.
  * @returns An auth scheme for use with `auth()`.
  */
-export function bearer<identity>(options: BearerOptions<identity>): AuthScheme<identity> {
+export function createBearerAuthScheme<identity>(
+  options: BearerOptions<identity>,
+): AuthScheme<identity> {
   let name = options.name ?? 'bearer'
   let headerName = options.headerName ?? 'Authorization'
   let scheme = options.scheme ?? 'Bearer'
