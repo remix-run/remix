@@ -188,6 +188,32 @@ describe('jsx', () => {
       let applied = <div mix={[withOnMixin()]} />
     })
 
+    it('accepts extracted on handlers with target-only generics', () => {
+      let onClick = (event: MouseEvent) => {
+        event.preventDefault()
+      }
+      let stopPropagation = (event: Event) => {
+        event.stopPropagation()
+      }
+      let onKeydown = (event: KeyboardEvent) => {
+        event.preventDefault()
+      }
+
+      let button = <button mix={[on<HTMLElement>('click', onClick)]} />
+      let details = (
+        <details
+          mix={[
+            on<HTMLDetailsElement>('mousedown', stopPropagation),
+            on<HTMLDetailsElement>('touchstart', stopPropagation),
+            on<HTMLDetailsElement>('focusin', stopPropagation),
+          ]}
+        />
+      )
+
+      // @ts-expect-error click handlers should not widen to unrelated event payloads
+      let bad = <button mix={[on<HTMLElement>('click', onKeydown)]} />
+    })
+
     it('infers ref mixin node type from host context', () => {
       let element = (
         <button
