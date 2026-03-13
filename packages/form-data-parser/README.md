@@ -5,8 +5,6 @@ A streaming `multipart/form-data` parser that solves memory issues with file upl
 ## Features
 
 - **Drop-in replacement** for `request.formData()` with streaming file upload support
-- **Typed schema parsing** - produces Standard Schema-compatible `FormData` and
-  `URLSearchParams` schemas
 - **Minimal buffering** - processes file upload streams with minimal memory footprint
 - **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
 - **Smart fallback** - automatically uses native `request.formData()` for non-`multipart/form-data` requests
@@ -74,48 +72,8 @@ async function requestHandler(request: Request) {
 }
 ```
 
-### Schema Parsing
-
-The `schema` helpers let you build Standard Schema-compatible validators for an existing
-`FormData` or `URLSearchParams` object. This pairs well with
-[`remix/data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) for
-validating login forms, uploads, and repeated fields without manually calling `get(...)`
-everywhere.
-
-```ts
-import * as f from 'remix/form-data-parser/schema'
-import * as s from 'remix/data-schema'
-import * as checks from 'remix/data-schema/checks'
-import * as coerce from 'remix/data-schema/coerce'
-
-let formData = await request.formData()
-
-let input = s.parse(
-  f.object({
-    email: f.field(coerce.string().pipe(checks.email())),
-    password: f.field(s.string().pipe(checks.minLength(8))),
-    avatar: f.file(s.instanceof_(File)),
-  }),
-  formData,
-)
-```
-
-The same schema also works with `URLSearchParams`:
-
-```ts
-let searchParams = new URL(request.url).searchParams
-
-let filters = s.parse(
-  f.object({
-    query: f.field(s.defaulted(s.optional(s.string()), '')),
-    tags: f.fields(s.array(s.string())),
-  }),
-  searchParams,
-)
-```
-
-Use `fields(...)` and `files(...)` when a field may appear more than once, and use
-`s.parseSafe(...)` when you want validation issues instead of throwing a `ValidationError`.
+To validate the resulting `FormData` object with `remix/data-schema`, use the
+`remix/data-schema/form-data` helpers.
 
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 
@@ -176,6 +134,8 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fo
 
 ## Related Packages
 
+- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny,
+  standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
 - [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 

@@ -20,7 +20,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -29,15 +28,10 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./schema": {
-        "types": "./dist/schema.d.ts",
-        "default": "./dist/schema.js"
-      },
       "./package.json": "./package.json"
     }
   },
   "dependencies": {
-    "@remix-run/data-schema": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^"
   },
   "devDependencies": {

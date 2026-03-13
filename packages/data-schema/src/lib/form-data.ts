@@ -1,5 +1,5 @@
-import type { InferOutput, Issue, ParseOptions, Schema } from '@remix-run/data-schema'
-import { createIssue, createSchema, fail } from '@remix-run/data-schema'
+import type { InferOutput, Issue, ParseOptions, Schema } from './schema.ts'
+import { createIssue, createSchema, fail } from './schema.ts'
 
 type FormDataEntryKind = 'field' | 'fields' | 'file' | 'files'
 

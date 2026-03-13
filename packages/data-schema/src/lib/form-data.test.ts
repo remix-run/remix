@@ -1,13 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import * as s from '@remix-run/data-schema'
-import { minLength } from '@remix-run/data-schema/checks'
-import * as coerce from '@remix-run/data-schema/coerce'
+import * as coerce from '../coerce.ts'
+import * as f from '../form-data.ts'
+import { minLength } from './checks.ts'
+import * as s from './schema.ts'
 
-import * as f from '../schema.ts'
-
-describe('object', () => {
+describe('form-data.object', () => {
   it('parses single text fields', () => {
     let formData = new FormData()
     formData.set('email', 'ada@example.com')

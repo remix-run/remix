@@ -23,6 +23,7 @@
     ".": "./src/index.ts",
     "./checks": "./src/checks.ts",
     "./coerce": "./src/coerce.ts",
+    "./form-data": "./src/form-data.ts",
     "./lazy": "./src/lazy.ts",
     "./package.json": "./package.json"
   },
@@ -39,6 +40,10 @@
       "./coerce": {
         "types": "./dist/coerce.d.ts",
         "default": "./dist/coerce.js"
+      },
+      "./form-data": {
+        "types": "./dist/form-data.d.ts",
+        "default": "./dist/form-data.js"
       },
       "./lazy": {
         "types": "./dist/lazy.d.ts",

@@ -1,2 +1,2 @@
 // IMPORTANT: This file is auto-generated, please do not edit manually.
-export * from '@remix-run/form-data-parser/schema'
+export * from '@remix-run/data-schema/form-data'

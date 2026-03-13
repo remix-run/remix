@@ -1,7 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
-import * as f from '@remix-run/form-data-parser/schema'
 import * as s from '@remix-run/data-schema'
+import * as f from '@remix-run/data-schema/form-data'
 import { Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'

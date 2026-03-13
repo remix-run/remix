@@ -31,6 +31,7 @@
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
     "./data-table-mysql": "./src/data-table-mysql.ts",
@@ -50,7 +51,6 @@
     "./file-storage/memory": "./src/file-storage/memory.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./form-data-parser": "./src/form-data-parser.ts",
-    "./form-data-parser/schema": "./src/form-data-parser/schema.ts",
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./html-template": "./src/html-template.ts",
@@ -132,6 +132,10 @@
         "types": "./dist/data-schema/coerce.d.ts",
         "default": "./dist/data-schema/coerce.js"
       },
+      "./data-schema/form-data": {
+        "types": "./dist/data-schema/form-data.d.ts",
+        "default": "./dist/data-schema/form-data.js"
+      },
       "./data-schema/lazy": {
         "types": "./dist/data-schema/lazy.d.ts",
         "default": "./dist/data-schema/lazy.js"
@@ -207,10 +211,6 @@
       "./form-data-parser": {
         "types": "./dist/form-data-parser.d.ts",
         "default": "./dist/form-data-parser.js"
-      },
-      "./form-data-parser/schema": {
-        "types": "./dist/form-data-parser/schema.d.ts",
-        "default": "./dist/form-data-parser/schema.js"
       },
       "./fs": {
         "types": "./dist/fs.d.ts",

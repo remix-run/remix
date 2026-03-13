@@ -1,3 +1,3 @@
 Added `package.json` `exports`:
 
-- `remix/form-data-parser/schema` to re-export APIs from `@remix-run/form-data-parser/schema`
+- `remix/data-schema/form-data` to re-export APIs from `@remix-run/data-schema/form-data`

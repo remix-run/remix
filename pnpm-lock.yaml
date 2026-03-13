@@ -556,9 +556,6 @@ importers:
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema
-      '@remix-run/form-data-parser':
-        specifier: workspace:^
-        version: link:../form-data-parser
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -727,9 +724,6 @@ importers:
 
   packages/form-data-parser:
     dependencies:
-      '@remix-run/data-schema':
-        specifier: workspace:^
-        version: link:../data-schema
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser

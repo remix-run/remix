@@ -1,7 +1,7 @@
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
-import * as f from 'remix/form-data-parser/schema'
 import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
