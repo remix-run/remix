@@ -102,9 +102,9 @@ await scheduler.enqueue(
 )
 ```
 
-## Failed Jobs and Replay
+## Retrying Failed Jobs
 
-When a job exhausts retries, it remains in storage with `status: 'failed'` and can be inspected or replayed.
+When a job exhausts retries, it remains in storage with `status: 'failed'` and can be inspected or retried.
 
 ```ts
 let failedJobs = await scheduler.listFailedJobs({
@@ -116,7 +116,7 @@ for (let job of failedJobs) {
   console.error('failed job', job.id, job.lastError)
 }
 
-let replayed = await scheduler.replayFailedJob(failedJobs[0].id, {
+let retried = await scheduler.retryFailedJob(failedJobs[0].id, {
   priority: 10,
 })
 ```

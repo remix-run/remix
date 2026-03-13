@@ -10,7 +10,7 @@ import type {
   JobWriteOptions,
   JobFailureInput,
   ListFailedJobsInput,
-  ReplayFailedJobInput,
+  RetryFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
 } from '@remix-run/job/storage'
@@ -180,8 +180,8 @@ export function createDataTableJobStorage(
         return (rows.rows ?? []).map(toJobRecord)
       })
     },
-    replayFailedJob(
-      input: ReplayFailedJobInput,
+    retryFailedJob(
+      input: RetryFailedJobInput,
       writeOptions?: JobWriteOptions<Database>,
     ): Promise<{ jobId: string } | null> {
       let db = writeOptions?.transaction ?? baseDb
@@ -202,7 +202,7 @@ export function createDataTableJobStorage(
 
           let sourceJob = toJobRecord(source)
           let now = Date.now()
-          let replayedJobId = crypto.randomUUID()
+          let retriedJobId = crypto.randomUUID()
 
           await database.exec(
             rawSql(
@@ -213,7 +213,7 @@ export function createDataTableJobStorage(
                 ') values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
               ].join(''),
               [
-                replayedJobId,
+                retriedJobId,
                 sourceJob.name,
                 input.queue ?? sourceJob.queue,
                 JSON.stringify(sourceJob.payload),
@@ -230,7 +230,7 @@ export function createDataTableJobStorage(
           )
 
           return {
-            jobId: replayedJobId,
+            jobId: retriedJobId,
           }
         }),
       )

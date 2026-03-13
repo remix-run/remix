@@ -16,7 +16,7 @@ let scriptDefinitions: ScriptDefinition[] = [
   { exportName: 'COMPLETE_JOB_SCRIPT', fileName: 'complete-job.lua' },
   { exportName: 'FAIL_JOB_SCRIPT', fileName: 'fail-job.lua' },
   { exportName: 'LIST_FAILED_JOBS_SCRIPT', fileName: 'list-failed-jobs.lua' },
-  { exportName: 'REPLAY_FAILED_JOB_SCRIPT', fileName: 'replay-failed-job.lua' },
+  { exportName: 'RETRY_FAILED_JOB_SCRIPT', fileName: 'retry-failed-job.lua' },
   { exportName: 'PRUNE_JOBS_SCRIPT', fileName: 'prune-jobs.lua' },
 ]
 

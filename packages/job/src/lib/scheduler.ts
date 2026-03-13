@@ -12,13 +12,13 @@ import type {
   JobScheduler,
   PruneOptions,
   PruneResult,
-  ReplayFailedJobOptions,
-  ReplayFailedJobResult,
+  RetryFailedJobOptions,
+  RetryFailedJobResult,
   SchedulerCancelEvent,
   SchedulerEnqueueEvent,
   SchedulerHookName,
   SchedulerPruneEvent,
-  SchedulerReplayFailedJobEvent,
+  SchedulerRetryFailedJobEvent,
   SchedulerHooks,
 } from './types.ts'
 import type { JobStorage } from './storage.ts'
@@ -136,38 +136,38 @@ export function createJobScheduler<
         limit: normalizeOptionalWholeNumber(failedJobOptions?.limit, 50, 1),
       })
     },
-    async replayFailedJob(
+    async retryFailedJob(
       jobId: string,
-      replayOptions?: ReplayFailedJobOptions<transaction>,
-    ): Promise<ReplayFailedJobResult> {
-      let replayed = await storage.replayFailedJob(
+      retryOptions?: RetryFailedJobOptions<transaction>,
+    ): Promise<RetryFailedJobResult> {
+      let retried = await storage.retryFailedJob(
         {
           jobId,
-          runAt: replayOptions?.runAt?.getTime(),
+          runAt: retryOptions?.runAt?.getTime(),
           priority:
-            replayOptions?.priority == null
+            retryOptions?.priority == null
               ? undefined
-              : normalizeWholeNumber(replayOptions.priority, 0, Number.MIN_SAFE_INTEGER),
-          queue: replayOptions?.queue,
+              : normalizeWholeNumber(retryOptions.priority, 0, Number.MIN_SAFE_INTEGER),
+          queue: retryOptions?.queue,
         },
         {
-          transaction: replayOptions?.transaction,
+          transaction: retryOptions?.transaction,
         },
       )
 
-      if (replayed == null) {
-        throw new Error(`Cannot replay job "${jobId}": job not found or not failed`)
+      if (retried == null) {
+        throw new Error(`Cannot retry failed job "${jobId}": job not found or not failed`)
       }
 
       let result = {
-        jobId: replayed.jobId,
+        jobId: retried.jobId,
       }
 
       await runSchedulerHook(hooks, {
-        hook: 'onReplayFailedJob',
+        hook: 'onRetryFailedJob',
         event: {
           jobId,
-          options: replayOptions,
+          options: retryOptions,
           result,
         },
       })
@@ -279,12 +279,12 @@ async function runSchedulerHook<
       return
     }
 
-    if (invocation.hook === 'onReplayFailedJob') {
-      if (hooks.onReplayFailedJob == null) {
+    if (invocation.hook === 'onRetryFailedJob') {
+      if (hooks.onRetryFailedJob == null) {
         return
       }
 
-      await hooks.onReplayFailedJob(invocation.event)
+      await hooks.onRetryFailedJob(invocation.event)
       return
     }
 
@@ -330,7 +330,7 @@ type SchedulerHookEventMap<
 > = {
   onEnqueue: SchedulerEnqueueEvent<defs, transaction>
   onCancel: SchedulerCancelEvent<transaction>
-  onReplayFailedJob: SchedulerReplayFailedJobEvent<transaction>
+  onRetryFailedJob: SchedulerRetryFailedJobEvent<transaction>
   onPrune: SchedulerPruneEvent<transaction>
 }
 

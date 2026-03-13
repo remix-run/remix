@@ -45,7 +45,7 @@ await scheduler.enqueue(jobs.sendEmail, {
 let failedJobs = await scheduler.listFailedJobs({ limit: 20 })
 
 if (failedJobs.length > 0) {
-  await scheduler.replayFailedJob(failedJobs[0].id)
+  await scheduler.retryFailedJob(failedJobs[0].id)
 }
 
 await scheduler.prune({

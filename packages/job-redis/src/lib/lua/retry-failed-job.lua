@@ -1,11 +1,11 @@
 local sourceJobKey = KEYS[1]
-local replayJobKey = KEYS[2]
+local retryJobKey = KEYS[2]
 local dueKey = KEYS[3]
 local completedKey = KEYS[4]
 local failedKey = KEYS[5]
 local canceledKey = KEYS[6]
 local sourceJobId = ARGV[1]
-local replayJobId = ARGV[2]
+local retryJobId = ARGV[2]
 local now = ARGV[3]
 local runAt = ARGV[4]
 local priorityOverride = ARGV[5]
@@ -50,8 +50,8 @@ end
 
 redis.call(
   'HSET',
-  replayJobKey,
-  'id', replayJobId,
+  retryJobKey,
+  'id', retryJobId,
   'name', sourceName,
   'queue', queue,
   'payload', sourcePayload,
@@ -71,9 +71,9 @@ redis.call(
   'lockedUntil', '0'
 )
 
-redis.call('ZADD', dueKey, runAt, replayJobId)
-redis.call('ZREM', completedKey, replayJobId)
-redis.call('ZREM', failedKey, replayJobId)
-redis.call('ZREM', canceledKey, replayJobId)
+redis.call('ZADD', dueKey, runAt, retryJobId)
+redis.call('ZREM', completedKey, retryJobId)
+redis.call('ZREM', failedKey, retryJobId)
+redis.call('ZREM', canceledKey, retryJobId)
 
-return replayJobId
+return retryJobId

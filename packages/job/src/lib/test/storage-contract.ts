@@ -188,7 +188,7 @@ export function runJobStorageContract<transaction = never>(
       assert.equal(reclaimed[0].attempts, 2)
     })
 
-    it('lists failed jobs and replays failed jobs', { skip: !enabled }, async () => {
+    it('lists failed jobs and retries failed jobs', { skip: !enabled }, async () => {
       let jobs = createJobs({
         alwaysFail: {
           schema: s.object({ id: s.string() }),
@@ -223,24 +223,24 @@ export function runJobStorageContract<transaction = never>(
       let failedJobs = await storage.listFailedJobs({ limit: 10 })
       assert.ok(failedJobs.some((job) => job.id === enqueued.jobId))
 
-      let replayed = await storage.replayFailedJob({
+      let retried = await storage.retryFailedJob({
         jobId: enqueued.jobId,
         priority: 99,
       })
-      assert.ok(replayed)
-      assert.notEqual(replayed.jobId, enqueued.jobId)
+      assert.ok(retried)
+      assert.notEqual(retried.jobId, enqueued.jobId)
 
       let original = await scheduler.get(enqueued.jobId)
       assert.ok(original)
       assert.equal(original.status, 'failed')
 
-      let replayedJob = await scheduler.get(replayed.jobId)
-      assert.ok(replayedJob)
-      assert.equal(replayedJob.status, 'queued')
-      assert.equal(replayedJob.priority, 99)
+      let retriedJob = await scheduler.get(retried.jobId)
+      assert.ok(retriedJob)
+      assert.equal(retriedJob.status, 'queued')
+      assert.equal(retriedJob.priority, 99)
     })
 
-    it('returns null when replaying missing or non-failed jobs', { skip: !enabled }, async () => {
+    it('returns null when retrying missing or non-failed jobs', { skip: !enabled }, async () => {
       let queued = await storage.enqueue({
         name: 'not-failed',
         queue: 'default',
@@ -258,13 +258,13 @@ export function runJobStorageContract<transaction = never>(
       })
 
       assert.equal(
-        await storage.replayFailedJob({
+        await storage.retryFailedJob({
           jobId: 'missing-job-id',
         }),
         null,
       )
       assert.equal(
-        await storage.replayFailedJob({
+        await storage.retryFailedJob({
           jobId: queued.jobId,
         }),
         null,
