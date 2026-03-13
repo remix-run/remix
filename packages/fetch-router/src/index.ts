@@ -9,5 +9,7 @@ export { RequestContext } from './lib/request-context.ts'
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
+export type { CrawlOptions, CrawlResult } from './lib/crawl.ts'
+export { crawl } from './lib/crawl.ts'
 export { createRouter } from './lib/router.ts'
 export type { MatchData, Router, RouterOptions } from './lib/router.ts'
