@@ -25,7 +25,7 @@ import { route } from 'remix/fetch-router/routes'
 import {
   auth,
   Auth,
-  createBearerAuthScheme,
+  createBearerTokenAuthScheme,
   requireAuth,
 } from 'remix/auth-middleware'
 
@@ -37,7 +37,7 @@ let router = createRouter({
   middleware: [
     auth({
       schemes: [
-        createBearerAuthScheme({
+        createBearerTokenAuthScheme({
           async verify(token) {
             if (token === 'token-123') {
               return { id: 'u1', role: 'user' }
@@ -89,7 +89,7 @@ When implementing custom schemes, return `null`, `undefined`, or no value from `
 An auth scheme is any object with a `name` and an `authenticate(context)` method.
 This package ships with three auth-scheme helpers:
 
-- `createBearerAuthScheme()` for bearer tokens in `Authorization`
+- `createBearerTokenAuthScheme()` for bearer tokens in `Authorization`
 - `createAPIAuthScheme()` for API keys in a request header
 - `createSessionAuthScheme()` for session-backed auth loaded by `session()`
 
@@ -143,16 +143,16 @@ The built-in helpers all return `AuthScheme` objects. Use them directly, mix the
 
 ### Bearer Tokens
 
-Use `createBearerAuthScheme()` for APIs that authenticate requests with `Authorization: Bearer <token>`.
+Use `createBearerTokenAuthScheme()` for APIs that authenticate requests with `Authorization: Bearer <token>`.
 
 ```ts
-import { auth, createBearerAuthScheme } from 'remix/auth-middleware'
+import { auth, createBearerTokenAuthScheme } from 'remix/auth-middleware'
 
 let router = createRouter({
   middleware: [
     auth({
       schemes: [
-        createBearerAuthScheme({
+        createBearerTokenAuthScheme({
           async verify(token) {
             return usersByToken.get(token) ?? null
           },
@@ -240,7 +240,7 @@ import {
   auth,
   Auth,
   createAPIAuthScheme,
-  createBearerAuthScheme,
+  createBearerTokenAuthScheme,
   requireAuth,
 } from 'remix/auth-middleware'
 
@@ -270,7 +270,7 @@ let servicesByKey = new Map([
   ['key_analytics', { id: 'svc-analytics', scope: 'analytics:read' }],
 ])
 
-let bearerScheme = createBearerAuthScheme({
+let bearerScheme = createBearerTokenAuthScheme({
   verify(token) {
     return usersByToken.get(token) ?? null
   },
@@ -397,7 +397,7 @@ router.map(routes.api.apiKeyOnly, {
 
 ## Built-In Schemes
 
-### `createBearerAuthScheme(options)`
+### `createBearerTokenAuthScheme(options)`
 
 Reads tokens from `Authorization` (default) using the `Bearer <token>` format.
 
