@@ -1,3 +1,0 @@
-Forward hydrated client entry, frame reload, and `ready()` initialization errors to the top-level runtime target returned by `run()`, and type that runtime as a `TypedEventTarget` with an `error` event whose `.error` value is `unknown`.
-
-This lets `app.addEventListener('error', ...)` observe bubbling DOM errors captured by hydrated client entry roots, frame reload failures such as rejected `resolveFrame()` calls, and initialization failures that reject `app.ready()`, while also giving TypeScript-aware consumers the concrete event names and safer payload types exposed by `run()` and root listeners.
