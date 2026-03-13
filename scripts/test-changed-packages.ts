@@ -1,6 +1,7 @@
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 type PackageInfo = {
   dirName: string
@@ -207,4 +208,11 @@ function getSelectedPackageNames(
     .filter((packageName) => selectedPackages.has(packageName))
 }
 
-main()
+let isCliEntryPoint =
+  process.argv[1] != null &&
+  !process.execArgv.some((arg) => arg === '--test' || arg.startsWith('--test-')) &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+
+if (isCliEntryPoint) {
+  main()
+}
