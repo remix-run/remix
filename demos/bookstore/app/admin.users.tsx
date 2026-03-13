@@ -1,6 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
-import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { users } from './data/schema.ts'
@@ -9,6 +11,16 @@ import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { RestfulForm } from './components/restful-form.tsx'
+
+const textField = f.field(s.defaulted(s.string(), ''))
+const roleField = f.field(
+  s.defaulted(s.union([s.literal('customer'), s.literal('admin')]), 'customer'),
+)
+const userSchema = f.object({
+  name: textField,
+  email: textField,
+  role: roleField,
+})
 
 export default {
   actions: {
@@ -200,11 +212,13 @@ export default {
       let formData = get(FormData)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
+      let { email, name, role } = s.parse(userSchema, formData)
+
       if (targetUser) {
         await db.update(users, targetUser.id, {
-          name: formData.get('name')?.toString() ?? '',
-          email: formData.get('email')?.toString() ?? '',
-          role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
+          name,
+          email,
+          role,
         })
       }
 

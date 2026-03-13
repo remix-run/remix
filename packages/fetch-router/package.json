@@ -38,6 +38,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/data-schema": "workspace:^",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },

@@ -78,7 +78,9 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   if (baseRef === '') {
-    throw new Error('Usage: node ./scripts/test-changed-packages.ts <base-ref> [head-ref] [--list]')
+    throw new Error(
+      'Usage: node ./scripts/detect-changed-packages.ts <base-ref> [head-ref] [--list]',
+    )
   }
 
   return { baseRef, headRef, listOnly }

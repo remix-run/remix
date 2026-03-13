@@ -94,7 +94,7 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
       - name: Run changed package tests
-        run: node ./scripts/test-changed-packages.ts origin/${{ github.base_ref }}
+        run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
 
   test-windows-main:
     name: test (windows-latest)

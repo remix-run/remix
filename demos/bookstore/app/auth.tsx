@@ -1,6 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
-import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { passwordResetTokens, users } from './data/schema.ts'
@@ -8,6 +10,24 @@ import { Document } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
+
+const textField = f.field(s.defaulted(s.string(), ''))
+const loginSchema = f.object({
+  email: textField,
+  password: textField,
+})
+const registrationSchema = f.object({
+  name: textField,
+  email: textField,
+  password: textField,
+})
+const forgotPasswordSchema = f.object({
+  email: textField,
+})
+const resetPasswordSchema = f.object({
+  password: textField,
+  confirmPassword: textField,
+})
 
 export default {
   middleware: [loadAuth()],
@@ -18,7 +38,7 @@ export default {
           let session = get(Session)
           let error = session.get('error')
           let formAction = routes.auth.login.action.href(undefined, {
-            returnTo: url.searchParams.get('returnTo'),
+            returnTo: url.searchParams.get('returnTo') ?? undefined,
           })
 
           return render(
@@ -88,11 +108,11 @@ export default {
         async action({ db, get, url }) {
           let session = get(Session)
           let formData = get(FormData)
-          let email = formData.get('email')?.toString() ?? ''
-          let password = formData.get('password')?.toString() ?? ''
-          let returnTo = url.searchParams.get('returnTo')
+          let { email, password } = s.parse(loginSchema, formData)
+          let returnTo = url.searchParams.get('returnTo') ?? undefined
+          let normalizedEmail = normalizeEmail(email)
 
-          let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+          let user = await db.findOne(users, { where: { email: normalizedEmail } })
           if (!user || user.password !== password) {
             session.flash('error', 'Invalid email or password. Please try again.')
             return redirect(routes.auth.login.index.href(undefined, { returnTo }))
@@ -151,12 +171,11 @@ export default {
         async action({ db, get }) {
           let session = get(Session)
           let formData = get(FormData)
-          let name = formData.get('name')?.toString() ?? ''
-          let email = formData.get('email')?.toString() ?? ''
-          let password = formData.get('password')?.toString() ?? ''
+          let { email, name, password } = s.parse(registrationSchema, formData)
+          let normalizedEmail = normalizeEmail(email)
 
           // Check if user already exists
-          if (await db.findOne(users, { where: { email: normalizeEmail(email) } })) {
+          if (await db.findOne(users, { where: { email: normalizedEmail } })) {
             return render(
               <Document>
                 <div class="card" mix={[css({ maxWidth: '500px', margin: '2rem auto' })]}>
@@ -182,7 +201,7 @@ export default {
           let user = await db.create(
             users,
             {
-              email,
+              email: normalizedEmail,
               password,
               name,
             },
@@ -232,8 +251,9 @@ export default {
 
         async action({ db, get }) {
           let formData = get(FormData)
-          let email = formData.get('email')?.toString() ?? ''
-          let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+          let { email } = s.parse(forgotPasswordSchema, formData)
+          let normalizedEmail = normalizeEmail(email)
+          let user = await db.findOne(users, { where: { email: normalizedEmail } })
           let token = undefined as string | undefined
 
           if (user) {
@@ -341,8 +361,7 @@ export default {
         async action({ db, get, params }) {
           let session = get(Session)
           let formData = get(FormData)
-          let password = formData.get('password')?.toString() ?? ''
-          let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
+          let { confirmPassword, password } = s.parse(resetPasswordSchema, formData)
           let token = params.token
 
           if (!token) {
