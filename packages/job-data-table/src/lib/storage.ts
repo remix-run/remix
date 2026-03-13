@@ -28,11 +28,21 @@ type StorageTables = {
 }
 
 export interface DataTableJobStorageOptions {
+  /**
+   * Data-table database handle used to persist job state.
+   */
   db: Database
+
+  /**
+   * Prefix applied to the jobs, dedupe, and schedules tables. Defaults to `"job_"`.
+   */
   tablePrefix?: string
 }
 
 export interface DataTableJobStorageMigrationOptions {
+  /**
+   * Prefix applied to the jobs, dedupe, and schedules tables. Defaults to `"job_"`.
+   */
   tablePrefix?: string
 }
 
