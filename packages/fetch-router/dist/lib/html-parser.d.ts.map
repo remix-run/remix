@@ -1,0 +1,1 @@
+{"version":3,"file":"html-parser.d.ts","sourceRoot":"","sources":["../../src/lib/html-parser.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,WAAW;IAC1B,IAAI,EAAE,MAAM,CAAA;IACZ,YAAY,CAAC,IAAI,EAAE,MAAM,GAAG,MAAM,GAAG,IAAI,CAAA;CAC1C;AAmCD,wBAAgB,KAAK,CAAC,IAAI,EAAE,MAAM,GAAG,WAAW,EAAE,CAuLjD"}
