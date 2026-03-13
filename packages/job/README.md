@@ -31,7 +31,7 @@ let jobs = createJobs({
   },
 })
 
-let storage = createDataTableJobStorage({ db })
+let storage = createDataTableJobStorage(db)
 let scheduler = createJobScheduler(jobs, storage)
 
 let enqueued = await scheduler.enqueue(jobs.sendEmail, {

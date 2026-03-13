@@ -30,11 +30,6 @@ export interface RedisJobStorageClient {
 
 export interface RedisJobStorageOptions {
   /**
-   * Redis client or compatible adapter used to execute commands.
-   */
-  redis: RedisJobStorageClient
-
-  /**
    * Prefix applied to all Redis keys managed by the storage. Defaults to `"job:"`.
    */
   prefix?: string
@@ -43,11 +38,14 @@ export interface RedisJobStorageOptions {
 /**
  * Creates a Redis-backed `JobStorage` implementation.
  *
- * @param options Storage configuration
+ * @param redis Redis client or compatible adapter used to execute commands
+ * @param options Optional storage configuration
  * @returns A `JobStorage` that persists jobs in Redis
  */
-export function createRedisJobStorage(options: RedisJobStorageOptions): JobStorage {
-  let redis = options.redis
+export function createRedisJobStorage(
+  redis: RedisJobStorageClient,
+  options: RedisJobStorageOptions = {},
+): JobStorage {
   let keys = createKeys(normalizePrefix(options.prefix))
 
   return {

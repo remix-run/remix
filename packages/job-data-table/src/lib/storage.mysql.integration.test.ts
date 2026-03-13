@@ -45,9 +45,6 @@ describe('data-table job storage (mysql integration)', () => {
       await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
     },
     createStorage: async () =>
-      createDataTableJobStorage({
-        db: database,
-        tablePrefix: DEFAULT_TEST_TABLE_PREFIX,
-      }),
+      createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX }),
   })
 })

@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { getTableName } from '@remix-run/data-table'
 
-import { createDataTableJobStorageMigration } from './storage.ts'
+import type { Database } from '@remix-run/data-table'
+
+import { createDataTableJobStorage, createDataTableJobStorageMigration } from './storage.ts'
 
 describe('createDataTableJobStorageMigration', () => {
   it('creates prefixed tables and indexes', async () => {
@@ -63,3 +65,14 @@ describe('createDataTableJobStorageMigration', () => {
     }, /tablePrefix may only contain letters, numbers, and underscores/)
   })
 })
+
+function assertDataTableStorageConstructorTyping(): void {
+  let db = {} as Database
+
+  void createDataTableJobStorage(db)
+  void createDataTableJobStorage(db, { tablePrefix: 'custom_' })
+  // @ts-expect-error Database must be passed as the first argument.
+  void createDataTableJobStorage({ db })
+}
+
+void assertDataTableStorageConstructorTyping
