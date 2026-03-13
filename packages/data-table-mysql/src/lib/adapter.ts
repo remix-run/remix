@@ -19,45 +19,15 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
+import type {
+  Connection as MysqlConnection,
+  Pool as MysqlPool,
+  PoolConnection as MysqlPoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from 'mysql2/promise'
 
 import { compileMysqlOperation } from './sql-compiler.ts'
-
-/**
- * Row-array response shape for mysql query calls.
- */
-export type MysqlQueryRows = Record<string, unknown>[]
-
-/**
- * Metadata shape for mysql write results.
- */
-export type MysqlQueryResultHeader = {
-  affectedRows: number
-  insertId: unknown
-}
-
-/**
- * Supported mysql `query()` response tuple.
- */
-export type MysqlQueryResponse = [result: unknown, fields?: unknown]
-
-/**
- * Single mysql connection contract used by this adapter.
- */
-export type MysqlDatabaseConnection = {
-  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
-  beginTransaction(): Promise<void>
-  commit(): Promise<void>
-  rollback(): Promise<void>
-  release?: () => void
-}
-
-/**
- * Mysql pool contract used by this adapter.
- */
-export type MysqlDatabasePool = {
-  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
-  getConnection(): Promise<MysqlDatabaseConnection>
-}
 
 /**
  * Mysql adapter configuration.
@@ -67,11 +37,17 @@ export type MysqlDatabaseAdapterOptions = {
 }
 
 type TransactionState = {
-  connection: MysqlDatabaseConnection
+  connection: MysqlTransactionConnection
   releaseOnClose: boolean
 }
 
-type MysqlQueryable = MysqlDatabasePool | MysqlDatabaseConnection
+type MysqlQueryRows = RowDataPacket[]
+type MysqlQueryResultHeader = {
+  affectedRows: number
+  insertId: unknown
+}
+type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
+type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
 /**
  * `DatabaseAdapter` implementation for mysql-compatible clients.
@@ -227,7 +203,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     let releaseOnClose = false
-    let connection: MysqlDatabaseConnection
+    let connection: MysqlTransactionConnection
 
     if (isMysqlPool(this.#client)) {
       connection = await this.#client.getConnection()
@@ -276,8 +252,8 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose) {
-        transaction.connection.release?.()
+      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
+        transaction.connection.release()
       }
     }
   }
@@ -299,8 +275,8 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose) {
-        transaction.connection.release?.()
+      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
+        transaction.connection.release()
       }
     }
   }
@@ -354,7 +330,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     await this.#client.query('select release_lock(?)', ['data_table_migrations'])
   }
 
-  #resolveClient(token: TransactionToken | undefined): MysqlDatabaseConnection | MysqlDatabasePool {
+  #resolveClient(token: TransactionToken | undefined): MysqlQueryable {
     if (!token) {
       return this.#client
     }
@@ -362,7 +338,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return this.#transactionConnection(token)
   }
 
-  #transactionConnection(token: TransactionToken): MysqlDatabaseConnection {
+  #transactionConnection(token: TransactionToken): MysqlTransactionConnection {
     let transaction = this.#transactions.get(token.id)
 
     if (!transaction) {
@@ -396,8 +372,14 @@ export function createMysqlDatabaseAdapter(
   return new MysqlDatabaseAdapter(client, options)
 }
 
-function isMysqlPool(client: MysqlQueryable): client is MysqlDatabasePool {
-  return typeof (client as MysqlDatabasePool).getConnection === 'function'
+function isMysqlPool(client: MysqlQueryable): client is MysqlPool {
+  return 'getConnection' in client && typeof client.getConnection === 'function'
+}
+
+function isMysqlPoolConnection(
+  connection: MysqlTransactionConnection,
+): connection is MysqlPoolConnection {
+  return 'release' in connection && typeof connection.release === 'function'
 }
 
 function isRowsResult(result: unknown): result is MysqlQueryRows {
@@ -430,7 +412,7 @@ function normalizeRows(rows: MysqlQueryRows): Record<string, unknown>[] {
 
 function normalizeHeader(result: unknown): MysqlQueryResultHeader {
   if (typeof result === 'object' && result !== null) {
-    let header = result as { affectedRows?: unknown; insertId?: unknown }
+    let header = result as Partial<ResultSetHeader>
 
     return {
       affectedRows: typeof header.affectedRows === 'number' ? header.affectedRows : 0,

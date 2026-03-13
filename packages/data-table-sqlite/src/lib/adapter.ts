@@ -24,11 +24,6 @@ import type { Database as BetterSqliteDatabase, RunResult } from 'better-sqlite3
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 /**
- * Better SQLite3 database handle accepted by the sqlite adapter.
- */
-export type SqliteDatabaseConnection = BetterSqliteDatabase
-
-/**
  * Sqlite adapter configuration.
  */
 export type SqliteDatabaseAdapterOptions = {
@@ -49,11 +44,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
-  #database: SqliteDatabaseConnection
+  #database: BetterSqliteDatabase
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: SqliteDatabaseConnection, options?: SqliteDatabaseAdapterOptions) {
+  constructor(database: BetterSqliteDatabase, options?: SqliteDatabaseAdapterOptions) {
     this.#database = database
     this.capabilities = {
       returning: options?.capabilities?.returning ?? true,
@@ -279,7 +274,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createSqliteDatabaseAdapter(
-  database: SqliteDatabaseConnection,
+  database: BetterSqliteDatabase,
   options?: SqliteDatabaseAdapterOptions,
 ): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(database, options)

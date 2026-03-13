@@ -5,7 +5,7 @@ Use this package when you want `data-table` APIs backed by `mysql2`.
 
 ## Features
 
-- **Native `mysql2` Integration**: Works with `mysql2/promise` connection pools
+- **Native `mysql2` Integration**: Works with `mysql2/promise` `Pool` and `PoolConnection` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
 - **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
@@ -34,6 +34,7 @@ let db = createDatabase(createMysqlDatabaseAdapter(pool))
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
+Import any driver-specific types you need directly from `mysql2/promise`.
 
 ## Adapter Capabilities
 
