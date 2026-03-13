@@ -66,10 +66,11 @@ A skill is a reusable local instruction set stored in a `SKILL.md` file.
 ### Available skills
 
 - **add-package**: Create or align a package in the Remix monorepo to match existing package conventions. Use when adding a brand new package under packages/, or when fixing an existing package's structure, test setup, TypeScript/build config, code style, and README layout to match the rest of Remix 3. (file: `./.agents/skills/add-package/SKILL.md`)
-- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./.agents/skills/supersede-pr/SKILL.md`)
+- **make-change-file**: Create or update package change files using Remix repo conventions, deterministic naming, and release-note style. (file: `./.agents/skills/make-change-file/SKILL.md`)
+- **make-demo**: Create or revise demos in the Remix repository so they stay focused on Remix packages, strong code hygiene, and production-quality patterns. (file: `./.agents/skills/make-demo/SKILL.md`)
 - **make-pr**: Create GitHub pull requests with clear context, issue/feature bullets, and required usage examples for new or changed APIs. (file: `./.agents/skills/make-pr/SKILL.md`)
 - **publish-placeholder-package**: Publish a minimal npm package at `0.0.0` to reserve the name and enable npm OIDC setup before CI-based publishing. (file: `./.agents/skills/publish-placeholder-package/SKILL.md`)
+- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./.agents/skills/supersede-pr/SKILL.md`)
 - **update-pr**: Rewrite GitHub PR titles and descriptions from scratch so they match the PR as it exists now, and always review the title when updating the body. (file: `./.agents/skills/update-pr/SKILL.md`)
-- **make-change-file**: Create or update package change files using Remix repo conventions, deterministic naming, and release-note style. (file: `./.agents/skills/make-change-file/SKILL.md`)
 - **write-api-docs**: Write or audit public API docs for Remix packages. Use when adding or tightening JSDoc on exported functions, classes, interfaces, type aliases, or option objects. (file: `./.agents/skills/write-api-docs/SKILL.md`)
 - **write-readme**: Write or rewrite Remix package READMEs using this repo's structure, installation conventions, production-style examples, and section ordering. (file: `./.agents/skills/write-readme/SKILL.md`)
