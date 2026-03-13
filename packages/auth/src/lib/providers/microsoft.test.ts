@@ -6,7 +6,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { login } from '../login.ts'
+import { createAuthLoginRequestHandler } from '../login.ts'
 import { mockFetch } from '../test-utils.ts'
 import { createMicrosoftAuthProvider } from './microsoft.ts'
 
@@ -41,7 +41,7 @@ describe('microsoft provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/microsoft', login(provider))
+      router.get('/login/microsoft', createAuthLoginRequestHandler(provider))
 
       let response = await router.fetch('https://app.example.com/login/microsoft')
 
