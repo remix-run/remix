@@ -18,7 +18,7 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let worker = createJobWorker({
       jobs,
       storage,
@@ -52,7 +52,7 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let worker = createJobWorker({
       jobs,
       storage,
@@ -106,7 +106,7 @@ describe('createJobWorker', () => {
         },
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let threwStartHook = false
     let worker = createJobWorker({
       jobs,
@@ -181,7 +181,7 @@ describe('createJobWorker', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let worker = createJobWorker({
       jobs,
       storage,
@@ -218,7 +218,7 @@ describe('createJobWorker', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let pruneEvents = 0
     let worker = createJobWorker({
       jobs,
@@ -268,7 +268,7 @@ describe('createJobWorker', () => {
         async handle() {},
       },
     })
-    let scheduler = createJobScheduler({ jobs, storage })
+    let scheduler = createJobScheduler(jobs, storage)
     let worker = createJobWorker({
       jobs,
       storage,
