@@ -8,7 +8,7 @@ Pluggable authentication middleware for Remix. It resolves identity into request
 - **Multiple Auth Modes** - Optional auth, strict API auth, redirect-based browser auth
 - **Ordered Fallback** - Try Bearer first, then API key (or any order you choose)
 - **Explicit Request State** - Read auth state from `context.get(Auth)` instead of mutating request context objects
-- **Session Bridge** - Use `sessionAuth()` to convert session data into request auth state
+- **Session Bridge** - Use `createSessionAuthScheme()` to convert session data into request auth state
 - **Composable Middleware** - Use globally or per-route
 
 ## Installation
@@ -22,7 +22,12 @@ npm i remix
 ```ts
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
-import { auth, Auth, bearer, requireAuth } from 'remix/auth-middleware'
+import {
+  auth,
+  Auth,
+  createBearerAuthScheme,
+  requireAuth,
+} from 'remix/auth-middleware'
 
 let routes = route({
   private: '/private',
@@ -32,7 +37,7 @@ let router = createRouter({
   middleware: [
     auth({
       schemes: [
-        bearer({
+        createBearerAuthScheme({
           async verify(token) {
             if (token === 'token-123') {
               return { id: 'u1', role: 'user' }
@@ -82,7 +87,11 @@ When implementing custom schemes, return `null`, `undefined`, or no value from `
 ## Auth Scheme API
 
 An auth scheme is any object with a `name` and an `authenticate(context)` method.
-The built-in `bearer()` and `apiKey()` helpers just create objects with this shape.
+This package ships with three auth-scheme helpers:
+
+- `createBearerAuthScheme()` for bearer tokens in `Authorization`
+- `createAPIAuthScheme()` for API keys in a request header
+- `createSessionAuthScheme()` for session-backed auth loaded by `session()`
 
 ```ts
 import type { RequestContext } from 'remix/fetch-router'
@@ -128,6 +137,86 @@ let sessionScheme: AuthScheme<User, 'session'> = {
 
 The scheme `name` becomes `auth.method` when authentication succeeds.
 
+## Built-In Auth Schemes
+
+The built-in helpers all return `AuthScheme` objects. Use them directly, mix them together in fallback order, or combine them with your own custom schemes.
+
+### Bearer Tokens
+
+Use `createBearerAuthScheme()` for APIs that authenticate requests with `Authorization: Bearer <token>`.
+
+```ts
+import { auth, createBearerAuthScheme } from 'remix/auth-middleware'
+
+let router = createRouter({
+  middleware: [
+    auth({
+      schemes: [
+        createBearerAuthScheme({
+          async verify(token) {
+            return usersByToken.get(token) ?? null
+          },
+        }),
+      ],
+    }),
+  ],
+})
+```
+
+### API Keys
+
+Use `createAPIAuthScheme()` for integrations that send a key in a header such as `X-API-Key`.
+
+```ts
+import { auth, createAPIAuthScheme } from 'remix/auth-middleware'
+
+let router = createRouter({
+  middleware: [
+    auth({
+      schemes: [
+        createAPIAuthScheme({
+          async verify(key) {
+            return servicesByKey.get(key) ?? null
+          },
+        }),
+      ],
+    }),
+  ],
+})
+```
+
+### Session-Backed Auth
+
+Use `createSessionAuthScheme()` when another part of the app has already written a small auth record into the session and you want normal requests to resolve that back into the current user.
+
+```ts
+import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
+import { session } from 'remix/session-middleware'
+
+let router = createRouter({
+  middleware: [
+    session(sessionCookie, sessionStorage),
+    auth({
+      schemes: [
+        createSessionAuthScheme({
+          read(session) {
+            return session.get('auth') as { userId: string } | null
+          },
+          async verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
+          },
+        }),
+      ],
+    }),
+  ],
+})
+```
+
+This is the scheme to use with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) or any other login flow that persists a session auth record.
+
 ## Route Protection
 
 Use `requireAuth()` after `auth()` when a route must be authenticated.
@@ -147,7 +236,13 @@ This single router demonstrates five auth modes.
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
 import { redirect } from 'remix/response/redirect'
-import { auth, apiKey, Auth, bearer, requireAuth } from 'remix/auth-middleware'
+import {
+  auth,
+  Auth,
+  createAPIAuthScheme,
+  createBearerAuthScheme,
+  requireAuth,
+} from 'remix/auth-middleware'
 
 let routes = route({
   home: '/',
@@ -175,14 +270,14 @@ let servicesByKey = new Map([
   ['key_analytics', { id: 'svc-analytics', scope: 'analytics:read' }],
 ])
 
-let bearerScheme = bearer({
+let bearerScheme = createBearerAuthScheme({
   verify(token) {
     return usersByToken.get(token) ?? null
   },
   challenge: 'Bearer realm="example"',
 })
 
-let apiKeyScheme = apiKey({
+let apiKeyScheme = createAPIAuthScheme({
   verify(key) {
     return servicesByKey.get(key) ?? null
   },
@@ -302,7 +397,7 @@ router.map(routes.api.apiKeyOnly, {
 
 ## Built-In Schemes
 
-### `bearer(options)`
+### `createBearerAuthScheme(options)`
 
 Reads tokens from `Authorization` (default) using the `Bearer <token>` format.
 
@@ -314,7 +409,7 @@ Options:
 - `scheme` (default: `'Bearer'`)
 - `challenge` (default: same as `scheme`)
 
-### `apiKey(options)`
+### `createAPIAuthScheme(options)`
 
 Reads API keys from `X-API-Key` (default).
 
@@ -324,14 +419,14 @@ Options:
 - `name` (default: `'api-key'`)
 - `headerName` (default: `'X-API-Key'`)
 
-### `sessionAuth(options)`
+### `createSessionAuthScheme(options)`
 
 Reads an auth record from `context.get(Session)` and resolves the full request identity.
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
-import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
+import { auth, Auth, requireAuth, createSessionAuthScheme } from 'remix/auth-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
 
@@ -346,7 +441,7 @@ let router = createRouter({
     session(sessionCookie, sessionStorage),
     auth({
       schemes: [
-        sessionAuth({
+        createSessionAuthScheme({
           read(session) {
             return session.get('auth') as { userId: string } | null
           },
@@ -390,9 +485,9 @@ Behavior:
 - `read()` returning `null` or `undefined` skips the scheme
 - `verify()` returning an identity authenticates the request
 - `verify()` returning `null` fails auth and can optionally trigger `invalidate()`
-- `session()` middleware must run before `sessionAuth()`
+- `session()` middleware must run before `createSessionAuthScheme()`
 
-If you want session-backed browser login flows, pair `sessionAuth()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth). That package covers generic OIDC, thin wrappers like Google/Microsoft/Okta/Auth0, custom GitHub/Facebook OAuth helpers, and credentials-based login.
+If you want session-backed browser login flows, pair `createSessionAuthScheme()` with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth). That package covers generic OIDC, thin wrappers like Google/Microsoft/Okta/Auth0, custom GitHub/Facebook/X OAuth helpers, and credentials-based login.
 
 ## Related Packages
 

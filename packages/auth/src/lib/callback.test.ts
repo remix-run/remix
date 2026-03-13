@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { auth, Auth, requireAuth, sessionAuth } from '@remix-run/auth-middleware'
+import { auth, Auth, requireAuth, createSessionAuthScheme } from '@remix-run/auth-middleware'
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
@@ -14,7 +14,7 @@ import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest, mockFetch } from './test-utils.ts'
 
 describe('callback()', () => {
-  it('completes a Google callback, preserves returnTo, and authenticates via sessionAuth()', async () => {
+  it('completes a Google callback, preserves returnTo, and authenticates via createSessionAuthScheme()', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
       let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
@@ -57,7 +57,7 @@ describe('callback()', () => {
           sessionMiddleware(cookie, storage),
           auth({
             schemes: [
-              sessionAuth({
+              createSessionAuthScheme({
                 read(session) {
                   return session.get('auth') as { userId: string } | null
                 },

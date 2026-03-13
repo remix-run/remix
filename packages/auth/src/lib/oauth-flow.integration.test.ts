@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 
-import { auth, Auth, requireAuth, sessionAuth } from '@remix-run/auth-middleware'
+import { auth, Auth, requireAuth, createSessionAuthScheme } from '@remix-run/auth-middleware'
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
@@ -45,7 +45,7 @@ describe('OAuth flow integration', () => {
         sessionMiddleware(cookie, storage),
         auth({
           schemes: [
-            sessionAuth({
+            createSessionAuthScheme({
               read(session) {
                 return session.get('auth') as { userId: string } | null
               },

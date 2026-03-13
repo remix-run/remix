@@ -67,7 +67,7 @@ function SignedOutState() {
           <h2>Login to your account</h2>
           <p class="muted">
             Use the seeded local account or any configured social provider. The session stores a
-            compact auth record, and <code>sessionAuth()</code> resolves the current user on later
+            compact auth record, and <code>createSessionAuthScheme()</code> resolves the current user on later
             requests.
           </p>
         </div>

@@ -16,7 +16,9 @@ export interface ApiKeyOptions<identity> {
  * @param options Header parsing and key verification options.
  * @returns An auth scheme for use with `auth()`.
  */
-export function apiKey<identity>(options: ApiKeyOptions<identity>): AuthScheme<identity> {
+export function createAPIAuthScheme<identity>(
+  options: ApiKeyOptions<identity>,
+): AuthScheme<identity> {
   let name = options.name ?? 'api-key'
   let headerName = options.headerName ?? 'X-API-Key'
 

@@ -23,7 +23,7 @@ npm i remix
 
 `remix/auth-middleware` handles request-time authentication. It loads auth state into `context.get(Auth)`, protects routes with `requireAuth()`, and resolves the full identity for later requests.
 
-`sessionAuth()` is the bridge between the two. `writeSession()` stores a small auth record in the session during login, and `sessionAuth()` turns that record back into the current user on normal app requests.
+`createSessionAuthScheme()` is the bridge between the two. `writeSession()` stores a small auth record in the session during login, and `createSessionAuthScheme()` turns that record back into the current user on normal app requests.
 
 ## Choosing a Provider
 
@@ -40,7 +40,7 @@ import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
 import type { RequestContext } from 'remix/fetch-router'
 import { form, route } from 'remix/fetch-router/routes'
-import { auth, Auth, requireAuth, sessionAuth } from 'remix/auth-middleware'
+import { auth, Auth, requireAuth, createSessionAuthScheme } from 'remix/auth-middleware'
 import {
   callback,
   createCredentialsAuthProvider,
@@ -115,7 +115,7 @@ let router = createRouter({
     formData(),
     auth({
       schemes: [
-        sessionAuth({
+        createSessionAuthScheme({
           read(session) {
             return session.get('auth') as { userId: string } | null
           },
@@ -189,7 +189,7 @@ This package manages the OAuth transaction in `context.get(Session)` and lets yo
 
 - `login()` and `callback()` store the OAuth transaction under `__auth`
 - your `writeSession(session, result, context)` hook writes app-defined auth data, often under `auth`
-- `sessionAuth()` can read that data and resolve the full request identity into `context.get(Auth)`
+- `createSessionAuthScheme()` can read that data and resolve the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `login(createCredentialsAuthProvider(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
 
@@ -510,7 +510,7 @@ The successful auth flow always follows the same order:
 3. `writeSession(session, result, context)` writes your app-defined auth data
 4. `onSuccess(result, context)` runs after the session write, if you provided it
 5. otherwise the handler redirects to the resolved success location
-6. `sessionAuth()` later reads the written session data and resolves request identity into `context.get(Auth)`
+6. `createSessionAuthScheme()` later reads the written session data and resolves request identity into `context.get(Auth)`
 
 ## Callback Handling
 
@@ -567,7 +567,7 @@ Like `login()`, `callback()` supports redirect and hook customization for succes
 This package is designed to be paired with `remix/session-middleware` and `remix/auth-middleware`.
 
 ```ts
-import { auth, sessionAuth } from 'remix/auth-middleware'
+import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
 import { session } from 'remix/session-middleware'
 
 let router = createRouter({
@@ -575,7 +575,7 @@ let router = createRouter({
     session(sessionCookie, sessionStorage),
     auth({
       schemes: [
-        sessionAuth({
+        createSessionAuthScheme({
           read(session) {
             return session.get('auth') as { userId: string } | null
           },
@@ -592,9 +592,9 @@ let router = createRouter({
 This keeps login mechanics separate from request authentication:
 
 - `remix/auth` creates and persists the session auth record
-- `sessionAuth()` converts that session record into `context.get(Auth)`
+- `createSessionAuthScheme()` converts that session record into `context.get(Auth)`
 - `requireAuth()` protects routes that require a signed-in user
-- `session()` middleware must run before `login()`, `callback()`, or `sessionAuth()`
+- `session()` middleware must run before `login()`, `callback()`, or `createSessionAuthScheme()`
 
 ## Related Packages
 
