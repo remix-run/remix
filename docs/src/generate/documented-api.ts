@@ -395,10 +395,9 @@ function getApiMethod(fullName: string, node: typedoc.SignatureReflection): Meth
     }
   })
 
-  if (!node.comment) {
+  // Constructors are self-documenting via the code signature so don't require a summary
+  if (!node.comment?.summary && node.parent.kind !== typedoc.ReflectionKind.Constructor) {
     warn(`missing comment for signature: ${node.getFriendlyFullName()}`)
-  } else if (!node.comment.summary) {
-    warn(`missing summary for signature: ${node.getFriendlyFullName()}`)
   }
 
   let returnType = node.type ? node.type.toString() : 'void'
