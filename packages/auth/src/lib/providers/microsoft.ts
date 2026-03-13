@@ -1,6 +1,6 @@
-import type { OIDCOptions, OIDCProfile, OAuthProvider } from '../types.ts'
+import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider } from './oidc.ts'
+import { createOIDCAuthProvider, type OIDCOptions, type OIDCProfile } from './oidc.ts'
 
 /**
  * Profile claims returned by the built-in Microsoft auth provider.

@@ -9,7 +9,7 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { auth } from '../auth.ts'
 import { requireAuth } from '../require-auth.ts'
-import { Auth } from '../types.ts'
+import { Auth } from '../auth.ts'
 import { createSessionAuthScheme } from './session.ts'
 
 describe('createSessionAuthScheme scheme', () => {

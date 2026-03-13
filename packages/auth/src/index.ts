@@ -24,19 +24,16 @@ export type {
 } from './lib/providers/github.ts'
 export type { GoogleOptions, GoogleProfile } from './lib/providers/google.ts'
 export type { MicrosoftOptions, MicrosoftProfile } from './lib/providers/microsoft.ts'
-export type { OIDCOptions } from './lib/providers/oidc.ts'
+export type { OIDCMetadata, OIDCOptions, OIDCProfile } from './lib/providers/oidc.ts'
 export type { OktaOptions, OktaProfile } from './lib/providers/okta.ts'
 export type { XOptions, XProfile } from './lib/providers/x.ts'
 
 export type {
-  CallbackOptions,
-  CredentialsProvider,
-  LoginOptions,
-  OIDCMetadata,
-  OIDCProfile,
   OAuthAccount,
-  OAuthLoginOptions,
   OAuthProvider,
   OAuthResult,
   OAuthTokens,
-} from './lib/types.ts'
+} from './lib/provider.ts'
+export type { CredentialsProvider } from './lib/credentials.ts'
+export type { LoginOptions, OAuthLoginOptions } from './lib/login.ts'
+export type { CallbackOptions } from './lib/callback.ts'

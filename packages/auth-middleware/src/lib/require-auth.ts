@@ -1,6 +1,18 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import type { RequireAuthOptions, UnauthenticatedAuth } from './types.ts'
-import { Auth } from './types.ts'
+import { Auth, type UnauthenticatedAuth } from './auth.ts'
+
+/**
+ * Options for enforcing authentication on a route.
+ */
+export interface RequireAuthOptions {
+  onFailure?: (
+    context: RequestContext,
+    auth: UnauthenticatedAuth,
+  ) => Response | Promise<Response>
+  status?: number
+  body?: BodyInit | null
+  headers?: HeadersInit
+}
 
 /**
  * Enforces that `auth()` has already resolved a successful auth state for the current request.

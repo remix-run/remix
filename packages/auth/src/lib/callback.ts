@@ -1,15 +1,34 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
+import type { RequestContext, RequestHandler } from '@remix-run/fetch-router'
 import type { Session } from '@remix-run/session'
 
 import { getOAuthProviderRuntime } from './provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthTransaction } from './provider.ts'
 import { completeAuthSession } from './session-flow.ts'
-import type { CallbackOptions, OAuthProvider, OAuthTransaction } from './types.ts'
 import {
   createRedirectResponse,
   getRequiredSearchParam,
   getSession,
   resolveRedirectTarget,
 } from './utils.ts'
+
+/**
+ * Options for handling an OAuth or OIDC callback request.
+ */
+export interface CallbackOptions<profile, provider extends string> {
+  transactionKey?: string
+  writeSession(
+    session: Session,
+    result: OAuthResult<profile, provider>,
+    context: RequestContext,
+  ): void | Promise<void>
+  successRedirectTo?: string | URL
+  failureRedirectTo?: string | URL
+  onSuccess?(
+    result: OAuthResult<profile, provider>,
+    context: RequestContext,
+  ): Response | Promise<Response>
+  onFailure?(error: unknown, context: RequestContext): Response | Promise<Response>
+}
 
 /**
  * Creates a request handler for an OAuth or OIDC callback route.

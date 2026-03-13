@@ -1,12 +1,12 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
-import type { AuthFailure, AuthScheme } from '../types.ts'
+import type { AuthFailure, AuthScheme } from '../auth.ts'
 
 /**
  * Options for creating a session-backed auth scheme.
  */
-export interface SessionAuthOptions<
+export interface SessionAuthSchemeOptions<
   identity,
   session_value = unknown,
   scheme extends string = 'session',
@@ -32,7 +32,9 @@ export function createSessionAuthScheme<
   identity,
   session_value = unknown,
   scheme extends string = 'session',
->(options: SessionAuthOptions<identity, session_value, scheme>): AuthScheme<identity, scheme> {
+>(
+  options: SessionAuthSchemeOptions<identity, session_value, scheme>,
+): AuthScheme<identity, scheme> {
   let name = options.name ?? ('session' as scheme)
 
   return {
