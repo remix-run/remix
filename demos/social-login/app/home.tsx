@@ -177,7 +177,11 @@ function SignedOutState() {
           <p mix={mutedTextStyle}>Use any configured provider to create or resume a local account.</p>
         </div>
 
-        <div mix={providerListStyle}>{providers.map(renderProviderButton)}</div>
+        <div mix={providerListStyle}>
+          {providers.map((provider) => (
+            <ProviderButton key={provider.name} provider={provider} />
+          ))}
+        </div>
       </aside>
     </section>
   )
@@ -240,7 +244,9 @@ function SetupGuide() {
           </div>
         </section>
 
-        {providers.map(renderProviderSetupSection)}
+        {providers.map((provider) => (
+          <ProviderSetupSection key={provider.name} provider={provider} />
+        ))}
       </div>
     </section>
   )
@@ -316,40 +322,50 @@ function Avatar() {
   }
 }
 
-function renderProviderButton(provider: SocialProviderState) {
-  let buttonStyles = [providerButtonStyle, providerThemeStyles[provider.name]]
-  let markStyles = [providerMarkStyle, providerMarkThemeStyles[provider.name]]
-  let iconStyles =
-    provider.name === 'x' ? [providerIconStyle, providerIconInvertedStyle] : [providerIconStyle]
-  let body = (
-    <>
-      <span mix={markStyles}>
-        <img mix={iconStyles} src={getProviderIconHref(provider.name)} alt="" />
-      </span>
-      <span mix={providerBodyStyle}>
-        <span mix={providerTitleStyle}>Login with {provider.label}</span>
-      </span>
-    </>
-  )
-
-  if (provider.configured) {
-    return (
-      <a key={provider.name} href={getProviderLoginHref(provider.name)} mix={buttonStyles}>
-        {body}
-      </a>
-    )
-  }
-
-  return (
-    <button key={provider.name} type="button" mix={buttonStyles} disabled>
-      {body}
-    </button>
-  )
+interface ProviderButtonProps {
+  provider: SocialProviderState
 }
 
-function renderProviderSetupSection(provider: SocialProviderState) {
-  return (
-    <section key={provider.name} mix={[setupTopicStyle, stackSmStyle]}>
+function ProviderButton() {
+  return ({ provider }: ProviderButtonProps) => {
+    let buttonStyles = [providerButtonStyle, providerThemeStyles[provider.name]]
+    let markStyles = [providerMarkStyle, providerMarkThemeStyles[provider.name]]
+    let iconStyles =
+      provider.name === 'x' ? [providerIconStyle, providerIconInvertedStyle] : [providerIconStyle]
+    let body = (
+      <>
+        <span mix={markStyles}>
+          <img mix={iconStyles} src={getProviderIconHref(provider.name)} alt="" />
+        </span>
+        <span mix={providerBodyStyle}>
+          <span mix={providerTitleStyle}>Login with {provider.label}</span>
+        </span>
+      </>
+    )
+
+    if (provider.configured) {
+      return (
+        <a href={getProviderLoginHref(provider.name)} mix={buttonStyles}>
+          {body}
+        </a>
+      )
+    }
+
+    return (
+      <button type="button" mix={buttonStyles} disabled>
+        {body}
+      </button>
+    )
+  }
+}
+
+interface ProviderSetupSectionProps {
+  provider: SocialProviderState
+}
+
+function ProviderSetupSection() {
+  return ({ provider }: ProviderSetupSectionProps) => (
+    <section mix={[setupTopicStyle, stackSmStyle]}>
       <div mix={setupProviderHeaderStyle}>
         <div mix={stackSmStyle}>
           <h3 mix={setupHeadingStyle}>{getProviderSetupHeading(provider.name)}</h3>
@@ -371,7 +387,9 @@ function renderProviderSetupSection(provider: SocialProviderState) {
         </span>
       </div>
 
-      <p mix={mutedTextStyle}>{renderProviderSetupDescription(provider.name)}</p>
+      <p mix={mutedTextStyle}>
+        <ProviderSetupDescription name={provider.name} />
+      </p>
 
       <dl mix={setupDefinitionListStyle}>
         <div>
@@ -401,63 +419,69 @@ function renderProviderSetupSection(provider: SocialProviderState) {
   )
 }
 
-function renderProviderSetupDescription(name: SocialProviderName) {
-  switch (name) {
-    case 'google':
-      return (
-        <>
-          Create a{' '}
-          <a
-            href="https://developers.google.com/identity/protocols/oauth2/web-server"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Web application OAuth client in Google Cloud
-          </a>
-          , add <code>{getProviderCallbackHref('google', localDemoOrigin)}</code> as an authorized
-          redirect URI, then copy the client ID and client secret into .env.
-        </>
-      )
-    case 'github':
-      return (
-        <>
-          Create an{' '}
-          <a
-            href="https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
-            target="_blank"
-            rel="noreferrer"
-          >
-            OAuth App in GitHub settings
-          </a>
-          , set <code>{localDemoOrigin}/</code> as the homepage URL and{' '}
-          <code>{getProviderCallbackHref('github', localDemoOrigin)}</code> as the authorization
-          callback URL, then copy the client ID and client secret into .env.
-        </>
-      )
-    case 'x':
-      return (
-        <>
-          Create an{' '}
-          <a
-            href="https://docs.x.com/fundamentals/developer-portal"
-            target="_blank"
-            rel="noreferrer"
-          >
-            app in the X Developer Portal
-          </a>
-          , enable{' '}
-          <a
-            href="https://docs.x.com/x-for-websites/log-in-with-x/guides/browser-sign-in-flow"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Sign in with X
-          </a>
-          , register <code>{getProviderCallbackHref('x', localDemoOrigin)}</code> as the callback
-          URL, then copy the client ID and client secret into .env. Open the demo at{' '}
-          <code>{localDemoOrigin}/</code> when you test the X flow.
-        </>
-      )
+interface ProviderSetupDescriptionProps {
+  name: SocialProviderName
+}
+
+function ProviderSetupDescription() {
+  return ({ name }: ProviderSetupDescriptionProps) => {
+    switch (name) {
+      case 'google':
+        return (
+          <>
+            Create a{' '}
+            <a
+              href="https://developers.google.com/identity/protocols/oauth2/web-server"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Web application OAuth client in Google Cloud
+            </a>
+            , add <code>{getProviderCallbackHref('google', localDemoOrigin)}</code> as an
+            authorized redirect URI, then copy the client ID and client secret into .env.
+          </>
+        )
+      case 'github':
+        return (
+          <>
+            Create an{' '}
+            <a
+              href="https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
+              target="_blank"
+              rel="noreferrer"
+            >
+              OAuth App in GitHub settings
+            </a>
+            , set <code>{localDemoOrigin}/</code> as the homepage URL and{' '}
+            <code>{getProviderCallbackHref('github', localDemoOrigin)}</code> as the authorization
+            callback URL, then copy the client ID and client secret into .env.
+          </>
+        )
+      case 'x':
+        return (
+          <>
+            Create an{' '}
+            <a
+              href="https://docs.x.com/fundamentals/developer-portal"
+              target="_blank"
+              rel="noreferrer"
+            >
+              app in the X Developer Portal
+            </a>
+            , enable{' '}
+            <a
+              href="https://docs.x.com/x-for-websites/log-in-with-x/guides/browser-sign-in-flow"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Sign in with X
+            </a>
+            , register <code>{getProviderCallbackHref('x', localDemoOrigin)}</code> as the
+            callback URL, then copy the client ID and client secret into .env. Open the demo at{' '}
+            <code>{localDemoOrigin}/</code> when you test the X flow.
+          </>
+        )
+    }
   }
 }
 
