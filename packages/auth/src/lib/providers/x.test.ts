@@ -235,4 +235,150 @@ describe('x provider', () => {
       restoreFetch()
     }
   })
+
+  it('fails when the X profile does not include a valid username', async () => {
+    let restoreFetch = mockFetch(async input => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://api.x.com/2/oauth2/token') {
+        return Response.json({
+          access_token: 'x-token',
+          token_type: 'bearer',
+          scope: 'tweet.read users.read',
+        })
+      }
+
+      if (
+        url ===
+        'https://api.x.com/2/users/me?user.fields=profile_image_url,verified,description,url'
+      ) {
+        return Response.json({
+          data: {
+            id: 'x-user-1',
+            name: 'X Person',
+          },
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let cookie = createCookie('__session', { secrets: ['secret1'] })
+      let storage = createMemorySessionStorage()
+      let provider = createXAuthProvider({
+        clientId: 'x-client-id',
+        clientSecret: 'x-client-secret',
+        redirectUri: 'https://app.example.com/auth/x/callback',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/x', login(provider))
+      router.get(
+        '/auth/x/callback',
+        callback(provider, {
+          writeSession(session, result) {
+            session.set('auth', { userId: result.profile.id })
+          },
+          onFailure(error) {
+            return Response.json(
+              {
+                error: error instanceof Error ? error.message : 'unknown',
+              },
+              { status: 400 },
+            )
+          },
+        }),
+      )
+
+      let loginResponse = await router.fetch('https://app.example.com/login/x')
+      let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
+      let response = await router.fetch(
+        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+      )
+
+      assert.equal(response.status, 400)
+      assert.deepEqual(await response.json(), {
+        error: 'X profile did not include a valid username.',
+      })
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('fails when the X profile does not include a valid name', async () => {
+    let restoreFetch = mockFetch(async input => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url === 'https://api.x.com/2/oauth2/token') {
+        return Response.json({
+          access_token: 'x-token',
+          token_type: 'bearer',
+          scope: 'tweet.read users.read',
+        })
+      }
+
+      if (
+        url ===
+        'https://api.x.com/2/users/me?user.fields=profile_image_url,verified,description,url'
+      ) {
+        return Response.json({
+          data: {
+            id: 'x-user-1',
+            username: 'xperson',
+          },
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let cookie = createCookie('__session', { secrets: ['secret1'] })
+      let storage = createMemorySessionStorage()
+      let provider = createXAuthProvider({
+        clientId: 'x-client-id',
+        clientSecret: 'x-client-secret',
+        redirectUri: 'https://app.example.com/auth/x/callback',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, storage)],
+      })
+
+      router.get('/login/x', login(provider))
+      router.get(
+        '/auth/x/callback',
+        callback(provider, {
+          writeSession(session, result) {
+            session.set('auth', { userId: result.profile.id })
+          },
+          onFailure(error) {
+            return Response.json(
+              {
+                error: error instanceof Error ? error.message : 'unknown',
+              },
+              { status: 400 },
+            )
+          },
+        }),
+      )
+
+      let loginResponse = await router.fetch('https://app.example.com/login/x')
+      let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
+      let response = await router.fetch(
+        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+      )
+
+      assert.equal(response.status, 400)
+      assert.deepEqual(await response.json(), {
+        error: 'X profile did not include a valid name.',
+      })
+    } finally {
+      restoreFetch()
+    }
+  })
 })

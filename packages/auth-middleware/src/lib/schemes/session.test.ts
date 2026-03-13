@@ -1,10 +1,14 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
 import { createSession, Session } from '@remix-run/session'
+import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
+import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
 import { auth } from '../auth.ts'
+import { requireAuth } from '../require-auth.ts'
 import { Auth } from '../types.ts'
 import { sessionAuth } from './session.ts'
 
@@ -193,4 +197,84 @@ describe('sessionAuth scheme', () => {
       method: 'member-session',
     })
   })
+
+  it('invalidates stale session auth before requireAuth() returns 401', async () => {
+    let invalidated = false
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let router = createRouter({
+      middleware: [
+        sessionMiddleware(cookie, storage),
+        auth({
+          schemes: [
+            sessionAuth({
+              read(session) {
+                return session.get('auth')
+              },
+              verify() {
+                return null
+              },
+              invalidate(session) {
+                invalidated = true
+                session.unset('auth')
+              },
+              message: 'Session expired',
+            }),
+          ],
+        }),
+      ],
+    })
+
+    router.get('/seed', ({ get }) => {
+      let session = get(Session)
+      session.set('auth', { userId: 'u1' })
+      return new Response('Seeded')
+    })
+
+    router.get('/protected', {
+      middleware: [requireAuth()],
+      action: () => new Response('OK'),
+    })
+
+    router.get('/inspect', ({ get }) =>
+      Response.json({
+        auth: get(Auth),
+        sessionAuth: get(Session).get('auth') ?? null,
+      }),
+    )
+
+    let seedResponse = await router.fetch('https://remix.run/seed')
+    let protectedResponse = await router.fetch(createRequest('https://remix.run/protected', seedResponse))
+
+    assert.equal(protectedResponse.status, 401)
+    assert.equal(await protectedResponse.text(), 'Unauthorized')
+    assert.equal(invalidated, true)
+
+    let inspectResponse = await router.fetch(
+      createRequest('https://remix.run/inspect', protectedResponse),
+    )
+
+    assert.deepEqual(await inspectResponse.json(), {
+      auth: {
+        ok: false,
+      },
+      sessionAuth: null,
+    })
+  })
 })
+
+function createRequest(url: string, fromResponse?: Response): Request {
+  let headers = new Headers()
+
+  if (fromResponse != null) {
+    let cookieValues = fromResponse.headers
+      .getSetCookie()
+      .map(value => value.split(';', 1)[0])
+
+    if (cookieValues.length > 0) {
+      headers.set('Cookie', cookieValues.join('; '))
+    }
+  }
+
+  return new Request(url, { headers })
+}
