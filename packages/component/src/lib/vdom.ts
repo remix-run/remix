@@ -15,16 +15,25 @@ import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 
+/**
+ * Events emitted by virtual roots.
+ */
 export type VirtualRootEventMap = {
   error: ComponentErrorEvent
 }
 
+/**
+ * Root controller returned by `createRoot()` and `createRangeRoot()`.
+ */
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
   dispose: () => void
   flush: () => void
 }
 
+/**
+ * Options for creating a virtual DOM root.
+ */
 export type VirtualRootOptions = {
   frame?: FrameHandle
   scheduler?: Scheduler
@@ -52,10 +61,18 @@ function getHydrationComponentIdFromRangeStart(start: Node): string | undefined 
   return id.length > 0 ? id : undefined
 }
 
+/**
+ * Creates a virtual root bounded by two DOM nodes.
+ *
+ * @param boundaries Start and end marker nodes that define the render region.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
 export function createRangeRoot(
-  [start, end]: [Node, Node],
+  boundaries: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
+  let [start, end] = boundaries
   let vroot: VNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
 
@@ -145,6 +162,13 @@ export function createRangeRoot(
   })
 }
 
+/**
+ * Creates a virtual root for a host container element.
+ *
+ * @param container Host element to render into.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let vroot: VNode | null = null
   let styles = options.styleManager ?? defaultStyleManager

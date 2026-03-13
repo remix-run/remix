@@ -6,8 +6,14 @@ let defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
 
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 
+/**
+ * Return shape for a dynamic CSRF origin resolver.
+ */
 export type CsrfOriginResolverResult = boolean | null | undefined
 
+/**
+ * Resolves whether an unsafe cross-origin request should be allowed.
+ */
 export interface CsrfOriginResolver {
   (
     origin: string,
@@ -15,10 +21,19 @@ export interface CsrfOriginResolver {
   ): CsrfOriginResolverResult | Promise<CsrfOriginResolverResult>
 }
 
+/**
+ * Accepted forms for configuring allowed CSRF origins.
+ */
 export type CsrfOrigin = OriginMatcher | CsrfOriginResolver
 
+/**
+ * Return shape for a dynamic CSRF token resolver.
+ */
 export type CsrfTokenResolverResult = string | null | undefined
 
+/**
+ * Resolves the submitted CSRF token for a request.
+ */
 export interface CsrfTokenResolver {
   (context: RequestContext): CsrfTokenResolverResult | Promise<CsrfTokenResolverResult>
 }

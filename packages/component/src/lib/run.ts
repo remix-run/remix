@@ -8,15 +8,24 @@ import type { LoadModule, ResolveFrame } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
+/**
+ * Options for starting the client runtime.
+ */
 export type RunInit = {
   loadModule: LoadModule
   resolveFrame?: ResolveFrame
 }
 
+/**
+ * Events emitted by the application runtime.
+ */
 export type AppRuntimeEventMap = {
   error: ComponentErrorEvent
 }
 
+/**
+ * Client runtime returned by `run()`.
+ */
 export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   ready(): Promise<void>
   flush(): void
@@ -34,6 +43,12 @@ export function getNamedFrame(name: string): FrameHandle {
   return namedFrames.get(name) ?? getTopFrame()
 }
 
+/**
+ * Starts the client-side Remix component runtime for the current document.
+ *
+ * @param init Runtime hooks for loading modules and resolving frames.
+ * @returns The running application runtime.
+ */
 export function run(init: RunInit): AppRuntime {
   let styleManager = defaultStyleManager
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()

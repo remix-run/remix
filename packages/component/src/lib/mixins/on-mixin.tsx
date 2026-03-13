@@ -62,6 +62,14 @@ let onMixin = createMixin<
   }
 })
 
+/**
+ * Attaches a typed DOM event handler through the mixin system.
+ *
+ * @param type Event type to listen for.
+ * @param handler Event handler.
+ * @param captureBoolean Whether to listen during capture.
+ * @returns A mixin descriptor for the target element.
+ */
 export function on<
   target extends Element = Element,
   type extends EventType<target> = EventType<target>,

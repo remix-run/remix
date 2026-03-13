@@ -115,6 +115,9 @@ function htmlHelper(strings: TemplateStringsArray, ...values: Interpolation[]): 
   return createSafeHtml(out)
 }
 
+/**
+ * Tagged template helper for creating `SafeHtml` values.
+ */
 export const html = htmlHelper as SafeHtmlHelper
 
 html.raw = (strings, ...values) => {

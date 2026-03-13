@@ -38,8 +38,14 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
+/**
+ * Loads a client entry module for hydration.
+ */
 export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
 
+/**
+ * Resolves frame content for the given frame source.
+ */
 export type ResolveFrame = (
   src: string,
   signal?: AbortSignal,

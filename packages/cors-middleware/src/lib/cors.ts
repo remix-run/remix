@@ -5,8 +5,14 @@ let defaultCorsMethods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE']
 
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 
+/**
+ * Return shape for a dynamic CORS origin resolver.
+ */
 export type CorsOriginResolverResult = '*' | string | boolean | null | undefined
 
+/**
+ * Resolves the allowed origin for a given request origin.
+ */
 export interface CorsOriginResolver {
   (
     origin: string,
@@ -14,10 +20,19 @@ export interface CorsOriginResolver {
   ): CorsOriginResolverResult | Promise<CorsOriginResolverResult>
 }
 
+/**
+ * Accepted forms for configuring allowed CORS origins.
+ */
 export type CorsOrigin = OriginMatcher | boolean | CorsOriginResolver
 
+/**
+ * Return shape for a dynamic allowed-headers resolver.
+ */
 export type CorsAllowedHeadersResolverResult = readonly string[] | null | undefined
 
+/**
+ * Resolves the allowed request headers for a preflight request.
+ */
 export interface CorsAllowedHeadersResolver {
   (
     request: Request,

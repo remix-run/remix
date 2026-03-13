@@ -16,6 +16,9 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
   return { type, props, key }
 }
 
+/**
+ * Options for server-side rendering to a byte stream.
+ */
 export interface RenderToStreamOptions {
   frameSrc?: string | URL
   topFrameSrc?: string | URL
@@ -27,6 +30,9 @@ export interface RenderToStreamOptions {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
 }
 
+/**
+ * Context passed to `resolveFrame` during server rendering.
+ */
 export interface ResolveFrameContext {
   currentFrameSrc: string
   topFrameSrc: string
@@ -141,6 +147,13 @@ function createSsrThrowingSignal(): AbortSignal {
   })
 }
 
+/**
+ * Renders a node tree to a streaming HTML response body.
+ *
+ * @param node Node tree to render.
+ * @param options Stream rendering options.
+ * @returns A readable byte stream of HTML.
+ */
 export function renderToStream(
   node: RemixNode,
   options?: RenderToStreamOptions,
@@ -1047,6 +1060,12 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
   return html
 }
 
+/**
+ * Renders a node tree to a complete HTML string.
+ *
+ * @param node Node tree to render.
+ * @returns Rendered HTML.
+ */
 export async function renderToString(node: RemixNode): Promise<string> {
   return drain(
     renderToStream(node, {

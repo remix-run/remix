@@ -12,12 +12,21 @@ interface BypassPattern {
   matchesSubtree: boolean
 }
 
+/**
+ * Reason reported when cross-origin protection rejects a request.
+ */
 export type CopFailureReason = 'cross-origin-request' | 'cross-origin-request-from-old-browser'
 
+/**
+ * Custom response handler for rejected cross-origin requests.
+ */
 export interface CopDenyHandler {
   (reason: CopFailureReason, context: RequestContext): Response | Promise<Response>
 }
 
+/**
+ * Configuration for the cross-origin protection middleware.
+ */
 export interface CopOptions {
   trustedOrigins?: readonly string[]
   insecureBypassPatterns?: readonly string[]
@@ -107,6 +116,12 @@ class CrossOriginProtection {
   }
 }
 
+/**
+ * Creates middleware that rejects unsafe cross-origin requests.
+ *
+ * @param options Cross-origin protection options.
+ * @returns Middleware that validates request origin headers.
+ */
 export function cop(options: CopOptions = {}): Middleware {
   let protection = new CrossOriginProtection(options)
 

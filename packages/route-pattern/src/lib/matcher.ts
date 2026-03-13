@@ -1,5 +1,8 @@
 import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
 
+/**
+ * Successful pattern match paired with matcher-specific data.
+ */
 export type Match<source extends string = string, data = unknown> = RoutePatternMatch<source> & {
   data: data
 }

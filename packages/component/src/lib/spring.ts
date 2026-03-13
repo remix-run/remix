@@ -14,12 +14,18 @@
 
 export type SpringPreset = 'smooth' | 'snappy' | 'bouncy'
 
+/**
+ * Options for generating a spring easing iterator.
+ */
 export interface SpringOptions {
   duration?: number // perceptual duration in ms (default: 300) - affects stiffness
   bounce?: number // -1 to ~0.95: negative = overdamped, 0 = critical, positive = bouncy
   velocity?: number // initial velocity in units per second
 }
 
+/**
+ * Iterator returned by `spring()`, decorated for CSS and WAAPI use.
+ */
 export interface SpringIterator extends IterableIterator<number> {
   /** Time when spring settles to rest (milliseconds) */
   duration: number

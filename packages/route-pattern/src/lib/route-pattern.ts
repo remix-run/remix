@@ -27,6 +27,9 @@ type AST = {
   search: Map<string, Set<string> | null>
 }
 
+/**
+ * Result returned when a URL matches a route pattern.
+ */
 export type RoutePatternMatch<source extends string = string> = {
   pattern: RoutePattern
   url: URL

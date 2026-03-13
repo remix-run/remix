@@ -12,6 +12,9 @@ import { matchSearch } from './route-pattern/match.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
+/**
+ * Trie-based matcher optimized for repeated route lookups.
+ */
 export class TrieMatcher<data = unknown> implements Matcher<data> {
   readonly ignoreCase: boolean
   trie: Trie<data>

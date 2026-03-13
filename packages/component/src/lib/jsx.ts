@@ -70,6 +70,14 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
   JSX.IntrinsicElements[T]
 >
 
+/**
+ * Creates a Remix virtual element.
+ *
+ * @param type Host tag or component function.
+ * @param props Element props.
+ * @param key Optional reconciliation key.
+ * @returns A Remix virtual element.
+ */
 export function jsx(type: string, props: ElementProps, key?: string): RemixElement
 export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
 export function jsx(type: any, props: any, key?: any): RemixElement {

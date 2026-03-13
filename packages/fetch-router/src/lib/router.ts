@@ -14,6 +14,9 @@ import {
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
+/**
+ * Normalized route match payload stored in the router matcher.
+ */
 export type MatchData = {
   handler: RequestHandler<any>
   method: RequestMethod | 'ANY'

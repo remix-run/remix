@@ -5,6 +5,9 @@ export type RequestBodyMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
  */
 export const RequestBodyMethods = ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
 
+/**
+ * All HTTP request methods supported by the router.
+ */
 export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
 /**
