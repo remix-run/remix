@@ -184,61 +184,61 @@ describe('data-table job storage (sqlite)', () => {
     assert.equal(job.status, 'canceled')
   })
 
-  it('rolls back replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
+  it('rolls back retryFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
     let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let failedJobId = await createFailedJob(storage)
-    let replayedJobId = ''
+    let retriedJobId = ''
 
     await assert.rejects(
       () =>
         database.transaction(async (transaction) => {
-          let replayed = await storage.replayFailedJob(
+          let retried = await storage.retryFailedJob(
             {
               jobId: failedJobId,
               priority: 77,
             },
             { transaction },
           )
-          assert.ok(replayed)
-          replayedJobId = replayed.jobId
-          throw new Error('rollback replay')
+          assert.ok(retried)
+          retriedJobId = retried.jobId
+          throw new Error('rollback retry')
         }),
-      /rollback replay/,
+      /rollback retry/,
     )
 
-    assert.notEqual(replayedJobId, '')
-    assert.equal(await storage.get(replayedJobId), null)
+    assert.notEqual(retriedJobId, '')
+    assert.equal(await storage.get(retriedJobId), null)
     let failed = await storage.get(failedJobId)
     assert.ok(failed)
     assert.equal(failed.status, 'failed')
   })
 
-  it('commits replayFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
+  it('commits retryFailedJob when using a provided transaction', { skip: !integrationEnabled }, async () => {
     await resetJobStorageSchema(database, DEFAULT_TEST_TABLE_PREFIX)
 
     let storage = createDataTableJobStorage(database, { tablePrefix: DEFAULT_TEST_TABLE_PREFIX })
     let failedJobId = await createFailedJob(storage)
-    let replayedJobId = ''
+    let retriedJobId = ''
 
     await database.transaction(async (transaction) => {
-      let replayed = await storage.replayFailedJob(
+      let retried = await storage.retryFailedJob(
         {
           jobId: failedJobId,
           priority: 77,
         },
         { transaction },
       )
-      assert.ok(replayed)
-      replayedJobId = replayed.jobId
+      assert.ok(retried)
+      retriedJobId = retried.jobId
     })
 
-    assert.notEqual(replayedJobId, '')
-    let replayed = await storage.get(replayedJobId)
-    assert.ok(replayed)
-    assert.equal(replayed.status, 'queued')
-    assert.equal(replayed.priority, 77)
+    assert.notEqual(retriedJobId, '')
+    let retried = await storage.get(retriedJobId)
+    assert.ok(retried)
+    assert.equal(retried.status, 'queued')
+    assert.equal(retried.priority, 77)
   })
 
   it('rolls back prune when using a provided transaction', { skip: !integrationEnabled }, async () => {

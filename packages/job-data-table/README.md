@@ -41,7 +41,7 @@ let storage = createDataTableJobStorage(db)
 await db.transaction(async (transaction) => {
   await scheduler.enqueue(jobs.sendEmail, { to: 'a@example.com', subject: 'Hello' }, { transaction })
   await scheduler.cancel('job-id', { transaction })
-  await scheduler.replayFailedJob('failed-job-id', { transaction })
+  await scheduler.retryFailedJob('failed-job-id', { transaction })
   await scheduler.prune(
     {
       policy: {

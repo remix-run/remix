@@ -5,7 +5,7 @@ import type {
   JobWriteOptions,
   JobFailureInput,
   ListFailedJobsInput,
-  ReplayFailedJobInput,
+  RetryFailedJobInput,
   PruneJobsInput,
   PruneJobsResult,
 } from '../storage.ts'
@@ -97,8 +97,8 @@ export function createMemoryJobStorage(): JobStorage {
         .slice(0, limit)
         .map(toPublicJob)
     },
-    async replayFailedJob(
-      input: ReplayFailedJobInput,
+    async retryFailedJob(
+      input: RetryFailedJobInput,
       _options?: JobWriteOptions,
     ): Promise<{ jobId: string } | null> {
       let source = jobs.get(input.jobId)
@@ -108,10 +108,10 @@ export function createMemoryJobStorage(): JobStorage {
       }
 
       let now = Date.now()
-      let replayedJobId = crypto.randomUUID()
+      let retriedJobId = crypto.randomUUID()
 
-      jobs.set(replayedJobId, {
-        id: replayedJobId,
+      jobs.set(retriedJobId, {
+        id: retriedJobId,
         name: source.name,
         queue: input.queue ?? source.queue,
         payload: source.payload,
@@ -126,7 +126,7 @@ export function createMemoryJobStorage(): JobStorage {
       })
 
       return {
-        jobId: replayedJobId,
+        jobId: retriedJobId,
       }
     },
     async prune(input: PruneJobsInput, _options?: JobWriteOptions): Promise<PruneJobsResult> {
