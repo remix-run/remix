@@ -451,6 +451,7 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+
   packages/data-schema:
     dependencies:
       '@standard-schema/spec':
@@ -552,6 +553,12 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
+      '@remix-run/form-data-parser':
+        specifier: workspace:^
+        version: link:../form-data-parser
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

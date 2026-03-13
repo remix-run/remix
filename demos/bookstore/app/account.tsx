@@ -1,6 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
-import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
+import * as f from 'remix/form-data-parser/schema'
+import * as s from 'remix/data-schema'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
@@ -10,6 +12,13 @@ import { getCurrentUser } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
+
+const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const accountSettingsSchema = f.object({
+  name: textField,
+  email: textField,
+  password: textField,
+})
 
 export default {
   middleware: [requireAuth()],
@@ -113,9 +122,7 @@ export default {
           let formData = get(FormData)
           let user = getCurrentUser()
 
-          let name = formData.get('name')?.toString() ?? ''
-          let email = formData.get('email')?.toString() ?? ''
-          let password = formData.get('password')?.toString() ?? ''
+          let { email, name, password } = s.parse(accountSettingsSchema, formData)
 
           let updateData: any = { name, email }
           if (password) {

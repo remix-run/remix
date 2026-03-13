@@ -1,6 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
-import { redirect } from 'remix/response/redirect'
 import { css } from 'remix/component'
+import * as f from 'remix/form-data-parser/schema'
+import * as s from 'remix/data-schema'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
@@ -11,6 +13,14 @@ import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { Session } from './utils/session.ts'
+
+const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const shippingAddressSchema = f.object({
+  street: textField,
+  city: textField,
+  state: textField,
+  zip: textField,
+})
 
 export default {
   middleware: [requireAuth()],
@@ -120,12 +130,7 @@ export default {
         return redirect(routes.cart.index.href())
       }
 
-      let shippingAddress = {
-        street: formData.get('street')?.toString() || '',
-        city: formData.get('city')?.toString() || '',
-        state: formData.get('state')?.toString() || '',
-        zip: formData.get('zip')?.toString() || '',
-      }
+      let shippingAddress = s.parse(shippingAddressSchema, formData)
 
       let total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 

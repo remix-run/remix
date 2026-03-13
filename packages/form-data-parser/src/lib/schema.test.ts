@@ -1,22 +1,25 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { array, instanceof_, optional, string, ValidationError } from '@remix-run/data-schema'
+import * as s from '@remix-run/data-schema'
 import { minLength } from '@remix-run/data-schema/checks'
 import * as coerce from '@remix-run/data-schema/coerce'
 
-import { extractFormData, extractFormDataSafe, field, fields, file, files } from '../extract.ts'
+import * as f from '../schema.ts'
 
-describe('extractFormData', () => {
-  it('extracts single text fields', () => {
+describe('object', () => {
+  it('parses single text fields', () => {
     let formData = new FormData()
     formData.set('email', 'ada@example.com')
     formData.set('password', 'secret')
 
-    let result = extractFormData(formData, {
-      email: field(string()),
-      password: field(string().pipe(minLength(1))),
-    })
+    let result = s.parse(
+      f.object({
+        email: f.field(s.string()),
+        password: f.field(s.string().pipe(minLength(1))),
+      }),
+      formData,
+    )
 
     assert.deepEqual(result, {
       email: 'ada@example.com',
@@ -28,50 +31,62 @@ describe('extractFormData', () => {
     let formData = new FormData()
     formData.set('user-email', 'ada@example.com')
 
-    let result = extractFormData(formData, {
-      email: field(string(), { name: 'user-email' }),
-    })
+    let result = s.parse(
+      f.object({
+        email: f.field(s.string(), { name: 'user-email' }),
+      }),
+      formData,
+    )
 
     assert.deepEqual(result, {
       email: 'ada@example.com',
     })
   })
 
-  it('extracts repeated text fields', () => {
+  it('parses repeated text fields', () => {
     let formData = new FormData()
     formData.append('tags', 'one')
     formData.append('tags', 'two')
 
-    let result = extractFormData(formData, {
-      tags: fields(array(string())),
-    })
+    let result = s.parse(
+      f.object({
+        tags: f.fields(s.array(s.string())),
+      }),
+      formData,
+    )
 
     assert.deepEqual(result, {
       tags: ['one', 'two'],
     })
   })
 
-  it('extracts a single file field', async () => {
+  it('parses a single file field', async () => {
     let formData = new FormData()
     let avatar = new File(['avatar'], 'avatar.png', { type: 'image/png' })
     formData.set('avatar', avatar)
 
-    let result = extractFormData(formData, {
-      avatar: file(instanceof_(File)),
-    })
+    let result = s.parse(
+      f.object({
+        avatar: f.file(s.instanceof_(File)),
+      }),
+      formData,
+    )
 
     assert.equal(result.avatar.name, 'avatar.png')
     assert.equal(await result.avatar.text(), 'avatar')
   })
 
-  it('extracts repeated file fields', async () => {
+  it('parses repeated file fields', async () => {
     let formData = new FormData()
     formData.append('attachments', new File(['one'], 'one.txt', { type: 'text/plain' }))
     formData.append('attachments', new File(['two'], 'two.txt', { type: 'text/plain' }))
 
-    let result = extractFormData(formData, {
-      attachments: files(array(instanceof_(File))),
-    })
+    let result = s.parse(
+      f.object({
+        attachments: f.files(s.array(s.instanceof_(File))),
+      }),
+      formData,
+    )
 
     assert.equal(result.attachments.length, 2)
     assert.equal(result.attachments[0]?.name, 'one.txt')
@@ -81,25 +96,32 @@ describe('extractFormData', () => {
   it('passes undefined to optional fields when a value is missing', () => {
     let formData = new FormData()
 
-    let result = extractFormData(formData, {
-      nickname: field(optional(string())),
-    })
+    let result = s.parse(
+      f.object({
+        nickname: f.field(s.optional(s.string())),
+      }),
+      formData,
+    )
 
     assert.deepEqual(result, {
       nickname: undefined,
     })
   })
 
-  it('throws a ValidationError when extraction fails', () => {
+  it('throws a ValidationError when parsing fails', () => {
     let formData = new FormData()
     formData.set('age', 'not-a-number')
 
-    assert.throws(() =>
-      extractFormData(formData, {
-        age: field(coerce.number()),
-      }),
+    assert.throws(
+      () =>
+        s.parse(
+          f.object({
+            age: f.field(coerce.number()),
+          }),
+          formData,
+        ),
       (error: unknown) => {
-        assert.ok(error instanceof ValidationError)
+        assert.ok(error instanceof s.ValidationError)
         assert.deepEqual(error.issues[0]?.path, ['age'])
         return true
       },
@@ -110,23 +132,29 @@ describe('extractFormData', () => {
     let formData = new FormData()
     formData.set('avatar', new File(['avatar'], 'avatar.png', { type: 'image/png' }))
 
-    let result = extractFormDataSafe(formData, {
-      avatar: field(string()),
-    })
+    let result = s.parseSafe(
+      f.object({
+        avatar: f.field(s.string()),
+      }),
+      formData,
+    )
 
     assert.equal(result.success, false)
     assert.equal(result.issues[0]?.message, 'Expected text field "avatar"')
     assert.deepEqual(result.issues[0]?.path, ['avatar'])
   })
 
-  it('prefixes nested schema issues with the extracted field path', () => {
+  it('prefixes nested schema issues with the parsed field path', () => {
     let formData = new FormData()
     formData.append('ages', '1')
     formData.append('ages', 'x')
 
-    let result = extractFormDataSafe(formData, {
-      ages: fields(array(coerce.number())),
-    })
+    let result = s.parseSafe(
+      f.object({
+        ages: f.fields(s.array(coerce.number())),
+      }),
+      formData,
+    )
 
     assert.equal(result.success, false)
     assert.deepEqual(result.issues[0]?.path, ['ages', 1])
