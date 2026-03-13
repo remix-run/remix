@@ -40,6 +40,7 @@ import {
   prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
+  type MixinRuntimeBinding,
   type MixinRuntimeState,
 } from './mixin.ts'
 
