@@ -88,7 +88,7 @@ let Login = f.object({
 let credentials = s.parse(Login, await request.formData())
 let filters = s.parse(
   f.object({
-    query: f.field(s.defaulted(s.optional(s.string()), '')),
+    query: f.field(s.defaulted(s.string(), '')),
     tags: f.fields(s.array(s.string())),
   }),
   new URL(request.url).searchParams,

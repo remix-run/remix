@@ -16,7 +16,7 @@ import { env } from 'cloudflare:workers'
 import { routes } from './routes.ts'
 import * as data from './data.ts'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const loginSchema = f.object({
   username: textField,
 })

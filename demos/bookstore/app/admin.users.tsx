@@ -12,9 +12,9 @@ import { getCurrentUser } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const roleField = f.field(
-  s.defaulted(s.optional(s.union([s.literal('customer'), s.literal('admin')])), 'customer'),
+  s.defaulted(s.union([s.literal('customer'), s.literal('admin')]), 'customer'),
 )
 const userSchema = f.object({
   name: textField,

@@ -16,7 +16,7 @@ import { routes } from './routes.ts'
 import * as data from './data.ts'
 import path from 'node:path'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const loginSchema = f.object({
   username: textField,
 })

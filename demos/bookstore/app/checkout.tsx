@@ -14,7 +14,7 @@ import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
 import { Session } from './utils/session.ts'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const shippingAddressSchema = f.object({
   street: textField,
   city: textField,

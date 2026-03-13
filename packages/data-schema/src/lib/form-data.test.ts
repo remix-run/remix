@@ -6,6 +6,13 @@ import * as f from '../form-data.ts'
 import { minLength } from './checks.ts'
 import * as s from './schema.ts'
 
+type Equal<left, right> =
+  (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
+    ? true
+    : false
+
+function expectType<condition extends true>(_value?: condition): void {}
+
 describe('form-data.object', () => {
   it('parses single text fields', () => {
     let formData = new FormData()
@@ -140,6 +147,22 @@ describe('form-data.object', () => {
 
     assert.deepEqual(result, {
       nickname: undefined,
+    })
+  })
+
+  it('infers defaulted fields as required outputs', () => {
+    let formData = new FormData()
+
+    let result = s.parse(
+      f.object({
+        query: f.field(s.defaulted(s.string(), '')),
+      }),
+      formData,
+    )
+
+    expectType<Equal<(typeof result)['query'], string>>()
+    assert.deepEqual(result, {
+      query: '',
     })
   })
 

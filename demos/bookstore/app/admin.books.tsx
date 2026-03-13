@@ -12,13 +12,13 @@ import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const optionalTextField = f.field(s.optional(s.string()))
-const priceField = f.field(s.defaulted(s.optional(s.string()), '0'))
-const publishedYearField = f.field(s.defaulted(s.optional(s.string()), '2024'), {
+const priceField = f.field(s.defaulted(s.string(), '0'))
+const publishedYearField = f.field(s.defaulted(s.string(), '2024'), {
   name: 'publishedYear',
 })
-const inStockField = f.field(s.defaulted(s.optional(coerce.boolean()), false), {
+const inStockField = f.field(s.defaulted(coerce.boolean(), false), {
   name: 'inStock',
 })
 const bookSchema = f.object({
@@ -272,12 +272,12 @@ export default {
         title,
         author,
         description,
-        price: parseFloat(price ?? '0'),
+        price: parseFloat(price),
         genre,
         cover_url: cover ?? '/images/placeholder.jpg',
         image_urls: JSON.stringify([]),
         isbn,
-        published_year: parseInt(publishedYear ?? '2024', 10),
+        published_year: parseInt(publishedYear, 10),
         in_stock: inStock,
       })
 
@@ -430,11 +430,11 @@ export default {
         title,
         author,
         description,
-        price: parseFloat(price ?? '0'),
+        price: parseFloat(price),
         genre,
         cover_url,
         isbn,
-        published_year: parseInt(publishedYear ?? '2024', 10),
+        published_year: parseInt(publishedYear, 10),
         in_stock: inStock,
       })
 

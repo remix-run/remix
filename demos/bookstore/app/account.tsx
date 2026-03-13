@@ -13,7 +13,7 @@ import { parseId } from './utils/ids.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
-const textField = f.field(s.defaulted(s.optional(s.string()), ''))
+const textField = f.field(s.defaulted(s.string(), ''))
 const accountSettingsSchema = f.object({
   name: textField,
   email: textField,

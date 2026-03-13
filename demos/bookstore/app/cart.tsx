@@ -16,7 +16,7 @@ import { render } from './utils/render.ts'
 import { Session } from './utils/session.ts'
 
 const bookIdField = f.field(s.optional(s.string()))
-const quantityField = f.field(s.defaulted(s.optional(s.string()), '1'))
+const quantityField = f.field(s.defaulted(s.string(), '1'))
 const redirectField = f.field(s.optional(s.string()))
 const bookIdSchema = f.object({
   bookId: bookIdField,
@@ -87,7 +87,7 @@ export default {
             return new Response('Book not found', { status: 404 })
           }
 
-          let nextQuantity = parseInt(quantity ?? '1', 10)
+          let nextQuantity = parseInt(quantity, 10)
 
           session.set('cart', updateCartItem(getCurrentCart(), book.id, nextQuantity))
 
