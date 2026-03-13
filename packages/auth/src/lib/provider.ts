@@ -43,10 +43,10 @@ export interface OAuthResult<profile, provider extends string = string> {
 }
 
 /**
- * Public shape for an OAuth or OIDC provider used by `login()` and `callback()`.
+ * Public shape for an OAuth or OIDC provider used by `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export interface OAuthProvider<profile, provider extends string = string> {
-  /** Discriminator used by `login()` to select the OAuth flow. */
+  /** Discriminator used by `createAuthLoginRequestHandler()` to select the OAuth flow. */
   kind: 'oauth'
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
@@ -61,7 +61,7 @@ export interface OAuthTransaction {
 
 export interface OAuthProviderRuntime<profile, provider extends string = string> {
   createAuthorizationURL(transaction: OAuthTransaction): URL | Promise<URL>
-  authenticate(
+  handleCallback(
     context: RequestContext,
     transaction: OAuthTransaction,
   ): Promise<OAuthResult<profile, provider>>

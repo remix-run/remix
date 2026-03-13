@@ -124,7 +124,7 @@ export interface OIDCAuthProviderOptions<
  * Creates an OpenID Connect provider backed by discovery metadata or explicit endpoints.
  *
  * @param options OIDC settings, client credentials, and optional profile mapping hooks.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createOIDCAuthProvider<
   profile extends OIDCAuthProfile = OIDCAuthProfile,
@@ -165,7 +165,7 @@ export function createOIDCAuthProvider<
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<profile, provider>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<profile, provider>> {
       let metadata = await getMetadata()
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: metadata.token_endpoint,

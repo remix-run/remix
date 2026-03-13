@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { login as authenticateWithCredentials } from 'remix/auth'
+import { createAuthLoginRequestHandler as authenticateWithCredentials } from 'remix/auth'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'

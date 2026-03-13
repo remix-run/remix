@@ -56,7 +56,7 @@ export interface FacebookAuthProfile {
  * Creates a Facebook Login provider.
  *
  * @param options Facebook OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `login()` and `callback()`.
+ * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
  */
 export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
@@ -75,7 +75,7 @@ export function createFacebookAuthProvider(options: FacebookAuthProviderOptions)
         code_challenge_method: 'S256',
       })
     },
-    async authenticate(context, transaction): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: FACEBOOK_TOKEN_ENDPOINT,
         clientId: options.clientId,
