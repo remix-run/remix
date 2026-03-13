@@ -40,9 +40,10 @@ export type ErrorMapContext = {
 export type ErrorMap = (context: ErrorMapContext) => string | undefined
 
 /**
- * Options passed to `parse` and `parseSafe`.
+ * Options passed to {@link parse} and {@link parseSafe}.
  *
- * This mirrors `ValidationOptions`, but also supports a convenience `abortEarly` option at the top level.
+ * This mirrors {@link ValidationOptions}, but also supports a convenience `abortEarly`
+ * option at the top level.
  */
 export type ParseOptions = StandardSchemaV1.Options & {
   abortEarly?: boolean
@@ -1092,7 +1093,7 @@ export function union<schemas extends Schema<any, any>[]>(
 }
 
 /**
- * Error thrown by `parse()` when validation fails.
+ * Error thrown by {@link parse} when validation fails.
  */
 export class ValidationError extends Error {
   /**
@@ -1112,7 +1113,7 @@ export class ValidationError extends Error {
 }
 
 /**
- * Validate a value and return the typed output or throw a `ValidationError`.
+ * Validate a value and return the typed output or throw a {@link ValidationError}.
  *
  * @param schema The schema to validate against
  * @param value The value to validate

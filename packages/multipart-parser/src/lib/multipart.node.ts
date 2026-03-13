@@ -10,14 +10,14 @@ import {
 import { getMultipartBoundary } from './multipart-request.ts'
 
 /**
- * Parse a `multipart/*` Node.js `Buffer` and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` Node.js `Buffer` and yield each part as a {@link MultipartPart} object.
  *
- * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
- * building a web server, consider using `parseMultipartRequest(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the content and boundary.
+ * If you're building a web server, consider using {@link parseMultipartRequest} instead.
  *
  * @param message The multipart message as a `Buffer` or an iterable of `Buffer` chunks
  * @param options Options for the parser
- * @returns A generator yielding `MultipartPart` objects
+ * @returns A generator yielding {@link MultipartPart} objects
  */
 export function* parseMultipart(
   message: Buffer | Iterable<Buffer>,
@@ -27,14 +27,15 @@ export function* parseMultipart(
 }
 
 /**
- * Parse a `multipart/*` Node.js `Readable` stream and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` Node.js `Readable` stream and yield each part as a
+ * {@link MultipartPart} object.
  *
- * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
- * building a web server, consider using `parseMultipartRequest(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the stream and boundary.
+ * If you're building a web server, consider using {@link parseMultipartRequest} instead.
  *
  * @param stream A Node.js `Readable` stream containing multipart data
  * @param options Options for the parser
- * @returns An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartStream(
   stream: Readable,
@@ -55,11 +56,11 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
 }
 
 /**
- * Parse a multipart Node.js request and yield each part as a `MultipartPart` object.
+ * Parse a multipart Node.js request and yield each part as a {@link MultipartPart} object.
  *
  * @param req The Node.js `http.IncomingMessage` object containing multipart data
  * @param options Options for the parser
- * @returns An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartRequest(
   req: http.IncomingMessage,

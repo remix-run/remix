@@ -193,7 +193,7 @@ type NormalizePrimaryKey<
     : DefaultPrimaryKey<columns>
 
 /**
- * Timestamp configuration accepted by `table()`.
+ * Timestamp configuration accepted by {@link table}.
  */
 export type TimestampOptions = boolean | { createdAt?: string; updatedAt?: string }
 
@@ -262,7 +262,7 @@ type TableRowFromColumns<columns extends TableColumnsDefinition> = Pretty<{
 }>
 
 /**
- * Fully-typed table object returned by `table()`.
+ * Fully-typed table object returned by {@link table}.
  */
 export type Table<
   name extends string,
@@ -537,7 +537,7 @@ export type KeySelector<table extends AnyTable> =
   | readonly (keyof TableRow<table> & string)[]
 
 /**
- * Options for defining a `hasMany` relation.
+ * Options for defining a {@link hasMany} relation.
  */
 export type HasManyOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<target>
@@ -545,7 +545,7 @@ export type HasManyOptions<source extends AnyTable, target extends AnyTable> = {
 }
 
 /**
- * Options for defining a `hasOne` relation.
+ * Options for defining a {@link hasOne} relation.
  */
 export type HasOneOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<target>
@@ -553,7 +553,7 @@ export type HasOneOptions<source extends AnyTable, target extends AnyTable> = {
 }
 
 /**
- * Options for defining a `belongsTo` relation.
+ * Options for defining a {@link belongsTo} relation.
  */
 export type BelongsToOptions<source extends AnyTable, target extends AnyTable> = {
   foreignKey?: KeySelector<source>
@@ -561,7 +561,7 @@ export type BelongsToOptions<source extends AnyTable, target extends AnyTable> =
 }
 
 /**
- * Options for defining a `hasManyThrough` relation.
+ * Options for defining a {@link hasManyThrough} relation.
  */
 export type HasManyThroughOptions<source extends AnyTable, target extends AnyTable> = {
   through: Relation<source, AnyTable, RelationCardinality, any>

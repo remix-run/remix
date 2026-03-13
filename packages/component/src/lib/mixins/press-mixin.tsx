@@ -17,7 +17,7 @@ declare global {
 }
 
 /**
- * Event emitted by the `pressEvents` mixin for pointer and keyboard presses.
+ * Event emitted by the {@link pressEvents} mixin for pointer and keyboard presses.
  */
 export class PressEvent extends Event {
   clientX: number

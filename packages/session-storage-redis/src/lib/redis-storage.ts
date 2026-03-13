@@ -4,7 +4,7 @@ import type { SessionStorage } from '@remix-run/session'
 type SessionData = ReturnType<typeof createSession>['data']
 
 /**
- * Minimal Redis client contract required by `createRedisSessionStorage`.
+ * Minimal Redis client contract required by {@link createRedisSessionStorage}.
  */
 export interface RedisSessionStorageClient {
   get(key: string): Promise<string | null> | string | null
@@ -15,7 +15,7 @@ export interface RedisSessionStorageClient {
 }
 
 /**
- * Options for Redis-backed session storage.
+ * Options for Redis-backed session storage created by {@link createRedisSessionStorage}.
  */
 export interface RedisSessionStorageOptions {
   /**

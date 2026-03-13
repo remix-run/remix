@@ -1,8 +1,9 @@
 import type { FileStorage, ListOptions, ListResult } from '../file-storage.ts'
 
 /**
- * Creates a simple, in-memory implementation of the `FileStorage` interface.
- * @returns A new in-memory file storage instance
+ * Creates a simple, in-memory implementation of the {@link FileStorage} interface.
+ *
+ * @returns A new in-memory {@link FileStorage} instance
  */
 export function createMemoryFileStorage(): FileStorage {
   let map = new Map<string, File>()

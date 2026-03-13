@@ -896,7 +896,7 @@ class DatabaseRuntime implements Database {
  * @param adapter Adapter implementation responsible for SQL execution.
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
- * @returns A `Database` API instance.
+ * @returns A {@link Database} API instance.
  * @example
  * ```ts
  * import { column as c, createDatabase, table } from 'remix/data-table'
@@ -934,7 +934,7 @@ export function createDatabase(
  * @param token Active adapter transaction token.
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
- * @returns A `Database` API instance bound to the provided transaction.
+ * @returns A {@link Database} API instance bound to the provided transaction.
  */
 export function createDatabaseWithTransaction(
   adapter: DatabaseAdapter,

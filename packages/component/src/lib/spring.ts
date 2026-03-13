@@ -24,7 +24,7 @@ export interface SpringOptions {
 }
 
 /**
- * Iterator returned by `spring()`, decorated for CSS and WAAPI use.
+ * Iterator returned by {@link spring}, decorated for CSS and WAAPI use.
  */
 export interface SpringIterator extends IterableIterator<number> {
   /** Time when spring settles to rest (milliseconds) */

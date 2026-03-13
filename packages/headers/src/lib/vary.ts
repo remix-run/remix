@@ -1,7 +1,7 @@
 import { type HeaderValue } from './header-value.ts'
 
 /**
- * Object form for constructing a `Vary` header value.
+ * Object form for constructing a {@link Vary} header value.
  */
 export interface VaryInit {
   /**

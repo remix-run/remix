@@ -3,7 +3,7 @@ import { parseParams, quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 /**
- * Initializer for a `Cookie` header value.
+ * Initializer for a {@link Cookie} header value.
  */
 export type CookieInit = Iterable<[string, string]> | Record<string, string>
 

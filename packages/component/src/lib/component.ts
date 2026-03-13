@@ -145,7 +145,7 @@ export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
 }
 
 /**
- * Props accepted by the built-in `Frame` component.
+ * Props accepted by the built-in {@link Frame} component.
  */
 export interface FrameProps {
   name?: string

@@ -9,7 +9,7 @@ import { startNavigationListener } from './navigation.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
 /**
- * Options for starting the client runtime.
+ * Options for starting the client runtime with {@link run}.
  */
 export type RunInit = {
   loadModule: LoadModule
@@ -24,7 +24,7 @@ export type AppRuntimeEventMap = {
 }
 
 /**
- * Client runtime returned by `run()`.
+ * Client runtime returned by {@link run}.
  */
 export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   ready(): Promise<void>

@@ -1,7 +1,7 @@
 import { type HeaderValue } from './header-value.ts'
 
 /**
- * Initializer for a `Range` header value.
+ * Initializer for a {@link Range} header value.
  */
 export interface RangeInit {
   /**

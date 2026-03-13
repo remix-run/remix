@@ -3,7 +3,7 @@ import { parseParams } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 /**
- * Initializer for an `Accept` header value.
+ * Initializer for an {@link Accept} header value.
  */
 export type AcceptInit = Iterable<string | [string, number]> | Record<string, number>
 

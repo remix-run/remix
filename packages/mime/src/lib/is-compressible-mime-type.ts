@@ -8,7 +8,8 @@ import { customCompressibleByMimeType } from './define-mime-type.ts'
  * - Compressible MIME types from mime-db
  * - Any text/* type
  * - Types with +json, +text, or +xml suffix
- * - MIME types explicitly registered as compressible via `defineMimeType()`
+ * - MIME types explicitly registered as compressible via
+ *   {@link import('./define-mime-type.ts').defineMimeType}
  *
  * Accepts either a bare MIME type or a full Content-Type header value with parameters.
  *
