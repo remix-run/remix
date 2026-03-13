@@ -29,6 +29,8 @@ A good demo should:
 - Use Remix library packages for the demo's framework behavior. Do not introduce unrelated routers, component frameworks, state managers, or middleware stacks that distract from the Remix patterns being demonstrated.
 - Keep any non-Remix dependency incidental to the runtime environment only. If a database driver, asset bundler, or type package is needed, it should support the demo rather than define its architecture.
 - Demos should push Remix to its limits in a focused way. Prefer realistic edge cases, composition, streaming, middleware, routing, navigation, forms, or request-handling scenarios over toy examples.
+- When demos use `remix/component`, prefer idiomatic Remix component patterns. Use normal JSX composition and built-in styling/mixin props such as `css={...}` or `mix={css(...)}`
+  and `mix={[...]}` instead of dropping down to manual DOM mutation or ad hoc class management.
 - Demo code must have good hygiene. Use clear names, small focused modules, explicit control flow, and accessible markup. Avoid hacks, dead code, unexplained shortcuts, or patterns that would be poor examples for users to copy.
 - Make the demo teach good patterns. Assume readers and future agents will study it as an example of how Remix code should be written in this repository.
 - All demo servers should use port `44100`.
