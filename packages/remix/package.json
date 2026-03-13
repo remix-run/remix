@@ -514,7 +514,10 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/node-serve": "workspace:^"
+    "@remix-run/node-serve": "workspace:^",
+    "@remix-run/job": "workspace:^",
+    "@remix-run/job-data-table": "workspace:^",
+    "@remix-run/job-redis": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
