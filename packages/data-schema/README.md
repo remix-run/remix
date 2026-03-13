@@ -95,6 +95,12 @@ let filters = s.parse(
 )
 ```
 
+`f.object(...)` is the root schema for `FormData` and `URLSearchParams`.
+Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values,
+`f.file(...)` for one uploaded file, and `f.files(...)` for repeated files.
+When you want a fallback value, prefer `s.defaulted(s.string(), '')`.
+File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
+
 You can also customize built-in validation messages with `errorMap`:
 
 ```ts
