@@ -163,8 +163,8 @@ function SignedOutState() {
 
 function SetupGuide() {
   return ({ providers }: { providers: SocialProviderState[] }) => (
-    <section class="setup-section stack-lg">
-      <div class="setup-card setup-overview-card stack-lg">
+    <section class="setup-section">
+      <div class="setup-card setup-guide-card stack-lg">
         <div class="stack-sm">
           <p class="eyebrow">Demo setup</p>
           <h2>Configure local and social authentication</h2>
@@ -175,49 +175,51 @@ function SetupGuide() {
           </p>
         </div>
 
-        <div class="setup-columns">
-          <div class="stack-sm">
-            <h3>Boot the demo</h3>
-            <ol class="setup-list">
-              <li>
-                Copy <code>.env.example</code> to .env in `demos/social-login`.
-              </li>
-              <li>Fill in any provider client ID and secret pairs you want to enable.</li>
-              <li>Register the callback URLs below with each provider app.</li>
-              <li>
-                Run <code>pnpm start</code> and open <code>{localDemoOrigin}/</code>.
-              </li>
-            </ol>
-          </div>
+        <section class="setup-topic stack-md">
+          <h3>Demo setup</h3>
+          <div class="setup-columns">
+            <div class="stack-sm">
+              <h4>Boot the demo</h4>
+              <ol class="setup-list">
+                <li>
+                  Copy <code>.env.example</code> to .env in `demos/social-login`.
+                </li>
+                <li>Fill in any provider client ID and secret pairs you want to enable.</li>
+                <li>Register the callback URLs below with each provider app.</li>
+                <li>
+                  Run <code>pnpm start</code> and open <code>{localDemoOrigin}/</code>.
+                </li>
+              </ol>
+            </div>
 
-          <div class="stack-sm">
-            <h3>Email login</h3>
-            <p class="muted">The demo seeds one local user into SQLite the first time it boots.</p>
-            <div class="demo-account demo-account-inline">
-              <p class="demo-account-label">Seeded local account</p>
+            <div class="stack-sm">
+              <h4>Email login</h4>
               <p class="muted">
-                <strong>demo@example.com</strong> / <strong>password123</strong>
+                The demo seeds one local user into SQLite the first time it boots.
               </p>
+              <div class="demo-account demo-account-inline">
+                <p class="demo-account-label">Seeded local account</p>
+                <p class="muted">
+                  <strong>demo@example.com</strong> / <strong>password123</strong>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="setup-provider-grid">
         {providers.map((provider) => (
-          <ProviderSetupCard provider={provider} />
+          <ProviderSetupSection provider={provider} />
         ))}
       </div>
     </section>
   )
 }
 
-function ProviderSetupCard() {
+function ProviderSetupSection() {
   return ({ provider }: { provider: SocialProviderState }) => (
-    <article class="setup-card setup-provider-card stack-sm">
+    <section class="setup-topic stack-sm">
       <div class="setup-provider-header">
         <div class="stack-sm">
-          <p class="eyebrow">{provider.label}</p>
           <h3>{getProviderSetupHeading(provider.name)}</h3>
         </div>
         <span class={`setup-status ${provider.configured ? 'setup-status-ready' : ''}`}>
@@ -251,7 +253,7 @@ function ProviderSetupCard() {
           </div>
         ) : null}
       </dl>
-    </article>
+    </section>
   )
 }
 
