@@ -36,18 +36,61 @@ export function createHomeAction(
 
       return render(
         <Layout>
-          <section mix={pageStageStyle}>
-            <section mix={[pageHeroStyle, stackSmStyle]}>
-              <h1 mix={heroTitleStyle}>Remix Auth Demo</h1>
-              <p mix={ledeStyle}>
+          <section mix={css({ display: 'grid', gap: '22px' })}>
+            <section
+              mix={[
+                stackSmStyle,
+                css({
+                  justifyItems: 'center',
+                  textAlign: 'center',
+                  color: '#ffffff',
+                  paddingTop: '8px',
+                }),
+              ]}
+            >
+              <h1
+                mix={css({
+                  margin: 0,
+                  lineHeight: 1.04,
+                  fontSize: 'clamp(2.4rem, 5vw, 4rem)',
+                  letterSpacing: '-0.04em',
+                  textWrap: 'balance',
+                })}
+              >
+                Remix Auth Demo
+              </h1>
+              <p
+                mix={css({
+                  margin: 0,
+                  lineHeight: 1.58,
+                  maxWidth: '44rem',
+                  color: 'rgba(255, 255, 255, 0.82)',
+                })}
+              >
                 Sign in with the seeded local account or connect a social provider. The demo keeps
                 users in SQLite and resolves request identity from <code>context.get(Auth)</code>.
               </p>
             </section>
 
-            <section mix={contentStageStyle}>
+            <section
+              mix={css({
+                display: 'grid',
+                gap: '16px',
+                justifyItems: 'center',
+              })}
+            >
               {typeof error === 'string' ? (
-                <div mix={[noticeStyle, noticeErrorStyle]}>{error}</div>
+                <div
+                  mix={[
+                    noticeStyle,
+                    css({
+                      background: 'var(--error-bg)',
+                      color: 'var(--error-text)',
+                    }),
+                  ]}
+                >
+                  {error}
+                </div>
               ) : null}
 
               {user ? <SignedInState user={user} /> : <SignedOutState providers={providers} />}
@@ -146,7 +189,7 @@ interface SetupGuideProps {
 
 function SetupGuide() {
   return ({ providers }: SetupGuideProps) => (
-    <section mix={setupSectionStyle}>
+    <section mix={css({ width: 'min(980px, 100%)' })}>
       <div mix={[setupCardStyle, setupGuideCardStyle, stackLgStyle]}>
         <div mix={stackSmStyle}>
           <p mix={eyebrowStyle}>Demo setup</p>
@@ -180,7 +223,14 @@ function SetupGuide() {
               <p mix={mutedTextStyle}>
                 The demo seeds one local user into SQLite the first time it boots.
               </p>
-              <div mix={[demoAccountStyle, demoAccountInlineStyle]}>
+              <div
+                mix={[
+                  demoAccountStyle,
+                  css({
+                    background: '#ffffff',
+                  }),
+                ]}
+              >
                 <p mix={demoAccountLabelStyle}>Seeded local account</p>
                 <p mix={mutedTextStyle}>
                   <strong>demo@example.com</strong> / <strong>password123</strong>
@@ -203,9 +253,32 @@ interface SignedInStateProps {
 function SignedInState() {
   return ({ user }: SignedInStateProps) => (
     <section mix={[panelStyle, authCardStyle, stackLgStyle]}>
-      <div mix={signedInHeaderStyle}>
+      <div
+        mix={css({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          padding: '28px 28px 0',
+          '@media (max-width: 640px)': {
+            paddingLeft: '18px',
+            paddingRight: '18px',
+          },
+        })}
+      >
         <p mix={eyebrowStyle}>Authenticated session</p>
-        <span mix={statusPillStyle}>Signed in</span>
+        <span
+          mix={css({
+            borderRadius: '999px',
+            padding: '0.42rem 0.85rem',
+            background: 'rgba(15, 159, 110, 0.12)',
+            color: 'var(--success)',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+          })}
+        >
+          Signed in
+        </span>
       </div>
 
       <div mix={identityRowStyle}>
@@ -281,7 +354,19 @@ function renderProviderSetupSection(provider: SocialProviderState) {
         <div mix={stackSmStyle}>
           <h3 mix={setupHeadingStyle}>{getProviderSetupHeading(provider.name)}</h3>
         </div>
-        <span mix={provider.configured ? [setupStatusStyle, setupStatusReadyStyle] : setupStatusStyle}>
+        <span
+          mix={
+            provider.configured
+              ? [
+                  setupStatusStyle,
+                  css({
+                    background: 'rgba(15, 159, 110, 0.12)',
+                    color: 'var(--success)',
+                  }),
+                ]
+              : setupStatusStyle
+          }
+        >
           {provider.configured ? 'Enabled' : 'Needs .env'}
         </span>
       </div>
@@ -402,36 +487,9 @@ let stackSmStyle = css({
   gap: '6px',
 })
 
-let pageStageStyle = css({
-  display: 'grid',
-  gap: '22px',
-})
-
-let pageHeroStyle = css({
-  justifyItems: 'center',
-  textAlign: 'center',
-  color: '#ffffff',
-  paddingTop: '8px',
-})
-
-let heroTitleStyle = css({
-  margin: 0,
-  lineHeight: 1.04,
-  fontSize: 'clamp(2.4rem, 5vw, 4rem)',
-  letterSpacing: '-0.04em',
-  textWrap: 'balance',
-})
-
 let sectionTitleStyle = css({
   margin: 0,
   lineHeight: 1.04,
-})
-
-let ledeStyle = css({
-  margin: 0,
-  lineHeight: 1.58,
-  maxWidth: '44rem',
-  color: 'rgba(255, 255, 255, 0.82)',
 })
 
 let mutedTextStyle = css({
@@ -448,23 +506,12 @@ let mutedTextStyle = css({
   },
 })
 
-let contentStageStyle = css({
-  display: 'grid',
-  gap: '16px',
-  justifyItems: 'center',
-})
-
 let noticeStyle = css({
   borderRadius: 'var(--radius-lg)',
   padding: '12px 14px',
   border: '1px solid var(--error-border)',
   maxWidth: '760px',
   width: '100%',
-})
-
-let noticeErrorStyle = css({
-  background: 'var(--error-bg)',
-  color: 'var(--error-text)',
 })
 
 let panelStyle = css({
@@ -635,10 +682,6 @@ let demoAccountStyle = css({
   padding: '14px 16px',
 })
 
-let demoAccountInlineStyle = css({
-  background: '#ffffff',
-})
-
 let demoAccountLabelStyle = css({
   margin: 0,
   textTransform: 'uppercase',
@@ -729,10 +772,6 @@ let providerTitleStyle = css({
   lineHeight: 1.15,
 })
 
-let setupSectionStyle = css({
-  width: 'min(980px, 100%)',
-})
-
 let setupCardStyle = css({
   border: '1px solid var(--border)',
   background: 'var(--panel)',
@@ -797,11 +836,6 @@ let setupStatusStyle = css({
   whiteSpace: 'nowrap',
 })
 
-let setupStatusReadyStyle = css({
-  background: 'rgba(15, 159, 110, 0.12)',
-  color: 'var(--success)',
-})
-
 let setupDefinitionListStyle = css({
   margin: 0,
   display: 'grid',
@@ -826,27 +860,6 @@ let setupDefinitionDescriptionStyle = css({
     whiteSpace: 'normal',
     overflowWrap: 'anywhere',
   },
-})
-
-let signedInHeaderStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  padding: '28px 28px 0',
-  '@media (max-width: 640px)': {
-    paddingLeft: '18px',
-    paddingRight: '18px',
-  },
-})
-
-let statusPillStyle = css({
-  borderRadius: '999px',
-  padding: '0.42rem 0.85rem',
-  background: 'rgba(15, 159, 110, 0.12)',
-  color: 'var(--success)',
-  fontSize: '0.82rem',
-  fontWeight: 700,
 })
 
 let identityRowStyle = css({
