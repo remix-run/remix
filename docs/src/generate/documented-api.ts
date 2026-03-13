@@ -156,6 +156,10 @@ function getDocumentedClass(
   let constructor: Method | undefined
   node.traverse((child) => {
     if (child.isDeclaration() && child.kind === typedoc.ReflectionKind.Constructor) {
+      invariant(
+        child.getAllSignatures().length === 1,
+        `Docs only support one constructor signature at the moment: ${child.getFriendlyFullName()}`,
+      )
       let signature = child.getAllSignatures()[0]
       invariant(signature, `Missing constructor signature for class: ${node.getFriendlyFullName()}`)
       constructor = getApiMethod(fullName, signature)
@@ -231,13 +235,17 @@ function getChildrenSignature(
       let type = c.getSignature.type?.toString() ?? 'unknown'
       childrenSignature += `  get ${c.name}(): ${type}\n`
     } else if (c.kind === typedoc.ReflectionKind.Method && c.isDeclaration()) {
-      let method = getApiMethod(c.name, c.getAllSignatures()[0])
-      invariant(method, `Failed to get method signature: ${c.getFriendlyFullName()}`)
-      childrenSignature += `  ${method.signature}\n`
+      c.getAllSignatures().forEach((signature) => {
+        let method = getApiMethod(c.name, signature)
+        invariant(method, `Failed to get method signature: ${c.getFriendlyFullName()}`)
+        childrenSignature += `  ${method.signature}\n`
+      })
     } else if (c.kind === typedoc.ReflectionKind.Constructor && c.isDeclaration()) {
-      let method = getApiMethod(c.name, c.getAllSignatures()[0])
-      invariant(method, `Failed to get constructor signature: ${c.getFriendlyFullName()}`)
-      childrenSignature += `  ${method.signature}\n`
+      c.getAllSignatures().forEach((signature) => {
+        let method = getApiMethod(c.name, signature)
+        invariant(method, `Failed to get constructor signature: ${c.getFriendlyFullName()}`)
+        childrenSignature += `  ${method.signature}\n`
+      })
     }
   })
   return childrenSignature
@@ -363,12 +371,12 @@ function getApiPropertiesAndMethods(
           accessors.push(accessor)
         }
       } else if (child.kind === typedoc.ReflectionKind.Method) {
-        let signature = child.getAllSignatures()[0]
-        invariant(`Missing method signature for class: ${child.getFriendlyFullName()}`)
-        let method = getApiMethod(fullName, signature)
-        if (method) {
-          methods.push(method)
-        }
+        child.getAllSignatures().forEach((signature) => {
+          let method = getApiMethod(fullName, signature)
+          if (method) {
+            methods.push(method)
+          }
+        })
       } else if (!handledTypes.has(child.kind)) {
         unimplemented(
           `class child kind: ${typedoc.ReflectionKind[child.kind]} ${node.getFriendlyFullName()}`,

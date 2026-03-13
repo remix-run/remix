@@ -88,11 +88,17 @@ export class ColumnBuilder<output = unknown> {
   /**
    * Adds a foreign-key reference for the column.
    * @param table Referenced table name.
-   * @param columnsOrName Referenced column list or constraint name for the two-argument form.
-   * @param maybeName Constraint name when referenced columns are provided explicitly.
+   * @param name Constraint name.
    * @returns The column builder.
    */
   references(table: string, name: string): ColumnBuilder<output>
+  /**
+   * Adds a foreign-key reference for the column.
+   * @param table Referenced table name.
+   * @param columns Referenced column list.
+   * @param name Constraint name.
+   * @returns The column builder.
+   */
   references(table: string, columns: string | string[], name: string): ColumnBuilder<output>
   references(
     table: string,
