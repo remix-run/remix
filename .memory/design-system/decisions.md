@@ -21,6 +21,10 @@
   - `ui.fieldText.*` covers shared label/help roles
 - Item/list rows should be represented as a reusable primitive.
   - `ui.item.*` exists for menus, tabs, option rows, command items, and similar UI
+- Card structure should start as semantic recipes, not wrapper-heavy components.
+  - `ui.card.*` owns shared card layout, slot rhythm, and optional action/footer structure
+  - surface tone can be selected with `ui.card.base`, `ui.card.secondary`, `ui.card.elevated`, and `ui.card.inset`
+  - avoid rushing into `CardHeader`, `CardContent`, `CardFooter`, or `asChild`-style APIs unless the recipe model proves insufficient
 
 ## Learned
 

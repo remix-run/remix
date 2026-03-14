@@ -29,6 +29,7 @@ const sampleTheme = {
     mono: 'monospace',
   },
   fontSize: {
+    '3xs': '10px',
     '2xs': '11px',
     xs: '12px',
     sm: '14px',
@@ -171,7 +172,7 @@ describe('theme contract', () => {
   it('exposes CSS variable references', () => {
     expect(theme.space.md).toBe('var(--rmx-space-md)')
     expect(theme.fontFamily.sans).toBe('var(--rmx-font-family-sans)')
-    expect(theme.fontSize['2xs']).toBe('var(--rmx-font-size-2xs)')
+    expect(theme.fontSize['3xs']).toBe('var(--rmx-font-size-3xs)')
     expect(theme.colors.text.primary).toBe('var(--rmx-color-text-primary)')
     expect(theme.colors.action.primary.background).toBe(
       'var(--rmx-color-action-primary-background)',
@@ -216,6 +217,10 @@ describe('ui', () => {
         'div',
         {
           mix: [
+            ui.card.base,
+            ui.card.header,
+            ui.card.headerWithAction,
+            ui.card.description,
             ui.control.base,
             ui.button.primary,
             ui.surfaceText.eyebrow,
@@ -231,10 +236,36 @@ describe('ui', () => {
     )
 
     expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
-    expect(html).toMatch(/font-size: var\(--rmx-font-size-2xs\)/)
+    expect(html).toMatch(/padding: var\(--rmx-space-lg\)/)
+    expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
+    expect(html).toMatch(/margin: var\(--rmx-space-sm\) 0 0/)
+    expect(html).toMatch(/font-size: var\(--rmx-font-size-3xs\)/)
     expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
+  })
+
+  it('provides card structure recipes for layout and typography', async () => {
+    let html = await renderToString(
+      createElement(
+        'article',
+        {
+          mix: [ui.card.elevated, ui.card.headerWithAction],
+        },
+        createElement('div', { mix: ui.card.header }, [
+          createElement('p', { mix: ui.card.eyebrow }, 'Surface'),
+          createElement('h2', { mix: ui.card.title }, 'Share workspace'),
+          createElement('p', { mix: ui.card.description }, 'Invite teammates and manage access'),
+        ]),
+        createElement('button', { type: 'button', mix: [ui.control.base, ui.button.secondary, ui.card.action] }, 'Edit'),
+      ),
+    )
+
+    expect(html).toMatch(/box-shadow: var\(--rmx-shadow-md\)/)
+    expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
+    expect(html).toMatch(/justify-self: end/)
+    expect(html).toMatch(/text-transform: uppercase/)
+    expect(html).toMatch(/letter-spacing: -0.022em/)
   })
 })

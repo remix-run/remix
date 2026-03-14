@@ -30,6 +30,7 @@ let themeVariableNames = {
     mono: '--rmx-font-family-mono',
   },
   fontSize: {
+    '3xs': '--rmx-font-size-3xs',
     '2xs': '--rmx-font-size-2xs',
     xs: '--rmx-font-size-xs',
     sm: '--rmx-font-size-sm',
@@ -248,6 +249,21 @@ export type ThemeUi = {
     label: ThemeUtility
     help: ThemeUtility
   }
+  card: {
+    base: ThemeUtility
+    secondary: ThemeUtility
+    elevated: ThemeUtility
+    inset: ThemeUtility
+    stack: ThemeUtility
+    header: ThemeUtility
+    headerWithAction: ThemeUtility
+    body: ThemeUtility
+    footer: ThemeUtility
+    eyebrow: ThemeUtility
+    title: ThemeUtility
+    description: ThemeUtility
+    action: ThemeUtility
+  }
   item: {
     base: ThemeUtility
     selected: ThemeUtility
@@ -367,12 +383,12 @@ export const ui: ThemeUi = {
   },
   surfaceText: {
     eyebrow: css({
-      fontSize: theme.fontSize['2xs'],
+      fontSize: theme.fontSize['3xs'],
       lineHeight: theme.lineHeight.normal,
-      fontWeight: theme.fontWeight.semibold,
+      fontWeight: theme.fontWeight.medium,
       letterSpacing: theme.letterSpacing.meta,
       textTransform: 'uppercase',
-      color: `color-mix(in oklab, ${theme.colors.text.muted} 84%, white)`,
+      color: `color-mix(in oklab, ${theme.colors.text.muted} 76%, white)`,
     }),
     title: css({
       fontSize: theme.fontSize.lg,
@@ -382,9 +398,9 @@ export const ui: ThemeUi = {
       color: theme.colors.text.primary,
     }),
     body: css({
-      fontSize: theme.fontSize.sm,
-      lineHeight: '1.44',
-      color: `color-mix(in oklab, ${theme.colors.text.secondary} 76%, white)`,
+      fontSize: theme.fontSize.xs,
+      lineHeight: '1.48',
+      color: `color-mix(in oklab, ${theme.colors.text.secondary} 72%, white)`,
     }),
     supporting: css({
       fontSize: theme.fontSize['2xs'],
@@ -479,6 +495,91 @@ export const ui: ThemeUi = {
       color: theme.colors.text.muted,
     }),
   },
+  card: {
+    base: createCardUtility({
+      background: theme.colors.background.surface,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.xs,
+    }),
+    secondary: createCardUtility({
+      background: theme.colors.background.surfaceSecondary,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.xs,
+    }),
+    elevated: createCardUtility({
+      background: theme.colors.background.surfaceElevated,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.md,
+    }),
+    inset: createCardUtility({
+      background: theme.colors.background.inset,
+      border: theme.colors.border.subtle,
+      shadow: 'none',
+    }),
+    stack: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.space.md,
+      minWidth: 0,
+    }),
+    header: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 0,
+      minWidth: 0,
+    }),
+    headerWithAction: css({
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr) auto',
+      alignItems: 'start',
+      gap: theme.space.md,
+    }),
+    body: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.space.sm,
+      minWidth: 0,
+    }),
+    footer: css({
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: theme.space.sm,
+      marginTop: 'auto',
+      paddingTop: theme.space.md,
+      borderTop: `1px solid ${theme.colors.border.subtle}`,
+    }),
+    eyebrow: css({
+      margin: 0,
+      fontSize: theme.fontSize['3xs'],
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.medium,
+      letterSpacing: theme.letterSpacing.meta,
+      textTransform: 'uppercase',
+      color: `color-mix(in oklab, ${theme.colors.text.muted} 76%, white)`,
+    }),
+    title: css({
+      margin: 0,
+      fontSize: theme.fontSize.lg,
+      lineHeight: '1.16',
+      fontWeight: theme.fontWeight.medium,
+      letterSpacing: '-0.022em',
+      color: theme.colors.text.primary,
+    }),
+    description: css({
+      margin: `${theme.space.sm} 0 0`,
+      fontSize: theme.fontSize.xs,
+      lineHeight: '1.48',
+      color: `color-mix(in oklab, ${theme.colors.text.secondary} 72%, white)`,
+    }),
+    action: css({
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifySelf: 'end',
+      alignSelf: 'start',
+      flexShrink: 0,
+    }),
+  },
   item: {
     base: css({
       display: 'flex',
@@ -563,6 +664,7 @@ export const RMX_01_VALUES: ThemeValues = {
     full: '9999px',
   },
   fontSize: {
+    '3xs': '10px',
     '2xs': '11px',
     xs: '12px',
     sm: '13px',
@@ -820,6 +922,24 @@ function createSurfaceUtility(options: {
   shadow: string
 }) {
   return css({
+    border: `1px solid ${options.border}`,
+    borderRadius: theme.radius.lg,
+    backgroundColor: options.background,
+    boxShadow: options.shadow,
+  })
+}
+
+function createCardUtility(options: {
+  background: string
+  border: string
+  shadow: string
+}) {
+  return css({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.space.md,
+    minWidth: 0,
+    padding: theme.space.lg,
     border: `1px solid ${options.border}`,
     borderRadius: theme.radius.lg,
     backgroundColor: options.background,

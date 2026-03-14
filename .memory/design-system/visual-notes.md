@@ -5,6 +5,7 @@
 ### Learned
 
 - Surface cards looked better once surface typography became its own layer via `ui.surfaceText.*`.
+- The simple surface cards also held up well as the baseline reference for `ui.card.*`.
 - Smaller, quieter eyebrows improved hierarchy significantly.
 - Surface body copy needed to be more compact and softer than page body text.
 - The simple surface card became a strong reference for how surface stacks should feel.
@@ -45,3 +46,15 @@
 
 - Warning callouts inside content panels can overpower the surrounding text too easily.
 - Inline guidance works better when it feels supportive and lightly toned rather than bright and promotional.
+
+## Card Recipes
+
+### Learned
+
+- Card abstractions are more valuable here as semantic recipes than as wrapper components.
+- The most useful shared card behaviors so far are:
+  - consistent outer shell spacing
+  - header/action alignment
+  - clear content spacing
+  - an optional footer boundary for actions or metadata
+- A good card system should make content panels, dialog shells, and specimen/reference panels feel related without making them identical.

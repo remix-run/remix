@@ -14,6 +14,7 @@ Implemented in `packages/theme`:
   - `ui.control.*`
   - `ui.field.base`
   - `ui.fieldText.*`
+  - `ui.card.*`
   - `ui.item.*`
   - `ui.surface.*`
   - `ui.status.*`
@@ -24,6 +25,11 @@ Implemented in `demos/theme-rmx-01`:
 - demo server on port `44100`
 - app shell showing buttons, cards, popover-like panels, content areas, and system recipe panels
 - demo composes heavily from semantic `ui` recipes instead of bespoke styles
+- demo now uses `ui.card.*` to structure:
+  - surface cards
+  - content panels
+  - dialog/popover-like examples
+  - recipe showcase panels
 - demo includes a Playwright screenshot workflow for iterative visual review
   - `pnpm -C demos/theme-rmx-01 run screenshot`
   - `pnpm -C demos/theme-rmx-01 run screenshot:card`
@@ -43,6 +49,7 @@ Most recent validation loops have included:
 - The screenshot workflow is now good enough for iterative visual review without waiting on manual screenshots.
 - The `System Recipes` section needs to behave like a reference artifact, not like a set of normal content cards.
 - `Content Areas` benefit when intro text and list rhythm are handled as separate spacing boundaries.
+- The card recipe layer is a good fit for this codebase because it captures spacing structure without forcing wrapper components.
 
 ## Next
 
