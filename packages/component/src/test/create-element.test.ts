@@ -16,10 +16,12 @@ describe('createElement', () => {
 
     let withSingle = createElement('div', { mix: descriptor })
     let withArray = createElement('div', { mix: [descriptor] })
+    let withNestedArray = createElement('div', { mix: [[descriptor], [[[descriptor]]]] })
     let withEmptyArray = createElement('div', { mix: [] })
 
     expect(withSingle.props.mix).toEqual([descriptor])
     expect(withArray.props.mix).toEqual([descriptor])
+    expect(withNestedArray.props.mix).toEqual([descriptor, descriptor])
     expect(withEmptyArray.props.mix).toBeUndefined()
   })
 })

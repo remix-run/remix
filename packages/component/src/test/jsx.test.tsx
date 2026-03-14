@@ -4,8 +4,8 @@ import type { Handle } from '../lib/component'
 import { animateLayout, createMixin, on, ref } from '../index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
-type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
-type NormalizedMix<mix> = Array<MixItem<Exclude<mix, undefined>>> | undefined
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type NormalizedMix<mix> = Array<MixLeaf<Exclude<mix, undefined>>> | undefined
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -115,10 +115,12 @@ describe('jsx', () => {
       let descriptor = passthrough()
       let withSingle = <Button mix={descriptor} />
       let withArray = <Button mix={[descriptor]} />
+      let withNested = <Button mix={[[descriptor], [[[descriptor]]]]} />
       let withoutMix = <Button />
 
       expect(withSingle.props.mix).toEqual([descriptor])
       expect(withArray.props.mix).toEqual([descriptor])
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
       expect(withoutMix.props.mix).toBeUndefined()
     })
   })

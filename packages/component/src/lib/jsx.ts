@@ -48,17 +48,21 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  */
 export type RemixNode = Renderable | RemixNode[]
 
-type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+type NestedMixValue<mix, depth extends number = 4> = depth extends 0
+  ? mix | ReadonlyArray<mix>
+  : mix | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>
 
 type NormalizeMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: Array<MixItem<Exclude<mix, undefined>>>
+      mix?: Array<MixLeaf<Exclude<mix, undefined>>>
     }
   : props
 
 type ExpandMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: MixItem<Exclude<mix, undefined>> | ReadonlyArray<MixItem<Exclude<mix, undefined>>>
+      mix?: NestedMixValue<MixLeaf<Exclude<mix, undefined>>>
     }
   : props
 
@@ -368,8 +372,20 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
 
 function normalizeMixValue(mix: unknown): unknown[] | undefined {
   if (mix == null) return undefined
-  if (Array.isArray(mix)) {
-    return mix.length === 0 ? undefined : [...mix]
+
+  let normalizedMix = flattenMixValue(mix)
+  return normalizedMix.length === 0 ? undefined : normalizedMix
+}
+
+function flattenMixValue(mix: unknown): unknown[] {
+  if (mix == null) return []
+  if (!Array.isArray(mix)) return [mix]
+
+  let flattened: unknown[] = []
+
+  for (let item of mix) {
+    flattened.push(...flattenMixValue(item))
   }
-  return [mix]
+
+  return flattened
 }
