@@ -78,6 +78,7 @@ const sampleTheme = {
     fast: '120ms',
     normal: '180ms',
     slow: '280ms',
+    spin: '850ms',
   },
   easing: {
     standard: 'ease',
@@ -250,6 +251,7 @@ describe('ui', () => {
             ui.icon.sm,
             ui.icon.md,
             ui.icon.lg,
+            ui.animation.spin,
           ],
         },
         'Hello',
@@ -272,6 +274,8 @@ describe('ui', () => {
     expect(html).toMatch(/width: var\(--rmx-font-size-xs\)/)
     expect(html).toMatch(/width: var\(--rmx-font-size-sm\)/)
     expect(html).toMatch(/width: var\(--rmx-font-size-lg\)/)
+    expect(html).toMatch(/animation: rmx-spin var\(--rmx-duration-spin\) linear infinite/)
+    expect(html).toMatch(/@keyframes rmx-spin/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/--rmx-button-label-padding-inline: var\(--rmx-space-sm\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)

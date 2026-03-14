@@ -19,7 +19,7 @@ export default function Example() {
       </button>
 
       <button aria-busy="true" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        <Glyph mix={[ui.button.icon, buttonSpinnerGlyphCss]} name="spinner" />
+        <Glyph mix={[ui.button.icon, ui.animation.spin, buttonSpinnerGlyphCss]} name="spinner" />
         <span mix={ui.button.label}>Saving</span>
       </button>
     </div>

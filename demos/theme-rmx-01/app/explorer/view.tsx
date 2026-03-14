@@ -975,7 +975,7 @@ function UiRecipeButtonPage() {
           <RecipeExample
             code={EXAMPLES.buttonSlotsStates.code}
             description={
-              'Use `ui.button.icon` and `ui.button.label` for leading icons, trailing icons, and loading spinners. Loading is a content convention, not a separate button variant.'
+              'Use `ui.button.icon` and `ui.button.label` for leading icons, trailing icons, and loading spinners. Add `ui.animation.spin` when the glyph should visibly indicate in-progress work.'
             }
             previewMix={docsExamplePreviewCenterCss}
             title="Icons, loading, and disabled"

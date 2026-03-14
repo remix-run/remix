@@ -80,6 +80,7 @@ let themeVariableNames = {
     fast: '--rmx-duration-fast',
     normal: '--rmx-duration-normal',
     slow: '--rmx-duration-slow',
+    spin: '--rmx-duration-spin',
   },
   easing: {
     standard: '--rmx-easing-standard',
@@ -237,6 +238,9 @@ export type ThemeUi = {
     md: ThemeUtility
     lg: ThemeUtility
   }
+  animation: {
+    spin: ThemeUtility
+  }
   text: {
     body: ThemeUtility
     bodySm: ThemeUtility
@@ -365,6 +369,23 @@ let iconSizeUtilities = {
   lg: css({
     width: theme.fontSize.lg,
     height: theme.fontSize.lg,
+  }),
+}
+
+let animationUtilities = {
+  spin: css({
+    animation: `rmx-spin ${theme.duration.spin} linear infinite`,
+    '@keyframes rmx-spin': {
+      from: {
+        transform: 'rotate(0deg)',
+      },
+      to: {
+        transform: 'rotate(360deg)',
+      },
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      animation: 'none',
+    },
   }),
 }
 
@@ -710,6 +731,7 @@ export const ui: ThemeUi = {
   borderColor: borderColorUtilities,
   shadow: shadowUtilities,
   icon: iconSizeUtilities,
+  animation: animationUtilities,
   text: {
     body: css({
       fontSize: theme.fontSize.md,
@@ -1073,6 +1095,7 @@ export const RMX_01_VALUES: ThemeValues = {
     fast: '120ms',
     normal: '180ms',
     slow: '260ms',
+    spin: '850ms',
   },
   easing: {
     standard: 'ease',
