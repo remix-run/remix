@@ -226,6 +226,15 @@ describe('ui', () => {
             ui.card.header,
             ui.card.headerWithAction,
             ui.card.description,
+            ui.button.base,
+            ui.button.sm,
+            ui.button.md,
+            ui.button.lg,
+            ui.button.icon,
+            ui.button.tone.primary,
+            ui.button.tone.secondary,
+            ui.button.tone.ghost,
+            ui.button.tone.danger,
             ui.button.primary,
             ui.button.ghost,
             ui.sidebar.heading,
@@ -242,7 +251,10 @@ describe('ui', () => {
       ),
     )
 
+    expect(html).toMatch(/min-height: calc\(var\(--rmx-control-height-sm\) - 4px\)/)
     expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
+    expect(html).toMatch(/min-height: var\(--rmx-control-height-md\)/)
+    expect(html).toMatch(/inline-size: var\(--rmx-control-height-sm\)/)
     expect(html).toMatch(/padding: var\(--rmx-space-lg\)/)
     expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
     expect(html).toMatch(/flex-direction: row/)
@@ -253,6 +265,8 @@ describe('ui', () => {
     expect(html).toMatch(/font-size: var\(--rmx-font-size-3xs\)/)
     expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
+    expect(html).toMatch(/\[data-slot="icon"\]/)
+    expect(html).toMatch(/\[data-slot="label"\]/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
     expect(html).toMatch(/background-color: transparent/)
@@ -300,8 +314,26 @@ describe('ui', () => {
     let explicitHtml = await renderToString(
       createElement('button', { type: 'submit', mix: ui.button.primary }, 'Save'),
     )
+    let anchorHtml = await renderToString(
+      createElement('a', { href: '/settings', mix: ui.button.primary }, 'Settings'),
+    )
+    let composedHtml = await renderToString(
+      createElement(
+        'button',
+        {
+          mix: [ui.button.base, ui.button.lg, ui.button.tone.secondary],
+        },
+        createElement('span', { 'data-slot': 'icon' }, 'i'),
+        createElement('span', { 'data-slot': 'label' }, 'Publish'),
+      ),
+    )
 
     expect(defaultHtml).toMatch(/type="button"/)
     expect(explicitHtml).toMatch(/type="submit"/)
+    expect(anchorHtml).not.toMatch(/type="button"/)
+    expect(composedHtml).toMatch(/type="button"/)
+    expect(composedHtml).toMatch(/data-slot="icon"/)
+    expect(composedHtml).toMatch(/data-slot="label"/)
+    expect(composedHtml).toMatch(/min-height: var\(--rmx-control-height-md\)/)
   })
 })

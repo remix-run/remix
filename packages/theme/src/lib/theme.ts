@@ -1,5 +1,5 @@
-import { attrs, createElement, css } from '@remix-run/component'
-import type { RemixElement } from '@remix-run/component'
+import { createElement, createMixin, css } from '@remix-run/component'
+import type { ElementProps, RemixElement } from '@remix-run/component'
 import type { MixinDescriptor } from '@remix-run/component'
 
 interface ThemeVariableTree {
@@ -309,6 +309,17 @@ export type ThemeUi = {
     danger: ThemeUtility
   }
   button: {
+    base: ThemeRecipe
+    sm: ThemeUtility
+    md: ThemeUtility
+    lg: ThemeUtility
+    icon: ThemeUtility
+    tone: {
+      primary: ThemeUtility
+      secondary: ThemeUtility
+      ghost: ThemeUtility
+      danger: ThemeUtility
+    }
     primary: ThemeRecipe
     secondary: ThemeRecipe
     ghost: ThemeRecipe
@@ -404,6 +415,71 @@ let controlGhostToneUtility = css({
   '&:disabled': {
     opacity: 0.6,
   },
+})
+
+let buttonBaseStyleUtility = css({
+  position: 'relative',
+  isolation: 'isolate',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: theme.space.xs,
+  overflow: 'hidden',
+  borderRadius: theme.radius.full,
+  fontFamily: theme.fontFamily.sans,
+  lineHeight: '1',
+  fontWeight: theme.fontWeight.medium,
+  whiteSpace: 'nowrap',
+  textDecoration: 'none',
+  userSelect: 'none',
+  verticalAlign: 'top',
+  transitionProperty: 'border-color, background-color, box-shadow, color',
+  transitionDuration: theme.duration.fast,
+  transitionTimingFunction: theme.easing.standard,
+  '& [data-slot="icon"]': {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '1em',
+    height: '1em',
+    flexShrink: 0,
+  },
+  '& [data-slot="icon"] > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
+  '& [data-slot="label"]': {
+    display: 'inline-flex',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+})
+
+let buttonSizeSmUtility = css({
+  minHeight: `calc(${theme.control.height.sm} - 4px)`,
+  paddingInline: theme.control.paddingInline.sm,
+  fontSize: theme.fontSize['2xs'],
+})
+
+let buttonSizeMdUtility = css({
+  minHeight: theme.control.height.sm,
+  paddingInline: theme.control.paddingInline.md,
+  fontSize: theme.fontSize.xs,
+})
+
+let buttonSizeLgUtility = css({
+  minHeight: theme.control.height.md,
+  paddingInline: theme.control.paddingInline.lg,
+  fontSize: theme.fontSize.sm,
+  gap: theme.space.sm,
+})
+
+let buttonSizeIconUtility = css({
+  minHeight: theme.control.height.sm,
+  inlineSize: theme.control.height.sm,
+  paddingInline: '0',
+  gap: '0',
 })
 
 let surfaceBaseUtility = createSurfaceUtility({
@@ -564,10 +640,27 @@ let stackUtility = Object.assign(stackBaseUtility, {
   wrap: stackWrapUtility,
 }) as ThemeAxisUtility
 
+let buttonDefaultsMixin = createMixin<Element, [], ElementProps>((handle, hostType) => props => {
+  if (hostType !== 'button' || props.type !== undefined) {
+    return handle.element
+  }
+
+  return createElement(handle.element as unknown as string, {
+    ...props,
+    type: 'button',
+  })
+})
+
+let buttonDefaultsUtility = buttonDefaultsMixin()
 let primaryButtonToneUtility = createButtonUtility(theme.colors.action.primary)
 let secondaryButtonToneUtility = createButtonUtility(theme.colors.action.secondary)
 let dangerButtonToneUtility = createButtonUtility(theme.colors.action.danger)
-let buttonTypeButtonUtility = attrs<HTMLButtonElement>({ type: 'button' })
+let buttonToneUtilities = {
+  primary: primaryButtonToneUtility,
+  secondary: secondaryButtonToneUtility,
+  ghost: controlGhostToneUtility,
+  danger: dangerButtonToneUtility,
+}
 
 export const ui = {
   p: spacingUtilities,
@@ -841,14 +934,36 @@ export const ui = {
     danger: createStatusUtility(theme.colors.status.danger),
   },
   button: {
-    primary: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, primaryButtonToneUtility),
-    secondary: composeThemeRecipe(
-      buttonTypeButtonUtility,
-      controlBaseUtility,
-      secondaryButtonToneUtility,
+    base: composeThemeRecipe(buttonDefaultsUtility, buttonBaseStyleUtility),
+    sm: buttonSizeSmUtility,
+    md: buttonSizeMdUtility,
+    lg: buttonSizeLgUtility,
+    icon: buttonSizeIconUtility,
+    tone: buttonToneUtilities,
+    primary: composeThemeRecipe(
+      buttonDefaultsUtility,
+      buttonBaseStyleUtility,
+      buttonSizeMdUtility,
+      buttonToneUtilities.primary,
     ),
-    ghost: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, controlGhostToneUtility),
-    danger: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, dangerButtonToneUtility),
+    secondary: composeThemeRecipe(
+      buttonDefaultsUtility,
+      buttonBaseStyleUtility,
+      buttonSizeMdUtility,
+      buttonToneUtilities.secondary,
+    ),
+    ghost: composeThemeRecipe(
+      buttonDefaultsUtility,
+      buttonBaseStyleUtility,
+      buttonSizeMdUtility,
+      buttonToneUtilities.ghost,
+    ),
+    danger: composeThemeRecipe(
+      buttonDefaultsUtility,
+      buttonBaseStyleUtility,
+      buttonSizeMdUtility,
+      buttonToneUtilities.danger,
+    ),
   },
 } satisfies ThemeUi
 
