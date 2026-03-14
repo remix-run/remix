@@ -20,6 +20,9 @@
   - avoid demo-only abstractions becoming the de facto design-system taxonomy
 - `ui` should stay centered on composable base objects plus tone/state mixins.
 - When using `mix`, prefer passing a single value directly instead of wrapping it in a one-item array.
+- The demo should clarify the whole design system, not imply that `RMX_01` itself is the whole story.
+- A dedicated proof sheet is valuable for evaluating a theme’s overall character quickly.
+- The docs shell itself should stay demo-specific even if some sidebar/navigation ingredients become reusable primitives.
 
 ## Learned
 

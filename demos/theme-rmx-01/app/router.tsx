@@ -3,8 +3,22 @@ import type { RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { createRouter } from 'remix/fetch-router'
 import { logger } from 'remix/logger-middleware'
-import { RMX_01, theme, ui } from '@remix-run/theme'
+import { RMX_01, RMX_01_VALUES, theme, ui } from '@remix-run/theme'
 import type { ThemeUtility } from '@remix-run/theme'
+
+type PageDefinition = {
+  description: string
+  eyebrow: string
+  id: string
+  navLabel: string
+  path: string
+  title: string
+}
+
+type NavGroupDefinition = {
+  label: string
+  pages: PageDefinition[]
+}
 
 let middleware = []
 
@@ -12,25 +26,102 @@ if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
+let PAGES = {
+  overview: {
+    id: 'overview',
+    path: '/',
+    navLabel: 'Overview',
+    eyebrow: 'Design System',
+    title: 'RMX design system explorer',
+    description:
+      'The demo now shows the design system itself: theme values, semantic recipes, layout primitives, and the current default theme preset.',
+  },
+  proofSheet: {
+    id: 'proof-sheet',
+    path: '/proof-sheet',
+    navLabel: 'Proof Sheet',
+    eyebrow: 'Theme Proof Sheet',
+    title: 'RMX_01 in a realistic application frame',
+    description:
+      'A compact fake product view for quickly judging typography, hierarchy, controls, surfaces, and overall tone when evaluating a theme.',
+  },
+  themeValues: {
+    id: 'theme-values',
+    path: '/theme-values',
+    navLabel: 'Theme Values',
+    eyebrow: 'Theme Contract',
+    title: 'Typed theme values backed by CSS custom properties',
+    description:
+      'Apps and first-party components both read from the same variable contract, while themes provide the concrete values rendered into CSS.',
+  },
+  uiRecipes: {
+    id: 'ui-recipes',
+    path: '/ui-recipes',
+    navLabel: 'UI Recipes',
+    eyebrow: 'Semantic Recipes',
+    title: 'Composable ui recipes above the token layer',
+    description:
+      'The `ui` surface turns raw variables into reusable styling primitives for text, cards, controls, fields, navigation, and status treatments.',
+  },
+  components: {
+    id: 'components',
+    path: '/components',
+    navLabel: 'Components',
+    eyebrow: 'Component Layer',
+    title: 'Component ergonomics should sit on top of shared recipes',
+    description:
+      'The eventual first-party component library should feel thin and consistent because shared styling lives in the theme contract and `ui` recipes.',
+  },
+  layouts: {
+    id: 'layouts',
+    path: '/layouts',
+    navLabel: 'Layouts',
+    eyebrow: 'Layout Primitives',
+    title: 'Sidebar and navigation patterns for application shells',
+    description:
+      'The docs shell here is demo-specific, but the sidebar, nav, and panel ingredients are useful application-level primitives worth carrying forward.',
+  },
+} as const satisfies Record<string, PageDefinition>
+
+let NAV_GROUPS: NavGroupDefinition[] = [
+  {
+    label: 'Themes',
+    pages: [PAGES.overview, PAGES.proofSheet],
+  },
+  {
+    label: 'API',
+    pages: [PAGES.themeValues, PAGES.uiRecipes, PAGES.components, PAGES.layouts],
+  },
+]
+
 export let router = createRouter({ middleware })
 
-router.get('/', async () => {
-  let stream = renderToStream(<App />, {
-    onError(error) {
-      console.error(error)
-    },
-  })
+router.get('/', createPageHandler(PAGES.overview))
+router.get('/proof-sheet', createPageHandler(PAGES.proofSheet))
+router.get('/theme-values', createPageHandler(PAGES.themeValues))
+router.get('/ui-recipes', createPageHandler(PAGES.uiRecipes))
+router.get('/components', createPageHandler(PAGES.components))
+router.get('/layouts', createPageHandler(PAGES.layouts))
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
-  })
-})
+function createPageHandler(page: PageDefinition) {
+  return async () => {
+    let stream = renderToStream(<Document page={page} />, {
+      onError(error) {
+        console.error(error)
+      },
+    })
 
-function App() {
-  return () => (
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
+}
+
+function Document() {
+  return ({ page }: { page: PageDefinition }) => (
     <html>
       <head>
         <meta charSet="utf-8" />
@@ -41,444 +132,22 @@ function App() {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         />
-        <title>RMX_01 Theme Demo</title>
+        <title>{`${page.title} | RMX_01 Design System`}</title>
         <RMX_01 />
       </head>
-      <body mix={[bodyCss]}>
-        <div mix={[appShellCss]}>
-          <aside mix={[sidebarCss]}>
-            <div mix={[sidebarHeaderCss]}>
-              <p mix={[ui.text.eyebrow, eyebrowCss]}>Theme Preset</p>
-              <h1 mix={[ui.text.title, sidebarTitleCss]}>RMX_01</h1>
-              <p mix={[ui.text.bodySm, sidebarBodyCss]}>
-                A calm, general-purpose UI theme for dashboards, admin tools, and internal web
-                applications.
-              </p>
+      <body mix={bodyCss}>
+        <div mix={appShellCss}>
+          <aside mix={sidebarFrameCss}>
+            <div mix={sidebarStickyCss}>
+              <Sidebar currentPath={page.path} />
             </div>
-
-            <nav aria-label="Demo sections" mix={[sidebarNavCss]}>
-              <a href="#buttons" mix={[navLinkCss]}>
-                Buttons
-              </a>
-              <a href="#cards" mix={[navLinkCss]}>
-                Cards
-              </a>
-              <a href="#overlays" mix={[navLinkCss]}>
-                Popovers
-              </a>
-              <a href="#content" mix={[navLinkCss]}>
-                Content
-              </a>
-              <a href="#system" mix={[navLinkCss]}>
-                System
-              </a>
-            </nav>
-
-            <section mix={[calloutCss, calloutInfoCss]}>
-              <p mix={[ui.text.label, calloutTitleCss]}>Why this preset?</p>
-              <p mix={[ui.text.bodySm, calloutBodyCss]}>
-                Native-sized controls, restrained spacing, readable text contrast, and surfaces that
-                feel ready for real product work.
-              </p>
-            </section>
           </aside>
 
-          <main mix={[mainCss]}>
-            <header mix={[ui.surface.base, heroCss]}>
-              <div mix={[heroCopyCss]}>
-                <p mix={[ui.text.eyebrow, eyebrowCss]}>Application Theme</p>
-                <h2 mix={[ui.text.display, heroTitleCss]}>A default Remix theme for utilitarian interfaces</h2>
-                <p mix={[ui.text.body, heroBodyCss]}>
-                  The preset leans into compact controls, neutral surfaces, predictable typography,
-                  and semantic color roles that can carry a full component library.
-                </p>
-              </div>
-
-              <div mix={[heroActionsCss]}>
-                <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
-                  Create Project
-                </button>
-                <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
-                  Sign in →
-                </button>
-                <button type="button" mix={[buttonBaseCss, quietButtonCss]}>
-                  Secondary Action
-                </button>
-              </div>
-            </header>
-
-            <Section
-              id="buttons"
-              title="Buttons"
-              description="Primary, secondary, danger, and muted actions stay compact and readable by default."
-            >
-              <div mix={[ui.card.base, buttonPanelCss]}>
-                <div mix={ui.card.header}>
-                  <p mix={ui.card.eyebrow}>Control Recipes</p>
-                  <h3 mix={ui.card.title}>Compact buttons for app-heavy interfaces</h3>
-                  <p mix={ui.card.description}>
-                    Button tone changes, but the shared shape, border, shadow, and density keep the
-                    controls feeling like the same family.
-                  </p>
-                </div>
-
-                <div mix={ui.card.body}>
-                  <div mix={[buttonGroupCss]}>
-                    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
-                      Save
-                    </button>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
-                      Sign in →
-                    </button>
-                    <button type="button" mix={[buttonBaseCss, ui.button.danger]}>
-                      Delete
-                    </button>
-                    <button type="button" mix={[buttonBaseCss, quietButtonCss]}>
-                      Ghost
-                    </button>
-                  </div>
-                </div>
-
-                <div mix={ui.card.footer}>
-                  <div mix={[ui.text.bodySm, buttonNoteCss]}>
-                    <span mix={[statusDotCss, statusInfoDotCss]} />
-                    Default button density is intentionally close to native controls for app-heavy
-                    layouts.
-                  </div>
-                </div>
-              </div>
-            </Section>
-
-            <Section
-              id="cards"
-              title="Cards and Surfaces"
-              description="Semantic backgrounds create clear hierarchy without relying on loud gradients or oversized shadows."
-            >
-              <div mix={[cardGridCss]}>
-                <Card
-                  title="Primary Surface"
-                  body="The default working surface for forms, tables, and routine app content."
-                  tone={ui.card.base}
-                  mixins={[surfaceCardCss]}
-                />
-                <Card
-                  title="Secondary Surface"
-                  body="A softer layer for grouped controls, filter rails, and nested layout regions."
-                  tone={ui.card.secondary}
-                  mixins={[surfaceSecondaryCardCss]}
-                />
-                <Card
-                  title="Elevated Surface"
-                  body="Use this for floating panels that should lift above the rest of the page."
-                  tone={ui.card.elevated}
-                  mixins={[surfaceElevatedCardCss]}
-                />
-                <Card
-                  title="Inset Surface"
-                  body="An inset tone works well for canvas backgrounds and low-emphasis utility areas."
-                  tone={ui.card.inset}
-                  mixins={[surfaceInsetCardCss]}
-                />
-              </div>
-            </Section>
-
-            <Section
-              id="overlays"
-              title="Popover-like Surfaces"
-              description="These are static examples of dialog and menu styling, meant to preview token usage rather than popup behavior."
-            >
-              <div mix={[overlayGridCss]}>
-                <div mix={[ui.card.elevated, dialogSurfaceCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Dialog</p>
-                    <h3 mix={[ui.card.title, surfaceHeadingCss]}>Share workspace</h3>
-                    <p mix={ui.card.description}>
-                      Invite teammates, choose a permission level, and keep the action area visually
-                      distinct without making the panel feel heavy.
-                    </p>
-                  </div>
-
-                  <div mix={ui.card.body}>
-                    <label for="dialog-email" mix={[ui.text.label, fieldLabelCss]}>
-                      Email
-                    </label>
-                    <input
-                      id="dialog-email"
-                      value="team@remix.dev"
-                      readOnly
-                      mix={[ui.field.base, fieldInputCss]}
-                    />
-                  </div>
-
-                  <div mix={ui.card.footer}>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
-                      Cancel
-                    </button>
-                    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
-                      Send Invite
-                    </button>
-                  </div>
-                </div>
-
-                <div mix={[menuSurfaceWrapCss]}>
-                  <button type="button" aria-haspopup="menu" mix={[buttonBaseCss, ui.button.secondary]}>
-                    Project Menu
-                  </button>
-                  <div role="menu" aria-label="Project actions" mix={[ui.card.elevated, menuSurfaceCss]}>
-                    <button type="button" role="menuitem" mix={[menuItemCss]}>
-                      Rename project
-                    </button>
-                    <button type="button" role="menuitem" mix={[menuItemCss]}>
-                      Copy environment
-                    </button>
-                    <button type="button" role="menuitem" mix={[menuItemCss]}>
-                      Transfer ownership
-                    </button>
-                    <button type="button" role="menuitem" mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}>
-                      Archive project
-                    </button>
-                  </div>
-                </div>
-
-                <div mix={[ui.card.elevated, compactPanelCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Compact Menu Surface</p>
-                    <h3 mix={ui.card.title}>Quick project snapshot</h3>
-                  </div>
-                  <div mix={ui.card.body}>
-                    <div mix={[compactRowCss]}>
-                      <span mix={[ui.text.eyebrow, compactKeyCss]}>Status</span>
-                      <span mix={[statusBadgeCss, successBadgeCss, ui.status.success]}>Healthy</span>
-                    </div>
-                    <div mix={[compactRowCss]}>
-                      <span mix={[ui.text.eyebrow, compactKeyCss]}>Deploys</span>
-                      <span mix={[ui.text.bodySm, compactValueCss]}>12 this week</span>
-                    </div>
-                    <div mix={[compactRowCss]}>
-                      <span mix={[ui.text.eyebrow, compactKeyCss]}>Owner</span>
-                      <span mix={[ui.text.bodySm, compactValueCss]}>Platform team</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Section>
-
-            <Section
-              id="content"
-              title="Content Areas"
-              description="Typography stays quiet and legible so dashboards and settings screens can carry dense information comfortably."
-            >
-              <div mix={[contentGridCss]}>
-                <article mix={[ui.card.base, articleCardCss]}>
-                  <div mix={[ui.card.headerWithAction]}>
-                    <div mix={ui.card.header}>
-                      <p mix={ui.card.eyebrow}>Team Notes</p>
-                      <h3 mix={[ui.card.title, articleTitleCss]}>
-                        Release checklist for the next deployment
-                      </h3>
-                      <p mix={[ui.card.description, articleParagraphCss]}>
-                        Keep headings firm, body copy readable, and supporting notes visually secondary.
-                        The goal is to make operational content easy to scan, not decorative.
-                      </p>
-                    </div>
-                    <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Draft</span>
-                  </div>
-
-                  <div mix={ui.card.body}>
-                    <ul mix={[articleListCss]}>
-                      <li>Verify background jobs are paused before the schema migration.</li>
-                      <li>Run the smoke suite against staging after the first deploy finishes.</li>
-                      <li>Notify support once cache warming completes.</li>
-                    </ul>
-                  </div>
-
-                  <div mix={ui.card.footer}>
-                    <p mix={[ui.text.caption, cardFooterMetaCss]}>Updated 18 minutes ago</p>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
-                      Open runbook
-                    </button>
-                  </div>
-                </article>
-
-                <section mix={[ui.card.base, articleCardCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Reading Rhythm</p>
-                    <h3 mix={[ui.card.title, articleTitleCss]}>Default copy settings</h3>
-                    <p mix={[ui.card.description, articleParagraphCss]}>
-                      RMX_01 uses modest font sizes and balanced line heights so the same theme can
-                      support dense tool UIs, forms, command surfaces, and longer settings content.
-                    </p>
-                  </div>
-
-                  <div mix={ui.card.body}>
-                    <div mix={[calloutCss, calloutWarningCss, ui.status.warning, inlineCalloutCss]}>
-                      <p mix={[ui.text.label, calloutTitleCss]}>Guideline</p>
-                      <p mix={[ui.text.bodySm, calloutBodyCss]}>
-                        Reserve brighter colors for actions, statuses, and focus affordances instead
-                        of general layout chrome.
-                      </p>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </Section>
-
-            <Section
-              id="system"
-              title="System Recipes"
-              description="The demo also shows the semantic primitives directly so first-party components and app code can share the same design language."
-            >
-              <div mix={[systemGridCss]}>
-                <article mix={[ui.card.base, systemCardCss, systemWideCardCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Type Roles</p>
-                    <h3 mix={[ui.card.title, articleTitleCss]}>
-                      A shared type vocabulary for application UI
-                    </h3>
-                    <p mix={[ui.card.description, articleParagraphCss]}>
-                      Page roles can carry larger layout descriptions, while surface roles stay tighter
-                      and calmer inside cards, dialogs, and menus.
-                    </p>
-                  </div>
-                  <div mix={[ui.card.body, typeSpecimenPanelCss]}>
-                    <div mix={[typeSpecimenGroupCss]}>
-                      <p mix={[ui.text.caption, specimenGroupLabelCss]}>Page Roles</p>
-                      <div mix={[typeSpecimenCss]}>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Eyebrow</p>
-                          <p mix={[ui.text.eyebrow, sampleTextCss]}>Page eyebrow</p>
-                        </div>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Title</p>
-                          <p mix={[ui.text.title, sampleTextCss]}>Section title</p>
-                        </div>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Body</p>
-                          <p mix={[ui.text.bodySm, sampleTextCss]}>
-                            Standard body copy for page-level descriptions and longer explanations.
-                          </p>
-                        </div>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Supporting</p>
-                          <p mix={[ui.text.supporting, sampleTextCss]}>
-                            Supporting text can back away further when needed.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div mix={[typeSpecimenGroupCss]}>
-                      <p mix={[ui.text.caption, specimenGroupLabelCss]}>Utility Roles</p>
-                      <div mix={[typeSpecimenCss]}>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Caption</p>
-                          <p mix={[ui.text.caption, sampleTextCss]}>Caption text for compact metadata</p>
-                        </div>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Code</p>
-                          <code mix={[ui.text.code, codeSampleCss]}>theme.colors.background.surface</code>
-                        </div>
-                        <div mix={[specimenRowCss]}>
-                          <p mix={[ui.text.caption, specimenLabelCss]}>Surface text</p>
-                          <p mix={[ui.surfaceText.supporting, sampleTextCss]}>
-                            Surface roles stay quieter inside dense UI.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-
-                <article mix={[ui.card.base, systemCardCss]}>
-                  <div mix={[ui.card.headerWithAction]}>
-                    <div mix={ui.card.header}>
-                      <p mix={ui.card.eyebrow}>Field System</p>
-                      <h3 mix={[ui.card.title, articleTitleCss]}>Controls, labels, and help text</h3>
-                      <p mix={[ui.card.description, articleParagraphCss]}>
-                        Fields should not invent their own typography. Labels and help copy belong to the
-                        same shared system.
-                      </p>
-                    </div>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary, ui.card.action]}>
-                      Edit
-                    </button>
-                  </div>
-
-                  <div mix={ui.card.body}>
-                    <div mix={[fieldShowcaseCss]}>
-                      <label for="system-project-name" mix={[ui.fieldText.label, fieldLabelCss]}>
-                        Project name
-                      </label>
-                      <input
-                        id="system-project-name"
-                        value="RMX Internal Console"
-                        readOnly
-                        mix={[ui.field.base, fieldInputCss]}
-                      />
-                      <p mix={[ui.fieldText.help, fieldHelpCss]}>
-                        Visible to collaborators in navigation, notifications, and audit events.
-                      </p>
-                    </div>
-                  </div>
-                </article>
-
-                <article mix={[ui.card.elevated, systemCardCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Item Rows</p>
-                    <h3 mix={[ui.card.title, articleTitleCss]}>Reusable primitives for menus and lists</h3>
-                    <p mix={[ui.card.description, articleParagraphCss]}>
-                      Item rows are meant to scale into tabs, combobox options, command lists, and sidebars.
-                    </p>
-                  </div>
-                  <div mix={ui.card.body}>
-                    <button type="button" mix={[ui.item.base, itemPreviewCss]}>
-                      <span>General settings</span>
-                      <span mix={[ui.text.caption, itemMetaCss]}>⌘,</span>
-                    </button>
-                    <button type="button" mix={[ui.item.base, ui.item.selected, itemPreviewCss]}>
-                      <span>Members</span>
-                      <span mix={[statusBadgeCss, successBadgeCss, ui.status.success]}>12 online</span>
-                    </button>
-                    <button type="button" mix={[ui.item.base, ui.item.danger, itemPreviewCss]}>
-                      <span>Archive workspace</span>
-                      <span mix={[ui.text.caption, itemMetaCss]}>Permanent</span>
-                    </button>
-                  </div>
-                </article>
-
-                <article mix={[ui.card.base, systemCardCss, systemWideCardCss]}>
-                  <div mix={ui.card.header}>
-                    <p mix={ui.card.eyebrow}>Statuses and Utilities</p>
-                    <h3 mix={[ui.card.title, articleTitleCss]}>Tone and low-level composition</h3>
-                    <p mix={[ui.card.description, articleParagraphCss]}>
-                      Semantic status recipes and lower-level utility mixins can work together in app code.
-                    </p>
-                  </div>
-                  <div mix={ui.card.body}>
-                    <div mix={[statusStackCss]}>
-                    <div mix={[calloutCss, ui.status.info]}>
-                      <p mix={[ui.text.label, calloutTitleCss]}>Info</p>
-                      <p mix={[ui.text.bodySm, calloutBodyCss]}>Queues are processing normally.</p>
-                    </div>
-                    <div mix={[calloutCss, ui.status.success]}>
-                      <p mix={[ui.text.label, calloutTitleCss]}>Success</p>
-                      <p mix={[ui.text.bodySm, calloutBodyCss]}>Deploy completed in 42 seconds.</p>
-                    </div>
-                    </div>
-                    <div mix={[utilityRowCss]}>
-                      <div mix={[ui.p.sm, ui.rounded.lg, ui.shadow.xs, ui.bg.surfaceSecondary, utilityChipCss]}>
-                        <code mix={[ui.text.code, utilityCodeCss]}>ui.p.sm</code>
-                      </div>
-                      <div mix={[ui.p.sm, ui.rounded.full, ui.bg.inset, utilityChipCss]}>
-                        <code mix={[ui.text.code, utilityCodeCss]}>ui.rounded.full</code>
-                      </div>
-                      <div mix={[ui.p.sm, ui.rounded.md, ui.borderColor.default, utilityOutlineCss]}>
-                        <code mix={[ui.text.code, utilityCodeCss]}>ui.borderColor.default</code>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </div>
-            </Section>
+          <main mix={mainCss}>
+            <div mix={pageStackCss}>
+              <PageHeader page={page} />
+              <PageContent page={page} />
+            </div>
           </main>
         </div>
       </body>
@@ -486,17 +155,832 @@ function App() {
   )
 }
 
-type SectionProps = {
-  id: string
-  title: string
-  description: string
-  children: RemixNode
+function Sidebar() {
+  return ({ currentPath }: { currentPath: string }) => (
+    <div mix={ui.sidebar.panel}>
+      {NAV_GROUPS.map(group => (
+        <section key={group.label} mix={ui.sidebar.section}>
+          <p mix={ui.sidebar.heading}>{group.label}</p>
+          <nav aria-label={group.label} mix={ui.nav.list}>
+            {group.pages.map(page => (
+              <a
+                key={page.path}
+                href={page.path}
+                aria-current={currentPath === page.path ? 'page' : undefined}
+                mix={getNavItemMix(page.path, currentPath)}
+              >
+                {page.navLabel}
+              </a>
+            ))}
+          </nav>
+        </section>
+      ))}
+
+      <section mix={[calloutCss, calloutInfoCss]}>
+        <p mix={[ui.text.label, calloutTitleCss]}>Why this structure?</p>
+        <p mix={[ui.text.bodySm, calloutBodyCss]}>
+          The demo is now documenting the whole system, while RMX_01 is simply the currently selected
+          default theme.
+        </p>
+      </section>
+    </div>
+  )
+}
+
+function PageHeader() {
+  return ({ page }: { page: PageDefinition }) => (
+    <header mix={[ui.card.base, pageHeaderCss]}>
+      <div mix={ui.card.header}>
+        <p mix={ui.card.eyebrow}>{page.eyebrow}</p>
+        <h2 mix={[ui.text.display, pageTitleCss]}>{page.title}</h2>
+        <p mix={[ui.text.body, pageDescriptionCss]}>{page.description}</p>
+      </div>
+    </header>
+  )
+}
+
+function PageContent() {
+  return ({ page }: { page: PageDefinition }) => {
+    if (page.id === PAGES.overview.id) {
+      return <OverviewPage />
+    }
+
+    if (page.id === PAGES.proofSheet.id) {
+      return <ProofSheetPage />
+    }
+
+    if (page.id === PAGES.themeValues.id) {
+      return <ThemeValuesPage />
+    }
+
+    if (page.id === PAGES.uiRecipes.id) {
+      return <UiRecipesPage />
+    }
+
+    if (page.id === PAGES.components.id) {
+      return <ComponentsPage />
+    }
+
+    return <LayoutsPage />
+  }
+}
+
+function OverviewPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="System model"
+        description="The design system now has three layers that should stay in sync: raw theme values, semantic ui recipes, and thin component ergonomics built on top."
+      >
+        <div mix={threeColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>1. Theme Values</p>
+              <h3 mix={ui.card.title}>`theme` is the contract</h3>
+              <p mix={ui.card.description}>
+                Components and app code read `theme.*` variable references, while themes define the
+                underlying CSS custom property values.
+              </p>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>2. UI Recipes</p>
+              <h3 mix={ui.card.title}>`ui` is the styling language</h3>
+              <p mix={ui.card.description}>
+                Recipes like `ui.button.primary`, `ui.card.base`, and `ui.nav.item` make composition
+                fast without scattering one-off styling decisions through the app.
+              </p>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>3. Components</p>
+              <h3 mix={ui.card.title}>Built-ins should stay thin</h3>
+              <p mix={ui.card.description}>
+                First-party components can focus on markup, behavior, and ergonomics because their
+                visual structure is already shared below them.
+              </p>
+            </div>
+          </article>
+        </div>
+      </Section>
+
+      <Section
+        title="What this explorer covers"
+        description="The sidebar maps the design system itself, not just a single pretty page."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Current pages</p>
+              <h3 mix={ui.card.title}>A docs-style model for the system</h3>
+              <p mix={ui.card.description}>
+                Overview, proof sheet, theme values, ui recipes, components, and layouts are split into
+                separate pages so each part can grow without turning the demo into one giant scroll.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>Overview explains the architecture.</li>
+                <li>Proof sheet shows the feel of a theme in context.</li>
+                <li>API pages show the contract and recipe surface.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Next obvious steps</p>
+              <h3 mix={ui.card.title}>This structure supports future tooling</h3>
+              <p mix={ui.card.description}>
+                The explorer is now in a good place for a theme picker, a theme editor, route-level
+                examples, and eventually real first-party component docs.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <div mix={stackSmCss}>
+                <div mix={[calloutCss, calloutInfoCss]}>
+                  <p mix={[ui.text.label, calloutTitleCss]}>Planned</p>
+                  <p mix={[ui.text.bodySm, calloutBodyCss]}>
+                    Switch between themes in the sidebar and use the proof sheet as the immediate
+                    visual acceptance test.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function ProofSheetPage() {
+  return () => (
+    <div id="proof-sheet" mix={pageSectionStackCss}>
+      <Section
+        title="Theme proof sheet"
+        description="This page is intentionally closer to a fake product than a docs page. It should answer whether a theme feels right at a glance."
+      >
+        <div mix={[ui.card.base, proofAppShellCss]}>
+          <div mix={proofToolbarCss}>
+            <div mix={proofToolbarTitleCss}>
+              <p mix={ui.text.eyebrow}>Workspace</p>
+              <h3 mix={[ui.text.title, zeroMarginCss]}>Operations Console</h3>
+            </div>
+            <div mix={buttonRowCss}>
+              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                Export
+              </button>
+              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                New release
+              </button>
+            </div>
+          </div>
+
+          <div mix={proofLayoutCss}>
+            <aside mix={[ui.card.secondary, proofSidebarCss]}>
+              <div mix={ui.sidebar.section}>
+                <p mix={ui.sidebar.heading}>Navigation</p>
+                <nav aria-label="Proof sheet app navigation" mix={ui.nav.list}>
+                  <a href="/proof-sheet" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                    Overview
+                  </a>
+                  <a href="/proof-sheet" mix={ui.nav.item}>
+                    Deployments
+                  </a>
+                  <a href="/proof-sheet" mix={ui.nav.item}>
+                    Logs
+                  </a>
+                  <a href="/proof-sheet" mix={ui.nav.item}>
+                    Settings
+                  </a>
+                </nav>
+              </div>
+
+              <div mix={ui.sidebar.section}>
+                <p mix={ui.sidebar.heading}>Environment</p>
+                <div mix={stackSmCss}>
+                  <div mix={compactRowCss}>
+                    <span mix={ui.text.caption}>Status</span>
+                    <span mix={[statusBadgeCss, ui.status.success]}>Healthy</span>
+                  </div>
+                  <div mix={compactRowCss}>
+                    <span mix={ui.text.caption}>Version</span>
+                    <span mix={ui.text.bodySm}>v0.19.4</span>
+                  </div>
+                  <div mix={compactRowCss}>
+                    <span mix={ui.text.caption}>Owner</span>
+                    <span mix={ui.text.bodySm}>Platform team</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <div mix={proofMainCss}>
+              <div mix={proofStatsGridCss}>
+                <MetricCard
+                  badge="Stable"
+                  metric="99.97%"
+                  tone={ui.card.base}
+                  title="Availability"
+                  value="Healthy week-over-week"
+                  dataId="primary"
+                />
+                <MetricCard
+                  badge="12"
+                  metric="Deploys"
+                  tone={ui.card.base}
+                  title="This week"
+                  value="Consistent release cadence"
+                />
+                <MetricCard
+                  badge="4m"
+                  metric="Review"
+                  tone={ui.card.base}
+                  title="Average rollback window"
+                  value="Fast enough for routine shipping"
+                />
+                <MetricCard
+                  badge="2"
+                  metric="Alerts"
+                  tone={ui.card.secondary}
+                  title="Open incidents"
+                  value="Low but visible attention needed"
+                />
+              </div>
+
+              <div mix={proofContentGridCss}>
+                <article mix={[ui.card.base, proofWideCardCss]}>
+                  <div mix={[ui.card.headerWithAction]}>
+                    <div mix={ui.card.header}>
+                      <p mix={ui.card.eyebrow}>Release checklist</p>
+                      <h3 mix={ui.card.title}>Readability under operational pressure</h3>
+                      <p mix={ui.card.description}>
+                        The proof sheet should reveal whether dense task-oriented surfaces still feel
+                        calm, legible, and trustworthy.
+                      </p>
+                    </div>
+                    <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Draft</span>
+                  </div>
+                  <div mix={ui.card.body}>
+                    <ul mix={bulletListCss}>
+                      <li>Verify migrations are locked before the deploy starts.</li>
+                      <li>Hold background workers for the first rollout window.</li>
+                      <li>Run smoke tests before enabling the scheduled queue.</li>
+                    </ul>
+                  </div>
+                  <div mix={ui.card.footer}>
+                    <p mix={[ui.text.caption, metaTextCss]}>Updated 18 minutes ago</p>
+                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                      Open runbook
+                    </button>
+                  </div>
+                </article>
+
+                <article mix={[ui.card.elevated, proofNarrowCardCss]}>
+                  <div mix={ui.card.header}>
+                    <p mix={ui.card.eyebrow}>Quick action</p>
+                    <h3 mix={ui.card.title}>Invite collaborator</h3>
+                    <p mix={ui.card.description}>
+                      Fields, labels, and actions should remain compact without feeling cramped.
+                    </p>
+                  </div>
+                  <div mix={ui.card.body}>
+                    <label for="proof-email" mix={ui.fieldText.label}>
+                      Email
+                    </label>
+                    <input
+                      id="proof-email"
+                      readOnly
+                      value="team@remix.dev"
+                      mix={[ui.field.base, proofInputCss]}
+                    />
+                    <p mix={ui.fieldText.help}>Editors can ship changes but cannot manage billing.</p>
+                  </div>
+                  <div mix={ui.card.footer}>
+                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                      Cancel
+                    </button>
+                    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                      Send invite
+                    </button>
+                  </div>
+                </article>
+
+                <article mix={[ui.card.base, proofWideCardCss]}>
+                  <div mix={ui.card.header}>
+                    <p mix={ui.card.eyebrow}>Recent activity</p>
+                    <h3 mix={ui.card.title}>A table-like content area without heavy chrome</h3>
+                    <p mix={ui.card.description}>
+                      Utility apps need lists and rows to be quiet, aligned, and easy to scan.
+                    </p>
+                  </div>
+                  <div mix={ui.card.body}>
+                    <div mix={rowTableCss}>
+                      {[
+                        ['Deploy preview', '2 minutes ago', 'Success'],
+                        ['Cache warmup', '13 minutes ago', 'Running'],
+                        ['Customer import', '26 minutes ago', 'Queued'],
+                      ].map(([label, time, status]) => (
+                        <div key={label} mix={rowTableItemCss}>
+                          <div mix={stackXsCss}>
+                            <p mix={[ui.text.bodySm, zeroMarginCss]}>{label}</p>
+                            <p mix={[ui.text.caption, zeroMarginCss]}>{time}</p>
+                          </div>
+                          <span mix={[statusBadgeCss, getStatusMix(status)]}>{status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+
+                <article mix={[ui.card.base, proofNarrowCardCss]}>
+                  <div mix={ui.card.header}>
+                    <p mix={ui.card.eyebrow}>Menu surface</p>
+                    <h3 mix={ui.card.title}>Floating panels should stay related to the system</h3>
+                  </div>
+                  <div mix={ui.card.body}>
+                    <div role="menu" aria-label="Project actions" mix={[ui.card.elevated, proofMenuCss]}>
+                      <button type="button" role="menuitem" mix={menuItemCss}>
+                        Rename project
+                      </button>
+                      <button type="button" role="menuitem" mix={menuItemCss}>
+                        Copy environment
+                      </button>
+                      <button type="button" role="menuitem" mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}>
+                        Archive project
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function ThemeValuesPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Core contract"
+        description="The contract is the stable API. Themes provide the values, but app code and first-party components always consume `theme.*` variable references."
+      >
+        <div mix={twoColumnGridCss}>
+          <TokenGroupCard
+            code="theme.space.md"
+            rows={[
+              ['xs', String(RMX_01_VALUES.space.xs)],
+              ['sm', String(RMX_01_VALUES.space.sm)],
+              ['md', String(RMX_01_VALUES.space.md)],
+              ['lg', String(RMX_01_VALUES.space.lg)],
+            ]}
+            title="Space scale"
+          />
+          <TokenGroupCard
+            code="theme.radius.lg"
+            rows={[
+              ['sm', String(RMX_01_VALUES.radius.sm)],
+              ['md', String(RMX_01_VALUES.radius.md)],
+              ['lg', String(RMX_01_VALUES.radius.lg)],
+              ['full', String(RMX_01_VALUES.radius.full)],
+            ]}
+            title="Radius scale"
+          />
+          <TokenGroupCard
+            code="theme.fontSize.sm"
+            rows={[
+              ['3xs', String(RMX_01_VALUES.fontSize['3xs'])],
+              ['xs', String(RMX_01_VALUES.fontSize.xs)],
+              ['md', String(RMX_01_VALUES.fontSize.md)],
+              ['2xl', String(RMX_01_VALUES.fontSize['2xl'])],
+            ]}
+            title="Typography sizes"
+          />
+          <TokenGroupCard
+            code="theme.shadow.md"
+            rows={[
+              ['xs', String(RMX_01_VALUES.shadow.xs)],
+              ['sm', String(RMX_01_VALUES.shadow.sm)],
+              ['md', String(RMX_01_VALUES.shadow.md)],
+              ['lg', String(RMX_01_VALUES.shadow.lg)],
+            ]}
+            title="Shadows and elevation"
+          />
+        </div>
+      </Section>
+
+      <Section
+        title="Semantic color roles"
+        description="The system distinguishes content, surfaces, borders, actions, and statuses so components can read the right semantic value rather than inventing their own colors."
+      >
+        <div mix={threeColumnGridCss}>
+          <ColorRoleCard
+            role="Surface stack"
+            swatches={[
+              ['Canvas', String(RMX_01_VALUES.colors.background.canvas)],
+              ['Surface', String(RMX_01_VALUES.colors.background.surface)],
+              ['Secondary', String(RMX_01_VALUES.colors.background.surfaceSecondary)],
+              ['Inset', String(RMX_01_VALUES.colors.background.inset)],
+            ]}
+          />
+          <ColorRoleCard
+            role="Text stack"
+            swatches={[
+              ['Primary', String(RMX_01_VALUES.colors.text.primary)],
+              ['Secondary', String(RMX_01_VALUES.colors.text.secondary)],
+              ['Muted', String(RMX_01_VALUES.colors.text.muted)],
+              ['Link', String(RMX_01_VALUES.colors.text.link)],
+            ]}
+          />
+          <ColorRoleCard
+            role="Action and status"
+            swatches={[
+              ['Primary', String(RMX_01_VALUES.colors.action.primary.background)],
+              ['Danger', String(RMX_01_VALUES.colors.action.danger.background)],
+              ['Info', String(RMX_01_VALUES.colors.status.info.background)],
+              ['Success', String(RMX_01_VALUES.colors.status.success.background)],
+            ]}
+          />
+        </div>
+      </Section>
+
+      <Section
+        title="Authoring model"
+        description="This is the contract the app and library code share. The actual component styling never needs JS-resolved values, only CSS variable references."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.header}>
+            <p mix={ui.card.eyebrow}>Example</p>
+            <h3 mix={ui.card.title}>Theme values render into CSS custom properties</h3>
+          </div>
+          <div mix={ui.card.body}>
+            <pre mix={codeBlockCss}>
+              <code>{`let Theme = createTheme({
+  space: {
+    xs: "4px",
+    sm: "8px",
+    md: "12px",
+    lg: "16px",
+  },
+  colors: {
+    action: {
+      primary: {
+        background: "#3561cf",
+        foreground: "rgb(255 255 255 / 0.92)",
+      },
+    },
+  },
+})`}</code>
+            </pre>
+            <pre mix={codeBlockCss}>
+              <code>{`:root {
+  --rmx-space-md: 12px;
+  --rmx-color-action-primary-background: #3561cf;
+}`}</code>
+            </pre>
+          </div>
+        </article>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipesPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Recipe families"
+        description="Recipes are where the design system becomes practical. They should absorb recurring layout and typography decisions so app code composes instead of restyling."
+      >
+        <div mix={twoColumnGridCss}>
+          <RecipeFamilyCard
+            code="ui.text.*"
+            description="Page-level typography roles for headings, body copy, captions, and metadata."
+            title="Text roles"
+          >
+            <p mix={ui.text.eyebrow}>Page eyebrow</p>
+            <p mix={ui.text.title}>Section title</p>
+            <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
+          </RecipeFamilyCard>
+
+          <RecipeFamilyCard
+            code="ui.card.*"
+            description="Shared shell, spacing, and slot rhythm for cards, popovers, and content panels."
+            title="Card recipes"
+          >
+            <div mix={ui.card.base}>
+              <div mix={ui.card.header}>
+                <p mix={ui.card.eyebrow}>Surface</p>
+                <h4 mix={ui.card.title}>Card header</h4>
+                <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
+              </div>
+            </div>
+          </RecipeFamilyCard>
+
+          <RecipeFamilyCard
+            code="ui.button.*"
+            description="Compact action treatments that stay cohesive across white, colored, and destructive states."
+            title="Buttons and controls"
+          >
+            <div mix={buttonRowCss}>
+              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                Save
+              </button>
+              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                Ghost
+              </button>
+              <button type="button" mix={[buttonBaseCss, ui.button.danger]}>
+                Delete
+              </button>
+            </div>
+          </RecipeFamilyCard>
+
+          <RecipeFamilyCard
+            code="ui.field.* / ui.fieldText.*"
+            description="Field chrome and label/help typography should travel together."
+            title="Fields"
+          >
+            <div mix={stackXsCss}>
+              <label for="ui-recipe-field" mix={ui.fieldText.label}>
+                Project name
+              </label>
+              <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
+              <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
+            </div>
+          </RecipeFamilyCard>
+
+          <RecipeFamilyCard
+            code="ui.item.* / ui.status.*"
+            description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
+            title="Items and status"
+          >
+            <div mix={stackXsCss}>
+              <button type="button" mix={ui.item.base}>
+                <span>Members</span>
+                <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
+              </button>
+              <button type="button" mix={[ui.item.base, ui.item.danger]}>
+                <span>Archive workspace</span>
+                <span mix={ui.text.caption}>Permanent</span>
+              </button>
+            </div>
+          </RecipeFamilyCard>
+
+          <RecipeFamilyCard
+            code="ui.sidebar.* / ui.nav.*"
+            description="Sidebar and navigation primitives are useful app-level building blocks even though this docs shell itself is demo-specific."
+            title="Sidebar and nav"
+          >
+            <div mix={[ui.card.secondary, navPreviewCardCss]}>
+              <div mix={ui.sidebar.section}>
+                <p mix={ui.sidebar.heading}>Navigation</p>
+                <nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
+                  <a href="/ui-recipes" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                    Current page
+                  </a>
+                  <a href="/ui-recipes" mix={ui.nav.item}>
+                    Secondary page
+                  </a>
+                </nav>
+              </div>
+            </div>
+          </RecipeFamilyCard>
+        </div>
+      </Section>
+
+      <Section
+        title="Low-level composition still matters"
+        description="The recipe layer should not replace utility composition. It should sit above it and remove the most repetitive styling choices."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.header}>
+            <p mix={ui.card.eyebrow}>Utilities</p>
+            <h3 mix={ui.card.title}>Recipes and low-level utilities can coexist</h3>
+          </div>
+          <div mix={utilityRowCss}>
+            <div mix={[ui.p.sm, ui.rounded.lg, ui.shadow.xs, ui.bg.surfaceSecondary, utilityChipCss]}>
+              <code mix={ui.text.code}>ui.p.sm</code>
+            </div>
+            <div mix={[ui.p.sm, ui.rounded.full, ui.bg.inset, utilityChipCss]}>
+              <code mix={ui.text.code}>ui.rounded.full</code>
+            </div>
+            <div mix={[ui.p.sm, ui.rounded.md, ui.borderColor.default, utilityOutlineCss]}>
+              <code mix={ui.text.code}>ui.borderColor.default</code>
+            </div>
+          </div>
+        </article>
+      </Section>
+    </div>
+  )
+}
+
+function ComponentsPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Current component direction"
+        description="Components should mostly be ergonomic shells around behavior and shared recipes rather than isolated style islands."
+      >
+        <div mix={threeColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Button</p>
+              <h3 mix={ui.card.title}>A thin wrapper over control + tone</h3>
+              <p mix={ui.card.description}>
+                A button component can expose behavior and semantics while still leaning on
+                `ui.control.base` and `ui.button.*`.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <div mix={buttonRowCss}>
+                <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                  Primary
+                </button>
+                <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                  Secondary
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Card</p>
+              <h3 mix={ui.card.title}>Likely a micro-layout helper</h3>
+              <p mix={ui.card.description}>
+                The most useful component-level value may be ergonomic card composition, while
+                subparts like headers and footers stay as mixins instead of wrappers.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <div mix={[ui.card.secondary, componentPreviewCardCss]}>
+                <div mix={ui.card.header}>
+                  <p mix={ui.card.eyebrow}>Example</p>
+                  <h4 mix={ui.card.title}>Small card composition</h4>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Popover shells</p>
+              <h3 mix={ui.card.title}>Menus and dialogs should stay on-system</h3>
+              <p mix={ui.card.description}>
+                Floating layers should feel like related surfaces instead of separate aesthetic worlds.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <div mix={[ui.card.elevated, componentPreviewCardCss]}>
+                <button type="button" mix={menuItemCss}>
+                  Rename project
+                </button>
+                <button type="button" mix={menuItemCss}>
+                  Copy environment
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </Section>
+
+      <Section
+        title="Planned first-party surface area"
+        description="The component library should eventually cover the usual app primitives, but the visual language should still come from shared recipes and theme values."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>High-confidence early wins</p>
+              <h3 mix={ui.card.title}>Start with components that prove the shared system</h3>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>Button and button group</li>
+                <li>Card and surface shells</li>
+                <li>Dialog, popover, dropdown menu, tooltip</li>
+                <li>Tabs, combobox, command, select</li>
+                <li>Field, input, textarea, checkbox, switch, radio group</li>
+              </ul>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Longer-term library</p>
+              <h3 mix={ui.card.title}>The broader shadcn-style surface area can follow</h3>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>Calendar, date picker, chart, data table</li>
+                <li>Drawer, sheet, sidebar, navigation menu, menubar</li>
+                <li>Toast, sonner, spinner, progress, skeleton</li>
+                <li>Carousel, resizable, scroll area, pagination</li>
+                <li>Table, badge, breadcrumb, avatar, separator</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function LayoutsPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Demo shell vs reusable layout ingredients"
+        description="The docs shell here is not the package abstraction. What should travel into the system are the reusable parts like sidebar panels, nav items, carded rails, and content rhythm."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={[ui.card.base, layoutPreviewShellCss]}>
+            <div mix={layoutPreviewSidebarCss}>
+              <div mix={ui.sidebar.section}>
+                <p mix={ui.sidebar.heading}>Account</p>
+                <nav aria-label="Settings sidebar" mix={ui.nav.list}>
+                  <a href="/layouts" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                    Profile
+                  </a>
+                  <a href="/layouts" mix={ui.nav.item}>
+                    Members
+                  </a>
+                  <a href="/layouts" mix={ui.nav.item}>
+                    Billing
+                  </a>
+                </nav>
+              </div>
+            </div>
+            <div mix={layoutPreviewMainCss}>
+              <div mix={[ui.card.secondary, componentPreviewCardCss]}>
+                <div mix={ui.card.header}>
+                  <p mix={ui.card.eyebrow}>Settings layout</p>
+                  <h3 mix={ui.card.title}>Sticky side navigation + flexible main rail</h3>
+                  <p mix={ui.card.description}>
+                    A common app shell pattern that should be easy to build from shared sidebar and card
+                    primitives.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>What belongs in the package</p>
+              <h3 mix={ui.card.title}>Reusable primitives, not demo-specific wrappers</h3>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>`ui.sidebar.*` for panel rhythm and section labeling</li>
+                <li>`ui.nav.*` for compact application navigation items</li>
+                <li>`ui.card.*` for content rails and side panels</li>
+                <li>Demo-specific docs shell composition stays local to the docs app</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </Section>
+
+      <Section
+        title="Why layouts matter here"
+        description="As the component library grows, app shells and settings-style layouts become one of the best places to prove that the design system feels cohesive in real use."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.header}>
+            <p mix={ui.card.eyebrow}>Current takeaway</p>
+            <h3 mix={ui.card.title}>The layout layer is where system quality becomes obvious</h3>
+            <p mix={ui.card.description}>
+              If nav, cards, typography, buttons, and fields all feel like they belong together inside
+              a practical app shell, the rest of the library gets easier to trust.
+            </p>
+          </div>
+        </article>
+      </Section>
+    </div>
+  )
 }
 
 function Section() {
-  return ({ id, title, description, children }: SectionProps) => (
-    <section id={id} mix={[sectionCss]}>
-      <div mix={[sectionHeaderCss]}>
+  return ({
+    children,
+    description,
+    title,
+  }: {
+    children: RemixNode
+    description: string
+    title: string
+  }) => (
+    <section mix={sectionCss}>
+      <div mix={sectionHeaderCss}>
         <h2 mix={[ui.text.title, sectionTitleCss]}>{title}</h2>
         <p mix={[ui.text.body, sectionDescriptionCss]}>{description}</p>
       </div>
@@ -505,23 +989,133 @@ function Section() {
   )
 }
 
-type CardProps = {
-  title: string
-  body: string
-  tone: ThemeUtility
-  mixins?: ThemeUtility[]
-}
-
-function Card() {
-  return ({ title, body, tone, mixins = [] }: CardProps) => (
-    <article mix={[tone, ...mixins]}>
+function TokenGroupCard() {
+  return ({
+    code,
+    rows,
+    title,
+  }: {
+    code: string
+    rows: Array<[string, string]>
+    title: string
+  }) => (
+    <article mix={ui.card.base}>
       <div mix={ui.card.header}>
-        <p mix={ui.card.eyebrow}>Surface</p>
-        <h3 mix={[ui.card.title, surfaceHeadingCss]}>{title}</h3>
-        <p mix={ui.card.description}>{body}</p>
+        <p mix={ui.card.eyebrow}>Value group</p>
+        <h3 mix={ui.card.title}>{title}</h3>
+      </div>
+      <div mix={ui.card.body}>
+        <code mix={[ui.text.code, inlineCodeCss]}>{code}</code>
+        <div mix={tokenListCss}>
+          {rows.map(([label, value]) => (
+            <div key={label} mix={tokenRowCss}>
+              <span mix={ui.text.caption}>{label}</span>
+              <code mix={ui.text.code}>{value}</code>
+            </div>
+          ))}
+        </div>
       </div>
     </article>
   )
+}
+
+function ColorRoleCard() {
+  return ({
+    role,
+    swatches,
+  }: {
+    role: string
+    swatches: Array<[string, string]>
+  }) => (
+    <article mix={ui.card.base}>
+      <div mix={ui.card.header}>
+        <p mix={ui.card.eyebrow}>Color role</p>
+        <h3 mix={ui.card.title}>{role}</h3>
+      </div>
+      <div mix={ui.card.body}>
+        {swatches.map(([label, value]) => (
+          <div key={label} mix={swatchRowCss}>
+            <div mix={swatchMetaCss}>
+              <span mix={ui.text.caption}>{label}</span>
+              <code mix={ui.text.code}>{value}</code>
+            </div>
+            <span mix={[swatchCss, css({ backgroundColor: value })]} />
+          </div>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+function RecipeFamilyCard() {
+  return ({
+    children,
+    code,
+    description,
+    title,
+  }: {
+    children: RemixNode
+    code: string
+    description: string
+    title: string
+  }) => (
+    <article mix={ui.card.base}>
+      <div mix={ui.card.header}>
+        <p mix={ui.card.eyebrow}>Recipe family</p>
+        <h3 mix={ui.card.title}>{title}</h3>
+        <p mix={ui.card.description}>{description}</p>
+      </div>
+      <div mix={ui.card.body}>
+        <code mix={[ui.text.code, inlineCodeCss]}>{code}</code>
+        {children}
+      </div>
+    </article>
+  )
+}
+
+function MetricCard() {
+  return ({
+    badge,
+    dataId,
+    metric,
+    title,
+    tone,
+    value,
+  }: {
+    badge: string
+    dataId?: string
+    metric: string
+    title: string
+    tone: ThemeUtility
+    value: string
+  }) => (
+    <article data-proof-card={dataId} mix={[tone, metricCardCss]}>
+      <div mix={metricBadgeRowCss}>
+        <span mix={[statusBadgeCss, ui.status.info]}>{badge}</span>
+        <span mix={ui.text.caption}>{metric}</span>
+      </div>
+      <div mix={ui.card.header}>
+        <h3 mix={[ui.card.title, zeroMarginCss]}>{title}</h3>
+        <p mix={[ui.card.description, zeroTopMarginCss]}>{value}</p>
+      </div>
+    </article>
+  )
+}
+
+function getNavItemMix(path: string, currentPath: string) {
+  return currentPath === path ? [ui.nav.item, ui.nav.itemActive] : [ui.nav.item]
+}
+
+function getStatusMix(label: string) {
+  if (label === 'Success') {
+    return ui.status.success
+  }
+
+  if (label === 'Running') {
+    return ui.status.info
+  }
+
+  return ui.status.warning
 }
 
 let bodyCss = css({
@@ -534,104 +1128,72 @@ let bodyCss = css({
 let appShellCss = css({
   minHeight: '100vh',
   display: 'grid',
-  gridTemplateColumns: '280px minmax(0, 1fr)',
-  '@media (max-width: 920px)': {
+  gridTemplateColumns: '304px minmax(0, 1fr)',
+  background:
+    'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
+  '@media (max-width: 960px)': {
     gridTemplateColumns: '1fr',
   },
 })
 
-let sidebarCss = css({
+let sidebarFrameCss = css({
   backgroundColor: theme.colors.background.inset,
   borderRight: `1px solid ${theme.colors.border.subtle}`,
-  padding: theme.space.xl,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.lg,
-  '@media (max-width: 920px)': {
+  '@media (max-width: 960px)': {
     borderRight: 'none',
     borderBottom: `1px solid ${theme.colors.border.subtle}`,
   },
 })
 
-let sidebarHeaderCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
-
-let sidebarTitleCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.xl,
-  fontWeight: theme.fontWeight.bold,
-})
-
-let sidebarBodyCss = css({
-  margin: 0,
-})
-
-let sidebarNavCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-})
-
-let navLinkCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  minHeight: '32px',
-  padding: `${theme.space.xs} ${theme.space.sm}`,
-  borderRadius: theme.radius.md,
-  color: theme.colors.text.secondary,
-  fontFamily: theme.fontFamily.sans,
-  fontSize: theme.fontSize.sm,
-  fontWeight: theme.fontWeight.medium,
-  textDecoration: 'none',
-  '&:hover': {
-    backgroundColor: theme.colors.background.surface,
-    color: theme.colors.text.primary,
+let sidebarStickyCss = css({
+  position: 'sticky',
+  top: 0,
+  height: '100vh',
+  overflowY: 'auto',
+  padding: theme.space.xl,
+  boxSizing: 'border-box',
+  '@media (max-width: 960px)': {
+    position: 'static',
+    height: 'auto',
+    overflowY: 'visible',
   },
 })
 
 let mainCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xl,
-  padding: theme.space.xl,
-})
-
-let heroCss = css({
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-  gap: theme.space.lg,
-  padding: theme.space.xl,
-  borderRadius: theme.radius.xl,
-  boxShadow: theme.shadow.sm,
-  '@media (max-width: 760px)': {
-    flexDirection: 'column',
+  minWidth: 0,
+  padding: theme.space['2xl'],
+  '@media (max-width: 960px)': {
+    padding: theme.space.xl,
   },
 })
 
-let heroCopyCss = css({
-  maxWidth: '720px',
-})
-
-let heroTitleCss = css({
-  margin: `0 0 ${theme.space.sm}`,
-})
-
-let heroBodyCss = css({
-  margin: 0,
-  maxWidth: '62ch',
-})
-
-let heroActionsCss = css({
+let pageStackCss = css({
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: theme.space.sm,
+  flexDirection: 'column',
+  gap: theme.space.xl,
+  maxWidth: '1180px',
 })
 
-let eyebrowCss = css({ margin: 0 })
+let pageHeaderCss = css({
+  padding: theme.space.xl,
+})
+
+let pageTitleCss = css({
+  margin: 0,
+  fontSize: 'clamp(28px, 3vw, 36px)',
+  maxWidth: '18ch',
+})
+
+let pageDescriptionCss = css({
+  margin: 0,
+  maxWidth: '68ch',
+})
+
+let pageSectionStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xl,
+})
 
 let sectionCss = css({
   display: 'flex',
@@ -653,40 +1215,118 @@ let sectionTitleCss = css({
 
 let sectionDescriptionCss = css({
   margin: 0,
-  maxWidth: '70ch',
+  maxWidth: '72ch',
 })
 
-let buttonBaseCss = ui.control.base
-let quietButtonCss = ui.control.quiet
-
-let buttonPanelCss = css({
-  minHeight: '0',
+let threeColumnGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: theme.space.md,
+  '@media (max-width: 1080px)': {
+    gridTemplateColumns: '1fr',
+  },
 })
 
-let buttonGroupCss = css({
+let twoColumnGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.md,
+  '@media (max-width: 920px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let bulletListCss = css({
+  margin: 0,
+  paddingLeft: theme.space.lg,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  color: theme.colors.text.secondary,
+  '& li + li': {
+    marginTop: theme.space.sm,
+  },
+})
+
+let stackSmCss = css({
   display: 'flex',
-  flexWrap: 'wrap',
+  flexDirection: 'column',
   gap: theme.space.sm,
 })
 
-let buttonNoteCss = css({
+let stackXsCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let calloutCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+  padding: theme.space.md,
+  borderRadius: theme.radius.lg,
+  border: '1px solid transparent',
+})
+
+let calloutInfoCss = ui.status.info
+
+let calloutTitleCss = css({
+  margin: 0,
+  color: theme.colors.text.primary,
+})
+
+let calloutBodyCss = css({
+  margin: 0,
+  color: theme.colors.text.secondary,
+})
+
+let proofAppShellCss = css({
+  gap: theme.space.lg,
+  padding: theme.space.lg,
+})
+
+let proofToolbarCss = css({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.space.sm,
+  justifyContent: 'space-between',
+  gap: theme.space.md,
+  paddingBottom: theme.space.md,
+  borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  '@media (max-width: 720px)': {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
 })
 
-let statusDotCss = css({
-  width: '8px',
-  height: '8px',
-  borderRadius: theme.radius.full,
-  flexShrink: 0,
+let proofToolbarTitleCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
 })
 
-let statusInfoDotCss = css({
-  backgroundColor: theme.colors.status.info.foreground,
+let proofLayoutCss = css({
+  display: 'grid',
+  gridTemplateColumns: '220px minmax(0, 1fr)',
+  gap: theme.space.md,
+  '@media (max-width: 920px)': {
+    gridTemplateColumns: '1fr',
+  },
 })
 
-let cardGridCss = css({
+let proofSidebarCss = css({
+  alignSelf: 'start',
+  gap: theme.space.md,
+  padding: theme.space.md,
+})
+
+let proofMainCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.md,
+  minWidth: 0,
+})
+
+let proofStatsGridCss = css({
   display: 'grid',
   gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
   gap: theme.space.md,
@@ -698,41 +1338,65 @@ let cardGridCss = css({
   },
 })
 
-let surfaceCardCss = css({ minHeight: '168px' })
-let surfaceSecondaryCardCss = css({ minHeight: '168px' })
-let surfaceElevatedCardCss = css({ minHeight: '168px' })
-let surfaceInsetCardCss = css({ minHeight: '168px' })
+let metricCardCss = css({
+  minHeight: '136px',
+})
 
-let overlayGridCss = css({
+let metricBadgeRowCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.sm,
+})
+
+let proofContentGridCss = css({
   display: 'grid',
-  gridTemplateColumns: '1.2fr 1fr 0.9fr',
+  gridTemplateColumns: '1.5fr 1fr',
   gap: theme.space.md,
-  alignItems: 'start',
   '@media (max-width: 1080px)': {
     gridTemplateColumns: '1fr',
   },
 })
 
-let dialogSurfaceCss = css({
-  borderRadius: theme.radius.xl,
+let proofWideCardCss = css({
+  minHeight: '0',
 })
 
-let menuSurfaceWrapCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
+let proofNarrowCardCss = css({
+  minHeight: '0',
 })
 
-let menuSurfaceCss = css({
-  display: 'flex',
-  flexDirection: 'column',
+let proofInputCss = css({
+  width: '100%',
+  boxSizing: 'border-box',
+})
+
+let proofMenuCss = css({
   gap: theme.space.xs,
   padding: theme.space.sm,
 })
 
-let compactPanelCss = css({
+let rowTableCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  borderTop: `1px solid ${theme.colors.border.subtle}`,
+})
+
+let rowTableItemCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.md,
+  padding: `${theme.space.sm} 0`,
+  borderBottom: `1px solid ${theme.colors.border.subtle}`,
+})
+
+let buttonBaseCss = ui.control.base
+
+let buttonRowCss = css({
+  display: 'flex',
+  flexWrap: 'wrap',
   gap: theme.space.sm,
-  padding: theme.space.md,
 })
 
 let menuItemCss = css({
@@ -755,26 +1419,6 @@ let menuItemCss = css({
 
 let menuItemDangerCss = css({
   borderColor: theme.colors.status.danger.border,
-  '&:hover': {
-    filter: 'brightness(0.98)',
-  },
-})
-
-let dialogFieldCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-})
-
-let fieldLabelCss = css({
-  margin: 0,
-})
-
-let fieldInputCss = css({})
-
-let surfaceHeadingCss = css({
-  margin: 0,
-  maxWidth: '18ch',
 })
 
 let compactRowCss = css({
@@ -782,14 +1426,8 @@ let compactRowCss = css({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: theme.space.md,
-  minHeight: '28px',
+  minHeight: theme.control.height.sm,
 })
-
-let compactKeyCss = css({
-  margin: 0,
-})
-
-let compactValueCss = css({ margin: 0 })
 
 let statusBadgeCss = css({
   display: 'inline-flex',
@@ -802,99 +1440,29 @@ let statusBadgeCss = css({
   fontWeight: theme.fontWeight.semibold,
 })
 
-let successBadgeCss = css({})
-
-let contentGridCss = css({
-  display: 'grid',
-  gridTemplateColumns: '1.2fr 1fr',
-  gap: theme.space.md,
-  '@media (max-width: 980px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-let systemGridCss = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: theme.space.md,
-  '@media (max-width: 980px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-let systemCardCss = css({
-  minHeight: '240px',
-})
-
-let systemWideCardCss = css({
-  gridColumn: '1 / -1',
-  minHeight: '0',
-})
-
-let articleCardCss = css({
-  minHeight: '0',
-})
-
-let articleTitleCss = css({
-  margin: 0,
-})
-
-let articleParagraphCss = css({
-  maxWidth: '50ch',
-})
-
-let cardFooterMetaCss = css({
+let metaTextCss = css({
   margin: 0,
   marginRight: 'auto',
 })
 
-let sampleTextCss = css({
+let zeroMarginCss = css({ margin: 0 })
+let zeroTopMarginCss = css({ marginTop: 0 })
+
+let codeBlockCss = css({
   margin: 0,
+  padding: theme.space.md,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.lg,
+  backgroundColor: theme.colors.background.inset,
+  overflowX: 'auto',
+  fontFamily: theme.fontFamily.mono,
+  fontSize: theme.fontSize.xs,
+  lineHeight: theme.lineHeight.relaxed,
+  color: theme.colors.text.secondary,
+  whiteSpace: 'pre',
 })
 
-let typeSpecimenPanelCss = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: theme.space.md,
-  paddingTop: theme.space.sm,
-  borderTop: `1px solid ${theme.colors.border.subtle}`,
-  '@media (max-width: 760px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-let typeSpecimenGroupCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
-
-let specimenGroupLabelCss = css({
-  margin: 0,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-})
-
-let typeSpecimenCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
-
-let specimenRowCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '5px',
-})
-
-let specimenLabelCss = css({
-  margin: 0,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-})
-
-let codeSampleCss = css({
+let inlineCodeCss = css({
   display: 'inline-flex',
   alignSelf: 'flex-start',
   padding: `${theme.space.xs} ${theme.space.sm}`,
@@ -903,71 +1471,43 @@ let codeSampleCss = css({
   backgroundColor: theme.colors.background.inset,
 })
 
-let articleListCss = css({
-  margin: 0,
-  paddingLeft: theme.space.lg,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.relaxed,
-  color: theme.colors.text.secondary,
-  '& li + li': {
-    marginTop: theme.space.sm,
-  },
-})
-
-let calloutCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-  padding: theme.space.md,
-  borderRadius: theme.radius.lg,
-  border: '1px solid transparent',
-})
-
-let calloutInfoCss = ui.status.info
-let calloutWarningCss = css({})
-let inlineCalloutCss = css({
-  padding: theme.space.sm,
-  borderRadius: theme.radius.md,
-  backgroundColor: 'color-mix(in oklab, rgb(255 246 228) 34%, white)',
-  borderColor: 'color-mix(in oklab, rgb(241 211 146) 58%, white)',
-  boxShadow: 'none',
-})
-
-let calloutTitleCss = css({
-  margin: 0,
-  color: theme.colors.text.primary,
-})
-
-let calloutBodyCss = css({
-  margin: 0,
-  color: theme.colors.text.secondary,
-})
-
-let fieldShowcaseCss = css({
+let tokenListCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xs,
 })
 
-let fieldHelpCss = css({
-  margin: 0,
+let tokenRowCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.sm,
 })
 
-let itemPreviewCss = css({
-  cursor: 'pointer',
+let swatchRowCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.md,
 })
 
-let itemMetaCss = css({
+let swatchMetaCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+  minWidth: 0,
+})
+
+let swatchCss = css({
+  width: '44px',
+  height: '24px',
+  borderRadius: theme.radius.full,
+  border: `1px solid ${theme.colors.border.subtle}`,
   flexShrink: 0,
 })
 
-let statusStackCss = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: theme.space.sm,
-  '@media (max-width: 680px)': {
-    gridTemplateColumns: '1fr',
-  },
+let navPreviewCardCss = css({
+  padding: theme.space.md,
 })
 
 let utilityRowCss = css({
@@ -989,6 +1529,31 @@ let utilityOutlineCss = css({
   borderRadius: theme.radius.md,
 })
 
-let utilityCodeCss = css({
-  whiteSpace: 'nowrap',
+let componentPreviewCardCss = css({
+  gap: theme.space.sm,
+  padding: theme.space.md,
+})
+
+let layoutPreviewShellCss = css({
+  display: 'grid',
+  gridTemplateColumns: '220px minmax(0, 1fr)',
+  gap: theme.space.md,
+  '@media (max-width: 780px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let layoutPreviewSidebarCss = css({
+  paddingRight: theme.space.md,
+  borderRight: `1px solid ${theme.colors.border.subtle}`,
+  '@media (max-width: 780px)': {
+    paddingRight: 0,
+    paddingBottom: theme.space.md,
+    borderRight: 'none',
+    borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  },
+})
+
+let layoutPreviewMainCss = css({
+  minWidth: 0,
 })

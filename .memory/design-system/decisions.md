@@ -25,6 +25,12 @@
   - `ui.card.*` owns shared card layout, slot rhythm, and optional action/footer structure
   - surface tone can be selected with `ui.card.base`, `ui.card.secondary`, `ui.card.elevated`, and `ui.card.inset`
   - avoid rushing into `CardHeader`, `CardContent`, `CardFooter`, or `asChild`-style APIs unless the recipe model proves insufficient
+- The demo should now be treated as a design-system explorer, not just a theme landing page.
+  - `RMX_01` is the current default theme inside that explorer
+  - a dedicated proof-sheet page should carry the “what does this theme feel like?” responsibility
+- Reusable sidebar/navigation primitives belong in the package, but a docs-shell wrapper does not.
+  - app-level ingredients like `ui.sidebar.*` and `ui.nav.*` are good system abstractions
+  - the explorer shell composition itself should stay local to the demo/docs app
 
 ## Learned
 

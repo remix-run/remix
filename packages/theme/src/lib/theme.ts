@@ -249,6 +249,17 @@ export type ThemeUi = {
     label: ThemeUtility
     help: ThemeUtility
   }
+  sidebar: {
+    panel: ThemeUtility
+    section: ThemeUtility
+    heading: ThemeUtility
+  }
+  nav: {
+    list: ThemeUtility
+    item: ThemeUtility
+    itemActive: ThemeUtility
+    itemMuted: ThemeUtility
+  }
   card: {
     base: ThemeUtility
     secondary: ThemeUtility
@@ -492,6 +503,67 @@ export const ui: ThemeUi = {
     help: css({
       fontSize: theme.fontSize['2xs'],
       lineHeight: theme.lineHeight.normal,
+      color: theme.colors.text.muted,
+    }),
+  },
+  sidebar: {
+    panel: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.space.lg,
+      minWidth: 0,
+    }),
+    section: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.space.xs,
+      minWidth: 0,
+    }),
+    heading: css({
+      margin: 0,
+      fontSize: theme.fontSize['2xs'],
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.semibold,
+      letterSpacing: theme.letterSpacing.meta,
+      textTransform: 'uppercase',
+      color: theme.colors.text.muted,
+    }),
+  },
+  nav: {
+    list: css({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.space.xs,
+      minWidth: 0,
+    }),
+    item: css({
+      display: 'inline-flex',
+      alignItems: 'center',
+      minHeight: theme.control.height.md,
+      padding: `${theme.space.xs} ${theme.space.sm}`,
+      border: `1px solid transparent`,
+      borderRadius: theme.radius.md,
+      color: theme.colors.text.secondary,
+      fontFamily: theme.fontFamily.sans,
+      fontSize: theme.fontSize.sm,
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.medium,
+      textDecoration: 'none',
+      transitionProperty: 'background-color, border-color, color, box-shadow',
+      transitionDuration: theme.duration.fast,
+      transitionTimingFunction: theme.easing.standard,
+      '&:hover': {
+        backgroundColor: theme.colors.background.surface,
+        color: theme.colors.text.primary,
+      },
+    }),
+    itemActive: css({
+      backgroundColor: theme.colors.background.surface,
+      borderColor: theme.colors.border.subtle,
+      color: theme.colors.text.primary,
+      boxShadow: theme.shadow.xs,
+    }),
+    itemMuted: css({
       color: theme.colors.text.muted,
     }),
   },

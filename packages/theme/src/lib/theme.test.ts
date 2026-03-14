@@ -223,6 +223,8 @@ describe('ui', () => {
             ui.card.description,
             ui.control.base,
             ui.button.primary,
+            ui.sidebar.heading,
+            ui.nav.itemActive,
             ui.surfaceText.eyebrow,
             ui.item.base,
             ui.fieldText.help,
@@ -244,6 +246,8 @@ describe('ui', () => {
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
+    expect(html).toMatch(/text-transform: uppercase/)
+    expect(html).toMatch(/box-shadow: var\(--rmx-shadow-xs\)/)
   })
 
   it('provides card structure recipes for layout and typography', async () => {

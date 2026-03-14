@@ -15,6 +15,8 @@ Implemented in `packages/theme`:
   - `ui.field.base`
   - `ui.fieldText.*`
   - `ui.card.*`
+  - `ui.sidebar.*`
+  - `ui.nav.*`
   - `ui.item.*`
   - `ui.surface.*`
   - `ui.status.*`
@@ -23,13 +25,16 @@ Implemented in `packages/theme`:
 Implemented in `demos/theme-rmx-01`:
 
 - demo server on port `44100`
-- app shell showing buttons, cards, popover-like panels, content areas, and system recipe panels
+- docs-style explorer shell with sticky, scrollable sidebar navigation
+- multiple pages for:
+  - overview
+  - proof sheet
+  - theme values
+  - ui recipes
+  - components
+  - layouts
+- a proof-sheet route that acts like a compact fake app for judging theme feel quickly
 - demo composes heavily from semantic `ui` recipes instead of bespoke styles
-- demo now uses `ui.card.*` to structure:
-  - surface cards
-  - content panels
-  - dialog/popover-like examples
-  - recipe showcase panels
 - demo includes a Playwright screenshot workflow for iterative visual review
   - `pnpm -C demos/theme-rmx-01 run screenshot`
   - `pnpm -C demos/theme-rmx-01 run screenshot:card`
@@ -50,6 +55,7 @@ Most recent validation loops have included:
 - The `System Recipes` section needs to behave like a reference artifact, not like a set of normal content cards.
 - `Content Areas` benefit when intro text and list rhythm are handled as separate spacing boundaries.
 - The card recipe layer is a good fit for this codebase because it captures spacing structure without forcing wrapper components.
+- The explorer model is a better fit than a single long demo page because it cleanly separates theme feel, API reference, and future component docs.
 
 ## Next
 

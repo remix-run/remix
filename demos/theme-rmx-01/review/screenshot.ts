@@ -19,6 +19,7 @@ async function main() {
   let { values } = parseArgs({
     options: {
       name: { type: 'string' },
+      path: { type: 'string', default: '/' },
       width: { type: 'string', default: '1440' },
       height: { type: 'string', default: '1400' },
       selector: { type: 'string' },
@@ -30,6 +31,8 @@ async function main() {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true })
 
   let selector = values.selector
+  let routePath = normalizePath(values.path)
+  let targetUrl = new URL(routePath, BASE_URL).toString()
   let width = parseDimension(values.width, 'width')
   let height = parseDimension(values.height, 'height')
   let screenshotName = values.name ?? `theme-rmx-01-${createTimestamp()}`
@@ -56,7 +59,7 @@ async function main() {
         deviceScaleFactor: 2,
       })
 
-      await page.goto(BASE_URL, {
+      await page.goto(targetUrl, {
         waitUntil: 'networkidle',
       })
 
@@ -83,8 +86,9 @@ async function main() {
         LAST_RUN_FILE,
         JSON.stringify(
           {
-            url: BASE_URL,
+            url: targetUrl,
             selector: selector ?? null,
+            path: routePath,
             latest: LATEST_SCREENSHOT,
             saved: screenshotPath,
             timestamp: new Date().toISOString(),
@@ -113,6 +117,14 @@ function parseDimension(value: string | undefined, name: string) {
     throw new TypeError(`Expected ${name} to be a positive number`)
   }
   return parsed
+}
+
+function normalizePath(value: string | undefined) {
+  if (!value || value === '/') {
+    return '/'
+  }
+
+  return value.startsWith('/') ? value : `/${value}`
 }
 
 function createTimestamp() {
