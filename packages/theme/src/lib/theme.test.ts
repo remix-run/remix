@@ -215,7 +215,16 @@ describe('ui', () => {
       createElement(
         'div',
         {
-          mix: [ui.control.base, ui.button.primary, ui.surfaceText.eyebrow, ui.px.md, ui.rounded.md],
+          mix: [
+            ui.control.base,
+            ui.button.primary,
+            ui.surfaceText.eyebrow,
+            ui.item.base,
+            ui.fieldText.help,
+            ui.text.code,
+            ui.px.md,
+            ui.rounded.md,
+          ],
         },
         'Hello',
       ),
@@ -223,6 +232,7 @@ describe('ui', () => {
 
     expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
     expect(html).toMatch(/font-size: var\(--rmx-font-size-2xs\)/)
+    expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)

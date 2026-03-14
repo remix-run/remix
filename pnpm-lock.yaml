@@ -172,6 +172,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0

@@ -223,6 +223,7 @@ export type ThemeUi = {
     label: ThemeUtility
     eyebrow: ThemeUtility
     caption: ThemeUtility
+    code: ThemeUtility
     supporting: ThemeUtility
     title: ThemeUtility
     display: ThemeUtility
@@ -242,6 +243,15 @@ export type ThemeUi = {
   }
   field: {
     base: ThemeUtility
+  }
+  fieldText: {
+    label: ThemeUtility
+    help: ThemeUtility
+  }
+  item: {
+    base: ThemeUtility
+    selected: ThemeUtility
+    danger: ThemeUtility
   }
   surface: {
     base: ThemeUtility
@@ -321,6 +331,12 @@ export const ui: ThemeUi = {
       fontSize: theme.fontSize['2xs'],
       lineHeight: theme.lineHeight.normal,
       color: theme.colors.text.muted,
+    }),
+    code: css({
+      fontFamily: theme.fontFamily.mono,
+      fontSize: theme.fontSize.xs,
+      lineHeight: theme.lineHeight.normal,
+      color: theme.colors.text.secondary,
     }),
     eyebrow: css({
       fontSize: theme.fontSize.xs,
@@ -448,6 +464,48 @@ export const ui: ThemeUi = {
         outline: `2px solid ${theme.colors.focus.ring}`,
         outlineOffset: '2px',
       },
+    }),
+  },
+  fieldText: {
+    label: css({
+      fontSize: theme.fontSize.xs,
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.text.secondary,
+    }),
+    help: css({
+      fontSize: theme.fontSize['2xs'],
+      lineHeight: theme.lineHeight.normal,
+      color: theme.colors.text.muted,
+    }),
+  },
+  item: {
+    base: css({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.space.sm,
+      width: '100%',
+      minHeight: theme.control.height.md,
+      padding: `${theme.space.xs} ${theme.space.sm}`,
+      border: '1px solid transparent',
+      borderRadius: theme.radius.md,
+      backgroundColor: 'transparent',
+      color: theme.colors.text.primary,
+      fontFamily: theme.fontFamily.sans,
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.medium,
+      textAlign: 'left',
+    }),
+    selected: css({
+      backgroundColor: theme.colors.background.surfaceSecondary,
+      borderColor: theme.colors.border.subtle,
+      boxShadow: theme.shadow.xs,
+    }),
+    danger: css({
+      color: theme.colors.status.danger.foreground,
+      borderColor: theme.colors.status.danger.border,
+      backgroundColor: theme.colors.status.danger.background,
     }),
   },
   surface: {

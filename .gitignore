@@ -4,6 +4,7 @@ pnpm-publish-summary.json
 reference/
 .tmp/
 /demos/tmp/
+/demos/theme-rmx-01/.artifacts/
 *.db
 *.db-*
 *.sqlite

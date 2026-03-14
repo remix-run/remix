@@ -69,6 +69,9 @@ function App() {
               <a href="#content" mix={[navLinkCss]}>
                 Content
               </a>
+              <a href="#system" mix={[navLinkCss]}>
+                System
+              </a>
             </nav>
 
             <section mix={[calloutCss, calloutInfoCss]}>
@@ -277,6 +280,120 @@ function App() {
                     </p>
                   </div>
                 </section>
+              </div>
+            </Section>
+
+            <Section
+              id="system"
+              title="System Recipes"
+              description="The demo also shows the semantic primitives directly so first-party components and app code can share the same design language."
+            >
+              <div mix={[systemGridCss]}>
+                <article mix={[ui.surface.base, systemCardCss]}>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Type Roles</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>Page and surface text stay distinct</h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      Surface text is quieter and tighter than page text so cards, dialogs, and menus
+                      do not feel oversized.
+                    </p>
+                    <p mix={[ui.surfaceText.supporting, systemSupportingCss]}>
+                      Use surface roles when text lives inside cards, dialogs, popovers, and menus.
+                    </p>
+                  </div>
+                  <div mix={[typeSpecimenCss]}>
+                    <p mix={[ui.text.eyebrow, sampleTextCss]}>Page eyebrow</p>
+                    <p mix={[ui.text.title, sampleTextCss]}>Section title</p>
+                    <p mix={[ui.text.body, sampleTextCss]}>
+                      Standard body copy for page-level descriptions and longer explanations.
+                    </p>
+                    <p mix={[ui.text.supporting, sampleTextCss]}>
+                      Supporting text can back away further when needed.
+                    </p>
+                    <p mix={[ui.text.caption, sampleTextCss]}>Caption text for compact metadata</p>
+                    <code mix={[ui.text.code, codeSampleCss]}>theme.colors.background.surface</code>
+                  </div>
+                </article>
+
+                <article mix={[ui.surface.base, systemCardCss]}>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Field System</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>Controls, labels, and help text</h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      Fields should not invent their own typography. Labels and help copy belong to the
+                      same shared system.
+                    </p>
+                  </div>
+                  <div mix={[fieldShowcaseCss]}>
+                    <label for="system-project-name" mix={[ui.fieldText.label, fieldLabelCss]}>
+                      Project name
+                    </label>
+                    <input
+                      id="system-project-name"
+                      value="RMX Internal Console"
+                      readOnly
+                      mix={[ui.field.base, fieldInputCss]}
+                    />
+                    <p mix={[ui.fieldText.help, fieldHelpCss]}>
+                      Visible to collaborators in navigation, notifications, and audit events.
+                    </p>
+                  </div>
+                </article>
+
+                <article mix={[ui.surface.elevated, systemCardCss]}>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Item Rows</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>Reusable primitives for menus and lists</h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      Item rows are meant to scale into tabs, combobox options, command lists, and sidebars.
+                    </p>
+                  </div>
+                  <div mix={[itemStackCss]}>
+                    <button type="button" mix={[ui.item.base, itemPreviewCss]}>
+                      <span>General settings</span>
+                      <span mix={[ui.text.caption, itemMetaCss]}>⌘,</span>
+                    </button>
+                    <button type="button" mix={[ui.item.base, ui.item.selected, itemPreviewCss]}>
+                      <span>Members</span>
+                      <span mix={[statusBadgeCss, successBadgeCss, ui.status.success]}>12 online</span>
+                    </button>
+                    <button type="button" mix={[ui.item.base, ui.item.danger, itemPreviewCss]}>
+                      <span>Archive workspace</span>
+                      <span mix={[ui.text.caption, itemMetaCss]}>Permanent</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article mix={[ui.surface.base, systemCardCss]}>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Statuses and Utilities</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>Tone and low-level composition</h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      Semantic status recipes and lower-level utility mixins can work together in app code.
+                    </p>
+                  </div>
+                  <div mix={[statusStackCss]}>
+                    <div mix={[calloutCss, ui.status.info]}>
+                      <p mix={[ui.text.label, calloutTitleCss]}>Info</p>
+                      <p mix={[ui.text.bodySm, calloutBodyCss]}>Queues are processing normally.</p>
+                    </div>
+                    <div mix={[calloutCss, ui.status.success]}>
+                      <p mix={[ui.text.label, calloutTitleCss]}>Success</p>
+                      <p mix={[ui.text.bodySm, calloutBodyCss]}>Deploy completed in 42 seconds.</p>
+                    </div>
+                  </div>
+                  <div mix={[utilityRowCss]}>
+                    <div mix={[ui.p.sm, ui.rounded.lg, ui.shadow.xs, ui.bg.surfaceSecondary, utilityChipCss]}>
+                      <code mix={[ui.text.code, utilityCodeCss]}>ui.p.sm</code>
+                    </div>
+                    <div mix={[ui.p.sm, ui.rounded.full, ui.bg.inset, utilityChipCss]}>
+                      <code mix={[ui.text.code, utilityCodeCss]}>ui.rounded.full</code>
+                    </div>
+                    <div mix={[ui.p.sm, ui.rounded.md, ui.borderColor.default, utilityOutlineCss]}>
+                      <code mix={[ui.text.code, utilityCodeCss]}>ui.borderColor.default</code>
+                    </div>
+                  </div>
+                </article>
               </div>
             </Section>
           </main>
@@ -632,6 +749,23 @@ let contentGridCss = css({
   },
 })
 
+let systemGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.md,
+  '@media (max-width: 980px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let systemCardCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.md,
+  padding: theme.space.lg,
+  minHeight: '240px',
+})
+
 let articleCardCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -645,6 +779,29 @@ let articleTitleCss = css({
 
 let articleParagraphCss = css({
   margin: 0,
+})
+
+let sampleTextCss = css({
+  margin: 0,
+})
+
+let systemSupportingCss = css({
+  margin: '2px 0 0',
+})
+
+let typeSpecimenCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let codeSampleCss = css({
+  display: 'inline-flex',
+  alignSelf: 'flex-start',
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.background.inset,
 })
 
 let articleListCss = css({
@@ -675,4 +832,60 @@ let calloutTitleCss = css({
 let calloutBodyCss = css({
   margin: 0,
   color: theme.colors.text.secondary,
+})
+
+let fieldShowcaseCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let fieldHelpCss = css({
+  margin: 0,
+})
+
+let itemStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let itemPreviewCss = css({
+  cursor: 'pointer',
+})
+
+let itemMetaCss = css({
+  flexShrink: 0,
+})
+
+let statusStackCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.sm,
+  '@media (max-width: 680px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let utilityRowCss = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: theme.space.sm,
+})
+
+let utilityChipCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+})
+
+let utilityOutlineCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderRadius: theme.radius.md,
+})
+
+let utilityCodeCss = css({
+  whiteSpace: 'nowrap',
 })

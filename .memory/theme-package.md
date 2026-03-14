@@ -27,6 +27,8 @@ Implemented in `packages/theme`:
   - `ui.surfaceText.*`
   - `ui.control.*`
   - `ui.field.base`
+  - `ui.fieldText.*`
+  - `ui.item.*`
   - `ui.surface.*`
   - `ui.status.*`
   - `ui.button.*`
@@ -35,7 +37,8 @@ Implemented in `demos/theme-rmx-01`:
 
 - demo server on port `44100`
 - app shell showing buttons, cards, popover-like panels, and content areas
-- demo now composes more heavily from semantic `ui` recipes instead of bespoke styles
+- demo now composes heavily from semantic `ui` recipes instead of bespoke styles
+- demo includes a broader system showcase for text roles, fields, item rows, statuses, and utilities
 
 ## Current design direction
 

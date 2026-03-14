@@ -17,6 +17,27 @@ pnpm -C demos/theme-rmx-01 dev
 
 Then open `http://localhost:44100`.
 
+## Screenshot Workflow
+
+The demo includes a Playwright-based review workflow so you can capture the current UI without manually taking screenshots.
+
+```sh
+pnpm -C demos/theme-rmx-01 screenshot
+```
+
+That script will:
+
+- start the demo server if it is not already running
+- capture a screenshot of the page
+- save a timestamped image under `demos/theme-rmx-01/.artifacts/screenshots/`
+- update `demos/theme-rmx-01/.artifacts/screenshots/latest.png`
+
+For a focused surface-card capture:
+
+```sh
+pnpm -C demos/theme-rmx-01 screenshot:card
+```
+
 ## Key APIs
 
 - `@remix-run/theme` for `RMX_01`, `theme`, and `ui`
