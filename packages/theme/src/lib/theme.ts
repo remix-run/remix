@@ -25,23 +25,45 @@ let themeVariableNames = {
     xl: '--rmx-radius-xl',
     full: '--rmx-radius-full',
   },
+  fontFamily: {
+    sans: '--rmx-font-family-sans',
+    mono: '--rmx-font-family-mono',
+  },
   fontSize: {
     xs: '--rmx-font-size-xs',
     sm: '--rmx-font-size-sm',
     md: '--rmx-font-size-md',
     lg: '--rmx-font-size-lg',
     xl: '--rmx-font-size-xl',
+    '2xl': '--rmx-font-size-2xl',
   },
   lineHeight: {
     tight: '--rmx-line-height-tight',
     normal: '--rmx-line-height-normal',
     relaxed: '--rmx-line-height-relaxed',
   },
+  letterSpacing: {
+    tight: '--rmx-letter-spacing-tight',
+    normal: '--rmx-letter-spacing-normal',
+    wide: '--rmx-letter-spacing-wide',
+  },
   fontWeight: {
     normal: '--rmx-font-weight-normal',
     medium: '--rmx-font-weight-medium',
     semibold: '--rmx-font-weight-semibold',
     bold: '--rmx-font-weight-bold',
+  },
+  control: {
+    height: {
+      sm: '--rmx-control-height-sm',
+      md: '--rmx-control-height-md',
+      lg: '--rmx-control-height-lg',
+    },
+    paddingInline: {
+      sm: '--rmx-control-padding-inline-sm',
+      md: '--rmx-control-padding-inline-md',
+      lg: '--rmx-control-padding-inline-lg',
+    },
   },
   shadow: {
     xs: '--rmx-shadow-xs',
@@ -193,8 +215,35 @@ export type ThemeUi = {
   bg: ThemeUtilityScale<typeof theme.colors.background>
   borderColor: ThemeUtilityScale<typeof theme.colors.border>
   shadow: ThemeUtilityScale<typeof theme.shadow>
+  text: {
+    body: ThemeUtility
+    bodySm: ThemeUtility
+    label: ThemeUtility
+    eyebrow: ThemeUtility
+    title: ThemeUtility
+    display: ThemeUtility
+  }
   ring: {
     focus: ThemeUtility
+  }
+  control: {
+    base: ThemeUtility
+    quiet: ThemeUtility
+  }
+  field: {
+    base: ThemeUtility
+  }
+  surface: {
+    base: ThemeUtility
+    secondary: ThemeUtility
+    elevated: ThemeUtility
+    inset: ThemeUtility
+  }
+  status: {
+    info: ThemeUtility
+    success: ThemeUtility
+    warning: ThemeUtility
+    danger: ThemeUtility
   }
   button: {
     primary: ThemeUtility
@@ -241,6 +290,45 @@ export const ui: ThemeUi = {
   bg: backgroundUtilities,
   borderColor: borderColorUtilities,
   shadow: shadowUtilities,
+  text: {
+    body: css({
+      fontSize: theme.fontSize.md,
+      lineHeight: theme.lineHeight.relaxed,
+      color: theme.colors.text.secondary,
+    }),
+    bodySm: css({
+      fontSize: theme.fontSize.sm,
+      lineHeight: theme.lineHeight.relaxed,
+      color: theme.colors.text.secondary,
+    }),
+    label: css({
+      fontSize: theme.fontSize.xs,
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.text.secondary,
+    }),
+    eyebrow: css({
+      fontSize: theme.fontSize.xs,
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.semibold,
+      letterSpacing: theme.letterSpacing.wide,
+      textTransform: 'uppercase',
+      color: theme.colors.text.muted,
+    }),
+    title: css({
+      fontSize: theme.fontSize.lg,
+      lineHeight: theme.lineHeight.tight,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.text.primary,
+    }),
+    display: css({
+      fontSize: theme.fontSize['2xl'],
+      lineHeight: theme.lineHeight.tight,
+      fontWeight: theme.fontWeight.bold,
+      letterSpacing: theme.letterSpacing.tight,
+      color: theme.colors.text.primary,
+    }),
+  },
   ring: {
     focus: css({
       '&:focus-visible': {
@@ -248,6 +336,100 @@ export const ui: ThemeUi = {
         outlineOffset: '2px',
       },
     }),
+  },
+  control: {
+    base: css({
+      position: 'relative',
+      isolation: 'isolate',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: theme.control.height.sm,
+      paddingInline: theme.control.paddingInline.md,
+      overflow: 'hidden',
+      borderRadius: theme.radius.full,
+      fontFamily: theme.fontFamily.sans,
+      fontSize: theme.fontSize.xs,
+      lineHeight: '1',
+      fontWeight: theme.fontWeight.medium,
+      whiteSpace: 'nowrap',
+      cursor: 'pointer',
+      transitionProperty: 'border-color, background-color, box-shadow, color',
+      transitionDuration: theme.duration.fast,
+      transitionTimingFunction: theme.easing.standard,
+      boxShadow: `${theme.shadow.xs}, ${theme.shadow.sm}`,
+    }),
+    quiet: css({
+      backgroundColor: theme.colors.background.surfaceSecondary,
+      backgroundImage:
+        'linear-gradient(to bottom, rgb(255 255 255 / 0.96) 0%, rgb(247 247 247 / 0.98) 100%)',
+      color: theme.colors.text.secondary,
+      border: `0.5px solid ${theme.colors.border.default}`,
+      boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.7), ${theme.shadow.xs}, ${theme.shadow.sm}`,
+      '&:hover': {
+        backgroundColor: theme.colors.background.surface,
+        color: theme.colors.text.primary,
+      },
+      '&:active': {
+        backgroundColor: theme.colors.background.inset,
+        boxShadow: `${theme.shadow.xs}`,
+      },
+      '&:focus-visible': {
+        outline: `2px solid ${theme.colors.focus.ring}`,
+        outlineOffset: '2px',
+      },
+      '&:disabled': {
+        opacity: 0.6,
+        cursor: 'not-allowed',
+      },
+    }),
+  },
+  field: {
+    base: css({
+      minHeight: theme.control.height.lg,
+      width: '100%',
+      paddingInline: theme.control.paddingInline.sm,
+      border: `0.5px solid ${theme.colors.border.default}`,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.background.surface,
+      color: theme.colors.text.primary,
+      fontFamily: theme.fontFamily.sans,
+      fontSize: theme.fontSize.sm,
+      lineHeight: theme.lineHeight.normal,
+      boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.7)`,
+      '&:focus-visible': {
+        outline: `2px solid ${theme.colors.focus.ring}`,
+        outlineOffset: '2px',
+      },
+    }),
+  },
+  surface: {
+    base: createSurfaceUtility({
+      background: theme.colors.background.surface,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.xs,
+    }),
+    secondary: createSurfaceUtility({
+      background: theme.colors.background.surfaceSecondary,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.xs,
+    }),
+    elevated: createSurfaceUtility({
+      background: theme.colors.background.surfaceElevated,
+      border: theme.colors.border.subtle,
+      shadow: theme.shadow.md,
+    }),
+    inset: createSurfaceUtility({
+      background: theme.colors.background.inset,
+      border: theme.colors.border.subtle,
+      shadow: 'none',
+    }),
+  },
+  status: {
+    info: createStatusUtility(theme.colors.status.info),
+    success: createStatusUtility(theme.colors.status.success),
+    warning: createStatusUtility(theme.colors.status.warning),
+    danger: createStatusUtility(theme.colors.status.danger),
   },
   button: {
     primary: createButtonUtility(theme.colors.action.primary),
@@ -281,17 +463,41 @@ export const RMX_01_VALUES: ThemeValues = {
     md: '14px',
     lg: '16px',
     xl: '20px',
+    '2xl': '28px',
+  },
+  fontFamily: {
+    sans:
+      '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    mono:
+      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
   },
   lineHeight: {
     tight: '1.25',
     normal: '1.45',
     relaxed: '1.65',
   },
+  letterSpacing: {
+    tight: '-0.03em',
+    normal: '0',
+    wide: '0.08em',
+  },
   fontWeight: {
     normal: '400',
     medium: '500',
     semibold: '600',
     bold: '700',
+  },
+  control: {
+    height: {
+      sm: '28px',
+      md: '32px',
+      lg: '36px',
+    },
+    paddingInline: {
+      sm: '8px',
+      md: '12px',
+      lg: '16px',
+    },
   },
   shadow: {
     xs: '0 1px 1px rgb(0 0 0 / 0.05)',
@@ -499,6 +705,31 @@ function createSinglePropertyUtilities<scale extends ThemeScale>(
   }
 
   return utilities
+}
+
+function createSurfaceUtility(options: {
+  background: string
+  border: string
+  shadow: string
+}) {
+  return css({
+    border: `1px solid ${options.border}`,
+    borderRadius: theme.radius.lg,
+    backgroundColor: options.background,
+    boxShadow: options.shadow,
+  })
+}
+
+function createStatusUtility(statusTheme: {
+  background: string
+  foreground: string
+  border: string
+}) {
+  return css({
+    backgroundColor: statusTheme.background,
+    color: statusTheme.foreground,
+    borderColor: statusTheme.border,
+  })
 }
 
 function createButtonUtility(buttonTheme: {

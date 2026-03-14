@@ -24,23 +24,45 @@ const sampleTheme = {
     xl: '16px',
     full: '9999px',
   },
+  fontFamily: {
+    sans: 'Inter, sans-serif',
+    mono: 'monospace',
+  },
   fontSize: {
     xs: '12px',
     sm: '14px',
     md: '16px',
     lg: '18px',
     xl: '20px',
+    '2xl': '28px',
   },
   lineHeight: {
     tight: '1.2',
     normal: '1.5',
     relaxed: '1.7',
   },
+  letterSpacing: {
+    tight: '-0.02em',
+    normal: '0',
+    wide: '0.08em',
+  },
   fontWeight: {
     normal: '400',
     medium: '500',
     semibold: '600',
     bold: '700',
+  },
+  control: {
+    height: {
+      sm: '28px',
+      md: '32px',
+      lg: '36px',
+    },
+    paddingInline: {
+      sm: '8px',
+      md: '12px',
+      lg: '16px',
+    },
   },
   shadow: {
     xs: '0 1px 2px rgb(0 0 0 / 0.05)',
@@ -146,6 +168,7 @@ const sampleTheme = {
 describe('theme contract', () => {
   it('exposes CSS variable references', () => {
     expect(theme.space.md).toBe('var(--rmx-space-md)')
+    expect(theme.fontFamily.sans).toBe('var(--rmx-font-family-sans)')
     expect(theme.colors.text.primary).toBe('var(--rmx-color-text-primary)')
     expect(theme.colors.action.primary.background).toBe(
       'var(--rmx-color-action-primary-background)',
@@ -160,6 +183,7 @@ describe('createTheme', () => {
     expect(Theme.selector).toBe(':root')
     expect(Theme.cssText).toMatch(/:root \{/)
     expect(Theme.cssText).toMatch(/--rmx-space-md: 8px;/)
+    expect(Theme.cssText).toMatch(/--rmx-control-height-sm: 28px;/)
     expect(Theme.cssText).toMatch(/--rmx-color-text-primary: #111827;/)
     expect(Theme.vars['--rmx-color-action-primary-background']).toBe('#2563eb')
   })
@@ -188,12 +212,13 @@ describe('ui', () => {
       createElement(
         'div',
         {
-          mix: [ui.px.md, ui.rounded.md, ui.button.primary],
+          mix: [ui.control.base, ui.button.primary, ui.px.md, ui.rounded.md],
         },
         'Hello',
       ),
     )
 
+    expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
