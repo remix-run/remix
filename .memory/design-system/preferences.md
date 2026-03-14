@@ -27,6 +27,8 @@
 - The demo should clarify the whole design system, not imply that `RMX_01` itself is the whole story.
 - A dedicated proof sheet is valuable for evaluating a theme’s overall character quickly.
 - The docs shell itself should stay demo-specific even if some sidebar/navigation ingredients become reusable primitives.
+- While `packages/theme` is still incubating, do not create change files for it yet.
+  - treat it as pre-publish internal iteration until we explicitly decide to publish it
 
 ## Learned
 
