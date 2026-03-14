@@ -1,5 +1,7 @@
 export {
   createTheme,
+  RMX_01,
+  RMX_01_VALUES,
   theme,
   ui,
   type CreateThemeOptions,

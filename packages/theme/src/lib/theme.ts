@@ -256,6 +256,146 @@ export const ui: ThemeUi = {
   },
 }
 
+export const RMX_01_VALUES: ThemeValues = {
+  space: {
+    0: '0px',
+    px: '1px',
+    xs: '4px',
+    sm: '8px',
+    md: '12px',
+    lg: '16px',
+    xl: '24px',
+    '2xl': '32px',
+  },
+  radius: {
+    none: '0px',
+    sm: '4px',
+    md: '8px',
+    lg: '12px',
+    xl: '16px',
+    full: '9999px',
+  },
+  fontSize: {
+    xs: '12px',
+    sm: '13px',
+    md: '14px',
+    lg: '16px',
+    xl: '20px',
+  },
+  lineHeight: {
+    tight: '1.25',
+    normal: '1.45',
+    relaxed: '1.65',
+  },
+  fontWeight: {
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+  shadow: {
+    xs: '0 1px 1px rgb(0 0 0 / 0.05)',
+    sm: '0 1px 2px rgb(0 0 0 / 0.07)',
+    md: '0 6px 18px rgb(0 0 0 / 0.08)',
+    lg: '0 16px 34px rgb(0 0 0 / 0.10)',
+    xl: '0 24px 52px rgb(0 0 0 / 0.14)',
+  },
+  duration: {
+    fast: '120ms',
+    normal: '180ms',
+    slow: '260ms',
+  },
+  easing: {
+    standard: 'ease',
+    emphasized: 'cubic-bezier(0.2, 0, 0, 1)',
+  },
+  zIndex: {
+    dropdown: '1000',
+    popover: '1100',
+    sticky: '1200',
+    overlay: '1300',
+    modal: '1400',
+    toast: '1500',
+    tooltip: '1600',
+  },
+  colors: {
+    text: {
+      primary: '#151515',
+      secondary: '#4f4f4f',
+      muted: '#6d6d6d',
+      inverse: '#ffffff',
+      link: '#2456d3',
+    },
+    background: {
+      canvas: '#fdfdfd',
+      surface: '#ffffff',
+      surfaceSecondary: '#f8f8f8',
+      surfaceElevated: '#ffffff',
+      inset: '#f3f3f3',
+      inverse: '#151515',
+    },
+    border: {
+      subtle: '#e7e7e7',
+      default: '#d1d1d1',
+      strong: '#b0b0b0',
+      inverse: '#4f4f4f',
+    },
+    focus: {
+      ring: '#3d6cff',
+    },
+    overlay: {
+      scrim: 'rgb(0 0 0 / 0.28)',
+    },
+    action: {
+      primary: {
+        background: '#3561cf',
+        backgroundHover: '#2f57bb',
+        backgroundActive: '#28489a',
+        foreground: 'rgb(255 255 255 / 0.92)',
+        border: '#3561cf',
+      },
+      secondary: {
+        background: '#ffffff',
+        backgroundHover: '#fbfbfb',
+        backgroundActive: '#f3f3f3',
+        foreground: '#202020',
+        border: '#d1d1d1',
+      },
+      danger: {
+        background: '#cf4a40',
+        backgroundHover: '#ba4138',
+        backgroundActive: '#97322b',
+        foreground: 'rgb(255 255 255 / 0.92)',
+        border: '#cf4a40',
+      },
+    },
+    status: {
+      info: {
+        background: '#eef4ff',
+        foreground: '#2456d3',
+        border: '#c6d8ff',
+      },
+      success: {
+        background: '#edf9f1',
+        foreground: '#1d7a4f',
+        border: '#bfe7cd',
+      },
+      warning: {
+        background: '#fff7e8',
+        foreground: '#9b6808',
+        border: '#f1d392',
+      },
+      danger: {
+        background: '#fff0ef',
+        foreground: '#b23833',
+        border: '#f0c1be',
+      },
+    },
+  },
+}
+
+export const RMX_01 = createTheme(RMX_01_VALUES)
+
 export function createTheme(
   values: ThemeValues,
   options: CreateThemeOptions = {},
@@ -368,15 +508,26 @@ function createButtonUtility(buttonTheme: {
   foreground: string
   border: string
 }) {
+  let borderColor = createButtonBorderColor(buttonTheme.border)
+  let hoverBorderColor = createButtonBorderColor(buttonTheme.backgroundHover)
+  let activeBorderColor = createButtonBorderColor(buttonTheme.backgroundActive)
+
   return css({
     backgroundColor: buttonTheme.background,
+    backgroundImage: createButtonBackgroundImage(buttonTheme.background),
     color: buttonTheme.foreground,
-    border: `1px solid ${buttonTheme.border}`,
+    border: `0.5px solid ${borderColor}`,
+    boxShadow: `${createButtonHighlight(buttonTheme.background)}, ${theme.shadow.xs}, ${theme.shadow.sm}`,
     '&:hover': {
       backgroundColor: buttonTheme.backgroundHover,
+      backgroundImage: createButtonBackgroundImage(buttonTheme.backgroundHover),
+      borderColor: hoverBorderColor,
     },
     '&:active': {
       backgroundColor: buttonTheme.backgroundActive,
+      backgroundImage: createButtonBackgroundImage(buttonTheme.backgroundActive),
+      borderColor: activeBorderColor,
+      boxShadow: `${createButtonHighlight(buttonTheme.backgroundActive, 0.12)}, ${theme.shadow.xs}`,
     },
     '&:focus-visible': {
       outline: `2px solid ${theme.colors.focus.ring}`,
@@ -387,4 +538,21 @@ function createButtonUtility(buttonTheme: {
       cursor: 'not-allowed',
     },
   })
+}
+
+function createButtonBackgroundImage(background: string) {
+  return `linear-gradient(to bottom, ${createButtonHighlightColor(background, 0.18)} 0%, ${background} 100%)`
+}
+
+function createButtonBorderColor(color: string) {
+  return `color-mix(in oklab, ${color} 74%, black)`
+}
+
+function createButtonHighlight(background: string, amount = 0.16) {
+  return `inset 0 1px 0 ${createButtonHighlightColor(background, amount)}`
+}
+
+function createButtonHighlightColor(background: string, amount: number) {
+  let alpha = Math.round(amount * 100)
+  return `color-mix(in oklab, white ${alpha}%, ${background})`
 }
