@@ -1,5 +1,6 @@
-import { createElement, css } from '@remix-run/component'
+import { attrs, createElement, css } from '@remix-run/component'
 import type { RemixElement } from '@remix-run/component'
+import type { MixinDescriptor } from '@remix-run/component'
 
 interface ThemeVariableTree {
   [key: string]: string | ThemeVariableTree
@@ -196,11 +197,12 @@ export type ThemeComponent = ThemeRenderer & {
 
 export const theme = createThemeContract(themeVariableNames)
 export type ThemeUtility = ReturnType<typeof css>
+type ThemeRecipeLeaf = MixinDescriptor<any, any, any>
 type PreviousThemeRecipeDepth = [0, 0, 1, 2, 3, 4]
 type NestedThemeRecipe<value, depth extends number = 4> = depth extends 0
   ? value | ReadonlyArray<value>
   : value | ReadonlyArray<NestedThemeRecipe<value, PreviousThemeRecipeDepth[depth]>>
-export type ThemeRecipe = NestedThemeRecipe<ThemeUtility>
+export type ThemeRecipe = NestedThemeRecipe<ThemeRecipeLeaf>
 type ThemeUtilityScale<scale extends ThemeScale> = {
   [key in keyof scale]: ThemeUtility
 }
@@ -462,6 +464,7 @@ let itemDangerToneUtility = css({
 let primaryButtonToneUtility = createButtonUtility(theme.colors.action.primary)
 let secondaryButtonToneUtility = createButtonUtility(theme.colors.action.secondary)
 let dangerButtonToneUtility = createButtonUtility(theme.colors.action.danger)
+let buttonTypeButtonUtility = attrs<HTMLButtonElement>({ type: 'button' })
 
 export const ui = {
   p: spacingUtilities,
@@ -733,9 +736,13 @@ export const ui = {
     danger: createStatusUtility(theme.colors.status.danger),
   },
   button: {
-    primary: composeThemeRecipe(controlBaseUtility, primaryButtonToneUtility),
-    secondary: composeThemeRecipe(controlBaseUtility, secondaryButtonToneUtility),
-    danger: composeThemeRecipe(controlBaseUtility, dangerButtonToneUtility),
+    primary: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, primaryButtonToneUtility),
+    secondary: composeThemeRecipe(
+      buttonTypeButtonUtility,
+      controlBaseUtility,
+      secondaryButtonToneUtility,
+    ),
+    danger: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, dangerButtonToneUtility),
   },
 } satisfies ThemeUi
 

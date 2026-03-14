@@ -281,4 +281,16 @@ describe('ui', () => {
     expect(html).toMatch(/margin-right: calc\(var\(--rmx-space-lg\) \* -1\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-background-surface-secondary\)/)
   })
+
+  it('lets button recipes provide default button attrs while preserving explicit overrides', async () => {
+    let defaultHtml = await renderToString(
+      createElement('button', { mix: ui.button.primary }, 'Save'),
+    )
+    let explicitHtml = await renderToString(
+      createElement('button', { type: 'submit', mix: ui.button.primary }, 'Save'),
+    )
+
+    expect(defaultHtml).toMatch(/type="button"/)
+    expect(explicitHtml).toMatch(/type="submit"/)
+  })
 })
