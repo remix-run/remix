@@ -2,7 +2,7 @@
 
 ## Current
 
-Implemented in `packages/theme`:
+Implemented in `packages/ui`:
 
 - typed token contract via `theme`
 - `createTheme()` renderer
@@ -45,8 +45,8 @@ Implemented in `demos/theme-rmx-01`:
 
 Most recent validation loops have included:
 
-- `pnpm --filter @remix-run/theme run typecheck`
-- `pnpm --filter @remix-run/theme run test`
+- `pnpm --filter @remix-run/ui run typecheck`
+- `pnpm --filter @remix-run/ui run test`
 - `pnpm -C demos/theme-rmx-01 run typecheck`
 - `pnpm run lint`
 

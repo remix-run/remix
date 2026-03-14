@@ -1095,9 +1095,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
-      '@remix-run/theme':
+      '@remix-run/ui':
         specifier: workspace:^
-        version: link:../theme
+        version: link:../ui
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
@@ -1312,7 +1312,7 @@ importers:
         specifier: ^3.1.3
         version: 3.1.3
 
-  packages/theme:
+  packages/ui:
     dependencies:
       '@remix-run/component':
         specifier: workspace:^
@@ -1343,7 +1343,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/theme/demo:
+  packages/ui/demo:
     dependencies:
       remix:
         specifier: workspace:*

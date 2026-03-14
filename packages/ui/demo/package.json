@@ -1,0 +1,22 @@
+{
+  "name": "ui-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "playwright": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch server.ts",
+    "screenshot": "node --import tsx review/screenshot.ts",
+    "screenshot:card": "node --import tsx review/screenshot.ts --path='/proof-sheet' --selector='[data-proof-card=\"primary\"]' --name='proof-metric-card'",
+    "start": "tsx server.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

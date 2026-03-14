@@ -75,7 +75,7 @@
     "./session/memory-storage": "./src/session/memory-storage.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
-    "./theme": "./src/theme.ts",
+    "./ui": "./src/ui.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -308,9 +308,9 @@
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
       },
-      "./theme": {
-        "types": "./dist/theme.d.ts",
-        "default": "./dist/theme.js"
+      "./ui": {
+        "types": "./dist/ui.d.ts",
+        "default": "./dist/ui.js"
       },
       "./package.json": "./package.json"
     }
@@ -356,7 +356,7 @@
     "@remix-run/cop-middleware": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
-    "@remix-run/theme": "workspace:^"
+    "@remix-run/ui": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
