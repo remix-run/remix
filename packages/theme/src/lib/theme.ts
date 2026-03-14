@@ -206,6 +206,13 @@ export type ThemeRecipe = NestedThemeRecipe<ThemeRecipeLeaf>
 type ThemeUtilityScale<scale extends ThemeScale> = {
   [key in keyof scale]: ThemeUtility
 }
+type ThemeAxisUtility = ThemeUtility & {
+  start: ThemeUtility
+  center: ThemeUtility
+  end: ThemeUtility
+  between: ThemeUtility
+  wrap: ThemeUtility
+}
 export type ThemeUi = {
   p: ThemeUtilityScale<typeof theme.space>
   px: ThemeUtilityScale<typeof theme.space>
@@ -261,6 +268,8 @@ export type ThemeUi = {
     section: ThemeUtility
     heading: ThemeUtility
   }
+  row: ThemeAxisUtility
+  stack: ThemeAxisUtility
   nav: {
     list: ThemeUtility
     item: ThemeUtility
@@ -461,6 +470,75 @@ let itemDangerToneUtility = css({
   backgroundColor: theme.colors.status.danger.background,
 })
 
+let rowBaseUtility = css({
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  minWidth: 0,
+})
+
+let rowStartUtility = css({
+  alignItems: 'flex-start',
+})
+
+let rowCenterUtility = css({
+  alignItems: 'center',
+})
+
+let rowEndUtility = css({
+  alignItems: 'flex-end',
+})
+
+let rowBetweenUtility = css({
+  justifyContent: 'space-between',
+})
+
+let rowWrapUtility = css({
+  flexWrap: 'wrap',
+})
+
+let stackBaseUtility = css({
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+})
+
+let stackStartUtility = css({
+  alignItems: 'flex-start',
+})
+
+let stackCenterUtility = css({
+  alignItems: 'center',
+})
+
+let stackEndUtility = css({
+  alignItems: 'flex-end',
+})
+
+let stackBetweenUtility = css({
+  justifyContent: 'space-between',
+})
+
+let stackWrapUtility = css({
+  flexWrap: 'wrap',
+})
+
+let rowUtility = Object.assign(rowBaseUtility, {
+  start: rowStartUtility,
+  center: rowCenterUtility,
+  end: rowEndUtility,
+  between: rowBetweenUtility,
+  wrap: rowWrapUtility,
+}) as ThemeAxisUtility
+
+let stackUtility = Object.assign(stackBaseUtility, {
+  start: stackStartUtility,
+  center: stackCenterUtility,
+  end: stackEndUtility,
+  between: stackBetweenUtility,
+  wrap: stackWrapUtility,
+}) as ThemeAxisUtility
+
 let primaryButtonToneUtility = createButtonUtility(theme.colors.action.primary)
 let secondaryButtonToneUtility = createButtonUtility(theme.colors.action.secondary)
 let dangerButtonToneUtility = createButtonUtility(theme.colors.action.danger)
@@ -634,6 +712,8 @@ export const ui = {
       color: theme.colors.text.muted,
     }),
   },
+  row: rowUtility,
+  stack: stackUtility,
   nav: {
     list: css({
       display: 'flex',

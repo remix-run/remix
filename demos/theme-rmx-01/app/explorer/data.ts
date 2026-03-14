@@ -103,6 +103,15 @@ export let PAGES = {
     description:
       'Sidebar and navigation primitives are useful app-level building blocks even when the full docs shell remains demo-specific.',
   },
+  uiRecipeLayout: {
+    id: 'ui-recipe-layout',
+    path: '/ui-recipes/layout',
+    navLabel: 'Row + Stack',
+    eyebrow: 'UI Recipe',
+    title: 'Row and stack layout recipes',
+    description:
+      'Symmetrical row and stack primitives provide reusable flex layout mechanics without falling back to demo-specific helpers.',
+  },
   components: {
     id: 'components',
     path: '/components',
@@ -130,6 +139,7 @@ export let UI_RECIPE_PAGES = [
   PAGES.uiRecipeField,
   PAGES.uiRecipeItem,
   PAGES.uiRecipeNav,
+  PAGES.uiRecipeLayout,
 ] as const
 
 export let NAV_GROUPS: NavGroupDefinition[] = [

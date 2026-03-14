@@ -217,6 +217,11 @@ describe('ui', () => {
         'div',
         {
           mix: [
+            ui.row,
+            ui.row.between,
+            ui.row.wrap,
+            ui.stack,
+            ui.stack.center,
             ui.card.base,
             ui.card.header,
             ui.card.headerWithAction,
@@ -239,6 +244,10 @@ describe('ui', () => {
     expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
     expect(html).toMatch(/padding: var\(--rmx-space-lg\)/)
     expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
+    expect(html).toMatch(/flex-direction: row/)
+    expect(html).toMatch(/justify-content: space-between/)
+    expect(html).toMatch(/flex-wrap: wrap/)
+    expect(html).toMatch(/flex-direction: column/)
     expect(html).toMatch(/margin: var\(--rmx-space-sm\) 0 0/)
     expect(html).toMatch(/font-size: var\(--rmx-font-size-3xs\)/)
     expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)

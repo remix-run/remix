@@ -238,7 +238,7 @@ function ProofSheetPage() {
               <p mix={ui.text.eyebrow}>Workspace</p>
               <h3 mix={[ui.text.title, zeroMarginCss]}>Operations Console</h3>
             </div>
-            <div mix={buttonRowCss}>
+            <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
               <button mix={ui.button.secondary}>
                 Export
               </button>
@@ -569,7 +569,7 @@ function UiRecipesPage() {
       >
         <div mix={twoColumnGridCss}>
           <RecipeExample
-            code={`<div mix={stackSmCss}>
+            code={`<div mix={[ui.stack, ui.gap.sm]}>
   <p mix={ui.text.eyebrow}>Page eyebrow</p>
   <p mix={ui.text.title}>Section title</p>
   <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
@@ -579,7 +579,7 @@ function UiRecipesPage() {
             previewMix={docsExamplePreviewTopLeftCss}
             title="Text roles"
           >
-            <div mix={stackSmCss}>
+            <div mix={[ui.stack, ui.gap.sm]}>
               <p mix={ui.text.eyebrow}>Page eyebrow</p>
               <p mix={ui.text.title}>Section title</p>
               <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
@@ -609,7 +609,7 @@ function UiRecipesPage() {
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={buttonRowCss}>
+            code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
   <button mix={ui.button.primary}>Save</button>
   <button mix={ui.button.secondary}>Ghost</button>
   <button mix={ui.button.danger}>Delete</button>
@@ -619,7 +619,7 @@ function UiRecipesPage() {
             previewMix={docsExamplePreviewTopLeftCss}
             title="Buttons and controls"
           >
-            <div mix={buttonRowCss}>
+            <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
               <button mix={ui.button.primary}>
                 Save
               </button>
@@ -633,7 +633,7 @@ function UiRecipesPage() {
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={stackXsCss}>
+            code={`<div mix={[ui.stack, ui.gap.xs]}>
   <label for="ui-recipe-field" mix={ui.fieldText.label}>Project name</label>
   <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
   <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
@@ -643,7 +643,7 @@ function UiRecipesPage() {
             previewMix={docsExamplePreviewTopLeftCss}
             title="Fields"
           >
-            <div mix={stackXsCss}>
+            <div mix={[ui.stack, ui.gap.xs]}>
               <label for="ui-recipe-field" mix={ui.fieldText.label}>
                 Project name
               </label>
@@ -653,7 +653,7 @@ function UiRecipesPage() {
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={stackXsCss}>
+            code={`<div mix={[ui.stack, ui.gap.xs]}>
   <button type="button" mix={ui.item.base}>
     <span>Members</span>
     <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
@@ -668,7 +668,7 @@ function UiRecipesPage() {
             previewMix={docsExamplePreviewTopLeftCss}
             title="Items and status"
           >
-            <div mix={stackXsCss}>
+            <div mix={[ui.stack, ui.gap.xs]}>
               <button type="button" mix={ui.item.base}>
                 <span>Members</span>
                 <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
@@ -703,6 +703,36 @@ function UiRecipesPage() {
                     Secondary page
                   </a>
                 </nav>
+              </div>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={[ui.stack, ui.gap.md]}>
+  <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
+    <p mix={ui.text.label}>Toolbar</p>
+    <button mix={ui.button.secondary}>Filter</button>
+  </div>
+  <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+    <button mix={ui.button.primary}>Save</button>
+    <button mix={ui.button.secondary}>Share</button>
+    <button mix={ui.button.danger}>Delete</button>
+  </div>
+</div>`}
+            description="Symmetrical row and stack primitives replace demo-specific flex helpers and pair naturally with the shared spacing scale."
+            href={PAGES.uiRecipeLayout.path}
+            previewMix={docsExamplePreviewTopLeftCss}
+            title="Row and stack"
+          >
+            <div mix={[ui.stack, ui.gap.md]}>
+              <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
+                <p mix={[ui.text.label, zeroMarginCss]}>Toolbar</p>
+                <button mix={ui.button.secondary}>Filter</button>
+              </div>
+              <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+                <button mix={ui.button.primary}>Save</button>
+                <button mix={ui.button.secondary}>Share</button>
+                <button mix={ui.button.danger}>Delete</button>
               </div>
             </div>
           </RecipeExample>
@@ -757,6 +787,10 @@ function UiRecipeDetailPage() {
       return <UiRecipeItemPage />
     }
 
+    if (page.id === PAGES.uiRecipeLayout.id) {
+      return <UiRecipeLayoutPage />
+    }
+
     return <UiRecipeNavPage />
   }
 }
@@ -769,7 +803,7 @@ function UiRecipeTextPage() {
         description="Text recipes provide the shared page-level voice of the system. They are the default vocabulary for headings, body copy, supporting notes, captions, and code."
       >
         <RecipeExample
-          code={`<div mix={stackSmCss}>
+          code={`<div mix={[ui.stack, ui.gap.sm]}>
   <p mix={ui.text.eyebrow}>Page eyebrow</p>
   <p mix={ui.text.title}>Section title</p>
   <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
@@ -780,7 +814,7 @@ function UiRecipeTextPage() {
           previewMix={docsExamplePreviewTopLeftCss}
           title="Page typography"
         >
-          <div mix={stackSmCss}>
+          <div mix={[ui.stack, ui.gap.sm]}>
             <p mix={ui.text.eyebrow}>Page eyebrow</p>
             <p mix={ui.text.title}>Section title</p>
             <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
@@ -934,7 +968,7 @@ function UiRecipeButtonPage() {
         description="Buttons are built from a shared control object plus tonal recipes, so the family stays cohesive even when the color changes."
       >
         <RecipeExample
-          code={`<div mix={buttonRowCss}>
+          code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
   <button mix={ui.button.primary}>Save</button>
   <button mix={ui.button.secondary}>Ghost</button>
   <button mix={ui.button.danger}>Delete</button>
@@ -943,7 +977,7 @@ function UiRecipeButtonPage() {
           previewMix={docsExamplePreviewTopLeftCss}
           title="Control family"
         >
-          <div mix={buttonRowCss}>
+          <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
             <button mix={ui.button.primary}>
               Save
             </button>
@@ -968,7 +1002,7 @@ function UiRecipeFieldPage() {
         description="Fields should not reinvent their own chrome or type. The field and field-text recipes keep forms aligned with the rest of the system."
       >
         <RecipeExample
-          code={`<div mix={[stackXsCss, docsExampleFieldStackCss]}>
+          code={`<div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
   <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>Project name</label>
   <input id="ui-recipe-detail-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
   <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
@@ -977,7 +1011,7 @@ function UiRecipeFieldPage() {
           previewMix={docsExamplePreviewTopLeftCss}
           title="Field stack"
         >
-          <div mix={[stackXsCss, docsExampleFieldStackCss]}>
+          <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
             <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>
               Project name
             </label>
@@ -1003,7 +1037,7 @@ function UiRecipeItemPage() {
         description="Rows and status treatments are the basis for menus, command surfaces, tabs, combobox options, and sidebar collections."
       >
         <RecipeExample
-          code={`<div mix={[stackXsCss, docsExampleFieldStackCss]}>
+          code={`<div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
   <button type="button" mix={ui.item.base}>
     <span>Members</span>
     <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
@@ -1017,7 +1051,7 @@ function UiRecipeItemPage() {
           previewMix={docsExamplePreviewTopLeftCss}
           title="Row primitives"
         >
-          <div mix={[stackXsCss, docsExampleFieldStackCss]}>
+          <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
             <button type="button" mix={ui.item.base}>
               <span>Members</span>
               <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
@@ -1079,6 +1113,83 @@ function UiRecipeNavPage() {
   )
 }
 
+function UiRecipeLayoutPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Row and stack recipe overview"
+        description="These primitives cover the common flex mechanics that kept showing up as demo-only helpers: horizontal alignment, vertical rhythm, distribution, and wrapping."
+      >
+        <RecipeExample
+          code={`<div mix={[ui.stack, ui.gap.md]}>
+  <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
+    <p mix={ui.text.label}>Toolbar</p>
+    <button mix={ui.button.secondary}>Filter</button>
+  </div>
+  <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+    <button mix={ui.button.primary}>Save</button>
+    <button mix={ui.button.secondary}>Share</button>
+    <button mix={ui.button.danger}>Delete</button>
+  </div>
+</div>`}
+          description="Use `ui.row` and `ui.stack` for repeated flex mechanics, then add spacing with `ui.gap.*` instead of inventing purpose-built row helpers."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Composed layout primitives"
+        >
+          <div mix={[ui.stack, ui.gap.md]}>
+            <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
+              <p mix={[ui.text.label, zeroMarginCss]}>Toolbar</p>
+              <button mix={ui.button.secondary}>Filter</button>
+            </div>
+            <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+              <button mix={ui.button.primary}>Save</button>
+              <button mix={ui.button.secondary}>Share</button>
+              <button mix={ui.button.danger}>Delete</button>
+            </div>
+          </div>
+        </RecipeExample>
+      </Section>
+
+      <Section
+        title="Included modifiers"
+        description="Rows and stacks stay symmetrical so they are easy to remember and easy for coding agents to reach for."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Row</p>
+              <h3 mix={ui.card.title}>Horizontal alignment + distribution</h3>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>`ui.row`</li>
+                <li>`ui.row.start`, `ui.row.center`, `ui.row.end`</li>
+                <li>`ui.row.between`</li>
+                <li>`ui.row.wrap`</li>
+              </ul>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Stack</p>
+              <h3 mix={ui.card.title}>Vertical flow with the same modifier model</h3>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>`ui.stack`</li>
+                <li>`ui.stack.start`, `ui.stack.center`, `ui.stack.end`</li>
+                <li>`ui.stack.between`</li>
+                <li>`ui.stack.wrap`</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
 function ComponentsPage() {
   return () => (
     <div mix={pageSectionStackCss}>
@@ -1097,7 +1208,7 @@ function ComponentsPage() {
               </p>
             </div>
             <div mix={ui.card.body}>
-              <div mix={buttonRowCss}>
+              <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
                 <button mix={ui.button.primary}>
                   Primary
                 </button>
@@ -1756,12 +1867,6 @@ let rowTableItemCss = css({
   gap: theme.space.md,
   padding: `${theme.space.sm} 0`,
   borderBottom: `1px solid ${theme.colors.border.subtle}`,
-})
-
-let buttonRowCss = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: theme.space.sm,
 })
 
 let menuItemCss = css({

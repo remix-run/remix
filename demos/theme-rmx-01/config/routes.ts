@@ -12,6 +12,7 @@ export let routes = {
       button: get('button'),
       field: get('field'),
       item: get('item'),
+      layout: get('layout'),
       navigation: get('navigation'),
     }),
     components: get('components'),

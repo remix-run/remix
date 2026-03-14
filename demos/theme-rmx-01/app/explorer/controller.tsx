@@ -44,6 +44,9 @@ let explorerController: Controller<typeof routes.explorer> = {
         item() {
           return renderPage(PAGES.uiRecipeItem)
         },
+        layout() {
+          return renderPage(PAGES.uiRecipeLayout)
+        },
         navigation() {
           return renderPage(PAGES.uiRecipeNav)
         },
