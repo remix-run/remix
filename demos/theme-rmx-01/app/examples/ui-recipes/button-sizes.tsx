@@ -1,4 +1,4 @@
-import { ui } from 'remix/theme'
+import { Glyph, ui } from 'remix/theme'
 import { buttonScrollRowCss } from './shared.ts'
 
 export default function Example() {
@@ -14,12 +14,10 @@ export default function Example() {
         <span mix={ui.button.label}>Large</span>
       </button>
       <button
-        aria-label="Refresh"
+        aria-label="Add item"
         mix={[ui.button.base, ui.button.iconOnly, ui.button.tone.secondary]}
       >
-        <span mix={ui.button.icon}>
-          +
-        </span>
+        <Glyph mix={ui.button.icon} name="add" />
       </button>
     </div>
   )

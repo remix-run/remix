@@ -1,10 +1,21 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import { RMX_01, RMX_01_VALUES, theme, ui } from 'remix/theme'
+import {
+  createGlyphSheet,
+  Glyph,
+  glyphNames,
+  RMX_01,
+  RMX_01_GLYPHS,
+  RMX_01_VALUES,
+  theme,
+  ui,
+} from 'remix/theme'
 import type { ThemeRecipe } from 'remix/theme'
 import { EXAMPLES } from '../examples/index.tsx'
 import type { PageDefinition } from './data.ts'
 import { NAV_GROUPS, PAGES, UI_RECIPE_PAGES } from './data.ts'
+
+let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
 
 export function ExplorerDocument() {
   return ({ page }: { page: PageDefinition }) => (
@@ -22,6 +33,7 @@ export function ExplorerDocument() {
         <RMX_01 />
       </head>
       <body mix={bodyCss}>
+        <RMX_01Glyphs />
         <div mix={appShellCss}>
           <aside mix={sidebarFrameCss}>
             <div mix={sidebarStickyCss}>
@@ -241,10 +253,12 @@ function ProofSheetPage() {
             </div>
             <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
               <button mix={ui.button.secondary}>
-                Export
+                <Glyph mix={ui.button.icon} name="chevronDown" />
+                <span mix={ui.button.label}>Export</span>
               </button>
               <button mix={ui.button.primary}>
-                New release
+                <Glyph mix={ui.button.icon} name="add" />
+                <span mix={ui.button.label}>New release</span>
               </button>
             </div>
           </div>
@@ -255,15 +269,19 @@ function ProofSheetPage() {
                 <p mix={ui.sidebar.heading}>Navigation</p>
                 <nav aria-label="Proof sheet app navigation" mix={ui.nav.list}>
                   <a href="/proof-sheet" aria-current="page" mix={ui.nav.itemActive}>
+                    <Glyph mix={proofNavGlyphCss} name="menu" />
                     Overview
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
+                    <Glyph mix={proofNavGlyphCss} name="search" />
                     Deployments
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
+                    <Glyph mix={proofNavGlyphCss} name="spinner" />
                     Logs
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
+                    <Glyph mix={proofNavGlyphCss} name="info" />
                     Settings
                   </a>
                 </nav>
@@ -335,16 +353,26 @@ function ProofSheetPage() {
                     <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Draft</span>
                   </div>
                   <div mix={ui.card.body}>
-                    <ul mix={bulletListCss}>
-                      <li>Verify migrations are locked before the deploy starts.</li>
-                      <li>Hold background workers for the first rollout window.</li>
-                      <li>Run smoke tests before enabling the scheduled queue.</li>
+                    <ul mix={proofChecklistCss}>
+                      <li mix={proofChecklistItemCss}>
+                        <Glyph mix={proofChecklistGlyphCss} name="check" />
+                        <span>Verify migrations are locked before the deploy starts.</span>
+                      </li>
+                      <li mix={proofChecklistItemCss}>
+                        <Glyph mix={proofChecklistGlyphCss} name="alert" />
+                        <span>Hold background workers for the first rollout window.</span>
+                      </li>
+                      <li mix={proofChecklistItemCss}>
+                        <Glyph mix={proofChecklistGlyphCss} name="check" />
+                        <span>Run smoke tests before enabling the scheduled queue.</span>
+                      </li>
                     </ul>
                   </div>
                   <div mix={ui.card.footer}>
                     <p mix={[ui.text.caption, metaTextCss]}>Updated 18 minutes ago</p>
                     <button mix={ui.button.secondary}>
-                      Open runbook
+                      <span mix={ui.button.label}>Open runbook</span>
+                      <Glyph mix={ui.button.icon} name="chevronRight" />
                     </button>
                   </div>
                 </article>
@@ -371,10 +399,11 @@ function ProofSheetPage() {
                   </div>
                   <div mix={ui.card.footer}>
                     <button mix={ui.button.secondary}>
-                      Cancel
+                      <span mix={ui.button.label}>Cancel</span>
                     </button>
                     <button mix={ui.button.primary}>
-                      Send invite
+                      <span mix={ui.button.label}>Send invite</span>
+                      <Glyph mix={ui.button.icon} name="chevronRight" />
                     </button>
                   </div>
                 </article>
@@ -414,12 +443,15 @@ function ProofSheetPage() {
                   <div mix={ui.card.body}>
                     <div role="menu" aria-label="Project actions" mix={[ui.card.elevated, proofMenuCss]}>
                       <button type="button" role="menuitem" mix={menuItemCss}>
+                        <Glyph mix={menuItemGlyphCss} name="search" />
                         Rename project
                       </button>
                       <button type="button" role="menuitem" mix={menuItemCss}>
+                        <Glyph mix={menuItemGlyphCss} name="chevronRight" />
                         Copy environment
                       </button>
                       <button type="button" role="menuitem" mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}>
+                        <Glyph mix={menuItemGlyphCss} name="close" />
                         Archive project
                       </button>
                     </div>
@@ -556,6 +588,60 @@ function ThemeValuesPage() {
             </pre>
           </div>
         </article>
+      </Section>
+
+      <Section
+        title="Glyph contract"
+        description="Glyphs are a sibling system to theme values: a fixed shared icon contract, a sprite sheet renderer, and a thin `<Glyph />` wrapper for app code and first-party components."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Usage</p>
+              <h3 mix={ui.card.title}>Render the sheet once, then reference glyphs anywhere</h3>
+              <p mix={ui.card.description}>
+                The style tag stays in the head, while the glyph sprite lives in the body. Components
+                only need the shared glyph names.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <pre mix={codeBlockCss}>
+                <code mix={codeTextCss}>{renderHighlightedCode(`import {
+  createGlyphSheet,
+  Glyph,
+  RMX_01_GLYPHS,
+  ui,
+} from "remix/theme"
+
+let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
+
+<body>
+  <Glyphs />
+  <button mix={ui.button.primary}>
+    <Glyph mix={ui.button.icon} name="add" />
+    <span mix={ui.button.label}>New project</span>
+  </button>
+</body>`)}
+                </code>
+              </pre>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Built-in names</p>
+              <h3 mix={ui.card.title}>The package owns a stable glyph vocabulary</h3>
+            </div>
+            <div mix={glyphPreviewGridCss}>
+              {glyphNames.map(name => (
+                <div key={name} mix={glyphPreviewItemCss}>
+                  <Glyph mix={glyphPreviewGlyphCss} name={name} />
+                  <code mix={ui.text.code}>{name}</code>
+                </div>
+              ))}
+            </div>
+          </article>
+        </div>
       </Section>
     </div>
   )
@@ -853,7 +939,7 @@ function UiRecipeButtonPage() {
 
       <Section
         title="Slots and states"
-        description="Buttons use slot selectors for icons and keep loading layout-stable by treating the spinner as just another icon."
+        description="Buttons use slot recipes for icons and keep loading layout-stable by treating the spinner as just another icon."
       >
         <div mix={pageSectionStackCss}>
           <RecipeExample
@@ -1353,7 +1439,8 @@ function getSubnavItemMix(path: string, currentPath: string) {
 }
 
 function renderHighlightedCode(code: string) {
-  let pattern = /\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\bcreateTheme\b|\bRMX_01(?:_VALUES)?\b/g
+  let pattern =
+    /\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\b(?:createTheme|createGlyphSheet|Glyph|glyphNames)\b|\bRMX_01(?:_VALUES|_GLYPHS)?\b/g
   let nodes: Array<RemixNode> = []
   let lastIndex = 0
 
@@ -1618,6 +1705,13 @@ let proofSidebarCss = css({
   padding: theme.space.md,
 })
 
+let proofNavGlyphCss = css({
+  width: '12px',
+  height: '12px',
+  color: theme.colors.text.muted,
+  flexShrink: 0,
+})
+
 let proofMainCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -1675,6 +1769,32 @@ let proofMenuCss = css({
   padding: theme.space.sm,
 })
 
+let proofChecklistCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+  margin: 0,
+  padding: 0,
+  listStyle: 'none',
+})
+
+let proofChecklistItemCss = css({
+  display: 'grid',
+  gridTemplateColumns: '14px minmax(0, 1fr)',
+  alignItems: 'start',
+  gap: theme.space.sm,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  color: theme.colors.text.secondary,
+})
+
+let proofChecklistGlyphCss = css({
+  width: '14px',
+  height: '14px',
+  marginTop: '2px',
+  color: theme.colors.text.muted,
+})
+
 let rowTableCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -1691,6 +1811,9 @@ let rowTableItemCss = css({
 })
 
 let menuItemCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.space.sm,
   width: '100%',
   minHeight: theme.control.height.sm,
   padding: `${theme.space.xs} ${theme.space.sm}`,
@@ -1706,6 +1829,13 @@ let menuItemCss = css({
   '&:hover': {
     backgroundColor: theme.colors.background.surfaceSecondary,
   },
+})
+
+let menuItemGlyphCss = css({
+  width: '12px',
+  height: '12px',
+  color: 'currentColor',
+  flexShrink: 0,
 })
 
 let menuItemDangerCss = css({
@@ -1916,6 +2046,34 @@ let toneSampleCss = css({
   alignItems: 'flex-end',
   justifyContent: 'flex-start',
   padding: theme.space.sm,
+})
+
+let glyphPreviewGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.sm,
+  padding: theme.space.lg,
+  '@media (max-width: 640px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let glyphPreviewItemCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.space.sm,
+  minHeight: theme.control.height.md,
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.background.surfaceSecondary,
+})
+
+let glyphPreviewGlyphCss = css({
+  width: '14px',
+  height: '14px',
+  color: theme.colors.text.secondary,
+  flexShrink: 0,
 })
 
 let utilityRowCss = css({

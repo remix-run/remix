@@ -518,6 +518,7 @@ let cardFrameUtility = createCardFrameUtility()
 let navItemUtility = css({
   display: 'inline-flex',
   alignItems: 'center',
+  gap: theme.space.sm,
   minHeight: theme.control.height.md,
   padding: `${theme.space.xs} ${theme.space.sm}`,
   border: `1px solid transparent`,

@@ -6,6 +6,8 @@ A theme contract for Remix apps and first-party Remix components built on CSS cu
 
 - Fixed typed `theme` contract whose leaves resolve to `var(--rmx-...)`
 - `createTheme()` utility for rendering theme variables into a `<style>` tag
+- `createGlyphSheet()` utility for rendering a hidden SVG sprite sheet in the body
+- `<Glyph />` component for shared icon usage through sprite references
 - Typed `ui` utility mixins for common spacing, color, typography, and button styles
 - Works with Remix component `mix` composition and server rendering
 
@@ -189,6 +191,33 @@ let card = css({
 })
 
 <div mix={[card, ui.px.md, ui.py.sm, ui.rounded.md]} />
+```
+
+Render shared glyphs separately from the theme styles:
+
+```tsx
+import type { RemixNode } from 'remix/component'
+import { createGlyphSheet, Glyph, RMX_01_GLYPHS, ui } from 'remix/theme'
+
+let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
+
+function Layout(props: { children: RemixNode }) {
+  return (
+    <html>
+      <head>
+        <Theme />
+      </head>
+      <body>
+        <Glyphs />
+        <button mix={ui.button.primary}>
+          <Glyph mix={ui.button.icon} name="add" />
+          <span mix={ui.button.label}>New project</span>
+        </button>
+        {props.children}
+      </body>
+    </html>
+  )
+}
 ```
 
 ## License

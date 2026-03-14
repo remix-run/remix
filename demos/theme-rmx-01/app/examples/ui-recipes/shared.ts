@@ -43,3 +43,10 @@ export let buttonScrollRowCss = css({
 export let buttonSpinnerGlyphCss = css({
   opacity: 0.72,
 })
+
+export let navPreviewGlyphCss = css({
+  width: '12px',
+  height: '12px',
+  color: theme.colors.text.muted,
+  flexShrink: 0,
+})
