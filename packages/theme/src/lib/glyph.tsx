@@ -58,169 +58,159 @@ export let glyphContract = Object.freeze(createGlyphContract(DEFAULT_GLYPH_ID_PR
 export let RMX_01_GLYPHS: GlyphValues = {
   add: {
     viewBox: glyphViewBoxes.add,
-    content: (
-      <path
-        d="M8 3.25v9.5M3.25 8h9.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'M8 3.25v9.5M3.25 8h9.5',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   alert: {
     viewBox: glyphViewBoxes.alert,
-    content: (
-      <>
-        <path
-          d="M8 2.5 13.75 12.5H2.25Z"
-          fill="none"
-          stroke="currentColor"
-          strokeLinejoin="round"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M8 5.75v3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.5"
-        />
-        <circle cx="8" cy="11.25" fill="currentColor" r="0.75" />
-      </>
-    ),
+    content: [
+      createElement('path', {
+        d: 'M8 2.5 13.75 12.5H2.25Z',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinejoin: 'round',
+        strokeWidth: '1.5',
+      }),
+      createElement('path', {
+        d: 'M8 5.75v3.5',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '1.5',
+      }),
+      createElement('circle', {
+        cx: '8',
+        cy: '11.25',
+        fill: 'currentColor',
+        r: '0.75',
+      }),
+    ],
   },
   check: {
     viewBox: glyphViewBoxes.check,
-    content: (
-      <path
-        d="m3.5 8.25 2.75 2.75L12.5 4.75"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'm3.5 8.25 2.75 2.75L12.5 4.75',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   chevronDown: {
     viewBox: glyphViewBoxes.chevronDown,
-    content: (
-      <path
-        d="m3.75 6.25 4.25 4 4.25-4"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'm3.75 6.25 4.25 4 4.25-4',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   chevronRight: {
     viewBox: glyphViewBoxes.chevronRight,
-    content: (
-      <path
-        d="m6 4 4 4-4 4"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'm6 4 4 4-4 4',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   close: {
     viewBox: glyphViewBoxes.close,
-    content: (
-      <path
-        d="m4.5 4.5 7 7m0-7-7 7"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'm4.5 4.5 7 7m0-7-7 7',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   info: {
     viewBox: glyphViewBoxes.info,
-    content: (
-      <>
-        <circle
-          cx="8"
-          cy="8"
-          fill="none"
-          r="5.75"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M8 7.25v3"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.5"
-        />
-        <circle cx="8" cy="5" fill="currentColor" r="0.75" />
-      </>
-    ),
+    content: [
+      createElement('circle', {
+        cx: '8',
+        cy: '8',
+        fill: 'none',
+        r: '5.75',
+        stroke: 'currentColor',
+        strokeWidth: '1.5',
+      }),
+      createElement('path', {
+        d: 'M8 7.25v3',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '1.5',
+      }),
+      createElement('circle', {
+        cx: '8',
+        cy: '5',
+        fill: 'currentColor',
+        r: '0.75',
+      }),
+    ],
   },
   menu: {
     viewBox: glyphViewBoxes.menu,
-    content: (
-      <path
-        d="M3 4.75h10M3 8h10M3 11.25h10"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-    ),
+    content: createElement('path', {
+      d: 'M3 4.75h10M3 8h10M3 11.25h10',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeLinecap: 'round',
+      strokeWidth: '1.5',
+    }),
   },
   search: {
     viewBox: glyphViewBoxes.search,
-    content: (
-      <>
-        <circle
-          cx="7"
-          cy="7"
-          fill="none"
-          r="4.25"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <path
-          d="m10.25 10.25 3 3"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.5"
-        />
-      </>
-    ),
+    content: [
+      createElement('circle', {
+        cx: '7',
+        cy: '7',
+        fill: 'none',
+        r: '4.25',
+        stroke: 'currentColor',
+        strokeWidth: '1.5',
+      }),
+      createElement('path', {
+        d: 'm10.25 10.25 3 3',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '1.5',
+      }),
+    ],
   },
   spinner: {
     viewBox: glyphViewBoxes.spinner,
-    content: (
-      <>
-        <circle
-          cx="8"
-          cy="8"
-          fill="none"
-          opacity="0.24"
-          r="5.25"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M8 2.75a5.25 5.25 0 0 1 5.25 5.25"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.5"
-        />
-      </>
-    ),
+    content: [
+      createElement('circle', {
+        cx: '8',
+        cy: '8',
+        fill: 'none',
+        opacity: '0.24',
+        r: '5.25',
+        stroke: 'currentColor',
+        strokeWidth: '1.5',
+      }),
+      createElement('path', {
+        d: 'M8 2.75a5.25 5.25 0 0 1 5.25 5.25',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeLinecap: 'round',
+        strokeWidth: '1.5',
+      }),
+    ],
   },
 }
 
@@ -256,10 +246,10 @@ export function createGlyphSheet(
         glyphNames.map(name => {
           let glyph = values[name]
 
-          return (
-            <symbol id={ids[name]} key={name} viewBox={glyph.viewBox}>
-              {glyph.content}
-            </symbol>
+          return createElement(
+            'symbol',
+            { id: ids[name], key: name, viewBox: glyph.viewBox },
+            glyph.content,
           )
         }),
       )
@@ -281,16 +271,18 @@ export function Glyph() {
       props['aria-label'] === undefined &&
       props['aria-labelledby'] === undefined
 
-    return (
-      <svg
-        {...svgProps}
-        aria-hidden={hiddenByDefault ? true : props['aria-hidden']}
-        fill={fill ?? 'none'}
-        viewBox={viewBox ?? contract.viewBox}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <use href={`#${contract.id}`} />
-      </svg>
+    return createElement(
+      'svg',
+      {
+        ...svgProps,
+        'aria-hidden': hiddenByDefault ? true : props['aria-hidden'],
+        fill: fill ?? 'none',
+        viewBox: viewBox ?? contract.viewBox,
+        xmlns: 'http://www.w3.org/2000/svg',
+      },
+      createElement('use', {
+        xlinkHref: `#${contract.id}`,
+      }),
     )
   }
 }

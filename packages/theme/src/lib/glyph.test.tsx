@@ -31,7 +31,7 @@ describe('Glyph', () => {
 
     expect(html).toContain('<svg')
     expect(html).toContain(`viewBox="${glyphContract.add.viewBox}"`)
-    expect(html).toContain(`<use href="#${glyphContract.add.id}"></use>`)
+    expect(html).toContain(`<use xlink:href="#${glyphContract.add.id}"></use>`)
     expect(html).toContain('aria-hidden')
   })
 
