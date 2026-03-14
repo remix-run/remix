@@ -169,12 +169,14 @@ function App() {
             >
               <div mix={[overlayGridCss]}>
                 <div mix={[ui.surface.elevated, dialogSurfaceCss]}>
-                  <p mix={[ui.text.eyebrow, surfaceLabelCss]}>Dialog</p>
-                  <h3 mix={[ui.text.title, surfaceHeadingCss]}>Share workspace</h3>
-                  <p mix={[ui.text.bodySm, surfaceBodyCss]}>
-                    Invite teammates, choose a permission level, and keep the action area visually
-                    distinct without making the panel feel heavy.
-                  </p>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Dialog</p>
+                    <h3 mix={[ui.surfaceText.title, surfaceHeadingCss]}>Share workspace</h3>
+                    <p mix={[ui.surfaceText.body, surfaceBodyCss]}>
+                      Invite teammates, choose a permission level, and keep the action area visually
+                      distinct without making the panel feel heavy.
+                    </p>
+                  </div>
                   <div mix={[dialogFieldCss]}>
                     <label for="dialog-email" mix={[ui.text.label, fieldLabelCss]}>
                       Email
@@ -217,7 +219,7 @@ function App() {
                 </div>
 
                 <div mix={[ui.surface.elevated, menuSurfaceCss]}>
-                  <p mix={[ui.text.eyebrow, surfaceLabelCss]}>Compact Menu Surface</p>
+                  <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Compact Menu Surface</p>
                   <div mix={[compactRowCss]}>
                     <span mix={[ui.text.eyebrow, compactKeyCss]}>Status</span>
                     <span mix={[statusBadgeCss, successBadgeCss, ui.status.success]}>Healthy</span>
@@ -241,12 +243,16 @@ function App() {
             >
               <div mix={[contentGridCss]}>
                 <article mix={[ui.surface.base, articleCardCss]}>
-                  <p mix={[ui.text.eyebrow, surfaceLabelCss]}>Team Notes</p>
-                  <h3 mix={[ui.text.title, articleTitleCss]}>Release checklist for the next deployment</h3>
-                  <p mix={[ui.text.body, articleParagraphCss]}>
-                    Keep headings firm, body copy readable, and supporting notes visually secondary.
-                    The goal is to make operational content easy to scan, not decorative.
-                  </p>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Team Notes</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>
+                      Release checklist for the next deployment
+                    </h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      Keep headings firm, body copy readable, and supporting notes visually secondary.
+                      The goal is to make operational content easy to scan, not decorative.
+                    </p>
+                  </div>
                   <ul mix={[articleListCss]}>
                     <li>Verify background jobs are paused before the schema migration.</li>
                     <li>Run the smoke suite against staging after the first deploy finishes.</li>
@@ -255,12 +261,14 @@ function App() {
                 </article>
 
                 <section mix={[ui.surface.base, articleCardCss]}>
-                  <p mix={[ui.text.eyebrow, surfaceLabelCss]}>Reading Rhythm</p>
-                  <h3 mix={[ui.text.title, articleTitleCss]}>Default copy settings</h3>
-                  <p mix={[ui.text.body, articleParagraphCss]}>
-                    RMX_01 uses modest font sizes and balanced line heights so the same theme can
-                    support dense tool UIs, forms, command surfaces, and longer settings content.
-                  </p>
+                  <div mix={[surfaceTextStackCss]}>
+                    <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Reading Rhythm</p>
+                    <h3 mix={[ui.surfaceText.title, articleTitleCss]}>Default copy settings</h3>
+                    <p mix={[ui.surfaceText.body, articleParagraphCss]}>
+                      RMX_01 uses modest font sizes and balanced line heights so the same theme can
+                      support dense tool UIs, forms, command surfaces, and longer settings content.
+                    </p>
+                  </div>
                   <div mix={[calloutCss, calloutWarningCss, ui.status.warning]}>
                     <p mix={[ui.text.label, calloutTitleCss]}>Guideline</p>
                     <p mix={[ui.text.bodySm, calloutBodyCss]}>
@@ -306,9 +314,11 @@ type CardProps = {
 function Card() {
   return ({ title, body, mixins = [] }: CardProps) => (
     <article mix={[cardBaseCss, ...mixins]}>
-      <p mix={[ui.text.eyebrow, surfaceLabelCss]}>Surface</p>
-      <h3 mix={[ui.text.title, surfaceHeadingCss]}>{title}</h3>
-      <p mix={[ui.text.bodySm, surfaceBodyCss]}>{body}</p>
+      <div mix={[surfaceTextStackCss]}>
+        <p mix={[ui.surfaceText.eyebrow, surfaceLabelCss]}>Surface</p>
+        <h3 mix={[ui.surfaceText.title, surfaceHeadingCss]}>{title}</h3>
+        <p mix={[ui.surfaceText.body, surfaceBodyCss]}>{body}</p>
+      </div>
     </article>
   )
 }
@@ -491,6 +501,8 @@ let cardGridCss = css({
 })
 
 let cardBaseCss = css({
+  display: 'flex',
+  flexDirection: 'column',
   padding: theme.space.lg,
   minHeight: '168px',
 })
@@ -569,13 +581,19 @@ let fieldLabelCss = css({
 let fieldInputCss = css({})
 
 let surfaceLabelCss = css({ margin: 0 })
+let surfaceTextStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 0,
+})
 
 let surfaceHeadingCss = css({
   margin: 0,
+  maxWidth: '18ch',
 })
 
 let surfaceBodyCss = css({
-  margin: 0,
+  margin: '10px 0 0',
 })
 
 let compactRowCss = css({
@@ -617,7 +635,7 @@ let contentGridCss = css({
 let articleCardCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.md,
+  gap: theme.space.sm,
   padding: theme.space.lg,
 })
 

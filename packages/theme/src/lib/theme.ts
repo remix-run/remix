@@ -30,6 +30,7 @@ let themeVariableNames = {
     mono: '--rmx-font-family-mono',
   },
   fontSize: {
+    '2xs': '--rmx-font-size-2xs',
     xs: '--rmx-font-size-xs',
     sm: '--rmx-font-size-sm',
     md: '--rmx-font-size-md',
@@ -45,6 +46,7 @@ let themeVariableNames = {
   letterSpacing: {
     tight: '--rmx-letter-spacing-tight',
     normal: '--rmx-letter-spacing-normal',
+    meta: '--rmx-letter-spacing-meta',
     wide: '--rmx-letter-spacing-wide',
   },
   fontWeight: {
@@ -220,8 +222,16 @@ export type ThemeUi = {
     bodySm: ThemeUtility
     label: ThemeUtility
     eyebrow: ThemeUtility
+    caption: ThemeUtility
+    supporting: ThemeUtility
     title: ThemeUtility
     display: ThemeUtility
+  }
+  surfaceText: {
+    eyebrow: ThemeUtility
+    title: ThemeUtility
+    body: ThemeUtility
+    supporting: ThemeUtility
   }
   ring: {
     focus: ThemeUtility
@@ -307,12 +317,22 @@ export const ui: ThemeUi = {
       fontWeight: theme.fontWeight.semibold,
       color: theme.colors.text.secondary,
     }),
+    caption: css({
+      fontSize: theme.fontSize['2xs'],
+      lineHeight: theme.lineHeight.normal,
+      color: theme.colors.text.muted,
+    }),
     eyebrow: css({
       fontSize: theme.fontSize.xs,
       lineHeight: theme.lineHeight.normal,
       fontWeight: theme.fontWeight.semibold,
       letterSpacing: theme.letterSpacing.wide,
       textTransform: 'uppercase',
+      color: theme.colors.text.muted,
+    }),
+    supporting: css({
+      fontSize: theme.fontSize.sm,
+      lineHeight: theme.lineHeight.normal,
       color: theme.colors.text.muted,
     }),
     title: css({
@@ -327,6 +347,33 @@ export const ui: ThemeUi = {
       fontWeight: theme.fontWeight.bold,
       letterSpacing: theme.letterSpacing.tight,
       color: theme.colors.text.primary,
+    }),
+  },
+  surfaceText: {
+    eyebrow: css({
+      fontSize: theme.fontSize['2xs'],
+      lineHeight: theme.lineHeight.normal,
+      fontWeight: theme.fontWeight.semibold,
+      letterSpacing: theme.letterSpacing.meta,
+      textTransform: 'uppercase',
+      color: `color-mix(in oklab, ${theme.colors.text.muted} 84%, white)`,
+    }),
+    title: css({
+      fontSize: theme.fontSize.xl,
+      lineHeight: '1.16',
+      fontWeight: theme.fontWeight.medium,
+      letterSpacing: '-0.022em',
+      color: theme.colors.text.primary,
+    }),
+    body: css({
+      fontSize: theme.fontSize.sm,
+      lineHeight: '1.44',
+      color: `color-mix(in oklab, ${theme.colors.text.secondary} 80%, white)`,
+    }),
+    supporting: css({
+      fontSize: theme.fontSize['2xs'],
+      lineHeight: theme.lineHeight.normal,
+      color: theme.colors.text.muted,
     }),
   },
   ring: {
@@ -458,6 +505,7 @@ export const RMX_01_VALUES: ThemeValues = {
     full: '9999px',
   },
   fontSize: {
+    '2xs': '11px',
     xs: '12px',
     sm: '13px',
     md: '14px',
@@ -479,6 +527,7 @@ export const RMX_01_VALUES: ThemeValues = {
   letterSpacing: {
     tight: '-0.03em',
     normal: '0',
+    meta: '0.06em',
     wide: '0.08em',
   },
   fontWeight: {

@@ -29,6 +29,7 @@ const sampleTheme = {
     mono: 'monospace',
   },
   fontSize: {
+    '2xs': '11px',
     xs: '12px',
     sm: '14px',
     md: '16px',
@@ -44,6 +45,7 @@ const sampleTheme = {
   letterSpacing: {
     tight: '-0.02em',
     normal: '0',
+    meta: '0.06em',
     wide: '0.08em',
   },
   fontWeight: {
@@ -169,6 +171,7 @@ describe('theme contract', () => {
   it('exposes CSS variable references', () => {
     expect(theme.space.md).toBe('var(--rmx-space-md)')
     expect(theme.fontFamily.sans).toBe('var(--rmx-font-family-sans)')
+    expect(theme.fontSize['2xs']).toBe('var(--rmx-font-size-2xs)')
     expect(theme.colors.text.primary).toBe('var(--rmx-color-text-primary)')
     expect(theme.colors.action.primary.background).toBe(
       'var(--rmx-color-action-primary-background)',
@@ -212,13 +215,14 @@ describe('ui', () => {
       createElement(
         'div',
         {
-          mix: [ui.control.base, ui.button.primary, ui.px.md, ui.rounded.md],
+          mix: [ui.control.base, ui.button.primary, ui.surfaceText.eyebrow, ui.px.md, ui.rounded.md],
         },
         'Hello',
       ),
     )
 
     expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
+    expect(html).toMatch(/font-size: var\(--rmx-font-size-2xs\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
