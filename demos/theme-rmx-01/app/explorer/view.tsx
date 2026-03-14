@@ -1806,7 +1806,7 @@ let pageStackCss = css({
   flexDirection: 'column',
   gap: theme.space.xl,
   width: '100%',
-  maxWidth: '1040px',
+  maxWidth: '960px',
   marginInline: 'auto',
 })
 
