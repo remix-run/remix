@@ -156,9 +156,6 @@ importers:
 
   demos/theme-rmx-01:
     dependencies:
-      '@remix-run/theme':
-        specifier: workspace:*
-        version: link:../../packages/theme
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -1120,6 +1117,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      '@remix-run/theme':
+        specifier: workspace:^
+        version: link:../theme
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7

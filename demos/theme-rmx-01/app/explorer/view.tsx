@@ -1,7 +1,8 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import { RMX_01, RMX_01_VALUES, theme, ui } from '@remix-run/theme'
-import type { ThemeRecipe } from '@remix-run/theme'
+import { RMX_01, RMX_01_VALUES, theme, ui } from 'remix/theme'
+import type { ThemeRecipe } from 'remix/theme'
+import { EXAMPLES } from '../examples/index.tsx'
 import type { PageDefinition } from './data.ts'
 import { NAV_GROUPS, PAGES, UI_RECIPE_PAGES } from './data.ts'
 
@@ -569,176 +570,73 @@ function UiRecipesPage() {
       >
         <div mix={twoColumnGridCss}>
           <RecipeExample
-            code={`<div mix={[ui.stack, ui.gap.sm]}>
-  <p mix={ui.text.eyebrow}>Page eyebrow</p>
-  <p mix={ui.text.title}>Section title</p>
-  <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
-</div>`}
+            code={EXAMPLES.overviewText.code}
             description="Page-level typography roles for headings, body copy, captions, and metadata."
             href={PAGES.uiRecipeText.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Text roles"
           >
-            <div mix={[ui.stack, ui.gap.sm]}>
-              <p mix={ui.text.eyebrow}>Page eyebrow</p>
-              <p mix={ui.text.title}>Section title</p>
-              <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
-            </div>
+            {EXAMPLES.overviewText.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={ui.card.base}>
-  <div mix={ui.card.header}>
-    <p mix={ui.card.eyebrow}>Surface</p>
-    <h4 mix={ui.card.title}>Card header</h4>
-    <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
-  </div>
-</div>`}
+            code={EXAMPLES.overviewCard.code}
             description="Shared shell, spacing, and slot rhythm for cards, popovers, and content panels."
             href={PAGES.uiRecipeCard.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Card recipes"
           >
-            <div mix={ui.card.base}>
-              <div mix={ui.card.header}>
-                <p mix={ui.card.eyebrow}>Surface</p>
-                <h4 mix={ui.card.title}>Card header</h4>
-                <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
-              </div>
-            </div>
+            {EXAMPLES.overviewCard.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={buttonExampleRowCss}>
-  <button mix={ui.button.primary}>Save</button>
-  <button mix={ui.button.secondary}>Secondary</button>
-  <button mix={ui.button.ghost}>Ghost</button>
-  <button mix={ui.button.danger}>Delete</button>
-</div>`}
+            code={EXAMPLES.buttonAliases.code}
             description="Compact action treatments for primary, surfaced neutral, text-first ghost, and destructive actions."
             href={PAGES.uiRecipeButton.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Buttons and controls"
           >
-            <div mix={buttonExampleRowCss}>
-              <button mix={ui.button.primary}>
-                Save
-              </button>
-              <button mix={ui.button.secondary}>
-                Secondary
-              </button>
-              <button mix={ui.button.ghost}>
-                Ghost
-              </button>
-              <button mix={ui.button.danger}>
-                Delete
-              </button>
-            </div>
+            {EXAMPLES.buttonAliases.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={[ui.stack, ui.gap.xs]}>
-  <label for="ui-recipe-field" mix={ui.fieldText.label}>Project name</label>
-  <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
-  <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
-</div>`}
+            code={EXAMPLES.fieldStack.code}
             description="Field chrome and label/help typography should travel together."
             href={PAGES.uiRecipeField.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Fields"
           >
-            <div mix={[ui.stack, ui.gap.xs]}>
-              <label for="ui-recipe-field" mix={ui.fieldText.label}>
-                Project name
-              </label>
-              <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
-              <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
-            </div>
+            {EXAMPLES.fieldStack.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={[ui.stack, ui.gap.xs]}>
-  <button type="button" mix={ui.item.base}>
-    <span>Members</span>
-    <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
-  </button>
-  <button type="button" mix={ui.item.danger}>
-    <span>Archive workspace</span>
-    <span mix={ui.text.caption}>Permanent</span>
-  </button>
-</div>`}
+            code={EXAMPLES.itemStatus.code}
             description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
             href={PAGES.uiRecipeItem.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Items and status"
           >
-            <div mix={[ui.stack, ui.gap.xs]}>
-              <button type="button" mix={ui.item.base}>
-                <span>Members</span>
-                <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
-              </button>
-              <button type="button" mix={ui.item.danger}>
-                <span>Archive workspace</span>
-                <span mix={ui.text.caption}>Permanent</span>
-              </button>
-            </div>
+            {EXAMPLES.itemStatus.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
-  <a href="/ui-recipes" aria-current="page" mix={ui.nav.itemActive}>
-    Current page
-  </a>
-  <a href="/ui-recipes" mix={ui.nav.item}>Secondary page</a>
-</nav>`}
+            code={EXAMPLES.navOverview.code}
             description="Sidebar and navigation primitives are useful app-level building blocks even though this docs shell itself is demo-specific."
             href={PAGES.uiRecipeNav.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Sidebar and nav"
           >
-            <div mix={[ui.card.secondary, navPreviewCardCss]}>
-              <div mix={ui.sidebar.section}>
-                <p mix={ui.sidebar.heading}>Navigation</p>
-                <nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
-                  <a href="/ui-recipes" aria-current="page" mix={ui.nav.itemActive}>
-                    Current page
-                  </a>
-                  <a href="/ui-recipes" mix={ui.nav.item}>
-                    Secondary page
-                  </a>
-                </nav>
-              </div>
-            </div>
+            {EXAMPLES.navOverview.preview}
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={[ui.stack, ui.gap.md]}>
-  <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
-    <p mix={ui.text.label}>Toolbar</p>
-    <button mix={ui.button.secondary}>Filter</button>
-  </div>
-  <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-    <button mix={ui.button.primary}>Save</button>
-    <button mix={ui.button.secondary}>Share</button>
-    <button mix={ui.button.danger}>Delete</button>
-  </div>
-</div>`}
+            code={EXAMPLES.rowStack.code}
             description="Symmetrical row and stack primitives replace demo-specific flex helpers and pair naturally with the shared spacing scale."
             href={PAGES.uiRecipeLayout.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Row and stack"
           >
-            <div mix={[ui.stack, ui.gap.md]}>
-              <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
-                <p mix={[ui.text.label, zeroMarginCss]}>Toolbar</p>
-                <button mix={ui.button.secondary}>Filter</button>
-              </div>
-              <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-                <button mix={ui.button.primary}>Save</button>
-                <button mix={ui.button.secondary}>Share</button>
-                <button mix={ui.button.danger}>Delete</button>
-              </div>
-            </div>
+            {EXAMPLES.rowStack.preview}
           </RecipeExample>
         </div>
       </Section>
@@ -807,24 +705,12 @@ function UiRecipeTextPage() {
         description="Text recipes provide the shared page-level voice of the system. They are the default vocabulary for headings, body copy, supporting notes, captions, and code."
       >
         <RecipeExample
-          code={`<div mix={[ui.stack, ui.gap.sm]}>
-  <p mix={ui.text.eyebrow}>Page eyebrow</p>
-  <p mix={ui.text.title}>Section title</p>
-  <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
-  <p mix={ui.text.supporting}>Supporting notes can back away when needed.</p>
-  <code mix={ui.text.code}>theme.colors.background.surface</code>
-</div>`}
+          code={EXAMPLES.textPageTypography.code}
           description="Use page-level text roles when content sits in ordinary document flow and should read like part of the page rather than a surface-specific micro-layout."
           previewMix={docsExamplePreviewCenterCss}
           title="Page typography"
         >
-          <div mix={[ui.stack, ui.gap.sm]}>
-            <p mix={ui.text.eyebrow}>Page eyebrow</p>
-            <p mix={ui.text.title}>Section title</p>
-            <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
-            <p mix={ui.text.supporting}>Supporting notes can back away when needed.</p>
-            <code mix={ui.text.code}>theme.colors.background.surface</code>
-          </div>
+          {EXAMPLES.textPageTypography.preview}
         </RecipeExample>
       </Section>
 
@@ -855,52 +741,12 @@ function UiRecipeCardPage() {
         description="Card recipes solve recurring shell and spacing problems: the outer surface, the header rhythm, body spacing, action alignment, and footer boundaries."
       >
         <RecipeExample
-          code={`<article mix={[ui.card.base, docsExampleInnerCardCss]}>
-  <div mix={ui.card.headerWithAction}>
-    <div mix={ui.card.header}>
-      <p mix={ui.card.eyebrow}>Surface</p>
-      <h4 mix={ui.card.title}>Card header</h4>
-      <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
-    </div>
-    <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Info</span>
-  </div>
-  <div mix={ui.card.body}>
-    <p mix={[ui.text.bodySm, zeroMarginCss]}>
-      Body content can stay simple because the structural spacing is already solved.
-    </p>
-  </div>
-  <div mix={ui.card.footer}>
-    <button mix={ui.button.secondary}>Cancel</button>
-    <button mix={ui.button.primary}>Continue</button>
-  </div>
-</article>`}
+          code={EXAMPLES.cardStructuredSurface.code}
           description="Use the card layer for content panels, popovers, previews, settings groups, and any other surface that needs consistent slot rhythm."
           previewMix={docsExamplePreviewCenterCss}
           title="Structured surface"
         >
-          <article mix={[ui.card.base, docsExampleInnerCardCss]}>
-            <div mix={ui.card.headerWithAction}>
-              <div mix={ui.card.header}>
-                <p mix={ui.card.eyebrow}>Surface</p>
-                <h4 mix={ui.card.title}>Card header</h4>
-                <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
-              </div>
-              <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Info</span>
-            </div>
-            <div mix={ui.card.body}>
-              <p mix={[ui.text.bodySm, zeroMarginCss]}>
-                Body content can stay simple because the structural spacing is already solved.
-              </p>
-            </div>
-            <div mix={ui.card.footer}>
-              <button mix={ui.button.secondary}>
-                Cancel
-              </button>
-              <button mix={ui.button.primary}>
-                Continue
-              </button>
-            </div>
-          </article>
+          {EXAMPLES.cardStructuredSurface.preview}
         </RecipeExample>
       </Section>
 
@@ -972,30 +818,12 @@ function UiRecipeButtonPage() {
         description="The button API now supports both fast aliases and deliberate composition. Use the flat button recipes when they fit, or compose `base + size + tone` when you need more control."
       >
         <RecipeExample
-          code={`<div mix={buttonExampleRowCss}>
-  <button type="submit" mix={ui.button.primary}>Save</button>
-  <button mix={ui.button.secondary}>Secondary</button>
-  <button mix={ui.button.ghost}>Ghost</button>
-  <button mix={ui.button.danger}>Delete</button>
-</div>`}
+          code={EXAMPLES.buttonAliases.code}
           description="These aliases are the quickest way to style ordinary actions. They already include `ui.button.base`, the default `md` size, and the matching tone."
           previewMix={docsExamplePreviewCenterCss}
           title="Everyday button aliases"
         >
-          <div mix={buttonExampleRowCss}>
-            <button type="submit" mix={ui.button.primary}>
-              Save
-            </button>
-            <button mix={ui.button.secondary}>
-              Secondary
-            </button>
-            <button mix={ui.button.ghost}>
-              Ghost
-            </button>
-            <button mix={ui.button.danger}>
-              Delete
-            </button>
-          </div>
+          {EXAMPLES.buttonAliases.preview}
         </RecipeExample>
       </Section>
 
@@ -1005,75 +833,20 @@ function UiRecipeButtonPage() {
       >
         <div mix={pageSectionStackCss}>
           <RecipeExample
-            code={`<div mix={buttonExampleRowCss}>
-  <button
-    type="submit"
-    mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}
-  >
-    Publish
-  </button>
-
-  <a
-    href="/proof-sheet"
-    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
-  >
-    View proof sheet
-  </a>
-</div>`}
+            code={EXAMPLES.buttonBaseSizeTone.code}
             description="Button recipes compose directly onto both `<button>` and `<a>`. This is the alternative to wrapper-heavy `asChild` patterns."
             previewMix={docsExamplePreviewCenterCss}
             title="Base, size, and tone"
           >
-            <div mix={buttonExampleRowCss}>
-              <button type="submit" mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-                Publish
-              </button>
-              <a href="/proof-sheet" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-                View proof sheet
-              </a>
-            </div>
+            {EXAMPLES.buttonBaseSizeTone.preview}
           </RecipeExample>
           <RecipeExample
-            code={`<div mix={buttonExampleRowCss}>
-  <button mix={[ui.button.base, ui.button.sm, ui.button.tone.secondary]}>
-    Small
-  </button>
-  <button mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-    Medium
-  </button>
-  <button mix={[ui.button.base, ui.button.lg, ui.button.tone.secondary]}>
-    Large
-  </button>
-  <button
-    aria-label="Refresh"
-    mix={[ui.button.base, ui.button.icon, ui.button.tone.secondary]}
-  >
-    <span data-slot="icon" aria-hidden="true">+</span>
-  </button>
-</div>`}
+            code={EXAMPLES.buttonSizes.code}
             description="Size is a separate layer. `ui.button.icon` is for icon-only buttons and keeps the control square."
             previewMix={docsExamplePreviewCenterCss}
             title="Sizes"
           >
-            <div mix={buttonExampleRowCss}>
-              <button mix={[ui.button.base, ui.button.sm, ui.button.tone.secondary]}>
-                Small
-              </button>
-              <button mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-                Medium
-              </button>
-              <button mix={[ui.button.base, ui.button.lg, ui.button.tone.secondary]}>
-                Large
-              </button>
-              <button
-                aria-label="Refresh"
-                mix={[ui.button.base, ui.button.icon, ui.button.tone.secondary]}
-              >
-                <span data-slot="icon" aria-hidden="true">
-                  +
-                </span>
-              </button>
-            </div>
+            {EXAMPLES.buttonSizes.preview}
           </RecipeExample>
         </div>
       </Section>
@@ -1084,67 +857,14 @@ function UiRecipeButtonPage() {
       >
         <div mix={pageSectionStackCss}>
           <RecipeExample
-            code={`<div mix={buttonExampleRowCss}>
-  <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-    <span data-slot="icon" aria-hidden="true">+</span>
-    <span data-slot="label">New issue</span>
-  </button>
-
-  <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
-    <span data-slot="label">Open</span>
-    <span data-slot="icon" aria-hidden="true">→</span>
-  </button>
-
-  <button
-    disabled
-    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
-  >
-    Disabled
-  </button>
-
-  <button
-    aria-busy="true"
-    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
-  >
-    <span data-slot="icon" aria-hidden="true">◌</span>
-    <span data-slot="label">Saving</span>
-  </button>
-</div>`}
+            code={EXAMPLES.buttonSlotsStates.code}
             description={
               'Use `[data-slot="icon"]` and `[data-slot="label"]` for leading icons, trailing icons, and loading spinners. Loading is a content convention, not a separate button variant.'
             }
             previewMix={docsExamplePreviewCenterCss}
             title="Icons, loading, and disabled"
           >
-            <div mix={buttonExampleRowCss}>
-              <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-                <span data-slot="icon" aria-hidden="true">
-                  +
-                </span>
-                <span data-slot="label">New issue</span>
-              </button>
-
-              <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
-                <span data-slot="label">Open</span>
-                <span data-slot="icon" aria-hidden="true">
-                  →
-                </span>
-              </button>
-
-              <button disabled mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-                Disabled
-              </button>
-
-              <button
-                aria-busy="true"
-                mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
-              >
-                <span data-slot="icon" aria-hidden="true" mix={buttonSpinnerGlyphCss}>
-                  ◌
-                </span>
-                <span data-slot="label">Saving</span>
-              </button>
-            </div>
+            {EXAMPLES.buttonSlotsStates.preview}
           </RecipeExample>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
@@ -1180,27 +900,12 @@ function UiRecipeFieldPage() {
         description="Fields should not reinvent their own chrome or type. The field and field-text recipes keep forms aligned with the rest of the system."
       >
         <RecipeExample
-          code={`<div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
-  <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>Project name</label>
-  <input id="ui-recipe-detail-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
-  <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
-</div>`}
+          code={EXAMPLES.fieldStack.code}
           description="Labels, help text, and field chrome belong together. That gives first-party form components a strong default shape."
           previewMix={docsExamplePreviewCenterCss}
           title="Field stack"
         >
-          <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
-            <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>
-              Project name
-            </label>
-            <input
-              id="ui-recipe-detail-field"
-              value="RMX Internal Console"
-              readOnly
-              mix={ui.field.base}
-            />
-            <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
-          </div>
+          {EXAMPLES.fieldStack.preview}
         </RecipeExample>
       </Section>
     </div>
@@ -1215,30 +920,12 @@ function UiRecipeItemPage() {
         description="Rows and status treatments are the basis for menus, command surfaces, tabs, combobox options, and sidebar collections."
       >
         <RecipeExample
-          code={`<div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
-  <button type="button" mix={ui.item.base}>
-    <span>Members</span>
-    <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
-  </button>
-  <button type="button" mix={ui.item.danger}>
-    <span>Archive workspace</span>
-    <span mix={ui.text.caption}>Permanent</span>
-  </button>
-</div>`}
+          code={EXAMPLES.itemStatus.code}
           description="Items should be useful as a boring default. Status treatments then add semantic tone without changing the row structure."
           previewMix={docsExamplePreviewCenterCss}
           title="Row primitives"
         >
-          <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
-            <button type="button" mix={ui.item.base}>
-              <span>Members</span>
-              <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
-            </button>
-            <button type="button" mix={ui.item.danger}>
-              <span>Archive workspace</span>
-              <span mix={ui.text.caption}>Permanent</span>
-            </button>
-          </div>
+          {EXAMPLES.itemStatus.preview}
         </RecipeExample>
       </Section>
     </div>
@@ -1253,38 +940,12 @@ function UiRecipeNavPage() {
         description="The docs shell here is local, but the sidebar and navigation ingredients are useful application primitives that can be reused elsewhere."
       >
         <RecipeExample
-          code={`<div mix={[ui.card.secondary, navPreviewCardCss]}>
-  <div mix={ui.sidebar.section}>
-    <p mix={ui.sidebar.heading}>Navigation</p>
-    <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
-      <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
-        Current page
-      </a>
-      <a href="/ui-recipes/navigation" mix={ui.nav.item}>Secondary page</a>
-      <a href="/ui-recipes/navigation" mix={ui.nav.item}>Tertiary page</a>
-    </nav>
-  </div>
-</div>`}
+          code={EXAMPLES.navDetail.code}
           description="These recipes should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
           previewMix={docsExamplePreviewCenterCss}
           title="Sidebar stack"
         >
-          <div mix={[ui.card.secondary, navPreviewCardCss]}>
-            <div mix={ui.sidebar.section}>
-              <p mix={ui.sidebar.heading}>Navigation</p>
-              <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
-                <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
-                  Current page
-                </a>
-                <a href="/ui-recipes/navigation" mix={ui.nav.item}>
-                  Secondary page
-                </a>
-                <a href="/ui-recipes/navigation" mix={ui.nav.item}>
-                  Tertiary page
-                </a>
-              </nav>
-            </div>
-          </div>
+          {EXAMPLES.navDetail.preview}
         </RecipeExample>
       </Section>
     </div>
@@ -1299,32 +960,12 @@ function UiRecipeLayoutPage() {
         description="These primitives cover the common flex mechanics that kept showing up as demo-only helpers: horizontal alignment, vertical rhythm, distribution, and wrapping."
       >
         <RecipeExample
-          code={`<div mix={[ui.stack, ui.gap.md]}>
-  <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
-    <p mix={ui.text.label}>Toolbar</p>
-    <button mix={ui.button.secondary}>Filter</button>
-  </div>
-  <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-    <button mix={ui.button.primary}>Save</button>
-    <button mix={ui.button.secondary}>Share</button>
-    <button mix={ui.button.danger}>Delete</button>
-  </div>
-</div>`}
+          code={EXAMPLES.rowStack.code}
           description="Use `ui.row` and `ui.stack` for repeated flex mechanics, then add spacing with `ui.gap.*` instead of inventing purpose-built row helpers."
           previewMix={docsExamplePreviewCenterCss}
           title="Composed layout primitives"
         >
-          <div mix={[ui.stack, ui.gap.md]}>
-            <div mix={[ui.row, ui.row.between, ui.gap.sm]}>
-              <p mix={[ui.text.label, zeroMarginCss]}>Toolbar</p>
-              <button mix={ui.button.secondary}>Filter</button>
-            </div>
-            <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-              <button mix={ui.button.primary}>Save</button>
-              <button mix={ui.button.secondary}>Share</button>
-              <button mix={ui.button.danger}>Delete</button>
-            </div>
-          </div>
+          {EXAMPLES.rowStack.preview}
         </RecipeExample>
       </Section>
 
@@ -2160,10 +1801,6 @@ let swatchCss = css({
   flexShrink: 0,
 })
 
-let navPreviewCardCss = css({
-  padding: theme.space.md,
-})
-
 let docsExampleBlockCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -2209,24 +1846,6 @@ let docsExamplePreviewCenterCss = css({
   justifyContent: 'center',
 })
 
-let buttonExampleRowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.space.sm,
-  width: 'max-content',
-  maxWidth: '100%',
-  overflowX: 'auto',
-  overflowY: 'hidden',
-  paddingBottom: theme.space.xs,
-  '& > *': {
-    flexShrink: 0,
-  },
-})
-
-let buttonSpinnerGlyphCss = css({
-  opacity: 0.72,
-})
-
 let docsExampleCodePanelCss = css({
   display: 'flex',
   alignItems: 'center',
@@ -2265,16 +1884,6 @@ let docsExampleLinkCss = css({
   '&:hover': {
     textDecoration: 'underline',
   },
-})
-
-let docsExampleInnerCardCss = css({
-  width: '100%',
-  maxWidth: '500px',
-})
-
-let docsExampleFieldStackCss = css({
-  width: '100%',
-  maxWidth: '360px',
 })
 
 let anatomyGridCss = css({
