@@ -1,4 +1,4 @@
-import { createElement, createMixin, css } from '@remix-run/component'
+import { attrs, createElement, createMixin, css } from '@remix-run/component'
 import type { ElementProps, RemixElement } from '@remix-run/component'
 import type { MixinDescriptor } from '@remix-run/component'
 
@@ -310,10 +310,12 @@ export type ThemeUi = {
   }
   button: {
     base: ThemeRecipe
+    label: ThemeUtility
+    icon: ThemeRecipe
     sm: ThemeUtility
     md: ThemeUtility
     lg: ThemeUtility
-    icon: ThemeUtility
+    iconOnly: ThemeUtility
     tone: {
       primary: ThemeUtility
       secondary: ThemeUtility
@@ -418,12 +420,12 @@ let controlGhostToneUtility = css({
 })
 
 let buttonBaseStyleUtility = css({
+  '--rmx-button-label-padding-inline': theme.space.xs,
   position: 'relative',
   isolation: 'isolate',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: theme.space.xs,
   overflow: 'hidden',
   borderRadius: theme.radius.full,
   fontFamily: theme.fontFamily.sans,
@@ -436,25 +438,30 @@ let buttonBaseStyleUtility = css({
   transitionProperty: 'border-color, background-color, box-shadow, color',
   transitionDuration: theme.duration.fast,
   transitionTimingFunction: theme.easing.standard,
-  '& [data-slot="icon"]': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '1em',
-    height: '1em',
-    flexShrink: 0,
-  },
-  '& [data-slot="icon"] > svg': {
+})
+
+let buttonLabelUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minWidth: 0,
+  paddingInline: 'var(--rmx-button-label-padding-inline)',
+})
+
+let buttonIconUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '1em',
+  height: '1em',
+  flexShrink: 0,
+  '& > svg': {
     display: 'block',
     width: '100%',
     height: '100%',
   },
-  '& [data-slot="label"]': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    minWidth: 0,
-  },
 })
+
+let buttonIconAttrsUtility = attrs({ 'aria-hidden': true })
 
 let buttonSizeSmUtility = css({
   minHeight: `calc(${theme.control.height.sm} - 4px)`,
@@ -472,10 +479,10 @@ let buttonSizeLgUtility = css({
   minHeight: theme.control.height.md,
   paddingInline: theme.control.paddingInline.lg,
   fontSize: theme.fontSize.sm,
-  gap: theme.space.sm,
+  '--rmx-button-label-padding-inline': theme.space.sm,
 })
 
-let buttonSizeIconUtility = css({
+let buttonSizeIconOnlyUtility = css({
   minHeight: theme.control.height.sm,
   inlineSize: theme.control.height.sm,
   paddingInline: '0',
@@ -935,10 +942,12 @@ export const ui = {
   },
   button: {
     base: composeThemeRecipe(buttonDefaultsUtility, buttonBaseStyleUtility),
+    label: buttonLabelUtility,
+    icon: composeThemeRecipe(buttonIconAttrsUtility, buttonIconUtility),
     sm: buttonSizeSmUtility,
     md: buttonSizeMdUtility,
     lg: buttonSizeLgUtility,
-    icon: buttonSizeIconUtility,
+    iconOnly: buttonSizeIconOnlyUtility,
     tone: buttonToneUtilities,
     primary: composeThemeRecipe(
       buttonDefaultsUtility,

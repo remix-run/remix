@@ -5,10 +5,10 @@ export default function Example() {
   return () => (
     <div mix={buttonScrollRowCss}>
       <button type="submit" mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-        Publish
+        <span mix={ui.button.label}>Publish</span>
       </button>
       <a href="/proof-sheet" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        View proof sheet
+        <span mix={ui.button.label}>View proof sheet</span>
       </a>
     </div>
   )

@@ -5,28 +5,28 @@ export default function Example() {
   return () => (
     <div mix={buttonScrollRowCss}>
       <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-        <span data-slot="icon" aria-hidden="true">
+        <span mix={ui.button.icon}>
           +
         </span>
-        <span data-slot="label">New issue</span>
+        <span mix={ui.button.label}>New issue</span>
       </button>
 
       <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
-        <span data-slot="label">Open</span>
-        <span data-slot="icon" aria-hidden="true">
+        <span mix={ui.button.label}>Open</span>
+        <span mix={ui.button.icon}>
           →
         </span>
       </button>
 
       <button disabled mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        Disabled
+        <span mix={ui.button.label}>Disabled</span>
       </button>
 
       <button aria-busy="true" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        <span data-slot="icon" aria-hidden="true" mix={buttonSpinnerGlyphCss}>
+        <span mix={[ui.button.icon, buttonSpinnerGlyphCss]}>
           ◌
         </span>
-        <span data-slot="label">Saving</span>
+        <span mix={ui.button.label}>Saving</span>
       </button>
     </div>
   )

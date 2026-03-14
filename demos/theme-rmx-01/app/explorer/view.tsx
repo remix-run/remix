@@ -842,7 +842,7 @@ function UiRecipeButtonPage() {
           </RecipeExample>
           <RecipeExample
             code={EXAMPLES.buttonSizes.code}
-            description="Size is a separate layer. `ui.button.icon` is for icon-only buttons and keeps the control square."
+            description="Size is a separate layer. `ui.button.iconOnly` is for icon-only buttons and keeps the control square."
             previewMix={docsExamplePreviewCenterCss}
             title="Sizes"
           >
@@ -859,7 +859,7 @@ function UiRecipeButtonPage() {
           <RecipeExample
             code={EXAMPLES.buttonSlotsStates.code}
             description={
-              'Use `[data-slot="icon"]` and `[data-slot="label"]` for leading icons, trailing icons, and loading spinners. Loading is a content convention, not a separate button variant.'
+              'Use `ui.button.icon` and `ui.button.label` for leading icons, trailing icons, and loading spinners. Loading is a content convention, not a separate button variant.'
             }
             previewMix={docsExamplePreviewCenterCss}
             title="Icons, loading, and disabled"

@@ -227,10 +227,12 @@ describe('ui', () => {
             ui.card.headerWithAction,
             ui.card.description,
             ui.button.base,
+            ui.button.label,
             ui.button.sm,
             ui.button.md,
             ui.button.lg,
             ui.button.icon,
+            ui.button.iconOnly,
             ui.button.tone.primary,
             ui.button.tone.secondary,
             ui.button.tone.ghost,
@@ -265,8 +267,9 @@ describe('ui', () => {
     expect(html).toMatch(/font-size: var\(--rmx-font-size-3xs\)/)
     expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
-    expect(html).toMatch(/\[data-slot="icon"\]/)
-    expect(html).toMatch(/\[data-slot="label"\]/)
+    expect(html).toMatch(/--rmx-button-label-padding-inline: var\(--rmx-space-sm\)/)
+    expect(html).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
+    expect(html).toMatch(/width: 1em/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
     expect(html).toMatch(/background-color: transparent/)
@@ -323,8 +326,8 @@ describe('ui', () => {
         {
           mix: [ui.button.base, ui.button.lg, ui.button.tone.secondary],
         },
-        createElement('span', { 'data-slot': 'icon' }, 'i'),
-        createElement('span', { 'data-slot': 'label' }, 'Publish'),
+        createElement('span', { mix: ui.button.icon }, 'i'),
+        createElement('span', { mix: ui.button.label }, 'Publish'),
       ),
     )
 
@@ -332,8 +335,10 @@ describe('ui', () => {
     expect(explicitHtml).toMatch(/type="submit"/)
     expect(anchorHtml).not.toMatch(/type="button"/)
     expect(composedHtml).toMatch(/type="button"/)
-    expect(composedHtml).toMatch(/data-slot="icon"/)
-    expect(composedHtml).toMatch(/data-slot="label"/)
+    expect(composedHtml).toMatch(/width: 1em/)
+    expect(composedHtml).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
     expect(composedHtml).toMatch(/min-height: var\(--rmx-control-height-md\)/)
+    expect(composedHtml).toMatch(/padding-inline: var\(--rmx-space-sm\)/)
+    expect(composedHtml).toMatch(/aria-hidden\b/)
   })
 })
