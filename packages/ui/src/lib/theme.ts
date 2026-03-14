@@ -32,7 +32,7 @@ let themeVariableNames = {
   },
   fontSize: {
     '3xs': '--rmx-font-size-3xs',
-    '2xs': '--rmx-font-size-2xs',
+    xxs: '--rmx-font-size-xxs',
     xs: '--rmx-font-size-xs',
     sm: '--rmx-font-size-sm',
     md: '--rmx-font-size-md',
@@ -507,7 +507,7 @@ let buttonIconAttrsUtility = attrs({ 'aria-hidden': true })
 let buttonSizeSmUtility = css({
   minHeight: `calc(${theme.control.height.sm} - 4px)`,
   paddingInline: theme.control.paddingInline.sm,
-  fontSize: theme.fontSize['2xs'],
+  fontSize: theme.fontSize.xxs,
 })
 
 let buttonSizeMdUtility = css({
@@ -750,7 +750,7 @@ export const ui: ThemeUi = {
       color: theme.colors.text.secondary,
     }),
     caption: css({
-      fontSize: theme.fontSize['2xs'],
+      fontSize: theme.fontSize.xxs,
       lineHeight: theme.lineHeight.normal,
       color: theme.colors.text.muted,
     }),
@@ -809,7 +809,7 @@ export const ui: ThemeUi = {
       color: `color-mix(in oklab, ${theme.colors.text.secondary} 72%, white)`,
     }),
     supporting: css({
-      fontSize: theme.fontSize['2xs'],
+      fontSize: theme.fontSize.xxs,
       lineHeight: theme.lineHeight.normal,
       color: theme.colors.text.muted,
     }),
@@ -853,7 +853,7 @@ export const ui: ThemeUi = {
       color: theme.colors.text.secondary,
     }),
     help: css({
-      fontSize: theme.fontSize['2xs'],
+      fontSize: theme.fontSize.xxs,
       lineHeight: theme.lineHeight.normal,
       color: theme.colors.text.muted,
     }),
@@ -873,7 +873,7 @@ export const ui: ThemeUi = {
     }),
     heading: css({
       margin: 0,
-      fontSize: theme.fontSize['2xs'],
+      fontSize: theme.fontSize.xxs,
       lineHeight: theme.lineHeight.normal,
       fontWeight: theme.fontWeight.semibold,
       letterSpacing: theme.letterSpacing.meta,
@@ -1041,7 +1041,7 @@ export const RMX_01_VALUES: ThemeValues = {
   },
   fontSize: {
     '3xs': '10px',
-    '2xs': '11px',
+    xxs: '11px',
     xs: '12px',
     sm: '13px',
     md: '14px',

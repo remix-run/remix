@@ -4,9 +4,17 @@ export let routes = {
   explorer: route('/', {
     index: get('/'),
     proofSheet: get('proof-sheet'),
-    themeValues: get('theme-values'),
+    glyphs: get('glyphs'),
+    themeTokens: route('theme-tokens', {
+      space: get('space'),
+      radius: get('radius'),
+      typography: get('typography'),
+      colors: get('colors'),
+      shadow: get('shadow'),
+      motion: get('motion'),
+      control: get('control'),
+    }),
     uiRecipes: route('ui-recipes', {
-      index: get('/'),
       text: get('text'),
       card: get('card'),
       button: get('button'),

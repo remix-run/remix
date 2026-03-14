@@ -21,14 +21,36 @@ let explorerController: Controller<typeof routes.explorer> = {
     proofSheet() {
       return renderPage(PAGES.proofSheet)
     },
-    themeValues() {
-      return renderPage(PAGES.themeValues)
+    glyphs() {
+      return renderPage(PAGES.glyphs)
+    },
+    themeTokens: {
+      actions: {
+        space() {
+          return renderPage(PAGES.themeTokenSpace)
+        },
+        radius() {
+          return renderPage(PAGES.themeTokenRadius)
+        },
+        typography() {
+          return renderPage(PAGES.themeTokenTypography)
+        },
+        colors() {
+          return renderPage(PAGES.themeTokenColors)
+        },
+        shadow() {
+          return renderPage(PAGES.themeTokenShadow)
+        },
+        motion() {
+          return renderPage(PAGES.themeTokenMotion)
+        },
+        control() {
+          return renderPage(PAGES.themeTokenControl)
+        },
+      },
     },
     uiRecipes: {
       actions: {
-        index() {
-          return renderPage(PAGES.uiRecipes)
-        },
         text() {
           return renderPage(PAGES.uiRecipeText)
         },

@@ -6,14 +6,13 @@ import {
   glyphNames,
   RMX_01,
   RMX_01_GLYPHS,
-  RMX_01_VALUES,
   theme,
   ui,
 } from 'remix/ui'
 import type { ThemeRecipe } from 'remix/ui'
 import { EXAMPLES } from '../examples/index.tsx'
 import type { PageDefinition } from './data.ts'
-import { NAV_GROUPS, PAGES, UI_RECIPE_PAGES } from './data.ts'
+import { PAGES, PRIMARY_PAGES, THEME_TOKEN_PAGES, UI_RECIPE_PAGES } from './data.ts'
 
 let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
 
@@ -56,49 +55,79 @@ export function ExplorerDocument() {
 function Sidebar() {
   return ({ currentPath }: { currentPath: string }) => (
     <div mix={ui.sidebar.panel}>
-      {NAV_GROUPS.map(group => (
-        <section key={group.label} mix={ui.sidebar.section}>
-          <p mix={ui.sidebar.heading}>{group.label}</p>
-          <nav aria-label={group.label} mix={ui.nav.list}>
-            {group.pages.map(page => {
-              let isUiRecipesParent = page.id === PAGES.uiRecipes.id
+      <nav aria-label="Design system pages" mix={ui.nav.list}>
+        {PRIMARY_PAGES.slice(0, 2).map(page => (
+          <a
+            key={page.path}
+            href={page.path}
+            aria-current={currentPath === page.path ? 'page' : undefined}
+            mix={getNavItemMix(page.path, currentPath)}
+          >
+            {page.navLabel}
+          </a>
+        ))}
+      </nav>
 
-              return (
-                <div key={page.path} mix={sidebarNavGroupItemCss}>
-                  <a
-                    href={page.path}
-                    aria-current={currentPath === page.path ? 'page' : undefined}
-                    mix={getNavItemMix(page.path, currentPath)}
-                  >
-                    {page.navLabel}
-                  </a>
+      <section mix={ui.sidebar.section}>
+        <p mix={ui.sidebar.heading}>Theme Tokens</p>
+        <nav aria-label="Theme token pages" mix={ui.nav.list}>
+          {THEME_TOKEN_PAGES.map(tokenPage => (
+            <a
+              key={tokenPage.path}
+              href={tokenPage.path}
+              aria-current={currentPath === tokenPage.path ? 'page' : undefined}
+              mix={getSubnavItemMix(tokenPage.path, currentPath)}
+            >
+              {tokenPage.navLabel}
+            </a>
+          ))}
+        </nav>
+      </section>
 
-                  {isUiRecipesParent ? (
-                    <nav aria-label="UI mixin pages" mix={sidebarSubnavCss}>
-                      {UI_RECIPE_PAGES.map(recipePage => (
-                        <a
-                          key={recipePage.path}
-                          href={recipePage.path}
-                          aria-current={currentPath === recipePage.path ? 'page' : undefined}
-                          mix={getSubnavItemMix(recipePage.path, currentPath)}
-                        >
-                          {recipePage.navLabel}
-                        </a>
-                      ))}
-                    </nav>
-                  ) : null}
-                </div>
-              )
-            })}
-          </nav>
-        </section>
-      ))}
+      <nav aria-label="Additional API pages" mix={ui.nav.list}>
+        <a
+          href={PAGES.glyphs.path}
+          aria-current={currentPath === PAGES.glyphs.path ? 'page' : undefined}
+          mix={getNavItemMix(PAGES.glyphs.path, currentPath)}
+        >
+          {PAGES.glyphs.navLabel}
+        </a>
+      </nav>
+
+      <section mix={ui.sidebar.section}>
+        <p mix={ui.sidebar.heading}>UI Mixins</p>
+        <nav aria-label="UI mixin pages" mix={ui.nav.list}>
+          {UI_RECIPE_PAGES.map(recipePage => (
+            <a
+              key={recipePage.path}
+              href={recipePage.path}
+              aria-current={currentPath === recipePage.path ? 'page' : undefined}
+              mix={getSubnavItemMix(recipePage.path, currentPath)}
+            >
+              {recipePage.navLabel}
+            </a>
+          ))}
+        </nav>
+      </section>
+
+      <nav aria-label="Remaining pages" mix={ui.nav.list}>
+        {PRIMARY_PAGES.slice(3).map(page => (
+          <a
+            key={page.path}
+            href={page.path}
+            aria-current={currentPath === page.path ? 'page' : undefined}
+            mix={getNavItemMix(page.path, currentPath)}
+          >
+            {page.navLabel}
+          </a>
+        ))}
+      </nav>
 
       <section mix={[calloutCss, calloutInfoCss]}>
-        <p mix={[ui.text.label, calloutTitleCss]}>Why this structure?</p>
+        <p mix={[ui.text.label, calloutTitleCss]}>What this shows</p>
         <p mix={[ui.text.bodySm, calloutBodyCss]}>
-          The demo is now documenting the whole system, while RMX_01 is simply the currently selected
-          default theme.
+          RMX_01 is the current default theme, and the pages here show the tokens, mixins, blocks,
+          and examples available right now.
         </p>
       </section>
     </div>
@@ -125,12 +154,12 @@ function PageContent() {
       return <ProofSheetPage />
     }
 
-    if (page.id === PAGES.themeValues.id) {
-      return <ThemeValuesPage />
+    if (THEME_TOKEN_PAGES.some(tokenPage => tokenPage.id === page.id)) {
+      return <ThemeTokenDetailPage page={page} />
     }
 
-    if (page.id === PAGES.uiRecipes.id) {
-      return <UiRecipesPage />
+    if (page.id === PAGES.glyphs.id) {
+      return <GlyphsPage />
     }
 
     if (UI_RECIPE_PAGES.some(recipePage => recipePage.id === page.id)) {
@@ -149,13 +178,13 @@ function OverviewPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="System model"
-        description="The design system now has four layers that should stay in sync: raw theme values, semantic ui mixins, structural blocks, and thin component ergonomics built on top."
+        title="Available today"
+        description="The explorer is organized around the pieces you can use directly: theme tokens, ui mixins, blocks, and proof-sheet examples."
       >
         <div mix={threeColumnGridCss}>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>1. Theme Values</p>
+              <p mix={ui.card.eyebrow}>1. Theme Tokens</p>
               <h3 mix={ui.card.title}>`theme` is the contract</h3>
               <p mix={ui.card.description}>
                 Components and app code read `theme.*` variable references, while themes define the
@@ -167,7 +196,7 @@ function OverviewPage() {
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>2. UI Mixins</p>
-              <h3 mix={ui.card.title}>`ui` is the compositional layer</h3>
+              <h3 mix={ui.card.title}>`ui` speeds up composition</h3>
               <p mix={ui.card.description}>
                 Mixins like `ui.button.primary`, `ui.card.base`, and `ui.nav.item` make composition
                 fast without scattering one-off styling decisions through the app.
@@ -178,7 +207,7 @@ function OverviewPage() {
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>3. Blocks</p>
-              <h3 mix={ui.card.title}>Blocks compose structure</h3>
+              <h3 mix={ui.card.title}>Blocks handle bigger structure</h3>
               <p mix={ui.card.description}>
                 Cards, sidebars, rails, and shell sections are larger structural pieces that can be
                 built from shared mixins without immediately turning into full behavioral components.
@@ -200,44 +229,44 @@ function OverviewPage() {
       </Section>
 
       <Section
-        title="What this explorer covers"
-        description="The sidebar maps the design system itself, not just a single pretty page."
+        title="Pages"
+        description="Use the sidebar to jump straight to the token, mixin, block, and proof-sheet pages you need."
       >
-        <div mix={twoColumnGridCss}>
+        <div mix={exampleStackCss}>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>Current pages</p>
-              <h3 mix={ui.card.title}>A docs-style model for the system</h3>
+              <p mix={ui.card.eyebrow}>Browse</p>
+              <h3 mix={ui.card.title}>Focused pages by API area</h3>
               <p mix={ui.card.description}>
-                Overview, proof sheet, theme values, ui mixins, components, and blocks are split into
-                separate pages so each part can grow without turning the demo into one giant scroll.
+                Theme tokens, glyphs, ui mixins, components, and blocks each have their own pages so
+                the explorer stays easy to scan.
               </p>
             </div>
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
-                <li>Overview explains the architecture.</li>
+                <li>Overview highlights what is available.</li>
                 <li>Proof sheet shows the feel of a theme in context.</li>
-                <li>API pages show the contract and mixin surface.</li>
+                <li>API pages show the available tokens, mixins, and blocks.</li>
               </ul>
             </div>
           </article>
 
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>Next obvious steps</p>
-              <h3 mix={ui.card.title}>This structure supports future tooling</h3>
+              <p mix={ui.card.eyebrow}>Use</p>
+              <h3 mix={ui.card.title}>Examples stay practical</h3>
               <p mix={ui.card.description}>
-                The explorer is now in a good place for a theme picker, a theme editor, route-level
-                examples, and eventually real first-party component docs.
+                The explorer is meant to show what is available and how to use it briefly, without
+                turning every page into a long explanation.
               </p>
             </div>
             <div mix={ui.card.body}>
               <div mix={stackSmCss}>
                 <div mix={[calloutCss, calloutInfoCss]}>
-                  <p mix={[ui.text.label, calloutTitleCss]}>Planned</p>
+                  <p mix={[ui.text.label, calloutTitleCss]}>Current focus</p>
                   <p mix={[ui.text.bodySm, calloutBodyCss]}>
-                    Switch between themes in the sidebar and use the proof sheet as the immediate
-                    visual acceptance test.
+                    Keep tightening the shared tokens, mixins, typography, and examples until the
+                    system is strong enough for first-party components.
                   </p>
                 </div>
               </div>
@@ -477,135 +506,556 @@ function ProofSheetPage() {
   )
 }
 
-function ThemeValuesPage() {
+function ThemeTokenDetailPage() {
+  return ({ page }: { page: PageDefinition }) => {
+    if (page.id === PAGES.themeTokenSpace.id) {
+      return <ThemeTokenSpacePage />
+    }
+
+    if (page.id === PAGES.themeTokenRadius.id) {
+      return <ThemeTokenRadiusPage />
+    }
+
+    if (page.id === PAGES.themeTokenTypography.id) {
+      return <ThemeTokenTypographyPage />
+    }
+
+    if (page.id === PAGES.themeTokenColors.id) {
+      return <ThemeTokenColorsPage />
+    }
+
+    if (page.id === PAGES.themeTokenShadow.id) {
+      return <ThemeTokenShadowPage />
+    }
+
+    if (page.id === PAGES.themeTokenMotion.id) {
+      return <ThemeTokenMotionPage />
+    }
+
+    return <ThemeTokenControlPage />
+  }
+}
+
+function ThemeTokenSpacePage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <div mix={exampleStackCss}>
+          <RecipeExample
+            code={`<div mix={[ui.stack, css({ gap: theme.space.sm })]}>
+  <div mix={[ui.card.secondary, css({ padding: theme.space.xs })]}>theme.space.xs</div>
+  <div mix={[ui.card.secondary, css({ padding: theme.space.sm })]}>theme.space.sm</div>
+  <div mix={[ui.card.secondary, css({ padding: theme.space.md })]}>theme.space.md</div>
+  <div mix={[ui.card.secondary, css({ padding: theme.space.lg })]}>theme.space.lg</div>
+</div>`}
+            description="Use space tokens for padding and internal rhythm so density changes with the theme instead of being hard-coded per component."
+            previewMix={docsExamplePreviewStartCss}
+            title="Padding scale"
+          >
+            <div mix={[ui.stack, css({ gap: theme.space.sm, width: '100%' })]}>
+              <div mix={[ui.card.secondary, css({ padding: theme.space.xs })]}>theme.space.xs</div>
+              <div mix={[ui.card.secondary, css({ padding: theme.space.sm })]}>theme.space.sm</div>
+              <div mix={[ui.card.secondary, css({ padding: theme.space.md })]}>theme.space.md</div>
+              <div mix={[ui.card.secondary, css({ padding: theme.space.lg })]}>theme.space.lg</div>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={[ui.stack, css({ gap: theme.space.xs })]}>
+  <div mix={spaceRowSampleCss}>
+    <span />
+    <span />
+    <span />
+  </div>
+  <div mix={[spaceRowSampleCss, css({ gap: theme.space.sm })]}>
+    <span />
+    <span />
+    <span />
+  </div>
+  <div mix={[spaceRowSampleCss, css({ gap: theme.space.md })]}>
+    <span />
+    <span />
+    <span />
+  </div>
+</div>`}
+            description="Gap tokens keep repeated layouts consistent across rows, stacks, toolbars, and grouped controls."
+            previewMix={docsExamplePreviewStartCss}
+            title="Gap rhythm"
+          >
+            <div mix={[ui.stack, css({ gap: theme.space.sm, width: '100%' })]}>
+              <div mix={[spaceRowSampleCss, css({ gap: theme.space.xs })]}>
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+              </div>
+              <div mix={[spaceRowSampleCss, css({ gap: theme.space.sm })]}>
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+              </div>
+              <div mix={[spaceRowSampleCss, css({ gap: theme.space.md })]}>
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+              </div>
+              <div mix={[spaceRowSampleCss, css({ gap: theme.space.lg })]}>
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+                <span mix={spaceDotCss} />
+              </div>
+            </div>
+          </RecipeExample>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ThemeTokenRadiusPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <RecipeExample
+          code={`<div mix={radiusPreviewGridCss}>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.none })]}>none</div>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.sm })]}>sm</div>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.md })]}>md</div>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.lg })]}>lg</div>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.xl })]}>xl</div>
+  <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.full })]}>full</div>
+</div>`}
+          description="Use radius tokens directly when a component needs a specific corner shape instead of introducing another semantic abstraction."
+          previewMix={docsExamplePreviewStartCss}
+          title="Corner shapes"
+        >
+          <div mix={radiusPreviewGridCss}>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.none })]}>none</div>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.sm })]}>sm</div>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.md })]}>md</div>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.lg })]}>lg</div>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.xl })]}>xl</div>
+            <div mix={[radiusTokenSampleCss, css({ borderRadius: theme.radius.full })]}>full</div>
+          </div>
+        </RecipeExample>
+      </section>
+    </div>
+  )
+}
+
+function ThemeTokenTypographyPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <div mix={exampleStackCss}>
+          <RecipeExample
+            code={`<div mix={typePreviewStackCss}>
+  <p mix={css({ fontSize: theme.fontSize.xxs })}>xxs label</p>
+  <p mix={css({ fontSize: theme.fontSize.xs })}>xs body</p>
+  <p mix={css({ fontSize: theme.fontSize.md })}>md body</p>
+  <p mix={css({ fontSize: theme.fontSize.xl, fontWeight: theme.fontWeight.semibold })}>xl title</p>
+</div>`}
+            description="Font size tokens should change the overall rhythm of the theme without every component redefining its own scale."
+            previewMix={docsExamplePreviewStartCss}
+            title="Font sizes"
+          >
+            <div mix={typePreviewStackCss}>
+              <p mix={[tokenTextResetCss, css({ fontSize: theme.fontSize.xxs })]}>xxs label</p>
+              <p mix={[tokenTextResetCss, css({ fontSize: theme.fontSize.xs })]}>xs body</p>
+              <p mix={[tokenTextResetCss, css({ fontSize: theme.fontSize.md })]}>md body</p>
+              <p
+                mix={[
+                  tokenTextResetCss,
+                  css({ fontSize: theme.fontSize.xl, fontWeight: theme.fontWeight.semibold }),
+                ]}
+              >
+                xl title
+              </p>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={typePreviewStackCss}>
+  <p mix={css({ fontWeight: theme.fontWeight.normal })}>normal</p>
+  <p mix={css({ fontWeight: theme.fontWeight.medium })}>medium</p>
+  <p mix={css({ fontWeight: theme.fontWeight.semibold })}>semibold</p>
+  <p mix={css({ fontWeight: theme.fontWeight.bold })}>bold</p>
+</div>`}
+            description="Weight tokens define emphasis and hierarchy while staying inside the same type family."
+            previewMix={docsExamplePreviewStartCss}
+            title="Font weights"
+          >
+            <div mix={typePreviewStackCss}>
+              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.normal })]}>normal</p>
+              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.medium })]}>medium</p>
+              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.semibold })]}>semibold</p>
+              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.bold })]}>bold</p>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={lineHeightPreviewStackCss}>
+  <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.tight })]}>Tight line height keeps dense product labels, short instructions, and compact headings feeling crisp without opening extra space between every wrapped line of text.</p>
+  <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.normal })]}>Normal line height is the default workhorse for app copy, status messages, and short paragraphs where readability matters but the surface still needs to stay compact.</p>
+  <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.relaxed })]}>Relaxed line height gives longer notes, supporting explanations, and reference text a calmer rhythm so extended reading feels easier inside cards, sidebars, and content areas.</p>
+</div>`}
+            description="Line height tokens tune how open or compact the text feels across a theme."
+            previewMix={docsExamplePreviewStartCss}
+            title="Line heights"
+          >
+            <div mix={lineHeightPreviewStackCss}>
+              <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.tight })]}>
+                Tight line height keeps dense product labels, short instructions, and compact
+                headings feeling crisp without opening extra space between every wrapped line of
+                text.
+              </p>
+              <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.normal })]}>
+                Normal line height is the default workhorse for app copy, status messages, and
+                short paragraphs where readability matters but the surface still needs to stay
+                compact.
+              </p>
+              <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.relaxed })]}>
+                Relaxed line height gives longer notes, supporting explanations, and reference text
+                a calmer rhythm so extended reading feels easier inside cards, sidebars, and
+                content areas.
+              </p>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={typePreviewStackCss}>
+  <p mix={css({ letterSpacing: theme.letterSpacing.tight })}>tight tracking</p>
+  <p mix={css({ letterSpacing: theme.letterSpacing.normal })}>normal tracking</p>
+  <p mix={css({ letterSpacing: theme.letterSpacing.wide, textTransform: 'uppercase' })}>wide tracking</p>
+</div>`}
+            description="Tracking tokens help themes fine-tune how compact or airy labels and titles feel."
+            previewMix={docsExamplePreviewStartCss}
+            title="Letter spacing"
+          >
+            <div mix={typePreviewStackCss}>
+              <p mix={[tokenTextResetCss, css({ letterSpacing: theme.letterSpacing.tight })]}>
+                tight tracking
+              </p>
+              <p mix={[tokenTextResetCss, css({ letterSpacing: theme.letterSpacing.normal })]}>
+                normal tracking
+              </p>
+              <p
+                mix={[
+                  tokenTextResetCss,
+                  css({ letterSpacing: theme.letterSpacing.wide, textTransform: 'uppercase' }),
+                ]}
+              >
+                wide tracking
+              </p>
+            </div>
+          </RecipeExample>
+        </div>
+      </section>
+
+      <Section
+        title="Font families"
+        description="Family tokens keep the system grounded in a readable sans stack with a distinct mono option for code and metadata."
+      >
+        <RecipeExample
+          code={`<div mix={typePreviewStackCss}>
+  <p mix={css({ fontFamily: theme.fontFamily.sans })}>Sans family for interface copy</p>
+  <code mix={css({ fontFamily: theme.fontFamily.mono })}>Mono family for code and diagnostics</code>
+</div>`}
+          description="Family tokens should be enough to support ordinary interface copy and code-like content without reaching for custom stacks."
+          previewMix={docsExamplePreviewStartCss}
+          title="Font families"
+        >
+          <div mix={typePreviewStackCss}>
+            <p mix={[tokenTextResetCss, css({ fontFamily: theme.fontFamily.sans })]}>
+              Sans family for interface copy
+            </p>
+            <code mix={[ui.text.code, css({ fontFamily: theme.fontFamily.mono })]}>
+              Mono family for code and diagnostics
+            </code>
+          </div>
+        </RecipeExample>
+      </Section>
+    </div>
+  )
+}
+
+function ThemeTokenColorsPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <div mix={exampleStackCss}>
+          <RecipeExample
+            code={`<div mix={colorStackCss}>
+  <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.canvas })]}>theme.colors.background.canvas</div>
+  <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.surface })]}>theme.colors.background.surface</div>
+  <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.surfaceSecondary })]}>theme.colors.background.surfaceSecondary</div>
+  <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.inset })]}>theme.colors.background.inset</div>
+</div>`}
+            description="Background roles should separate canvas, ordinary surfaces, secondary surfaces, and inset treatments without hard-coding specific colors."
+            previewMix={docsExamplePreviewStartCss}
+            title="Surface stack"
+          >
+            <div mix={colorStackCss}>
+              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.canvas })]}>
+                <code mix={ui.text.code}>theme.colors.background.canvas</code>
+              </div>
+              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.surface })]}>
+                <code mix={ui.text.code}>theme.colors.background.surface</code>
+              </div>
+              <div
+                mix={[
+                  colorSwatchRowCss,
+                  css({ backgroundColor: theme.colors.background.surfaceSecondary }),
+                ]}
+              >
+                <code mix={ui.text.code}>theme.colors.background.surfaceSecondary</code>
+              </div>
+              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.inset })]}>
+                <code mix={ui.text.code}>theme.colors.background.inset</code>
+              </div>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={typePreviewStackCss}>
+  <p mix={css({ color: theme.colors.text.primary })}>theme.colors.text.primary</p>
+  <p mix={css({ color: theme.colors.text.secondary })}>theme.colors.text.secondary</p>
+  <p mix={css({ color: theme.colors.text.muted })}>theme.colors.text.muted</p>
+  <p mix={css({ color: theme.colors.text.link })}>theme.colors.text.link</p>
+</div>`}
+            description="Text roles should provide hierarchy and emphasis without components choosing one-off colors."
+            previewMix={docsExamplePreviewStartCss}
+            title="Text stack"
+          >
+            <div mix={typePreviewStackCss}>
+              <p mix={[tokenTextResetCss, css({ color: theme.colors.text.primary })]}>
+                theme.colors.text.primary
+              </p>
+              <p mix={[tokenTextResetCss, css({ color: theme.colors.text.secondary })]}>
+                theme.colors.text.secondary
+              </p>
+              <p mix={[tokenTextResetCss, css({ color: theme.colors.text.muted })]}>
+                theme.colors.text.muted
+              </p>
+              <p mix={[tokenTextResetCss, css({ color: theme.colors.text.link })]}>
+                theme.colors.text.link
+              </p>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={statusPreviewStackCss}>
+  <button mix={ui.button.primary}>Primary action</button>
+  <button mix={ui.button.danger}>Danger action</button>
+  <span mix={[statusBadgeCss, ui.status.info]}>Info</span>
+  <span mix={[statusBadgeCss, ui.status.success]}>Success</span>
+</div>`}
+            description="Action and status roles should feel related to the rest of the theme while still communicating priority and meaning."
+            previewMix={docsExamplePreviewStartCss}
+            title="Action and status"
+          >
+            <div mix={statusPreviewStackCss}>
+              <button mix={ui.button.primary}>Primary action</button>
+              <button mix={ui.button.danger}>Danger action</button>
+              <span mix={[statusBadgeCss, ui.status.info]}>Info</span>
+              <span mix={[statusBadgeCss, ui.status.success]}>Success</span>
+            </div>
+          </RecipeExample>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ThemeTokenShadowPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <RecipeExample
+          code={`<div mix={shadowPreviewGridCss}>
+  <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.xs })]}>theme.shadow.xs</div>
+  <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.sm })]}>theme.shadow.sm</div>
+  <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.md })]}>theme.shadow.md</div>
+  <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.lg })]}>theme.shadow.lg</div>
+</div>`}
+          description="Shadow tokens should make changes in depth and emphasis visible immediately when a theme changes."
+          previewMix={docsExamplePreviewStartCss}
+          title="Shadow samples"
+        >
+          <div mix={shadowPreviewGridCss}>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.xs })]}>theme.shadow.xs</div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.sm })]}>theme.shadow.sm</div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.md })]}>theme.shadow.md</div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.lg })]}>theme.shadow.lg</div>
+          </div>
+        </RecipeExample>
+      </section>
+    </div>
+  )
+}
+
+function ThemeTokenMotionPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <div mix={exampleStackCss}>
+          <RecipeExample
+            code={`<div mix={motionPreviewStackCss}>
+  <button mix={[ui.button.secondary, motionHoverSampleCss, css({ transitionDuration: theme.duration.fast })]}>
+    Fast duration
+  </button>
+  <button mix={[ui.button.secondary, motionHoverSampleCss, css({ transitionDuration: theme.duration.normal })]}>
+    Normal duration
+  </button>
+  <button mix={[ui.button.secondary, motionHoverSampleCss, css({ transitionDuration: theme.duration.slow })]}>
+    Slow duration
+  </button>
+  <Glyph mix={[ui.icon.md, ui.animation.spin, css({ animationDuration: theme.duration.spin })]} name="spinner" />
+</div>`}
+            description="Duration tokens should control both transitions and longer-running activity indicators without hard-coding milliseconds into components."
+            previewMix={docsExamplePreviewStartCss}
+            title="Durations"
+          >
+            <div mix={motionPreviewStackCss}>
+              <button
+                mix={[
+                  ui.button.secondary,
+                  motionHoverSampleCss,
+                  css({ transitionDuration: theme.duration.fast }),
+                ]}
+              >
+                Fast duration
+              </button>
+              <button
+                mix={[
+                  ui.button.secondary,
+                  motionHoverSampleCss,
+                  css({ transitionDuration: theme.duration.normal }),
+                ]}
+              >
+                Normal duration
+              </button>
+              <button
+                mix={[
+                  ui.button.secondary,
+                  motionHoverSampleCss,
+                  css({ transitionDuration: theme.duration.slow }),
+                ]}
+              >
+                Slow duration
+              </button>
+              <Glyph
+                mix={[ui.icon.md, ui.animation.spin, css({ animationDuration: theme.duration.spin })]}
+                name="spinner"
+              />
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={motionPreviewStackCss}>
+  <button mix={[ui.button.secondary, motionHoverSampleCss, css({ transitionTimingFunction: theme.easing.standard })]}>
+    Standard easing
+  </button>
+  <button mix={[ui.button.secondary, motionHoverSampleCss, css({ transitionTimingFunction: theme.easing.emphasized })]}>
+    Emphasized easing
+  </button>
+</div>`}
+            description="Easing tokens should give interactive elements a shared feel without each component choosing its own curve."
+            previewMix={docsExamplePreviewStartCss}
+            title="Easing"
+          >
+            <div mix={motionPreviewStackCss}>
+              <button
+                mix={[
+                  ui.button.secondary,
+                  motionHoverSampleCss,
+                  css({ transitionTimingFunction: theme.easing.standard }),
+                ]}
+              >
+                Standard easing
+              </button>
+              <button
+                mix={[
+                  ui.button.secondary,
+                  motionHoverSampleCss,
+                  css({ transitionTimingFunction: theme.easing.emphasized }),
+                ]}
+              >
+                Emphasized easing
+              </button>
+            </div>
+          </RecipeExample>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ThemeTokenControlPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <section mix={sectionCss}>
+        <div mix={exampleStackCss}>
+          <RecipeExample
+            code={`<div mix={controlPreviewStackCss}>
+  <button mix={[ui.button.base, css({ minHeight: theme.control.height.sm })]}>theme.control.height.sm</button>
+  <button mix={[ui.button.base, css({ minHeight: theme.control.height.md })]}>theme.control.height.md</button>
+</div>`}
+            description="Height tokens should keep small and medium controls aligned across buttons, fields, menus, and other compact interactions."
+            previewMix={docsExamplePreviewStartCss}
+            title="Control heights"
+          >
+            <div mix={controlPreviewStackCss}>
+              <button mix={[ui.button.base, ui.button.tone.secondary, css({ minHeight: theme.control.height.sm })]}>
+                theme.control.height.sm
+              </button>
+              <button mix={[ui.button.base, ui.button.tone.secondary, css({ minHeight: theme.control.height.md })]}>
+                theme.control.height.md
+              </button>
+            </div>
+          </RecipeExample>
+
+          <RecipeExample
+            code={`<div mix={controlPreviewStackCss}>
+  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.sm })]}>padding sm</button>
+  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.md })]}>padding md</button>
+  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.lg })]}>padding lg</button>
+</div>`}
+            description="Inline padding tokens set how compact or roomy control chrome feels without changing component markup."
+            previewMix={docsExamplePreviewStartCss}
+            title="Inline padding"
+          >
+            <div mix={controlPreviewStackCss}>
+              <button
+                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.sm })]}
+              >
+                padding sm
+              </button>
+              <button
+                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.md })]}
+              >
+                padding md
+              </button>
+              <button
+                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.lg })]}
+              >
+                padding lg
+              </button>
+            </div>
+          </RecipeExample>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function GlyphsPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Core contract"
-        description="The contract is the stable API. Themes provide the values, but app code and first-party components always consume `theme.*` variable references."
-      >
-        <div mix={twoColumnGridCss}>
-          <TokenGroupCard
-            code="theme.space.md"
-            rows={[
-              ['xs', String(RMX_01_VALUES.space.xs)],
-              ['sm', String(RMX_01_VALUES.space.sm)],
-              ['md', String(RMX_01_VALUES.space.md)],
-              ['lg', String(RMX_01_VALUES.space.lg)],
-            ]}
-            title="Space scale"
-          />
-          <TokenGroupCard
-            code="theme.radius.lg"
-            rows={[
-              ['sm', String(RMX_01_VALUES.radius.sm)],
-              ['md', String(RMX_01_VALUES.radius.md)],
-              ['lg', String(RMX_01_VALUES.radius.lg)],
-              ['full', String(RMX_01_VALUES.radius.full)],
-            ]}
-            title="Radius scale"
-          />
-          <TokenGroupCard
-            code="theme.fontSize.sm"
-            rows={[
-              ['3xs', String(RMX_01_VALUES.fontSize['3xs'])],
-              ['xs', String(RMX_01_VALUES.fontSize.xs)],
-              ['md', String(RMX_01_VALUES.fontSize.md)],
-              ['2xl', String(RMX_01_VALUES.fontSize['2xl'])],
-            ]}
-            title="Typography sizes"
-          />
-          <TokenGroupCard
-            code="theme.shadow.md"
-            rows={[
-              ['xs', String(RMX_01_VALUES.shadow.xs)],
-              ['sm', String(RMX_01_VALUES.shadow.sm)],
-              ['md', String(RMX_01_VALUES.shadow.md)],
-              ['lg', String(RMX_01_VALUES.shadow.lg)],
-            ]}
-            title="Shadows and elevation"
-          />
-        </div>
-      </Section>
-
-      <Section
-        title="Semantic color roles"
-        description="The system distinguishes content, surfaces, borders, actions, and statuses so components can read the right semantic value rather than inventing their own colors."
-      >
-        <div mix={threeColumnGridCss}>
-          <ColorRoleCard
-            role="Surface stack"
-            swatches={[
-              ['Canvas', String(RMX_01_VALUES.colors.background.canvas)],
-              ['Surface', String(RMX_01_VALUES.colors.background.surface)],
-              ['Secondary', String(RMX_01_VALUES.colors.background.surfaceSecondary)],
-              ['Inset', String(RMX_01_VALUES.colors.background.inset)],
-            ]}
-          />
-          <ColorRoleCard
-            role="Text stack"
-            swatches={[
-              ['Primary', String(RMX_01_VALUES.colors.text.primary)],
-              ['Secondary', String(RMX_01_VALUES.colors.text.secondary)],
-              ['Muted', String(RMX_01_VALUES.colors.text.muted)],
-              ['Link', String(RMX_01_VALUES.colors.text.link)],
-            ]}
-          />
-          <ColorRoleCard
-            role="Action and status"
-            swatches={[
-              ['Primary', String(RMX_01_VALUES.colors.action.primary.background)],
-              ['Danger', String(RMX_01_VALUES.colors.action.danger.background)],
-              ['Info', String(RMX_01_VALUES.colors.status.info.background)],
-              ['Success', String(RMX_01_VALUES.colors.status.success.background)],
-            ]}
-          />
-        </div>
-      </Section>
-
-      <Section
-        title="Authoring model"
-        description="This is the contract the app and library code share. The actual component styling never needs JS-resolved values, only CSS variable references."
-      >
-        <article mix={ui.card.base}>
-          <div mix={ui.card.header}>
-            <p mix={ui.card.eyebrow}>Example</p>
-            <h3 mix={ui.card.title}>Theme values render into CSS custom properties</h3>
-          </div>
-          <div mix={ui.card.body}>
-            <pre mix={codeBlockCss}>
-              <code mix={codeTextCss}>{renderHighlightedCode(`let Theme = createTheme({
-  space: {
-    xs: "4px",
-    sm: "8px",
-    md: "12px",
-    lg: "16px",
-  },
-  colors: {
-    action: {
-      primary: {
-        background: "#3561cf",
-        foreground: "rgb(255 255 255 / 0.92)",
-      },
-    },
-  },
-})`)}</code>
-            </pre>
-            <pre mix={codeBlockCss}>
-              <code mix={codeTextCss}>{renderHighlightedCode(`:root {
-  --rmx-space-md: 12px;
-  --rmx-color-action-primary-background: #3561cf;
-}`)}</code>
-            </pre>
-          </div>
-        </article>
-      </Section>
-
-      <Section
         title="Glyph contract"
-        description="Glyphs are a sibling system to theme values: a fixed shared icon contract, a sprite sheet renderer, and a thin `<Glyph />` wrapper for app code and first-party components."
+        description="Glyphs are a sibling system to theme tokens: a fixed shared icon contract, a sprite sheet renderer, and a thin `<Glyph />` wrapper for app code and first-party components."
       >
-        <div mix={twoColumnGridCss}>
+        <div mix={exampleStackCss}>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>Usage</p>
@@ -680,112 +1130,6 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
             <div mix={glyphSizingItemCss}>
               <Glyph mix={[ui.icon.lg, glyphPreviewGlyphCss]} name="search" />
               <code mix={ui.text.code}>ui.icon.lg</code>
-            </div>
-          </div>
-        </article>
-      </Section>
-    </div>
-  )
-}
-
-function UiRecipesPage() {
-  return () => (
-    <div mix={pageSectionStackCss}>
-      <Section
-        title="Mixin Families"
-        description="Mixins are where the design system becomes practical. They should absorb recurring layout and typography decisions so app code composes instead of restyling."
-      >
-        <div mix={twoColumnGridCss}>
-          <RecipeExample
-            code={EXAMPLES.overviewText.code}
-            description="Page-level typography roles for headings, body copy, captions, and metadata."
-            href={PAGES.uiRecipeText.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Text roles"
-          >
-            {EXAMPLES.overviewText.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.overviewCard.code}
-            description="Shared shell, spacing, and slot rhythm for cards, popovers, and content panels."
-            href={PAGES.uiRecipeCard.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Card mixins"
-          >
-            {EXAMPLES.overviewCard.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.buttonAliases.code}
-            description="Compact action treatments for primary, surfaced neutral, text-first ghost, and destructive actions."
-            href={PAGES.uiRecipeButton.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Buttons and controls"
-          >
-            {EXAMPLES.buttonAliases.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.fieldStack.code}
-            description="Field chrome and label/help typography should travel together."
-            href={PAGES.uiRecipeField.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Fields"
-          >
-            {EXAMPLES.fieldStack.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.itemStatus.code}
-            description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
-            href={PAGES.uiRecipeItem.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Items and status"
-          >
-            {EXAMPLES.itemStatus.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.navOverview.code}
-            description="Sidebar and navigation primitives are useful app-level building blocks even though this docs shell itself is demo-specific."
-            href={PAGES.uiRecipeNav.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Sidebar and nav"
-          >
-            {EXAMPLES.navOverview.preview}
-          </RecipeExample>
-
-          <RecipeExample
-            code={EXAMPLES.rowStack.code}
-            description="Symmetrical row and stack primitives replace demo-specific flex helpers and pair naturally with the shared spacing scale."
-            href={PAGES.uiRecipeLayout.path}
-            previewMix={docsExamplePreviewCenterCss}
-            title="Row and stack"
-          >
-            {EXAMPLES.rowStack.preview}
-          </RecipeExample>
-        </div>
-      </Section>
-
-      <Section
-        title="Low-level composition still matters"
-        description="The mixin layer should not replace utility composition. It should sit above it and remove the most repetitive styling choices."
-      >
-        <article mix={ui.card.base}>
-          <div mix={ui.card.header}>
-            <p mix={ui.card.eyebrow}>Utilities</p>
-            <h3 mix={ui.card.title}>Mixins and low-level utilities can coexist</h3>
-          </div>
-          <div mix={utilityRowCss}>
-            <div mix={[ui.p.sm, ui.rounded.lg, ui.shadow.xs, ui.bg.surfaceSecondary, utilityChipCss]}>
-              <code mix={ui.text.code}>ui.p.sm</code>
-            </div>
-            <div mix={[ui.p.sm, ui.rounded.full, ui.bg.inset, utilityChipCss]}>
-              <code mix={ui.text.code}>ui.rounded.full</code>
-            </div>
-            <div mix={[ui.p.sm, ui.rounded.md, ui.borderColor.default, utilityOutlineCss]}>
-              <code mix={ui.text.code}>ui.borderColor.default</code>
             </div>
           </div>
         </article>
@@ -1343,64 +1687,6 @@ function Section() {
   )
 }
 
-function TokenGroupCard() {
-  return ({
-    code,
-    rows,
-    title,
-  }: {
-    code: string
-    rows: Array<[string, string]>
-    title: string
-  }) => (
-    <article mix={ui.card.base}>
-      <div mix={ui.card.header}>
-        <p mix={ui.card.eyebrow}>Value group</p>
-        <h3 mix={ui.card.title}>{title}</h3>
-      </div>
-      <div mix={ui.card.body}>
-        <code mix={[ui.text.code, inlineCodeCss]}>{renderHighlightedCode(code)}</code>
-        <div mix={tokenListCss}>
-          {rows.map(([label, value]) => (
-            <div key={label} mix={tokenRowCss}>
-              <span mix={ui.text.caption}>{label}</span>
-              <code mix={ui.text.code}>{value}</code>
-            </div>
-          ))}
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function ColorRoleCard() {
-  return ({
-    role,
-    swatches,
-  }: {
-    role: string
-    swatches: Array<[string, string]>
-  }) => (
-    <article mix={ui.card.base}>
-      <div mix={ui.card.header}>
-        <p mix={ui.card.eyebrow}>Color role</p>
-        <h3 mix={ui.card.title}>{role}</h3>
-      </div>
-      <div mix={ui.card.body}>
-        {swatches.map(([label, value]) => (
-          <div key={label} mix={swatchRowCss}>
-            <div mix={swatchMetaCss}>
-              <span mix={ui.text.caption}>{label}</span>
-              <code mix={ui.text.code}>{value}</code>
-            </div>
-            <span mix={[swatchCss, css({ backgroundColor: value })]} />
-          </div>
-        ))}
-      </div>
-    </article>
-  )
-}
-
 function RecipeExample() {
   return ({
     children,
@@ -1582,7 +1868,7 @@ let pageStackCss = css({
 let pageHeaderCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.xs,
+  gap: '2px',
 })
 
 let pageTitleCss = css({
@@ -1660,6 +1946,22 @@ let twoColumnGridCss = css({
   gap: theme.space.md,
   '@media (max-width: 920px)': {
     gridTemplateColumns: '1fr',
+  },
+})
+
+let exampleStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xl,
+})
+
+let lineHeightPreviewStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  '& > * + *': {
+    marginTop: theme.space.lg,
+    paddingTop: theme.space.lg,
+    borderTop: `1px solid ${theme.colors.border.subtle}`,
   },
 })
 
@@ -1922,50 +2224,6 @@ let codeTextCss = css({
   whiteSpace: 'pre',
 })
 
-let inlineCodeCss = css({
-  display: 'inline-flex',
-  alignSelf: 'flex-start',
-  padding: `${theme.space.xs} ${theme.space.sm}`,
-  border: `1px solid ${theme.colors.border.subtle}`,
-  borderRadius: theme.radius.md,
-  backgroundColor: theme.colors.background.inset,
-})
-
-let tokenListCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-})
-
-let tokenRowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: theme.space.sm,
-})
-
-let swatchRowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: theme.space.md,
-})
-
-let swatchMetaCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-  minWidth: 0,
-})
-
-let swatchCss = css({
-  width: '44px',
-  height: '24px',
-  borderRadius: theme.radius.full,
-  border: `1px solid ${theme.colors.border.subtle}`,
-  flexShrink: 0,
-})
-
 let docsExampleBlockCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -1975,7 +2233,7 @@ let docsExampleBlockCss = css({
 let docsExampleIntroCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.xs,
+  gap: '2px',
 })
 
 let docsExampleTitleCss = css({
@@ -2009,6 +2267,11 @@ let docsExamplePreviewCss = css({
 let docsExamplePreviewCenterCss = css({
   alignItems: 'center',
   justifyContent: 'center',
+})
+
+let docsExamplePreviewStartCss = css({
+  alignItems: 'stretch',
+  justifyContent: 'flex-start',
 })
 
 let docsExampleCodePanelCss = css({
@@ -2049,6 +2312,123 @@ let docsExampleLinkCss = css({
   '&:hover': {
     textDecoration: 'underline',
   },
+})
+
+let tokenTextResetCss = css({
+  margin: 0,
+})
+
+let typePreviewStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+  width: '100%',
+})
+
+let spaceRowSampleCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.space.sm,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.background.surfaceSecondary,
+})
+
+let spaceDotCss = css({
+  width: '18px',
+  height: '18px',
+  borderRadius: theme.radius.full,
+  backgroundColor: theme.colors.text.link,
+  flexShrink: 0,
+})
+
+let radiusPreviewGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: theme.space.sm,
+  width: '100%',
+  '@media (max-width: 640px)': {
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  },
+})
+
+let radiusTokenSampleCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '84px',
+  padding: theme.space.sm,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  backgroundColor: theme.colors.background.surface,
+  boxShadow: theme.shadow.xs,
+  fontSize: theme.fontSize.xs,
+  color: theme.colors.text.secondary,
+})
+
+let colorStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+  width: '100%',
+})
+
+let colorSwatchRowCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '52px',
+  padding: `${theme.space.sm} ${theme.space.md}`,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  boxSizing: 'border-box',
+})
+
+let statusPreviewStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: theme.space.sm,
+  width: '100%',
+})
+
+let shadowPreviewGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.md,
+  width: '100%',
+})
+
+let shadowTokenSampleCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '84px',
+  padding: theme.space.sm,
+  borderRadius: theme.radius.lg,
+  backgroundColor: theme.colors.background.surface,
+  color: theme.colors.text.secondary,
+})
+
+let motionPreviewStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: theme.space.md,
+  width: '100%',
+})
+
+let motionHoverSampleCss = css({
+  transitionProperty: 'transform, background-color, color, border-color',
+  transitionDuration: theme.duration.normal,
+  '&:hover': {
+    transform: 'translateX(8px)',
+  },
+})
+
+let controlPreviewStackCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: theme.space.sm,
+  width: '100%',
 })
 
 let anatomyGridCss = css({

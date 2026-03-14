@@ -7,11 +7,6 @@ export type PageDefinition = {
   title: string
 }
 
-export type NavGroupDefinition = {
-  label: string
-  pages: PageDefinition[]
-}
-
 export let PAGES = {
   overview: {
     id: 'overview',
@@ -20,7 +15,7 @@ export let PAGES = {
     eyebrow: 'Design System',
     title: 'RMX design system explorer',
     description:
-      'The demo now shows the design system itself: theme values, semantic mixins, structural blocks, and the current default theme preset.',
+      'Browse the current theme, token groups, mixins, blocks, and proof sheet examples in one place.',
   },
   proofSheet: {
     id: 'proof-sheet',
@@ -31,23 +26,77 @@ export let PAGES = {
     description:
       'A compact fake product view for quickly judging typography, hierarchy, controls, surfaces, and overall tone when evaluating a theme.',
   },
-  themeValues: {
-    id: 'theme-values',
-    path: '/theme-values',
-    navLabel: 'Theme Values',
-    eyebrow: 'Theme Contract',
-    title: 'Typed theme values backed by CSS custom properties',
+  themeTokenSpace: {
+    id: 'theme-token-space',
+    path: '/theme-tokens/space',
+    navLabel: 'Space',
+    eyebrow: 'Theme Token',
+    title: 'Space tokens',
     description:
-      'Apps and first-party components both read from the same variable contract, while themes provide the concrete values rendered into CSS.',
+      'Space tokens define the shared rhythm for padding, gaps, margins, and larger layout spacing across the system.',
   },
-  uiRecipes: {
-    id: 'ui-recipes',
-    path: '/ui-recipes',
-    navLabel: 'UI Mixins',
-    eyebrow: 'Semantic Mixins',
-    title: 'Composable ui mixins above the token layer',
+  themeTokenRadius: {
+    id: 'theme-token-radius',
+    path: '/theme-tokens/radius',
+    navLabel: 'Radius',
+    eyebrow: 'Theme Token',
+    title: 'Radius tokens',
     description:
-      'The `ui` surface turns raw variables into reusable styling primitives for text, cards, controls, fields, navigation, and status treatments.',
+      'Radius tokens define corner shapes from sharp utility treatments to rounded controls and pill-shaped actions.',
+  },
+  themeTokenTypography: {
+    id: 'theme-token-typography',
+    path: '/theme-tokens/typography',
+    navLabel: 'Typography',
+    eyebrow: 'Theme Token',
+    title: 'Typography tokens',
+    description:
+      'Typography tokens define families, sizes, weights, line heights, and tracking so text roles share one visual language.',
+  },
+  themeTokenColors: {
+    id: 'theme-token-colors',
+    path: '/theme-tokens/colors',
+    navLabel: 'Colors',
+    eyebrow: 'Theme Token',
+    title: 'Color tokens',
+    description:
+      'Color tokens stay semantic so components can choose the right role for text, surfaces, borders, actions, and statuses.',
+  },
+  themeTokenShadow: {
+    id: 'theme-token-shadow',
+    path: '/theme-tokens/shadow',
+    navLabel: 'Shadow',
+    eyebrow: 'Theme Token',
+    title: 'Shadow tokens',
+    description:
+      'Shadow tokens provide a compact elevation scale for controls, surfaces, menus, and higher-emphasis layers.',
+  },
+  themeTokenMotion: {
+    id: 'theme-token-motion',
+    path: '/theme-tokens/motion',
+    navLabel: 'Motion',
+    eyebrow: 'Theme Token',
+    title: 'Motion tokens',
+    description:
+      'Motion tokens define the timing and easing values that keep transitions and animations calm, consistent, and utilitarian.',
+  },
+  themeTokenControl: {
+    id: 'theme-token-control',
+    path: '/theme-tokens/control',
+    navLabel: 'Control',
+    eyebrow: 'Theme Token',
+    title: 'Control tokens',
+    description:
+      'Control tokens define the shared sizing primitives used by buttons, fields, and other compact interactive UI.',
+  },
+  glyphs: {
+    id: 'glyphs',
+    path: '/glyphs',
+    navLabel: 'Glyphs',
+    eyebrow: 'Glyph Contract',
+    title: 'Shared glyphs and icon sizing',
+    description:
+      'Glyphs are a sibling system to tokens: a fixed icon contract, a sprite sheet renderer, a thin `<Glyph />` wrapper, and shared icon sizing mixins.',
   },
   uiRecipeText: {
     id: 'ui-recipe-text',
@@ -116,19 +165,19 @@ export let PAGES = {
     id: 'components',
     path: '/components',
     navLabel: 'Components',
-    eyebrow: 'Component Layer',
-    title: 'Component ergonomics should sit on top of shared mixins and blocks',
+    eyebrow: 'Components',
+    title: 'Thin first-party components',
     description:
-      'The eventual first-party component library should feel thin and consistent because shared styling lives in the theme contract and `ui` mixins.',
+      'First-party components should stay focused on markup, behavior, and ergonomics while styling comes from shared tokens and mixins.',
   },
   layouts: {
     id: 'layouts',
     path: '/layouts',
     navLabel: 'Blocks',
-    eyebrow: 'Block Layer',
-    title: 'Structural blocks for application shells and surfaces',
+    eyebrow: 'Blocks',
+    title: 'Structural blocks for shells and surfaces',
     description:
-      'The docs shell here is demo-specific, but cards, sidebars, rails, and shell compositions are useful structural blocks worth carrying forward.',
+      'Use blocks for larger structural pieces like shells, sidebars, rails, and grouped surfaces.',
   },
 } as const satisfies Record<string, PageDefinition>
 
@@ -142,13 +191,20 @@ export let UI_RECIPE_PAGES = [
   PAGES.uiRecipeLayout,
 ] as const
 
-export let NAV_GROUPS: NavGroupDefinition[] = [
-  {
-    label: 'Themes',
-    pages: [PAGES.overview, PAGES.proofSheet],
-  },
-  {
-    label: 'API',
-    pages: [PAGES.themeValues, PAGES.uiRecipes, PAGES.components, PAGES.layouts],
-  },
-]
+export let THEME_TOKEN_PAGES = [
+  PAGES.themeTokenSpace,
+  PAGES.themeTokenRadius,
+  PAGES.themeTokenTypography,
+  PAGES.themeTokenColors,
+  PAGES.themeTokenShadow,
+  PAGES.themeTokenMotion,
+  PAGES.themeTokenControl,
+] as const
+
+export let PRIMARY_PAGES = [
+  PAGES.overview,
+  PAGES.proofSheet,
+  PAGES.glyphs,
+  PAGES.components,
+  PAGES.layouts,
+] as const

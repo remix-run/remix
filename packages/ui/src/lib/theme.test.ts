@@ -30,7 +30,7 @@ const sampleTheme = {
   },
   fontSize: {
     '3xs': '10px',
-    '2xs': '11px',
+    xxs: '11px',
     xs: '12px',
     sm: '14px',
     md: '16px',
