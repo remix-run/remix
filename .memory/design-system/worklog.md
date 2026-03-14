@@ -21,6 +21,8 @@ Implemented in `packages/theme`:
   - `ui.surface.*`
   - `ui.status.*`
   - `ui.button.*`
+  - `ui.icon.*`
+  - `ui.animation.spin`
 
 Implemented in `demos/theme-rmx-01`:
 
@@ -61,6 +63,11 @@ Most recent validation loops have included:
 
 - Keep refining the demo so each section clearly demonstrates a system concept without unnecessary noise.
 - Continue using screenshots for any non-trivial visual pass.
+- Add a few more reusable motion recipes and demos.
+  - user explicitly asked to remember candidates like `pulse` and other calm shared animations
+- Add component-level follow-ups for loading affordances.
+  - `Spinner` should wrap the spinner glyph + shared motion recipe
+  - `ActionButton` should demonstrate loading-state ergonomics and state transitions on top of the shared button system
 - Commit the current uncommitted design-system and memory changes when ready.
 
 ## Commits So Far
