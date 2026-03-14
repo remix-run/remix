@@ -182,6 +182,7 @@ export type ThemeValues = MapLeaves<typeof themeVariableNames, ThemeValue>
 export type ThemeVars = Readonly<Record<string, string>>
 export type CreateThemeOptions = {
   selector?: string
+  reset?: boolean
 }
 export type ThemeStyleProps = {
   nonce?: string
@@ -462,6 +463,9 @@ let controlGhostToneUtility = css({
 
 let buttonBaseStyleUtility = css({
   '--rmx-button-label-padding-inline': theme.space.xs,
+  all: 'unset',
+  boxSizing: 'border-box',
+  cursor: 'revert',
   position: 'relative',
   isolation: 'isolate',
   display: 'inline-flex',
@@ -1193,8 +1197,9 @@ export function createTheme(
   options: CreateThemeOptions = {},
 ): ThemeComponent {
   let selector = options.selector ?? ':root'
+  let reset = options.reset ?? true
   let vars = Object.freeze(collectThemeVars(themeVariableNames, values))
-  let cssText = serializeThemeCss(selector, vars)
+  let cssText = serializeThemeCss(selector, vars, { reset })
 
   function Theme() {
     return (props: ThemeStyleProps = {}) =>
@@ -1264,12 +1269,46 @@ function collectThemeVars(
   return vars
 }
 
-function serializeThemeCss(selector: string, vars: ThemeVars): string {
+function serializeThemeCss(
+  selector: string,
+  vars: ThemeVars,
+  options: { reset: boolean },
+): string {
   let lines = Object.entries(vars)
     .map(([name, value]) => `  ${name}: ${value};`)
     .join('\n')
 
-  return `${selector} {\n${lines}\n}`
+  let blocks = [`${selector} {\n${lines}\n}`]
+
+  if (options.reset) {
+    blocks.push(serializeThemeResetCss(selector))
+  }
+
+  return blocks.join('\n\n')
+}
+
+function serializeThemeResetCss(selector: string): string {
+  let fontFamily = theme.fontFamily.sans
+  let fontSize = theme.fontSize.md
+  let lineHeight = theme.lineHeight.normal
+  let textColor = theme.colors.text.primary
+  let backgroundColor = theme.colors.background.canvas
+  if (selector === ':root') {
+    return [
+      `*, *::before, *::after {\n  box-sizing: border-box;\n}`,
+      `html, body {\n  margin: 0;\n}`,
+      `body {\n  font-family: ${fontFamily};\n  font-size: ${fontSize};\n  line-height: ${lineHeight};\n  color: ${textColor};\n  background-color: ${backgroundColor};\n}`,
+      `:where(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, figure, blockquote) {\n  margin: 0;\n}`,
+      `:where(img, svg) {\n  display: block;\n}`,
+    ].join('\n\n')
+  }
+
+  return [
+    `${selector}, ${selector} *, ${selector} *::before, ${selector} *::after {\n  box-sizing: border-box;\n}`,
+    `${selector} {\n  font-family: ${fontFamily};\n  font-size: ${fontSize};\n  line-height: ${lineHeight};\n  color: ${textColor};\n  background-color: ${backgroundColor};\n}`,
+    `${selector} :where(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, figure, blockquote) {\n  margin: 0;\n}`,
+    `${selector} :where(img, svg) {\n  display: block;\n}`,
+  ].join('\n\n')
 }
 
 function escapeStyleText(cssText: string): string {

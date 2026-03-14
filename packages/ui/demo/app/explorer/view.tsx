@@ -1958,8 +1958,8 @@ let exampleStackCss = css({
 let lineHeightPreviewStackCss = css({
   display: 'flex',
   flexDirection: 'column',
+  gap: theme.space.lg,
   '& > * + *': {
-    marginTop: theme.space.lg,
     paddingTop: theme.space.lg,
     borderTop: `1px solid ${theme.colors.border.subtle}`,
   },

@@ -190,6 +190,10 @@ describe('createTheme', () => {
     expect(Theme.cssText).toMatch(/--rmx-space-md: 8px;/)
     expect(Theme.cssText).toMatch(/--rmx-control-height-sm: 28px;/)
     expect(Theme.cssText).toMatch(/--rmx-color-text-primary: #111827;/)
+    expect(Theme.cssText).toMatch(/html, body \{/)
+    expect(Theme.cssText).toMatch(/font-family: var\(--rmx-font-family-sans\);/)
+    expect(Theme.cssText).toMatch(/:where\(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, figure, blockquote\) \{/)
+    expect(Theme.cssText).not.toMatch(/:where\(button, input, textarea, select\) \{/)
     expect(Theme.vars['--rmx-color-action-primary-background']).toBe('#2563eb')
   })
 
@@ -199,6 +203,20 @@ describe('createTheme', () => {
     })
 
     expect(Theme.cssText).toMatch(/\[data-theme="dark"\] \{/)
+    expect(Theme.cssText).toMatch(
+      /\[data-theme="dark"\], \[data-theme="dark"\] \*, \[data-theme="dark"\] \*::before, \[data-theme="dark"\] \*::after \{/,
+    )
+    expect(Theme.cssText).not.toMatch(/\[data-theme="dark"\] :where\(a\) \{/)
+  })
+
+  it('allows opting out of the base reset', () => {
+    let Theme = createTheme(sampleTheme, {
+      reset: false,
+    })
+
+    expect(Theme.cssText).toMatch(/:root \{/)
+    expect(Theme.cssText).not.toMatch(/html, body \{/)
+    expect(Theme.cssText).not.toMatch(/box-sizing: border-box;/)
   })
 
   it('renders a style tag component', async () => {
@@ -279,6 +297,9 @@ describe('ui', () => {
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/--rmx-button-label-padding-inline: var\(--rmx-space-sm\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
+    expect(html).toMatch(/all: unset/)
+    expect(html).toMatch(/box-sizing: border-box/)
+    expect(html).toMatch(/cursor: revert/)
     expect(html).toMatch(/width: 1em/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
