@@ -1,126 +1,11 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
-import { createRouter } from 'remix/fetch-router'
-import { logger } from 'remix/logger-middleware'
 import { RMX_01, RMX_01_VALUES, theme, ui } from '@remix-run/theme'
 import type { ThemeUtility } from '@remix-run/theme'
+import type { PageDefinition } from './data.ts'
+import { NAV_GROUPS, PAGES, UI_RECIPE_PAGES } from './data.ts'
 
-type PageDefinition = {
-  description: string
-  eyebrow: string
-  id: string
-  navLabel: string
-  path: string
-  title: string
-}
-
-type NavGroupDefinition = {
-  label: string
-  pages: PageDefinition[]
-}
-
-let middleware = []
-
-if (process.env.NODE_ENV === 'development') {
-  middleware.push(logger())
-}
-
-let PAGES = {
-  overview: {
-    id: 'overview',
-    path: '/',
-    navLabel: 'Overview',
-    eyebrow: 'Design System',
-    title: 'RMX design system explorer',
-    description:
-      'The demo now shows the design system itself: theme values, semantic recipes, layout primitives, and the current default theme preset.',
-  },
-  proofSheet: {
-    id: 'proof-sheet',
-    path: '/proof-sheet',
-    navLabel: 'Proof Sheet',
-    eyebrow: 'Theme Proof Sheet',
-    title: 'RMX_01 in a realistic application frame',
-    description:
-      'A compact fake product view for quickly judging typography, hierarchy, controls, surfaces, and overall tone when evaluating a theme.',
-  },
-  themeValues: {
-    id: 'theme-values',
-    path: '/theme-values',
-    navLabel: 'Theme Values',
-    eyebrow: 'Theme Contract',
-    title: 'Typed theme values backed by CSS custom properties',
-    description:
-      'Apps and first-party components both read from the same variable contract, while themes provide the concrete values rendered into CSS.',
-  },
-  uiRecipes: {
-    id: 'ui-recipes',
-    path: '/ui-recipes',
-    navLabel: 'UI Recipes',
-    eyebrow: 'Semantic Recipes',
-    title: 'Composable ui recipes above the token layer',
-    description:
-      'The `ui` surface turns raw variables into reusable styling primitives for text, cards, controls, fields, navigation, and status treatments.',
-  },
-  components: {
-    id: 'components',
-    path: '/components',
-    navLabel: 'Components',
-    eyebrow: 'Component Layer',
-    title: 'Component ergonomics should sit on top of shared recipes',
-    description:
-      'The eventual first-party component library should feel thin and consistent because shared styling lives in the theme contract and `ui` recipes.',
-  },
-  layouts: {
-    id: 'layouts',
-    path: '/layouts',
-    navLabel: 'Layouts',
-    eyebrow: 'Layout Primitives',
-    title: 'Sidebar and navigation patterns for application shells',
-    description:
-      'The docs shell here is demo-specific, but the sidebar, nav, and panel ingredients are useful application-level primitives worth carrying forward.',
-  },
-} as const satisfies Record<string, PageDefinition>
-
-let NAV_GROUPS: NavGroupDefinition[] = [
-  {
-    label: 'Themes',
-    pages: [PAGES.overview, PAGES.proofSheet],
-  },
-  {
-    label: 'API',
-    pages: [PAGES.themeValues, PAGES.uiRecipes, PAGES.components, PAGES.layouts],
-  },
-]
-
-export let router = createRouter({ middleware })
-
-router.get('/', createPageHandler(PAGES.overview))
-router.get('/proof-sheet', createPageHandler(PAGES.proofSheet))
-router.get('/theme-values', createPageHandler(PAGES.themeValues))
-router.get('/ui-recipes', createPageHandler(PAGES.uiRecipes))
-router.get('/components', createPageHandler(PAGES.components))
-router.get('/layouts', createPageHandler(PAGES.layouts))
-
-function createPageHandler(page: PageDefinition) {
-  return async () => {
-    let stream = renderToStream(<Document page={page} />, {
-      onError(error) {
-        console.error(error)
-      },
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-store',
-      },
-    })
-  }
-}
-
-function Document() {
+export function ExplorerDocument() {
   return ({ page }: { page: PageDefinition }) => (
     <html>
       <head>
@@ -162,16 +47,36 @@ function Sidebar() {
         <section key={group.label} mix={ui.sidebar.section}>
           <p mix={ui.sidebar.heading}>{group.label}</p>
           <nav aria-label={group.label} mix={ui.nav.list}>
-            {group.pages.map(page => (
-              <a
-                key={page.path}
-                href={page.path}
-                aria-current={currentPath === page.path ? 'page' : undefined}
-                mix={getNavItemMix(page.path, currentPath)}
-              >
-                {page.navLabel}
-              </a>
-            ))}
+            {group.pages.map(page => {
+              let isUiRecipesParent = page.id === PAGES.uiRecipes.id
+
+              return (
+                <div key={page.path} mix={sidebarNavGroupItemCss}>
+                  <a
+                    href={page.path}
+                    aria-current={currentPath === page.path ? 'page' : undefined}
+                    mix={getNavItemMix(page.path, currentPath)}
+                  >
+                    {page.navLabel}
+                  </a>
+
+                  {isUiRecipesParent ? (
+                    <nav aria-label="UI recipe pages" mix={sidebarSubnavCss}>
+                      {UI_RECIPE_PAGES.map(recipePage => (
+                        <a
+                          key={recipePage.path}
+                          href={recipePage.path}
+                          aria-current={currentPath === recipePage.path ? 'page' : undefined}
+                          mix={getSubnavItemMix(recipePage.path, currentPath)}
+                        >
+                          {recipePage.navLabel}
+                        </a>
+                      ))}
+                    </nav>
+                  ) : null}
+                </div>
+              )
+            })}
           </nav>
         </section>
       ))}
@@ -189,12 +94,10 @@ function Sidebar() {
 
 function PageHeader() {
   return ({ page }: { page: PageDefinition }) => (
-    <header mix={[ui.card.base, pageHeaderCss]}>
-      <div mix={ui.card.header}>
-        <p mix={ui.card.eyebrow}>{page.eyebrow}</p>
-        <h2 mix={[ui.text.display, pageTitleCss]}>{page.title}</h2>
-        <p mix={[ui.text.body, pageDescriptionCss]}>{page.description}</p>
-      </div>
+    <header mix={pageHeaderCss}>
+      <p mix={ui.text.eyebrow}>{page.eyebrow}</p>
+      <h2 mix={[ui.text.display, pageTitleCss]}>{page.title}</h2>
+      <p mix={[ui.text.body, pageDescriptionCss]}>{page.description}</p>
     </header>
   )
 }
@@ -215,6 +118,10 @@ function PageContent() {
 
     if (page.id === PAGES.uiRecipes.id) {
       return <UiRecipesPage />
+    }
+
+    if (UI_RECIPE_PAGES.some(recipePage => recipePage.id === page.id)) {
+      return <UiRecipeDetailPage page={page} />
     }
 
     if (page.id === PAGES.components.id) {
@@ -623,7 +530,7 @@ function ThemeValuesPage() {
           </div>
           <div mix={ui.card.body}>
             <pre mix={codeBlockCss}>
-              <code>{`let Theme = createTheme({
+              <code mix={codeTextCss}>{renderHighlightedCode(`let Theme = createTheme({
   space: {
     xs: "4px",
     sm: "8px",
@@ -638,13 +545,13 @@ function ThemeValuesPage() {
       },
     },
   },
-})`}</code>
+})`)}</code>
             </pre>
             <pre mix={codeBlockCss}>
-              <code>{`:root {
+              <code mix={codeTextCss}>{renderHighlightedCode(`:root {
   --rmx-space-md: 12px;
   --rmx-color-action-primary-background: #3561cf;
-}`}</code>
+}`)}</code>
             </pre>
           </div>
         </article>
@@ -661,19 +568,35 @@ function UiRecipesPage() {
         description="Recipes are where the design system becomes practical. They should absorb recurring layout and typography decisions so app code composes instead of restyling."
       >
         <div mix={twoColumnGridCss}>
-          <RecipeFamilyCard
-            code="ui.text.*"
+          <RecipeExample
+            code={`<div mix={stackSmCss}>
+  <p mix={ui.text.eyebrow}>Page eyebrow</p>
+  <p mix={ui.text.title}>Section title</p>
+  <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
+</div>`}
             description="Page-level typography roles for headings, body copy, captions, and metadata."
+            href={PAGES.uiRecipeText.path}
+            previewMix={docsExamplePreviewTopLeftCss}
             title="Text roles"
           >
-            <p mix={ui.text.eyebrow}>Page eyebrow</p>
-            <p mix={ui.text.title}>Section title</p>
-            <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
-          </RecipeFamilyCard>
+            <div mix={stackSmCss}>
+              <p mix={ui.text.eyebrow}>Page eyebrow</p>
+              <p mix={ui.text.title}>Section title</p>
+              <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
+            </div>
+          </RecipeExample>
 
-          <RecipeFamilyCard
-            code="ui.card.*"
+          <RecipeExample
+            code={`<div mix={ui.card.base}>
+  <div mix={ui.card.header}>
+    <p mix={ui.card.eyebrow}>Surface</p>
+    <h4 mix={ui.card.title}>Card header</h4>
+    <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
+  </div>
+</div>`}
             description="Shared shell, spacing, and slot rhythm for cards, popovers, and content panels."
+            href={PAGES.uiRecipeCard.path}
+            previewMix={docsExamplePreviewCenterCss}
             title="Card recipes"
           >
             <div mix={ui.card.base}>
@@ -683,11 +606,17 @@ function UiRecipesPage() {
                 <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
               </div>
             </div>
-          </RecipeFamilyCard>
+          </RecipeExample>
 
-          <RecipeFamilyCard
-            code="ui.button.*"
+          <RecipeExample
+            code={`<div mix={buttonRowCss}>
+  <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Save</button>
+  <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Ghost</button>
+  <button type="button" mix={[buttonBaseCss, ui.button.danger]}>Delete</button>
+</div>`}
             description="Compact action treatments that stay cohesive across white, colored, and destructive states."
+            href={PAGES.uiRecipeButton.path}
+            previewMix={docsExamplePreviewTopLeftCss}
             title="Buttons and controls"
           >
             <div mix={buttonRowCss}>
@@ -701,11 +630,17 @@ function UiRecipesPage() {
                 Delete
               </button>
             </div>
-          </RecipeFamilyCard>
+          </RecipeExample>
 
-          <RecipeFamilyCard
-            code="ui.field.* / ui.fieldText.*"
+          <RecipeExample
+            code={`<div mix={stackXsCss}>
+  <label for="ui-recipe-field" mix={ui.fieldText.label}>Project name</label>
+  <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
+  <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
+</div>`}
             description="Field chrome and label/help typography should travel together."
+            href={PAGES.uiRecipeField.path}
+            previewMix={docsExamplePreviewTopLeftCss}
             title="Fields"
           >
             <div mix={stackXsCss}>
@@ -715,11 +650,18 @@ function UiRecipesPage() {
               <input id="ui-recipe-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
               <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
             </div>
-          </RecipeFamilyCard>
+          </RecipeExample>
 
-          <RecipeFamilyCard
-            code="ui.item.* / ui.status.*"
+          <RecipeExample
+            code={`<div mix={stackXsCss}>
+  <button type="button" mix={ui.item.base}>
+    <span>Members</span>
+    <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
+  </button>
+</div>`}
             description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
+            href={PAGES.uiRecipeItem.path}
+            previewMix={docsExamplePreviewTopLeftCss}
             title="Items and status"
           >
             <div mix={stackXsCss}>
@@ -732,11 +674,18 @@ function UiRecipesPage() {
                 <span mix={ui.text.caption}>Permanent</span>
               </button>
             </div>
-          </RecipeFamilyCard>
+          </RecipeExample>
 
-          <RecipeFamilyCard
-            code="ui.sidebar.* / ui.nav.*"
+          <RecipeExample
+            code={`<nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
+  <a href="/ui-recipes" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+    Current page
+  </a>
+  <a href="/ui-recipes" mix={ui.nav.item}>Secondary page</a>
+</nav>`}
             description="Sidebar and navigation primitives are useful app-level building blocks even though this docs shell itself is demo-specific."
+            href={PAGES.uiRecipeNav.path}
+            previewMix={docsExamplePreviewTopLeftCss}
             title="Sidebar and nav"
           >
             <div mix={[ui.card.secondary, navPreviewCardCss]}>
@@ -752,7 +701,7 @@ function UiRecipesPage() {
                 </nav>
               </div>
             </div>
-          </RecipeFamilyCard>
+          </RecipeExample>
         </div>
       </Section>
 
@@ -777,6 +726,350 @@ function UiRecipesPage() {
             </div>
           </div>
         </article>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeDetailPage() {
+  return ({ page }: { page: PageDefinition }) => {
+    if (page.id === PAGES.uiRecipeText.id) {
+      return <UiRecipeTextPage />
+    }
+
+    if (page.id === PAGES.uiRecipeCard.id) {
+      return <UiRecipeCardPage />
+    }
+
+    if (page.id === PAGES.uiRecipeButton.id) {
+      return <UiRecipeButtonPage />
+    }
+
+    if (page.id === PAGES.uiRecipeField.id) {
+      return <UiRecipeFieldPage />
+    }
+
+    if (page.id === PAGES.uiRecipeItem.id) {
+      return <UiRecipeItemPage />
+    }
+
+    return <UiRecipeNavPage />
+  }
+}
+
+function UiRecipeTextPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Text recipe overview"
+        description="Text recipes provide the shared page-level voice of the system. They are the default vocabulary for headings, body copy, supporting notes, captions, and code."
+      >
+        <RecipeExample
+          code={`<div mix={stackSmCss}>
+  <p mix={ui.text.eyebrow}>Page eyebrow</p>
+  <p mix={ui.text.title}>Section title</p>
+  <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
+  <p mix={ui.text.supporting}>Supporting notes can back away when needed.</p>
+  <code mix={ui.text.code}>theme.colors.background.surface</code>
+</div>`}
+          description="Use page-level text roles when content sits in ordinary document flow and should read like part of the page rather than a surface-specific micro-layout."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Page typography"
+        >
+          <div mix={stackSmCss}>
+            <p mix={ui.text.eyebrow}>Page eyebrow</p>
+            <p mix={ui.text.title}>Section title</p>
+            <p mix={ui.text.bodySm}>Readable default copy for descriptive text.</p>
+            <p mix={ui.text.supporting}>Supporting notes can back away when needed.</p>
+            <code mix={ui.text.code}>theme.colors.background.surface</code>
+          </div>
+        </RecipeExample>
+      </Section>
+
+      <Section
+        title="Included roles"
+        description="These roles should be enough for most page-level writing without inventing component-specific typography every time."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.body}>
+            <ul mix={bulletListCss}>
+              <li>`ui.text.eyebrow` for quiet uppercase metadata</li>
+              <li>`ui.text.title` and `ui.text.display` for hierarchy</li>
+              <li>`ui.text.body` and `ui.text.bodySm` for explanatory copy</li>
+              <li>`ui.text.supporting`, `ui.text.caption`, and `ui.text.code` for secondary needs</li>
+            </ul>
+          </div>
+        </article>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeCardPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Card recipe overview"
+        description="Card recipes solve recurring shell and spacing problems: the outer surface, the header rhythm, body spacing, action alignment, and footer boundaries."
+      >
+        <RecipeExample
+          code={`<article mix={[ui.card.base, docsExampleInnerCardCss]}>
+  <div mix={ui.card.headerWithAction}>
+    <div mix={ui.card.header}>
+      <p mix={ui.card.eyebrow}>Surface</p>
+      <h4 mix={ui.card.title}>Card header</h4>
+      <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
+    </div>
+    <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Info</span>
+  </div>
+  <div mix={ui.card.body}>
+    <p mix={[ui.text.bodySm, zeroMarginCss]}>
+      Body content can stay simple because the structural spacing is already solved.
+    </p>
+  </div>
+  <div mix={ui.card.footer}>
+    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Cancel</button>
+    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Continue</button>
+  </div>
+</article>`}
+          description="Use the card layer for content panels, popovers, previews, settings groups, and any other surface that needs consistent slot rhythm."
+          previewMix={docsExamplePreviewCenterCss}
+          title="Structured surface"
+        >
+          <article mix={[ui.card.base, docsExampleInnerCardCss]}>
+            <div mix={ui.card.headerWithAction}>
+              <div mix={ui.card.header}>
+                <p mix={ui.card.eyebrow}>Surface</p>
+                <h4 mix={ui.card.title}>Card header</h4>
+                <p mix={ui.card.description}>Typography and spacing stay consistent across surfaces.</p>
+              </div>
+              <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Info</span>
+            </div>
+            <div mix={ui.card.body}>
+              <p mix={[ui.text.bodySm, zeroMarginCss]}>
+                Body content can stay simple because the structural spacing is already solved.
+              </p>
+            </div>
+            <div mix={ui.card.footer}>
+              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                Cancel
+              </button>
+              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                Continue
+              </button>
+            </div>
+          </article>
+        </RecipeExample>
+      </Section>
+
+      <Section
+        title="Anatomy and tones"
+        description="The recipe family is really two things working together: structural slots and surface tone. Components can mix those pieces without inventing a new card model each time."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Slots</p>
+              <h3 mix={ui.card.title}>Reusable structure</h3>
+              <p mix={ui.card.description}>
+                These slots are what make cards useful as a layout primitive instead of just a border
+                and background.
+              </p>
+            </div>
+            <div mix={anatomyGridCss}>
+              <div mix={[ui.card.secondary, anatomyPillCss]}>
+                <code mix={ui.text.code}>ui.card.header</code>
+              </div>
+              <div mix={[ui.card.secondary, anatomyPillCss]}>
+                <code mix={ui.text.code}>ui.card.headerWithAction</code>
+              </div>
+              <div mix={[ui.card.secondary, anatomyPillCss]}>
+                <code mix={ui.text.code}>ui.card.body</code>
+              </div>
+              <div mix={[ui.card.secondary, anatomyPillCss]}>
+                <code mix={ui.text.code}>ui.card.footer</code>
+              </div>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>Surface tones</p>
+              <h3 mix={ui.card.title}>Visual hierarchy stays semantic</h3>
+              <p mix={ui.card.description}>
+                Tone is separate from structure, so different surfaces can still feel like the same
+                family.
+              </p>
+            </div>
+            <div mix={toneGridCss}>
+              <div mix={[ui.card.base, toneSampleCss]}>
+                <span mix={ui.text.caption}>Base</span>
+              </div>
+              <div mix={[ui.card.secondary, toneSampleCss]}>
+                <span mix={ui.text.caption}>Secondary</span>
+              </div>
+              <div mix={[ui.card.elevated, toneSampleCss]}>
+                <span mix={ui.text.caption}>Elevated</span>
+              </div>
+              <div mix={[ui.card.inset, toneSampleCss]}>
+                <span mix={ui.text.caption}>Inset</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeButtonPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Button recipe overview"
+        description="Buttons are built from a shared control object plus tonal recipes, so the family stays cohesive even when the color changes."
+      >
+        <RecipeExample
+          code={`<div mix={buttonRowCss}>
+  <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Save</button>
+  <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Ghost</button>
+  <button type="button" mix={[buttonBaseCss, ui.button.danger]}>Delete</button>
+</div>`}
+          description="The important part is shared structure first: compact height, rounded silhouette, border, shadow, and soft text treatment."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Control family"
+        >
+          <div mix={buttonRowCss}>
+            <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+              Save
+            </button>
+            <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+              Ghost
+            </button>
+            <button type="button" mix={[buttonBaseCss, ui.button.danger]}>
+              Delete
+            </button>
+          </div>
+        </RecipeExample>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeFieldPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Field recipe overview"
+        description="Fields should not reinvent their own chrome or type. The field and field-text recipes keep forms aligned with the rest of the system."
+      >
+        <RecipeExample
+          code={`<div mix={[stackXsCss, docsExampleFieldStackCss]}>
+  <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>Project name</label>
+  <input id="ui-recipe-detail-field" value="RMX Internal Console" readOnly mix={ui.field.base} />
+  <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
+</div>`}
+          description="Labels, help text, and field chrome belong together. That gives first-party form components a strong default shape."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Field stack"
+        >
+          <div mix={[stackXsCss, docsExampleFieldStackCss]}>
+            <label for="ui-recipe-detail-field" mix={ui.fieldText.label}>
+              Project name
+            </label>
+            <input
+              id="ui-recipe-detail-field"
+              value="RMX Internal Console"
+              readOnly
+              mix={ui.field.base}
+            />
+            <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
+          </div>
+        </RecipeExample>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeItemPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Item and status recipe overview"
+        description="Rows and status treatments are the basis for menus, command surfaces, tabs, combobox options, and sidebar collections."
+      >
+        <RecipeExample
+          code={`<div mix={[stackXsCss, docsExampleFieldStackCss]}>
+  <button type="button" mix={ui.item.base}>
+    <span>Members</span>
+    <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
+  </button>
+  <button type="button" mix={[ui.item.base, ui.item.danger]}>
+    <span>Archive workspace</span>
+    <span mix={ui.text.caption}>Permanent</span>
+  </button>
+</div>`}
+          description="Items should be useful as a boring default. Status treatments then add semantic tone without changing the row structure."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Row primitives"
+        >
+          <div mix={[stackXsCss, docsExampleFieldStackCss]}>
+            <button type="button" mix={ui.item.base}>
+              <span>Members</span>
+              <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
+            </button>
+            <button type="button" mix={[ui.item.base, ui.item.danger]}>
+              <span>Archive workspace</span>
+              <span mix={ui.text.caption}>Permanent</span>
+            </button>
+          </div>
+        </RecipeExample>
+      </Section>
+    </div>
+  )
+}
+
+function UiRecipeNavPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Sidebar and nav recipe overview"
+        description="The docs shell here is local, but the sidebar and navigation ingredients are useful application primitives that can be reused elsewhere."
+      >
+        <RecipeExample
+          code={`<div mix={[ui.card.secondary, navPreviewCardCss]}>
+  <div mix={ui.sidebar.section}>
+    <p mix={ui.sidebar.heading}>Navigation</p>
+    <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
+      <a href="/ui-recipes/navigation" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+        Current page
+      </a>
+      <a href="/ui-recipes/navigation" mix={ui.nav.item}>Secondary page</a>
+      <a href="/ui-recipes/navigation" mix={ui.nav.item}>Tertiary page</a>
+    </nav>
+  </div>
+</div>`}
+          description="These recipes should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
+          previewMix={docsExamplePreviewTopLeftCss}
+          title="Sidebar stack"
+        >
+          <div mix={[ui.card.secondary, navPreviewCardCss]}>
+            <div mix={ui.sidebar.section}>
+              <p mix={ui.sidebar.heading}>Navigation</p>
+              <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
+                <a href="/ui-recipes/navigation" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                  Current page
+                </a>
+                <a href="/ui-recipes/navigation" mix={ui.nav.item}>
+                  Secondary page
+                </a>
+                <a href="/ui-recipes/navigation" mix={ui.nav.item}>
+                  Tertiary page
+                </a>
+              </nav>
+            </div>
+          </div>
+        </RecipeExample>
       </Section>
     </div>
   )
@@ -1005,7 +1298,7 @@ function TokenGroupCard() {
         <h3 mix={ui.card.title}>{title}</h3>
       </div>
       <div mix={ui.card.body}>
-        <code mix={[ui.text.code, inlineCodeCss]}>{code}</code>
+        <code mix={[ui.text.code, inlineCodeCss]}>{renderHighlightedCode(code)}</code>
         <div mix={tokenListCss}>
           {rows.map(([label, value]) => (
             <div key={label} mix={tokenRowCss}>
@@ -1047,29 +1340,42 @@ function ColorRoleCard() {
   )
 }
 
-function RecipeFamilyCard() {
+function RecipeExample() {
   return ({
     children,
     code,
     description,
+    href,
+    previewMix,
     title,
   }: {
     children: RemixNode
     code: string
     description: string
+    href?: string
+    previewMix?: ThemeUtility
     title: string
   }) => (
-    <article mix={ui.card.base}>
-      <div mix={ui.card.header}>
-        <p mix={ui.card.eyebrow}>Recipe family</p>
-        <h3 mix={ui.card.title}>{title}</h3>
-        <p mix={ui.card.description}>{description}</p>
+    <div mix={docsExampleBlockCss}>
+      <div mix={docsExampleIntroCss}>
+        <p mix={ui.text.eyebrow}>Recipe family</p>
+        <h3 mix={[ui.text.title, docsExampleTitleCss]}>{title}</h3>
+        <p mix={[ui.text.bodySm, docsExampleDescriptionCss]}>{description}</p>
       </div>
-      <div mix={ui.card.body}>
-        <code mix={[ui.text.code, inlineCodeCss]}>{code}</code>
-        {children}
-      </div>
-    </article>
+      <article mix={docsExampleCardCss}>
+        <div mix={previewMix ? [docsExamplePreviewCss, previewMix] : [docsExamplePreviewCss]}>
+          {children}
+        </div>
+        <div mix={docsExampleCodePanelCss}>
+          <code mix={[ui.text.code, docsExampleCodeCss]}>{renderHighlightedCode(code)}</code>
+          {href ? (
+            <a href={href} mix={docsExampleLinkCss}>
+              Open recipe page
+            </a>
+          ) : null}
+        </div>
+      </article>
+    </div>
   )
 }
 
@@ -1104,6 +1410,41 @@ function MetricCard() {
 
 function getNavItemMix(path: string, currentPath: string) {
   return currentPath === path ? [ui.nav.item, ui.nav.itemActive] : [ui.nav.item]
+}
+
+function getSubnavItemMix(path: string, currentPath: string) {
+  return currentPath === path
+    ? [ui.nav.item, ui.nav.itemActive, sidebarSubnavItemCss]
+    : [ui.nav.item, sidebarSubnavItemCss]
+}
+
+function renderHighlightedCode(code: string) {
+  let pattern = /\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\bcreateTheme\b|\bRMX_01(?:_VALUES)?\b/g
+  let nodes: Array<RemixNode> = []
+  let lastIndex = 0
+
+  for (let match of code.matchAll(pattern)) {
+    let index = match.index ?? 0
+    let value = match[0]
+
+    if (index > lastIndex) {
+      nodes.push(code.slice(lastIndex, index))
+    }
+
+    nodes.push(
+      <span key={`${value}-${index}`} mix={apiCodeTokenCss}>
+        {value}
+      </span>,
+    )
+
+    lastIndex = index + value.length
+  }
+
+  if (lastIndex < code.length) {
+    nodes.push(code.slice(lastIndex))
+  }
+
+  return nodes
 }
 
 function getStatusMix(label: string) {
@@ -1175,7 +1516,9 @@ let pageStackCss = css({
 })
 
 let pageHeaderCss = css({
-  padding: theme.space.xl,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
 })
 
 let pageTitleCss = css({
@@ -1216,6 +1559,26 @@ let sectionTitleCss = css({
 let sectionDescriptionCss = css({
   margin: 0,
   maxWidth: '72ch',
+})
+
+let sidebarNavGroupItemCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let sidebarSubnavCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+  paddingLeft: theme.space.md,
+})
+
+let sidebarSubnavItemCss = css({
+  minHeight: '28px',
+  paddingBlock: '3px',
+  fontSize: theme.fontSize.xs,
+  color: theme.colors.text.muted,
 })
 
 let threeColumnGridCss = css({
@@ -1462,6 +1825,10 @@ let codeBlockCss = css({
   whiteSpace: 'pre',
 })
 
+let codeTextCss = css({
+  whiteSpace: 'pre',
+})
+
 let inlineCodeCss = css({
   display: 'inline-flex',
   alignSelf: 'flex-start',
@@ -1508,6 +1875,137 @@ let swatchCss = css({
 
 let navPreviewCardCss = css({
   padding: theme.space.md,
+})
+
+let docsExampleBlockCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+})
+
+let docsExampleIntroCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+let docsExampleTitleCss = css({
+  margin: 0,
+})
+
+let docsExampleDescriptionCss = css({
+  margin: 0,
+  maxWidth: '64ch',
+})
+
+let docsExampleCardCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.lg,
+  backgroundColor: theme.colors.background.surface,
+  overflow: 'hidden',
+})
+
+let docsExamplePreviewCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '180px',
+  padding: theme.space.md,
+  background:
+    'linear-gradient(to bottom, color-mix(in oklab, rgb(250 250 250) 70%, white) 0%, white 100%)',
+})
+
+let docsExamplePreviewTopLeftCss = css({
+  alignItems: 'flex-start',
+  justifyContent: 'flex-start',
+})
+
+let docsExamplePreviewCenterCss = css({
+  alignItems: 'center',
+  justifyContent: 'center',
+})
+
+let docsExampleCodePanelCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.sm,
+  padding: theme.space.md,
+  borderTop: `1px solid ${theme.colors.border.subtle}`,
+  backgroundColor: 'color-mix(in oklab, rgb(248 248 248) 76%, white)',
+  '@media (max-width: 640px)': {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+})
+
+let docsExampleCodeCss = css({
+  display: 'block',
+  fontSize: theme.fontSize.xs,
+  lineHeight: theme.lineHeight.normal,
+  color: theme.colors.text.secondary,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+})
+
+let apiCodeTokenCss = css({
+  color: theme.colors.text.link,
+})
+
+let docsExampleLinkCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  color: theme.colors.text.link,
+  fontSize: theme.fontSize.sm,
+  fontWeight: theme.fontWeight.medium,
+  textDecoration: 'none',
+  '&:hover': {
+    textDecoration: 'underline',
+  },
+})
+
+let docsExampleInnerCardCss = css({
+  width: '100%',
+  maxWidth: '500px',
+})
+
+let docsExampleFieldStackCss = css({
+  width: '100%',
+  maxWidth: '360px',
+})
+
+let anatomyGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.sm,
+  '@media (max-width: 640px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let anatomyPillCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '48px',
+  padding: theme.space.sm,
+})
+
+let toneGridCss = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: theme.space.sm,
+  '@media (max-width: 640px)': {
+    gridTemplateColumns: '1fr',
+  },
+})
+
+let toneSampleCss = css({
+  minHeight: '84px',
+  alignItems: 'flex-end',
+  justifyContent: 'flex-start',
+  padding: theme.space.sm,
 })
 
 let utilityRowCss = css({

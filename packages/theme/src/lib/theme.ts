@@ -618,8 +618,12 @@ export const ui: ThemeUi = {
       flexWrap: 'wrap',
       gap: theme.space.sm,
       marginTop: 'auto',
-      paddingTop: theme.space.md,
+      marginRight: `calc(${theme.space.lg} * -1)`,
+      marginBottom: `calc(${theme.space.lg} * -1)`,
+      marginLeft: `calc(${theme.space.lg} * -1)`,
+      padding: `${theme.space.md} ${theme.space.lg} ${theme.space.lg}`,
       borderTop: `1px solid ${theme.colors.border.subtle}`,
+      backgroundColor: theme.colors.background.surfaceSecondary,
     }),
     eyebrow: css({
       margin: 0,
@@ -1016,6 +1020,7 @@ function createCardUtility(options: {
     borderRadius: theme.radius.lg,
     backgroundColor: options.background,
     boxShadow: options.shadow,
+    overflow: 'hidden',
   })
 }
 

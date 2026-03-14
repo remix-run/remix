@@ -31,6 +31,11 @@
 - Reusable sidebar/navigation primitives belong in the package, but a docs-shell wrapper does not.
   - app-level ingredients like `ui.sidebar.*` and `ui.nav.*` are good system abstractions
   - the explorer shell composition itself should stay local to the demo/docs app
+- Action hierarchy should follow the Apple HIG model for confirmation surfaces.
+  - the most likely/default action belongs on the trailing side in a row or at the top of a stack
+  - `Cancel` belongs on the leading side in a row or at the bottom of a stack
+  - destructive styling should be reserved for destructive actions people did not deliberately choose
+  - when a destructive action is present, provide a clear `Cancel` action
 
 ## Learned
 

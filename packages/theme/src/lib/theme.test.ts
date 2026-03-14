@@ -262,7 +262,15 @@ describe('ui', () => {
           createElement('h2', { mix: ui.card.title }, 'Share workspace'),
           createElement('p', { mix: ui.card.description }, 'Invite teammates and manage access'),
         ]),
-        createElement('button', { type: 'button', mix: [ui.control.base, ui.button.secondary, ui.card.action] }, 'Edit'),
+        createElement(
+          'div',
+          { mix: ui.card.footer },
+          createElement(
+            'button',
+            { type: 'button', mix: [ui.control.base, ui.button.secondary, ui.card.action] },
+            'Edit',
+          ),
+        ),
       ),
     )
 
@@ -271,5 +279,7 @@ describe('ui', () => {
     expect(html).toMatch(/justify-self: end/)
     expect(html).toMatch(/text-transform: uppercase/)
     expect(html).toMatch(/letter-spacing: -0.022em/)
+    expect(html).toMatch(/margin-right: calc\(var\(--rmx-space-lg\) \* -1\)/)
+    expect(html).toMatch(/background-color: var\(--rmx-color-background-surface-secondary\)/)
   })
 })
