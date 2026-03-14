@@ -45,8 +45,6 @@ export let buttonSpinnerGlyphCss = css({
 })
 
 export let navPreviewGlyphCss = css({
-  width: '12px',
-  height: '12px',
   color: theme.colors.text.muted,
   flexShrink: 0,
 })

@@ -232,6 +232,11 @@ export type ThemeUi = {
   bg: ThemeUtilityScale<typeof theme.colors.background>
   borderColor: ThemeUtilityScale<typeof theme.colors.border>
   shadow: ThemeUtilityScale<typeof theme.shadow>
+  icon: {
+    sm: ThemeUtility
+    md: ThemeUtility
+    lg: ThemeUtility
+  }
   text: {
     body: ThemeUtility
     bodySm: ThemeUtility
@@ -347,6 +352,21 @@ const textColorUtilities = createSinglePropertyUtilities('color', theme.colors.t
 const backgroundUtilities = createSinglePropertyUtilities('backgroundColor', theme.colors.background)
 const borderColorUtilities = createSinglePropertyUtilities('borderColor', theme.colors.border)
 const shadowUtilities = createSinglePropertyUtilities('boxShadow', theme.shadow)
+
+let iconSizeUtilities = {
+  sm: css({
+    width: theme.fontSize.xs,
+    height: theme.fontSize.xs,
+  }),
+  md: css({
+    width: theme.fontSize.sm,
+    height: theme.fontSize.sm,
+  }),
+  lg: css({
+    width: theme.fontSize.lg,
+    height: theme.fontSize.lg,
+  }),
+}
 
 let controlBaseUtility = css({
   position: 'relative',
@@ -670,7 +690,7 @@ let buttonToneUtilities = {
   danger: dangerButtonToneUtility,
 }
 
-export const ui = {
+export const ui: ThemeUi = {
   p: spacingUtilities,
   px: paddingInlineUtilities,
   py: paddingBlockUtilities,
@@ -689,6 +709,7 @@ export const ui = {
   bg: backgroundUtilities,
   borderColor: borderColorUtilities,
   shadow: shadowUtilities,
+  icon: iconSizeUtilities,
   text: {
     body: css({
       fontSize: theme.fontSize.md,
@@ -975,7 +996,7 @@ export const ui = {
       buttonToneUtilities.danger,
     ),
   },
-} satisfies ThemeUi
+}
 
 export const RMX_01_VALUES: ThemeValues = {
   space: {

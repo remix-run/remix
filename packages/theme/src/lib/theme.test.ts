@@ -247,6 +247,9 @@ describe('ui', () => {
             ui.text.code,
             ui.px.md,
             ui.rounded.md,
+            ui.icon.sm,
+            ui.icon.md,
+            ui.icon.lg,
           ],
         },
         'Hello',
@@ -266,6 +269,9 @@ describe('ui', () => {
     expect(html).toMatch(/margin: var\(--rmx-space-sm\) 0 0/)
     expect(html).toMatch(/font-size: var\(--rmx-font-size-3xs\)/)
     expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
+    expect(html).toMatch(/width: var\(--rmx-font-size-xs\)/)
+    expect(html).toMatch(/width: var\(--rmx-font-size-sm\)/)
+    expect(html).toMatch(/width: var\(--rmx-font-size-lg\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/--rmx-button-label-padding-inline: var\(--rmx-space-sm\)/)
     expect(html).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)

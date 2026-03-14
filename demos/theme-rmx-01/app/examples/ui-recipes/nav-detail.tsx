@@ -8,15 +8,15 @@ export default function Example() {
         <p mix={ui.sidebar.heading}>Navigation</p>
         <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
           <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
-            <Glyph mix={navPreviewGlyphCss} name="menu" />
+            <Glyph mix={[ui.icon.sm, navPreviewGlyphCss]} name="menu" />
             Current page
           </a>
           <a href="/ui-recipes/navigation" mix={ui.nav.item}>
-            <Glyph mix={navPreviewGlyphCss} name="search" />
+            <Glyph mix={[ui.icon.sm, navPreviewGlyphCss]} name="search" />
             Secondary page
           </a>
           <a href="/ui-recipes/navigation" mix={ui.nav.item}>
-            <Glyph mix={navPreviewGlyphCss} name="info" />
+            <Glyph mix={[ui.icon.sm, navPreviewGlyphCss]} name="info" />
             Tertiary page
           </a>
         </nav>

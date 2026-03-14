@@ -269,19 +269,19 @@ function ProofSheetPage() {
                 <p mix={ui.sidebar.heading}>Navigation</p>
                 <nav aria-label="Proof sheet app navigation" mix={ui.nav.list}>
                   <a href="/proof-sheet" aria-current="page" mix={ui.nav.itemActive}>
-                    <Glyph mix={proofNavGlyphCss} name="menu" />
+                    <Glyph mix={[ui.icon.sm, proofNavGlyphCss]} name="menu" />
                     Overview
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
-                    <Glyph mix={proofNavGlyphCss} name="search" />
+                    <Glyph mix={[ui.icon.sm, proofNavGlyphCss]} name="search" />
                     Deployments
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
-                    <Glyph mix={proofNavGlyphCss} name="spinner" />
+                    <Glyph mix={[ui.icon.sm, proofNavGlyphCss]} name="spinner" />
                     Logs
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
-                    <Glyph mix={proofNavGlyphCss} name="info" />
+                    <Glyph mix={[ui.icon.sm, proofNavGlyphCss]} name="info" />
                     Settings
                   </a>
                 </nav>
@@ -355,15 +355,15 @@ function ProofSheetPage() {
                   <div mix={ui.card.body}>
                     <ul mix={proofChecklistCss}>
                       <li mix={proofChecklistItemCss}>
-                        <Glyph mix={proofChecklistGlyphCss} name="check" />
+                        <Glyph mix={[ui.icon.md, proofChecklistGlyphCss]} name="check" />
                         <span>Verify migrations are locked before the deploy starts.</span>
                       </li>
                       <li mix={proofChecklistItemCss}>
-                        <Glyph mix={proofChecklistGlyphCss} name="alert" />
+                        <Glyph mix={[ui.icon.md, proofChecklistGlyphCss]} name="alert" />
                         <span>Hold background workers for the first rollout window.</span>
                       </li>
                       <li mix={proofChecklistItemCss}>
-                        <Glyph mix={proofChecklistGlyphCss} name="check" />
+                        <Glyph mix={[ui.icon.md, proofChecklistGlyphCss]} name="check" />
                         <span>Run smoke tests before enabling the scheduled queue.</span>
                       </li>
                     </ul>
@@ -443,15 +443,15 @@ function ProofSheetPage() {
                   <div mix={ui.card.body}>
                     <div role="menu" aria-label="Project actions" mix={[ui.card.elevated, proofMenuCss]}>
                       <button type="button" role="menuitem" mix={menuItemCss}>
-                        <Glyph mix={menuItemGlyphCss} name="search" />
+                        <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="search" />
                         Rename project
                       </button>
                       <button type="button" role="menuitem" mix={menuItemCss}>
-                        <Glyph mix={menuItemGlyphCss} name="chevronRight" />
+                        <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="chevronRight" />
                         Copy environment
                       </button>
                       <button type="button" role="menuitem" mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}>
-                        <Glyph mix={menuItemGlyphCss} name="close" />
+                        <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="close" />
                         Archive project
                       </button>
                     </div>
@@ -635,13 +635,43 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
             <div mix={glyphPreviewGridCss}>
               {glyphNames.map(name => (
                 <div key={name} mix={glyphPreviewItemCss}>
-                  <Glyph mix={glyphPreviewGlyphCss} name={name} />
+                  <Glyph mix={[ui.icon.md, glyphPreviewGlyphCss]} name={name} />
                   <code mix={ui.text.code}>{name}</code>
                 </div>
               ))}
             </div>
           </article>
         </div>
+      </Section>
+
+      <Section
+        title="Icon sizing"
+        description="A small shared icon scale is enough for most utilitarian app UI: compact navigation and menu icons, ordinary inline icons, and a slightly larger size for emphasis."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.header}>
+            <p mix={ui.card.eyebrow}>Shared sizes</p>
+            <h3 mix={ui.card.title}>`ui.icon.sm`, `ui.icon.md`, and `ui.icon.lg`</h3>
+            <p mix={ui.card.description}>
+              These recipes size the glyph itself. Layout-specific recipes like `ui.button.icon`
+              still handle spacing and alignment inside controls.
+            </p>
+          </div>
+          <div mix={glyphSizingRowCss}>
+            <div mix={glyphSizingItemCss}>
+              <Glyph mix={[ui.icon.sm, glyphPreviewGlyphCss]} name="search" />
+              <code mix={ui.text.code}>ui.icon.sm</code>
+            </div>
+            <div mix={glyphSizingItemCss}>
+              <Glyph mix={[ui.icon.md, glyphPreviewGlyphCss]} name="search" />
+              <code mix={ui.text.code}>ui.icon.md</code>
+            </div>
+            <div mix={glyphSizingItemCss}>
+              <Glyph mix={[ui.icon.lg, glyphPreviewGlyphCss]} name="search" />
+              <code mix={ui.text.code}>ui.icon.lg</code>
+            </div>
+          </div>
+        </article>
       </Section>
     </div>
   )
@@ -1706,8 +1736,6 @@ let proofSidebarCss = css({
 })
 
 let proofNavGlyphCss = css({
-  width: '12px',
-  height: '12px',
   color: theme.colors.text.muted,
   flexShrink: 0,
 })
@@ -1789,8 +1817,6 @@ let proofChecklistItemCss = css({
 })
 
 let proofChecklistGlyphCss = css({
-  width: '14px',
-  height: '14px',
   marginTop: '2px',
   color: theme.colors.text.muted,
 })
@@ -1832,8 +1858,6 @@ let menuItemCss = css({
 })
 
 let menuItemGlyphCss = css({
-  width: '12px',
-  height: '12px',
   color: 'currentColor',
   flexShrink: 0,
 })
@@ -2070,10 +2094,26 @@ let glyphPreviewItemCss = css({
 })
 
 let glyphPreviewGlyphCss = css({
-  width: '14px',
-  height: '14px',
   color: theme.colors.text.secondary,
   flexShrink: 0,
+})
+
+let glyphSizingRowCss = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: theme.space.sm,
+  padding: theme.space.lg,
+})
+
+let glyphSizingItemCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: theme.space.sm,
+  minHeight: theme.control.height.md,
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.background.surfaceSecondary,
 })
 
 let utilityRowCss = css({
