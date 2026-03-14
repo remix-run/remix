@@ -72,9 +72,9 @@ export let PAGES = {
     path: '/ui-recipes/button',
     navLabel: 'Button',
     eyebrow: 'UI Recipe',
-    title: 'Button and control recipes',
+    title: 'Button recipes',
     description:
-      'Shared control shape plus tonal layers keep actions cohesive across neutral, primary, and destructive states.',
+      'Composable button layers cover shared structure, size, tone, icons, and loading patterns without wrapper-heavy component APIs.',
   },
   uiRecipeField: {
     id: 'ui-recipe-field',

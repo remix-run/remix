@@ -609,7 +609,7 @@ function UiRecipesPage() {
           </RecipeExample>
 
           <RecipeExample
-            code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+            code={`<div mix={buttonExampleRowCss}>
   <button mix={ui.button.primary}>Save</button>
   <button mix={ui.button.secondary}>Secondary</button>
   <button mix={ui.button.ghost}>Ghost</button>
@@ -620,7 +620,7 @@ function UiRecipesPage() {
             previewMix={docsExamplePreviewCenterCss}
             title="Buttons and controls"
           >
-            <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+            <div mix={buttonExampleRowCss}>
               <button mix={ui.button.primary}>
                 Save
               </button>
@@ -969,20 +969,20 @@ function UiRecipeButtonPage() {
     <div mix={pageSectionStackCss}>
       <Section
         title="Buttons"
-        description="Use `ui.button.primary` for the main action, `ui.button.secondary` for surfaced neutral actions, `ui.button.ghost` for low-emphasis text-first actions, and `ui.button.danger` for destructive actions."
+        description="The button API now supports both fast aliases and deliberate composition. Use the flat button recipes when they fit, or compose `base + size + tone` when you need more control."
       >
         <RecipeExample
-          code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+          code={`<div mix={buttonExampleRowCss}>
   <button type="submit" mix={ui.button.primary}>Save</button>
   <button mix={ui.button.secondary}>Secondary</button>
   <button mix={ui.button.ghost}>Ghost</button>
   <button mix={ui.button.danger}>Delete</button>
 </div>`}
-          description="Most button groups should have one main action. Use secondary when you want a surfaced neutral button, ghost when you want the action to read more like text, and danger only when the action is destructive."
+          description="These aliases are the quickest way to style ordinary actions. They already include `ui.button.base`, the default `md` size, and the matching tone."
           previewMix={docsExamplePreviewCenterCss}
-          title="Primary, secondary, ghost, and danger"
+          title="Everyday button aliases"
         >
-          <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
+          <div mix={buttonExampleRowCss}>
             <button type="submit" mix={ui.button.primary}>
               Save
             </button>
@@ -1000,45 +1000,169 @@ function UiRecipeButtonPage() {
       </Section>
 
       <Section
-        title="Guidance"
-        description="This is the practical guidance developers and coding agents need when choosing button styles."
+        title="Composition"
+        description="Use the composable model when you need a specific size, when you want to apply button styling to a link, or when a first-party component should build its own button shape from shared parts."
       >
-        <div mix={twoColumnGridCss}>
+        <div mix={pageSectionStackCss}>
+          <RecipeExample
+            code={`<div mix={buttonExampleRowCss}>
+  <button
+    type="submit"
+    mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}
+  >
+    Publish
+  </button>
+
+  <a
+    href="/proof-sheet"
+    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
+  >
+    View proof sheet
+  </a>
+</div>`}
+            description="Button recipes compose directly onto both `<button>` and `<a>`. This is the alternative to wrapper-heavy `asChild` patterns."
+            previewMix={docsExamplePreviewCenterCss}
+            title="Base, size, and tone"
+          >
+            <div mix={buttonExampleRowCss}>
+              <button type="submit" mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
+                Publish
+              </button>
+              <a href="/proof-sheet" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
+                View proof sheet
+              </a>
+            </div>
+          </RecipeExample>
+          <RecipeExample
+            code={`<div mix={buttonExampleRowCss}>
+  <button mix={[ui.button.base, ui.button.sm, ui.button.tone.secondary]}>
+    Small
+  </button>
+  <button mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
+    Medium
+  </button>
+  <button mix={[ui.button.base, ui.button.lg, ui.button.tone.secondary]}>
+    Large
+  </button>
+  <button
+    aria-label="Refresh"
+    mix={[ui.button.base, ui.button.icon, ui.button.tone.secondary]}
+  >
+    <span data-slot="icon" aria-hidden="true">+</span>
+  </button>
+</div>`}
+            description="Size is a separate layer. `ui.button.icon` is for icon-only buttons and keeps the control square."
+            previewMix={docsExamplePreviewCenterCss}
+            title="Sizes"
+          >
+            <div mix={buttonExampleRowCss}>
+              <button mix={[ui.button.base, ui.button.sm, ui.button.tone.secondary]}>
+                Small
+              </button>
+              <button mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
+                Medium
+              </button>
+              <button mix={[ui.button.base, ui.button.lg, ui.button.tone.secondary]}>
+                Large
+              </button>
+              <button
+                aria-label="Refresh"
+                mix={[ui.button.base, ui.button.icon, ui.button.tone.secondary]}
+              >
+                <span data-slot="icon" aria-hidden="true">
+                  +
+                </span>
+              </button>
+            </div>
+          </RecipeExample>
+        </div>
+      </Section>
+
+      <Section
+        title="Slots and states"
+        description="Buttons use slot selectors for icons and keep loading layout-stable by treating the spinner as just another icon."
+      >
+        <div mix={pageSectionStackCss}>
+          <RecipeExample
+            code={`<div mix={buttonExampleRowCss}>
+  <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
+    <span data-slot="icon" aria-hidden="true">+</span>
+    <span data-slot="label">New issue</span>
+  </button>
+
+  <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
+    <span data-slot="label">Open</span>
+    <span data-slot="icon" aria-hidden="true">→</span>
+  </button>
+
+  <button
+    disabled
+    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
+  >
+    Disabled
+  </button>
+
+  <button
+    aria-busy="true"
+    mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
+  >
+    <span data-slot="icon" aria-hidden="true">◌</span>
+    <span data-slot="label">Saving</span>
+  </button>
+</div>`}
+            description={
+              'Use `[data-slot="icon"]` and `[data-slot="label"]` for leading icons, trailing icons, and loading spinners. Loading is a content convention, not a separate button variant.'
+            }
+            previewMix={docsExamplePreviewCenterCss}
+            title="Icons, loading, and disabled"
+          >
+            <div mix={buttonExampleRowCss}>
+              <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
+                <span data-slot="icon" aria-hidden="true">
+                  +
+                </span>
+                <span data-slot="label">New issue</span>
+              </button>
+
+              <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
+                <span data-slot="label">Open</span>
+                <span data-slot="icon" aria-hidden="true">
+                  →
+                </span>
+              </button>
+
+              <button disabled mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
+                Disabled
+              </button>
+
+              <button
+                aria-busy="true"
+                mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}
+              >
+                <span data-slot="icon" aria-hidden="true" mix={buttonSpinnerGlyphCss}>
+                  ◌
+                </span>
+                <span data-slot="label">Saving</span>
+              </button>
+            </div>
+          </RecipeExample>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>When to use each button</p>
-              <h3 mix={ui.card.title}>Pick the style based on the action</h3>
+              <p mix={ui.card.eyebrow}>Usage rules</p>
+              <h3 mix={ui.card.title}>What developers and agents should remember</h3>
               <p mix={ui.card.description}>
-                Choose the button style based on what the action means, not on whether the UI needs
-                more visual variety.
+                The button API is intentionally small. Most decisions should be about action
+                hierarchy, size, and whether the host is a button or a link.
               </p>
             </div>
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
                 <li>`ui.button.primary` is for the main action in a surface or action group.</li>
-                <li>`ui.button.secondary` is the default surfaced neutral button for cancel, back, filter, or supporting actions.</li>
-                <li>`ui.button.ghost` is for low-emphasis actions that should read more like text until hover or focus.</li>
+                <li>`ui.button.secondary` is the surfaced neutral button for cancel, back, filter, or supporting actions.</li>
+                <li>`ui.button.ghost` is for low-emphasis actions that should read like text until interaction.</li>
                 <li>`ui.button.danger` is only for destructive work like delete, archive, or revoke access.</li>
-                <li>Avoid multiple primary buttons in the same small action group unless there are truly peer main actions.</li>
-              </ul>
-            </div>
-          </article>
-
-          <article mix={ui.card.base}>
-            <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>What you get by default</p>
-              <h3 mix={ui.card.title}>The button styles already include the shared basics</h3>
-              <p mix={ui.card.description}>
-                In most cases you should just apply the button style and move on. The shared shape
-                and default host behavior are already built in.
-              </p>
-            </div>
-            <div mix={ui.card.body}>
-              <ul mix={bulletListCss}>
-                <li>Each button style includes the shared compact size, border, radius, and shadow treatment.</li>
-                <li>Button styles default `button` elements to `type="button"` so they do not submit forms accidentally.</li>
-                <li>Set `type="submit"` explicitly when a button should submit a form.</li>
-                <li>Lay out button groups with `ui.row` and `ui.gap.*` instead of one-off flex helpers.</li>
+                <li>Recipes default real `button` elements to `type="button"`, so use `type="submit"` explicitly when needed.</li>
+                <li>Use the flat aliases for speed, and the composable layers when a first-party component needs to own size or structure.</li>
               </ul>
             </div>
           </article>
@@ -1681,7 +1805,9 @@ let pageStackCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xl,
-  maxWidth: '1180px',
+  width: '100%',
+  maxWidth: '1040px',
+  marginInline: 'auto',
 })
 
 let pageHeaderCss = css({
@@ -2083,6 +2209,24 @@ let docsExamplePreviewCenterCss = css({
   justifyContent: 'center',
 })
 
+let buttonExampleRowCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.space.sm,
+  width: 'max-content',
+  maxWidth: '100%',
+  overflowX: 'auto',
+  overflowY: 'hidden',
+  paddingBottom: theme.space.xs,
+  '& > *': {
+    flexShrink: 0,
+  },
+})
+
+let buttonSpinnerGlyphCss = css({
+  opacity: 0.72,
+})
+
 let docsExampleCodePanelCss = css({
   display: 'flex',
   alignItems: 'center',
@@ -2091,6 +2235,7 @@ let docsExampleCodePanelCss = css({
   padding: theme.space.md,
   borderTop: `1px solid ${theme.colors.border.subtle}`,
   backgroundColor: 'color-mix(in oklab, rgb(248 248 248) 76%, white)',
+  overflowX: 'auto',
   '@media (max-width: 640px)': {
     flexDirection: 'column',
     alignItems: 'flex-start',
@@ -2102,8 +2247,8 @@ let docsExampleCodeCss = css({
   fontSize: theme.fontSize.xs,
   lineHeight: theme.lineHeight.normal,
   color: theme.colors.text.secondary,
-  whiteSpace: 'pre-wrap',
-  wordBreak: 'break-word',
+  minWidth: 'max-content',
+  whiteSpace: 'pre',
 })
 
 let apiCodeTokenCss = css({
