@@ -154,28 +154,6 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
-  demos/theme-rmx-01:
-    dependencies:
-      remix:
-        specifier: workspace:*
-        version: link:../../packages/remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-      playwright:
-        specifier: 'catalog:'
-        version: 1.57.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-
   demos/unpkg:
     dependencies:
       remix:
@@ -1364,6 +1342,28 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/theme/demo:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   scripts:
     dependencies:

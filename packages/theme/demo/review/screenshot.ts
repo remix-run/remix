@@ -35,7 +35,7 @@ async function main() {
   let targetUrl = new URL(routePath, BASE_URL).toString()
   let width = parseDimension(values.width, 'width')
   let height = parseDimension(values.height, 'height')
-  let screenshotName = values.name ?? `theme-rmx-01-${createTimestamp()}`
+  let screenshotName = values.name ?? `theme-demo-${createTimestamp()}`
   let screenshotPath = path.join(SCREENSHOTS_DIR, `${screenshotName}.png`)
 
   let ownedServer = false

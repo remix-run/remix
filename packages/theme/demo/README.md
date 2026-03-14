@@ -1,4 +1,4 @@
-# theme-rmx-01
+# demo
 
 A focused demo for the `@remix-run/theme` package using the built-in `RMX_01` preset.
 
@@ -11,8 +11,8 @@ A focused demo for the `@remix-run/theme` package using the built-in `RMX_01` pr
 ## Run It
 
 ```sh
-pnpm -C demos/theme-rmx-01 install
-pnpm -C demos/theme-rmx-01 dev
+pnpm -C packages/theme/demo install
+pnpm -C packages/theme/demo dev
 ```
 
 Then open `http://localhost:44100`.
@@ -22,20 +22,20 @@ Then open `http://localhost:44100`.
 The demo includes a Playwright-based review workflow so you can capture the current UI without manually taking screenshots.
 
 ```sh
-pnpm -C demos/theme-rmx-01 screenshot
+pnpm -C packages/theme/demo screenshot
 ```
 
 That script will:
 
 - start the demo server if it is not already running
 - capture a screenshot of the page
-- save a timestamped image under `demos/theme-rmx-01/.artifacts/screenshots/`
-- update `demos/theme-rmx-01/.artifacts/screenshots/latest.png`
+- save a timestamped image under `packages/theme/demo/.artifacts/screenshots/`
+- update `packages/theme/demo/.artifacts/screenshots/latest.png`
 
 For a focused surface-card capture:
 
 ```sh
-pnpm -C demos/theme-rmx-01 screenshot:card
+pnpm -C packages/theme/demo screenshot:card
 ```
 
 ## Key APIs
