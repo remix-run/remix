@@ -311,6 +311,7 @@ export type ThemeUi = {
   button: {
     primary: ThemeRecipe
     secondary: ThemeRecipe
+    ghost: ThemeRecipe
     danger: ThemeRecipe
   }
 }
@@ -349,7 +350,6 @@ let controlBaseUtility = css({
   lineHeight: '1',
   fontWeight: theme.fontWeight.medium,
   whiteSpace: 'nowrap',
-  cursor: 'pointer',
   transitionProperty: 'border-color, background-color, box-shadow, color',
   transitionDuration: theme.duration.fast,
   transitionTimingFunction: theme.easing.standard,
@@ -378,6 +378,31 @@ let controlQuietToneUtility = css({
   '&:disabled': {
     opacity: 0.6,
     cursor: 'not-allowed',
+  },
+})
+
+let controlGhostToneUtility = css({
+  backgroundColor: 'transparent',
+  backgroundImage: 'none',
+  color: theme.colors.text.secondary,
+  border: '0.5px solid transparent',
+  boxShadow: 'none',
+  '&:hover': {
+    backgroundColor: theme.colors.background.inset,
+    color: theme.colors.text.primary,
+  },
+  '&:active': {
+    backgroundColor: `color-mix(in oklab, ${theme.colors.background.inset} 94%, black)`,
+    color: `color-mix(in oklab, ${theme.colors.text.primary} 94%, black)`,
+  },
+  '&:focus-visible': {
+    outline: `2px solid ${theme.colors.focus.ring}`,
+    outlineOffset: '2px',
+    backgroundColor: theme.colors.background.inset,
+    color: theme.colors.text.primary,
+  },
+  '&:disabled': {
+    opacity: 0.6,
   },
 })
 
@@ -822,6 +847,7 @@ export const ui = {
       controlBaseUtility,
       secondaryButtonToneUtility,
     ),
+    ghost: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, controlGhostToneUtility),
     danger: composeThemeRecipe(buttonTypeButtonUtility, controlBaseUtility, dangerButtonToneUtility),
   },
 } satisfies ThemeUi

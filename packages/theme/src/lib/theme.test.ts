@@ -227,6 +227,7 @@ describe('ui', () => {
             ui.card.headerWithAction,
             ui.card.description,
             ui.button.primary,
+            ui.button.ghost,
             ui.sidebar.heading,
             ui.nav.itemActive,
             ui.surfaceText.eyebrow,
@@ -254,6 +255,7 @@ describe('ui', () => {
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/border-radius: var\(--rmx-radius-md\)/)
     expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
+    expect(html).toMatch(/background-color: transparent/)
     expect(html).toMatch(/text-transform: uppercase/)
     expect(html).toMatch(/box-shadow: var\(--rmx-shadow-xs\)/)
   })

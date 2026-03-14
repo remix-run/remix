@@ -576,7 +576,7 @@ function UiRecipesPage() {
 </div>`}
             description="Page-level typography roles for headings, body copy, captions, and metadata."
             href={PAGES.uiRecipeText.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Text roles"
           >
             <div mix={[ui.stack, ui.gap.sm]}>
@@ -611,12 +611,13 @@ function UiRecipesPage() {
           <RecipeExample
             code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
   <button mix={ui.button.primary}>Save</button>
-  <button mix={ui.button.secondary}>Ghost</button>
+  <button mix={ui.button.secondary}>Secondary</button>
+  <button mix={ui.button.ghost}>Ghost</button>
   <button mix={ui.button.danger}>Delete</button>
 </div>`}
-            description="Compact action treatments that stay cohesive across white, colored, and destructive states."
+            description="Compact action treatments for primary, surfaced neutral, text-first ghost, and destructive actions."
             href={PAGES.uiRecipeButton.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Buttons and controls"
           >
             <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
@@ -624,6 +625,9 @@ function UiRecipesPage() {
                 Save
               </button>
               <button mix={ui.button.secondary}>
+                Secondary
+              </button>
+              <button mix={ui.button.ghost}>
                 Ghost
               </button>
               <button mix={ui.button.danger}>
@@ -640,7 +644,7 @@ function UiRecipesPage() {
 </div>`}
             description="Field chrome and label/help typography should travel together."
             href={PAGES.uiRecipeField.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Fields"
           >
             <div mix={[ui.stack, ui.gap.xs]}>
@@ -665,7 +669,7 @@ function UiRecipesPage() {
 </div>`}
             description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
             href={PAGES.uiRecipeItem.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Items and status"
           >
             <div mix={[ui.stack, ui.gap.xs]}>
@@ -689,7 +693,7 @@ function UiRecipesPage() {
 </nav>`}
             description="Sidebar and navigation primitives are useful app-level building blocks even though this docs shell itself is demo-specific."
             href={PAGES.uiRecipeNav.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Sidebar and nav"
           >
             <div mix={[ui.card.secondary, navPreviewCardCss]}>
@@ -721,7 +725,7 @@ function UiRecipesPage() {
 </div>`}
             description="Symmetrical row and stack primitives replace demo-specific flex helpers and pair naturally with the shared spacing scale."
             href={PAGES.uiRecipeLayout.path}
-            previewMix={docsExamplePreviewTopLeftCss}
+            previewMix={docsExamplePreviewCenterCss}
             title="Row and stack"
           >
             <div mix={[ui.stack, ui.gap.md]}>
@@ -811,7 +815,7 @@ function UiRecipeTextPage() {
   <code mix={ui.text.code}>theme.colors.background.surface</code>
 </div>`}
           description="Use page-level text roles when content sits in ordinary document flow and should read like part of the page rather than a surface-specific micro-layout."
-          previewMix={docsExamplePreviewTopLeftCss}
+          previewMix={docsExamplePreviewCenterCss}
           title="Page typography"
         >
           <div mix={[ui.stack, ui.gap.sm]}>
@@ -964,24 +968,28 @@ function UiRecipeButtonPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Button recipe overview"
-        description="Buttons are built from a shared control object plus tonal recipes, so the family stays cohesive even when the color changes."
+        title="Buttons"
+        description="Use `ui.button.primary` for the main action, `ui.button.secondary` for surfaced neutral actions, `ui.button.ghost` for low-emphasis text-first actions, and `ui.button.danger` for destructive actions."
       >
         <RecipeExample
           code={`<div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-  <button mix={ui.button.primary}>Save</button>
-  <button mix={ui.button.secondary}>Ghost</button>
+  <button type="submit" mix={ui.button.primary}>Save</button>
+  <button mix={ui.button.secondary}>Secondary</button>
+  <button mix={ui.button.ghost}>Ghost</button>
   <button mix={ui.button.danger}>Delete</button>
 </div>`}
-          description="The important part is shared structure first: compact height, rounded silhouette, border, shadow, and soft text treatment."
-          previewMix={docsExamplePreviewTopLeftCss}
-          title="Control family"
+          description="Most button groups should have one main action. Use secondary when you want a surfaced neutral button, ghost when you want the action to read more like text, and danger only when the action is destructive."
+          previewMix={docsExamplePreviewCenterCss}
+          title="Primary, secondary, ghost, and danger"
         >
           <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-            <button mix={ui.button.primary}>
+            <button type="submit" mix={ui.button.primary}>
               Save
             </button>
             <button mix={ui.button.secondary}>
+              Secondary
+            </button>
+            <button mix={ui.button.ghost}>
               Ghost
             </button>
             <button mix={ui.button.danger}>
@@ -989,6 +997,52 @@ function UiRecipeButtonPage() {
             </button>
           </div>
         </RecipeExample>
+      </Section>
+
+      <Section
+        title="Guidance"
+        description="This is the practical guidance developers and coding agents need when choosing button styles."
+      >
+        <div mix={twoColumnGridCss}>
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>When to use each button</p>
+              <h3 mix={ui.card.title}>Pick the style based on the action</h3>
+              <p mix={ui.card.description}>
+                Choose the button style based on what the action means, not on whether the UI needs
+                more visual variety.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>`ui.button.primary` is for the main action in a surface or action group.</li>
+                <li>`ui.button.secondary` is the default surfaced neutral button for cancel, back, filter, or supporting actions.</li>
+                <li>`ui.button.ghost` is for low-emphasis actions that should read more like text until hover or focus.</li>
+                <li>`ui.button.danger` is only for destructive work like delete, archive, or revoke access.</li>
+                <li>Avoid multiple primary buttons in the same small action group unless there are truly peer main actions.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>What you get by default</p>
+              <h3 mix={ui.card.title}>The button styles already include the shared basics</h3>
+              <p mix={ui.card.description}>
+                In most cases you should just apply the button style and move on. The shared shape
+                and default host behavior are already built in.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>Each button style includes the shared compact size, border, radius, and shadow treatment.</li>
+                <li>Button styles default `button` elements to `type="button"` so they do not submit forms accidentally.</li>
+                <li>Set `type="submit"` explicitly when a button should submit a form.</li>
+                <li>Lay out button groups with `ui.row` and `ui.gap.*` instead of one-off flex helpers.</li>
+              </ul>
+            </div>
+          </article>
+        </div>
       </Section>
     </div>
   )
@@ -1008,7 +1062,7 @@ function UiRecipeFieldPage() {
   <p mix={ui.fieldText.help}>Shown in navigation, notifications, and audit logs.</p>
 </div>`}
           description="Labels, help text, and field chrome belong together. That gives first-party form components a strong default shape."
-          previewMix={docsExamplePreviewTopLeftCss}
+          previewMix={docsExamplePreviewCenterCss}
           title="Field stack"
         >
           <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
@@ -1048,7 +1102,7 @@ function UiRecipeItemPage() {
   </button>
 </div>`}
           description="Items should be useful as a boring default. Status treatments then add semantic tone without changing the row structure."
-          previewMix={docsExamplePreviewTopLeftCss}
+          previewMix={docsExamplePreviewCenterCss}
           title="Row primitives"
         >
           <div mix={[ui.stack, ui.gap.xs, docsExampleFieldStackCss]}>
@@ -1088,7 +1142,7 @@ function UiRecipeNavPage() {
   </div>
 </div>`}
           description="These recipes should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
-          previewMix={docsExamplePreviewTopLeftCss}
+          previewMix={docsExamplePreviewCenterCss}
           title="Sidebar stack"
         >
           <div mix={[ui.card.secondary, navPreviewCardCss]}>
@@ -1133,7 +1187,7 @@ function UiRecipeLayoutPage() {
   </div>
 </div>`}
           description="Use `ui.row` and `ui.stack` for repeated flex mechanics, then add spacing with `ui.gap.*` instead of inventing purpose-built row helpers."
-          previewMix={docsExamplePreviewTopLeftCss}
+          previewMix={docsExamplePreviewCenterCss}
           title="Composed layout primitives"
         >
           <div mix={[ui.stack, ui.gap.md]}>
@@ -2022,11 +2076,6 @@ let docsExamplePreviewCss = css({
   padding: theme.space.md,
   background:
     'linear-gradient(to bottom, color-mix(in oklab, rgb(250 250 250) 70%, white) 0%, white 100%)',
-})
-
-let docsExamplePreviewTopLeftCss = css({
-  alignItems: 'flex-start',
-  justifyContent: 'flex-start',
 })
 
 let docsExamplePreviewCenterCss = css({
