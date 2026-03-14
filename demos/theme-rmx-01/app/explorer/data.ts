@@ -20,7 +20,7 @@ export let PAGES = {
     eyebrow: 'Design System',
     title: 'RMX design system explorer',
     description:
-      'The demo now shows the design system itself: theme values, semantic recipes, layout primitives, and the current default theme preset.',
+      'The demo now shows the design system itself: theme values, semantic mixins, structural blocks, and the current default theme preset.',
   },
   proofSheet: {
     id: 'proof-sheet',
@@ -43,9 +43,9 @@ export let PAGES = {
   uiRecipes: {
     id: 'ui-recipes',
     path: '/ui-recipes',
-    navLabel: 'UI Recipes',
-    eyebrow: 'Semantic Recipes',
-    title: 'Composable ui recipes above the token layer',
+    navLabel: 'UI Mixins',
+    eyebrow: 'Semantic Mixins',
+    title: 'Composable ui mixins above the token layer',
     description:
       'The `ui` surface turns raw variables into reusable styling primitives for text, cards, controls, fields, navigation, and status treatments.',
   },
@@ -53,8 +53,8 @@ export let PAGES = {
     id: 'ui-recipe-text',
     path: '/ui-recipes/text',
     navLabel: 'Text',
-    eyebrow: 'UI Recipe',
-    title: 'Text recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Text mixins',
     description:
       'Page-level text roles give the system a shared language for headings, descriptions, captions, code, and metadata.',
   },
@@ -62,17 +62,17 @@ export let PAGES = {
     id: 'ui-recipe-card',
     path: '/ui-recipes/card',
     navLabel: 'Card',
-    eyebrow: 'UI Recipe',
-    title: 'Card recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Card mixins',
     description:
-      'Card recipes define the shell, slot rhythm, and surface hierarchy used by content panels, menus, dialogs, and system showcases.',
+      'Card mixins define the shell, slot rhythm, and surface hierarchy used by content panels, menus, dialogs, and system showcases.',
   },
   uiRecipeButton: {
     id: 'ui-recipe-button',
     path: '/ui-recipes/button',
     navLabel: 'Button',
-    eyebrow: 'UI Recipe',
-    title: 'Button recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Button mixins',
     description:
       'Composable button layers cover shared structure, size, tone, icons, and loading patterns without wrapper-heavy component APIs.',
   },
@@ -80,8 +80,8 @@ export let PAGES = {
     id: 'ui-recipe-field',
     path: '/ui-recipes/field',
     navLabel: 'Field',
-    eyebrow: 'UI Recipe',
-    title: 'Field recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Field mixins',
     description:
       'Field chrome, labels, and help text should travel together so forms stay consistent across the component library.',
   },
@@ -89,8 +89,8 @@ export let PAGES = {
     id: 'ui-recipe-item',
     path: '/ui-recipes/item',
     navLabel: 'Item',
-    eyebrow: 'UI Recipe',
-    title: 'Item and status recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Item and status mixins',
     description:
       'Rows and status treatments underpin menus, command lists, tabs, combobox options, and sidebar entries.',
   },
@@ -98,8 +98,8 @@ export let PAGES = {
     id: 'ui-recipe-nav',
     path: '/ui-recipes/navigation',
     navLabel: 'Sidebar + Nav',
-    eyebrow: 'UI Recipe',
-    title: 'Sidebar and navigation recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Sidebar and navigation mixins',
     description:
       'Sidebar and navigation primitives are useful app-level building blocks even when the full docs shell remains demo-specific.',
   },
@@ -107,8 +107,8 @@ export let PAGES = {
     id: 'ui-recipe-layout',
     path: '/ui-recipes/layout',
     navLabel: 'Row + Stack',
-    eyebrow: 'UI Recipe',
-    title: 'Row and stack layout recipes',
+    eyebrow: 'UI Mixin',
+    title: 'Row and stack layout mixins',
     description:
       'Symmetrical row and stack primitives provide reusable flex layout mechanics without falling back to demo-specific helpers.',
   },
@@ -117,18 +117,18 @@ export let PAGES = {
     path: '/components',
     navLabel: 'Components',
     eyebrow: 'Component Layer',
-    title: 'Component ergonomics should sit on top of shared recipes',
+    title: 'Component ergonomics should sit on top of shared mixins and blocks',
     description:
-      'The eventual first-party component library should feel thin and consistent because shared styling lives in the theme contract and `ui` recipes.',
+      'The eventual first-party component library should feel thin and consistent because shared styling lives in the theme contract and `ui` mixins.',
   },
   layouts: {
     id: 'layouts',
     path: '/layouts',
-    navLabel: 'Layouts',
-    eyebrow: 'Layout Primitives',
-    title: 'Sidebar and navigation patterns for application shells',
+    navLabel: 'Blocks',
+    eyebrow: 'Block Layer',
+    title: 'Structural blocks for application shells and surfaces',
     description:
-      'The docs shell here is demo-specific, but the sidebar, nav, and panel ingredients are useful application-level primitives worth carrying forward.',
+      'The docs shell here is demo-specific, but cards, sidebars, rails, and shell compositions are useful structural blocks worth carrying forward.',
   },
 } as const satisfies Record<string, PageDefinition>
 

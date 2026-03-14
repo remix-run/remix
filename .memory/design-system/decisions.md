@@ -6,10 +6,10 @@
 - `theme` is a typed contract of CSS custom properties.
 - `createTheme(values)` renders a `<style>` tag defining those variables.
 - Both app code and first-party components consume `theme.*` variable references.
-- `ui` provides composable `css()` recipes built on top of the token contract.
-- Recipes are allowed to provide default host attributes through `attrs(...)`.
+- `ui` provides composable `css()` mixins built on top of the token contract.
+- Mixins are allowed to provide default host attributes through `attrs(...)`.
   - this is part of the design-system strategy, not a one-off convenience
-  - explicit element props override recipe defaults
+  - explicit element props override mixin defaults
   - `className` and `style` follow the same rule as any other prop: fill only when absent, no merging
 
 ## Current
@@ -18,9 +18,9 @@
   - one shared base treatment for an object like a control or surface
   - separate tone/state mixins layered on top
   - visual differences should mostly come from tokenized tone, not ad hoc component-specific styling
-- The preferred recipe model is:
-  - compose behavior, attrs, and styling in the recipe when the default is broadly correct
-  - remove redundant call-site attributes once a shared recipe reliably supplies them
+- The preferred mixin model is:
+  - compose behavior, attrs, and styling in the mixin when the default is broadly correct
+  - remove redundant call-site attributes once a shared mixin reliably supplies them
 - Surface text is distinct from page text.
   - `ui.text.*` covers broader/common text roles
   - `ui.surfaceText.*` covers tighter, calmer text inside cards, dialogs, and similar surfaces
@@ -28,10 +28,15 @@
   - `ui.fieldText.*` covers shared label/help roles
 - Item/list rows should be represented as a reusable primitive.
   - `ui.item.*` exists for menus, tabs, option rows, command items, and similar UI
-- Card structure should start as semantic recipes, not wrapper-heavy components.
+- Card structure should start as semantic mixins, not wrapper-heavy components.
   - `ui.card.*` owns shared card layout, slot rhythm, and optional action/footer structure
   - surface tone can be selected with `ui.card.base`, `ui.card.secondary`, `ui.card.elevated`, and `ui.card.inset`
-  - avoid rushing into `CardHeader`, `CardContent`, `CardFooter`, or `asChild`-style APIs unless the recipe model proves insufficient
+  - avoid rushing into `CardHeader`, `CardContent`, `CardFooter`, or `asChild`-style APIs unless the mixin model proves insufficient
+- The preferred naming stack is:
+  - `theme.*` = tokens
+  - `ui.*` = mixins
+  - structural compositions like cards and app shells = blocks
+  - behavioral wrappers = components
 - The demo should now be treated as a design-system explorer, not just a theme landing page.
   - `RMX_01` is the current default theme inside that explorer
   - a dedicated proof-sheet page should carry the “what does this theme feel like?” responsibility
@@ -46,7 +51,7 @@
 
 ## Learned
 
-- Theming is not enough on its own; a useful system needs semantic recipes, not just tokens.
+- Theming is not enough on its own; a useful system needs semantic mixins, not just tokens.
 - Typography and spacing rules should live at the system layer wherever possible instead of being re-solved per demo card.
 - The demo should prove real composition rather than just show a pretty page.
 

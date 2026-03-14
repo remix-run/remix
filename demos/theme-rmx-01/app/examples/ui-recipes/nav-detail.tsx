@@ -6,7 +6,7 @@ export default function Example() {
     <div mix={[ui.card.secondary, navPreviewCardCss]}>
       <div mix={ui.sidebar.section}>
         <p mix={ui.sidebar.heading}>Navigation</p>
-        <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
+        <nav aria-label="UI mixin nav detail preview" mix={ui.nav.list}>
           <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
             <Glyph mix={[ui.icon.sm, navPreviewGlyphCss]} name="menu" />
             Current page

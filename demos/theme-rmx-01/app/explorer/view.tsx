@@ -74,7 +74,7 @@ function Sidebar() {
                   </a>
 
                   {isUiRecipesParent ? (
-                    <nav aria-label="UI recipe pages" mix={sidebarSubnavCss}>
+                    <nav aria-label="UI mixin pages" mix={sidebarSubnavCss}>
                       {UI_RECIPE_PAGES.map(recipePage => (
                         <a
                           key={recipePage.path}
@@ -150,7 +150,7 @@ function OverviewPage() {
     <div mix={pageSectionStackCss}>
       <Section
         title="System model"
-        description="The design system now has three layers that should stay in sync: raw theme values, semantic ui recipes, and thin component ergonomics built on top."
+        description="The design system now has four layers that should stay in sync: raw theme values, semantic ui mixins, structural blocks, and thin component ergonomics built on top."
       >
         <div mix={threeColumnGridCss}>
           <article mix={ui.card.base}>
@@ -166,10 +166,10 @@ function OverviewPage() {
 
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>2. UI Recipes</p>
-              <h3 mix={ui.card.title}>`ui` is the styling language</h3>
+              <p mix={ui.card.eyebrow}>2. UI Mixins</p>
+              <h3 mix={ui.card.title}>`ui` is the compositional layer</h3>
               <p mix={ui.card.description}>
-                Recipes like `ui.button.primary`, `ui.card.base`, and `ui.nav.item` make composition
+                Mixins like `ui.button.primary`, `ui.card.base`, and `ui.nav.item` make composition
                 fast without scattering one-off styling decisions through the app.
               </p>
             </div>
@@ -177,7 +177,18 @@ function OverviewPage() {
 
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
-              <p mix={ui.card.eyebrow}>3. Components</p>
+              <p mix={ui.card.eyebrow}>3. Blocks</p>
+              <h3 mix={ui.card.title}>Blocks compose structure</h3>
+              <p mix={ui.card.description}>
+                Cards, sidebars, rails, and shell sections are larger structural pieces that can be
+                built from shared mixins without immediately turning into full behavioral components.
+              </p>
+            </div>
+          </article>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>4. Components</p>
               <h3 mix={ui.card.title}>Built-ins should stay thin</h3>
               <p mix={ui.card.description}>
                 First-party components can focus on markup, behavior, and ergonomics because their
@@ -198,7 +209,7 @@ function OverviewPage() {
               <p mix={ui.card.eyebrow}>Current pages</p>
               <h3 mix={ui.card.title}>A docs-style model for the system</h3>
               <p mix={ui.card.description}>
-                Overview, proof sheet, theme values, ui recipes, components, and layouts are split into
+                Overview, proof sheet, theme values, ui mixins, components, and blocks are split into
                 separate pages so each part can grow without turning the demo into one giant scroll.
               </p>
             </div>
@@ -206,7 +217,7 @@ function OverviewPage() {
               <ul mix={bulletListCss}>
                 <li>Overview explains the architecture.</li>
                 <li>Proof sheet shows the feel of a theme in context.</li>
-                <li>API pages show the contract and recipe surface.</li>
+                <li>API pages show the contract and mixin surface.</li>
               </ul>
             </div>
           </article>
@@ -653,7 +664,7 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
             <p mix={ui.card.eyebrow}>Shared sizes</p>
             <h3 mix={ui.card.title}>`ui.icon.sm`, `ui.icon.md`, and `ui.icon.lg`</h3>
             <p mix={ui.card.description}>
-              These recipes size the glyph itself. Layout-specific recipes like `ui.button.icon`
+              These mixins size the glyph itself. Layout-specific mixins like `ui.button.icon`
               still handle spacing and alignment inside controls.
             </p>
           </div>
@@ -681,8 +692,8 @@ function UiRecipesPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Recipe families"
-        description="Recipes are where the design system becomes practical. They should absorb recurring layout and typography decisions so app code composes instead of restyling."
+        title="Mixin Families"
+        description="Mixins are where the design system becomes practical. They should absorb recurring layout and typography decisions so app code composes instead of restyling."
       >
         <div mix={twoColumnGridCss}>
           <RecipeExample
@@ -700,7 +711,7 @@ function UiRecipesPage() {
             description="Shared shell, spacing, and slot rhythm for cards, popovers, and content panels."
             href={PAGES.uiRecipeCard.path}
             previewMix={docsExamplePreviewCenterCss}
-            title="Card recipes"
+            title="Card mixins"
           >
             {EXAMPLES.overviewCard.preview}
           </RecipeExample>
@@ -759,12 +770,12 @@ function UiRecipesPage() {
 
       <Section
         title="Low-level composition still matters"
-        description="The recipe layer should not replace utility composition. It should sit above it and remove the most repetitive styling choices."
+        description="The mixin layer should not replace utility composition. It should sit above it and remove the most repetitive styling choices."
       >
         <article mix={ui.card.base}>
           <div mix={ui.card.header}>
             <p mix={ui.card.eyebrow}>Utilities</p>
-            <h3 mix={ui.card.title}>Recipes and low-level utilities can coexist</h3>
+            <h3 mix={ui.card.title}>Mixins and low-level utilities can coexist</h3>
           </div>
           <div mix={utilityRowCss}>
             <div mix={[ui.p.sm, ui.rounded.lg, ui.shadow.xs, ui.bg.surfaceSecondary, utilityChipCss]}>
@@ -817,8 +828,8 @@ function UiRecipeTextPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Text recipe overview"
-        description="Text recipes provide the shared page-level voice of the system. They are the default vocabulary for headings, body copy, supporting notes, captions, and code."
+        title="Text mixin overview"
+        description="Text mixins provide the shared page-level voice of the system. They are the default vocabulary for headings, body copy, supporting notes, captions, and code."
       >
         <RecipeExample
           code={EXAMPLES.textPageTypography.code}
@@ -853,8 +864,8 @@ function UiRecipeCardPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Card recipe overview"
-        description="Card recipes solve recurring shell and spacing problems: the outer surface, the header rhythm, body spacing, action alignment, and footer boundaries."
+        title="Card mixin overview"
+        description="Card mixins solve recurring shell and spacing problems: the outer surface, the header rhythm, body spacing, action alignment, and footer boundaries."
       >
         <RecipeExample
           code={EXAMPLES.cardStructuredSurface.code}
@@ -868,7 +879,7 @@ function UiRecipeCardPage() {
 
       <Section
         title="Anatomy and tones"
-        description="The recipe family is really two things working together: structural slots and surface tone. Components can mix those pieces without inventing a new card model each time."
+        description="This mixin family is really two things working together: structural slots and surface tone. Components can mix those pieces without inventing a new card model each time."
       >
         <div mix={twoColumnGridCss}>
           <article mix={ui.card.base}>
@@ -931,7 +942,7 @@ function UiRecipeButtonPage() {
     <div mix={pageSectionStackCss}>
       <Section
         title="Buttons"
-        description="The button API now supports both fast aliases and deliberate composition. Use the flat button recipes when they fit, or compose `base + size + tone` when you need more control."
+        description="The button API now supports both fast aliases and deliberate composition. Use the flat button mixins when they fit, or compose `base + size + tone` when you need more control."
       >
         <RecipeExample
           code={EXAMPLES.buttonAliases.code}
@@ -950,7 +961,7 @@ function UiRecipeButtonPage() {
         <div mix={pageSectionStackCss}>
           <RecipeExample
             code={EXAMPLES.buttonBaseSizeTone.code}
-            description="Button recipes compose directly onto both `<button>` and `<a>`. This is the alternative to wrapper-heavy `asChild` patterns."
+            description="Button mixins compose directly onto both `<button>` and `<a>`. This is the alternative to wrapper-heavy `asChild` patterns."
             previewMix={docsExamplePreviewCenterCss}
             title="Base, size, and tone"
           >
@@ -969,7 +980,7 @@ function UiRecipeButtonPage() {
 
       <Section
         title="Slots and states"
-        description="Buttons use slot recipes for icons and keep loading layout-stable by treating the spinner as just another icon."
+        description="Buttons use slot mixins for icons and keep loading layout-stable by treating the spinner as just another icon."
       >
         <div mix={pageSectionStackCss}>
           <RecipeExample
@@ -997,7 +1008,7 @@ function UiRecipeButtonPage() {
                 <li>`ui.button.secondary` is the surfaced neutral button for cancel, back, filter, or supporting actions.</li>
                 <li>`ui.button.ghost` is for low-emphasis actions that should read like text until interaction.</li>
                 <li>`ui.button.danger` is only for destructive work like delete, archive, or revoke access.</li>
-                <li>Recipes default real `button` elements to `type="button"`, so use `type="submit"` explicitly when needed.</li>
+                <li>Mixins default real `button` elements to `type="button"`, so use `type="submit"` explicitly when needed.</li>
                 <li>Use the flat aliases for speed, and the composable layers when a first-party component needs to own size or structure.</li>
               </ul>
             </div>
@@ -1012,8 +1023,8 @@ function UiRecipeFieldPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Field recipe overview"
-        description="Fields should not reinvent their own chrome or type. The field and field-text recipes keep forms aligned with the rest of the system."
+        title="Field mixin overview"
+        description="Fields should not reinvent their own chrome or type. The field and field-text mixins keep forms aligned with the rest of the system."
       >
         <RecipeExample
           code={EXAMPLES.fieldStack.code}
@@ -1032,7 +1043,7 @@ function UiRecipeItemPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Item and status recipe overview"
+        title="Item and status mixin overview"
         description="Rows and status treatments are the basis for menus, command surfaces, tabs, combobox options, and sidebar collections."
       >
         <RecipeExample
@@ -1052,12 +1063,12 @@ function UiRecipeNavPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Sidebar and nav recipe overview"
+        title="Sidebar and nav mixin overview"
         description="The docs shell here is local, but the sidebar and navigation ingredients are useful application primitives that can be reused elsewhere."
       >
         <RecipeExample
           code={EXAMPLES.navDetail.code}
-          description="These recipes should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
+          description="These mixins should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
           previewMix={docsExamplePreviewCenterCss}
           title="Sidebar stack"
         >
@@ -1072,7 +1083,7 @@ function UiRecipeLayoutPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Row and stack recipe overview"
+        title="Row and stack mixin overview"
         description="These primitives cover the common flex mechanics that kept showing up as demo-only helpers: horizontal alignment, vertical rhythm, distribution, and wrapping."
       >
         <RecipeExample
@@ -1130,13 +1141,13 @@ function ComponentsPage() {
     <div mix={pageSectionStackCss}>
       <Section
         title="Current component direction"
-        description="Components should mostly be ergonomic shells around behavior and shared recipes rather than isolated style islands."
+        description="Components should mostly be ergonomic shells around behavior, shared mixins, and reusable blocks rather than isolated style islands."
       >
         <div mix={threeColumnGridCss}>
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>Button</p>
-              <h3 mix={ui.card.title}>A thin wrapper over a shared recipe</h3>
+              <h3 mix={ui.card.title}>A thin wrapper over shared mixins</h3>
               <p mix={ui.card.description}>
                 A button component can expose behavior and semantics while directly consuming
                 `ui.button.*`.
@@ -1197,7 +1208,7 @@ function ComponentsPage() {
 
       <Section
         title="Planned first-party surface area"
-        description="The component library should eventually cover the usual app primitives, but the visual language should still come from shared recipes and theme values."
+        description="The component library should eventually cover the usual app primitives, but the visual language should still come from shared mixins and theme values."
       >
         <div mix={twoColumnGridCss}>
           <article mix={ui.card.base}>
@@ -1241,8 +1252,8 @@ function LayoutsPage() {
   return () => (
     <div mix={pageSectionStackCss}>
       <Section
-        title="Demo shell vs reusable layout ingredients"
-        description="The docs shell here is not the package abstraction. What should travel into the system are the reusable parts like sidebar panels, nav items, carded rails, and content rhythm."
+        title="Blocks vs demo shell"
+        description="The docs shell here is not the package abstraction. What should travel into the system are reusable blocks like sidebar panels, carded rails, content sections, and shell ingredients."
       >
         <div mix={twoColumnGridCss}>
           <article mix={[ui.card.base, layoutPreviewShellCss]}>
@@ -1279,14 +1290,14 @@ function LayoutsPage() {
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>What belongs in the package</p>
-              <h3 mix={ui.card.title}>Reusable primitives, not demo-specific wrappers</h3>
+              <h3 mix={ui.card.title}>Reusable blocks, not demo-specific wrappers</h3>
             </div>
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
                 <li>`ui.sidebar.*` for panel rhythm and section labeling</li>
                 <li>`ui.nav.*` for compact application navigation items</li>
                 <li>`ui.card.*` for content rails and side panels</li>
-                <li>Demo-specific docs shell composition stays local to the docs app</li>
+                <li>Blocks can be composed from those mixins without turning the docs shell itself into package API</li>
               </ul>
             </div>
           </article>
@@ -1408,7 +1419,7 @@ function RecipeExample() {
   }) => (
     <div mix={docsExampleBlockCss}>
       <div mix={docsExampleIntroCss}>
-        <p mix={ui.text.eyebrow}>Recipe family</p>
+        <p mix={ui.text.eyebrow}>Mixin family</p>
         <h3 mix={[ui.text.title, docsExampleTitleCss]}>{title}</h3>
         <p mix={[ui.text.bodySm, docsExampleDescriptionCss]}>{description}</p>
       </div>
@@ -1420,7 +1431,7 @@ function RecipeExample() {
           <code mix={[ui.text.code, docsExampleCodeCss]}>{renderHighlightedCode(code)}</code>
           {href ? (
             <a href={href} mix={docsExampleLinkCss}>
-              Open recipe page
+              Open mixin page
             </a>
           ) : null}
         </div>

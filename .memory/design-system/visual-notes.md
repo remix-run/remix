@@ -27,7 +27,7 @@
   - add extra spacing only at the boundary before the list
 - List items feel much calmer when there is both space before the list and separation between bullets.
 
-## System Recipes
+## System Mixins
 
 ### Learned
 
@@ -47,11 +47,11 @@
 - Warning callouts inside content panels can overpower the surrounding text too easily.
 - Inline guidance works better when it feels supportive and lightly toned rather than bright and promotional.
 
-## Card Recipes
+## Card Mixins
 
 ### Learned
 
-- Card abstractions are more valuable here as semantic recipes than as wrapper components.
+- Card abstractions are more valuable here as semantic mixins than as wrapper components.
 - The most useful shared card behaviors so far are:
   - consistent outer shell spacing
   - header/action alignment

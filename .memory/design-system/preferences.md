@@ -16,11 +16,11 @@
   - not loud, brandy, or over-designed
 - Eyebrows and metadata should be subdued and not compete with headings.
 - Surface typography should feel tighter and calmer than page typography.
-- Prefer broad semantic recipes that first-party components and app code can share.
+- Prefer broad semantic mixins that first-party components and app code can share.
   - avoid demo-only abstractions becoming the de facto design-system taxonomy
 - `ui` should stay centered on composable base objects plus tone/state mixins.
-- Recipes should be allowed to carry safe default host attributes so call sites stay minimal.
-  - prefer defaults supplied by recipes over repeating the same element attributes everywhere
+- Mixins should be allowed to carry safe default host attributes so call sites stay minimal.
+  - prefer defaults supplied by mixins over repeating the same element attributes everywhere
   - explicit JSX props should still win
   - do not add special merging behavior for `className` or `style`; only fill them when absent
 - When using `mix`, prefer passing a single value directly instead of wrapping it in a one-item array.
