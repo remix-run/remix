@@ -8,6 +8,7 @@ export {
   type ThemeComponent,
   type ThemeUi,
   type ThemeStyleProps,
+  type ThemeRecipe,
   type ThemeUtility,
   type ThemeValue,
   type ThemeValues,

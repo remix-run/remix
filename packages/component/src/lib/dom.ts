@@ -1,6 +1,6 @@
 import type { StyleProps } from './style/lib/style.ts'
 import type { RemixNode } from './jsx.ts'
-import type { MixValue } from './mixin.ts'
+import type { MixInput } from './mixin.ts'
 
 /**
  * Adapted from Preact:
@@ -30,7 +30,7 @@ export interface HostProps<eventTarget extends EventTarget> {
   /** Child nodes to render inside the element. */
   children?: RemixNode
   /** Mixins to apply to the element. */
-  mix?: MixValue<eventTarget>
+  mix?: MixInput<eventTarget>
   /**
    * Set the innerHTML of the element directly.
    * When provided, children are ignored.

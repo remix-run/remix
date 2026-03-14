@@ -122,6 +122,19 @@ export type MixinDescriptor<
   readonly __node?: (node: node) => void
 }
 
+type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type NestedMixValue<descriptor, depth extends number = 4> = depth extends 0
+  ? descriptor | ReadonlyArray<descriptor>
+  : descriptor | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
+
+/**
+ * Accepted authoring shape for the `mix` prop on host elements.
+ */
+export type MixInput<
+  node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+> = NestedMixValue<MixinDescriptor<node, any, props>>
+
 /**
  * Accepted value shape for the `mix` prop.
  */

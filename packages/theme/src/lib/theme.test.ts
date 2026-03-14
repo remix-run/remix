@@ -221,7 +221,6 @@ describe('ui', () => {
             ui.card.header,
             ui.card.headerWithAction,
             ui.card.description,
-            ui.control.base,
             ui.button.primary,
             ui.sidebar.heading,
             ui.nav.itemActive,
@@ -267,7 +266,7 @@ describe('ui', () => {
           { mix: ui.card.footer },
           createElement(
             'button',
-            { type: 'button', mix: [ui.control.base, ui.button.secondary, ui.card.action] },
+            { type: 'button', mix: [ui.button.secondary, ui.card.action] },
             'Edit',
           ),
         ),

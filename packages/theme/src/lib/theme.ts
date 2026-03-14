@@ -196,6 +196,11 @@ export type ThemeComponent = ThemeRenderer & {
 
 export const theme = createThemeContract(themeVariableNames)
 export type ThemeUtility = ReturnType<typeof css>
+type PreviousThemeRecipeDepth = [0, 0, 1, 2, 3, 4]
+type NestedThemeRecipe<value, depth extends number = 4> = depth extends 0
+  ? value | ReadonlyArray<value>
+  : value | ReadonlyArray<NestedThemeRecipe<value, PreviousThemeRecipeDepth[depth]>>
+export type ThemeRecipe = NestedThemeRecipe<ThemeUtility>
 type ThemeUtilityScale<scale extends ThemeScale> = {
   [key in keyof scale]: ThemeUtility
 }
@@ -257,14 +262,14 @@ export type ThemeUi = {
   nav: {
     list: ThemeUtility
     item: ThemeUtility
-    itemActive: ThemeUtility
-    itemMuted: ThemeUtility
+    itemActive: ThemeRecipe
+    itemMuted: ThemeRecipe
   }
   card: {
-    base: ThemeUtility
-    secondary: ThemeUtility
-    elevated: ThemeUtility
-    inset: ThemeUtility
+    base: ThemeRecipe
+    secondary: ThemeRecipe
+    elevated: ThemeRecipe
+    inset: ThemeRecipe
     stack: ThemeUtility
     header: ThemeUtility
     headerWithAction: ThemeUtility
@@ -277,8 +282,8 @@ export type ThemeUi = {
   }
   item: {
     base: ThemeUtility
-    selected: ThemeUtility
-    danger: ThemeUtility
+    selected: ThemeRecipe
+    danger: ThemeRecipe
   }
   surface: {
     base: ThemeUtility
@@ -293,9 +298,9 @@ export type ThemeUi = {
     danger: ThemeUtility
   }
   button: {
-    primary: ThemeUtility
-    secondary: ThemeUtility
-    danger: ThemeUtility
+    primary: ThemeRecipe
+    secondary: ThemeRecipe
+    danger: ThemeRecipe
   }
 }
 
@@ -318,7 +323,147 @@ const backgroundUtilities = createSinglePropertyUtilities('backgroundColor', the
 const borderColorUtilities = createSinglePropertyUtilities('borderColor', theme.colors.border)
 const shadowUtilities = createSinglePropertyUtilities('boxShadow', theme.shadow)
 
-export const ui: ThemeUi = {
+let controlBaseUtility = css({
+  position: 'relative',
+  isolation: 'isolate',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: theme.control.height.sm,
+  paddingInline: theme.control.paddingInline.md,
+  overflow: 'hidden',
+  borderRadius: theme.radius.full,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.xs,
+  lineHeight: '1',
+  fontWeight: theme.fontWeight.medium,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  transitionProperty: 'border-color, background-color, box-shadow, color',
+  transitionDuration: theme.duration.fast,
+  transitionTimingFunction: theme.easing.standard,
+  boxShadow: `${theme.shadow.xs}, ${theme.shadow.sm}`,
+})
+
+let controlQuietToneUtility = css({
+  backgroundColor: theme.colors.background.surfaceSecondary,
+  backgroundImage:
+    'linear-gradient(to bottom, rgb(255 255 255 / 0.96) 0%, rgb(247 247 247 / 0.98) 100%)',
+  color: theme.colors.text.secondary,
+  border: `0.5px solid ${theme.colors.border.default}`,
+  boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.7), ${theme.shadow.xs}, ${theme.shadow.sm}`,
+  '&:hover': {
+    backgroundColor: theme.colors.background.surface,
+    color: theme.colors.text.primary,
+  },
+  '&:active': {
+    backgroundColor: theme.colors.background.inset,
+    boxShadow: `${theme.shadow.xs}`,
+  },
+  '&:focus-visible': {
+    outline: `2px solid ${theme.colors.focus.ring}`,
+    outlineOffset: '2px',
+  },
+  '&:disabled': {
+    opacity: 0.6,
+    cursor: 'not-allowed',
+  },
+})
+
+let surfaceBaseUtility = createSurfaceUtility({
+  background: theme.colors.background.surface,
+  border: theme.colors.border.subtle,
+  shadow: theme.shadow.xs,
+})
+
+let surfaceSecondaryUtility = createSurfaceUtility({
+  background: theme.colors.background.surfaceSecondary,
+  border: theme.colors.border.subtle,
+  shadow: theme.shadow.xs,
+})
+
+let surfaceElevatedUtility = createSurfaceUtility({
+  background: theme.colors.background.surfaceElevated,
+  border: theme.colors.border.subtle,
+  shadow: theme.shadow.md,
+})
+
+let surfaceInsetUtility = createSurfaceUtility({
+  background: theme.colors.background.inset,
+  border: theme.colors.border.subtle,
+  shadow: 'none',
+})
+
+let cardFrameUtility = createCardFrameUtility()
+
+let navItemUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: theme.control.height.md,
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  border: `1px solid transparent`,
+  borderRadius: theme.radius.md,
+  color: theme.colors.text.secondary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  fontWeight: theme.fontWeight.medium,
+  textDecoration: 'none',
+  transitionProperty: 'background-color, border-color, color, box-shadow',
+  transitionDuration: theme.duration.fast,
+  transitionTimingFunction: theme.easing.standard,
+  '&:hover': {
+    backgroundColor: theme.colors.background.surface,
+    color: theme.colors.text.primary,
+  },
+})
+
+let navItemActiveToneUtility = css({
+  backgroundColor: theme.colors.background.surface,
+  borderColor: theme.colors.border.subtle,
+  color: theme.colors.text.primary,
+  boxShadow: theme.shadow.xs,
+})
+
+let navItemMutedToneUtility = css({
+  color: theme.colors.text.muted,
+})
+
+let itemBaseUtility = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.space.sm,
+  width: '100%',
+  minHeight: theme.control.height.md,
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  border: '1px solid transparent',
+  borderRadius: theme.radius.md,
+  backgroundColor: 'transparent',
+  color: theme.colors.text.primary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  fontWeight: theme.fontWeight.medium,
+  textAlign: 'left',
+})
+
+let itemSelectedToneUtility = css({
+  backgroundColor: theme.colors.background.surfaceSecondary,
+  borderColor: theme.colors.border.subtle,
+  boxShadow: theme.shadow.xs,
+})
+
+let itemDangerToneUtility = css({
+  color: theme.colors.status.danger.foreground,
+  borderColor: theme.colors.status.danger.border,
+  backgroundColor: theme.colors.status.danger.background,
+})
+
+let primaryButtonToneUtility = createButtonUtility(theme.colors.action.primary)
+let secondaryButtonToneUtility = createButtonUtility(theme.colors.action.secondary)
+let dangerButtonToneUtility = createButtonUtility(theme.colors.action.danger)
+
+export const ui = {
   p: spacingUtilities,
   px: paddingInlineUtilities,
   py: paddingBlockUtilities,
@@ -428,51 +573,8 @@ export const ui: ThemeUi = {
     }),
   },
   control: {
-    base: css({
-      position: 'relative',
-      isolation: 'isolate',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: theme.control.height.sm,
-      paddingInline: theme.control.paddingInline.md,
-      overflow: 'hidden',
-      borderRadius: theme.radius.full,
-      fontFamily: theme.fontFamily.sans,
-      fontSize: theme.fontSize.xs,
-      lineHeight: '1',
-      fontWeight: theme.fontWeight.medium,
-      whiteSpace: 'nowrap',
-      cursor: 'pointer',
-      transitionProperty: 'border-color, background-color, box-shadow, color',
-      transitionDuration: theme.duration.fast,
-      transitionTimingFunction: theme.easing.standard,
-      boxShadow: `${theme.shadow.xs}, ${theme.shadow.sm}`,
-    }),
-    quiet: css({
-      backgroundColor: theme.colors.background.surfaceSecondary,
-      backgroundImage:
-        'linear-gradient(to bottom, rgb(255 255 255 / 0.96) 0%, rgb(247 247 247 / 0.98) 100%)',
-      color: theme.colors.text.secondary,
-      border: `0.5px solid ${theme.colors.border.default}`,
-      boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.7), ${theme.shadow.xs}, ${theme.shadow.sm}`,
-      '&:hover': {
-        backgroundColor: theme.colors.background.surface,
-        color: theme.colors.text.primary,
-      },
-      '&:active': {
-        backgroundColor: theme.colors.background.inset,
-        boxShadow: `${theme.shadow.xs}`,
-      },
-      '&:focus-visible': {
-        outline: `2px solid ${theme.colors.focus.ring}`,
-        outlineOffset: '2px',
-      },
-      '&:disabled': {
-        opacity: 0.6,
-        cursor: 'not-allowed',
-      },
-    }),
+    base: controlBaseUtility,
+    quiet: controlQuietToneUtility,
   },
   field: {
     base: css({
@@ -536,58 +638,15 @@ export const ui: ThemeUi = {
       gap: theme.space.xs,
       minWidth: 0,
     }),
-    item: css({
-      display: 'inline-flex',
-      alignItems: 'center',
-      minHeight: theme.control.height.md,
-      padding: `${theme.space.xs} ${theme.space.sm}`,
-      border: `1px solid transparent`,
-      borderRadius: theme.radius.md,
-      color: theme.colors.text.secondary,
-      fontFamily: theme.fontFamily.sans,
-      fontSize: theme.fontSize.sm,
-      lineHeight: theme.lineHeight.normal,
-      fontWeight: theme.fontWeight.medium,
-      textDecoration: 'none',
-      transitionProperty: 'background-color, border-color, color, box-shadow',
-      transitionDuration: theme.duration.fast,
-      transitionTimingFunction: theme.easing.standard,
-      '&:hover': {
-        backgroundColor: theme.colors.background.surface,
-        color: theme.colors.text.primary,
-      },
-    }),
-    itemActive: css({
-      backgroundColor: theme.colors.background.surface,
-      borderColor: theme.colors.border.subtle,
-      color: theme.colors.text.primary,
-      boxShadow: theme.shadow.xs,
-    }),
-    itemMuted: css({
-      color: theme.colors.text.muted,
-    }),
+    item: navItemUtility,
+    itemActive: composeThemeRecipe(navItemUtility, navItemActiveToneUtility),
+    itemMuted: composeThemeRecipe(navItemUtility, navItemMutedToneUtility),
   },
   card: {
-    base: createCardUtility({
-      background: theme.colors.background.surface,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.xs,
-    }),
-    secondary: createCardUtility({
-      background: theme.colors.background.surfaceSecondary,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.xs,
-    }),
-    elevated: createCardUtility({
-      background: theme.colors.background.surfaceElevated,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.md,
-    }),
-    inset: createCardUtility({
-      background: theme.colors.background.inset,
-      border: theme.colors.border.subtle,
-      shadow: 'none',
-    }),
+    base: composeThemeRecipe(cardFrameUtility, surfaceBaseUtility),
+    secondary: composeThemeRecipe(cardFrameUtility, surfaceSecondaryUtility),
+    elevated: composeThemeRecipe(cardFrameUtility, surfaceElevatedUtility),
+    inset: composeThemeRecipe(cardFrameUtility, surfaceInsetUtility),
     stack: css({
       display: 'flex',
       flexDirection: 'column',
@@ -657,55 +716,15 @@ export const ui: ThemeUi = {
     }),
   },
   item: {
-    base: css({
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: theme.space.sm,
-      width: '100%',
-      minHeight: theme.control.height.md,
-      padding: `${theme.space.xs} ${theme.space.sm}`,
-      border: '1px solid transparent',
-      borderRadius: theme.radius.md,
-      backgroundColor: 'transparent',
-      color: theme.colors.text.primary,
-      fontFamily: theme.fontFamily.sans,
-      fontSize: theme.fontSize.sm,
-      fontWeight: theme.fontWeight.medium,
-      textAlign: 'left',
-    }),
-    selected: css({
-      backgroundColor: theme.colors.background.surfaceSecondary,
-      borderColor: theme.colors.border.subtle,
-      boxShadow: theme.shadow.xs,
-    }),
-    danger: css({
-      color: theme.colors.status.danger.foreground,
-      borderColor: theme.colors.status.danger.border,
-      backgroundColor: theme.colors.status.danger.background,
-    }),
+    base: itemBaseUtility,
+    selected: composeThemeRecipe(itemBaseUtility, itemSelectedToneUtility),
+    danger: composeThemeRecipe(itemBaseUtility, itemDangerToneUtility),
   },
   surface: {
-    base: createSurfaceUtility({
-      background: theme.colors.background.surface,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.xs,
-    }),
-    secondary: createSurfaceUtility({
-      background: theme.colors.background.surfaceSecondary,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.xs,
-    }),
-    elevated: createSurfaceUtility({
-      background: theme.colors.background.surfaceElevated,
-      border: theme.colors.border.subtle,
-      shadow: theme.shadow.md,
-    }),
-    inset: createSurfaceUtility({
-      background: theme.colors.background.inset,
-      border: theme.colors.border.subtle,
-      shadow: 'none',
-    }),
+    base: surfaceBaseUtility,
+    secondary: surfaceSecondaryUtility,
+    elevated: surfaceElevatedUtility,
+    inset: surfaceInsetUtility,
   },
   status: {
     info: createStatusUtility(theme.colors.status.info),
@@ -714,11 +733,11 @@ export const ui: ThemeUi = {
     danger: createStatusUtility(theme.colors.status.danger),
   },
   button: {
-    primary: createButtonUtility(theme.colors.action.primary),
-    secondary: createButtonUtility(theme.colors.action.secondary),
-    danger: createButtonUtility(theme.colors.action.danger),
+    primary: composeThemeRecipe(controlBaseUtility, primaryButtonToneUtility),
+    secondary: composeThemeRecipe(controlBaseUtility, secondaryButtonToneUtility),
+    danger: composeThemeRecipe(controlBaseUtility, dangerButtonToneUtility),
   },
-}
+} satisfies ThemeUi
 
 export const RMX_01_VALUES: ThemeValues = {
   space: {
@@ -992,6 +1011,10 @@ function createSinglePropertyUtilities<scale extends ThemeScale>(
   return utilities
 }
 
+function composeThemeRecipe(...recipes: ThemeRecipe[]): ThemeRecipe {
+  return recipes
+}
+
 function createSurfaceUtility(options: {
   background: string
   border: string
@@ -1005,21 +1028,13 @@ function createSurfaceUtility(options: {
   })
 }
 
-function createCardUtility(options: {
-  background: string
-  border: string
-  shadow: string
-}) {
+function createCardFrameUtility() {
   return css({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.space.md,
     minWidth: 0,
     padding: theme.space.lg,
-    border: `1px solid ${options.border}`,
-    borderRadius: theme.radius.lg,
-    backgroundColor: options.background,
-    boxShadow: options.shadow,
     overflow: 'hidden',
   })
 }

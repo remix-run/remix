@@ -49,7 +49,7 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
 export type RemixNode = Renderable | RemixNode[]
 
 type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
-type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
 type NestedMixValue<mix, depth extends number = 4> = depth extends 0
   ? mix | ReadonlyArray<mix>
   : mix | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>

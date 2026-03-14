@@ -44,6 +44,15 @@ describe('jsx', () => {
         </button>
       )
     })
+
+    it('accepts nested mix values for host element JSX while render props still see arrays', () => {
+      let passthrough = createMixin((_handle) => {})
+      let descriptor = passthrough()
+
+      let withNested = <button mix={[[descriptor], [[[descriptor]]]]}>Click me</button>
+
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
+    })
   })
 
   describe('library managed attributes', () => {

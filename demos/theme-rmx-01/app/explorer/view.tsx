@@ -1,7 +1,7 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
 import { RMX_01, RMX_01_VALUES, theme, ui } from '@remix-run/theme'
-import type { ThemeUtility } from '@remix-run/theme'
+import type { ThemeRecipe } from '@remix-run/theme'
 import type { PageDefinition } from './data.ts'
 import { NAV_GROUPS, PAGES, UI_RECIPE_PAGES } from './data.ts'
 
@@ -239,10 +239,10 @@ function ProofSheetPage() {
               <h3 mix={[ui.text.title, zeroMarginCss]}>Operations Console</h3>
             </div>
             <div mix={buttonRowCss}>
-              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+              <button type="button" mix={ui.button.secondary}>
                 Export
               </button>
-              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+              <button type="button" mix={ui.button.primary}>
                 New release
               </button>
             </div>
@@ -253,7 +253,7 @@ function ProofSheetPage() {
               <div mix={ui.sidebar.section}>
                 <p mix={ui.sidebar.heading}>Navigation</p>
                 <nav aria-label="Proof sheet app navigation" mix={ui.nav.list}>
-                  <a href="/proof-sheet" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                  <a href="/proof-sheet" aria-current="page" mix={ui.nav.itemActive}>
                     Overview
                   </a>
                   <a href="/proof-sheet" mix={ui.nav.item}>
@@ -322,7 +322,7 @@ function ProofSheetPage() {
 
               <div mix={proofContentGridCss}>
                 <article mix={[ui.card.base, proofWideCardCss]}>
-                  <div mix={[ui.card.headerWithAction]}>
+                  <div mix={ui.card.headerWithAction}>
                     <div mix={ui.card.header}>
                       <p mix={ui.card.eyebrow}>Release checklist</p>
                       <h3 mix={ui.card.title}>Readability under operational pressure</h3>
@@ -342,7 +342,7 @@ function ProofSheetPage() {
                   </div>
                   <div mix={ui.card.footer}>
                     <p mix={[ui.text.caption, metaTextCss]}>Updated 18 minutes ago</p>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                    <button type="button" mix={ui.button.secondary}>
                       Open runbook
                     </button>
                   </div>
@@ -369,10 +369,10 @@ function ProofSheetPage() {
                     <p mix={ui.fieldText.help}>Editors can ship changes but cannot manage billing.</p>
                   </div>
                   <div mix={ui.card.footer}>
-                    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                    <button type="button" mix={ui.button.secondary}>
                       Cancel
                     </button>
-                    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                    <button type="button" mix={ui.button.primary}>
                       Send invite
                     </button>
                   </div>
@@ -610,9 +610,9 @@ function UiRecipesPage() {
 
           <RecipeExample
             code={`<div mix={buttonRowCss}>
-  <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Save</button>
-  <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Ghost</button>
-  <button type="button" mix={[buttonBaseCss, ui.button.danger]}>Delete</button>
+  <button type="button" mix={ui.button.primary}>Save</button>
+  <button type="button" mix={ui.button.secondary}>Ghost</button>
+  <button type="button" mix={ui.button.danger}>Delete</button>
 </div>`}
             description="Compact action treatments that stay cohesive across white, colored, and destructive states."
             href={PAGES.uiRecipeButton.path}
@@ -620,13 +620,13 @@ function UiRecipesPage() {
             title="Buttons and controls"
           >
             <div mix={buttonRowCss}>
-              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+              <button type="button" mix={ui.button.primary}>
                 Save
               </button>
-              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+              <button type="button" mix={ui.button.secondary}>
                 Ghost
               </button>
-              <button type="button" mix={[buttonBaseCss, ui.button.danger]}>
+              <button type="button" mix={ui.button.danger}>
                 Delete
               </button>
             </div>
@@ -658,6 +658,10 @@ function UiRecipesPage() {
     <span>Members</span>
     <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
   </button>
+  <button type="button" mix={ui.item.danger}>
+    <span>Archive workspace</span>
+    <span mix={ui.text.caption}>Permanent</span>
+  </button>
 </div>`}
             description="List rows and status treatments underpin menus, comboboxes, command surfaces, and sidebars."
             href={PAGES.uiRecipeItem.path}
@@ -669,7 +673,7 @@ function UiRecipesPage() {
                 <span>Members</span>
                 <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
               </button>
-              <button type="button" mix={[ui.item.base, ui.item.danger]}>
+              <button type="button" mix={ui.item.danger}>
                 <span>Archive workspace</span>
                 <span mix={ui.text.caption}>Permanent</span>
               </button>
@@ -678,7 +682,7 @@ function UiRecipesPage() {
 
           <RecipeExample
             code={`<nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
-  <a href="/ui-recipes" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+  <a href="/ui-recipes" aria-current="page" mix={ui.nav.itemActive}>
     Current page
   </a>
   <a href="/ui-recipes" mix={ui.nav.item}>Secondary page</a>
@@ -692,7 +696,7 @@ function UiRecipesPage() {
               <div mix={ui.sidebar.section}>
                 <p mix={ui.sidebar.heading}>Navigation</p>
                 <nav aria-label="UI recipe nav preview" mix={ui.nav.list}>
-                  <a href="/ui-recipes" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                  <a href="/ui-recipes" aria-current="page" mix={ui.nav.itemActive}>
                     Current page
                   </a>
                   <a href="/ui-recipes" mix={ui.nav.item}>
@@ -828,8 +832,8 @@ function UiRecipeCardPage() {
     </p>
   </div>
   <div mix={ui.card.footer}>
-    <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Cancel</button>
-    <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Continue</button>
+    <button type="button" mix={ui.button.secondary}>Cancel</button>
+    <button type="button" mix={ui.button.primary}>Continue</button>
   </div>
 </article>`}
           description="Use the card layer for content panels, popovers, previews, settings groups, and any other surface that needs consistent slot rhythm."
@@ -851,10 +855,10 @@ function UiRecipeCardPage() {
               </p>
             </div>
             <div mix={ui.card.footer}>
-              <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+              <button type="button" mix={ui.button.secondary}>
                 Cancel
               </button>
-              <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+              <button type="button" mix={ui.button.primary}>
                 Continue
               </button>
             </div>
@@ -931,22 +935,22 @@ function UiRecipeButtonPage() {
       >
         <RecipeExample
           code={`<div mix={buttonRowCss}>
-  <button type="button" mix={[buttonBaseCss, ui.button.primary]}>Save</button>
-  <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>Ghost</button>
-  <button type="button" mix={[buttonBaseCss, ui.button.danger]}>Delete</button>
+  <button type="button" mix={ui.button.primary}>Save</button>
+  <button type="button" mix={ui.button.secondary}>Ghost</button>
+  <button type="button" mix={ui.button.danger}>Delete</button>
 </div>`}
           description="The important part is shared structure first: compact height, rounded silhouette, border, shadow, and soft text treatment."
           previewMix={docsExamplePreviewTopLeftCss}
           title="Control family"
         >
           <div mix={buttonRowCss}>
-            <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+            <button type="button" mix={ui.button.primary}>
               Save
             </button>
-            <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+            <button type="button" mix={ui.button.secondary}>
               Ghost
             </button>
-            <button type="button" mix={[buttonBaseCss, ui.button.danger]}>
+            <button type="button" mix={ui.button.danger}>
               Delete
             </button>
           </div>
@@ -1004,7 +1008,7 @@ function UiRecipeItemPage() {
     <span>Members</span>
     <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
   </button>
-  <button type="button" mix={[ui.item.base, ui.item.danger]}>
+  <button type="button" mix={ui.item.danger}>
     <span>Archive workspace</span>
     <span mix={ui.text.caption}>Permanent</span>
   </button>
@@ -1018,7 +1022,7 @@ function UiRecipeItemPage() {
               <span>Members</span>
               <span mix={[statusBadgeCss, ui.status.success]}>12 online</span>
             </button>
-            <button type="button" mix={[ui.item.base, ui.item.danger]}>
+            <button type="button" mix={ui.item.danger}>
               <span>Archive workspace</span>
               <span mix={ui.text.caption}>Permanent</span>
             </button>
@@ -1041,7 +1045,7 @@ function UiRecipeNavPage() {
   <div mix={ui.sidebar.section}>
     <p mix={ui.sidebar.heading}>Navigation</p>
     <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
-      <a href="/ui-recipes/navigation" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+      <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
         Current page
       </a>
       <a href="/ui-recipes/navigation" mix={ui.nav.item}>Secondary page</a>
@@ -1057,7 +1061,7 @@ function UiRecipeNavPage() {
             <div mix={ui.sidebar.section}>
               <p mix={ui.sidebar.heading}>Navigation</p>
               <nav aria-label="UI recipe nav detail preview" mix={ui.nav.list}>
-                <a href="/ui-recipes/navigation" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                <a href="/ui-recipes/navigation" aria-current="page" mix={ui.nav.itemActive}>
                   Current page
                 </a>
                 <a href="/ui-recipes/navigation" mix={ui.nav.item}>
@@ -1086,18 +1090,18 @@ function ComponentsPage() {
           <article mix={ui.card.base}>
             <div mix={ui.card.header}>
               <p mix={ui.card.eyebrow}>Button</p>
-              <h3 mix={ui.card.title}>A thin wrapper over control + tone</h3>
+              <h3 mix={ui.card.title}>A thin wrapper over a shared recipe</h3>
               <p mix={ui.card.description}>
-                A button component can expose behavior and semantics while still leaning on
-                `ui.control.base` and `ui.button.*`.
+                A button component can expose behavior and semantics while directly consuming
+                `ui.button.*`.
               </p>
             </div>
             <div mix={ui.card.body}>
               <div mix={buttonRowCss}>
-                <button type="button" mix={[buttonBaseCss, ui.button.primary]}>
+                <button type="button" mix={ui.button.primary}>
                   Primary
                 </button>
-                <button type="button" mix={[buttonBaseCss, ui.button.secondary]}>
+                <button type="button" mix={ui.button.secondary}>
                   Secondary
                 </button>
               </div>
@@ -1200,7 +1204,7 @@ function LayoutsPage() {
               <div mix={ui.sidebar.section}>
                 <p mix={ui.sidebar.heading}>Account</p>
                 <nav aria-label="Settings sidebar" mix={ui.nav.list}>
-                  <a href="/layouts" aria-current="page" mix={[ui.nav.item, ui.nav.itemActive]}>
+                  <a href="/layouts" aria-current="page" mix={ui.nav.itemActive}>
                     Profile
                   </a>
                   <a href="/layouts" mix={ui.nav.item}>
@@ -1353,7 +1357,7 @@ function RecipeExample() {
     code: string
     description: string
     href?: string
-    previewMix?: ThemeUtility
+    previewMix?: ThemeRecipe
     title: string
   }) => (
     <div mix={docsExampleBlockCss}>
@@ -1392,7 +1396,7 @@ function MetricCard() {
     dataId?: string
     metric: string
     title: string
-    tone: ThemeUtility
+    tone: ThemeRecipe
     value: string
   }) => (
     <article data-proof-card={dataId} mix={[tone, metricCardCss]}>
@@ -1409,12 +1413,12 @@ function MetricCard() {
 }
 
 function getNavItemMix(path: string, currentPath: string) {
-  return currentPath === path ? [ui.nav.item, ui.nav.itemActive] : [ui.nav.item]
+  return currentPath === path ? ui.nav.itemActive : ui.nav.item
 }
 
 function getSubnavItemMix(path: string, currentPath: string) {
   return currentPath === path
-    ? [ui.nav.item, ui.nav.itemActive, sidebarSubnavItemCss]
+    ? [ui.nav.itemActive, sidebarSubnavItemCss]
     : [ui.nav.item, sidebarSubnavItemCss]
 }
 
@@ -1753,8 +1757,6 @@ let rowTableItemCss = css({
   padding: `${theme.space.sm} 0`,
   borderBottom: `1px solid ${theme.colors.border.subtle}`,
 })
-
-let buttonBaseCss = ui.control.base
 
 let buttonRowCss = css({
   display: 'flex',
