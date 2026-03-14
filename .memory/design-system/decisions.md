@@ -7,6 +7,10 @@
 - `createTheme(values)` renders a `<style>` tag defining those variables.
 - Both app code and first-party components consume `theme.*` variable references.
 - `ui` provides composable `css()` recipes built on top of the token contract.
+- Recipes are allowed to provide default host attributes through `attrs(...)`.
+  - this is part of the design-system strategy, not a one-off convenience
+  - explicit element props override recipe defaults
+  - `className` and `style` follow the same rule as any other prop: fill only when absent, no merging
 
 ## Current
 
@@ -14,6 +18,9 @@
   - one shared base treatment for an object like a control or surface
   - separate tone/state mixins layered on top
   - visual differences should mostly come from tokenized tone, not ad hoc component-specific styling
+- The preferred recipe model is:
+  - compose behavior, attrs, and styling in the recipe when the default is broadly correct
+  - remove redundant call-site attributes once a shared recipe reliably supplies them
 - Surface text is distinct from page text.
   - `ui.text.*` covers broader/common text roles
   - `ui.surfaceText.*` covers tighter, calmer text inside cards, dialogs, and similar surfaces

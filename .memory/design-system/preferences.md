@@ -19,6 +19,10 @@
 - Prefer broad semantic recipes that first-party components and app code can share.
   - avoid demo-only abstractions becoming the de facto design-system taxonomy
 - `ui` should stay centered on composable base objects plus tone/state mixins.
+- Recipes should be allowed to carry safe default host attributes so call sites stay minimal.
+  - prefer defaults supplied by recipes over repeating the same element attributes everywhere
+  - explicit JSX props should still win
+  - do not add special merging behavior for `className` or `style`; only fill them when absent
 - When using `mix`, prefer passing a single value directly instead of wrapping it in a one-item array.
 - The demo should clarify the whole design system, not imply that `RMX_01` itself is the whole story.
 - A dedicated proof sheet is valuable for evaluating a theme’s overall character quickly.

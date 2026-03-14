@@ -239,10 +239,10 @@ function ProofSheetPage() {
               <h3 mix={[ui.text.title, zeroMarginCss]}>Operations Console</h3>
             </div>
             <div mix={buttonRowCss}>
-              <button type="button" mix={ui.button.secondary}>
+              <button mix={ui.button.secondary}>
                 Export
               </button>
-              <button type="button" mix={ui.button.primary}>
+              <button mix={ui.button.primary}>
                 New release
               </button>
             </div>
@@ -342,7 +342,7 @@ function ProofSheetPage() {
                   </div>
                   <div mix={ui.card.footer}>
                     <p mix={[ui.text.caption, metaTextCss]}>Updated 18 minutes ago</p>
-                    <button type="button" mix={ui.button.secondary}>
+                    <button mix={ui.button.secondary}>
                       Open runbook
                     </button>
                   </div>
@@ -369,10 +369,10 @@ function ProofSheetPage() {
                     <p mix={ui.fieldText.help}>Editors can ship changes but cannot manage billing.</p>
                   </div>
                   <div mix={ui.card.footer}>
-                    <button type="button" mix={ui.button.secondary}>
+                    <button mix={ui.button.secondary}>
                       Cancel
                     </button>
-                    <button type="button" mix={ui.button.primary}>
+                    <button mix={ui.button.primary}>
                       Send invite
                     </button>
                   </div>
@@ -610,9 +610,9 @@ function UiRecipesPage() {
 
           <RecipeExample
             code={`<div mix={buttonRowCss}>
-  <button type="button" mix={ui.button.primary}>Save</button>
-  <button type="button" mix={ui.button.secondary}>Ghost</button>
-  <button type="button" mix={ui.button.danger}>Delete</button>
+  <button mix={ui.button.primary}>Save</button>
+  <button mix={ui.button.secondary}>Ghost</button>
+  <button mix={ui.button.danger}>Delete</button>
 </div>`}
             description="Compact action treatments that stay cohesive across white, colored, and destructive states."
             href={PAGES.uiRecipeButton.path}
@@ -620,13 +620,13 @@ function UiRecipesPage() {
             title="Buttons and controls"
           >
             <div mix={buttonRowCss}>
-              <button type="button" mix={ui.button.primary}>
+              <button mix={ui.button.primary}>
                 Save
               </button>
-              <button type="button" mix={ui.button.secondary}>
+              <button mix={ui.button.secondary}>
                 Ghost
               </button>
-              <button type="button" mix={ui.button.danger}>
+              <button mix={ui.button.danger}>
                 Delete
               </button>
             </div>
@@ -832,8 +832,8 @@ function UiRecipeCardPage() {
     </p>
   </div>
   <div mix={ui.card.footer}>
-    <button type="button" mix={ui.button.secondary}>Cancel</button>
-    <button type="button" mix={ui.button.primary}>Continue</button>
+    <button mix={ui.button.secondary}>Cancel</button>
+    <button mix={ui.button.primary}>Continue</button>
   </div>
 </article>`}
           description="Use the card layer for content panels, popovers, previews, settings groups, and any other surface that needs consistent slot rhythm."
@@ -855,10 +855,10 @@ function UiRecipeCardPage() {
               </p>
             </div>
             <div mix={ui.card.footer}>
-              <button type="button" mix={ui.button.secondary}>
+              <button mix={ui.button.secondary}>
                 Cancel
               </button>
-              <button type="button" mix={ui.button.primary}>
+              <button mix={ui.button.primary}>
                 Continue
               </button>
             </div>
@@ -935,22 +935,22 @@ function UiRecipeButtonPage() {
       >
         <RecipeExample
           code={`<div mix={buttonRowCss}>
-  <button type="button" mix={ui.button.primary}>Save</button>
-  <button type="button" mix={ui.button.secondary}>Ghost</button>
-  <button type="button" mix={ui.button.danger}>Delete</button>
+  <button mix={ui.button.primary}>Save</button>
+  <button mix={ui.button.secondary}>Ghost</button>
+  <button mix={ui.button.danger}>Delete</button>
 </div>`}
           description="The important part is shared structure first: compact height, rounded silhouette, border, shadow, and soft text treatment."
           previewMix={docsExamplePreviewTopLeftCss}
           title="Control family"
         >
           <div mix={buttonRowCss}>
-            <button type="button" mix={ui.button.primary}>
+            <button mix={ui.button.primary}>
               Save
             </button>
-            <button type="button" mix={ui.button.secondary}>
+            <button mix={ui.button.secondary}>
               Ghost
             </button>
-            <button type="button" mix={ui.button.danger}>
+            <button mix={ui.button.danger}>
               Delete
             </button>
           </div>
@@ -1098,10 +1098,10 @@ function ComponentsPage() {
             </div>
             <div mix={ui.card.body}>
               <div mix={buttonRowCss}>
-                <button type="button" mix={ui.button.primary}>
+                <button mix={ui.button.primary}>
                   Primary
                 </button>
-                <button type="button" mix={ui.button.secondary}>
+                <button mix={ui.button.secondary}>
                   Secondary
                 </button>
               </div>
