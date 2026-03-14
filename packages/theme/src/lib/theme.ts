@@ -359,7 +359,7 @@ export const ui: ThemeUi = {
       color: `color-mix(in oklab, ${theme.colors.text.muted} 84%, white)`,
     }),
     title: css({
-      fontSize: theme.fontSize.xl,
+      fontSize: theme.fontSize.lg,
       lineHeight: '1.16',
       fontWeight: theme.fontWeight.medium,
       letterSpacing: '-0.022em',
@@ -368,7 +368,7 @@ export const ui: ThemeUi = {
     body: css({
       fontSize: theme.fontSize.sm,
       lineHeight: '1.44',
-      color: `color-mix(in oklab, ${theme.colors.text.secondary} 80%, white)`,
+      color: `color-mix(in oklab, ${theme.colors.text.secondary} 76%, white)`,
     }),
     supporting: css({
       fontSize: theme.fontSize['2xs'],
