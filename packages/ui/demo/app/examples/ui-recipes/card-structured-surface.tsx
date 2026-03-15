@@ -1,9 +1,9 @@
 import { ui } from 'remix/ui'
-import { cardExampleFrameCss, statusBadgeCss } from './shared.ts'
+import { statusBadgeCss } from './shared.ts'
 
 export default function Example() {
   return () => (
-    <article mix={[ui.card.base, cardExampleFrameCss]}>
+    <article mix={ui.card.base}>
       <div mix={ui.card.headerWithAction}>
         <div mix={ui.card.header}>
           <p mix={ui.card.eyebrow}>Surface</p>

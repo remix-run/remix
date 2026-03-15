@@ -1,5 +1,5 @@
-import { css } from 'remix/component'
-import { createGlyphSheet, RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui'
+import { createGlyphSheet, RMX_01, RMX_01_GLYPHS } from 'remix/ui'
+import { standaloneExampleBodyCss, standaloneExampleBodyPadCss } from '../example-preview.tsx'
 import type { ExampleEntry } from './index.tsx'
 
 let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
@@ -20,22 +20,10 @@ export function ExampleDocument() {
         <title>{`${example.title} | RMX_01 Example`}</title>
         <RMX_01 />
       </head>
-      <body mix={pad ? [bodyCss, bodyPadCss] : bodyCss}>
+      <body mix={pad ? [standaloneExampleBodyCss, standaloneExampleBodyPadCss] : standaloneExampleBodyCss}>
         <RMX_01Glyphs />
         {example.preview}
       </body>
     </html>
   )
 }
-
-let bodyCss = css({
-  margin: 0,
-  minHeight: '100vh',
-  color: theme.colors.text.primary,
-  backgroundColor: theme.colors.background.canvas,
-  fontFamily: theme.fontFamily.sans,
-})
-
-let bodyPadCss = css({
-  padding: theme.space['2xl'],
-})

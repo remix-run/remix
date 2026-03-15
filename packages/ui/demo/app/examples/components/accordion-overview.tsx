@@ -9,7 +9,6 @@ import {
   theme,
   ui,
 } from 'remix/ui'
-import { accordionExampleFrameCss } from '../ui-recipes/shared.ts'
 
 let accordionBodyTextCss = css({
   margin: 0,
@@ -17,38 +16,36 @@ let accordionBodyTextCss = css({
 
 export default function example() {
   return () => (
-    <div mix={accordionExampleFrameCss}>
-      <Accordion defaultValue="account">
-        <AccordionItem value="account">
-          <AccordionTrigger>Account defaults</AccordionTrigger>
-          <AccordionContent>
-            <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
-              Keep billing contacts, email summaries, and workspace naming rules in one calm
-              disclosure list without adding another card layer.
-            </p>
-          </AccordionContent>
-        </AccordionItem>
+    <Accordion defaultValue="account">
+      <AccordionItem value="account">
+        <AccordionTrigger>Account defaults</AccordionTrigger>
+        <AccordionContent>
+          <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
+            Keep billing contacts, email summaries, and workspace naming rules in one calm
+            disclosure list without adding another card layer.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
 
-        <AccordionItem value="billing">
-          <AccordionTrigger>Billing schedule</AccordionTrigger>
-          <AccordionContent>
-            <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
-              Review invoice timing, payment methods, and renewal reminders with the same spacing
-              and typography used elsewhere in the system.
-            </p>
-          </AccordionContent>
-        </AccordionItem>
+      <AccordionItem value="billing">
+        <AccordionTrigger>Billing schedule</AccordionTrigger>
+        <AccordionContent>
+          <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
+            Review invoice timing, payment methods, and renewal reminders with the same spacing and
+            typography used elsewhere in the system.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
 
-        <AccordionItem value="notifications">
-          <AccordionTrigger>Notification rules</AccordionTrigger>
-          <AccordionContent>
-            <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
-              Use single mode when only one details panel should stay open at a time in a compact
-              settings or details view.
-            </p>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+      <AccordionItem value="notifications">
+        <AccordionTrigger>Notification rules</AccordionTrigger>
+        <AccordionContent>
+          <p mix={[ui.text.bodySm, accordionBodyTextCss]}>
+            Use single mode when only one details panel should stay open at a time in a compact
+            settings or details view.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }

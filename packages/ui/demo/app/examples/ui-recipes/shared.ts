@@ -16,19 +16,9 @@ export let navPreviewCardCss = css({
   padding: theme.space.md,
 })
 
-export let cardExampleFrameCss = css({
-  width: '100%',
-  maxWidth: '500px',
-})
-
 export let fieldStackCss = css({
   width: '100%',
   maxWidth: '360px',
-})
-
-export let accordionExampleFrameCss = css({
-  width: '100%',
-  maxWidth: '560px',
 })
 
 export let buttonScrollRowCss = css({
