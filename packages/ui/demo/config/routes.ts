@@ -1,6 +1,21 @@
 import { get, route } from 'remix/fetch-router/routes'
 
 export let routes = {
+  examples: route('/examples', {
+    textOverview: get('text-overview'),
+    cardOverview: get('card-overview'),
+    buttonAliases: get('button-aliases'),
+    fieldStack: get('field-stack'),
+    itemStatus: get('item-status'),
+    navOverview: get('nav-overview'),
+    rowStack: get('row-stack'),
+    textPageTypography: get('text-page-typography'),
+    cardStructuredSurface: get('card-structured-surface'),
+    buttonBaseSizeTone: get('button-base-size-tone'),
+    buttonSizes: get('button-sizes'),
+    buttonSlotsStates: get('button-slots-states'),
+    navDetail: get('nav-detail'),
+  }),
   explorer: route('/', {
     index: get('/'),
     proofSheet: get('proof-sheet'),

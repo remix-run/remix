@@ -997,49 +997,24 @@ function ThemeTokenControlPage() {
         <div mix={exampleStackCss}>
           <RecipeExample
             code={`<div mix={controlPreviewStackCss}>
-  <button mix={[ui.button.base, css({ minHeight: theme.control.height.sm })]}>theme.control.height.sm</button>
-  <button mix={[ui.button.base, css({ minHeight: theme.control.height.md })]}>theme.control.height.md</button>
+  <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.sm })]}>theme.control.height.sm</div>
+  <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.md })]}>theme.control.height.md</div>
+  <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.lg })]}>theme.control.height.lg</div>
 </div>`}
             description="Height tokens should keep small and medium controls aligned across buttons, fields, menus, and other compact interactions."
             previewMix={docsExamplePreviewStartCss}
             title="Control heights"
           >
             <div mix={controlPreviewStackCss}>
-              <button mix={[ui.button.base, ui.button.tone.secondary, css({ minHeight: theme.control.height.sm })]}>
+              <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.sm })]}>
                 theme.control.height.sm
-              </button>
-              <button mix={[ui.button.base, ui.button.tone.secondary, css({ minHeight: theme.control.height.md })]}>
+              </div>
+              <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.md })]}>
                 theme.control.height.md
-              </button>
-            </div>
-          </RecipeExample>
-
-          <RecipeExample
-            code={`<div mix={controlPreviewStackCss}>
-  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.sm })]}>padding sm</button>
-  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.md })]}>padding md</button>
-  <button mix={[ui.button.base, css({ paddingInline: theme.control.paddingInline.lg })]}>padding lg</button>
-</div>`}
-            description="Inline padding tokens set how compact or roomy control chrome feels without changing component markup."
-            previewMix={docsExamplePreviewStartCss}
-            title="Inline padding"
-          >
-            <div mix={controlPreviewStackCss}>
-              <button
-                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.sm })]}
-              >
-                padding sm
-              </button>
-              <button
-                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.md })]}
-              >
-                padding md
-              </button>
-              <button
-                mix={[ui.button.base, ui.button.tone.secondary, css({ paddingInline: theme.control.paddingInline.lg })]}
-              >
-                padding lg
-              </button>
+              </div>
+              <div mix={[controlTokenSampleCss, css({ minHeight: theme.control.height.lg })]}>
+                theme.control.height.lg
+              </div>
             </div>
           </RecipeExample>
         </div>
@@ -1178,6 +1153,7 @@ function UiRecipeTextPage() {
         <RecipeExample
           code={EXAMPLES.textPageTypography.code}
           description="Use page-level text roles when content sits in ordinary document flow and should read like part of the page rather than a surface-specific micro-layout."
+          href={EXAMPLES.textPageTypography.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Page typography"
         >
@@ -1214,6 +1190,7 @@ function UiRecipeCardPage() {
         <RecipeExample
           code={EXAMPLES.cardStructuredSurface.code}
           description="Use the card layer for content panels, popovers, previews, settings groups, and any other surface that needs consistent slot rhythm."
+          href={EXAMPLES.cardStructuredSurface.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Structured surface"
         >
@@ -1291,6 +1268,7 @@ function UiRecipeButtonPage() {
         <RecipeExample
           code={EXAMPLES.buttonAliases.code}
           description="These aliases are the quickest way to style ordinary actions. They already include `ui.button.base`, the default `md` size, and the matching tone."
+          href={EXAMPLES.buttonAliases.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Everyday button aliases"
         >
@@ -1306,6 +1284,7 @@ function UiRecipeButtonPage() {
           <RecipeExample
             code={EXAMPLES.buttonBaseSizeTone.code}
             description="Button mixins compose directly onto both `<button>` and `<a>`. This is the alternative to wrapper-heavy `asChild` patterns."
+            href={EXAMPLES.buttonBaseSizeTone.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Base, size, and tone"
           >
@@ -1314,6 +1293,7 @@ function UiRecipeButtonPage() {
           <RecipeExample
             code={EXAMPLES.buttonSizes.code}
             description="Size is a separate layer. `ui.button.iconOnly` is for icon-only buttons and keeps the control square."
+            href={EXAMPLES.buttonSizes.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Sizes"
           >
@@ -1332,6 +1312,7 @@ function UiRecipeButtonPage() {
             description={
               'Use `ui.button.icon` and `ui.button.label` for leading icons, trailing icons, and loading spinners. Add `ui.animation.spin` when the glyph should visibly indicate in-progress work.'
             }
+            href={EXAMPLES.buttonSlotsStates.path}
             previewMix={docsExamplePreviewCenterCss}
             title="Icons, loading, and disabled"
           >
@@ -1373,6 +1354,7 @@ function UiRecipeFieldPage() {
         <RecipeExample
           code={EXAMPLES.fieldStack.code}
           description="Labels, help text, and field chrome belong together. That gives first-party form components a strong default shape."
+          href={EXAMPLES.fieldStack.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Field stack"
         >
@@ -1393,6 +1375,7 @@ function UiRecipeItemPage() {
         <RecipeExample
           code={EXAMPLES.itemStatus.code}
           description="Items should be useful as a boring default. Status treatments then add semantic tone without changing the row structure."
+          href={EXAMPLES.itemStatus.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Row primitives"
         >
@@ -1413,6 +1396,7 @@ function UiRecipeNavPage() {
         <RecipeExample
           code={EXAMPLES.navDetail.code}
           description="These mixins should support settings rails, project navigation, and docs-style sidebars without requiring a wrapper-heavy layout API."
+          href={EXAMPLES.navDetail.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Sidebar stack"
         >
@@ -1433,6 +1417,7 @@ function UiRecipeLayoutPage() {
         <RecipeExample
           code={EXAMPLES.rowStack.code}
           description="Use `ui.row` and `ui.stack` for repeated flex mechanics, then add spacing with `ui.gap.*` instead of inventing purpose-built row helpers."
+          href={EXAMPLES.rowStack.path}
           previewMix={docsExamplePreviewCenterCss}
           title="Composed layout primitives"
         >
@@ -1717,7 +1702,7 @@ function RecipeExample() {
           <code mix={[ui.text.code, docsExampleCodeCss]}>{renderHighlightedCode(code)}</code>
           {href ? (
             <a href={href} mix={docsExampleLinkCss}>
-              Open mixin page
+              Open standalone example
             </a>
           ) : null}
         </div>
@@ -2429,6 +2414,20 @@ let controlPreviewStackCss = css({
   alignItems: 'flex-start',
   gap: theme.space.sm,
   width: '100%',
+})
+
+let controlTokenSampleCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: theme.control.height.sm,
+  paddingInline: theme.space.md,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.background.surfaceSecondary,
+  boxShadow: theme.shadow.xs,
+  fontSize: theme.fontSize.xs,
+  fontWeight: theme.fontWeight.medium,
+  color: theme.colors.text.secondary,
 })
 
 let anatomyGridCss = css({

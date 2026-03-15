@@ -61,11 +61,6 @@ const sampleTheme = {
       md: '32px',
       lg: '36px',
     },
-    paddingInline: {
-      sm: '8px',
-      md: '12px',
-      lg: '16px',
-    },
   },
   shadow: {
     xs: '0 1px 2px rgb(0 0 0 / 0.05)',

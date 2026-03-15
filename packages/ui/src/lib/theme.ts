@@ -63,11 +63,6 @@ let themeVariableNames = {
       md: '--rmx-control-height-md',
       lg: '--rmx-control-height-lg',
     },
-    paddingInline: {
-      sm: '--rmx-control-padding-inline-sm',
-      md: '--rmx-control-padding-inline-md',
-      lg: '--rmx-control-padding-inline-lg',
-    },
   },
   shadow: {
     xs: '--rmx-shadow-xs',
@@ -397,7 +392,7 @@ let controlBaseUtility = css({
   alignItems: 'center',
   justifyContent: 'center',
   minHeight: theme.control.height.sm,
-  paddingInline: theme.control.paddingInline.md,
+  paddingInline: theme.space.md,
   overflow: 'hidden',
   borderRadius: theme.radius.full,
   fontFamily: theme.fontFamily.sans,
@@ -510,19 +505,19 @@ let buttonIconAttrsUtility = attrs({ 'aria-hidden': true })
 
 let buttonSizeSmUtility = css({
   minHeight: `calc(${theme.control.height.sm} - 4px)`,
-  paddingInline: theme.control.paddingInline.sm,
+  paddingInline: theme.space.sm,
   fontSize: theme.fontSize.xxs,
 })
 
 let buttonSizeMdUtility = css({
   minHeight: theme.control.height.sm,
-  paddingInline: theme.control.paddingInline.md,
+  paddingInline: theme.space.md,
   fontSize: theme.fontSize.xs,
 })
 
 let buttonSizeLgUtility = css({
   minHeight: theme.control.height.md,
-  paddingInline: theme.control.paddingInline.lg,
+  paddingInline: theme.space.lg,
   fontSize: theme.fontSize.sm,
   '--rmx-button-label-padding-inline': theme.space.sm,
 })
@@ -834,7 +829,7 @@ export const ui: ThemeUi = {
     base: css({
       minHeight: theme.control.height.lg,
       width: '100%',
-      paddingInline: theme.control.paddingInline.sm,
+      paddingInline: theme.space.sm,
       border: `0.5px solid ${theme.colors.border.default}`,
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.background.surface,
@@ -1082,11 +1077,6 @@ export const RMX_01_VALUES: ThemeValues = {
       md: '32px',
       lg: '36px',
     },
-    paddingInline: {
-      sm: '8px',
-      md: '12px',
-      lg: '16px',
-    },
   },
   shadow: {
     xs: '0 1px 1px rgb(0 0 0 / 0.05)',
@@ -1167,9 +1157,9 @@ export const RMX_01_VALUES: ThemeValues = {
     },
     status: {
       info: {
-        background: '#faeef8',
-        foreground: '#b33e96',
-        border: '#f0c6e4',
+        background: '#eaf2ff',
+        foreground: '#1A72FF',
+        border: '#b9d4ff',
       },
       success: {
         background: '#EAF7E6',
