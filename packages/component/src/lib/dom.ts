@@ -19,6 +19,8 @@ export interface LayoutAnimationConfig {
   duration?: number
   /** CSS easing function (default: spring 'snappy' easing) */
   easing?: string
+  /** Include scale projection for size changes (default: true) */
+  size?: boolean
 }
 
 /**

@@ -131,6 +131,57 @@ describe('animateLayout mixin', () => {
     expect(animation.options.easing).toBe('linear')
   })
 
+  it('can animate translation without scale projection', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+    let node = container.querySelector('div')
+    invariant(node)
+
+    mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
+    root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+    mockAnimations = []
+
+    mockBoundingRectSequence(node, [
+      { left: 0, top: 0, right: 100, bottom: 100 },
+      { left: 20, top: 30, right: 160, bottom: 170 },
+    ])
+    root.render(<div data-tick="2" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+
+    expect(mockAnimations).toHaveLength(1)
+    let animation = mockAnimations[0]
+    expect(String(animation.keyframes[0].transform)).toContain('translate3d(')
+    expect(String(animation.keyframes[0].transform)).not.toContain('scale(')
+  })
+
+  it('does not invent translation for size-only changes when size projection is disabled', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+    let node = container.querySelector('div')
+    invariant(node)
+
+    mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 40 })
+    root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+    mockAnimations = []
+
+    mockBoundingRectSequence(node, [
+      { left: 0, top: 0, right: 100, bottom: 40 },
+      { left: 0, top: 0, right: 100, bottom: 120 },
+    ])
+    root.render(<div data-tick="2" mix={[animateLayout({ size: false })]} />)
+    root.flush()
+
+    expect(mockAnimations).toHaveLength(0)
+  })
+
   it('does not animate when geometry does not change', () => {
     let container = document.createElement('div')
     let root = createRoot(container)
