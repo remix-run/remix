@@ -77,7 +77,7 @@ describe('detectMimeType()', () => {
   })
 
   it('returns MIME type for common video formats', () => {
-    assert.equal(detectMimeType('mp4'), 'application/mp4')
+    assert.equal(detectMimeType('mp4'), 'video/mp4')
     assert.equal(detectMimeType('webm'), 'video/webm')
     assert.equal(detectMimeType('mov'), 'video/quicktime')
   })
