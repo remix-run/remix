@@ -33,6 +33,21 @@ let examplesController: Controller<typeof routes.examples> = {
         pad: url.searchParams.has('pad'),
       })
     },
+    breadcrumbsBasic({ url }) {
+      return renderExample(EXAMPLES.breadcrumbsBasic, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    breadcrumbsSeparator({ url }) {
+      return renderExample(EXAMPLES.breadcrumbsSeparator, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    breadcrumbsDecomposed({ url }) {
+      return renderExample(EXAMPLES.breadcrumbsDecomposed, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
     textOverview({ url }) {
       return renderExample(EXAMPLES.overviewText, {
         pad: url.searchParams.has('pad'),

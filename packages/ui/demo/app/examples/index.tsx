@@ -11,6 +11,9 @@ import {
 import AccordionCardExample from './components/accordion-card.tsx'
 import AccordionMultipleExample from './components/accordion-multiple.tsx'
 import AccordionOverviewExample from './components/accordion-overview.tsx'
+import BreadcrumbsBasicExample from './components/breadcrumbs-basic.tsx'
+import BreadcrumbsDecomposedExample from './components/breadcrumbs-decomposed.tsx'
+import BreadcrumbsSeparatorExample from './components/breadcrumbs-separator.tsx'
 import ButtonAliasesExample from './ui-recipes/button-aliases.tsx'
 import ButtonBaseSizeToneExample from './ui-recipes/button-base-size-tone.tsx'
 import ButtonSizesExample from './ui-recipes/button-sizes.tsx'
@@ -80,6 +83,27 @@ export let EXAMPLES = {
     relativePath: './components/accordion-multiple.tsx',
     preview: <HydratedAccordionMultipleExample />,
     title: 'Accordion multiple mode',
+  }),
+  breadcrumbsBasic: createExample({
+    docsPath: '/components/breadcrumbs',
+    path: '/examples/breadcrumbs-basic',
+    relativePath: './components/breadcrumbs-basic.tsx',
+    preview: <BreadcrumbsBasicExample />,
+    title: 'Breadcrumbs basic',
+  }),
+  breadcrumbsSeparator: createExample({
+    docsPath: '/components/breadcrumbs',
+    path: '/examples/breadcrumbs-separator',
+    relativePath: './components/breadcrumbs-separator.tsx',
+    preview: <BreadcrumbsSeparatorExample />,
+    title: 'Breadcrumbs custom separator',
+  }),
+  breadcrumbsDecomposed: createExample({
+    docsPath: '/components/breadcrumbs',
+    path: '/examples/breadcrumbs-decomposed',
+    relativePath: './components/breadcrumbs-decomposed.tsx',
+    preview: <BreadcrumbsDecomposedExample />,
+    title: 'Breadcrumbs decomposed',
   }),
   overviewText: createExample({
     path: '/examples/text-overview',

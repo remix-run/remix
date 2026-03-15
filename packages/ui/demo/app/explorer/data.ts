@@ -179,6 +179,15 @@ export let PAGES = {
     description:
       'Accordion is the first behavior-heavy `remix/ui` component: a calm disclosure list built from shared mixins, real DOM events, and context-driven internal coordination.',
   },
+  componentBreadcrumbs: {
+    id: 'component-breadcrumbs',
+    path: '/components/breadcrumbs',
+    navLabel: 'Breadcrumbs',
+    eyebrow: 'Component',
+    title: 'Breadcrumbs component',
+    description:
+      'Breadcrumbs is a thin convenience component for common app-layout trails: good default output first, with an easy path back to plain markup and existing primitives.',
+  },
   layouts: {
     id: 'layouts',
     path: '/layouts',
@@ -190,7 +199,7 @@ export let PAGES = {
   },
 } as const satisfies Record<string, PageDefinition>
 
-export let COMPONENT_PAGES = [PAGES.componentAccordion] as const
+export let COMPONENT_PAGES = [PAGES.componentAccordion, PAGES.componentBreadcrumbs] as const
 
 export let UI_RECIPE_PAGES = [
   PAGES.uiRecipeText,

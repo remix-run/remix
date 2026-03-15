@@ -1,4 +1,9 @@
 export {
+  Breadcrumbs,
+  type BreadcrumbItem,
+  type BreadcrumbsProps,
+} from './lib/breadcrumbs.tsx'
+export {
   Accordion,
   AccordionChangeEvent,
   AccordionContent,

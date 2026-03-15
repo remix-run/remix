@@ -5,6 +5,9 @@ export let routes = {
     accordionOverview: get('accordion-overview'),
     accordionCard: get('accordion-card'),
     accordionMultiple: get('accordion-multiple'),
+    breadcrumbsBasic: get('breadcrumbs-basic'),
+    breadcrumbsSeparator: get('breadcrumbs-separator'),
+    breadcrumbsDecomposed: get('breadcrumbs-decomposed'),
     textOverview: get('text-overview'),
     cardOverview: get('card-overview'),
     buttonAliases: get('button-aliases'),
@@ -24,6 +27,7 @@ export let routes = {
     proofSheet: get('proof-sheet'),
     glyphs: get('glyphs'),
     componentAccordion: get('components/accordion'),
+    componentBreadcrumbs: get('components/breadcrumbs'),
     themeTokens: route('theme-tokens', {
       space: get('space'),
       radius: get('radius'),

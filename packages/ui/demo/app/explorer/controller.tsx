@@ -27,6 +27,9 @@ let explorerController: Controller<typeof routes.explorer> = {
     componentAccordion() {
       return renderPage(PAGES.componentAccordion)
     },
+    componentBreadcrumbs() {
+      return renderPage(PAGES.componentBreadcrumbs)
+    },
     themeTokens: {
       actions: {
         space() {
