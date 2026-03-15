@@ -1,4 +1,18 @@
 export {
+  Accordion,
+  AccordionChangeEvent,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  accordionChangeEventType,
+  type AccordionContentProps,
+  type AccordionItemProps,
+  type AccordionMultipleProps,
+  type AccordionProps,
+  type AccordionSingleProps,
+  type AccordionTriggerProps,
+} from './lib/accordion.tsx'
+export {
   createTheme,
   RMX_01,
   RMX_01_VALUES,

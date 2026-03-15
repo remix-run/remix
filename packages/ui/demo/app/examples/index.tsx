@@ -3,6 +3,14 @@ import url from 'node:url'
 
 import type { RemixNode } from 'remix/component'
 
+import {
+  HydratedAccordionCardExample,
+  HydratedAccordionMultipleExample,
+  HydratedAccordionOverviewExample,
+} from '../assets/example-entries.tsx'
+import AccordionCardExample from './components/accordion-card.tsx'
+import AccordionMultipleExample from './components/accordion-multiple.tsx'
+import AccordionOverviewExample from './components/accordion-overview.tsx'
 import ButtonAliasesExample from './ui-recipes/button-aliases.tsx'
 import ButtonBaseSizeToneExample from './ui-recipes/button-base-size-tone.tsx'
 import ButtonSizesExample from './ui-recipes/button-sizes.tsx'
@@ -52,6 +60,27 @@ function createExample({
 }
 
 export let EXAMPLES = {
+  accordionOverview: createExample({
+    docsPath: '/components/accordion',
+    path: '/examples/accordion-overview',
+    relativePath: './components/accordion-overview.tsx',
+    preview: <HydratedAccordionOverviewExample />,
+    title: 'Accordion overview',
+  }),
+  accordionCard: createExample({
+    docsPath: '/components/accordion',
+    path: '/examples/accordion-card',
+    relativePath: './components/accordion-card.tsx',
+    preview: <HydratedAccordionCardExample />,
+    title: 'Accordion in a card',
+  }),
+  accordionMultiple: createExample({
+    docsPath: '/components/accordion',
+    path: '/examples/accordion-multiple',
+    relativePath: './components/accordion-multiple.tsx',
+    preview: <HydratedAccordionMultipleExample />,
+    title: 'Accordion multiple mode',
+  }),
   overviewText: createExample({
     path: '/examples/text-overview',
     relativePath: './ui-recipes/text-overview.tsx',

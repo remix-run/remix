@@ -2,6 +2,9 @@ import { get, route } from 'remix/fetch-router/routes'
 
 export let routes = {
   examples: route('/examples', {
+    accordionOverview: get('accordion-overview'),
+    accordionCard: get('accordion-card'),
+    accordionMultiple: get('accordion-multiple'),
     textOverview: get('text-overview'),
     cardOverview: get('card-overview'),
     buttonAliases: get('button-aliases'),
@@ -20,6 +23,7 @@ export let routes = {
     index: get('/'),
     proofSheet: get('proof-sheet'),
     glyphs: get('glyphs'),
+    componentAccordion: get('components/accordion'),
     themeTokens: route('theme-tokens', {
       space: get('space'),
       radius: get('radius'),

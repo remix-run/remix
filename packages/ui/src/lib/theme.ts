@@ -1,4 +1,4 @@
-import { attrs, createElement, createMixin, css } from '@remix-run/component'
+import { attrs, createElement, createMixin, css, spring } from '@remix-run/component'
 import type { ElementProps, RemixElement } from '@remix-run/component'
 import type { MixinDescriptor } from '@remix-run/component'
 
@@ -331,6 +331,14 @@ export type ThemeUi = {
     secondary: ThemeRecipe
     ghost: ThemeRecipe
     danger: ThemeRecipe
+  }
+  accordion: {
+    root: ThemeUtility
+    item: ThemeRecipe
+    trigger: ThemeUtility
+    indicator: ThemeUtility
+    panel: ThemeUtility
+    body: ThemeUtility
   }
 }
 
@@ -709,6 +717,85 @@ let buttonToneUtilities = {
   ghost: controlGhostToneUtility,
   danger: dangerButtonToneUtility,
 }
+let accordionRootUtility = css({
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+  borderTop: `1px solid ${theme.colors.border.subtle}`,
+})
+let accordionTransition = spring()
+let accordionItemUtility = css({
+  borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  minWidth: 0,
+})
+let accordionTriggerUtility = css({
+  all: 'unset',
+  boxSizing: 'border-box',
+  cursor: 'revert',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: theme.space.md,
+  width: '100%',
+  minHeight: theme.control.height.lg,
+  padding: `${theme.space.md} 0`,
+  color: theme.colors.text.primary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  fontWeight: theme.fontWeight.medium,
+  textAlign: 'left',
+  '&:focus-visible': {
+    outline: `2px solid ${theme.colors.focus.ring}`,
+    outlineOffset: '2px',
+  },
+  '&:disabled': {
+    opacity: 0.55,
+  },
+  '& > span:first-child': {
+    minWidth: 0,
+  },
+})
+let accordionIndicatorUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: theme.fontSize.sm,
+  height: theme.fontSize.sm,
+  color: theme.colors.text.muted,
+  transition: `transform ${accordionTransition}`,
+  '&[data-state="open"]': {
+    transform: 'rotate(90deg)',
+  },
+})
+let accordionPanelUtility = css({
+  display: 'grid',
+  gridTemplateRows: '0fr',
+  transition: `grid-template-rows ${accordionTransition}`,
+  '&[data-state="open"]': {
+    gridTemplateRows: '1fr',
+  },
+  '&[data-state="closed"]': {
+    pointerEvents: 'none',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+  },
+})
+let accordionBodyUtility = css({
+  display: 'flow-root',
+  minHeight: 0,
+  paddingBottom: theme.space.md,
+  color: theme.colors.text.secondary,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  '& > :first-child': {
+    marginTop: 0,
+  },
+  '& > :last-child': {
+    marginBottom: 0,
+  },
+})
 
 export const ui: ThemeUi = {
   p: spacingUtilities,
@@ -890,14 +977,14 @@ export const ui: ThemeUi = {
       minWidth: 0,
     }),
     item: navItemUtility,
-    itemActive: composeThemeRecipe(navItemUtility, navItemActiveToneUtility),
-    itemMuted: composeThemeRecipe(navItemUtility, navItemMutedToneUtility),
+    itemActive: [navItemUtility, navItemActiveToneUtility],
+    itemMuted: [navItemUtility, navItemMutedToneUtility],
   },
   card: {
-    base: composeThemeRecipe(cardFrameUtility, surfaceBaseUtility),
-    secondary: composeThemeRecipe(cardFrameUtility, surfaceSecondaryUtility),
-    elevated: composeThemeRecipe(cardFrameUtility, surfaceElevatedUtility),
-    inset: composeThemeRecipe(cardFrameUtility, surfaceInsetUtility),
+    base: [cardFrameUtility, surfaceBaseUtility],
+    secondary: [cardFrameUtility, surfaceSecondaryUtility],
+    elevated: [cardFrameUtility, surfaceElevatedUtility],
+    inset: [cardFrameUtility, surfaceInsetUtility],
     stack: css({
       display: 'flex',
       flexDirection: 'column',
@@ -968,8 +1055,8 @@ export const ui: ThemeUi = {
   },
   item: {
     base: itemBaseUtility,
-    selected: composeThemeRecipe(itemBaseUtility, itemSelectedToneUtility),
-    danger: composeThemeRecipe(itemBaseUtility, itemDangerToneUtility),
+    selected: [itemBaseUtility, itemSelectedToneUtility],
+    danger: [itemBaseUtility, itemDangerToneUtility],
   },
   surface: {
     base: surfaceBaseUtility,
@@ -984,38 +1071,46 @@ export const ui: ThemeUi = {
     danger: createStatusUtility(theme.colors.status.danger),
   },
   button: {
-    base: composeThemeRecipe(buttonDefaultsUtility, buttonBaseStyleUtility),
+    base: [buttonDefaultsUtility, buttonBaseStyleUtility],
     label: buttonLabelUtility,
-    icon: composeThemeRecipe(buttonIconAttrsUtility, buttonIconUtility),
+    icon: [buttonIconAttrsUtility, buttonIconUtility],
     sm: buttonSizeSmUtility,
     md: buttonSizeMdUtility,
     lg: buttonSizeLgUtility,
     iconOnly: buttonSizeIconOnlyUtility,
     tone: buttonToneUtilities,
-    primary: composeThemeRecipe(
+    primary: [
       buttonDefaultsUtility,
       buttonBaseStyleUtility,
       buttonSizeMdUtility,
       buttonToneUtilities.primary,
-    ),
-    secondary: composeThemeRecipe(
+    ],
+    secondary: [
       buttonDefaultsUtility,
       buttonBaseStyleUtility,
       buttonSizeMdUtility,
       buttonToneUtilities.secondary,
-    ),
-    ghost: composeThemeRecipe(
+    ],
+    ghost: [
       buttonDefaultsUtility,
       buttonBaseStyleUtility,
       buttonSizeMdUtility,
       buttonToneUtilities.ghost,
-    ),
-    danger: composeThemeRecipe(
+    ],
+    danger: [
       buttonDefaultsUtility,
       buttonBaseStyleUtility,
       buttonSizeMdUtility,
       buttonToneUtilities.danger,
-    ),
+    ],
+  },
+  accordion: {
+    root: accordionRootUtility,
+    item: accordionItemUtility,
+    trigger: accordionTriggerUtility,
+    indicator: accordionIndicatorUtility,
+    panel: accordionPanelUtility,
+    body: accordionBodyUtility,
   },
 }
 
@@ -1320,10 +1415,6 @@ function createSinglePropertyUtilities<scale extends ThemeScale>(
   }
 
   return utilities
-}
-
-function composeThemeRecipe(...recipes: ThemeRecipe[]): ThemeRecipe {
-  return recipes
 }
 
 function createSurfaceUtility(options: {

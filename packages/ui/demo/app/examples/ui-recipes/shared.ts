@@ -26,6 +26,11 @@ export let fieldStackCss = css({
   maxWidth: '360px',
 })
 
+export let accordionExampleFrameCss = css({
+  width: '100%',
+  maxWidth: '560px',
+})
+
 export let buttonScrollRowCss = css({
   display: 'flex',
   alignItems: 'center',

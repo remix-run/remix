@@ -24,6 +24,9 @@ let explorerController: Controller<typeof routes.explorer> = {
     glyphs() {
       return renderPage(PAGES.glyphs)
     },
+    componentAccordion() {
+      return renderPage(PAGES.componentAccordion)
+    },
     themeTokens: {
       actions: {
         space() {

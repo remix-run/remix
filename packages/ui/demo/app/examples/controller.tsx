@@ -5,8 +5,11 @@ import type { routes } from '../../config/routes.ts'
 import { EXAMPLES } from './index.tsx'
 import { ExampleDocument } from './view.tsx'
 
-function renderExample(example: (typeof EXAMPLES)[keyof typeof EXAMPLES]) {
-  return render(<ExampleDocument example={example} />, {
+function renderExample(
+  example: (typeof EXAMPLES)[keyof typeof EXAMPLES],
+  options?: { pad?: boolean },
+) {
+  return render(<ExampleDocument example={example} pad={options?.pad ?? false} />, {
     headers: {
       'Cache-Control': 'no-store',
     },
@@ -15,44 +18,85 @@ function renderExample(example: (typeof EXAMPLES)[keyof typeof EXAMPLES]) {
 
 let examplesController: Controller<typeof routes.examples> = {
   actions: {
-    textOverview() {
-      return renderExample(EXAMPLES.overviewText)
+    accordionOverview({ url }) {
+      return renderExample(EXAMPLES.accordionOverview, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    cardOverview() {
-      return renderExample(EXAMPLES.overviewCard)
+    accordionCard({ url }) {
+      return renderExample(EXAMPLES.accordionCard, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    buttonAliases() {
-      return renderExample(EXAMPLES.buttonAliases)
+    accordionMultiple({ url }) {
+      return renderExample(EXAMPLES.accordionMultiple, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    fieldStack() {
-      return renderExample(EXAMPLES.fieldStack)
+    textOverview({ url }) {
+      return renderExample(EXAMPLES.overviewText, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    itemStatus() {
-      return renderExample(EXAMPLES.itemStatus)
+    cardOverview({ url }) {
+      return renderExample(EXAMPLES.overviewCard, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    navOverview() {
-      return renderExample(EXAMPLES.navOverview)
+    buttonAliases({ url }) {
+      return renderExample(EXAMPLES.buttonAliases, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    rowStack() {
-      return renderExample(EXAMPLES.rowStack)
+    fieldStack({ url }) {
+      return renderExample(EXAMPLES.fieldStack, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    textPageTypography() {
-      return renderExample(EXAMPLES.textPageTypography)
+    itemStatus({ url }) {
+      return renderExample(EXAMPLES.itemStatus, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    cardStructuredSurface() {
-      return renderExample(EXAMPLES.cardStructuredSurface)
+    navOverview({ url }) {
+      return renderExample(EXAMPLES.navOverview, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    buttonBaseSizeTone() {
-      return renderExample(EXAMPLES.buttonBaseSizeTone)
+    rowStack({ url }) {
+      return renderExample(EXAMPLES.rowStack, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    buttonSizes() {
-      return renderExample(EXAMPLES.buttonSizes)
+    textPageTypography({ url }) {
+      return renderExample(EXAMPLES.textPageTypography, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    buttonSlotsStates() {
-      return renderExample(EXAMPLES.buttonSlotsStates)
+    cardStructuredSurface({ url }) {
+      return renderExample(EXAMPLES.cardStructuredSurface, {
+        pad: url.searchParams.has('pad'),
+      })
     },
-    navDetail() {
-      return renderExample(EXAMPLES.navDetail)
+    buttonBaseSizeTone({ url }) {
+      return renderExample(EXAMPLES.buttonBaseSizeTone, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    buttonSizes({ url }) {
+      return renderExample(EXAMPLES.buttonSizes, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    buttonSlotsStates({ url }) {
+      return renderExample(EXAMPLES.buttonSlotsStates, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    navDetail({ url }) {
+      return renderExample(EXAMPLES.navDetail, {
+        pad: url.searchParams.has('pad'),
+      })
     },
   },
 }

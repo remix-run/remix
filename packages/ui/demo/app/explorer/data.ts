@@ -170,6 +170,15 @@ export let PAGES = {
     description:
       'First-party components should stay focused on markup, behavior, and ergonomics while styling comes from shared tokens and mixins.',
   },
+  componentAccordion: {
+    id: 'component-accordion',
+    path: '/components/accordion',
+    navLabel: 'Accordion',
+    eyebrow: 'Component',
+    title: 'Accordion component',
+    description:
+      'Accordion is the first behavior-heavy `remix/ui` component: a calm disclosure list built from shared mixins, real DOM events, and context-driven internal coordination.',
+  },
   layouts: {
     id: 'layouts',
     path: '/layouts',
@@ -180,6 +189,8 @@ export let PAGES = {
       'Use blocks for larger structural pieces like shells, sidebars, rails, and grouped surfaces.',
   },
 } as const satisfies Record<string, PageDefinition>
+
+export let COMPONENT_PAGES = [PAGES.componentAccordion] as const
 
 export let UI_RECIPE_PAGES = [
   PAGES.uiRecipeText,

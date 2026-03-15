@@ -12,7 +12,7 @@ import {
 import type { ThemeRecipe } from 'remix/ui'
 import { EXAMPLES } from '../examples/index.tsx'
 import type { PageDefinition } from './data.ts'
-import { PAGES, PRIMARY_PAGES, THEME_TOKEN_PAGES, UI_RECIPE_PAGES } from './data.ts'
+import { COMPONENT_PAGES, PAGES, PRIMARY_PAGES, THEME_TOKEN_PAGES, UI_RECIPE_PAGES } from './data.ts'
 
 let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
 
@@ -28,6 +28,7 @@ export function ExplorerDocument() {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         />
+        <script async type="module" src="/assets/entry.js" />
         <title>{`${page.title} | RMX_01 Design System`}</title>
         <RMX_01 />
       </head>
@@ -110,13 +111,43 @@ function Sidebar() {
         </nav>
       </section>
 
+      <section mix={ui.sidebar.section}>
+        <p mix={ui.sidebar.heading}>Components</p>
+        <nav aria-label="Component pages" mix={ui.nav.list}>
+          {COMPONENT_PAGES.map(componentPage => (
+            <a
+              key={componentPage.path}
+              href={componentPage.path}
+              aria-current={currentPath === componentPage.path ? 'page' : undefined}
+              mix={getSubnavItemMix(componentPage.path, currentPath)}
+            >
+              {componentPage.navLabel}
+            </a>
+          ))}
+        </nav>
+      </section>
+
       <nav aria-label="Remaining pages" mix={ui.nav.list}>
         {PRIMARY_PAGES.slice(3).map(page => (
           <a
             key={page.path}
             href={page.path}
-            aria-current={currentPath === page.path ? 'page' : undefined}
-            mix={getNavItemMix(page.path, currentPath)}
+            aria-current={
+              page.path === PAGES.components.path
+                ? currentPath.startsWith(PAGES.components.path)
+                  ? 'page'
+                  : undefined
+                : currentPath === page.path
+                  ? 'page'
+                  : undefined
+            }
+            mix={
+              page.path === PAGES.components.path
+                ? currentPath.startsWith(PAGES.components.path)
+                  ? ui.nav.itemActive
+                  : ui.nav.item
+                : getNavItemMix(page.path, currentPath)
+            }
           >
             {page.navLabel}
           </a>
@@ -168,6 +199,10 @@ function PageContent() {
 
     if (page.id === PAGES.components.id) {
       return <ComponentsPage />
+    }
+
+    if (page.id === PAGES.componentAccordion.id) {
+      return <ComponentAccordionPage />
     }
 
     return <LayoutsPage />
@@ -1547,6 +1582,7 @@ function ComponentsPage() {
             </div>
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
+                <li>Accordion as the first behavior-heavy proof point</li>
                 <li>Button and button group</li>
                 <li>Card and surface shells</li>
                 <li>Dialog, popover, dropdown menu, tooltip</li>
@@ -1568,6 +1604,81 @@ function ComponentsPage() {
                 <li>Toast, sonner, spinner, progress, skeleton</li>
                 <li>Carousel, resizable, scroll area, pagination</li>
                 <li>Table, badge, breadcrumb, avatar, separator</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function ComponentAccordionPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Accordion"
+        description="Accordion is the first `remix/ui` component that proves the intended split: shared theme tokens and mixins for visuals, component context for internal coordination, and bubbling events for external communication."
+      >
+        <RecipeExample
+          code={EXAMPLES.accordionOverview.code}
+          description="The default Accordion is a separated disclosure list for compact settings, details, and inspector-style surfaces where one section usually stays open."
+          href={EXAMPLES.accordionOverview.path}
+          previewMix={docsExamplePreviewStartCss}
+          title="Single disclosure list"
+        >
+          {EXAMPLES.accordionOverview.preview}
+        </RecipeExample>
+      </Section>
+
+      <Section
+        title="Composition"
+        description="Because the visual model comes from `ui.accordion.*`, the component can sit inside another surface without needing wrapper-heavy APIs or special styling variants."
+      >
+        <RecipeExample
+          code={EXAMPLES.accordionCard.code}
+          description="Wrap the Accordion in a card when the surrounding content needs stronger grouping, then compose extra layout with ordinary mixins and `css()`."
+          href={EXAMPLES.accordionCard.path}
+          previewMix={docsExamplePreviewStartCss}
+          title="Accordion inside a card"
+        >
+          {EXAMPLES.accordionCard.preview}
+        </RecipeExample>
+      </Section>
+
+      <Section
+        title="Multiple mode and disabled items"
+        description="Use multiple mode for operational lists and check surfaces where several sections are commonly open together, and disable individual items when one section is unavailable."
+      >
+        <div mix={pageSectionStackCss}>
+          <RecipeExample
+            code={EXAMPLES.accordionMultiple.code}
+            description={
+              'The component supports `type="multiple"`, per-item disabled states, and the same shared disclosure styling.'
+            }
+            href={EXAMPLES.accordionMultiple.path}
+            previewMix={docsExamplePreviewStartCss}
+            title="Multiple + disabled"
+          >
+            {EXAMPLES.accordionMultiple.preview}
+          </RecipeExample>
+
+          <article mix={ui.card.base}>
+            <div mix={ui.card.header}>
+              <p mix={ui.card.eyebrow}>What to remember</p>
+              <h3 mix={ui.card.title}>Practical usage rules</h3>
+              <p mix={ui.card.description}>
+                The Accordion API should stay boring to use and easy for both app developers and
+                coding agents to reach for.
+              </p>
+            </div>
+            <div mix={ui.card.body}>
+              <ul mix={bulletListCss}>
+                <li>Use single mode for compact details and settings panels where focus should stay on one section at a time.</li>
+                <li>Use multiple mode for checklists, diagnostics, and operational surfaces where parallel reading is normal.</li>
+                <li>`AccordionTrigger` owns the heading and button structure so the accessibility wiring stays consistent.</li>
+                <li>Listen for changes with `on(Accordion.change, ...)` on the Accordion itself or any ancestor.</li>
+                <li>Compose extra spacing or surface treatment with mixins and `css()` instead of asking the component for aesthetic variants.</li>
               </ul>
             </div>
           </article>
@@ -1752,7 +1863,7 @@ function getSubnavItemMix(path: string, currentPath: string) {
 
 function renderHighlightedCode(code: string) {
   let pattern =
-    /\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\b(?:createTheme|createGlyphSheet|Glyph|glyphNames)\b|\bRMX_01(?:_VALUES|_GLYPHS)?\b/g
+    /\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\b(?:createTheme|createGlyphSheet|Glyph|glyphNames|Accordion|AccordionItem|AccordionTrigger|AccordionContent|AccordionChangeEvent)\b|\bRMX_01(?:_VALUES|_GLYPHS)?\b/g
   let nodes: Array<RemixNode> = []
   let lastIndex = 0
 

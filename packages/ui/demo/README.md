@@ -17,6 +17,12 @@ pnpm -C packages/ui/demo dev
 
 Then open `http://localhost:44100`.
 
+For a one-shot production-style run that also builds the browser assets:
+
+```sh
+pnpm -C packages/ui/demo start
+```
+
 ## Screenshot Workflow
 
 The demo includes a Playwright-based review workflow so you can capture the current UI without manually taking screenshots.
