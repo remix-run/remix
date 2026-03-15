@@ -745,6 +745,9 @@ let accordionTriggerUtility = css({
   lineHeight: theme.lineHeight.normal,
   fontWeight: theme.fontWeight.medium,
   textAlign: 'left',
+  '&:hover:not(:disabled)': {
+    backgroundColor: theme.colors.background.surfaceSecondary,
+  },
   '&:focus-visible': {
     outline: `2px solid ${theme.colors.focus.ring}`,
     outlineOffset: '2px',

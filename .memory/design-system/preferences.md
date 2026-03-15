@@ -14,6 +14,9 @@
   - avoid heavy text-shadow or crunchy contrast
 - Typography should feel quiet, readable, and product-oriented.
   - not loud, brandy, or over-designed
+- Hover affordances should usually feel immediate.
+  - subtle hover color shifts are good
+  - avoid animated hover transitions when they make controls feel laggy
 - Eyebrows and metadata should be subdued and not compete with headings.
 - Surface typography should feel tighter and calmer than page typography.
 - Prefer broad semantic mixins that first-party components and app code can share.
