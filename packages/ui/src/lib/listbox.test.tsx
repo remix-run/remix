@@ -5,7 +5,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 
 import { Listbox, ListboxOption } from './listbox.tsx'
-import type { ListboxChangeEvent, ListboxOpenChangeEvent, ListboxProps } from './listbox.tsx'
+import type {
+  ListboxChangeEvent,
+  ListboxOpenChangeEvent,
+  ListboxProps,
+  ListboxSetup,
+} from './listbox.tsx'
 import { isPopoverOpen, popoverFadeDuration } from './popover.tsx'
 
 function ensureAdoptedStyleSheets() {
@@ -59,9 +64,9 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
   element.getBoundingClientRect = () => new DOMRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-function renderExampleListbox(props: Partial<ListboxProps> = {}) {
+function renderExampleListbox(props: Partial<ListboxProps> & { setup?: ListboxSetup } = {}) {
   return (
-    <Listbox defaultLabel="Select a status" {...props}>
+    <Listbox setup={{ label: 'Select a status', value: 'backlog' }} {...props}>
       <ListboxOption value="backlog">Backlog</ListboxOption>
       <ListboxOption textValue="In progress" value="in-progress">
         In progress
@@ -92,8 +97,8 @@ describe('Listbox', () => {
   it('supports uncontrolled value and name submission', async () => {
     let { container, root } = renderApp(
       renderExampleListbox({
-        defaultValue: 'backlog',
         name: 'status',
+        setup: { label: 'Select a status', value: 'backlog' },
       }),
     )
 
@@ -118,11 +123,10 @@ describe('Listbox', () => {
     expect(hiddenInput.value).toBe('in-progress')
   })
 
-  it('renders the selected label on initial mount when defaultValue is provided', () => {
+  it('renders the selected label on initial mount when setup value is provided', () => {
     let { container } = renderApp(
       renderExampleListbox({
-        defaultValue: 'backlog',
-        defaultLabel: 'Select a status',
+        setup: { label: 'Select a status', value: 'backlog' },
       }),
     )
 

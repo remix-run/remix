@@ -49,9 +49,7 @@ export class ListboxOpenChangeEvent extends Event {
 
 export type ListboxProps = Omit<Props<'div'>, 'children'> & {
   children?: RemixNode
-  defaultLabel?: RemixNode
   defaultOpen?: boolean
-  defaultValue?: string | null
   disabled?: boolean
   loopFocus?: boolean
   name?: string
@@ -68,6 +66,7 @@ export type ListboxOptionProps = Omit<Props<'div'>, 'children'> & {
 
 export type ListboxSetup = {
   label?: RemixNode
+  value?: string | null
 }
 
 type ListboxComponent = typeof ListboxImpl & {
@@ -306,7 +305,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     }
 
     if (!hasInitializedValue) {
-      uncontrolledValue = currentProps.defaultValue ?? null
+      uncontrolledValue = setup.value ?? null
       hasInitializedValue = true
     }
 
@@ -570,11 +569,11 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       }
 
       if (
-        typeof currentProps?.defaultLabel === 'string' ||
-        typeof currentProps?.defaultLabel === 'number' ||
-        typeof currentProps?.defaultLabel === 'bigint'
+        typeof setup.label === 'string' ||
+        typeof setup.label === 'number' ||
+        typeof setup.label === 'bigint'
       ) {
-        node.textContent = String(currentProps.defaultLabel)
+        node.textContent = String(setup.label)
       }
     }
   }
@@ -975,9 +974,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     currentProps = props
     let domProps = { ...props } as Record<string, unknown>
     delete domProps.children
-    delete domProps.defaultLabel
     delete domProps.defaultOpen
-    delete domProps.defaultValue
     delete domProps.disabled
     delete domProps.loopFocus
     delete domProps.mix
@@ -996,9 +993,8 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
           selectedOption?.props.textValue ??
           (selectedOption ? getListboxOptionLabel(selectedOption) : null) ??
           setup.label ??
-          props.defaultLabel ??
           null
-        : props.defaultLabel ?? null
+        : setup.label ?? null
     let renderedChildren = usesCustomStructure
       ? replaceValueChildren(props.children, renderedLabel)
       : [
