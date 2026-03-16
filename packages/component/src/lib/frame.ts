@@ -59,6 +59,20 @@ type FrameTemplateListener = (fragment: DocumentFragment) => void
 let bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 let frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 
+function syncElementAttributes(target: Element, source: Element) {
+  for (let attribute of Array.from(target.attributes)) {
+    if (!source.hasAttribute(attribute.name)) {
+      target.removeAttribute(attribute.name)
+    }
+  }
+
+  for (let attribute of Array.from(source.attributes)) {
+    if (target.getAttribute(attribute.name) !== attribute.value) {
+      target.setAttribute(attribute.name, attribute.value)
+    }
+  }
+}
+
 export type FrameRuntime = {
   topFrame?: FrameHandle
   errorTarget: EventTarget
@@ -231,6 +245,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(content, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
+
+      syncElementAttributes(container.doc.documentElement, parsed.documentElement)
+      syncElementAttributes(container.doc.head, parsed.head)
+      syncElementAttributes(container.doc.body, parsed.body)
 
       diffNodes(Array.from(container.doc.head.childNodes), Array.from(parsed.head.childNodes), {
         ...context,
