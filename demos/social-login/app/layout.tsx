@@ -27,9 +27,9 @@ let documentStyle = css({
 })
 
 let bodyStyle = css({
-  '--bg': '#07a86d',
-  '--bg-deep': '#04925d',
-  '--panel': 'rgba(255, 255, 255, 0.92)',
+  '--bg': '#64748b',
+  '--bg-deep': '#475569',
+  '--panel': 'rgba(255, 255, 255, 0.95)',
   '--panel-strong': '#ffffff',
   '--text': '#0f172a',
   '--muted': '#5b6474',
@@ -37,12 +37,12 @@ let bodyStyle = css({
   '--google': '#2563eb',
   '--github': '#cbd5e1',
   '--x': '#111111',
-  '--primary': '#078f5c',
-  '--primary-accent': '#056d47',
+  '--primary': '#153e94',
+  '--primary-accent': '#0f2f72',
   '--error-bg': '#fff1f2',
   '--error-border': 'rgba(190, 24, 93, 0.14)',
   '--error-text': '#a11d48',
-  '--success': '#0f9f6e',
+  '--success': '#335ea8',
   '--radius-sm': '3px',
   '--radius-md': '4px',
   '--radius-lg': '6px',
@@ -53,7 +53,7 @@ let bodyStyle = css({
   fontFamily: "'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
   color: 'var(--text)',
   background:
-    'radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 34%), radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.06), transparent 26%), linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%)',
+    'radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 30%), radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.08), transparent 28%), linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%)',
   '& *': {
     boxSizing: 'border-box',
   },
