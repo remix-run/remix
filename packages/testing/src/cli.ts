@@ -6,12 +6,10 @@ import { discoverTests } from './lib/server/test-discovery.ts'
 import { runTests } from './lib/server/test-runner.ts'
 import { displayResults } from './lib/server/result-collector.ts'
 
-let { startServer, clearCache } = await tsImport('./lib/server/server.tsx', {
+let { startServer } = await tsImport('./lib/server/server.tsx', {
   parentURL: import.meta.url,
   tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
 })
-
-let cwd = process.cwd()
 
 let { values, positionals } = parseArgs({
   args: process.argv.slice(2),
@@ -29,7 +27,7 @@ let pattern = positionals[0] || '**/*.test.{ts,tsx}'
 let port = Number(values.port)
 let isWatchMode = values.watch ?? false
 
-let server = await startServer(port, pattern, cwd)
+let server = await startServer(port, pattern)
 
 let hasExited = false
 let latestExitCode = 0
@@ -80,10 +78,9 @@ async function executeRun() {
   if (hasExited) return
 
   running = true
-  clearCache()
 
   try {
-    let files = await discoverTests(pattern, cwd)
+    let files = await discoverTests(pattern, process.cwd())
 
     if (files.length === 0) {
       console.error(`No test files found matching pattern: ${pattern}`)

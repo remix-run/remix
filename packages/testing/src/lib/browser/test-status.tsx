@@ -1,20 +1,13 @@
 import { clientEntry, on, type Handle } from '@remix-run/component'
 import { runTests } from './test-executor.ts'
+import { normalizeFilePath, normalizeLine } from './utils.ts'
 
 // Matches `file:line:col` at end of a stack frame, e.g. `(fixtures/foo.ts:10:5)` or ` fixtures/foo.ts:10:5`
 let frameLocRe = /([^():\s][^():]*\.[jt]sx?):(\d+):(\d+)/
 
-function normalizeLine(line: string): string {
-  return line
-    .replace(/https?:\/\/localhost:\d+\//g, '')
-    .replace(/\/?_transform\/([^):]+)\.js(?=[:)])/g, '$1.ts')
-    .replace(/\/?_module\/([^):]+)(?=[:)])/g, (_match, encoded) => decodeURIComponent(encoded))
-    .replace(/^\s+/, '  ')
-}
-
 function renderStack(stack: string, baseDir: string) {
   return stack.split('\n').map((raw, i) => {
-    let isTestModule = raw.includes('/_module/')
+    let isTestModule = raw.includes('/@test/')
     let line = normalizeLine(raw)
     let match = isTestModule ? frameLocRe.exec(line) : null
     if (match) {
@@ -58,7 +51,7 @@ export const TestStatus = clientEntry(
     async function run() {
       try {
         for (let testFile of setup.testFiles) {
-          await import(`/_module/${testFile}`)
+          await import(testFile)
           let { passed, failed, tests } = await runTests()
           allResults.passed += passed
           allResults.failed += failed
@@ -118,7 +111,7 @@ export const TestStatus = clientEntry(
                   userSelect: 'none',
                 }}
               >
-                {file}
+                {normalizeFilePath(file)}
               </summary>
               <div style={{ marginLeft: '16px', marginTop: '4px' }}>
                 {Array.from(suiteMap.entries()).map(([suiteName, tests]) => {

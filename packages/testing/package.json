@@ -48,7 +48,7 @@
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
-    "@types/pluralize": "^0.0.33"
+    "@remix-run/script-server": "workspace:*"
   },
   "peerDependencies": {
     "esbuild": "^0.25.0",
@@ -70,7 +70,7 @@
     "@remix-run/assert": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "pluralize": "^8.0.0"
+    "decamelize": "^6.0.1"
   },
   "keywords": [
     "testing",

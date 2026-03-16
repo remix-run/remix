@@ -1,27 +1,5 @@
+import { normalizeFilePath, normalizeLine } from '../browser/utils.ts'
 import type { TestResults } from './test-runner.ts'
-
-function normalizeStack(stack: string): string {
-  let lines = stack.split('\n')
-  let cwd = process.cwd().replace(/\\/g, '/')
-
-  return lines
-    .map((line) => {
-      let normalized = line
-        .replace(/https?:\/\/localhost:\d+\//g, '')
-        .replace(/\/?_browser\/([^):]+)\.js(?=[:)])/g, '$1.ts')
-        .replace(/\/?_module\/([^):]+)(?=[:)])/g, (_match, encoded) => decodeURIComponent(encoded))
-        .replace(/\/?_test\/([^):]+)(?=[:)])/g, (_match, encoded) => decodeURIComponent(encoded))
-        .replace(`${cwd}/`, './')
-        .replace(cwd, '.')
-
-      if (/^\s/.test(normalized)) {
-        normalized = normalized.replace(/^\s+/, '  ')
-      }
-
-      return normalized
-    })
-    .join('\n')
-}
 
 export function displayResults(results: TestResults) {
   let fileMap = new Map<string, typeof results.tests>()
@@ -40,7 +18,7 @@ export function displayResults(results: TestResults) {
   for (let file of fileOrder) {
     let tests = fileMap.get(file)!
     let displayPath = file.replace(`${cwd}/`, './')
-    console.log(`\n${displayPath}`)
+    console.log(`\n${normalizeFilePath(displayPath)}`)
 
     let suiteMap = new Map<string, typeof tests>()
     for (let test of tests) {
@@ -64,7 +42,10 @@ export function displayResults(results: TestResults) {
         if (test.error) {
           console.log(`      ${color}Error: ${test.error.message}${reset}`)
           if (test.error.stack) {
-            let stack = normalizeStack(test.error.stack)
+            let stack = test.error.stack
+              .split('\n')
+              .map((line) => normalizeLine(line))
+              .join('\n')
             console.log(`      ${stack.split('\n').slice(1, 5).join('\n      ')}`)
           }
         }
