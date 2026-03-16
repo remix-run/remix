@@ -9,7 +9,6 @@ import type {
   ListboxChangeEvent,
   ListboxOpenChangeEvent,
   ListboxProps,
-  ListboxSetup,
 } from './listbox.tsx'
 import { isPopoverOpen, popoverFadeDuration } from './popover.tsx'
 
@@ -64,9 +63,9 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
   element.getBoundingClientRect = () => new DOMRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-function renderExampleListbox(props: Partial<ListboxProps> & { setup?: ListboxSetup } = {}) {
+function renderExampleListbox(props: Partial<ListboxProps> = {}) {
   return (
-    <Listbox setup={{ label: 'Select a status', value: 'backlog' }} {...props}>
+    <Listbox defaultValue="backlog" initialLabel="Select a status" {...props}>
       <ListboxOption value="backlog">Backlog</ListboxOption>
       <ListboxOption textValue="In progress" value="in-progress">
         In progress
@@ -97,8 +96,9 @@ describe('Listbox', () => {
   it('supports uncontrolled value and name submission', async () => {
     let { container, root } = renderApp(
       renderExampleListbox({
+        defaultValue: 'backlog',
+        initialLabel: 'Select a status',
         name: 'status',
-        setup: { label: 'Select a status', value: 'backlog' },
       }),
     )
 
@@ -126,10 +126,11 @@ describe('Listbox', () => {
     expect(hiddenInput.value).toBe('in-progress')
   })
 
-  it('renders the selected label on initial mount when setup value is provided', () => {
+  it('renders the selected label on initial mount when defaultValue is provided', () => {
     let { container } = renderApp(
       renderExampleListbox({
-        setup: { label: 'Select a status', value: 'backlog' },
+        defaultValue: 'backlog',
+        initialLabel: 'Select a status',
       }),
     )
 

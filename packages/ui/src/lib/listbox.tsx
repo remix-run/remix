@@ -49,8 +49,10 @@ export class ListboxOpenChangeEvent extends Event {
 
 export type ListboxProps = Omit<Props<'div'>, 'children'> & {
   children?: RemixNode
+  defaultValue?: string | null
   defaultOpen?: boolean
   disabled?: boolean
+  initialLabel?: RemixNode
   loopFocus?: boolean
   name?: string
   open?: boolean
@@ -62,11 +64,6 @@ export type ListboxOptionProps = Omit<Props<'div'>, 'children'> & {
   disabled?: boolean
   textValue?: string
   value: string
-}
-
-export type ListboxSetup = {
-  label?: RemixNode
-  value?: string | null
 }
 
 type ListboxComponent = typeof ListboxImpl & {
@@ -282,7 +279,7 @@ function ListboxOptionImpl() {
   }
 }
 
-function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
+function ListboxImpl(handle: Handle) {
   let currentProps: ListboxProps | null = null
   let highlightedValue: string | null = null
   let rootNode: HTMLElement | null = null
@@ -309,7 +306,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     }
 
     if (!hasInitializedValue) {
-      uncontrolledValue = setup.value ?? null
+      uncontrolledValue = currentProps.defaultValue ?? null
       hasInitializedValue = true
     }
 
@@ -573,11 +570,11 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       }
 
       if (
-        typeof setup.label === 'string' ||
-        typeof setup.label === 'number' ||
-        typeof setup.label === 'bigint'
+        typeof currentProps?.initialLabel === 'string' ||
+        typeof currentProps?.initialLabel === 'number' ||
+        typeof currentProps?.initialLabel === 'bigint'
       ) {
-        node.textContent = String(setup.label)
+        node.textContent = String(currentProps.initialLabel)
       }
     }
   }
@@ -1032,8 +1029,10 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     currentProps = props
     let domProps = { ...props } as Record<string, unknown>
     delete domProps.children
+    delete domProps.defaultValue
     delete domProps.defaultOpen
     delete domProps.disabled
+    delete domProps.initialLabel
     delete domProps.loopFocus
     delete domProps.mix
     delete domProps.name
@@ -1050,9 +1049,9 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         ? currentItem?.textValue ??
           selectedOption?.props.textValue ??
           (selectedOption ? getListboxOptionLabel(selectedOption) : null) ??
-          setup.label ??
+          props.initialLabel ??
           null
-        : setup.label ?? null
+        : props.initialLabel ?? null
     let renderedChildren = usesCustomStructure
       ? replaceValueChildren(props.children, renderedLabel)
       : [

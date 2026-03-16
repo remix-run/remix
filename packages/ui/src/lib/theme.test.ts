@@ -325,7 +325,7 @@ describe('ui', () => {
     expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
   })
 
-  it('provides card structure recipes for layout and typography', async () => {
+  it('provides card structure mixins for layout and typography', async () => {
     let html = await renderToString(
       createElement(
         'article',
@@ -358,7 +358,7 @@ describe('ui', () => {
     expect(html).toMatch(/background-color: var\(--rmx-color-background-surface-secondary\)/)
   })
 
-  it('lets button recipes provide default button attrs while preserving explicit overrides', async () => {
+  it('lets button mixins provide default button attrs while preserving explicit overrides', async () => {
     let defaultHtml = await renderToString(
       createElement('button', { mix: ui.button.primary }, 'Save'),
     )

@@ -64,25 +64,25 @@ let explorerController: Controller<typeof routes.explorer> = {
     uiRecipes: {
       actions: {
         text() {
-          return renderPage(PAGES.uiRecipeText)
+          return renderPage(PAGES.uiMixinText)
         },
         card() {
-          return renderPage(PAGES.uiRecipeCard)
+          return renderPage(PAGES.uiMixinCard)
         },
         button() {
-          return renderPage(PAGES.uiRecipeButton)
+          return renderPage(PAGES.uiMixinButton)
         },
         field() {
-          return renderPage(PAGES.uiRecipeField)
+          return renderPage(PAGES.uiMixinField)
         },
         item() {
-          return renderPage(PAGES.uiRecipeItem)
+          return renderPage(PAGES.uiMixinItem)
         },
         layout() {
-          return renderPage(PAGES.uiRecipeLayout)
+          return renderPage(PAGES.uiMixinLayout)
         },
         navigation() {
-          return renderPage(PAGES.uiRecipeNav)
+          return renderPage(PAGES.uiMixinNav)
         },
       },
     },

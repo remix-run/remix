@@ -98,8 +98,8 @@ export let PAGES = {
     description:
       'Glyphs are a sibling system to tokens: a fixed icon contract, a sprite sheet renderer, a thin `<Glyph />` wrapper, and shared icon sizing mixins.',
   },
-  uiRecipeText: {
-    id: 'ui-recipe-text',
+  uiMixinText: {
+    id: 'ui-mixin-text',
     path: '/ui-recipes/text',
     navLabel: 'Text',
     eyebrow: 'UI Mixin',
@@ -107,8 +107,8 @@ export let PAGES = {
     description:
       'Page-level text roles give the system a shared language for headings, descriptions, captions, code, and metadata.',
   },
-  uiRecipeCard: {
-    id: 'ui-recipe-card',
+  uiMixinCard: {
+    id: 'ui-mixin-card',
     path: '/ui-recipes/card',
     navLabel: 'Card',
     eyebrow: 'UI Mixin',
@@ -116,8 +116,8 @@ export let PAGES = {
     description:
       'Card mixins define the shell, slot rhythm, and surface hierarchy used by content panels, menus, dialogs, and system showcases.',
   },
-  uiRecipeButton: {
-    id: 'ui-recipe-button',
+  uiMixinButton: {
+    id: 'ui-mixin-button',
     path: '/ui-recipes/button',
     navLabel: 'Button',
     eyebrow: 'UI Mixin',
@@ -125,8 +125,8 @@ export let PAGES = {
     description:
       'Composable button layers cover shared structure, size, tone, icons, and loading patterns without wrapper-heavy component APIs.',
   },
-  uiRecipeField: {
-    id: 'ui-recipe-field',
+  uiMixinField: {
+    id: 'ui-mixin-field',
     path: '/ui-recipes/field',
     navLabel: 'Field',
     eyebrow: 'UI Mixin',
@@ -134,8 +134,8 @@ export let PAGES = {
     description:
       'Field chrome, labels, and help text should travel together so forms stay consistent across the component library.',
   },
-  uiRecipeItem: {
-    id: 'ui-recipe-item',
+  uiMixinItem: {
+    id: 'ui-mixin-item',
     path: '/ui-recipes/item',
     navLabel: 'Item',
     eyebrow: 'UI Mixin',
@@ -143,8 +143,8 @@ export let PAGES = {
     description:
       'Rows and status treatments underpin menus, command lists, tabs, combobox options, and sidebar entries.',
   },
-  uiRecipeNav: {
-    id: 'ui-recipe-nav',
+  uiMixinNav: {
+    id: 'ui-mixin-nav',
     path: '/ui-recipes/navigation',
     navLabel: 'Sidebar + Nav',
     eyebrow: 'UI Mixin',
@@ -152,8 +152,8 @@ export let PAGES = {
     description:
       'Sidebar and navigation primitives are useful app-level building blocks even when the full docs shell remains demo-specific.',
   },
-  uiRecipeLayout: {
-    id: 'ui-recipe-layout',
+  uiMixinLayout: {
+    id: 'ui-mixin-layout',
     path: '/ui-recipes/layout',
     navLabel: 'Row + Stack',
     eyebrow: 'UI Mixin',
@@ -224,14 +224,14 @@ export let COMPONENT_PAGES = [
   PAGES.componentListbox,
 ] as const
 
-export let UI_RECIPE_PAGES = [
-  PAGES.uiRecipeText,
-  PAGES.uiRecipeCard,
-  PAGES.uiRecipeButton,
-  PAGES.uiRecipeField,
-  PAGES.uiRecipeItem,
-  PAGES.uiRecipeNav,
-  PAGES.uiRecipeLayout,
+export let UI_MIXIN_PAGES = [
+  PAGES.uiMixinText,
+  PAGES.uiMixinCard,
+  PAGES.uiMixinButton,
+  PAGES.uiMixinField,
+  PAGES.uiMixinItem,
+  PAGES.uiMixinNav,
+  PAGES.uiMixinLayout,
 ] as const
 
 export let THEME_TOKEN_PAGES = [

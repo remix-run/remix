@@ -8,6 +8,7 @@ import {
   HydratedAccordionMultipleExample,
   HydratedAccordionOverviewExample,
   HydratedAnchorExample,
+  HydratedListboxControlledExample,
   HydratedListboxOverviewExample,
   HydratedPopoverOverviewExample,
 } from '../assets/example-entries.tsx'
@@ -129,6 +130,13 @@ export let EXAMPLES = {
     relativePath: './components/listbox-overview.tsx',
     preview: <HydratedListboxOverviewExample />,
     title: 'Listbox overview',
+  }),
+  listboxControlled: createExample({
+    docsPath: '/components/listbox',
+    path: '/examples/listbox-controlled',
+    relativePath: './components/listbox-controlled.tsx',
+    preview: <HydratedListboxControlledExample />,
+    title: 'Listbox controlled value',
   }),
   overviewText: createExample({
     path: '/examples/text-overview',

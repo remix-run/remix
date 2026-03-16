@@ -194,12 +194,12 @@ export type ThemeComponent = ThemeRenderer & {
 
 export const theme = createThemeContract(themeVariableNames)
 export type ThemeUtility = ReturnType<typeof css>
-type ThemeRecipeLeaf = MixinDescriptor<any, any, any>
-type PreviousThemeRecipeDepth = [0, 0, 1, 2, 3, 4]
-type NestedThemeRecipe<value, depth extends number = 4> = depth extends 0
+type ThemeMixLeaf = MixinDescriptor<any, any, any>
+type PreviousThemeMixDepth = [0, 0, 1, 2, 3, 4]
+type NestedThemeMix<value, depth extends number = 4> = depth extends 0
   ? value | ReadonlyArray<value>
-  : value | ReadonlyArray<NestedThemeRecipe<value, PreviousThemeRecipeDepth[depth]>>
-export type ThemeRecipe = NestedThemeRecipe<ThemeRecipeLeaf>
+  : value | ReadonlyArray<NestedThemeMix<value, PreviousThemeMixDepth[depth]>>
+export type ThemeMix = NestedThemeMix<ThemeMixLeaf>
 type ThemeUtilityScale<scale extends ThemeScale> = {
   [key in keyof scale]: ThemeUtility
 }
@@ -278,14 +278,14 @@ export type ThemeUi = {
   nav: {
     list: ThemeUtility
     item: ThemeUtility
-    itemActive: ThemeRecipe
-    itemMuted: ThemeRecipe
+    itemActive: ThemeMix
+    itemMuted: ThemeMix
   }
   card: {
-    base: ThemeRecipe
-    secondary: ThemeRecipe
-    elevated: ThemeRecipe
-    inset: ThemeRecipe
+    base: ThemeMix
+    secondary: ThemeMix
+    elevated: ThemeMix
+    inset: ThemeMix
     stack: ThemeUtility
     header: ThemeUtility
     headerWithAction: ThemeUtility
@@ -298,8 +298,8 @@ export type ThemeUi = {
   }
   item: {
     base: ThemeUtility
-    selected: ThemeRecipe
-    danger: ThemeRecipe
+    selected: ThemeMix
+    danger: ThemeMix
   }
   surface: {
     base: ThemeUtility
@@ -314,9 +314,9 @@ export type ThemeUi = {
     danger: ThemeUtility
   }
   button: {
-    base: ThemeRecipe
+    base: ThemeMix
     label: ThemeUtility
-    icon: ThemeRecipe
+    icon: ThemeMix
     sm: ThemeUtility
     md: ThemeUtility
     lg: ThemeUtility
@@ -327,40 +327,40 @@ export type ThemeUi = {
       ghost: ThemeUtility
       danger: ThemeUtility
     }
-    primary: ThemeRecipe
-    secondary: ThemeRecipe
-    ghost: ThemeRecipe
-    danger: ThemeRecipe
+    primary: ThemeMix
+    secondary: ThemeMix
+    ghost: ThemeMix
+    danger: ThemeMix
   }
   accordion: {
     root: ThemeUtility
-    item: ThemeRecipe
+    item: ThemeMix
     trigger: ThemeUtility
     indicator: ThemeUtility
     panel: ThemeUtility
     body: ThemeUtility
   }
   popover: {
-    base: ThemeRecipe
-    surface: ThemeRecipe
+    base: ThemeMix
+    surface: ThemeMix
   }
   listbox: {
-    root: ThemeRecipe
+    root: ThemeMix
     anchor: ThemeUtility
-    trigger: ThemeRecipe
-    value: ThemeRecipe
-    indicator: ThemeRecipe
-    popup: ThemeRecipe
-    list: ThemeRecipe
-    itemIndicator: ThemeRecipe
-    itemLabel: ThemeRecipe
+    trigger: ThemeMix
+    value: ThemeMix
+    indicator: ThemeMix
+    popup: ThemeMix
+    list: ThemeMix
+    itemIndicator: ThemeMix
+    itemLabel: ThemeMix
     item(
       value: string,
       options?: {
         textValue?: string
         disabled?: boolean
       },
-    ): ThemeRecipe
+    ): ThemeMix
   }
 }
 
@@ -505,9 +505,6 @@ let buttonBaseStyleUtility = css({
   textDecoration: 'none',
   userSelect: 'none',
   verticalAlign: 'top',
-  transitionProperty: 'border-color, background-color, box-shadow, color',
-  transitionDuration: theme.duration.fast,
-  transitionTimingFunction: theme.easing.standard,
 })
 
 let buttonLabelUtility = css({

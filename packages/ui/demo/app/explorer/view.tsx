@@ -9,11 +9,11 @@ import {
   theme,
   ui,
 } from 'remix/ui'
-import type { ThemeRecipe } from 'remix/ui'
+import type { ThemeMix } from 'remix/ui'
 import { ExamplePreview } from '../example-preview.tsx'
 import { EXAMPLES } from '../examples/index.tsx'
 import type { PageDefinition } from './data.ts'
-import { COMPONENT_PAGES, PAGES, PRIMARY_PAGES, THEME_TOKEN_PAGES, UI_RECIPE_PAGES } from './data.ts'
+import { COMPONENT_PAGES, PAGES, PRIMARY_PAGES, THEME_TOKEN_PAGES, UI_MIXIN_PAGES } from './data.ts'
 
 let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
 
@@ -99,14 +99,14 @@ function Sidebar() {
       <section mix={ui.sidebar.section}>
         <p mix={ui.sidebar.heading}>UI Mixins</p>
         <nav aria-label="UI mixin pages" mix={ui.nav.list}>
-          {UI_RECIPE_PAGES.map(recipePage => (
+          {UI_MIXIN_PAGES.map(mixinPage => (
             <a
-              key={recipePage.path}
-              href={recipePage.path}
-              aria-current={currentPath === recipePage.path ? 'page' : undefined}
-              mix={getSubnavItemMix(recipePage.path, currentPath)}
+              key={mixinPage.path}
+              href={mixinPage.path}
+              aria-current={currentPath === mixinPage.path ? 'page' : undefined}
+              mix={getSubnavItemMix(mixinPage.path, currentPath)}
             >
-              {recipePage.navLabel}
+              {mixinPage.navLabel}
             </a>
           ))}
         </nav>
@@ -194,7 +194,7 @@ function PageContent() {
       return <GlyphsPage />
     }
 
-    if (UI_RECIPE_PAGES.some(recipePage => recipePage.id === page.id)) {
+    if (UI_MIXIN_PAGES.some(mixinPage => mixinPage.id === page.id)) {
       return <UiRecipeDetailPage page={page} />
     }
 
@@ -1148,27 +1148,27 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
 
 function UiRecipeDetailPage() {
   return ({ page }: { page: PageDefinition }) => {
-    if (page.id === PAGES.uiRecipeText.id) {
+    if (page.id === PAGES.uiMixinText.id) {
       return <UiRecipeTextPage />
     }
 
-    if (page.id === PAGES.uiRecipeCard.id) {
+    if (page.id === PAGES.uiMixinCard.id) {
       return <UiRecipeCardPage />
     }
 
-    if (page.id === PAGES.uiRecipeButton.id) {
+    if (page.id === PAGES.uiMixinButton.id) {
       return <UiRecipeButtonPage />
     }
 
-    if (page.id === PAGES.uiRecipeField.id) {
+    if (page.id === PAGES.uiMixinField.id) {
       return <UiRecipeFieldPage />
     }
 
-    if (page.id === PAGES.uiRecipeItem.id) {
+    if (page.id === PAGES.uiMixinItem.id) {
       return <UiRecipeItemPage />
     }
 
-    if (page.id === PAGES.uiRecipeLayout.id) {
+    if (page.id === PAGES.uiMixinLayout.id) {
       return <UiRecipeLayoutPage />
     }
 
@@ -1773,6 +1773,15 @@ function ComponentListboxPage() {
         >
           {EXAMPLES.listboxOverview.preview}
         </ExamplePreview>
+
+        <ExamplePreview
+          code={EXAMPLES.listboxControlled.code}
+          description="Controlled listboxes work the same way as the rest of this system: pass a `value`, listen for `Listbox.change`, and update that value from anywhere else in the UI."
+          href={EXAMPLES.listboxControlled.path}
+          title="Controlled value"
+        >
+          {EXAMPLES.listboxControlled.preview}
+        </ExamplePreview>
       </Section>
 
       <Section
@@ -1903,7 +1912,7 @@ function MetricCard() {
     dataId?: string
     metric: string
     title: string
-    tone: ThemeRecipe
+    tone: ThemeMix
     value: string
   }) => (
     <article data-proof-card={dataId} mix={[tone, metricCardCss]}>

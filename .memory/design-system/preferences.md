@@ -17,6 +17,8 @@
 - Hover affordances should usually feel immediate.
   - subtle hover color shifts are good
   - avoid animated hover transitions when they make controls feel laggy
+- Do not add transitions to controls by default just because a property changes.
+  - button/background state changes should stay crisp unless motion is solving a specific problem
 - Selection and highlight states should usually snap immediately.
   - avoid animating list row highlights, menu selection states, and similar ephemeral feedback
   - if a state is meant to orient the user quickly, prefer crisp change over polish

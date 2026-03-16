@@ -63,6 +63,11 @@ let examplesController: Controller<typeof routes.examples> = {
         pad: url.searchParams.has('pad'),
       })
     },
+    listboxControlled({ url }) {
+      return renderExample(EXAMPLES.listboxControlled, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
     textOverview({ url }) {
       return renderExample(EXAMPLES.overviewText, {
         pad: url.searchParams.has('pad'),

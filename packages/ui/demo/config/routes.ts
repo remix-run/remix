@@ -11,6 +11,7 @@ export let routes = {
     breadcrumbsDecomposed: get('breadcrumbs-decomposed'),
     popoverOverview: get('popover-overview'),
     listboxOverview: get('listbox-overview'),
+    listboxControlled: get('listbox-controlled'),
     textOverview: get('text-overview'),
     cardOverview: get('card-overview'),
     buttonAliases: get('button-aliases'),

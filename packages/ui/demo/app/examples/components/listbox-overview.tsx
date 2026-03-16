@@ -9,9 +9,10 @@ export default function example() {
   return () => (
     <div>
       <Listbox
+        defaultValue="staging"
+        initialLabel="Choose an environment"
         mix={listboxExampleCss}
         name="environment"
-        setup={{ label: 'Choose an environment', value: 'staging' }}
       >
         <ListboxOption value="local">Local</ListboxOption>
         <ListboxOption value="staging">Staging</ListboxOption>

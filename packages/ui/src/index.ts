@@ -33,7 +33,6 @@ export {
   listboxOpenChangeEventType,
   type ListboxOptionProps,
   type ListboxProps,
-  type ListboxSetup,
 } from './lib/listbox.tsx'
 export {
   createTheme,
@@ -43,9 +42,9 @@ export {
   ui,
   type CreateThemeOptions,
   type ThemeComponent,
+  type ThemeMix,
   type ThemeUi,
   type ThemeStyleProps,
-  type ThemeRecipe,
   type ThemeUtility,
   type ThemeValue,
   type ThemeValues,
