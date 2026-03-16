@@ -13,7 +13,9 @@ import {
 } from './middleware/auth.ts'
 import { AppDatabase } from './middleware/database.ts'
 import {
-  createSocialAuthProvider,
+  createGitHubAuthProvider,
+  createGoogleAuthProvider,
+  createXAuthProvider,
   getLoginMethodLabel,
   getProviderUnavailableMessage,
   type SocialAuthResult,
@@ -122,13 +124,28 @@ function withConfiguredSocialProvider(
   config: SocialLoginConfig,
   action: (provider: SocialProvider) => Response | Promise<Response>,
 ): Response | Promise<Response> {
-  let provider = createSocialAuthProvider(name, context.url.origin, config)
+  let provider = getConfiguredSocialProvider(name, context.url.origin, config)
 
   if (provider == null) {
     return redirectWithError(context, getProviderUnavailableMessage(name, config))
   }
 
   return action(provider)
+}
+
+function getConfiguredSocialProvider(
+  name: SocialProviderName,
+  origin: string,
+  config: SocialLoginConfig,
+): SocialProvider | null {
+  switch (name) {
+    case 'google':
+      return createGoogleAuthProvider(origin, config)
+    case 'github':
+      return createGitHubAuthProvider(origin, config)
+    case 'x':
+      return createXAuthProvider(origin, config)
+  }
 }
 
 function redirectWithError(context: RequestContext, message: string): Response {
