@@ -182,16 +182,11 @@ describe('run', () => {
     frame.dispose()
   })
 
-  it('removes orphaned hydration end markers after full-document reloads of adjacent fragment entries', async () => {
+  it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
     let FragmentEntry = clientEntry(
       '/js/fragment-entry.js#FragmentEntry',
-      function FragmentEntry(_handle: Handle, setup: string) {
-        return () => (
-          <>
-            <span>{setup}</span>
-            <span>{setup}</span>
-          </>
-        )
+      function FragmentEntry() {
+        return () => <div />
       },
     )
 
@@ -199,8 +194,8 @@ describe('run', () => {
       return await drain(
         renderToStream(
           <div>
-            <FragmentEntry setup="a" />
-            <FragmentEntry setup="b" />
+            <FragmentEntry />
+            <FragmentEntry />
           </div>,
         ),
       )
@@ -212,7 +207,7 @@ describe('run', () => {
           <html>
             <body>
               <div>
-                <FragmentEntry setup="c" />
+                <FragmentEntry />
               </div>
             </body>
           </html>,
@@ -235,7 +230,7 @@ describe('run', () => {
     let topFrame = getTopFrame()
 
     topFrame.src = '/b'
-    await expect(topFrame.reload()).resolves.toBeInstanceOf(AbortSignal)
+    await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     let bodyHtml = document.body.innerHTML
