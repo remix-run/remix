@@ -1,1 +1,1 @@
-export { assert, AssertionError, ok, equal, notEqual, deepEqual, notDeepEqual, fail, match, throws, rejects } from './lib/assert.ts'
+export { assert, AssertionError, ok, equal, notEqual, deepEqual, notDeepEqual, fail, match, doesNotMatch, throws, doesNotThrow, rejects, doesNotReject } from './lib/assert.ts'

@@ -1,23 +1,16 @@
 import * as nodeAssert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import {
-  assert,
-  AssertionError,
-  ok,
-  equal,
-  notEqual,
-  deepEqual,
-  notDeepEqual,
-  fail,
-  match,
-  throws,
-  rejects,
-} from './assert.ts'
+import * as assert from './assert.ts'
 
 describe('AssertionError', () => {
   it('sets name, message, actual, expected, and operator', () => {
-    let err = new AssertionError({ message: 'msg', actual: 1, expected: 2, operator: 'equal' })
+    let err = new assert.AssertionError({
+      message: 'msg',
+      actual: 1,
+      expected: 2,
+      operator: 'equal',
+    })
     nodeAssert.equal(err.name, 'AssertionError')
     nodeAssert.equal(err.message, 'msg')
     nodeAssert.equal(err.actual, 1)
@@ -34,11 +27,10 @@ describe('assert.ok', () => {
   })
 
   it('throws AssertionError for falsy values', () => {
-    nodeAssert.throws(() => assert.ok(false), AssertionError)
-    nodeAssert.throws(() => assert.ok(0), AssertionError)
-    nodeAssert.throws(() => assert.ok(''), AssertionError)
+    nodeAssert.throws(() => assert.ok(false), assert.AssertionError)
+    nodeAssert.throws(() => assert.ok(0), assert.AssertionError)
+    nodeAssert.throws(() => assert.ok(''), assert.AssertionError)
   })
-
 })
 
 describe('assert.equal', () => {
@@ -48,13 +40,13 @@ describe('assert.equal', () => {
   })
 
   it('throws for type-coerced values', () => {
-    nodeAssert.throws(() => assert.equal(1 as any, '1'), AssertionError)
-    nodeAssert.throws(() => assert.equal(null as any, undefined), AssertionError)
-    nodeAssert.throws(() => assert.equal(0 as any, false), AssertionError)
+    nodeAssert.throws(() => assert.equal(1 as any, '1'), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(null as any, undefined), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(0 as any, false), assert.AssertionError)
   })
 
   it('throws for unequal values', () => {
-    nodeAssert.throws(() => assert.equal(1, 2), AssertionError)
+    nodeAssert.throws(() => assert.equal(1, 2), assert.AssertionError)
   })
 })
 
@@ -66,8 +58,8 @@ describe('assert.notEqual', () => {
   })
 
   it('throws for strictly equal values', () => {
-    nodeAssert.throws(() => assert.notEqual(1, 1), AssertionError)
-    nodeAssert.throws(() => assert.notEqual('a', 'a'), AssertionError)
+    nodeAssert.throws(() => assert.notEqual(1, 1), assert.AssertionError)
+    nodeAssert.throws(() => assert.notEqual('a', 'a'), assert.AssertionError)
   })
 })
 
@@ -81,13 +73,13 @@ describe('assert.deepEqual', () => {
   })
 
   it('throws for type-coerced values', () => {
-    nodeAssert.throws(() => assert.deepEqual({ a: 1 } as any, { a: '1' }), AssertionError)
-    nodeAssert.throws(() => assert.deepEqual(1 as any, '1'), AssertionError)
+    nodeAssert.throws(() => assert.deepEqual({ a: 1 } as any, { a: '1' }), assert.AssertionError)
+    nodeAssert.throws(() => assert.deepEqual(1 as any, '1'), assert.AssertionError)
   })
 
   it('throws for structurally unequal objects', () => {
-    nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 2 }), AssertionError)
-    nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 1, b: 2 }), AssertionError)
+    nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 2 }), assert.AssertionError)
+    nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 1, b: 2 }), assert.AssertionError)
   })
 })
 
@@ -98,21 +90,21 @@ describe('assert.notDeepEqual', () => {
   })
 
   it('throws for deeply strictly equal objects', () => {
-    nodeAssert.throws(() => assert.notDeepEqual({ a: 1 }, { a: 1 }), AssertionError)
+    nodeAssert.throws(() => assert.notDeepEqual({ a: 1 }, { a: 1 }), assert.AssertionError)
   })
 })
 
 describe('assert.fail', () => {
   it('always throws AssertionError', () => {
-    nodeAssert.throws(() => assert.fail(), AssertionError)
+    nodeAssert.throws(() => assert.fail(), assert.AssertionError)
   })
 
   it('uses custom message', () => {
-    let err: AssertionError | undefined
+    let err: assert.AssertionError | undefined
     try {
       assert.fail('custom fail')
     } catch (e) {
-      err = e as AssertionError
+      err = e as assert.AssertionError
     }
     nodeAssert.equal(err?.message, 'custom fail')
   })
@@ -124,7 +116,17 @@ describe('assert.match', () => {
   })
 
   it('throws when string does not match regexp', () => {
-    nodeAssert.throws(() => assert.match('hello world', /foo/), AssertionError)
+    nodeAssert.throws(() => assert.match('hello world', /foo/), assert.AssertionError)
+  })
+})
+
+describe('assert.doesNotMatch', () => {
+  it('passes when string does not match regexp', () => {
+    assert.doesNotMatch('hello world', /foo/)
+  })
+
+  it('throws when string matches regexp', () => {
+    nodeAssert.throws(() => assert.doesNotMatch('hello world', /world/), assert.AssertionError)
   })
 })
 
@@ -136,7 +138,7 @@ describe('assert.throws', () => {
   })
 
   it('throws AssertionError when function does not throw', () => {
-    nodeAssert.throws(() => assert.throws(() => {}), AssertionError)
+    nodeAssert.throws(() => assert.throws(() => {}), assert.AssertionError)
   })
 
   it('validates error constructor', () => {
@@ -151,10 +153,22 @@ describe('assert.throws', () => {
         assert.throws(() => {
           throw new Error('not a type error')
         }, TypeError),
-      AssertionError,
+      assert.AssertionError,
     )
   })
+})
 
+describe('assert.doesNotThrow', () => {
+  it('passes when function does not throw', () => {
+    assert.doesNotThrow(() => {})
+  })
+
+  it('throws AssertionError when function throws', () => {
+    nodeAssert.throws(
+      () => assert.doesNotThrow(() => { throw new Error('oops') }),
+      assert.AssertionError,
+    )
+  })
 })
 
 describe('assert.rejects', () => {
@@ -163,7 +177,7 @@ describe('assert.rejects', () => {
   })
 
   it('throws AssertionError when promise resolves', async () => {
-    await nodeAssert.rejects(() => assert.rejects(() => Promise.resolve()), AssertionError)
+    await nodeAssert.rejects(() => assert.rejects(() => Promise.resolve()), assert.AssertionError)
   })
 
   it('validates error constructor', async () => {
@@ -171,17 +185,16 @@ describe('assert.rejects', () => {
   })
 })
 
-describe('named exports', () => {
-  it('exports ok, equal, notEqual, deepEqual, notDeepEqual, fail, match, throws, rejects', () => {
-    nodeAssert.equal(typeof ok, 'function')
-    nodeAssert.equal(typeof equal, 'function')
-    nodeAssert.equal(typeof notEqual, 'function')
-    nodeAssert.equal(typeof deepEqual, 'function')
-    nodeAssert.equal(typeof notDeepEqual, 'function')
-    nodeAssert.equal(typeof fail, 'function')
-    nodeAssert.equal(typeof match, 'function')
-    nodeAssert.equal(typeof throws, 'function')
-    nodeAssert.equal(typeof rejects, 'function')
+describe('assert.doesNotReject', () => {
+  it('passes when promise resolves', async () => {
+    await assert.doesNotReject(() => Promise.resolve())
+  })
+
+  it('throws AssertionError when promise rejects', async () => {
+    await nodeAssert.rejects(
+      () => assert.doesNotReject(() => Promise.reject(new Error('oops'))),
+      assert.AssertionError,
+    )
   })
 })
 
@@ -309,6 +322,43 @@ describe('node:assert/strict compatibility', () => {
     assertCompatibleError(
       await captureAsync(() => assert.rejects(resolving)),
       await captureAsync(() => nodeAssert.rejects(resolving)),
+    )
+  })
+
+  it('doesNotMatch — pass and fail cases', () => {
+    assertCompatibleError(
+      capture(() => assert.doesNotMatch('hello world', /foo/)),
+      capture(() => nodeAssert.doesNotMatch('hello world', /foo/)),
+    )
+    assertCompatibleError(
+      capture(() => assert.doesNotMatch('hello world', /world/)),
+      capture(() => nodeAssert.doesNotMatch('hello world', /world/)),
+    )
+  })
+
+  it('doesNotThrow — pass and fail cases', () => {
+    let throwing = () => { throw new Error('oops') }
+    let silent = () => {}
+    assertCompatibleError(
+      capture(() => assert.doesNotThrow(silent)),
+      capture(() => nodeAssert.doesNotThrow(silent)),
+    )
+    assertCompatibleError(
+      capture(() => assert.doesNotThrow(throwing)),
+      capture(() => nodeAssert.doesNotThrow(throwing)),
+    )
+  })
+
+  it('doesNotReject — pass and fail cases', async () => {
+    let rejecting = () => Promise.reject(new Error('oops'))
+    let resolving = () => Promise.resolve()
+    assertCompatibleError(
+      await captureAsync(() => assert.doesNotReject(resolving)),
+      await captureAsync(() => nodeAssert.doesNotReject(resolving)),
+    )
+    assertCompatibleError(
+      await captureAsync(() => assert.doesNotReject(rejecting)),
+      await captureAsync(() => nodeAssert.doesNotReject(rejecting)),
     )
   })
 })
