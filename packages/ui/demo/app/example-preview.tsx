@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import { theme, ui } from 'remix/ui'
+import { Glyph, theme, ui } from 'remix/ui'
 
 export function ExamplePreview() {
   return ({
@@ -22,16 +22,21 @@ export function ExamplePreview() {
         <p mix={[ui.text.bodySm, exampleDescriptionCss]}>{description}</p>
       </div>
       <article mix={exampleCardCss}>
+        {href ? (
+          <a
+            aria-label="Open standalone example"
+            href={href}
+            mix={exampleExpandLinkCss}
+            title="Open standalone example"
+          >
+            <Glyph mix={ui.icon.sm} name="expand" />
+          </a>
+        ) : null}
         <div mix={examplePreviewSurfaceCss}>
           <div mix={exampleCanvasCss}>{children}</div>
         </div>
         <div mix={exampleCodePanelCss}>
           <code mix={[ui.text.code, exampleCodeCss]}>{renderHighlightedCode(code)}</code>
-          {href ? (
-            <a href={href} mix={exampleLinkCss}>
-              Open standalone example
-            </a>
-          ) : null}
         </div>
       </article>
     </div>
@@ -79,6 +84,7 @@ let exampleDescriptionCss = css({
 })
 
 let exampleCardCss = css({
+  position: 'relative',
   display: 'flex',
   flexDirection: 'column',
   border: `1px solid ${theme.colors.border.subtle}`,
@@ -103,18 +109,10 @@ let examplePreviewSurfaceCss = css({
 })
 
 let exampleCodePanelCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: theme.space.sm,
   padding: theme.space.md,
   borderTop: `1px solid ${theme.colors.border.subtle}`,
   backgroundColor: 'color-mix(in oklab, rgb(248 248 248) 76%, white)',
   overflowX: 'auto',
-  '@media (max-width: 640px)': {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
 })
 
 let exampleCodeCss = css({
@@ -126,15 +124,25 @@ let exampleCodeCss = css({
   whiteSpace: 'pre',
 })
 
-let exampleLinkCss = css({
+let exampleExpandLinkCss = css({
+  position: 'absolute',
+  top: theme.space.sm,
+  right: theme.space.sm,
+  zIndex: theme.zIndex.sticky,
   display: 'inline-flex',
   alignItems: 'center',
-  color: theme.colors.text.link,
-  fontSize: theme.fontSize.sm,
-  fontWeight: theme.fontWeight.medium,
+  justifyContent: 'center',
+  width: `calc(${theme.control.height.sm} - 2px)`,
+  height: `calc(${theme.control.height.sm} - 2px)`,
+  borderRadius: theme.radius.md,
+  color: theme.colors.text.secondary,
+  backgroundColor: 'color-mix(in oklab, white 82%, transparent)',
+  border: `1px solid color-mix(in oklab, ${theme.colors.border.subtle} 78%, white)`,
+  boxShadow: theme.shadow.xs,
   textDecoration: 'none',
   '&:hover': {
-    textDecoration: 'underline',
+    color: theme.colors.text.primary,
+    backgroundColor: theme.colors.background.surface,
   },
 })
 
