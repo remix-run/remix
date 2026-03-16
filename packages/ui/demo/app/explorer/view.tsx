@@ -154,14 +154,6 @@ function Sidebar() {
           </a>
         ))}
       </nav>
-
-      <section mix={[calloutCss, calloutInfoCss]}>
-        <p mix={[ui.text.label, calloutTitleCss]}>What this shows</p>
-        <p mix={[ui.text.bodySm, calloutBodyCss]}>
-          RMX_01 is the current default theme, and the pages here show the tokens, mixins, blocks,
-          and examples available right now.
-        </p>
-      </section>
     </div>
   )
 }
