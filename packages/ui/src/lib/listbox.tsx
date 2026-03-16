@@ -614,7 +614,6 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     let handleToggle = (event: Event) => {
       let toggleEvent = event as Event & { newState?: 'open' | 'closed' }
       let isNowOpen = toggleEvent.newState === 'open'
-
       if (currentProps?.open === undefined) {
         uncontrolledOpen = isNowOpen
       }
@@ -771,7 +770,6 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       let { trigger, popup } = getParts(rootNode)
       let nextInsideTrigger = relatedTarget ? (trigger?.contains(relatedTarget) ?? false) : false
       let nextInsidePopup = relatedTarget ? (popup?.contains(relatedTarget) ?? false) : false
-
       if (!isPopoverOpen(popup) || nextInsideTrigger || nextInsidePopup) {
         return
       }
@@ -788,7 +786,6 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         let activeInsidePopup = activeElement ? (popup?.contains(activeElement) ?? false) : false
 
         if (!activeInsideTrigger && !activeInsidePopup) {
-          setTriggerFocusRingSuppressed(false)
           hidePopup()
         }
       })
@@ -811,7 +808,6 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
 
       let trigger = target.closest(`[${partAttr}="trigger"]`)
       if (trigger && !currentProps?.disabled && pointerEvent.button === 0) {
-        pointerEvent.preventDefault()
         startedItemPointerDown = false
         if (!isPopoverOpen(getParts(rootNode).popup)) {
           openPopup()
@@ -939,12 +935,11 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         return
       }
 
+      let popupOpen = isPopoverOpen(getParts(rootNode).popup)
       let inTrigger = target.closest(`[${partAttr}="trigger"]`)
       let inList = target.closest(`[${partAttr}="list"]`)
 
       if (inTrigger) {
-        let popupOpen = isPopoverOpen(getParts(rootNode).popup)
-
         if (keyboardEvent.key === ' ' || keyboardEvent.key === 'Enter') {
           keyboardEvent.preventDefault()
           if (!popupOpen) {
