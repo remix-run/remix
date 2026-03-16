@@ -1314,6 +1314,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../node-fetch-server
+      '@types/pluralize':
+        specifier: ^0.0.33
+        version: 0.0.33
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
@@ -1324,12 +1327,18 @@ importers:
         specifier: ^4.0.0
         version: 4.21.0
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      pluralize:
+        specifier: ^8.0.0
+        version: 8.0.0
 
   packages/testing/demos/browser:
     dependencies:

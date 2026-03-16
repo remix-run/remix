@@ -1,4 +1,4 @@
-import { assert } from '@remix-run/assert'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/testing'
 
 describe('DOM Tests', () => {

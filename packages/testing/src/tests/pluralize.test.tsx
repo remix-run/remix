@@ -1,5 +1,5 @@
 import pluralize from 'pluralize'
-import { assert } from '@remix-run/assert'
+import * as assert from '@remix-run/assert'
 import { describe, it, render } from '@remix-run/testing'
 
 // This test file demonstrated that third party libraries are ok to import from within test modules

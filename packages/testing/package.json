@@ -41,13 +41,14 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "pnpm --filter remix-testing-demo-tests test",
+    "test": "node src/cli.ts 'src/tests/*.test.{ts,tsx}'",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@types/pluralize": "^0.0.33"
   },
   "peerDependencies": {
     "esbuild": "^0.25.0",
@@ -66,8 +67,10 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "pluralize": "^8.0.0"
   },
   "keywords": [
     "testing",
