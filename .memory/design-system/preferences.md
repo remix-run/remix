@@ -17,6 +17,9 @@
 - Hover affordances should usually feel immediate.
   - subtle hover color shifts are good
   - avoid animated hover transitions when they make controls feel laggy
+- Selection and highlight states should usually snap immediately.
+  - avoid animating list row highlights, menu selection states, and similar ephemeral feedback
+  - if a state is meant to orient the user quickly, prefer crisp change over polish
 - Eyebrows and metadata should be subdued and not compete with headings.
 - Surface typography should feel tighter and calmer than page typography.
 - Prefer broad semantic mixins that first-party components and app code can share.

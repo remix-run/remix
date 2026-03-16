@@ -227,48 +227,67 @@ describe('createTheme', () => {
 describe('ui', () => {
   it('serializes utility mixins using theme variables', async () => {
     let html = await renderToString(
-      createElement(
-        'div',
-        {
-          mix: [
-            ui.row,
-            ui.row.between,
-            ui.row.wrap,
-            ui.stack,
-            ui.stack.center,
-            ui.card.base,
-            ui.card.header,
-            ui.card.headerWithAction,
-            ui.card.description,
-            ui.button.base,
-            ui.button.label,
-            ui.button.sm,
-            ui.button.md,
-            ui.button.lg,
-            ui.button.icon,
-            ui.button.iconOnly,
-            ui.button.tone.primary,
-            ui.button.tone.secondary,
-            ui.button.tone.ghost,
-            ui.button.tone.danger,
-            ui.button.primary,
-            ui.button.ghost,
-            ui.sidebar.heading,
-            ui.nav.itemActive,
-            ui.surfaceText.eyebrow,
-            ui.item.base,
-            ui.fieldText.help,
-            ui.text.code,
-            ui.px.md,
-            ui.rounded.md,
-            ui.icon.sm,
-            ui.icon.md,
-            ui.icon.lg,
-            ui.animation.spin,
-          ],
-        },
-        'Hello',
-      ),
+      createElement('div', {}, [
+        createElement(
+          'div',
+          {
+            mix: [
+              ui.row,
+              ui.row.between,
+              ui.row.wrap,
+              ui.stack,
+              ui.stack.center,
+              ui.card.base,
+              ui.card.header,
+              ui.card.headerWithAction,
+              ui.card.description,
+              ui.button.base,
+              ui.button.label,
+              ui.button.sm,
+              ui.button.md,
+              ui.button.lg,
+              ui.button.icon,
+              ui.button.iconOnly,
+              ui.button.tone.primary,
+              ui.button.tone.secondary,
+              ui.button.tone.ghost,
+              ui.button.tone.danger,
+              ui.button.primary,
+              ui.button.ghost,
+              ui.sidebar.heading,
+              ui.nav.itemActive,
+              ui.surfaceText.eyebrow,
+              ui.item.base,
+              ui.popover.base,
+              ui.popover.surface,
+              ui.fieldText.help,
+              ui.text.code,
+              ui.px.md,
+              ui.rounded.md,
+              ui.icon.sm,
+              ui.icon.md,
+              ui.icon.lg,
+              ui.animation.spin,
+            ],
+          },
+          'Hello',
+        ),
+        createElement('div', { mix: ui.listbox.root }, [
+          createElement('button', { mix: ui.listbox.trigger }, [
+            createElement('span', { mix: ui.listbox.value }, 'Backlog'),
+            createElement('span', { mix: ui.listbox.indicator }, 'v'),
+          ]),
+          createElement('div', { mix: ui.listbox.popup }, [
+            createElement('div', { mix: ui.listbox.list }, [
+              createElement(
+                'div',
+                { mix: ui.listbox.item('backlog', { textValue: 'Backlog' }) },
+                'Backlog',
+              ),
+            ]),
+          ]),
+        ]),
+      ]),
     )
 
     expect(html).toMatch(/min-height: calc\(var\(--rmx-control-height-sm\) - 4px\)/)
@@ -301,6 +320,9 @@ describe('ui', () => {
     expect(html).toMatch(/background-color: transparent/)
     expect(html).toMatch(/text-transform: uppercase/)
     expect(html).toMatch(/box-shadow: var\(--rmx-shadow-xs\)/)
+    expect(html).toMatch(/data-rmx-listbox-part="popup"/)
+    expect(html).toMatch(/popover="auto"/)
+    expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
   })
 
   it('provides card structure recipes for layout and typography', async () => {

@@ -340,6 +340,28 @@ export type ThemeUi = {
     panel: ThemeUtility
     body: ThemeUtility
   }
+  popover: {
+    base: ThemeRecipe
+    surface: ThemeRecipe
+  }
+  listbox: {
+    root: ThemeRecipe
+    anchor: ThemeUtility
+    trigger: ThemeRecipe
+    value: ThemeRecipe
+    indicator: ThemeRecipe
+    popup: ThemeRecipe
+    list: ThemeRecipe
+    itemIndicator: ThemeRecipe
+    itemLabel: ThemeRecipe
+    item(
+      value: string,
+      options?: {
+        textValue?: string
+        disabled?: boolean
+      },
+    ): ThemeRecipe
+  }
 }
 
 const spacingUtilities = createSinglePropertyUtilities('padding', theme.space)
@@ -799,6 +821,138 @@ let accordionBodyUtility = css({
     marginBottom: 0,
   },
 })
+let popoverBaseUtility = css({
+  position: 'fixed',
+  inset: 'auto',
+  margin: 0,
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  color: theme.colors.text.primary,
+  overflow: 'visible',
+  zIndex: theme.zIndex.popover,
+  '&::backdrop': {
+    background: 'transparent',
+  },
+})
+let popoverSurfaceUtility = css({
+  minWidth: '12rem',
+  maxWidth: `min(24rem, calc(100vw - (${theme.space.lg} * 2)))`,
+  padding: theme.space.xs,
+})
+let listboxRootUtility = css({
+  position: 'relative',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  minWidth: 0,
+})
+let listboxAnchorUtility = css({
+  display: 'inline-flex',
+  alignItems: 'stretch',
+  minWidth: 0,
+})
+let listboxTriggerPartUtility = attrs({ 'data-rmx-listbox-part': 'trigger' })
+let listboxValuePartUtility = attrs({ 'data-rmx-listbox-part': 'value' })
+let listboxIndicatorPartUtility = attrs({ 'aria-hidden': true })
+let listboxPopupPartUtility = attrs({
+  'data-rmx-listbox-part': 'popup',
+  popover: 'auto',
+})
+let listboxListPartUtility = attrs({ 'data-rmx-listbox-part': 'list' })
+let listboxItemIndicatorPartUtility = attrs({
+  'data-rmx-listbox-part': 'item-indicator',
+  'aria-hidden': true,
+})
+let listboxItemLabelPartUtility = attrs({ 'data-rmx-listbox-part': 'item-label' })
+let listboxTriggerUtility = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  justifyContent: 'stretch',
+  width: '100%',
+  textAlign: 'left',
+})
+let listboxValueUtility = css({
+  display: 'block',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  lineHeight: theme.lineHeight.normal,
+})
+let listboxIndicatorUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: theme.fontSize.sm,
+  height: theme.fontSize.sm,
+  color: theme.colors.text.muted,
+  flexShrink: 0,
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
+})
+let listboxPopupUtility = css({
+  overflow: 'auto',
+})
+let listboxListUtility = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xxs,
+  outline: 'none',
+})
+let listboxItemBaseUtility = css({
+  display: 'grid',
+  gridTemplateColumns: `${theme.fontSize.sm} minmax(0, 1fr)`,
+  alignItems: 'center',
+  columnGap: theme.space.sm,
+  width: '100%',
+  minHeight: theme.control.height.md,
+  padding: `${theme.space.xs} ${theme.space.sm}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: 'transparent',
+  color: theme.colors.text.primary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  textAlign: 'left',
+  userSelect: 'none',
+  '&[data-rmx-listbox-highlighted="true"]': {
+    backgroundColor: theme.colors.action.primary.background,
+    color: theme.colors.action.primary.foreground,
+  },
+  '&[data-rmx-listbox-flash="true"]': {
+    backgroundColor: theme.colors.action.primary.background,
+    color: theme.colors.action.primary.foreground,
+  },
+  '&[aria-disabled="true"]': {
+    opacity: 0.5,
+  },
+  '& [data-rmx-listbox-part="item-indicator"]': {
+    opacity: 0,
+  },
+  '&[aria-selected="true"] [data-rmx-listbox-part="item-indicator"]': {
+    opacity: 1,
+  },
+})
+let listboxItemIndicatorUtility = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: theme.fontSize.sm,
+  height: theme.fontSize.sm,
+  color: 'currentColor',
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
+})
+let listboxItemLabelUtility = css({
+  minWidth: 0,
+})
 
 export const ui: ThemeUi = {
   p: spacingUtilities,
@@ -1114,6 +1268,34 @@ export const ui: ThemeUi = {
     indicator: accordionIndicatorUtility,
     panel: accordionPanelUtility,
     body: accordionBodyUtility,
+  },
+  popover: {
+    base: popoverBaseUtility,
+    surface: [popoverBaseUtility, surfaceElevatedUtility, popoverSurfaceUtility],
+  },
+  listbox: {
+    root: listboxRootUtility,
+    anchor: listboxAnchorUtility,
+    trigger: [listboxTriggerPartUtility, buttonDefaultsUtility, buttonBaseStyleUtility, buttonSizeMdUtility, buttonToneUtilities.secondary, listboxTriggerUtility],
+    value: [listboxValuePartUtility, listboxValueUtility],
+    indicator: [listboxIndicatorPartUtility, listboxIndicatorUtility],
+    popup: [listboxPopupPartUtility, popoverBaseUtility, surfaceElevatedUtility, popoverSurfaceUtility, listboxPopupUtility],
+    list: [listboxListPartUtility, listboxListUtility],
+    itemIndicator: [listboxItemIndicatorPartUtility, listboxItemIndicatorUtility],
+    itemLabel: [listboxItemLabelPartUtility, listboxItemLabelUtility],
+    item(value, options = {}) {
+      let { textValue, disabled } = options
+
+      return [
+        attrs({
+          'data-rmx-listbox-part': 'item',
+          'data-rmx-listbox-value': value,
+          'data-rmx-listbox-text-value': textValue ?? value,
+          'data-rmx-listbox-disabled': disabled ? 'true' : undefined,
+        }),
+        listboxItemBaseUtility,
+      ]
+    },
   },
 }
 

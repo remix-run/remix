@@ -3,6 +3,7 @@ export {
   type BreadcrumbItem,
   type BreadcrumbsProps,
 } from './lib/breadcrumbs.tsx'
+export { anchor, type AnchorOptions, type AnchorPlacement } from './lib/anchor.ts'
 export {
   Accordion,
   AccordionChangeEvent,
@@ -17,6 +18,20 @@ export {
   type AccordionSingleProps,
   type AccordionTriggerProps,
 } from './lib/accordion.tsx'
+export {
+  Popover,
+  PopoverOpenChangeEvent,
+  popoverOpenChangeEventType,
+  type PopoverProps,
+} from './lib/popover.tsx'
+export {
+  Listbox,
+  ListboxChangeEvent,
+  ListboxOpenChangeEvent,
+  listboxChangeEventType,
+  listboxOpenChangeEventType,
+  type ListboxProps,
+} from './lib/listbox.tsx'
 export {
   createTheme,
   RMX_01,
