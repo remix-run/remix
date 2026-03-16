@@ -18,6 +18,7 @@
   ],
   "type": "module",
   "exports": {
+    "./assert": "./src/assert.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./component": "./src/component.ts",
     "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
@@ -78,6 +79,10 @@
   },
   "publishConfig": {
     "exports": {
+      "./assert": {
+        "types": "./dist/assert.d.ts",
+        "default": "./dist/assert.js"
+      },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
@@ -316,9 +321,6 @@
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
-    "@remix-run/cop-middleware": "workspace:^",
-    "@remix-run/cors-middleware": "workspace:^",
-    "@remix-run/csrf-middleware": "workspace:^",
     "@remix-run/cookie": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
@@ -349,7 +351,8 @@
     "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/testing": "workspace:^"
+    "@remix-run/testing": "workspace:^",
+    "@remix-run/assert": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
