@@ -112,6 +112,10 @@ function getPart(root: HTMLElement | null, part: string) {
   return node instanceof HTMLElement ? node : null
 }
 
+function getEventTargetElement(event: Event) {
+  return event.target instanceof Element ? event.target : null
+}
+
 function isRemixElement(node: RemixNode): node is RemixElementLike {
   return !!node && typeof node === 'object' && !Array.isArray(node) && '$rmx' in node
 }
@@ -743,7 +747,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         return
       }
 
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
       let { trigger, popup } = getParts(rootNode)
       let isOpen = isPopoverOpen(popup)
       let targetInsideTrigger = target ? (trigger?.contains(target) ?? false) : false
@@ -797,7 +801,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       }
 
       let pointerEvent = event as PointerEvent
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
       if (!target) {
         return
       }
@@ -820,6 +824,13 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       if (item instanceof HTMLElement && pointerEvent.button === 0) {
         pointerEvent.preventDefault()
         startedItemPointerDown = true
+
+        if (isItemDisabled(item)) {
+          setHighlightedValue(null)
+          return
+        }
+
+        setHighlightedValue(item.getAttribute(valueAttr))
       }
     }
 
@@ -828,10 +839,18 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         return
       }
 
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
+      let { popup } = getParts(rootNode)
+      let targetInsidePopup = target ? (popup?.contains(target) ?? false) : false
       let item = target?.closest(`[${partAttr}="item"]`)
 
+      if (!targetInsidePopup) {
+        setHighlightedValue(null)
+        return
+      }
+
       if (!(item instanceof HTMLElement)) {
+        setHighlightedValue(null)
         return
       }
 
@@ -848,11 +867,32 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         return
       }
 
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
+      let { popup } = getParts(rootNode)
+      let targetInsidePopup = target ? (popup?.contains(target) ?? false) : false
       let item = target?.closest(`[${partAttr}="item"]`)
       let pointerEvent = event as PointerEvent
 
-      if (!(item instanceof HTMLElement) || pointerEvent.button !== 0) {
+      if (pointerEvent.button !== 0) {
+        pointerDownTime = null
+        startedItemPointerDown = false
+        return
+      }
+
+      if (!targetInsidePopup) {
+        let shouldDismiss = pointerDownTime !== null || startedItemPointerDown
+        pointerDownTime = null
+        startedItemPointerDown = false
+        setHighlightedValue(null)
+
+        if (shouldDismiss) {
+          dismissPopupLikeEscape()
+        }
+
+        return
+      }
+
+      if (!(item instanceof HTMLElement)) {
         pointerDownTime = null
         startedItemPointerDown = false
         return
@@ -880,7 +920,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     }
 
     let onPointerLeave = (event: Event) => {
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
       let list = target?.closest(`[${partAttr}="list"]`)
 
       if (list instanceof HTMLElement) {
@@ -890,7 +930,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
 
     let onKeyDown = (event: Event) => {
       let keyboardEvent = event as KeyboardEvent
-      let target = event.target instanceof HTMLElement ? event.target : null
+      let target = getEventTargetElement(event)
       if (!target || currentProps?.disabled) {
         return
       }
@@ -949,18 +989,18 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     }
 
     document.addEventListener('pointerdown', onDocumentPointerDown, true)
+    document.addEventListener('pointermove', onPointerMove)
+    document.addEventListener('pointerup', onPointerUp)
     node.addEventListener('pointerdown', onPointerDown)
-    node.addEventListener('pointermove', onPointerMove)
-    node.addEventListener('pointerup', onPointerUp)
     node.addEventListener('pointerleave', onPointerLeave)
     node.addEventListener('focusout', onFocusOut)
     node.addEventListener('keydown', onKeyDown)
 
     signal.addEventListener('abort', () => {
       document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+      document.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('pointerup', onPointerUp)
       node.removeEventListener('pointerdown', onPointerDown)
-      node.removeEventListener('pointermove', onPointerMove)
-      node.removeEventListener('pointerup', onPointerUp)
       node.removeEventListener('pointerleave', onPointerLeave)
       node.removeEventListener('focusout', onFocusOut)
       node.removeEventListener('keydown', onKeyDown)

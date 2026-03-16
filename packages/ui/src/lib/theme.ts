@@ -871,6 +871,7 @@ let listboxTriggerUtility = css({
   justifyContent: 'stretch',
   width: '100%',
   borderRadius: theme.radius.md,
+  paddingInlineEnd: theme.space.sm,
   textAlign: 'left',
 })
 let listboxValueUtility = css({

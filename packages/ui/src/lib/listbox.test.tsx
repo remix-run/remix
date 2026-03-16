@@ -255,6 +255,132 @@ describe('Listbox', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
+  it('dehighlights on drag out, rehighlights on re-entry, and selects on pointerup inside', async () => {
+    let { container, root } = renderApp(
+      <div>
+        {renderExampleListbox({ name: 'status' })}
+        <button type="button">Outside action</button>
+      </div>,
+    )
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let backlog = container.querySelector('[data-rmx-listbox-value="backlog"]') as HTMLElement
+    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
+    let outsideButton = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'Outside action',
+    ) as HTMLButtonElement
+
+    expect(isPopoverOpen(popup)).toBe(true)
+
+    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+
+    expect(inProgress.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
+
+    outsideButton.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
+    root.flush()
+
+    expect(container.querySelector('[data-rmx-listbox-highlighted="true"]')).toBe(null)
+
+    backlog.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
+    root.flush()
+
+    expect(backlog.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
+
+    backlog.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
+    root.flush()
+    await wait(480)
+    root.flush()
+
+    expect(trigger.textContent).toContain('Backlog')
+    expect(isPopoverOpen(popup)).toBe(false)
+  })
+
+  it('keeps highlight when dragging over the option indicator glyph', () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+
+    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
+    let indicator = inProgress.querySelector(
+      '[data-rmx-listbox-part="item-indicator"]',
+    ) as HTMLElement
+
+    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+
+    indicator.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
+    root.flush()
+
+    expect(inProgress.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
+  })
+
+  it('closes when a drag selection ends outside the popup', async () => {
+    let { container, root } = renderApp(
+      <div>
+        {renderExampleListbox()}
+        <button type="button">Outside action</button>
+      </div>,
+    )
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
+    let outsideButton = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'Outside action',
+    ) as HTMLButtonElement
+
+    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+
+    outsideButton.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
+    root.flush()
+
+    expect(container.querySelector('[data-rmx-listbox-highlighted="true"]')).toBe(null)
+
+    outsideButton.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
+    root.flush()
+    await wait(popoverFadeDuration + 20)
+
+    expect(isPopoverOpen(popup)).toBe(false)
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('closes when a trigger press ends outside the popup', async () => {
+    let { container, root } = renderApp(
+      <div>
+        {renderExampleListbox()}
+        <button type="button">Outside action</button>
+      </div>,
+    )
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let outsideButton = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'Outside action',
+    ) as HTMLButtonElement
+
+    trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    expect(isPopoverOpen(popup)).toBe(true)
+
+    outsideButton.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
+    root.flush()
+    await wait(popoverFadeDuration + 20)
+
+    expect(isPopoverOpen(popup)).toBe(false)
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('dispatches bubbling change and open events', async () => {
     let changeEvent: ListboxChangeEvent | null = null
     let openEvents: boolean[] = []

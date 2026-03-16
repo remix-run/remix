@@ -89,11 +89,12 @@ export function showPopover(node: HTMLElement | null) {
     return
   }
 
-  cancelPendingHide(node)
-
-  if (isPopoverOpen(node)) {
+  let alreadyOpen = isPopoverOpen(node)
+  if (alreadyOpen) {
     return
   }
+
+  cancelPendingHide(node)
 
   if (typeof node.showPopover === 'function') {
     node.showPopover()
