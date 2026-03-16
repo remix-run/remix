@@ -110,12 +110,15 @@ describe('Listbox', () => {
     expect(hiddenInput.name).toBe('status')
     expect(hiddenInput.value).toBe('backlog')
 
+    trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
 
-    let list = container.querySelector('[data-rmx-listbox-part="list"]') as HTMLElement
-    press(list, 'ArrowDown')
-    press(list, 'Enter')
+    expect(document.activeElement).toBe(trigger)
+    expect(trigger.getAttribute('role')).toBe('combobox')
+
+    press(trigger, 'ArrowDown')
+    press(trigger, 'Enter')
     await wait(480)
     root.flush()
 
@@ -156,12 +159,14 @@ describe('Listbox', () => {
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
     root.flush()
 
+    trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
 
-    let list = container.querySelector('[data-rmx-listbox-part="list"]') as HTMLElement
-    press(list, 'ArrowDown')
-    press(list, 'Enter')
+    expect(document.activeElement).toBe(trigger)
+
+    press(trigger, 'ArrowDown')
+    press(trigger, 'Enter')
     await wait(480)
     root.flush()
 
@@ -193,11 +198,11 @@ describe('Listbox', () => {
     mockLayout(trigger, { top: 40, left: 200, width: 180, height: 28 })
     mockLayout(popup, { top: 0, left: 0, width: 220, height: 140 })
 
+    trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
 
-    let list = container.querySelector('[data-rmx-listbox-part="list"]') as HTMLElement
-    press(list, 'ArrowDown')
+    press(trigger, 'ArrowDown')
     root.flush()
 
     expect(popup.style.minWidth).toBe('180px')
@@ -209,18 +214,20 @@ describe('Listbox', () => {
     let { container, root } = renderApp(renderExampleListbox())
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
 
+    trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
 
     let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let list = container.querySelector('[data-rmx-listbox-part="list"]') as HTMLElement
 
     expect(isPopoverOpen(popup)).toBe(true)
 
-    press(list, 'ArrowDown')
+    expect(document.activeElement).toBe(trigger)
+
+    press(trigger, 'ArrowDown')
     root.flush()
 
-    press(list, 'Tab')
+    press(trigger, 'Tab')
     root.flush()
 
     expect(isPopoverOpen(popup)).toBe(true)
@@ -321,6 +328,27 @@ describe('Listbox', () => {
     expect(inProgress.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
   })
 
+  it('keeps focus on the trigger after pointer selection', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+
+    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
+
+    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+
+    inProgress.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
+    root.flush()
+    await wait(480)
+    root.flush()
+
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('closes when a drag selection ends outside the popup', async () => {
     let { container, root } = renderApp(
       <div>
@@ -401,11 +429,11 @@ describe('Listbox', () => {
     )
 
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
 
-    let list = container.querySelector('[data-rmx-listbox-part="list"]') as HTMLElement
-    press(list, 'Enter')
+    press(trigger, 'Enter')
     await wait(480)
     root.flush()
 

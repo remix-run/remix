@@ -634,9 +634,6 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         if (shouldRestoreFocus) {
           trigger?.focus()
         }
-      } else {
-        let { list } = getParts(rootNode)
-        list?.focus()
       }
 
       dispatchOpenChange(isNowOpen)
@@ -663,18 +660,26 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     let highlightedItem = getHighlightedItem()
 
     if (trigger) {
+      trigger.setAttribute('role', 'combobox')
       trigger.setAttribute('aria-haspopup', 'listbox')
       trigger.setAttribute('aria-expanded', String(isOpen))
+      trigger.setAttribute('aria-autocomplete', 'none')
       trigger.disabled = !!currentProps?.disabled
+
+      if (popup) {
+        trigger.setAttribute('aria-controls', popup.id)
+      }
+
+      if (isOpen && highlightedItem) {
+        trigger.setAttribute('aria-activedescendant', highlightedItem.id)
+      } else {
+        trigger.removeAttribute('aria-activedescendant')
+      }
     }
 
     if (popup) {
       if (!popup.id) {
         popup.id = `${handle.id}-popup`
-      }
-
-      if (trigger) {
-        trigger.setAttribute('aria-controls', popup.id)
       }
 
       if (isOpen) {
@@ -686,17 +691,10 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
 
     if (list) {
       list.setAttribute('role', 'listbox')
-      list.tabIndex = -1
       if (currentProps?.disabled) {
         list.setAttribute('aria-disabled', 'true')
       } else {
         list.removeAttribute('aria-disabled')
-      }
-
-      if (highlightedItem) {
-        list.setAttribute('aria-activedescendant', highlightedItem.id)
-      } else {
-        list.removeAttribute('aria-activedescendant')
       }
     }
 
@@ -790,6 +788,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         let activeInsidePopup = activeElement ? (popup?.contains(activeElement) ?? false) : false
 
         if (!activeInsideTrigger && !activeInsidePopup) {
+          setTriggerFocusRingSuppressed(false)
           hidePopup()
         }
       })
@@ -944,17 +943,41 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       let inList = target.closest(`[${partAttr}="list"]`)
 
       if (inTrigger) {
+        let popupOpen = isPopoverOpen(getParts(rootNode).popup)
+
         if (keyboardEvent.key === ' ' || keyboardEvent.key === 'Enter') {
           keyboardEvent.preventDefault()
-          if (!isPopoverOpen(getParts(rootNode).popup)) {
+          if (!popupOpen) {
             openPopup()
+          } else {
+            selectHighlightedValue()
           }
         } else if (keyboardEvent.key === 'ArrowDown') {
           keyboardEvent.preventDefault()
-          openPopup()
+          if (!popupOpen) {
+            openPopup()
+          } else {
+            moveHighlight('next')
+          }
         } else if (keyboardEvent.key === 'ArrowUp') {
           keyboardEvent.preventDefault()
-          openPopup({ highlightLast: true })
+          if (!popupOpen) {
+            openPopup({ highlightLast: true })
+          } else {
+            moveHighlight('previous')
+          }
+        } else if (keyboardEvent.key === 'Home' && popupOpen) {
+          keyboardEvent.preventDefault()
+          moveHighlight('first')
+        } else if (keyboardEvent.key === 'End' && popupOpen) {
+          keyboardEvent.preventDefault()
+          moveHighlight('last')
+        } else if (keyboardEvent.key === 'Tab' && popupOpen) {
+          keyboardEvent.preventDefault()
+          moveHighlight('first')
+        } else if (keyboardEvent.key === 'Escape' && popupOpen) {
+          keyboardEvent.preventDefault()
+          dismissPopupLikeEscape()
         }
 
         return
