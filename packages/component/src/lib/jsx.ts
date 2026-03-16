@@ -49,20 +49,22 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
 export type RemixNode = Renderable | RemixNode[]
 
 type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type NullableMixValue<mix> = mix | null | undefined
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type NormalizeMixLeaf<mix> = Exclude<MixLeaf<mix>, null | undefined>
 type NestedMixValue<mix, depth extends number = 4> = depth extends 0
-  ? mix | ReadonlyArray<mix>
-  : mix | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>
+  ? NullableMixValue<mix> | ReadonlyArray<NullableMixValue<mix>>
+  : NullableMixValue<mix> | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>
 
 type NormalizeMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: Array<MixLeaf<Exclude<mix, undefined>>>
+      mix?: Array<NormalizeMixLeaf<mix>>
     }
   : props
 
 type ExpandMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: NestedMixValue<MixLeaf<Exclude<mix, undefined>>>
+      mix?: NestedMixValue<NormalizeMixLeaf<mix>>
     }
   : props
 
