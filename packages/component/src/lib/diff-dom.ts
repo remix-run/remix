@@ -245,6 +245,16 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
         let nextEndIdx = nextChildren.indexOf(cursor)
         let currEndIdx = findHydrationEndIndex(currentChildren, mi)
 
+        // Adjacent hydration regions can pre-match into the next region and leave
+        // an orphaned `<!-- /rmx:h -->` behind. Clear those stale matches first.
+        for (let j = i + 1; j <= nextEndIdx; j++) {
+          let matchedIndex = matchIndexForNext[j]
+          if (matchedIndex > currEndIdx) {
+            used[matchedIndex] = false
+          }
+          matchIndexForNext[j] = -1
+        }
+
         // Mark the entire current region as used to avoid removals.
         for (let k = mi; k <= currEndIdx; k++) used[k] = true
 

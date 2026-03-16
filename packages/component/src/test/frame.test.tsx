@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { Frame } from '../lib/component.ts'
 import { clientEntry } from '../lib/client-entries.ts'
-import { run } from '../lib/run.ts'
+import { getTopFrame, run } from '../lib/run.ts'
 import { createRangeRoot, createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
@@ -180,6 +180,71 @@ describe('run', () => {
     expect(buttons[1]?.textContent).toBe('Second')
 
     frame.dispose()
+  })
+
+  it('removes orphaned hydration end markers after full-document reloads of adjacent fragment entries', async () => {
+    let FragmentEntry = clientEntry(
+      '/js/fragment-entry.js#FragmentEntry',
+      function FragmentEntry(_handle: Handle, setup: string) {
+        return () => (
+          <>
+            <span>{setup}</span>
+            <span>{setup}</span>
+          </>
+        )
+      },
+    )
+
+    async function renderInitialBody() {
+      return await drain(
+        renderToStream(
+          <div>
+            <FragmentEntry setup="a" />
+            <FragmentEntry setup="b" />
+          </div>,
+        ),
+      )
+    }
+
+    async function renderReloadDocument() {
+      return await drain(
+        renderToStream(
+          <html>
+            <body>
+              <div>
+                <FragmentEntry setup="c" />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    document.body.innerHTML = await renderInitialBody()
+
+    let app = run({
+      loadModule: vi.fn().mockResolvedValue(FragmentEntry),
+      async resolveFrame(src: string) {
+        if (src === '/b') return await renderReloadDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let topFrame = getTopFrame()
+
+    topFrame.src = '/b'
+    await expect(topFrame.reload()).resolves.toBeInstanceOf(AbortSignal)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let bodyHtml = document.body.innerHTML
+    let hydrationStarts = bodyHtml.match(/<!--\s*rmx:h:/g)?.length ?? 0
+    let hydrationEnds = bodyHtml.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0
+
+    expect(hydrationStarts).toBe(hydrationEnds)
+
+    app.dispose()
   })
 
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
