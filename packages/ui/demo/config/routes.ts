@@ -2,12 +2,15 @@ import { get, route } from 'remix/fetch-router/routes'
 
 export let routes = {
   examples: route('/examples', {
+    anchor: get('anchor'),
     accordionOverview: get('accordion-overview'),
     accordionCard: get('accordion-card'),
     accordionMultiple: get('accordion-multiple'),
     breadcrumbsBasic: get('breadcrumbs-basic'),
     breadcrumbsSeparator: get('breadcrumbs-separator'),
     breadcrumbsDecomposed: get('breadcrumbs-decomposed'),
+    popoverOverview: get('popover-overview'),
+    listboxOverview: get('listbox-overview'),
     textOverview: get('text-overview'),
     cardOverview: get('card-overview'),
     buttonAliases: get('button-aliases'),
@@ -28,6 +31,8 @@ export let routes = {
     glyphs: get('glyphs'),
     componentAccordion: get('components/accordion'),
     componentBreadcrumbs: get('components/breadcrumbs'),
+    componentPopover: get('components/popover'),
+    componentListbox: get('components/listbox'),
     themeTokens: route('theme-tokens', {
       space: get('space'),
       radius: get('radius'),

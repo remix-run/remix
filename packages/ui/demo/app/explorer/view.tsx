@@ -210,6 +210,14 @@ function PageContent() {
       return <ComponentBreadcrumbsPage />
     }
 
+    if (page.id === PAGES.componentPopover.id) {
+      return <ComponentPopoverPage />
+    }
+
+    if (page.id === PAGES.componentListbox.id) {
+      return <ComponentListboxPage />
+    }
+
     return <LayoutsPage />
   }
 }
@@ -1709,6 +1717,78 @@ function ComponentBreadcrumbsPage() {
         >
           {EXAMPLES.breadcrumbsDecomposed.preview}
         </ExamplePreview>
+      </Section>
+    </div>
+  )
+}
+
+function ComponentPopoverPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Popover"
+        description="Use Popover for anchored floating surfaces like menus, quick actions, and small inspectors. The component owns opening, closing, and positioning, while `ui.popover.*` keeps the surface treatment shared."
+      >
+        <ExamplePreview
+          code={EXAMPLES.popoverOverview.code}
+          description="A compact action panel with a shared elevated surface, native popover behavior, and anchored positioning."
+          href={EXAMPLES.popoverOverview.path}
+          title="Anchored floating surface"
+        >
+          {EXAMPLES.popoverOverview.preview}
+        </ExamplePreview>
+      </Section>
+
+      <Section
+        title="What to remember"
+        description="Popover should stay boring to reach for so menus, listboxes, and future comboboxes can all build on the same popup foundation."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.body}>
+            <ul mix={bulletListCss}>
+              <li>Use `owner` or a matching `popovertarget` trigger so positioning stays tied to a real anchor element.</li>
+              <li>Compose visuals with `ui.popover.base` and `ui.popover.surface` instead of hand-styling every popup from scratch.</li>
+              <li>Listen for visibility changes with `on(Popover.openChange, ...)` on the popover itself or any ancestor.</li>
+              <li>Reach for Popover first when the surface is anchored and non-modal; save dialog semantics for a later dedicated component.</li>
+            </ul>
+          </div>
+        </article>
+      </Section>
+    </div>
+  )
+}
+
+function ComponentListboxPage() {
+  return () => (
+    <div mix={pageSectionStackCss}>
+      <Section
+        title="Listbox"
+        description="Listbox is the first popup-backed control in `remix/ui`. One behavior component coordinates trigger, popup, list, and item parts, while the visual system stays in `ui.listbox.*` mixins."
+      >
+        <ExamplePreview
+          code={EXAMPLES.listboxOverview.code}
+          description="A single-select popup control with shared trigger chrome, anchored popup layout, keyboard navigation, and form submission via the hidden input."
+          href={EXAMPLES.listboxOverview.path}
+          title="Single-select popup control"
+        >
+          {EXAMPLES.listboxOverview.preview}
+        </ExamplePreview>
+      </Section>
+
+      <Section
+        title="How to use it"
+        description="Listbox sets the pattern we can reuse for menu buttons, menus, and combobox later: one behavior component plus slotted mixins on ordinary elements."
+      >
+        <article mix={ui.card.base}>
+          <div mix={ui.card.body}>
+            <ul mix={bulletListCss}>
+              <li>`Listbox` is the behavior root; use `ui.listbox.trigger`, `ui.listbox.value`, `ui.listbox.popup`, `ui.listbox.list`, and `ui.listbox.item(...)` on plain markup inside it.</li>
+              <li>Use the `name` prop when the selected value should submit with a form.</li>
+              <li>Handle changes with `on(Listbox.change, ...)` and visibility with `on(Listbox.openChange, ...)` on the listbox or any ancestor.</li>
+              <li>The popup width follows the trigger by default, so it works well for compact app controls without extra layout code.</li>
+            </ul>
+          </div>
+        </article>
       </Section>
     </div>
   )

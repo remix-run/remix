@@ -7,6 +7,9 @@ import {
   HydratedAccordionCardExample,
   HydratedAccordionMultipleExample,
   HydratedAccordionOverviewExample,
+  HydratedAnchorExample,
+  HydratedListboxOverviewExample,
+  HydratedPopoverOverviewExample,
 } from '../assets/example-entries.tsx'
 import AccordionCardExample from './components/accordion-card.tsx'
 import AccordionMultipleExample from './components/accordion-multiple.tsx'
@@ -14,6 +17,8 @@ import AccordionOverviewExample from './components/accordion-overview.tsx'
 import BreadcrumbsBasicExample from './components/breadcrumbs-basic.tsx'
 import BreadcrumbsDecomposedExample from './components/breadcrumbs-decomposed.tsx'
 import BreadcrumbsSeparatorExample from './components/breadcrumbs-separator.tsx'
+import ListboxOverviewExample from './components/listbox-overview.tsx'
+import PopoverOverviewExample from './components/popover-overview.tsx'
 import ButtonAliasesExample from './ui-recipes/button-aliases.tsx'
 import ButtonBaseSizeToneExample from './ui-recipes/button-base-size-tone.tsx'
 import ButtonSizesExample from './ui-recipes/button-sizes.tsx'
@@ -84,6 +89,12 @@ export let EXAMPLES = {
     preview: <HydratedAccordionMultipleExample />,
     title: 'Accordion multiple mode',
   }),
+  anchor: createExample({
+    path: '/examples/anchor',
+    relativePath: './components/anchor.tsx',
+    preview: <HydratedAnchorExample />,
+    title: 'Anchor utility',
+  }),
   breadcrumbsBasic: createExample({
     docsPath: '/components/breadcrumbs',
     path: '/examples/breadcrumbs-basic',
@@ -104,6 +115,20 @@ export let EXAMPLES = {
     relativePath: './components/breadcrumbs-decomposed.tsx',
     preview: <BreadcrumbsDecomposedExample />,
     title: 'Breadcrumbs decomposed',
+  }),
+  popoverOverview: createExample({
+    docsPath: '/components/popover',
+    path: '/examples/popover-overview',
+    relativePath: './components/popover-overview.tsx',
+    preview: <HydratedPopoverOverviewExample />,
+    title: 'Popover overview',
+  }),
+  listboxOverview: createExample({
+    docsPath: '/components/listbox',
+    path: '/examples/listbox-overview',
+    relativePath: './components/listbox-overview.tsx',
+    preview: <HydratedListboxOverviewExample />,
+    title: 'Listbox overview',
   }),
   overviewText: createExample({
     path: '/examples/text-overview',

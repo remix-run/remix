@@ -30,6 +30,12 @@ let explorerController: Controller<typeof routes.explorer> = {
     componentBreadcrumbs() {
       return renderPage(PAGES.componentBreadcrumbs)
     },
+    componentPopover() {
+      return renderPage(PAGES.componentPopover)
+    },
+    componentListbox() {
+      return renderPage(PAGES.componentListbox)
+    },
     themeTokens: {
       actions: {
         space() {

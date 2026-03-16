@@ -18,6 +18,11 @@ function renderExample(
 
 let examplesController: Controller<typeof routes.examples> = {
   actions: {
+    anchor({ url }) {
+      return renderExample(EXAMPLES.anchor, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
     accordionOverview({ url }) {
       return renderExample(EXAMPLES.accordionOverview, {
         pad: url.searchParams.has('pad'),
@@ -45,6 +50,16 @@ let examplesController: Controller<typeof routes.examples> = {
     },
     breadcrumbsDecomposed({ url }) {
       return renderExample(EXAMPLES.breadcrumbsDecomposed, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    popoverOverview({ url }) {
+      return renderExample(EXAMPLES.popoverOverview, {
+        pad: url.searchParams.has('pad'),
+      })
+    },
+    listboxOverview({ url }) {
+      return renderExample(EXAMPLES.listboxOverview, {
         pad: url.searchParams.has('pad'),
       })
     },

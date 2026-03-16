@@ -188,6 +188,24 @@ export let PAGES = {
     description:
       'Breadcrumbs is a thin convenience component for common app-layout trails: good default output first, with an easy path back to plain markup and existing primitives.',
   },
+  componentPopover: {
+    id: 'component-popover',
+    path: '/components/popover',
+    navLabel: 'Popover',
+    eyebrow: 'Component',
+    title: 'Popover component',
+    description:
+      'Popover is the shared floating-surface primitive: native popover behavior where available, anchored positioning, and reusable popup surface mixins.',
+  },
+  componentListbox: {
+    id: 'component-listbox',
+    path: '/components/listbox',
+    navLabel: 'Listbox',
+    eyebrow: 'Component',
+    title: 'Listbox component',
+    description:
+      'Listbox is the first popup-backed control built on the shared popover pattern: one behavior component coordinating slotted trigger, popup, list, and item mixins.',
+  },
   layouts: {
     id: 'layouts',
     path: '/layouts',
@@ -199,7 +217,12 @@ export let PAGES = {
   },
 } as const satisfies Record<string, PageDefinition>
 
-export let COMPONENT_PAGES = [PAGES.componentAccordion, PAGES.componentBreadcrumbs] as const
+export let COMPONENT_PAGES = [
+  PAGES.componentAccordion,
+  PAGES.componentBreadcrumbs,
+  PAGES.componentPopover,
+  PAGES.componentListbox,
+] as const
 
 export let UI_RECIPE_PAGES = [
   PAGES.uiRecipeText,
