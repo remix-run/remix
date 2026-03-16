@@ -204,7 +204,7 @@ export let PAGES = {
     eyebrow: 'Component',
     title: 'Listbox component',
     description:
-      'Listbox is the first popup-backed control built on the shared popover pattern: one behavior component coordinating slotted trigger, popup, list, and item mixins.',
+      'Listbox is the first popup-backed control built on the shared popover pattern, with a simple `Listbox` + `ListboxOption` API and a lower-level composed escape hatch.',
   },
   layouts: {
     id: 'layouts',

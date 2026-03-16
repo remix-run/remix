@@ -41,6 +41,24 @@ type ToggleEventLike = Event & {
 }
 
 let fallbackOpenAttr = 'data-rmx-popover-open'
+export let popoverFadeDuration = 180
+let pendingHideTimers = new WeakMap<HTMLElement, number>()
+
+function resetPopoverStyles(node: HTMLElement) {
+  node.style.opacity = ''
+  node.style.pointerEvents = ''
+  node.style.transition = ''
+}
+
+function cancelPendingHide(node: HTMLElement) {
+  let timer = pendingHideTimers.get(node)
+  if (timer !== undefined) {
+    clearTimeout(timer)
+    pendingHideTimers.delete(node)
+  }
+
+  resetPopoverStyles(node)
+}
 
 function dispatchToggleEvent(
   node: HTMLElement,
@@ -67,7 +85,13 @@ export function isPopoverOpen(node: HTMLElement | null) {
 }
 
 export function showPopover(node: HTMLElement | null) {
-  if (!node || isPopoverOpen(node)) {
+  if (!node) {
+    return
+  }
+
+  cancelPendingHide(node)
+
+  if (isPopoverOpen(node)) {
     return
   }
 
@@ -81,8 +105,27 @@ export function showPopover(node: HTMLElement | null) {
   dispatchToggleEvent(node, 'toggle', 'closed', 'open')
 }
 
-export function hidePopover(node: HTMLElement | null) {
+export function hidePopover(node: HTMLElement | null, options?: { immediate?: boolean }) {
   if (!node || !isPopoverOpen(node)) {
+    return
+  }
+
+  if (options?.immediate) {
+    cancelPendingHide(node)
+  } else if (pendingHideTimers.has(node)) {
+    return
+  } else {
+    node.style.pointerEvents = 'none'
+    node.style.transition = `opacity ${popoverFadeDuration}ms ease`
+    node.style.opacity = '0'
+
+    let timer = window.setTimeout(() => {
+      pendingHideTimers.delete(node)
+      resetPopoverStyles(node)
+      hidePopover(node, { immediate: true })
+    }, popoverFadeDuration)
+
+    pendingHideTimers.set(node, timer)
     return
   }
 

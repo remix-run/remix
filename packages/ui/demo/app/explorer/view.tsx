@@ -1763,7 +1763,7 @@ function ComponentListboxPage() {
     <div mix={pageSectionStackCss}>
       <Section
         title="Listbox"
-        description="Listbox is the first popup-backed control in `remix/ui`. One behavior component coordinates trigger, popup, list, and item parts, while the visual system stays in `ui.listbox.*` mixins."
+        description="Listbox is the first popup-backed control in `remix/ui`. The default API keeps authoring light: use `Listbox` with `ListboxOption`, and drop to `ui.listbox.*` only when you need to fully compose the structure yourself."
       >
         <ExamplePreview
           code={EXAMPLES.listboxOverview.code}
@@ -1777,14 +1777,15 @@ function ComponentListboxPage() {
 
       <Section
         title="How to use it"
-        description="Listbox sets the pattern we can reuse for menu buttons, menus, and combobox later: one behavior component plus slotted mixins on ordinary elements."
+        description="Listbox sets the pattern we can reuse for menu buttons, menus, and combobox later: a thin behavior component with a clean default API and a lower-level escape hatch."
       >
         <article mix={ui.card.base}>
           <div mix={ui.card.body}>
             <ul mix={bulletListCss}>
-              <li>`Listbox` is the behavior root; use `ui.listbox.trigger`, `ui.listbox.value`, `ui.listbox.popup`, `ui.listbox.list`, and `ui.listbox.item(...)` on plain markup inside it.</li>
+              <li>Use `Listbox` with `ListboxOption` for the normal case; it renders the trigger, popup, selection indicator, and hidden form input for you.</li>
               <li>Use the `name` prop when the selected value should submit with a form.</li>
               <li>Handle changes with `on(Listbox.change, ...)` and visibility with `on(Listbox.openChange, ...)` on the listbox or any ancestor.</li>
+              <li>If you need a custom trigger or popup structure, you can still compose directly with `ui.listbox.trigger`, `ui.listbox.value`, `ui.listbox.popup`, `ui.listbox.list`, and `ui.listbox.item(...)`.</li>
               <li>The popup width follows the trigger by default, so it works well for compact app controls without extra layout code.</li>
             </ul>
           </div>

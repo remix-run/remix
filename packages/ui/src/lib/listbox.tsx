@@ -8,8 +8,10 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 
+import { Glyph } from './glyph.tsx'
 import { anchor } from './anchor.ts'
 import { hidePopover, isPopoverOpen, showPopover } from './popover.tsx'
+import { ui } from './theme.ts'
 
 export let listboxChangeEventType = 'rmx:listbox-change' as const
 export let listboxOpenChangeEventType = 'rmx:listbox-open-change' as const
@@ -57,6 +59,13 @@ export type ListboxProps = Omit<Props<'div'>, 'children'> & {
   value?: string | null
 }
 
+export type ListboxOptionProps = Omit<Props<'div'>, 'children'> & {
+  children?: RemixNode
+  disabled?: boolean
+  textValue?: string
+  value: string
+}
+
 export type ListboxSetup = {
   label?: RemixNode
 }
@@ -65,6 +74,8 @@ type ListboxComponent = typeof ListboxImpl & {
   readonly change: typeof listboxChangeEventType
   readonly openChange: typeof listboxOpenChangeEventType
 }
+
+type ListboxOptionComponent = typeof ListboxOptionImpl
 
 type ListboxItemRecord = {
   disabled: boolean
@@ -76,7 +87,13 @@ type ListboxItemRecord = {
 
 type RemixElementLike = {
   $rmx: true
+  type: string | Function
   props: Record<string, unknown>
+}
+
+type ListboxOptionElement = RemixElementLike & {
+  type: ListboxOptionComponent
+  props: ListboxOptionProps
 }
 
 let selectionFlashAttr = 'data-rmx-listbox-flash'
@@ -119,6 +136,77 @@ function getMixedAttr(node: RemixElementLike, name: string) {
     if (defaults && typeof defaults === 'object' && !Array.isArray(defaults) && name in defaults) {
       return (defaults as Record<string, unknown>)[name]
     }
+  }
+
+  return undefined
+}
+
+function isListboxOptionElement(node: RemixNode): node is ListboxOptionElement {
+  return isRemixElement(node) && node.type === ListboxOptionImpl
+}
+
+function getListboxOptionElements(node: RemixNode, out: ListboxOptionElement[] = []) {
+  if (Array.isArray(node)) {
+    for (let child of node) {
+      getListboxOptionElements(child, out)
+    }
+
+    return out
+  }
+
+  if (!node || !isRemixElement(node)) {
+    return out
+  }
+
+  if (isListboxOptionElement(node)) {
+    out.push(node)
+    return out
+  }
+
+  getListboxOptionElements(node.props.children as RemixNode, out)
+  return out
+}
+
+function hasCustomListboxStructure(node: RemixNode): boolean {
+  if (Array.isArray(node)) {
+    return node.some(child => hasCustomListboxStructure(child))
+  }
+
+  if (!node || !isRemixElement(node) || isListboxOptionElement(node)) {
+    return false
+  }
+
+  let part = getMixedAttr(node, partAttr)
+  if (
+    part === 'trigger' ||
+    part === 'popup' ||
+    part === 'list' ||
+    part === 'anchor' ||
+    part === 'value' ||
+    part === 'indicator'
+  ) {
+    return true
+  }
+
+  return hasCustomListboxStructure(node.props.children as RemixNode)
+}
+
+function getListboxOptionLabel(option: ListboxOptionElement) {
+  return option.props.children ?? option.props.textValue ?? option.props.value
+}
+
+function getTextValue(node: RemixNode): string | undefined {
+  if (Array.isArray(node)) {
+    let text = node.map(child => getTextValue(child)).filter(Boolean).join('')
+    return text || undefined
+  }
+
+  if (
+    typeof node === 'string' ||
+    typeof node === 'number' ||
+    typeof node === 'bigint'
+  ) {
+    return String(node)
   }
 
   return undefined
@@ -174,6 +262,23 @@ function getParts(root: HTMLElement | null) {
   }
 }
 
+function ListboxOptionImpl() {
+  return (props: ListboxOptionProps) => {
+    let { children, disabled, mix, textValue, value, ...domProps } = props
+    let resolvedTextValue = textValue ?? getTextValue(children) ?? value
+    let optionMix = mix
+      ? [ui.listbox.item(value, { disabled, textValue: resolvedTextValue }), mix]
+      : ui.listbox.item(value, { disabled, textValue: resolvedTextValue })
+
+    return (
+      <div {...domProps} mix={optionMix}>
+        <Glyph mix={ui.listbox.itemIndicator} name="check" />
+        <span mix={ui.listbox.itemLabel}>{children ?? textValue ?? value}</span>
+      </div>
+    )
+  }
+}
+
 function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
   let currentProps: ListboxProps | null = null
   let highlightedValue: string | null = null
@@ -189,6 +294,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
   let startedItemPointerDown = false
   let selectionTeardown = () => {}
   let selectionActive = false
+  let restoreTriggerFocusOnClose = false
 
   function getValue() {
     if (!currentProps) {
@@ -313,7 +419,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
       settled = true
       popup.removeEventListener('transitionend', done)
       resetPopupStyles()
-      hidePopup()
+      hidePopup({ immediate: true })
       selectionActive = false
       selectionTeardown = () => {}
       setTimeout(() => {
@@ -388,14 +494,21 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     showPopover(popup)
   }
 
-  function hidePopup() {
+  function hidePopup(options?: { immediate?: boolean }) {
     let { popup } = getParts(rootNode)
     selectionTeardown()
     resetPopupStyles()
     if (currentProps?.open === undefined) {
       uncontrolledOpen = false
     }
-    hidePopover(popup)
+    hidePopover(popup, options)
+  }
+
+  function dismissPopupLikeEscape() {
+    restoreTriggerFocusOnClose = true
+    let { trigger } = getParts(rootNode)
+    trigger?.focus()
+    hidePopup()
   }
 
   function isItemDisabled(item: HTMLElement) {
@@ -507,12 +620,15 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         cleanupAnchor()
         cleanupAnchor = () => {}
         highlightedValue = null
-        let activeElement =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null
+        let activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
         let activeInsideTrigger = activeElement ? (trigger?.contains(activeElement) ?? false) : false
         let activeInsidePopup = activeElement ? (popup?.contains(activeElement) ?? false) : false
+        let shouldRestoreFocus =
+          restoreTriggerFocusOnClose || !activeElement || activeInsideTrigger || activeInsidePopup
 
-        if (!activeElement || activeInsideTrigger || activeInsidePopup) {
+        restoreTriggerFocusOnClose = false
+
+        if (shouldRestoreFocus) {
           trigger?.focus()
         }
       } else {
@@ -618,6 +734,30 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
   }
 
   function attachRootListeners(node: HTMLElement, signal: AbortSignal) {
+    let onDocumentPointerDown = (event: Event) => {
+      if (selectionActive) {
+        return
+      }
+
+      let pointerEvent = event as PointerEvent
+      if (pointerEvent.button !== 0) {
+        return
+      }
+
+      let target = event.target instanceof HTMLElement ? event.target : null
+      let { trigger, popup } = getParts(rootNode)
+      let isOpen = isPopoverOpen(popup)
+      let targetInsideTrigger = target ? (trigger?.contains(target) ?? false) : false
+      let targetInsidePopup = target ? (popup?.contains(target) ?? false) : false
+
+      if (!isOpen || targetInsideTrigger || targetInsidePopup) {
+        return
+      }
+
+      event.preventDefault()
+      dismissPopupLikeEscape()
+    }
+
     let onFocusOut = (event: Event) => {
       if (selectionActive) {
         return
@@ -805,10 +945,11 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         moveHighlight('first')
       } else if (keyboardEvent.key === 'Escape') {
         keyboardEvent.preventDefault()
-        hidePopup()
+        dismissPopupLikeEscape()
       }
     }
 
+    document.addEventListener('pointerdown', onDocumentPointerDown, true)
     node.addEventListener('pointerdown', onPointerDown)
     node.addEventListener('pointermove', onPointerMove)
     node.addEventListener('pointerup', onPointerUp)
@@ -817,6 +958,7 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
     node.addEventListener('keydown', onKeyDown)
 
     signal.addEventListener('abort', () => {
+      document.removeEventListener('pointerdown', onDocumentPointerDown, true)
       node.removeEventListener('pointerdown', onPointerDown)
       node.removeEventListener('pointermove', onPointerMove)
       node.removeEventListener('pointerup', onPointerUp)
@@ -831,20 +973,57 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
 
   return (props: ListboxProps) => {
     currentProps = props
+    let domProps = { ...props } as Record<string, unknown>
+    delete domProps.children
+    delete domProps.defaultLabel
+    delete domProps.defaultOpen
+    delete domProps.defaultValue
+    delete domProps.disabled
+    delete domProps.loopFocus
+    delete domProps.mix
+    delete domProps.name
+    delete domProps.open
+    delete domProps.value
+
     let currentValue = getValue()
+    let optionElements = getListboxOptionElements(props.children)
+    let selectedOption = optionElements.find(option => option.props.value === currentValue)
+    let usesCustomStructure = hasCustomListboxStructure(props.children)
     let currentItem = rootNode ? getCurrentItem() : null
     let renderedLabel =
       currentValue !== null
-        ? currentItem?.textValue ?? setup.label ?? props.defaultLabel ?? null
+        ? currentItem?.textValue ??
+          selectedOption?.props.textValue ??
+          (selectedOption ? getListboxOptionLabel(selectedOption) : null) ??
+          setup.label ??
+          props.defaultLabel ??
+          null
         : props.defaultLabel ?? null
-    let renderedChildren = replaceValueChildren(props.children, renderedLabel)
+    let renderedChildren = usesCustomStructure
+      ? replaceValueChildren(props.children, renderedLabel)
+      : [
+          <div mix={ui.listbox.anchor}>
+            <button mix={ui.listbox.trigger}>
+              <span mix={ui.listbox.value}>{renderedLabel}</span>
+              <Glyph mix={ui.listbox.indicator} name="chevronDown" />
+            </button>
+          </div>,
+          <div mix={ui.listbox.popup}>
+            <div mix={ui.listbox.list}>{props.children}</div>
+          </div>,
+        ]
     handle.queueTask(() => {
       syncDom()
     })
 
-    let mix = props.mix
+    let rootMix = usesCustomStructure
+      ? props.mix
+      : props.mix
+        ? [ui.listbox.root, props.mix]
+        : ui.listbox.root
+    let mix = rootMix
       ? [
-          props.mix,
+          rootMix,
           ref((node, signal) => {
             rootNode = node as HTMLElement
             attachRootListeners(rootNode, signal)
@@ -858,10 +1037,15 @@ function ListboxImpl(handle: Handle, setup: ListboxSetup = {}) {
         })
 
     return (
-      <div {...props} mix={mix}>
+      <div {...domProps} mix={mix}>
         {renderedChildren}
         {props.name ? (
-          <input disabled={props.disabled} name={props.name} type="hidden" value={getValue() ?? ''} />
+          <input
+            disabled={props.disabled}
+            name={props.name}
+            type="hidden"
+            value={getValue() ?? ''}
+          />
         ) : null}
       </div>
     )
@@ -872,3 +1056,5 @@ export let Listbox = Object.assign(ListboxImpl, {
   change: listboxChangeEventType,
   openChange: listboxOpenChangeEventType,
 }) as ListboxComponent
+
+export let ListboxOption = ListboxOptionImpl as ListboxOptionComponent

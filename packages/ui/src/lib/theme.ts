@@ -870,6 +870,7 @@ let listboxTriggerUtility = css({
   gridTemplateColumns: 'minmax(0, 1fr) auto',
   justifyContent: 'stretch',
   width: '100%',
+  borderRadius: theme.radius.md,
   textAlign: 'left',
 })
 let listboxValueUtility = css({
@@ -900,7 +901,7 @@ let listboxPopupUtility = css({
 let listboxListUtility = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.xxs,
+  gap: theme.space.px,
   outline: 'none',
 })
 let listboxItemBaseUtility = css({

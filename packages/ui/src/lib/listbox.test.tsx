@@ -4,11 +4,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 
-import { Glyph } from './glyph.tsx'
-import { Listbox } from './listbox.tsx'
+import { Listbox, ListboxOption } from './listbox.tsx'
 import type { ListboxChangeEvent, ListboxOpenChangeEvent, ListboxProps } from './listbox.tsx'
-import { isPopoverOpen } from './popover.tsx'
-import { ui } from './theme.ts'
+import { isPopoverOpen, popoverFadeDuration } from './popover.tsx'
 
 function ensureAdoptedStyleSheets() {
   if (document.adoptedStyleSheets) {
@@ -63,27 +61,14 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
 
 function renderExampleListbox(props: Partial<ListboxProps> = {}) {
   return (
-    <Listbox defaultLabel="Select a status" mix={ui.listbox.root} setup={{ label: 'Backlog' }} {...props}>
-      <button mix={ui.listbox.trigger}>
-        <span mix={ui.listbox.value}>Select a status</span>
-        <Glyph mix={ui.listbox.indicator} name="chevronDown" />
-      </button>
-      <div mix={ui.listbox.popup}>
-        <div mix={ui.listbox.list}>
-          <div mix={ui.listbox.item('backlog', { textValue: 'Backlog' })}>
-            <Glyph mix={ui.listbox.itemIndicator} name="check" />
-            <span mix={ui.listbox.itemLabel}>Backlog</span>
-          </div>
-          <div mix={ui.listbox.item('in-progress', { textValue: 'In progress' })}>
-            <Glyph mix={ui.listbox.itemIndicator} name="check" />
-            <span mix={ui.listbox.itemLabel}>In progress</span>
-          </div>
-          <div mix={ui.listbox.item('done', { disabled: true, textValue: 'Done' })}>
-            <Glyph mix={ui.listbox.itemIndicator} name="check" />
-            <span mix={ui.listbox.itemLabel}>Done</span>
-          </div>
-        </div>
-      </div>
+    <Listbox defaultLabel="Select a status" {...props}>
+      <ListboxOption value="backlog">Backlog</ListboxOption>
+      <ListboxOption textValue="In progress" value="in-progress">
+        In progress
+      </ListboxOption>
+      <ListboxOption disabled textValue="Done" value="done">
+        Done
+      </ListboxOption>
     </Listbox>
   )
 }
@@ -179,7 +164,7 @@ describe('Listbox', () => {
     expect(trigger.textContent).toContain('In progress')
   })
 
-  it('supports controlled open state through bubbling open-change events', () => {
+  it('supports controlled open state through bubbling open-change events', async () => {
     let { container, root } = renderApp(renderExampleListbox({ open: false }))
 
     root.render(renderExampleListbox({ open: true }))
@@ -190,6 +175,7 @@ describe('Listbox', () => {
 
     root.render(renderExampleListbox({ open: false }))
     root.flush()
+    await wait(popoverFadeDuration + 20)
 
     let nextPopup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
     expect(isPopoverOpen(nextPopup)).toBe(false)
@@ -236,6 +222,33 @@ describe('Listbox', () => {
     expect(isPopoverOpen(popup)).toBe(true)
     let highlighted = container.querySelector('[data-rmx-listbox-highlighted="true"]') as HTMLElement
     expect(highlighted.getAttribute('data-rmx-listbox-value')).toBe('backlog')
+  })
+
+  it('treats outside pointer dismissal like escape and restores focus to the trigger', async () => {
+    let { container, root } = renderApp(
+      <div>
+        {renderExampleListbox()}
+        <button type="button">Outside action</button>
+      </div>,
+    )
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let outsideButton = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'Outside action',
+    ) as HTMLButtonElement
+
+    expect(isPopoverOpen(popup)).toBe(true)
+
+    outsideButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
+    root.flush()
+    await wait(popoverFadeDuration + 20)
+
+    expect(isPopoverOpen(popup)).toBe(false)
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('dispatches bubbling change and open events', async () => {

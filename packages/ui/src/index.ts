@@ -28,8 +28,10 @@ export {
   Listbox,
   ListboxChangeEvent,
   ListboxOpenChangeEvent,
+  ListboxOption,
   listboxChangeEventType,
   listboxOpenChangeEventType,
+  type ListboxOptionProps,
   type ListboxProps,
 } from './lib/listbox.tsx'
 export {

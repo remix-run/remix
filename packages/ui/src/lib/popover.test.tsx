@@ -7,6 +7,7 @@ import { createRoot, on, type RemixNode } from '@remix-run/component'
 import {
   hidePopover,
   isPopoverOpen,
+  popoverFadeDuration,
   Popover,
   showPopover,
 } from './popover.tsx'
@@ -36,6 +37,10 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
 
 async function flush() {
   await Promise.resolve()
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 afterEach(() => {
@@ -94,6 +99,7 @@ describe('Popover', () => {
     )
     root.flush()
     await flush()
+    await wait(popoverFadeDuration + 20)
 
     expect(isPopoverOpen(popover)).toBe(false)
   })
@@ -130,6 +136,7 @@ describe('Popover', () => {
 
     hidePopover(popover)
     await flush()
+    await wait(popoverFadeDuration + 20)
 
     expect(captured?.open).toBe(false)
   })
@@ -163,6 +170,7 @@ describe('Popover', () => {
 
     outside.focus()
     await flush()
+    await wait(popoverFadeDuration + 20)
     expect(isPopoverOpen(popover)).toBe(false)
   })
 })
