@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/script-handler",
+  "name": "@remix-run/script-server",
   "version": "0.0.0",
-  "description": "Route handler for compiling client-side JavaScript/TypeScript modules on demand",
+  "description": "Script server for compiling client-side JavaScript/TypeScript modules on demand",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/script-handler"
+    "directory": "packages/script-server"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/script-handler#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/script-server#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -57,9 +57,9 @@
   "keywords": [
     "remix",
     "scripts",
-    "script-handler",
+    "script-server",
     "transform",
     "esbuild",
-    "handler"
+    "server"
   ]
 }

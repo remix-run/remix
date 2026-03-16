@@ -11,7 +11,7 @@ import { routes } from './routes.ts'
 import { initializeBookstoreDatabase } from './data/setup.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
-import { scriptHandler } from './utils/scripts.ts'
+import { scriptServer } from './utils/scripts.ts'
 
 import adminController from './admin.tsx'
 import accountController from './account.tsx'
@@ -53,7 +53,7 @@ export let router = createRouter({ middleware })
 
 router.get(routes.scripts, async ({ request, params }) => {
   if (!params.path) return new Response('Not found', { status: 404 })
-  let script = await scriptHandler.handle(request, params.path)
+  let script = await scriptServer.fetch(request)
   return script ?? new Response('Not found', { status: 404 })
 })
 

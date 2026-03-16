@@ -579,7 +579,7 @@ function getUnconfiguredRootErrorMessage(
 ): string {
   return (
     `Resolved import "${specifier}" in ${importerPath} points to ${absolutePath}, which is outside all configured roots.\n\n` +
-    `Add a matching script-handler root, or mark this import as external.`
+    `Add a matching script-server root, or mark this import as external.`
   )
 }
 

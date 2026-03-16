@@ -21,7 +21,7 @@ packages:
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
   - packages/route-pattern/bench
-  - packages/script-handler/bench
+  - packages/script-server/bench
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - scripts

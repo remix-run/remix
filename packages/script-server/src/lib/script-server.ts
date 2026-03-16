@@ -16,8 +16,8 @@ import type { ResolvedScriptRoot } from './path-utils.ts'
 import type { ModuleCompileResult, ModuleGraphStore } from './module-graph.ts'
 import { generateETag, matchesETag } from './etag.ts'
 
-export interface ScriptHandlerOptions {
-  /** Configured source roots that may be served by this handler */
+export interface ScriptServerOptions {
+  /** Configured source roots that may be served by this server */
   roots: ReadonlyArray<{
     /** Public URL prefix under `base` (e.g. `'packages'`) */
     prefix?: string
@@ -27,7 +27,7 @@ export interface ScriptHandlerOptions {
     entryPoints?: readonly string[]
   }>
   /**
-   * URL base path where the handler is mounted (e.g. `'/scripts'`).
+   * URL base path where the server is mounted (e.g. `'/scripts'`).
    * All rewritten import URLs in compiled modules will be relative to this base.
    */
   base: string
@@ -39,7 +39,7 @@ export interface ScriptHandlerOptions {
   sourceMaps?: 'inline' | 'external'
   /**
    * Controls the source paths written into sourcemap `sources`.
-   * - `'virtual'` (default): use the stable handler path (e.g. `'/scripts/app/entry.ts'`)
+   * - `'virtual'` (default): use the stable server path (e.g. `'/scripts/app/entry.ts'`)
    * - `'absolute'`: use the original filesystem path on disk
    */
   sourceMapSourcePaths?: 'virtual' | 'absolute'
@@ -52,12 +52,12 @@ export interface ScriptHandlerOptions {
   onError?: (error: unknown) => void | Response | Promise<void | Response>
 }
 
-export interface ScriptHandler {
+export interface ScriptServer {
   /**
-   * Handles a request for a script module path. Returns `Response | null` — null means
-   * the request was not handled by this handler, letting the router fall through to a 404.
+   * Serves a script request. Returns `Response | null` — null means the request was not
+   * handled by this server, letting the router fall through to a 404.
    */
-  handle(request: Request, path: string): Promise<Response | null>
+  fetch(request: Request): Promise<Response | null>
   /**
    * Returns preload URLs for all transitive deps of the given entry point, ordered
    * shallowest-first. Pass either the public entry-point path relative to `base` or an
@@ -81,7 +81,7 @@ interface NormalizedScriptRoot extends ResolvedScriptRoot {
 }
 
 /**
- * Create the server-side scripts handler.
+ * Create the server-side scripts server.
  *
  * Compiles TypeScript/JavaScript modules on demand with content-addressed URLs:
  * - Internal modules served at `.@hash` URLs with `Cache-Control: immutable`
@@ -91,20 +91,20 @@ interface NormalizedScriptRoot extends ResolvedScriptRoot {
  * - CommonJS detection with clear error messages
  * - GET and HEAD support
  *
- * @param options Handler configuration
- * @returns A {@link ScriptHandler} with `handle()` and `preloads()` methods
+ * @param options Server configuration
+ * @returns A {@link ScriptServer} with `fetch()` and `preloads()` methods
  *
  * @example
  * ```ts
- * let scripts = createScriptHandler({
+ * let scriptServer = createScriptServer({
  *   base: '/scripts',
  *   roots: [{ directory: import.meta.dirname, entryPoints: ['app/entry.tsx'] }],
  * })
  *
- * route('/scripts/*path', ({ request, params }) => scripts.handle(request, params.path))
+ * route('/scripts/*path', ({ request }) => scriptServer.fetch(request))
  * ```
  */
-export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandler {
+export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   function normalizeBase(base: string): string {
     let normalized = `/${base}`.replace(/^\/+/, '/').replace(/\/+$/, '')
     return normalized || '/'
@@ -114,9 +114,9 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     return relativePath === '' ? directory : path.join(directory, ...relativePath.split('/'))
   }
 
-  function normalizeRoots(configuredRoots: ScriptHandlerOptions['roots']): NormalizedScriptRoot[] {
+  function normalizeRoots(configuredRoots: ScriptServerOptions['roots']): NormalizedScriptRoot[] {
     if (configuredRoots.length === 0) {
-      throw new Error('createScriptHandler() requires at least one configured root.')
+      throw new Error('createScriptServer() requires at least one configured root.')
     }
 
     let seenPrefixes = new Set<string>()
@@ -323,7 +323,7 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     try {
       return (await onError(error)) ?? internalServerError()
     } catch (error) {
-      console.error(`There was an error in the script handler error handler: ${error}`)
+      console.error(`There was an error in the script server error handler: ${error}`)
       return internalServerError()
     }
   }
@@ -396,9 +396,25 @@ export function createScriptHandler(options: ScriptHandlerOptions): ScriptHandle
     }
   }
 
+  function getModulePathFromRequest(request: Request): string | null {
+    let pathname = new URL(request.url).pathname
+
+    if (base === '/') {
+      return pathname.replace(/^\/+/, '')
+    }
+
+    if (pathname === base) return ''
+    if (!pathname.startsWith(`${base}/`)) return null
+
+    return pathname.slice(base.length + 1)
+  }
+
   return {
-    async handle(request, modulePath) {
+    async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
+
+      let modulePath = getModulePathFromRequest(request)
+      if (modulePath == null) return null
 
       let normalizedModulePath = modulePath.replace(/^\/+/, '')
       let isSourceMapRequest = normalizedModulePath.endsWith('.map')

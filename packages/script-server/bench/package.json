@@ -1,5 +1,5 @@
 {
-  "name": "script-handler-bench",
+  "name": "script-server-bench",
   "private": true,
   "type": "module"
 }

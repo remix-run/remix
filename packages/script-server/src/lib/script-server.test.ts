@@ -4,14 +4,14 @@ import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
-import { createScriptHandler } from './script-handler.ts'
+import { createScriptServer } from './script-server.ts'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 async function makeTmpDir(): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), 'script-handler-test-'))
+  return fs.mkdtemp(path.join(os.tmpdir(), 'script-server-test-'))
 }
 
 async function write(dir: string, rel: string, content: string): Promise<string> {
@@ -22,22 +22,22 @@ async function write(dir: string, rel: string, content: string): Promise<string>
 }
 
 function get(
-  handler: ReturnType<typeof createScriptHandler>,
+  scriptServer: ReturnType<typeof createScriptServer>,
   pathname: string,
   headers?: Record<string, string>,
 ) {
   let url = `http://localhost${pathname}`
-  return handler.handle(new Request(url, { headers }), pathname.replace('/scripts/', ''))
+  return scriptServer.fetch(new Request(url, { headers }))
 }
 
-function head(handler: ReturnType<typeof createScriptHandler>, pathname: string) {
+function head(scriptServer: ReturnType<typeof createScriptServer>, pathname: string) {
   let url = `http://localhost${pathname}`
-  return handler.handle(new Request(url, { method: 'HEAD' }), pathname.replace('/scripts/', ''))
+  return scriptServer.fetch(new Request(url, { method: 'HEAD' }))
 }
 
-function post(handler: ReturnType<typeof createScriptHandler>, pathname: string) {
+function post(scriptServer: ReturnType<typeof createScriptServer>, pathname: string) {
   let url = `http://localhost${pathname}`
-  return handler.handle(new Request(url, { method: 'POST' }), pathname.replace('/scripts/', ''))
+  return scriptServer.fetch(new Request(url, { method: 'POST' }))
 }
 
 async function parseJson(response: Response): Promise<any> {
@@ -72,21 +72,21 @@ describe('HTTP method handling', () => {
   })
 
   it('handles GET requests', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('handles HEAD requests (same status, no body)', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await head(handler, '/scripts/app/entry.ts')
+    let res = await head(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
     let body = await res.text()
@@ -94,21 +94,21 @@ describe('HTTP method handling', () => {
   })
 
   it('returns null for POST requests', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await post(handler, '/scripts/app/entry.ts')
+    let res = await post(scriptServer, '/scripts/app/entry.ts')
     assert.equal(res, null)
   })
 
   it('returns null for PUT requests', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
     let url = 'http://localhost/scripts/app/entry.ts'
-    let res = await handler.handle(new Request(url, { method: 'PUT' }), 'app/entry.ts')
+    let res = await scriptServer.fetch(new Request(url, { method: 'PUT' }))
     assert.equal(res, null)
   })
 })
@@ -130,31 +130,31 @@ describe('entry point routing', () => {
   })
 
   it('returns 200 for a path matching an exact entryPoints entry', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('returns null for a path not matching any entryPoints pattern', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/lib/internal.ts')
+    let res = await get(scriptServer, '/scripts/lib/internal.ts')
     assert.equal(res, null)
   })
 
   it('supports glob patterns for entryPoints', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/*.ts'] }],
       base: '/scripts',
     })
-    let res1 = await get(handler, '/scripts/app/entry.ts')
-    let res2 = await get(handler, '/scripts/app/other.ts')
+    let res1 = await get(scriptServer, '/scripts/app/entry.ts')
+    let res2 = await get(scriptServer, '/scripts/app/other.ts')
     assert.ok(res1)
     assert.ok(res2)
     assert.equal(res1.status, 200)
@@ -162,20 +162,29 @@ describe('entry point routing', () => {
   })
 
   it('returns null for a path matching glob but not an actual entryPoints glob', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/other.ts')
+    let res = await get(scriptServer, '/scripts/app/other.ts')
     assert.equal(res, null)
   })
 
   it('returns null for an empty path', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await handler.handle(new Request('http://localhost/scripts/'), '')
+    let res = await scriptServer.fetch(new Request('http://localhost/scripts/'))
+    assert.equal(res, null)
+  })
+
+  it('returns null for requests outside the configured base', async () => {
+    let scriptServer = createScriptServer({
+      roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
+      base: '/scripts',
+    })
+    let res = await scriptServer.fetch(new Request('http://localhost/assets/app/entry.ts'))
     assert.equal(res, null)
   })
 })
@@ -203,32 +212,32 @@ describe('response content', () => {
   })
 
   it('returns application/javascript content-type', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.ok(res.headers.get('Content-Type')?.includes('application/javascript'))
   })
 
   it('strips TypeScript type annotations from output', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(!body.includes(': string'), 'TypeScript type annotations should be stripped')
   })
 
   it('preserves the function logic in output', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('greet'), 'function name should be preserved')
@@ -259,11 +268,11 @@ describe('TSX transpilation', () => {
   })
 
   it('transpiles TSX files to valid JavaScript', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/component.tsx'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/component.tsx')
+    let res = await get(scriptServer, '/scripts/app/component.tsx')
     assert.ok(res)
     assert.equal(res.status, 200)
     let body = await res.text()
@@ -348,12 +357,12 @@ describe('tsconfig.json and package.json config', () => {
   })
 
   it('uses tsconfig jsxImportSource and rewrites package imports', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/component.tsx'] }],
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/app/component.tsx')
+    let res = await get(scriptServer, '/scripts/app/component.tsx')
     assert.ok(res)
     assert.equal(res.status, 200)
 
@@ -366,7 +375,7 @@ describe('tsconfig.json and package.json config', () => {
       `expected jsx runtime import to be rewritten via package imports, got:\n${body}`,
     )
 
-    let runtimeRes = await get(handler, `/scripts/support/jsx-runtime.ts.@${match[1]}`)
+    let runtimeRes = await get(scriptServer, `/scripts/support/jsx-runtime.ts.@${match[1]}`)
     assert.ok(runtimeRes)
     assert.equal(runtimeRes.status, 200)
   })
@@ -393,21 +402,21 @@ describe('cache headers', () => {
   })
 
   it('serves entry points with Cache-Control: no-cache', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.equal(res.headers.get('Cache-Control'), 'no-cache')
   })
 
   it('serves entry points with an ETag header', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let etag = res.headers.get('ETag')
     assert.ok(etag, 'ETag header should be present')
@@ -415,12 +424,12 @@ describe('cache headers', () => {
   })
 
   it('serves internal modules with Cache-Control: immutable', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
     // First fetch entry to build the graph and get the dep URL
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
@@ -429,7 +438,7 @@ describe('cache headers', () => {
     assert.ok(match, `expected dep URL in entry body, got:\n${entryBody}`)
     let depUrl = `/scripts/app/dep.ts.@${match[1]}`
 
-    let depRes = await get(handler, depUrl)
+    let depRes = await get(scriptServer, depUrl)
     assert.ok(depRes)
     assert.equal(depRes.status, 200)
     assert.ok(
@@ -439,17 +448,17 @@ describe('cache headers', () => {
   })
 
   it('internal modules have no ETag header (immutable, never revalidated)', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match)
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     assert.equal(depRes.headers.get('ETag'), null)
   })
@@ -470,16 +479,16 @@ describe('ETag and 304 Not Modified', () => {
   })
 
   it('returns 304 when If-None-Match matches the ETag', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let first = await get(handler, '/scripts/app/entry.ts')
+    let first = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(first)
     let etag = first.headers.get('ETag')
     assert.ok(etag)
 
-    let second = await get(handler, '/scripts/app/entry.ts', { 'If-None-Match': etag })
+    let second = await get(scriptServer, '/scripts/app/entry.ts', { 'If-None-Match': etag })
     assert.ok(second)
     assert.equal(second.status, 304)
     let body = await second.text()
@@ -487,25 +496,25 @@ describe('ETag and 304 Not Modified', () => {
   })
 
   it('returns 200 when If-None-Match does not match', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts', { 'If-None-Match': 'W/"stale"' })
+    let res = await get(scriptServer, '/scripts/app/entry.ts', { 'If-None-Match': 'W/"stale"' })
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('304 response has no body', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let first = await get(handler, '/scripts/app/entry.ts')
+    let first = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(first)
     let etag = first.headers.get('ETag')!
 
-    let second = await get(handler, '/scripts/app/entry.ts', { 'If-None-Match': etag })
+    let second = await get(scriptServer, '/scripts/app/entry.ts', { 'If-None-Match': etag })
     assert.ok(second)
     assert.equal(second.status, 304)
     assert.equal(await second.text(), '')
@@ -528,47 +537,47 @@ describe('internal module hash validation', () => {
   })
 
   it('returns null for a wrong hash on an internal module', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    await get(handler, '/scripts/app/entry.ts') // build the graph
-    let res = await get(handler, '/scripts/app/dep.ts.@wronghash')
+    await get(scriptServer, '/scripts/app/entry.ts') // build the graph
+    let res = await get(scriptServer, '/scripts/app/dep.ts.@wronghash')
     assert.equal(res, null)
   })
 
   it('returns null for a non-existent file with a hash', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/nonexistent.ts.@abc123')
+    let res = await get(scriptServer, '/scripts/app/nonexistent.ts.@abc123')
     assert.equal(res, null)
   })
 
   it('returns 200 for an internal module with the correct hash', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let entryRes = await get(handler, '/scripts/app/entry.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(entryRes)
     let body = await entryRes.text()
 
     let match = body.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match, `expected dep URL in entry body, got:\n${body}`)
 
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     assert.equal(depRes.status, 200)
   })
 
   it('returns 500 when an internal module has a compilation error', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let entryRes = await get(handler, '/scripts/app/entry.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(entryRes)
     let body = await entryRes.text()
 
@@ -577,7 +586,7 @@ describe('internal module hash validation', () => {
 
     await write(dir, 'app/dep.ts', 'export const y =')
 
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     await assertInternalServerError(depRes)
   })
@@ -585,11 +594,11 @@ describe('internal module hash validation', () => {
   it('calls onError when an internal module has a compilation error', async () => {
     await write(dir, 'app/dep.ts', 'export const y = 2')
 
-    let baselineHandler = createScriptHandler({
+    let baselineScriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let entryRes = await get(baselineHandler, '/scripts/app/entry.ts')
+    let entryRes = await get(baselineScriptServer, '/scripts/app/entry.ts')
     assert.ok(entryRes)
     let body = await entryRes.text()
 
@@ -597,7 +606,7 @@ describe('internal module hash validation', () => {
     assert.ok(match, `expected dep URL in entry body, got:\n${body}`)
 
     let receivedError: unknown
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       onError(error) {
@@ -607,7 +616,7 @@ describe('internal module hash validation', () => {
 
     await write(dir, 'app/dep.ts', 'export const y =')
 
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     await assertInternalServerError(depRes)
     assert.ok(receivedError instanceof Error)
@@ -629,39 +638,39 @@ describe('error handling', () => {
   })
 
   it('returns a generic 500 response for entry point compilation errors', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/broken.ts')
+    let res = await get(scriptServer, '/scripts/app/broken.ts')
     assert.ok(res)
     await assertInternalServerError(res)
   })
 
   it('calls onError when an entry point compilation error occurs', async () => {
     let receivedError: unknown
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
       base: '/scripts',
       onError(error) {
         receivedError = error
       },
     })
-    let res = await get(handler, '/scripts/app/broken.ts')
+    let res = await get(scriptServer, '/scripts/app/broken.ts')
     assert.ok(res)
     await assertInternalServerError(res)
     assert.ok(receivedError instanceof Error)
   })
 
   it('uses a custom response returned from onError', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
       base: '/scripts',
       onError() {
         return new Response('Custom error response', { status: 418 })
       },
     })
-    let res = await get(handler, '/scripts/app/broken.ts')
+    let res = await get(scriptServer, '/scripts/app/broken.ts')
     assert.ok(res)
     assert.equal(res.status, 418)
     assert.equal(await res.text(), 'Custom error response')
@@ -671,14 +680,14 @@ describe('error handling', () => {
     let errorMock = mock.method(console, 'error', () => {})
 
     try {
-      let handler = createScriptHandler({
+      let scriptServer = createScriptServer({
         roots: [{ directory: dir, entryPoints: ['app/broken.ts'] }],
         base: '/scripts',
         onError() {
           throw new Error('error handler failed')
         },
       })
-      let res = await get(handler, '/scripts/app/broken.ts')
+      let res = await get(scriptServer, '/scripts/app/broken.ts')
       assert.ok(res)
       await assertInternalServerError(res)
       assert.equal(errorMock.mock.calls.length, 1)
@@ -713,11 +722,11 @@ describe('import rewriting', () => {
   })
 
   it('rewrites relative imports to content-addressed URLs', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('/scripts/app/greet.ts.@'), 'relative import should be rewritten')
@@ -725,11 +734,11 @@ describe('import rewriting', () => {
   })
 
   it('leaves https:// URL imports unrewritten', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('https://esm.sh/some-lib'), 'URL imports should be left unchanged')
@@ -753,11 +762,11 @@ describe('entry point import URL rewriting', () => {
   })
 
   it('uses stable no-hash URL when importing a configured entry point', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/a.ts', 'app/b.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/a.ts')
+    let res = await get(scriptServer, '/scripts/app/a.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -771,11 +780,11 @@ describe('entry point import URL rewriting', () => {
   })
 
   it('uses content-addressed URL when importing a non-entry module', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/a.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/a.ts')
+    let res = await get(scriptServer, '/scripts/app/a.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -785,11 +794,11 @@ describe('entry point import URL rewriting', () => {
   })
 
   it('preloads() uses stable URL for entry point deps', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/a.ts', 'app/b.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/a.ts')
+    let urls = await scriptServer.preloads('app/a.ts')
     let bUrl = urls.find((u) => u.includes('app/b'))
     assert.ok(bUrl, 'should include b.ts in preloads')
     assert.ok(!bUrl.includes('.@'), `expected no hash token in entry preload URL, got: ${bUrl}`)
@@ -816,24 +825,24 @@ describe('external specifiers', () => {
   })
 
   it('leaves externals unrewritten', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: ['react'],
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes("'react'") || body.includes('"react"'), 'react import should remain')
   })
 
   it('still rewrites non-external relative imports', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: ['react'],
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -843,12 +852,12 @@ describe('external specifiers', () => {
   })
 
   it('supports a single string for external (not just array)', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       external: 'react',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes("'react'") || body.includes('"react"'))
@@ -866,12 +875,12 @@ describe('unresolved imports', () => {
   })
 
   it('returns 500 when an import cannot be resolved', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     await assertInternalServerError(res)
   })
@@ -894,19 +903,19 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'a/dep.ts', 'export const x = 1')
     await write(dir, 'a/entry.ts', 'import { x } from "./dep.ts"\nexport { x }')
 
-    let handlerA = createScriptHandler({
+    let scriptServerA = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['a/entry.ts'] }],
       base: '/scripts',
     })
-    let resA1 = await get(handlerA, '/scripts/a/entry.ts')
+    let resA1 = await get(scriptServerA, '/scripts/a/entry.ts')
     assert.ok(resA1)
     let bodyA1 = await resA1.text()
 
-    let handlerA2 = createScriptHandler({
+    let scriptServerA2 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['a/entry.ts'] }],
       base: '/scripts',
     })
-    let resA2 = await get(handlerA2, '/scripts/a/entry.ts')
+    let resA2 = await get(scriptServerA2, '/scripts/a/entry.ts')
     assert.ok(resA2)
     let bodyA2 = await resA2.text()
 
@@ -917,11 +926,11 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'b/dep.ts', 'export const x = 1')
     await write(dir, 'b/entry.ts', 'import { x } from "./dep.ts"\nexport { x }')
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['b/entry.ts'] }],
       base: '/scripts',
     })
-    let res1 = await get(handler, '/scripts/b/entry.ts')
+    let res1 = await get(scriptServer, '/scripts/b/entry.ts')
     assert.ok(res1)
     let body1 = await res1.text()
     let match1 = body1.match(/\/scripts\/b\/dep\.ts\.@([a-z0-9]+)/)
@@ -931,12 +940,12 @@ describe('content-addressed URL determinism', () => {
     // Modify dep content with a new mtime
     await write(dir, 'b/dep.ts', 'export const x = 999')
 
-    // New handler to get fresh compilation
-    let handler2 = createScriptHandler({
+    // New script server to get fresh compilation
+    let scriptServer2 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['b/entry.ts'] }],
       base: '/scripts',
     })
-    let res2 = await get(handler2, '/scripts/b/entry.ts')
+    let res2 = await get(scriptServer2, '/scripts/b/entry.ts')
     assert.ok(res2)
     let body2 = await res2.text()
     let match2 = body2.match(/\/scripts\/b\/dep\.ts\.@([a-z0-9]+)/)
@@ -951,11 +960,11 @@ describe('content-addressed URL determinism', () => {
     await write(dir, 'c/mid.ts', 'import { v } from "./leaf.ts"\nexport const w = v + 1')
     await write(dir, 'c/entry.ts', 'import { w } from "./mid.ts"\nexport const z = w')
 
-    let handler1 = createScriptHandler({
+    let scriptServer1 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['c/entry.ts'] }],
       base: '/scripts',
     })
-    let res1 = await get(handler1, '/scripts/c/entry.ts')
+    let res1 = await get(scriptServer1, '/scripts/c/entry.ts')
     assert.ok(res1)
     let body1 = await res1.text()
     let midMatch1 = body1.match(/\/scripts\/c\/mid\.ts\.@([a-z0-9]+)/)
@@ -965,11 +974,11 @@ describe('content-addressed URL determinism', () => {
     // Change the leaf (deepest dep)
     await write(dir, 'c/leaf.ts', 'export const v = 42')
 
-    let handler2 = createScriptHandler({
+    let scriptServer2 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['c/entry.ts'] }],
       base: '/scripts',
     })
-    let res2 = await get(handler2, '/scripts/c/entry.ts')
+    let res2 = await get(scriptServer2, '/scripts/c/entry.ts')
     assert.ok(res2)
     let body2 = await res2.text()
     let midMatch2 = body2.match(/\/scripts\/c\/mid\.ts\.@([a-z0-9]+)/)
@@ -1006,21 +1015,21 @@ describe('circular dependency handling', () => {
   })
 
   it('successfully compiles a module graph with circular deps', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cycle/entry.ts')
+    let res = await get(scriptServer, '/scripts/cycle/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('modules in a cycle share the same hash', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
-    let entryRes = await get(handler, '/scripts/cycle/entry.ts')
+    let entryRes = await get(scriptServer, '/scripts/cycle/entry.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
@@ -1029,7 +1038,7 @@ describe('circular dependency handling', () => {
     let aHash = aMatch[1]
 
     // a.ts and b.ts are in a real cycle — they must share the same compiledHash
-    let aRes = await get(handler, `/scripts/cycle/a.ts.@${aHash}`)
+    let aRes = await get(scriptServer, `/scripts/cycle/a.ts.@${aHash}`)
     assert.ok(aRes)
     assert.equal(aRes.status, 200)
     let aBody = await aRes.text()
@@ -1042,17 +1051,17 @@ describe('circular dependency handling', () => {
     assert.equal(aHash, bHash, 'modules in a real cycle should share the same hash')
 
     // b.ts must also be fetchable via its URL
-    let bRes = await get(handler, `/scripts/cycle/b.ts.@${bHash}`)
+    let bRes = await get(scriptServer, `/scripts/cycle/b.ts.@${bHash}`)
     assert.ok(bRes)
     assert.equal(bRes.status, 200)
   })
 
   it('cycle hash changes when a cycle member changes', async () => {
-    let handler1 = createScriptHandler({
+    let scriptServer1 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
-    let res1 = await get(handler1, '/scripts/cycle/entry.ts')
+    let res1 = await get(scriptServer1, '/scripts/cycle/entry.ts')
     assert.ok(res1)
     let body1 = await res1.text()
     let match1 = body1.match(/\/scripts\/cycle\/a\.ts\.@([a-z0-9]+)/)
@@ -1066,11 +1075,11 @@ describe('circular dependency handling', () => {
       'import { getB } from "./b.ts"\nexport const a = "AA"\nexport const aFn = () => "changed " + getB()',
     )
 
-    let handler2 = createScriptHandler({
+    let scriptServer2 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cycle/entry.ts'] }],
       base: '/scripts',
     })
-    let res2 = await get(handler2, '/scripts/cycle/entry.ts')
+    let res2 = await get(scriptServer2, '/scripts/cycle/entry.ts')
     assert.ok(res2)
     let body2 = await res2.text()
     let match2 = body2.match(/\/scripts\/cycle\/a\.ts\.@([a-z0-9]+)/)
@@ -1118,91 +1127,91 @@ describe('CommonJS detection', () => {
   })
 
   it('returns a generic 500 when entry point is module.exports CJS', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cjs/module-exports.js'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cjs/module-exports.js')
+    let res = await get(scriptServer, '/scripts/cjs/module-exports.js')
     assert.ok(res)
     await assertInternalServerError(res)
   })
 
   it('returns 500 for exports.foo CJS pattern', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cjs/exports-dot.js'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cjs/exports-dot.js')
+    let res = await get(scriptServer, '/scripts/cjs/exports-dot.js')
     assert.ok(res)
     assert.equal(res.status, 500)
   })
 
   it('returns 500 for bracketed module exports syntax', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cjs/module-bracket.js'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cjs/module-bracket.js')
+    let res = await get(scriptServer, '/scripts/cjs/module-bracket.js')
     assert.ok(res)
     assert.equal(res.status, 500)
   })
 
   it('returns 500 for exports assignment syntax', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cjs/exports-assignment.js'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cjs/exports-assignment.js')
+    let res = await get(scriptServer, '/scripts/cjs/exports-assignment.js')
     assert.ok(res)
     assert.equal(res.status, 500)
   })
 
   it('returns 500 for require member syntax', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['cjs/require-member.js'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/cjs/require-member.js')
+    let res = await get(scriptServer, '/scripts/cjs/require-member.js')
     assert.ok(res)
     assert.equal(res.status, 500)
   })
 
   it('returns 500 when an entry point imports a CJS dependency', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/imports-cjs.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/imports-cjs.ts')
+    let res = await get(scriptServer, '/scripts/app/imports-cjs.ts')
     assert.ok(res)
     await assertInternalServerError(res)
   })
 
   it('serves ESM entry points successfully (control case)', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('serves modules with shadowed require successfully', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/shadowed-require.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/shadowed-require.ts')
+    let res = await get(scriptServer, '/scripts/app/shadowed-require.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('serves modules with suspicious text in strings and comments successfully', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/suspicious-text.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/suspicious-text.ts')
+    let res = await get(scriptServer, '/scripts/app/suspicious-text.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
@@ -1234,21 +1243,21 @@ describe('preloads()', () => {
   })
 
   it('returns an array of URLs', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
     assert.ok(Array.isArray(urls))
     assert.ok(urls.length > 0)
   })
 
   it('includes the entry point URL first (without hash)', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
     assert.ok(
       urls[0].endsWith('/scripts/app/entry.ts'),
       `first URL should be entry, got: ${urls[0]}`,
@@ -1257,11 +1266,11 @@ describe('preloads()', () => {
   })
 
   it('includes all transitive dependencies', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
     let hasA = urls.some((u) => u.includes('app/a.ts.@'))
     let hasB = urls.some((u) => u.includes('app/b.ts.@'))
     let hasC = urls.some((u) => u.includes('app/c.ts.@'))
@@ -1271,11 +1280,11 @@ describe('preloads()', () => {
   })
 
   it('preload URLs for deps use content-addressed format', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
     let depUrls = urls.filter((u) => !u.endsWith('entry.ts'))
     for (let url of depUrls) {
       assert.match(url, /\.ts\.@[a-z0-9]+$/, `dep URL should be content-addressed: ${url}`)
@@ -1283,58 +1292,57 @@ describe('preloads()', () => {
   })
 
   it('all preload URLs resolve successfully', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
 
     for (let url of urls) {
       let pathname = url.replace('http://localhost', '')
-      let modulePath = pathname.replace('/scripts/', '')
-      let res = await handler.handle(new Request(`http://localhost${pathname}`), modulePath)
+      let res = await scriptServer.fetch(new Request(`http://localhost${pathname}`))
       assert.ok(res, `preload URL should resolve: ${url}`)
       assert.equal(res.status, 200, `preload URL should return 200: ${url}`)
     }
   })
 
   it('returns the same preload URLs across repeated calls when sources are unchanged', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
-    let first = await handler.preloads('app/entry.ts')
-    let second = await handler.preloads('app/entry.ts')
+    let first = await scriptServer.preloads('app/entry.ts')
+    let second = await scriptServer.preloads('app/entry.ts')
 
     assert.deepEqual(second, first)
   })
 
   it('returns a fresh array for each preloads call', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
-    let first = await handler.preloads('app/entry.ts')
+    let first = await scriptServer.preloads('app/entry.ts')
     first.push('/scripts/app/injected.ts')
 
-    let second = await handler.preloads('app/entry.ts')
+    let second = await scriptServer.preloads('app/entry.ts')
 
     assert.notEqual(second, first)
     assert.ok(!second.includes('/scripts/app/injected.ts'))
   })
 
   it('returns updated preload URLs after a dependency changes', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
-    let before = await handler.preloads('app/entry.ts')
+    let before = await scriptServer.preloads('app/entry.ts')
     await new Promise((resolve) => setTimeout(resolve, 10))
     await write(dir, 'app/c.ts', 'export const c = "updated"')
-    let after = await handler.preloads('app/entry.ts')
+    let after = await scriptServer.preloads('app/entry.ts')
 
     assert.notDeepEqual(after, before)
     assert.notEqual(
@@ -1350,21 +1358,21 @@ describe('preloads()', () => {
   it('throws when the entry point fails to compile', async () => {
     await write(dir, 'app/entry.ts', 'export const x =')
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    await assert.rejects(() => handler.preloads('app/entry.ts'))
+    await assert.rejects(() => scriptServer.preloads('app/entry.ts'))
   })
 
   it('throws when a dependency fails to compile', async () => {
     await write(dir, 'app/c.ts', 'export const c =')
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    await assert.rejects(() => handler.preloads('app/entry.ts'))
+    await assert.rejects(() => scriptServer.preloads('app/entry.ts'))
   })
 
   it('accepts public paths for prefixed roots', async () => {
@@ -1379,12 +1387,12 @@ describe('preloads()', () => {
     )
     await write(dir, 'app/c.ts', 'export const c = "c"')
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ prefix: 'app', directory: path.join(dir, 'app'), entryPoints: ['entry.ts'] }],
       base: '/scripts',
     })
 
-    let urls = await handler.preloads('app/entry.ts')
+    let urls = await scriptServer.preloads('app/entry.ts')
     assert.equal(urls[0], '/scripts/app/entry.ts')
     assert.ok(urls.some((url) => /\/scripts\/app\/a\.ts\.@/.test(url)))
   })
@@ -1401,39 +1409,42 @@ describe('preloads()', () => {
     )
     await write(dir, 'app/c.ts', 'export const c = "c"')
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ prefix: 'app', directory: path.join(dir, 'app'), entryPoints: ['entry.ts'] }],
       base: '/scripts',
     })
 
-    let publicUrls = await handler.preloads('app/entry.ts')
-    let absoluteUrls = await handler.preloads(path.join(dir, 'app/entry.ts'))
+    let publicUrls = await scriptServer.preloads('app/entry.ts')
+    let absoluteUrls = await scriptServer.preloads(path.join(dir, 'app/entry.ts'))
     assert.deepEqual(absoluteUrls, publicUrls)
   })
 
   it('throws for absolute file paths outside configured roots', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'script-handler-outside-'))
+    let outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'script-server-outside-'))
     let outsideEntry = path.join(outsideDir, 'outside-entry.ts')
     try {
       await fs.writeFile(outsideEntry, 'export const outside = true')
-      await assert.rejects(() => handler.preloads(outsideEntry), /outside all configured roots/)
+      await assert.rejects(
+        () => scriptServer.preloads(outsideEntry),
+        /outside all configured roots/,
+      )
     } finally {
       await fs.rm(outsideDir, { recursive: true, force: true })
     }
   })
 
   it('throws for absolute file paths that are not configured entry points', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
     await assert.rejects(
-      () => handler.preloads(path.join(dir, 'app/a.ts')),
+      () => scriptServer.preloads(path.join(dir, 'app/a.ts')),
       /does not match any configured entry points/,
     )
   })
@@ -1456,39 +1467,36 @@ describe('source maps', () => {
   })
 
   it("adds sourceMappingURL comment when sourceMaps: 'external'", async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('//# sourceMappingURL='), 'should have source map URL comment')
   })
 
   it('does NOT add sourceMappingURL when sourceMaps is not set', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(!body.includes('//# sourceMappingURL='), 'should not have source map URL comment')
   })
 
   it('serves entry point source map at .map path', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    await get(handler, '/scripts/app/entry.ts') // build the graph
-    let mapRes = await handler.handle(
-      new Request('http://localhost/scripts/app/entry.ts.map'),
-      'app/entry.ts.map',
-    )
+    await get(scriptServer, '/scripts/app/entry.ts') // build the graph
+    let mapRes = await scriptServer.fetch(new Request('http://localhost/scripts/app/entry.ts.map'))
     assert.ok(mapRes)
     assert.equal(mapRes.status, 200)
     assert.ok(mapRes.headers.get('Content-Type')?.includes('application/json'))
@@ -1499,12 +1507,12 @@ describe('source maps', () => {
   })
 
   it('serves internal module source map at .@hash.map path', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
@@ -1512,35 +1520,31 @@ describe('source maps', () => {
     assert.ok(match)
     let hash = match[1]
 
-    let mapRes = await handler.handle(
+    let mapRes = await scriptServer.fetch(
       new Request(`http://localhost/scripts/app/dep.ts.@${hash}.map`),
-      `app/dep.ts.@${hash}.map`,
     )
     assert.ok(mapRes)
     assert.equal(mapRes.status, 200)
   })
 
   it('returns 404 for source map request when sourceMaps is disabled', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    await get(handler, '/scripts/app/entry.ts')
-    let mapRes = await handler.handle(
-      new Request('http://localhost/scripts/app/entry.ts.map'),
-      'app/entry.ts.map',
-    )
+    await get(scriptServer, '/scripts/app/entry.ts')
+    let mapRes = await scriptServer.fetch(new Request('http://localhost/scripts/app/entry.ts.map'))
     assert.ok(mapRes)
     assert.equal(mapRes.status, 404)
   })
 
   it('entry point source map URL has no hash token', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -1550,18 +1554,18 @@ describe('source maps', () => {
   })
 
   it('internal module source map URL has a hash token', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match, 'entry should import dep via hash URL')
     let hash = match[1]
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${hash}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${hash}`)
     assert.ok(depRes)
     let depBody = await depRes.text()
     assert.ok(
@@ -1571,12 +1575,12 @@ describe('source maps', () => {
   })
 
   it('when entry point is also a dep, its import URL has no hash token', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts', 'app/dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let res = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let res = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -1590,17 +1594,17 @@ describe('source maps', () => {
   })
 
   it('sourceMaps flag is reflected in the content hash (different ETags)', async () => {
-    let withMaps = createScriptHandler({
+    let scriptServerWithMaps = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let withoutMaps = createScriptHandler({
+    let scriptServerWithoutMaps = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
-    let resWith = await get(withMaps, '/scripts/app/entry-with-dep.ts')
-    let resWithout = await get(withoutMaps, '/scripts/app/entry-with-dep.ts')
+    let resWith = await get(scriptServerWithMaps, '/scripts/app/entry-with-dep.ts')
+    let resWithout = await get(scriptServerWithoutMaps, '/scripts/app/entry-with-dep.ts')
     assert.ok(resWith && resWithout)
     let etagWith = resWith.headers.get('ETag')
     let etagWithout = resWithout.headers.get('ETag')
@@ -1609,17 +1613,20 @@ describe('source maps', () => {
   })
 
   it('sourceMaps flag changes internal module URL tokens', async () => {
-    let withMaps = createScriptHandler({
+    let scriptServerWithMaps = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let withoutMaps = createScriptHandler({
+    let scriptServerWithoutMaps = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
     })
-    let bodyWith = await (await get(withMaps, '/scripts/app/entry-with-dep.ts'))!.text()
-    let bodyWithout = await (await get(withoutMaps, '/scripts/app/entry-with-dep.ts'))!.text()
+    let bodyWith = await (await get(scriptServerWithMaps, '/scripts/app/entry-with-dep.ts'))!.text()
+    let bodyWithout = await (await get(
+      scriptServerWithoutMaps,
+      '/scripts/app/entry-with-dep.ts',
+    ))!.text()
     let matchWith = bodyWith.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     let matchWithout = bodyWithout.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(matchWith && matchWithout, 'both should have dep URL tokens')
@@ -1627,12 +1634,12 @@ describe('source maps', () => {
   })
 
   it("embeds data URL comment when sourceMaps: 'inline'", async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -1642,12 +1649,12 @@ describe('source maps', () => {
   })
 
   it('inline source map data URL contains valid JSON', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     let match = body.match(/sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)/)
@@ -1658,29 +1665,27 @@ describe('source maps', () => {
   })
 
   it('external source maps default to virtual source paths', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
 
-    let entryMapRes = await handler.handle(
+    let entryMapRes = await scriptServer.fetch(
       new Request('http://localhost/scripts/app/entry-with-dep.ts.map'),
-      'app/entry-with-dep.ts.map',
     )
     assert.ok(entryMapRes)
     let entryMap = await parseJson(entryMapRes)
     assert.deepEqual(entryMap.sources, ['/scripts/app/entry-with-dep.ts'])
 
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match)
 
-    let depMapRes = await handler.handle(
+    let depMapRes = await scriptServer.fetch(
       new Request(`http://localhost/scripts/app/dep.ts.@${match[1]}.map`),
-      `app/dep.ts.@${match[1]}.map`,
     )
     assert.ok(depMapRes)
     let depMap = await parseJson(depMapRes)
@@ -1691,30 +1696,28 @@ describe('source maps', () => {
     let entryPath = fsSync.realpathSync(path.join(dir, 'app/entry-with-dep.ts'))
     let depPath = fsSync.realpathSync(path.join(dir, 'app/dep.ts'))
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
       sourceMapSourcePaths: 'absolute',
     })
 
-    let entryMapRes = await handler.handle(
+    let entryMapRes = await scriptServer.fetch(
       new Request('http://localhost/scripts/app/entry-with-dep.ts.map'),
-      'app/entry-with-dep.ts.map',
     )
     assert.ok(entryMapRes)
     let entryMap = await parseJson(entryMapRes)
     assert.deepEqual(entryMap.sources, [entryPath])
 
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match)
 
-    let depMapRes = await handler.handle(
+    let depMapRes = await scriptServer.fetch(
       new Request(`http://localhost/scripts/app/dep.ts.@${match[1]}.map`),
-      `app/dep.ts.@${match[1]}.map`,
     )
     assert.ok(depMapRes)
     let depMap = await parseJson(depMapRes)
@@ -1722,24 +1725,24 @@ describe('source maps', () => {
   })
 
   it('inline source maps default to virtual source paths', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
 
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryMap = await parseInlineSourceMap(entryRes)
     assert.deepEqual(entryMap.sources, ['/scripts/app/entry-with-dep.ts'])
 
-    let entryBodyRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryBodyRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryBodyRes)
     let entryBody = await entryBodyRes.text()
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match)
 
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     let depMap = await parseInlineSourceMap(depRes)
     assert.deepEqual(depMap.sources, ['/scripts/app/dep.ts'])
@@ -1749,48 +1752,45 @@ describe('source maps', () => {
     let entryPath = fsSync.realpathSync(path.join(dir, 'app/entry-with-dep.ts'))
     let depPath = fsSync.realpathSync(path.join(dir, 'app/dep.ts'))
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
       sourceMapSourcePaths: 'absolute',
     })
 
-    let entryRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryRes)
     let entryMap = await parseInlineSourceMap(entryRes)
     assert.deepEqual(entryMap.sources, [entryPath])
 
-    let entryBodyRes = await get(handler, '/scripts/app/entry-with-dep.ts')
+    let entryBodyRes = await get(scriptServer, '/scripts/app/entry-with-dep.ts')
     assert.ok(entryBodyRes)
     let entryBody = await entryBodyRes.text()
     let match = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(match)
 
-    let depRes = await get(handler, `/scripts/app/dep.ts.@${match[1]}`)
+    let depRes = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
     assert.ok(depRes)
     let depMap = await parseInlineSourceMap(depRes)
     assert.deepEqual(depMap.sources, [depPath])
   })
 
   it("returns 404 for .map request when sourceMaps: 'inline'", async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
-    await get(handler, '/scripts/app/entry.ts')
-    let mapRes = await handler.handle(
-      new Request('http://localhost/scripts/app/entry.ts.map'),
-      'app/entry.ts.map',
-    )
+    await get(scriptServer, '/scripts/app/entry.ts')
+    let mapRes = await scriptServer.fetch(new Request('http://localhost/scripts/app/entry.ts.map'))
     assert.ok(mapRes)
     assert.equal(mapRes.status, 404)
   })
 
   it('all three sourceMaps modes produce distinct ETags', async () => {
     let makeHandler = (sourceMaps?: 'inline' | 'external') =>
-      createScriptHandler({
+      createScriptServer({
         roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
         base: '/scripts',
         sourceMaps,
@@ -1813,7 +1813,7 @@ describe('source maps', () => {
 
   it('all three sourceMaps modes produce distinct internal module URL tokens', async () => {
     let makeHandler = (sourceMaps?: 'inline' | 'external') =>
-      createScriptHandler({
+      createScriptServer({
         roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
         base: '/scripts',
         sourceMaps,
@@ -1840,39 +1840,45 @@ describe('source maps', () => {
   })
 
   it('sourceMapSourcePaths affects inline ETags', async () => {
-    let virtualHandler = createScriptHandler({
+    let virtualScriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
     })
-    let absoluteHandler = createScriptHandler({
+    let absoluteScriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
       sourceMaps: 'inline',
       sourceMapSourcePaths: 'absolute',
     })
 
-    let virtualRes = await get(virtualHandler, '/scripts/app/entry.ts')
-    let absoluteRes = await get(absoluteHandler, '/scripts/app/entry.ts')
+    let virtualRes = await get(virtualScriptServer, '/scripts/app/entry.ts')
+    let absoluteRes = await get(absoluteScriptServer, '/scripts/app/entry.ts')
     assert.ok(virtualRes && absoluteRes)
     assert.notEqual(virtualRes.headers.get('ETag'), absoluteRes.headers.get('ETag'))
   })
 
   it('sourceMapSourcePaths affects external internal-module URL tokens', async () => {
-    let virtualHandler = createScriptHandler({
+    let virtualScriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
     })
-    let absoluteHandler = createScriptHandler({
+    let absoluteScriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-with-dep.ts'] }],
       base: '/scripts',
       sourceMaps: 'external',
       sourceMapSourcePaths: 'absolute',
     })
 
-    let virtualBody = await (await get(virtualHandler, '/scripts/app/entry-with-dep.ts'))!.text()
-    let absoluteBody = await (await get(absoluteHandler, '/scripts/app/entry-with-dep.ts'))!.text()
+    let virtualBody = await (await get(
+      virtualScriptServer,
+      '/scripts/app/entry-with-dep.ts',
+    ))!.text()
+    let absoluteBody = await (await get(
+      absoluteScriptServer,
+      '/scripts/app/entry-with-dep.ts',
+    ))!.text()
     let virtualMatch = virtualBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     let absoluteMatch = absoluteBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
     assert.ok(virtualMatch && absoluteMatch)
@@ -1908,14 +1914,14 @@ describe('configured roots', () => {
   })
 
   it('rewrites imports using the configured root prefix', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [
         { directory: projectDir, entryPoints: ['app/entry.ts'] },
         { prefix: 'shared', directory: sharedDir },
       ],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(
@@ -1925,31 +1931,29 @@ describe('configured roots', () => {
   })
 
   it('serves prefixed-root modules at their configured URLs', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [
         { directory: projectDir, entryPoints: ['app/entry.ts'] },
         { prefix: 'shared', directory: sharedDir },
       ],
       base: '/scripts',
     })
-    let entryRes = await get(handler, '/scripts/app/entry.ts')
+    let entryRes = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(entryRes)
     let entryBody = await entryRes.text()
 
     let match = entryBody.match(/\/scripts\/shared\/utils\.ts\.@([a-z0-9]+)/)
     assert.ok(match, `expected prefixed root URL, got:\n${entryBody}`)
 
-    let modulePath = `shared/utils.ts.@${match[1]}`
-    let wsRes = await handler.handle(
-      new Request(`http://localhost/scripts/${modulePath}`),
-      modulePath,
+    let wsRes = await scriptServer.fetch(
+      new Request(`http://localhost/scripts/shared/utils.ts.@${match[1]}`),
     )
     assert.ok(wsRes)
     assert.equal(wsRes.status, 200)
   })
 
   it('serves entry points from prefixed roots when configured', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [
         { directory: projectDir, entryPoints: ['app/entry.ts'] },
         { prefix: 'shared', directory: sharedDir, entryPoints: ['entry.ts'] },
@@ -1957,7 +1961,7 @@ describe('configured roots', () => {
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/shared/entry.ts')
+    let res = await get(scriptServer, '/scripts/shared/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
     let body = await res.text()
@@ -1973,7 +1977,7 @@ describe('configured roots', () => {
       'import { util } from "./utils.ts"\nexport { util }',
     )
 
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [
         { directory: projectDir, entryPoints: ['app/entry.ts'] },
         {
@@ -1985,7 +1989,7 @@ describe('configured roots', () => {
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/packages/ui/entry.ts')
+    let res = await get(scriptServer, '/scripts/packages/ui/entry.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
     let body = await res.text()
@@ -1993,7 +1997,7 @@ describe('configured roots', () => {
   })
 
   it('does not treat prefixed-root modules as entry points unless configured', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [
         { directory: projectDir, entryPoints: ['app/entry.ts'] },
         { prefix: 'shared', directory: sharedDir },
@@ -2001,17 +2005,17 @@ describe('configured roots', () => {
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/shared/utils.ts')
+    let res = await get(scriptServer, '/scripts/shared/utils.ts')
     assert.equal(res, null)
   })
 
   it('returns 500 when a resolved import falls outside all configured roots', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: projectDir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
 
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     await assertInternalServerError(res)
   })
@@ -2025,7 +2029,7 @@ describe('root configuration validation', () => {
   it('requires at least one configured root', () => {
     assert.throws(
       () =>
-        createScriptHandler({
+        createScriptServer({
           roots: [],
           base: '/scripts',
         }),
@@ -2036,7 +2040,7 @@ describe('root configuration validation', () => {
   it('rejects duplicate normalized prefixes', () => {
     assert.throws(
       () =>
-        createScriptHandler({
+        createScriptServer({
           roots: [
             { prefix: ' packages/ ', directory: 'project-a' },
             { prefix: 'packages', directory: 'project-b' },
@@ -2050,7 +2054,7 @@ describe('root configuration validation', () => {
   it('rejects multiple prefixless roots after normalization', () => {
     assert.throws(
       () =>
-        createScriptHandler({
+        createScriptServer({
           roots: [{ directory: 'project-a' }, { prefix: '   ', directory: 'project-b' }],
           base: '/scripts',
         }),
@@ -2061,7 +2065,7 @@ describe('root configuration validation', () => {
   it('rejects invalid prefix shapes', () => {
     assert.throws(
       () =>
-        createScriptHandler({
+        createScriptServer({
           roots: [{ prefix: 'packages\\ui', directory: 'project-a' }],
           base: '/scripts',
         }),
@@ -2070,7 +2074,7 @@ describe('root configuration validation', () => {
 
     assert.throws(
       () =>
-        createScriptHandler({
+        createScriptServer({
           roots: [{ prefix: '../packages', directory: 'project-a' }],
           base: '/scripts',
         }),
@@ -2095,44 +2099,44 @@ describe('base path', () => {
   })
 
   it('uses the configured base for rewritten import URLs', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('/scripts/app/dep.ts.@'))
   })
 
   it('normalizes a trailing slash in base', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/scripts/',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('/scripts/app/dep.ts.@'))
   })
 
   it('normalizes a missing leading slash in base', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: 'scripts',
     })
-    let res = await get(handler, '/scripts/app/entry.ts')
+    let res = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('/scripts/app/dep.ts.@'))
   })
 
   it('supports root base when set to slash', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '/',
     })
-    let res = await handler.handle(new Request('http://localhost/app/entry.ts'), 'app/entry.ts')
+    let res = await scriptServer.fetch(new Request('http://localhost/app/entry.ts'))
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('from "/app/dep.ts.@'))
@@ -2140,11 +2144,11 @@ describe('base path', () => {
   })
 
   it('supports root base when set to an empty string', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '',
     })
-    let res = await handler.handle(new Request('http://localhost/app/entry.ts'), 'app/entry.ts')
+    let res = await scriptServer.fetch(new Request('http://localhost/app/entry.ts'))
     assert.ok(res)
     let body = await res.text()
     assert.ok(body.includes('from "/app/dep.ts.@'))
@@ -2152,11 +2156,11 @@ describe('base path', () => {
   })
 
   it('uses root base for preload URLs without double slashes', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry.ts'] }],
       base: '',
     })
-    let preloadUrls = await handler.preloads('app/entry.ts')
+    let preloadUrls = await scriptServer.preloads('app/entry.ts')
     assert.equal(preloadUrls[0], '/app/entry.ts')
     assert.match(preloadUrls[1]!, /^\/app\/dep\.ts\.@[a-z0-9]+$/)
   })
@@ -2180,29 +2184,29 @@ describe('multi-level dependency graph', () => {
   })
 
   it('correctly compiles a 4-level deep dependency chain', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/l0.ts')
+    let res = await get(scriptServer, '/scripts/app/l0.ts')
     assert.ok(res)
     assert.equal(res.status, 200)
   })
 
   it('each level has its own content-addressed URL', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
       base: '/scripts',
     })
 
-    let r0 = await get(handler, '/scripts/app/l0.ts')
+    let r0 = await get(scriptServer, '/scripts/app/l0.ts')
     assert.ok(r0)
     let b0 = await r0.text()
 
     let m1 = b0.match(/\/scripts\/app\/l1\.ts\.@([a-z0-9]+)/)
     assert.ok(m1, `l1 URL missing from l0, got:\n${b0}`)
 
-    let r1 = await get(handler, `/scripts/app/l1.ts.@${m1[1]}`)
+    let r1 = await get(scriptServer, `/scripts/app/l1.ts.@${m1[1]}`)
     assert.ok(r1)
     assert.equal(r1.status, 200)
     let b1 = await r1.text()
@@ -2210,7 +2214,7 @@ describe('multi-level dependency graph', () => {
     let m2 = b1.match(/\/scripts\/app\/l2\.ts\.@([a-z0-9]+)/)
     assert.ok(m2, `l2 URL missing from l1, got:\n${b1}`)
 
-    let r2 = await get(handler, `/scripts/app/l2.ts.@${m2[1]}`)
+    let r2 = await get(scriptServer, `/scripts/app/l2.ts.@${m2[1]}`)
     assert.ok(r2)
     assert.equal(r2.status, 200)
     let b2 = await r2.text()
@@ -2218,17 +2222,17 @@ describe('multi-level dependency graph', () => {
     let m3 = b2.match(/\/scripts\/app\/l3\.ts\.@([a-z0-9]+)/)
     assert.ok(m3, `l3 URL missing from l2, got:\n${b2}`)
 
-    let r3 = await get(handler, `/scripts/app/l3.ts.@${m3[1]}`)
+    let r3 = await get(scriptServer, `/scripts/app/l3.ts.@${m3[1]}`)
     assert.ok(r3)
     assert.equal(r3.status, 200)
   })
 
   it('changing a leaf dep invalidates all ancestor hashes', async () => {
-    let handler1 = createScriptHandler({
+    let scriptServer1 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
       base: '/scripts',
     })
-    let res1 = await get(handler1, '/scripts/app/l0.ts')
+    let res1 = await get(scriptServer1, '/scripts/app/l0.ts')
     assert.ok(res1)
     let body1 = await res1.text()
     let m1Before = body1.match(/\/scripts\/app\/l1\.ts\.@([a-z0-9]+)/)!
@@ -2236,11 +2240,11 @@ describe('multi-level dependency graph', () => {
 
     await write(dir, 'app/l3.ts', 'export const v3 = "changed"')
 
-    let handler2 = createScriptHandler({
+    let scriptServer2 = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/l0.ts'] }],
       base: '/scripts',
     })
-    let res2 = await get(handler2, '/scripts/app/l0.ts')
+    let res2 = await get(scriptServer2, '/scripts/app/l0.ts')
     assert.ok(res2)
     let body2 = await res2.text()
     let m1After = body2.match(/\/scripts\/app\/l1\.ts\.@([a-z0-9]+)/)!
@@ -2267,12 +2271,12 @@ describe('multiple entry points', () => {
   })
 
   it('serves all configured entry points', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
-    let resA = await get(handler, '/scripts/app/entry-a.ts')
-    let resB = await get(handler, '/scripts/app/entry-b.ts')
+    let resA = await get(scriptServer, '/scripts/app/entry-a.ts')
+    let resB = await get(scriptServer, '/scripts/app/entry-b.ts')
     assert.ok(resA)
     assert.ok(resB)
     assert.equal(resA.status, 200)
@@ -2280,11 +2284,11 @@ describe('multiple entry points', () => {
   })
 
   it('returns null for a path that is not in the entry points list', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
-    let res = await get(handler, '/scripts/app/not-entry.ts')
+    let res = await get(scriptServer, '/scripts/app/not-entry.ts')
     assert.equal(res, null)
   })
 })
@@ -2314,18 +2318,18 @@ describe('shared dependencies across entry points', () => {
   })
 
   it('both entry points produce the same hash for their shared dep', async () => {
-    let handler = createScriptHandler({
+    let scriptServer = createScriptServer({
       roots: [{ directory: dir, entryPoints: ['app/entry-a.ts', 'app/entry-b.ts'] }],
       base: '/scripts',
     })
 
-    let resA = await get(handler, '/scripts/app/entry-a.ts')
+    let resA = await get(scriptServer, '/scripts/app/entry-a.ts')
     assert.ok(resA)
     let bodyA = await resA.text()
     let matchA = bodyA.match(/\/scripts\/app\/shared\.ts\.@([a-z0-9]+)/)
     assert.ok(matchA)
 
-    let resB = await get(handler, '/scripts/app/entry-b.ts')
+    let resB = await get(scriptServer, '/scripts/app/entry-b.ts')
     assert.ok(resB)
     let bodyB = await resB.text()
     let matchB = bodyB.match(/\/scripts\/app\/shared\.ts\.@([a-z0-9]+)/)

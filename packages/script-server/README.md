@@ -1,6 +1,6 @@
-# script-handler
+# script-server
 
-Compile browser JavaScript/TypeScript modules on demand and serve them from a Fetch-compatible route handler.
+Compile browser JavaScript/TypeScript modules on demand and serve them from a Fetch-compatible route server.
 
 ## Features
 
@@ -18,13 +18,13 @@ npm i remix
 
 ## Basic Setup
 
-Create a handler with your app root and one or more entry points:
+Create a server with your app root and one or more entry points:
 
 ```ts
 import * as path from 'node:path'
-import { createScriptHandler } from 'remix/script-handler'
+import { createScriptServer } from 'remix/script-server'
 
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -38,8 +38,8 @@ let scripts = createScriptHandler({
 Mount it at the same `base` path:
 
 ```ts
-router.get('/scripts/*path', ({ request, params }) => {
-  return scripts.handle(request, params.path)
+router.get('/scripts/*path', ({ request }) => {
+  return scriptServer.fetch(request)
 })
 ```
 
@@ -52,7 +52,7 @@ Unexpected compilation errors return a generic `500 Internal Server Error` respo
 Enable sourcemaps with either `'external'` or `'inline'`:
 
 ```ts
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -64,10 +64,10 @@ let scripts = createScriptHandler({
 })
 ```
 
-By default, sourcemap `sources` use the handler path instead of the original filesystem path:
+By default, sourcemap `sources` use the server path instead of the original filesystem path:
 
 ```ts
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -85,7 +85,7 @@ This keeps authored sources next to compiled output in browser devtools, avoids 
 If you want sourcemaps to point to real files on disk instead, you can opt into absolute paths:
 
 ```ts
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -103,7 +103,7 @@ let scripts = createScriptHandler({
 Use `preloads()` when rendering HTML to add `<link rel="modulepreload">` tags or send `Link` headers for an entry point and all of its transitive dependencies:
 
 ```ts
-let preloadUrls = await scripts.preloads('app/assets/entry.tsx')
+let preloadUrls = await scriptServer.preloads('app/assets/entry.tsx')
 // ["/scripts/app/assets/entry.tsx", "/scripts/app/assets/utils.ts.@abc123"]
 ```
 
@@ -114,7 +114,7 @@ The primary input is the public module path relative to `base`. Absolute file pa
 Each configured root can optionally expose a public `prefix`. Roots without a `prefix` act as the fallback directory:
 
 ```ts
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -136,7 +136,7 @@ With this setup, imports from the second root are served at paths like `/scripts
 Use `onError` to report unexpected compilation failures or provide a custom response:
 
 ```ts
-let scripts = createScriptHandler({
+let scriptServer = createScriptServer({
   base: '/scripts',
   roots: [
     {
@@ -150,7 +150,7 @@ let scripts = createScriptHandler({
 })
 ```
 
-If `onError` returns nothing, the handler responds with `500 Internal Server Error`. Return a `Response` from `onError` to override that fallback.
+If `onError` returns nothing, the server responds with `500 Internal Server Error`. Return a `Response` from `onError` to override that fallback.
 
 ## License
 

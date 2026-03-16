@@ -1,5 +1,5 @@
 {
-  "name": "script-handler-large-fixture",
+  "name": "script-server-large-fixture",
   "private": true,
   "imports": {
     "#packages/*": "../packages/*"

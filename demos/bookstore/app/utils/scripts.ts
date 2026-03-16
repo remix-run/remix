@@ -1,8 +1,8 @@
 import * as path from 'node:path'
-import { createScriptHandler } from 'remix/script-handler'
+import { createScriptServer } from 'remix/script-server'
 import { scriptsBase } from '../routes.ts'
 
-export let scriptHandler = createScriptHandler({
+export let scriptServer = createScriptServer({
   base: scriptsBase,
   roots: [
     {

@@ -3,7 +3,7 @@ import type { Middleware } from 'remix/fetch-router'
 import { getContext } from 'remix/async-context-middleware'
 
 import { routes } from '../routes.ts'
-import { scriptHandler } from '../utils/scripts.ts'
+import { scriptServer } from '../utils/scripts.ts'
 
 interface ScriptEntry {
   src: string
@@ -16,7 +16,7 @@ export function loadScriptEntry(entry = 'app/assets/entry.tsx'): Middleware {
   return async (context, next) => {
     context.set(scriptEntryKey, {
       src: routes.scripts.href({ path: entry }),
-      preloads: await scriptHandler.preloads(entry).catch(() => []),
+      preloads: await scriptServer.preloads(entry).catch(() => []),
     })
     return next()
   }

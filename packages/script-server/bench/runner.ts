@@ -4,8 +4,8 @@ import * as process from 'node:process'
 import { performance } from 'node:perf_hooks'
 
 import { getLargeFixture } from './fixture.ts'
-import { createScriptHandler } from '../src/index.ts'
-import type { ScriptHandler, ScriptHandlerOptions } from '../src/index.ts'
+import { createScriptServer } from '../src/index.ts'
+import type { ScriptServer, ScriptServerOptions } from '../src/index.ts'
 
 let scriptBase = '/scripts'
 
@@ -42,8 +42,8 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getLargeFixture()
       return async function run() {
-        let handler = createBenchHandler(fixture.roots)
-        await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
+        let scriptServer = createBenchScriptServer(fixture.roots)
+        await readHandledResponse(scriptServer, toEntryPathname(fixture.entryPoint))
       }
     },
   },
@@ -52,10 +52,10 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / warm entry',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.roots)
-      await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
+      let scriptServer = createBenchScriptServer(fixture.roots)
+      await readHandledResponse(scriptServer, toEntryPathname(fixture.entryPoint))
       return async function run() {
-        await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
+        await readHandledResponse(scriptServer, toEntryPathname(fixture.entryPoint))
       }
     },
   },
@@ -64,8 +64,8 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / warm preloads',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.roots)
-      let initialUrls = await handler.preloads(fixture.entryPoint)
+      let scriptServer = createBenchScriptServer(fixture.roots)
+      let initialUrls = await scriptServer.preloads(fixture.entryPoint)
       assert.ok(initialUrls.length > 0, 'expected preload URLs for checked-in fixture')
       assert.ok(
         initialUrls.some((url) => url.includes('/packages/')),
@@ -80,7 +80,7 @@ let benchmarks: Benchmark[] = [
         'expected checked-in fixture package preload URLs',
       )
       return async function run() {
-        let urls = await handler.preloads(fixture.entryPoint)
+        let urls = await scriptServer.preloads(fixture.entryPoint)
         assert.ok(urls.length > 0, 'expected warm preload URLs')
         assert.ok(
           urls.some((url) => url.includes('/packages/')),
@@ -94,8 +94,8 @@ let benchmarks: Benchmark[] = [
     name: 'large fixture graph / internal module burst',
     async prepare() {
       let fixture = await getLargeFixture()
-      let handler = createBenchHandler(fixture.roots)
-      let preloadUrls = await handler.preloads(fixture.entryPoint)
+      let scriptServer = createBenchScriptServer(fixture.roots)
+      let preloadUrls = await scriptServer.preloads(fixture.entryPoint)
       let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
       assert.ok(internalUrls.length > 0, 'expected hashed internal module URLs')
       assert.ok(
@@ -107,7 +107,7 @@ let benchmarks: Benchmark[] = [
         'expected hashed component package URLs',
       )
       return async function run() {
-        await Promise.all(internalUrls.map((url) => readHandledResponse(handler, url)))
+        await Promise.all(internalUrls.map((url) => readHandledResponse(scriptServer, url)))
       }
     },
   },
@@ -117,42 +117,38 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getLargeFixture()
       return async function run() {
-        let handler = createBenchHandler(fixture.roots, {
+        let scriptServer = createBenchScriptServer(fixture.roots, {
           sourceMaps: 'external',
         })
-        await readHandledResponse(handler, toEntryPathname(fixture.entryPoint))
+        await readHandledResponse(scriptServer, toEntryPathname(fixture.entryPoint))
       }
     },
   },
 ]
 
-function createBenchHandler(
-  roots: ScriptHandlerOptions['roots'],
-  overrides: Partial<ScriptHandlerOptions> = {},
-): ScriptHandler {
-  let options: ScriptHandlerOptions = {
+function createBenchScriptServer(
+  roots: ScriptServerOptions['roots'],
+  overrides: Partial<ScriptServerOptions> = {},
+): ScriptServer {
+  let options: ScriptServerOptions = {
     roots,
     base: scriptBase,
     ...overrides,
   }
 
-  return createScriptHandler(options)
+  return createScriptServer(options)
 }
 
 function toEntryPathname(entryPoint: string): string {
   return `${scriptBase}/${entryPoint}`
 }
 
-function toModulePath(pathname: string): string {
-  return pathname.replace(/^\/scripts\/?/, '')
-}
-
 function createRequest(pathname: string): Request {
   return new Request(`http://localhost${pathname}`)
 }
 
-async function readHandledResponse(handler: ScriptHandler, pathname: string): Promise<void> {
-  let response = await handler.handle(createRequest(pathname), toModulePath(pathname))
+async function readHandledResponse(scriptServer: ScriptServer, pathname: string): Promise<void> {
+  let response = await scriptServer.fetch(createRequest(pathname))
   assert.ok(response, `expected response for ${pathname}`)
   assert.equal(response.status, 200, `expected 200 response for ${pathname}`)
   await response.text()

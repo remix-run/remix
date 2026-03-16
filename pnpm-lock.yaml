@@ -970,9 +970,9 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
-      '@remix-run/script-handler':
+      '@remix-run/script-server':
         specifier: workspace:^
-        version: link:../script-handler
+        version: link:../script-server
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
@@ -1052,7 +1052,7 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/script-handler:
+  packages/script-server:
     dependencies:
       '@remix-run/headers':
         specifier: workspace:*
@@ -1086,7 +1086,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
-  packages/script-handler/bench: {}
+  packages/script-server/bench: {}
 
   packages/session:
     devDependencies:
