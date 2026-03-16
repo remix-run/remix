@@ -1,6 +1,5 @@
 import { css, on, type Handle } from 'remix/component'
 import { Listbox, ListboxOption, ui } from 'remix/ui'
-import type { ListboxChangeEvent } from 'remix/ui'
 
 let listboxWidthCss = css({
   width: '16rem',
@@ -43,7 +42,7 @@ export default function example(handle: Handle) {
         mix={[
           listboxWidthCss,
           on(Listbox.change, event => {
-            setValue((event as ListboxChangeEvent).value)
+            setValue(event.value)
           }),
         ]}
         value={value}

@@ -17,6 +17,11 @@ export let listboxChangeEventType = 'rmx:listbox-change' as const
 export let listboxOpenChangeEventType = 'rmx:listbox-open-change' as const
 
 declare global {
+  interface ElementEventMap {
+    [listboxChangeEventType]: ListboxChangeEvent
+    [listboxOpenChangeEventType]: ListboxOpenChangeEvent
+  }
+
   interface HTMLElementEventMap {
     [listboxChangeEventType]: ListboxChangeEvent
     [listboxOpenChangeEventType]: ListboxOpenChangeEvent
