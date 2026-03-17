@@ -13,10 +13,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      mix={[on('click', () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-      })]}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -34,11 +36,13 @@ function Player(handle: Handle) {
   return () => (
     <button
       disabled={isPlaying}
-      mix={[on('click', async () => {
+      mix={[
+        on('click', async () => {
           isPlaying = true
           await handle.update()
           stopButton.focus()
-      })]}
+        }),
+      ]}
     >
       Play
     </button>
@@ -65,7 +69,8 @@ function Form(handle: Handle) {
       <input
         type="checkbox"
         checked={showDetails}
-        mix={[on('change', (event) => {
+        mix={[
+          on('change', (event) => {
             showDetails = event.currentTarget.checked
             handle.update()
             if (showDetails) {
@@ -74,7 +79,8 @@ function Form(handle: Handle) {
                 detailsSection.scrollIntoView({ behavior: 'smooth' })
               })
             }
-          })]}
+          }),
+        ]}
       />
       {showDetails && (
         <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
@@ -100,7 +106,8 @@ function BadExample(handle: Handle) {
   return () => (
     <div>
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             shouldLoad = true // Setting state just to trigger queueTask
             handle.update()
             handle.queueTask(() => {
@@ -108,7 +115,8 @@ function BadExample(handle: Handle) {
                 // Do work
               }
             })
-          })]}
+          }),
+        ]}
       >
         Load
       </button>
@@ -121,11 +129,13 @@ function GoodExample(handle: Handle) {
   return () => (
     <div>
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             handle.queueTask(() => {
               // Do work directly - no intermediate state needed
             })
-          })]}
+          }),
+        ]}
       >
         Load
       </button>
@@ -215,9 +225,11 @@ When server rendering with `renderToStream()`, pass the `frameSrc` option to pop
 function RefreshAllButton(handle: Handle) {
   return () => (
     <button
-      mix={[on('click', async () => {
+      mix={[
+        on('click', async () => {
           await handle.frames.top.reload()
-        })]}
+        }),
+      ]}
     >
       Refresh everything
     </button>
@@ -238,10 +250,12 @@ Return value:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      mix={[on('click', async () => {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frame.reload()
-        })]}
+        }),
+      ]}
     >
       Update Cart
     </button>

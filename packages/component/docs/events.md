@@ -12,10 +12,12 @@ function Button(handle: Handle) {
 
   return () => (
     <button
-      mix={[on('click', () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-      })]}
+        }),
+      ]}
     >
       Clicked {count} times
     </button>
@@ -55,7 +57,8 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        mix={[on('input', async (event, signal) => {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             loading = true
             handle.update()
@@ -69,7 +72,8 @@ function SearchInput(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          })]}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (
@@ -96,16 +100,20 @@ function InteractiveBox(handle: Handle) {
 
   return () => (
     <div
-      mix={[on('mouseenter', () => {
+      mix={[
+        on('mouseenter', () => {
           state = 'hovered'
           handle.update()
-        }), on('mouseleave', () => {
+        }),
+        on('mouseleave', () => {
           state = 'idle'
           handle.update()
-        }), on('click', () => {
+        }),
+        on('click', () => {
           state = 'clicked'
           handle.update()
-        })]}
+        }),
+      ]}
     >
       State: {state}
     </div>
@@ -121,24 +129,29 @@ Common form event patterns:
 function Form(handle: Handle) {
   return () => (
     <form
-      mix={[on('submit', (event) => {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           // Process form data
-        })]}
+        }),
+      ]}
     >
       <input
         name="email"
-        mix={[on('blur', (event) => {
+        mix={[
+          on('blur', (event) => {
             // Validate on blur
             let value = event.currentTarget.value
             if (!value.includes('@')) {
               event.currentTarget.setCustomValidity('Invalid email')
             }
-          }), on('input', (event) => {
+          }),
+          on('input', (event) => {
             // Clear validation on input
             event.currentTarget.setCustomValidity('')
-          })]}
+          }),
+        ]}
       />
       <button type="submit">Submit</button>
     </form>
@@ -158,7 +171,8 @@ function KeyboardNav(handle: Handle) {
   return () => (
     <ul
       tabIndex={0}
-      mix={[on('keydown', (event) => {
+      mix={[
+        on('keydown', (event) => {
           switch (event.key) {
             case 'ArrowDown':
               event.preventDefault()
@@ -171,7 +185,8 @@ function KeyboardNav(handle: Handle) {
               handle.update()
               break
           }
-        })]}
+        }),
+      ]}
     >
       {items.map((item, i) => (
         <li key={i} mix={[css({ backgroundColor: i === selectedIndex ? '#eee' : 'transparent' })]}>
@@ -258,7 +273,8 @@ function SearchResults(handle: Handle) {
   return () => (
     <div>
       <input
-        mix={[on('input', async (event, signal) => {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             // Do work in handler scope
             loading = true
@@ -272,7 +288,8 @@ function SearchResults(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          })]}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {results.map((result, i) => (

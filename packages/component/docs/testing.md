@@ -12,10 +12,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      mix={[on('click', () => {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-      })]}
+        }),
+      ]}
     >
       Count: {count}
     </button>

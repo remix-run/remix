@@ -291,16 +291,18 @@ Use the `css(...)` mixin for inline styles with pseudo-selectors and nested rule
 function Button(handle: Handle) {
   return () => (
     <button
-      mix={[css({
-        color: 'white',
-        backgroundColor: 'blue',
-        '&:hover': {
-          backgroundColor: 'darkblue',
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      })]}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -343,27 +345,29 @@ The syntax mirrors modern CSS nesting, but in object form. Use `&` to reference 
 function Button(handle: Handle) {
   return () => (
     <button
-      mix={[css({
-        color: 'white',
-        backgroundColor: 'blue',
-        '&:hover': {
-          backgroundColor: 'darkblue',
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-        },
-        '&[aria-selected="true"]': {
-          border: '2px solid yellow',
-        },
-        '.icon': {
-          width: '16px',
-          height: '16px',
-        },
-        '@media (max-width: 768px)': {
-          padding: '8px',
-        },
-      })]}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+          },
+          '&[aria-selected="true"]': {
+            border: '2px solid yellow',
+          },
+          '.icon': {
+            width: '16px',
+            height: '16px',
+          },
+          '@media (max-width: 768px)': {
+            padding: '8px',
+          },
+        }),
+      ]}
     >
       <span className="icon">★</span>
       Click me
@@ -632,9 +636,7 @@ function Header(handle: Handle) {
   // Consume context from App
   let { theme } = handle.context.get(App)
   return () => (
-    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>
-      Header
-    </header>
+    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>Header</header>
   )
 }
 ```

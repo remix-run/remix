@@ -36,10 +36,12 @@ function App(handle: Handle) {
     <div>
       <h1>Count: {count}</h1>
       <button
-        mix={[on('click', () => {
-          count++
-          handle.update()
-        })]}
+        mix={[
+          on('click', () => {
+            count++
+            handle.update()
+          }),
+        ]}
       >
         Increment
       </button>
@@ -145,10 +147,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          mix={[on('click', () => {
-            count++
-            handle.update()
-          })]}
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
         >
           +
         </button>

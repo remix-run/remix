@@ -58,10 +58,12 @@ function Form(handle: Handle) {
     <form>
       <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             // Focus the input from elsewhere in the form
             inputRef.focus()
-        })]}
+          }),
+        ]}
       >
         Focus Input
       </button>
@@ -150,11 +152,7 @@ function ReorderableList(handle: Handle) {
 
   return () => (
     <div>
-      <button
-        mix={[on('click', reverse)]}
-      >
-        Reverse List
-      </button>
+      <button mix={[on('click', reverse)]}>Reverse List</button>
       {items.map((item) => (
         <div key={item.id}>
           <input type="text" defaultValue={item.label} />

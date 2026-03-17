@@ -264,12 +264,15 @@ function AnimatedCard(handle: Handle) {
 
   return () => (
     <div
-      mix={[css({
-        transition: spring.transition(['width', 'height'], 'bouncy'),
-      }), on('click', () => {
-        isExpanded = !isExpanded
-        handle.update()
-      })]}
+      mix={[
+        css({
+          transition: spring.transition(['width', 'height'], 'bouncy'),
+        }),
+        on('click', () => {
+          isExpanded = !isExpanded
+          handle.update()
+        }),
+      ]}
       style={{
         width: isExpanded ? '300px' : '100px',
         height: isExpanded ? '200px' : '100px',

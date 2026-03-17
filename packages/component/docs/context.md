@@ -15,11 +15,13 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             theme = theme === 'light' ? 'dark' : 'light'
             handle.context.set({ theme })
             handle.update()
-        })]}
+          }),
+        ]}
       >
         Toggle Theme
       </button>
@@ -68,10 +70,12 @@ function ThemeProvider(handle: Handle<Theme>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             // No update needed - consumers subscribe to changes
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-        })]}
+          }),
+        ]}
       >
         Toggle Theme
       </button>

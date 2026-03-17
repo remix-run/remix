@@ -78,9 +78,11 @@ export let RefreshButton = clientEntry(
   function RefreshButton(handle: Handle) {
     return () => (
       <button
-        mix={[on('click', () => {
-          handle.frame.reload()
-        })]}
+        mix={[
+          on('click', () => {
+            handle.frame.reload()
+          }),
+        ]}
       >
         Refresh
       </button>
@@ -101,11 +103,13 @@ You can also reload adjacent named frames:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      mix={[on('click', async () => {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frames.get('cart-empty')?.reload()
           await handle.frame.reload()
-        })]}
+        }),
+      ]}
     >
       Save
     </button>

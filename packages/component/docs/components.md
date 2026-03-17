@@ -109,10 +109,12 @@ function Counter(handle: Handle) {
     <div>
       <span>Count: {count}</span>
       <button
-        mix={[on('click', () => {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-        })]}
+          }),
+        ]}
       >
         Increment
       </button>

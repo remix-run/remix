@@ -22,10 +22,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          mix={[on('click', () => {
-            count++
-            handle.update()
-          })]}
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
         >
           +
         </button>
