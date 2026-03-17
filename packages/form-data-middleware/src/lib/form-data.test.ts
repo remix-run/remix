@@ -236,4 +236,86 @@ describe('formData middleware', () => {
     assert.equal(upload2.type, 'text/plain')
     assert.equal(await upload2.text(), 'test 2')
   })
+
+  it('is a no-op when FormData has already been parsed by an earlier middleware', async () => {
+    let firstUploadHandler = mock.fn<FileUploadHandler>((upload) => `first:${upload.name}`)
+    let secondUploadHandler = mock.fn<FileUploadHandler>((upload) => `second:${upload.name}`)
+
+    let router = createRouter({
+      middleware: [
+        formData({ uploadHandler: firstUploadHandler }),
+        formData({ uploadHandler: secondUploadHandler }),
+      ],
+    })
+
+    router.post('/', (context) =>
+      Response.json({
+        file: context.get(FormData).get('file'),
+      }),
+    )
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      file: 'first:test.txt',
+    })
+    assert.equal(firstUploadHandler.mock.calls.length, 1)
+    assert.equal(secondUploadHandler.mock.calls.length, 0)
+  })
+
+  it('is a no-op when FormData has already been parsed by earlier request pipeline middleware', async () => {
+    let globalUploadHandler = mock.fn<FileUploadHandler>((upload) => `global:${upload.name}`)
+    let routeUploadHandler = mock.fn<FileUploadHandler>((upload) => `route:${upload.name}`)
+
+    let router = createRouter({
+      middleware: [formData({ uploadHandler: globalUploadHandler })],
+    })
+
+    router.post('/', {
+      middleware: [formData({ uploadHandler: routeUploadHandler })],
+      action(context) {
+        return Response.json({
+          file: context.get(FormData).get('file'),
+        })
+      },
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      file: 'global:test.txt',
+    })
+    assert.equal(globalUploadHandler.mock.calls.length, 1)
+    assert.equal(routeUploadHandler.mock.calls.length, 0)
+  })
 })
