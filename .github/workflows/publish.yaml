@@ -84,7 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output tag
-        run: echo "tag=remix@$(node -p "require('./packages/remix/package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "tag=$(git tag --points-at HEAD | grep -e '^remix@3')" >> $GITHUB_OUTPUT
 
   docs:
     name: Update API Docs
