@@ -1,7 +1,13 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import { FormDataParseError, type FileUploadHandler } from '@remix-run/form-data-parser'
+import {
+  FormDataParseError,
+  MaxFieldsExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+  type FileUploadHandler,
+} from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
@@ -185,6 +191,120 @@ describe('formData middleware', () => {
       isFormData: true,
       isEmpty: true,
     })
+  })
+
+  it('does not suppress multipart limit errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxFields: 1 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          '',
+          'value1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field2"',
+          '',
+          'value2',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxFieldsExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxParts errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxParts: 2 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          '',
+          'value1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field2"',
+          '',
+          'value2',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxPartsExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxTotalSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxTotalSize: 9 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          '',
+          'hello',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'world',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxTotalSizeExceededError)
+
+    assert.equal(actionCalled, false)
   })
 
   it('invokes a custom `uploadHandler` for file uploads', async () => {

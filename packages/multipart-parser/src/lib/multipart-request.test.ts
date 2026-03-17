@@ -3,11 +3,13 @@ import { describe, it } from 'node:test'
 
 import { createMultipartMessage, getRandomBytes } from '../../test/utils.ts'
 
-import type { MultipartPart } from './multipart.ts'
+import type { MultipartParserOptions, MultipartPart } from './multipart.ts'
 import {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
 } from './multipart.ts'
 import {
   getMultipartBoundary,
@@ -422,6 +424,49 @@ describe('parseMultipartRequest', async () => {
         // ...
       }
     }, MaxFileSizeExceededError)
+  })
+
+  it('throws when the number of parts exceeds maxParts', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+        field3: 'value3',
+      }),
+    })
+
+    let options: MultipartParserOptions = { maxParts: 2 }
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, options)) {
+        // ...
+      }
+    }, MaxPartsExceededError)
+  })
+
+  it('throws when the aggregate content size exceeds maxTotalSize', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'hello',
+        field2: 'world',
+      }),
+    })
+
+    let options: MultipartParserOptions = { maxTotalSize: 9 }
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, options)) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
   })
 
   it('parses malformed parts', async () => {

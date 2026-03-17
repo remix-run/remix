@@ -1,6 +1,10 @@
 import {
   type MultipartParserOptions,
   type MultipartPart,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   isMultipartRequest,
   parseMultipartRequest,
 } from '@remix-run/multipart-parser'
@@ -22,6 +26,16 @@ export class MaxFilesExceededError extends FormDataParseError {
   constructor(maxFiles: number) {
     super(`Maximum number of files exceeded: ${maxFiles}`)
     this.name = 'MaxFilesExceededError'
+  }
+}
+
+/**
+ * An error thrown when the maximum number of text fields allowed in a request is exceeded.
+ */
+export class MaxFieldsExceededError extends FormDataParseError {
+  constructor(maxFields: number) {
+    super(`Maximum number of fields exceeded: ${maxFields}`)
+    this.name = 'MaxFieldsExceededError'
   }
 }
 
@@ -61,6 +75,22 @@ function defaultFileUploadHandler(file: FileUpload): File {
   return file
 }
 
+const oneKb = 1024
+const oneMb = oneKb * oneKb
+const defaultMaxFiles = 20
+const defaultMaxFields = 500
+const defaultMaxFileSize = 2 * oneMb
+const defaultMaxParts = 1000
+
+function isMultipartLimitError(error: unknown): boolean {
+  return (
+    error instanceof MaxHeaderSizeExceededError ||
+    error instanceof MaxFileSizeExceededError ||
+    error instanceof MaxPartsExceededError ||
+    error instanceof MaxTotalSizeExceededError
+  )
+}
+
 /**
  * Options for parsing form data.
  */
@@ -72,6 +102,13 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
    * @default 20
    */
   maxFiles?: number
+  /**
+   * The maximum number of text fields that can be parsed from a multipart request. If this
+   * limit is exceeded, a `MaxFieldsExceededError` will be thrown.
+   *
+   * @default 500
+   */
+  maxFields?: number
 }
 
 /**
@@ -125,10 +162,25 @@ export async function parseFormData(
     }
   }
 
-  let { maxFiles = 20, ...parserOptions } = optionsOrUploadHandler
+  let {
+    maxFiles = defaultMaxFiles,
+    maxFields = defaultMaxFields,
+    maxHeaderSize,
+    maxFileSize = defaultMaxFileSize,
+    maxParts = defaultMaxParts,
+    maxTotalSize = maxFiles * maxFileSize + oneMb,
+  } = optionsOrUploadHandler
+
+  let parserOptions: MultipartParserOptions = {
+    maxHeaderSize,
+    maxFileSize,
+    maxParts,
+    maxTotalSize,
+  }
 
   let formData = new FormData()
   let fileCount = 0
+  let fieldCount = 0
 
   try {
     for await (let part of parseMultipartRequest(request, parserOptions)) {
@@ -145,11 +197,15 @@ export async function parseFormData(
           formData.append(fieldName, value)
         }
       } else {
+        if (++fieldCount > maxFields) {
+          throw new MaxFieldsExceededError(maxFields)
+        }
+
         formData.append(fieldName, part.text)
       }
     }
   } catch (error) {
-    if (error instanceof FormDataParseError) {
+    if (error instanceof FormDataParseError || isMultipartLimitError(error)) {
       throw error
     }
 

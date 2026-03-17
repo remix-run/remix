@@ -1,17 +1,24 @@
 import {
   FormDataParseError,
+  MaxFilesExceededError,
+  MaxFieldsExceededError,
   parseFormData,
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
 import type { Middleware } from '@remix-run/fetch-router'
 
+function isFormDataLimitError(error: unknown): boolean {
+  return error instanceof MaxFilesExceededError || error instanceof MaxFieldsExceededError
+}
+
 /**
  * Options for the {@link formData} middleware.
  */
 export interface FormDataOptions extends ParseFormDataOptions {
   /**
-   * Set `true` to suppress parse errors.
+   * Set `true` to suppress malformed form-data parse errors. Multipart limit violations always
+   * surface as errors even when suppression is enabled.
    *
    * @default false
    */
@@ -56,7 +63,11 @@ export function formData(options?: FormDataOptions): Middleware {
     try {
       context.set(FormData, await parseFormData(context.request, options, uploadHandler))
     } catch (error) {
-      if (!suppressErrors || !(error instanceof FormDataParseError)) {
+      if (
+        !suppressErrors ||
+        isFormDataLimitError(error) ||
+        !(error instanceof FormDataParseError)
+      ) {
         throw error
       }
 

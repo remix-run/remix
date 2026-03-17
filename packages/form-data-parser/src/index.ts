@@ -3,6 +3,7 @@ export {
   type ParseFormDataOptions,
   FormDataParseError,
   MaxFilesExceededError,
+  MaxFieldsExceededError,
   FileUpload,
   parseFormData,
 } from './lib/form-data.ts'
@@ -12,4 +13,6 @@ export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
 } from '@remix-run/multipart-parser'
