@@ -25,8 +25,8 @@ export type SqlStatement = {
 /**
  * Tagged-template helper for building parameterized SQL statements.
  * @param strings Template string parts.
- * @param values Interpolated values or nested `SqlStatement` values.
- * @returns A normalized SQL statement.
+ * @param values Interpolated values or nested {@link SqlStatement} values.
+ * @returns A normalized {@link SqlStatement}.
  * @example
  * ```ts
  * import { sql } from 'remix/data-table'

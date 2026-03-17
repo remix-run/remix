@@ -1,10 +1,11 @@
 import { jsx } from './jsx.ts'
 import { Frame, createFrameHandle, type FrameContent } from './component.ts'
+import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
-import type { RemixElement } from './jsx.ts'
+import type { RemixElement, RemixNode } from './jsx.ts'
 import type { FrameHandle } from './component.ts'
-import type { Scheduler } from './vdom.ts'
-import { createRangeRoot } from './vdom.ts'
+import type { Scheduler, VirtualRoot } from './vdom.ts'
+import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import type { StyleManager } from './style/index.ts'
 
@@ -37,11 +38,18 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
+/**
+ * Loads a client entry module for hydration.
+ */
 export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
 
+/**
+ * Resolves frame content for the given frame source.
+ */
 export type ResolveFrame = (
   src: string,
   signal?: AbortSignal,
+  target?: string,
 ) => Promise<FrameContent> | FrameContent
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -51,8 +59,23 @@ type FrameTemplateListener = (fragment: DocumentFragment) => void
 let bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 let frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 
+function syncElementAttributes(target: Element, source: Element) {
+  for (let attribute of Array.from(target.attributes)) {
+    if (!source.hasAttribute(attribute.name)) {
+      target.removeAttribute(attribute.name)
+    }
+  }
+
+  for (let attribute of Array.from(source.attributes)) {
+    if (target.getAttribute(attribute.name) !== attribute.value) {
+      target.setAttribute(attribute.name, attribute.value)
+    }
+  }
+}
+
 export type FrameRuntime = {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -67,6 +90,7 @@ export type FrameRuntime = {
 
 export type FrameContext = {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -86,6 +110,7 @@ type FrameInit = {
   name?: string
   topFrame?: FrameHandle
   src: string
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -116,6 +141,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let container = createContainer(root)
   let observers: MutationObserver[] = []
   let subscriptions: Array<() => void> = []
+  let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
 
   // Merge any rmx-data found in the current document once at startup.
@@ -132,10 +158,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       reloadController = controller
       frame.dispatchEvent(new Event('reloadStart'))
       try {
-        let content = await init.resolveFrame(frame.src, controller.signal)
+        let content = await init.resolveFrame(frame.src, controller.signal, frameName)
         if (reloadController !== controller || controller.signal.aborted) return controller.signal
         await render(content, { signal: controller.signal })
         return controller.signal
+      } catch (error) {
+        if (reloadController !== controller || controller.signal.aborted) return controller.signal
+        init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+        throw error
       } finally {
         if (reloadController === controller) {
           frame.dispatchEvent(new Event('reloadComplete'))
@@ -155,6 +185,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   let context: FrameContext = {
     topFrame: runtime.topFrame,
+    errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
     pendingClientEntries: init.pendingClientEntries,
@@ -181,11 +212,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    if (
+    if (isRemixNodeFrameContent(content)) {
+      if (!contentRoot) {
+        let currentNodes = getContentNodes()
+        removeVirtualRoots(currentNodes)
+        disposeSubFrames(currentNodes, context)
+        clearFrameContent()
+        contentRoot = createFrameContentRoot()
+      }
+
+      if (options?.signal?.aborted) return
+      contentRoot.render(content)
+      return
+    }
+
+    if (contentRoot) {
+      contentRoot.dispose()
+      contentRoot = undefined
+    }
+
+    let isFullDocumentReload =
       container.root instanceof Document &&
       typeof content === 'string' &&
       isFullDocumentHtml(content)
-    ) {
+
+    if (isFullDocumentReload && typeof content === 'string') {
       // Full-document reload should tear down existing hydrated roots and subframes
       // before diffing fresh HTML, otherwise stale component instances can survive
       // on detached DOM nodes.
@@ -194,6 +245,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(content, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
+
+      syncElementAttributes(container.doc.documentElement, parsed.documentElement)
+      syncElementAttributes(container.doc.head, parsed.head)
+      syncElementAttributes(container.doc.body, parsed.body)
 
       diffNodes(Array.from(container.doc.head.childNodes), Array.from(parsed.head.childNodes), {
         ...context,
@@ -215,7 +270,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    hoistHeadElements(container.doc, fragment)
+    moveServerStylesToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -233,6 +288,43 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     createSubFrames(container.childNodes, context)
   }
 
+  function createFrameContentRoot(): VirtualRoot {
+    let virtualRoot: VirtualRoot
+    if (container.root instanceof Document) {
+      virtualRoot = createRoot(container.doc.body, {
+        scheduler: context.scheduler,
+        frame,
+        styleManager: context.styleManager,
+      })
+    } else {
+      invariant(Array.isArray(root), 'Expected comment-bounded frame root')
+      virtualRoot = createRangeRoot(root, {
+        scheduler: context.scheduler,
+        frame,
+        styleManager: context.styleManager,
+      })
+    }
+
+    virtualRoot.addEventListener('error', (event: Event) => {
+      if (context.errorTarget === virtualRoot) return
+      context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+    })
+
+    return virtualRoot
+  }
+
+  function getContentNodes(): Node[] {
+    return container.root instanceof Document
+      ? Array.from(container.doc.body.childNodes)
+      : container.childNodes
+  }
+
+  function clearFrameContent() {
+    for (let node of getContentNodes()) {
+      node.parentNode?.removeChild(node)
+    }
+  }
+
   async function hydrateInitial(): Promise<void> {
     let initialHydrationTracker = createInitialHydrationTracker()
 
@@ -243,14 +335,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        hoistHeadElements(container.doc, early)
+        moveServerStylesToHead(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          hoistHeadElements(container.doc, fragment)
+          moveServerStylesToHead(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
@@ -259,7 +351,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          hoistHeadElements(container.doc, buffered)
+          moveServerStylesToHead(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
@@ -275,6 +367,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function dispose(): void {
     reloadController?.abort()
     reloadController = undefined
+    contentRoot?.dispose()
+    contentRoot = undefined
 
     // Disconnect any MutationObservers waiting for templates.
     for (let observer of observers) {
@@ -312,6 +406,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
 export function createFrameRuntime(init: {
   topFrame?: FrameHandle
+  errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
@@ -325,6 +420,7 @@ export function createFrameRuntime(init: {
 }): FrameRuntime {
   return {
     topFrame: init.topFrame,
+    errorTarget: init.errorTarget,
     loadModule: init.loadModule,
     resolveFrame: init.resolveFrame,
     pendingClientEntries: init.pendingClientEntries,
@@ -399,40 +495,23 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function hoistHeadElements(doc: Document, fragment: DocumentFragment): void {
+function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void {
   let target = doc.head
   if (!target) return
 
+  let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
+  for (let style of styles) {
+    if (style instanceof HTMLStyleElement) {
+      target.appendChild(style)
+    }
+  }
+
   let heads = Array.from(fragment.querySelectorAll('head'))
   for (let head of heads) {
-    while (head.firstChild) {
-      target.appendChild(head.firstChild)
+    if (!head.childNodes.length) {
+      head.remove()
     }
-    head.remove()
   }
-
-  // Some fragment parses can normalize <head> content to top-level siblings
-  // (e.g. leading <style>), so hoist head-managed elements directly as well.
-  let maybeHeadManaged = Array.from(
-    fragment.querySelectorAll('title,meta,link,style,script[type="application/ld+json"]'),
-  )
-
-  for (let element of maybeHeadManaged) {
-    if (!(element instanceof Element)) continue
-    if (!isHeadManagedElementNode(element)) continue
-    target.appendChild(element)
-  }
-}
-
-function isHeadManagedElementNode(element: Element): boolean {
-  let tag = element.tagName.toLowerCase()
-  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
-    return true
-  }
-  if (tag === 'script') {
-    return element.getAttribute('type') === 'application/ld+json'
-  }
-  return false
 }
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
@@ -607,6 +686,10 @@ function hydrateRegion(
     frame: context.frame,
     styleManager: context.styleManager,
   })
+  root.addEventListener('error', (event) => {
+    if (context.errorTarget === root) return
+    context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+  })
 
   Object.defineProperty(start, '$rmx', { value: root, enumerable: false })
   root.render(vElement)
@@ -628,6 +711,7 @@ function createSubFrames(nodes: Node[], context: FrameContext) {
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
+            errorTarget: context.errorTarget,
             loadModule: context.loadModule,
             resolveFrame: context.resolveFrame,
             pendingClientEntries: context.pendingClientEntries,
@@ -888,6 +972,10 @@ async function renderFrameStream(
 
       if (parsed.html !== '') {
         html += parsed.html
+        let htmlMarkers = collectHtmlMarkerSummary(html)
+        if (!hasBalancedMarkerSummary(htmlMarkers)) {
+          continue
+        }
         await applyHtml(html)
         appliedLength = html.length
         appliedOnce = true
@@ -972,6 +1060,14 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
   let template = doc.createElement('template')
   template.innerHTML = content.trim()
   return template.content
+}
+
+function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
+  return !(
+    content instanceof ReadableStream ||
+    content instanceof DocumentFragment ||
+    typeof content === 'string'
+  )
 }
 
 function isFullDocumentHtml(content: string): boolean {
@@ -1070,4 +1166,19 @@ function findEndMarker(
   }
 
   throw new Error('End marker not found')
+}
+
+function collectHtmlMarkerSummary(html: string): Record<string, number> {
+  return {
+    frameStarts: html.match(/<!--\s*rmx:f:/g)?.length ?? 0,
+    frameEnds: html.match(/<!--\s*\/rmx:f\s*-->/g)?.length ?? 0,
+    hydrationStarts: html.match(/<!--\s*rmx:h:/g)?.length ?? 0,
+    hydrationEnds: html.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0,
+  }
+}
+
+function hasBalancedMarkerSummary(summary: Record<string, number>): boolean {
+  return (
+    summary.frameStarts === summary.frameEnds && summary.hydrationStarts === summary.hydrationEnds
+  )
 }

@@ -1,27 +1,45 @@
 import { unreachable } from '../unreachable.ts'
 import type { RoutePattern } from '../route-pattern.ts'
-import type { OptionalParams, RequiredParams } from '../types/params.ts'
 import type { PartPattern } from './part-pattern.ts'
+import type { ParseParams } from './params.ts'
+import type { Split, SplitPattern } from '../types/split.ts'
+import type { Simplify } from '../types/utils.ts'
 
-type HrefParamValue = string | number
-export type HrefParams = Record<string, HrefParamValue>
-
+// todo: `Split<source>` return { hostname: "" } instead of { hostname: undefined } which causes issues
+/**
+ * Tuple of arguments accepted by `RoutePattern.href()` for a given pattern.
+ */
+export type HrefArgs<source extends string> = _HrefArgs<ParseHrefParams<source>>
 // prettier-ignore
-export type HrefArgs<source extends string> =
-  [RequiredParams<source>] extends [never] ?
-    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, HrefSearchParams] :
-    [HrefParamsArg<source>, HrefSearchParams] | [HrefParamsArg<source>]
+type _HrefArgs<params> =
+  {} extends params ?
+    [params?: Simplify<params & Record<string, unknown>> | null | undefined, searchParams?: SearchParams]
+  :
+  [params: Simplify<params & Record<string, unknown>>, searchParams?: SearchParams]
 
-// prettier-ignore
-type HrefParamsArg<source extends string> =
-  & Record<RequiredParams<source>, HrefParamValue>
-  & Partial<Record<OptionalParams<source>, HrefParamValue | null | undefined>>
-  & Record<string, unknown>
-
-export type HrefSearchParams = Record<
+type SearchParams = Record<
   string,
   string | number | null | undefined | Array<string | number | null | undefined>
 >
+
+// prettier-ignore
+type ParseHrefParams<source extends string> =
+  Split<source> extends infer split extends SplitPattern ?
+    split extends ({ protocol: string, hostname: undefined } | { hostname: undefined, port: string }) ? never : // missing-hostname
+    ParseParams<split> extends infer params extends Record<string, string | undefined> ?
+      params extends { '*': string } ? never : // nameless-wildcard
+      Optionalize<Omit<params, '*'>>
+    :
+    never
+  :
+  never
+
+// prettier-ignore
+type Optionalize<record extends Record<string, string | undefined>> =
+  // { name: string } -> { name: string | number }
+  & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
+  // { name: string | undefined } -> { name?: string | number | null | undefined }
+  & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
 
 /**
  * Generate a search query string from a pattern and params.
@@ -30,10 +48,7 @@ export type HrefSearchParams = Record<
  * @param searchParams the search params to include in the href
  * @returns the query string (without leading `?`), or undefined if empty
  */
-export function hrefSearch(
-  pattern: RoutePattern,
-  searchParams: HrefSearchParams,
-): string | undefined {
+export function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {
   let constraints = pattern.ast.search
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
     return undefined
@@ -92,20 +107,26 @@ type HrefErrorDetails =
       pattern: RoutePattern
       partPattern: PartPattern
       missingParams: Array<string>
-      params: Record<string, string | number>
+      params: Record<string, unknown>
     }
   | {
       type: 'missing-search-params'
       pattern: RoutePattern
       missingParams: Array<string>
-      searchParams: HrefSearchParams
+      searchParams: SearchParams
     }
   | {
       type: 'nameless-wildcard'
       pattern: RoutePattern
     }
 
+/**
+ * Error thrown when a route pattern cannot generate an href from the supplied args.
+ */
 export class HrefError extends Error {
+  /**
+   * Structured details describing why href generation failed.
+   */
   details: HrefErrorDetails
 
   constructor(details: HrefErrorDetails) {
@@ -116,6 +137,12 @@ export class HrefError extends Error {
     this.details = details
   }
 
+  /**
+   * Formats an error message for the given href failure details.
+   *
+   * @param details Structured href failure details.
+   * @returns A human-readable error message.
+   */
   static message(details: HrefErrorDetails): string {
     let pattern = details.pattern.toString()
 

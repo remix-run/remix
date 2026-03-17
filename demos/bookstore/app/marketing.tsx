@@ -4,14 +4,12 @@ import { css } from 'remix/component'
 import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
-import { loadAuth } from './middleware/auth.ts'
 import { ilike, inList, or } from 'remix/data-table'
 import { books } from './data/schema.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
-  middleware: [loadAuth()],
   async action({ db }) {
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
@@ -53,7 +51,6 @@ export let home: BuildAction<'GET', typeof routes.home> = {
 }
 
 export let about: BuildAction<'GET', typeof routes.about> = {
-  middleware: [loadAuth()],
   action() {
     return render(
       <Layout>
@@ -114,7 +111,6 @@ export let about: BuildAction<'GET', typeof routes.about> = {
 }
 
 export let contact: Controller<typeof routes.contact> = {
-  middleware: [loadAuth()],
   actions: {
     index() {
       return render(
@@ -170,7 +166,6 @@ export let contact: Controller<typeof routes.contact> = {
 }
 
 export let search: BuildAction<'GET', typeof routes.search> = {
-  middleware: [loadAuth()],
   async action({ db, url }) {
     let query = url.searchParams.get('q') ?? ''
     let matchingBooks = query

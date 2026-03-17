@@ -1,0 +1,1 @@
+Automatically intercept anchor and area navigations through the Navigation API, with `rmx-target` to target mounted frames, `rmx-src` to override the fetched frame source, and `rmx-document` to opt back into full-document navigation.

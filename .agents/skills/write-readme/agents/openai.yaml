@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Write Readme'
+  short_description: 'Write Remix package READMEs in the repo style.'
+  default_prompt: 'Use $write-readme to draft or rewrite this package README in the style used by the Remix repository.'

@@ -232,7 +232,7 @@ export function ControlGroup() {
             outlineOffset: '2px',
           },
         }),
-        ...(Array.isArray(mixOverride) ? mixOverride : []),
+        ...(mixOverride ?? []),
       ]}
     >
       {children}
@@ -328,7 +328,7 @@ export function TempoButton() {
             borderBottomRightRadius: '18px',
           },
         }),
-        ...(Array.isArray(mixOverride) ? mixOverride : []),
+        ...(mixOverride ?? []),
       ]}
     >
       <Triangle label={orientation} orientation={orientation} />

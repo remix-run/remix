@@ -40,9 +40,10 @@ export type ErrorMapContext = {
 export type ErrorMap = (context: ErrorMapContext) => string | undefined
 
 /**
- * Options passed to `parse` and `parseSafe`.
+ * Options passed to {@link parse} and {@link parseSafe}.
  *
- * This mirrors `ValidationOptions`, but also supports a convenience `abortEarly` option at the top level.
+ * This mirrors {@link ValidationOptions}, but also supports a convenience `abortEarly`
+ * option at the top level.
  */
 export type ParseOptions = StandardSchemaV1.Options & {
   abortEarly?: boolean
@@ -129,6 +130,12 @@ type IssueDescriptor = {
   values?: Record<string, unknown>
 }
 
+/**
+ * Creates a sync Standard Schema-compatible schema from a validation function.
+ *
+ * @param validator Validator that returns either a parsed value or validation issues.
+ * @returns A chainable schema object.
+ */
 export function createSchema<input, output>(
   validator: (
     value: unknown,
@@ -272,10 +279,29 @@ function createIssueFromContext(context: ValidationContext, descriptor: IssueDes
   return createIssue(message, path)
 }
 
+/**
+ * Creates a Standard Schema issue object.
+ *
+ * @param message Human-readable validation message.
+ * @param path Optional issue path within the input value.
+ * @returns A Standard Schema issue.
+ */
 export function createIssue(message: string, path: Issue['path']): Issue {
   return !path || path.length === 0 ? { message } : { message, path }
 }
 
+/**
+ * Creates a Standard Schema failure result with a single issue.
+ *
+ * @param message Human-readable validation message.
+ * @param path Optional issue path within the input value.
+ * @param options Optional issue metadata used for localized error mapping.
+ * @param options.code Optional error code passed to the error map.
+ * @param options.values Optional values passed to the error map.
+ * @param options.input Optional input value passed to the error map.
+ * @param options.parseOptions Optional parse options used for localization and error mapping.
+ * @returns A failure result containing one issue.
+ */
 export function fail(
   message: string,
   path: Issue['path'],
@@ -1067,7 +1093,7 @@ export function union<schemas extends Schema<any, any>[]>(
 }
 
 /**
- * Error thrown by `parse()` when validation fails.
+ * Error thrown by {@link parse} when validation fails.
  */
 export class ValidationError extends Error {
   /**
@@ -1087,7 +1113,7 @@ export class ValidationError extends Error {
 }
 
 /**
- * Validate a value and return the typed output or throw a `ValidationError`.
+ * Validate a value and return the typed output or throw a {@link ValidationError}.
  *
  * @param schema The schema to validate against
  * @param value The value to validate

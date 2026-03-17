@@ -40,7 +40,7 @@ When a component is rendered:
 
 3. **Component Removal**:
    - `handle.signal` is aborted
-   - All event listeners registered via `handle.on()` are automatically cleaned up
+   - All event listeners registered via `addEventListeners()` are automatically cleaned up
    - Any queued tasks are executed with an aborted signal
 
 ## Setup vs Props
@@ -109,12 +109,12 @@ function Counter(handle: Handle) {
     <div>
       <span>Count: {count}</span>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>

@@ -2,6 +2,11 @@ import type { FrameContent, FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
+import {
+  createComponentErrorEvent,
+  getComponentError,
+  type ComponentErrorEvent,
+} from './error-event.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
 import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
@@ -10,23 +15,36 @@ import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 
+/**
+ * Events emitted by virtual roots.
+ */
 export type VirtualRootEventMap = {
-  error: ErrorEvent
+  error: ComponentErrorEvent
 }
 
+/**
+ * Root controller returned by {@link createRoot} and {@link createRangeRoot}.
+ */
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
   dispose: () => void
   flush: () => void
 }
 
+/**
+ * Options for creating a virtual DOM root with {@link createRoot} or {@link createRangeRoot}.
+ */
 export type VirtualRootOptions = {
   frame?: FrameHandle
   scheduler?: Scheduler
   styleManager?: StyleManager
   frameInit?: {
     src?: string
-    resolveFrame: (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
+    resolveFrame: (
+      src: string,
+      signal?: AbortSignal,
+      target?: string,
+    ) => Promise<FrameContent> | FrameContent
     loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
   }
 }
@@ -43,10 +61,18 @@ function getHydrationComponentIdFromRangeStart(start: Node): string | undefined 
   return id.length > 0 ? id : undefined
 }
 
+/**
+ * Creates a virtual root bounded by two DOM nodes.
+ *
+ * @param boundaries Start and end marker nodes that define the render region.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
 export function createRangeRoot(
-  [start, end]: [Node, Node],
+  boundaries: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
+  let [start, end] = boundaries
   let vroot: VNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
 
@@ -66,13 +92,14 @@ export function createRangeRoot(
       src: options.frameInit?.src,
       resolveFrame: options.frameInit?.resolveFrame,
       loadModule: options.frameInit?.loadModule,
+      errorTarget: eventTarget,
       scheduler,
       styleManager: styles,
     })
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   }
   function attachDomErrorForwarding() {
     if (isErrorForwardingAttached) return
@@ -98,7 +125,7 @@ export function createRangeRoot(
         _rangeEnd: end,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
       }
-      scheduler.enqueueTasks([
+      scheduler.enqueueWork([
         () => {
           diffVNodes(
             vroot,
@@ -125,7 +152,7 @@ export function createRangeRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, parent, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, parent, scheduler, styles)])
       scheduler.dequeue()
     },
 
@@ -135,6 +162,13 @@ export function createRangeRoot(
   })
 }
 
+/**
+ * Creates a virtual root for a host container element.
+ *
+ * @param container Host element to render into.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let vroot: VNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
@@ -149,13 +183,14 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       src: options.frameInit?.src,
       resolveFrame: options.frameInit?.resolveFrame,
       loadModule: options.frameInit?.loadModule,
+      errorTarget: eventTarget,
       scheduler,
       styleManager: styles,
     })
 
   let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   }
   function attachDomErrorForwarding() {
     if (isErrorForwardingAttached) return
@@ -175,7 +210,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
 
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
-      scheduler.enqueueTasks([
+      scheduler.enqueueWork([
         () => {
           diffVNodes(
             vroot,
@@ -202,7 +237,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, container, scheduler, styles)])
       scheduler.dequeue()
     },
 
@@ -214,8 +249,13 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
 
 function createRootFrameHandle(init: {
   src?: string
-  resolveFrame?: (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
+  resolveFrame?: (
+    src: string,
+    signal?: AbortSignal,
+    target?: string,
+  ) => Promise<FrameContent> | FrameContent
   loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
+  errorTarget: EventTarget
   scheduler: Scheduler
   styleManager: StyleManager
 }): FrameHandle {
@@ -238,6 +278,7 @@ function createRootFrameHandle(init: {
           throw new Error('loadModule is required to hydrate client entries inside <Frame />')
         }),
       resolveFrame,
+      errorTarget: init.errorTarget,
       pendingClientEntries: new Map(),
       scheduler: init.scheduler,
       styleManager: init.styleManager,

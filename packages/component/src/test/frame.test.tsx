@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { Frame } from '../lib/component.ts'
 import { clientEntry } from '../lib/client-entries.ts'
-import { run } from '../lib/run.ts'
+import { getTopFrame, run } from '../lib/run.ts'
 import { createRangeRoot, createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { renderToStream } from '../lib/stream.ts'
@@ -71,7 +71,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Counter)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledWith('/js/counter.js', 'Counter')
@@ -85,6 +85,52 @@ describe('run', () => {
     expect(button?.textContent).toBe('Count: 6')
 
     frame.dispose()
+  })
+
+  it('forwards hydrated client entry root error events to app listeners', async () => {
+    let error = new Error('hydrated client entry root error')
+    let Broken = clientEntry('/js/broken.js#Broken', function Broken() {
+      return () => <button>Trigger</button>
+    })
+
+    let html = await drain(renderToStream(<Broken />))
+    document.body.innerHTML = html
+
+    let app = run({ loadModule: vi.fn().mockResolvedValue(Broken) })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = (event as ErrorEvent).error
+    })
+
+    await app.ready()
+
+    let marker = Array.from(document.body.childNodes).find(
+      (node): node is Comment & { $rmx: EventTarget } => node instanceof Comment && '$rmx' in node,
+    )
+    invariant(marker, 'Expected hydrated client entry marker')
+    marker.$rmx.dispatchEvent(new ErrorEvent('error', { error }))
+
+    expect(forwarded).toBe(error)
+
+    app.dispose()
+  })
+
+  it('dispatches ready() rejections to app error listeners', async () => {
+    document.body.innerHTML = '<!-- rmx:h:broken --><button>Broken</button>'
+
+    let app = run({ loadModule: vi.fn() })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    let readyError = await app.ready().catch((error) => error)
+
+    expect(readyError).toBeInstanceOf(Error)
+    expect((readyError as Error).message).toBe('End marker not found')
+    expect(forwarded).toBe(readyError)
+
+    app.dispose()
   })
 
   it('hydrates multiple components', async () => {
@@ -116,7 +162,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Button)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     // Module is cached by moduleUrl+exportName
@@ -134,6 +180,66 @@ describe('run', () => {
     expect(buttons[1]?.textContent).toBe('Second')
 
     frame.dispose()
+  })
+
+  it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
+    let FragmentEntry = clientEntry(
+      '/js/fragment-entry.js#FragmentEntry',
+      function FragmentEntry() {
+        return () => <div />
+      },
+    )
+
+    async function renderInitialBody() {
+      return await drain(
+        renderToStream(
+          <div>
+            <FragmentEntry />
+            <FragmentEntry />
+          </div>,
+        ),
+      )
+    }
+
+    async function renderReloadDocument() {
+      return await drain(
+        renderToStream(
+          <html>
+            <body>
+              <div>
+                <FragmentEntry />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    document.body.innerHTML = await renderInitialBody()
+
+    let app = run({
+      loadModule: vi.fn().mockResolvedValue(FragmentEntry),
+      async resolveFrame(src: string) {
+        if (src === '/b') return await renderReloadDocument()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let topFrame = getTopFrame()
+
+    topFrame.src = '/b'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let bodyHtml = document.body.innerHTML
+    let hydrationStarts = bodyHtml.match(/<!--\s*rmx:h:/g)?.length ?? 0
+    let hydrationEnds = bodyHtml.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0
+
+    expect(hydrationStarts).toBe(hydrationEnds)
+
+    app.dispose()
   })
 
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
@@ -188,7 +294,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let app = run(document, { loadModule })
+    let app = run({ loadModule })
 
     let readySettled = false
     let readyPromise = app.ready().then(() => {
@@ -247,7 +353,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Card)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledWith('/js/card.js', 'Card')
@@ -314,7 +420,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let app = run(document, { loadModule })
+    let app = run({ loadModule })
     await app.ready()
 
     // Only initial adopted-document markers block ready().
@@ -351,7 +457,7 @@ describe('run', () => {
 
     let loadModule = vi.fn()
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).not.toHaveBeenCalled()
@@ -367,7 +473,7 @@ describe('run', () => {
 
     let loadModule = vi.fn()
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).not.toHaveBeenCalled()
@@ -394,7 +500,7 @@ describe('run', () => {
 
     let loadModule = vi.fn().mockResolvedValue(Counter)
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     let spanAfterHydration = document.querySelector('span')
@@ -424,7 +530,7 @@ describe('run', () => {
     invariant(h1 && p && nav)
     expect(nav.textContent).toBe('Loading...')
 
-    let frame = run(document, { loadModule: vi.fn() })
+    let frame = run({ loadModule: vi.fn() })
     await frame.ready()
 
     let second = await chunks.next()
@@ -493,7 +599,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledTimes(2)
@@ -537,7 +643,7 @@ describe('run', () => {
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
-    let frame = run(document, { loadModule })
+    let frame = run({ loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledTimes(1)
@@ -591,7 +697,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload.js' && exportName === 'Reload') return ReloadButton
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -671,7 +777,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-empty.js' && exportName === 'ReloadEmpty') {
           return ReloadButton
@@ -741,7 +847,7 @@ describe('run', () => {
     let html = await drain(stream)
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/row-action.js' && exportName === 'RowAction') return RowAction
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -794,7 +900,7 @@ describe('run', () => {
       ),
     )
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-top.js' && exportName === 'ReloadTop') {
           return ReloadTop
@@ -888,7 +994,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-events.js' && exportName === 'ReloadEvents') {
           return RowAction
@@ -958,7 +1064,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-css.js' && exportName === 'ReloadCss') return ReloadButton
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -988,6 +1094,73 @@ describe('run', () => {
     expect(document.querySelector('button')).toBe(button)
 
     clientFrame.dispose()
+  })
+
+  it('dispatches reload rejections to app error listeners', async () => {
+    let reload: undefined | (() => Promise<AbortSignal>)
+    let reloadError = new TypeError('Failed to fetch')
+    let renderCount = 0
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-error.js#ReloadError',
+      function ReloadError(handle: Handle) {
+        reload = () => handle.frame.reload()
+        return () => <button id="reload-error">Reload error</button>
+      },
+    )
+
+    async function resolveFrame(src: string) {
+      if (src !== '/reload-error') throw new Error(`Unexpected frame src: ${src}`)
+      renderCount++
+      if (renderCount === 1) {
+        return await drain(
+          renderToStream(
+            <section>
+              <p id="reload-error-value">Initial</p>
+              <ReloadButton />
+            </section>,
+          ),
+        )
+      }
+      throw reloadError
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-error" fallback={<div>Loading…</div>} />
+        </main>,
+        { resolveFrame },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/reload-error.js' && exportName === 'ReloadError') {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+    let forwarded: unknown
+    app.addEventListener('error', (event) => {
+      forwarded = event.error
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reload)
+
+    let caught = await reload().catch((error) => error)
+
+    expect(caught).toBe(reloadError)
+    expect(forwarded).toBe(reloadError)
+    expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
+
+    app.dispose()
   })
 
   it('aborts stale frame reloads when reload is re-entered', async () => {
@@ -1027,7 +1200,7 @@ describe('run', () => {
     )
     document.body.innerHTML = html
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-abort.js' && exportName === 'ReloadAbort') {
           return ReloadButton
@@ -1082,7 +1255,7 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('hoists head-managed elements when a frame reloads', async () => {
+  it('keeps head-like elements inside the frame when a frame reloads', async () => {
     let renderCount = 0
     let reload: undefined | (() => Promise<AbortSignal>)
 
@@ -1125,7 +1298,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(html, 'rmx:f:')
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-head.js' && exportName === 'ReloadHead')
           return ReloadButton
@@ -1137,37 +1310,40 @@ describe('run', () => {
     await clientFrame.ready()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(document.head.querySelector('title')?.textContent).toBe('Frame title 1')
-    expect(
-      document.head.querySelector('meta[name="frame-description"]')?.getAttribute('content'),
-    ).toBe('frame-1')
-    expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+    let main = document.querySelector('main')
+    invariant(main)
+    expect(main.querySelector('title')?.textContent).toBe('Frame title 1')
+    expect(main.querySelector('meta[name="frame-description"]')?.getAttribute('content')).toBe(
+      'frame-1',
+    )
+    expect(main.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
       '{"count":1}',
     )
-    expect(document.head.querySelector('script[type="text/javascript"]')).toBeNull()
-    expect(document.querySelector('main script[type="text/javascript"]')).toBeTruthy()
-    expect(document.querySelector('main title')).toBeNull()
-    expect(document.querySelector('main meta[name="frame-description"]')).toBeNull()
-    expect(document.querySelector('main script[type="application/ld+json"]')).toBeNull()
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 1',
+    )
+    expect(document.head.querySelector('title')).toBeNull()
+    expect(document.head.querySelector('meta[name="frame-description"]')).toBeNull()
+    expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
 
     invariant(reload)
     await reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    let titles = document.head.querySelectorAll('title')
-    expect(titles).toHaveLength(2)
-    expect(titles[0]?.textContent).toBe('Frame title 1')
-    expect(titles[1]?.textContent).toBe('Frame title 2')
+    let titles = main.querySelectorAll('title')
+    expect(titles).toHaveLength(1)
+    expect(titles[0]?.textContent).toBe('Frame title 2')
 
-    let metas = document.head.querySelectorAll('meta[name="frame-description"]')
-    expect(metas).toHaveLength(2)
-    expect(metas[0]?.getAttribute('content')).toBe('frame-1')
-    expect(metas[1]?.getAttribute('content')).toBe('frame-2')
+    let metas = main.querySelectorAll('meta[name="frame-description"]')
+    expect(metas).toHaveLength(1)
+    expect(metas[0]?.getAttribute('content')).toBe('frame-2')
 
-    let ldJsonScripts = document.head.querySelectorAll('script[type="application/ld+json"]')
-    expect(ldJsonScripts).toHaveLength(2)
-    expect(ldJsonScripts[0]?.textContent).toBe('{"count":1}')
-    expect(ldJsonScripts[1]?.textContent).toBe('{"count":2}')
+    let ldJsonScripts = main.querySelectorAll('script[type="application/ld+json"]')
+    expect(ldJsonScripts).toHaveLength(1)
+    expect(ldJsonScripts[0]?.textContent).toBe('{"count":2}')
+    expect(main.querySelector('script[type="text/javascript"]')?.textContent).toBe(
+      'window.__frameRegular = 2',
+    )
     expect(document.querySelector('p')?.textContent).toBe('Frame body 2')
 
     clientFrame.dispose()
@@ -1198,7 +1374,7 @@ describe('run', () => {
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
     let loadModule = vi.fn().mockImplementation(async () => modulePromise)
-    let clientFrame = run(document, { loadModule })
+    let clientFrame = run({ loadModule })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
     resolveModule(Counter)
@@ -1253,7 +1429,7 @@ describe('run', () => {
     // Frame shows fallback.
     expect(document.getElementById('frame')!.textContent).toBe('Loading…')
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(Counter),
     })
     await clientFrame.ready()
@@ -1313,7 +1489,7 @@ describe('run', () => {
     expect(document.getElementById('fast')!.textContent).toBe('Loading fast…')
     expect(document.getElementById('slow')!.textContent).toBe('Loading slow…')
 
-    let clientFrame = run(document, { loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: vi.fn() })
     await clientFrame.ready()
 
     // Resolve the fast frame first.
@@ -1368,7 +1544,7 @@ describe('run', () => {
       return mod
     })
 
-    let clientFrame = run(document, { loadModule: loadModuleFn })
+    let clientFrame = run({ loadModule: loadModuleFn })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -1452,7 +1628,7 @@ describe('run', () => {
     document.body.innerHTML = pageFirst.value
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(Counter),
     })
 
@@ -1538,7 +1714,7 @@ describe('run', () => {
     document.body.innerHTML = pageFirst.value
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
-    let clientFrame = run(document, { loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: vi.fn() })
     await clientFrame.ready()
 
     // Page content is visible, outer frame shows fallback.
@@ -1633,7 +1809,7 @@ describe('run', () => {
     let pageHtml = await drain(pageStream)
     document.body.innerHTML = pageHtml
 
-    let clientFrame = run(document, {
+    let clientFrame = run({
       loadModule: vi.fn().mockResolvedValue(ReloadButton),
       resolveFrame: renderInner,
     })
@@ -1920,7 +2096,7 @@ describe('run', () => {
     let pageHtml = await drain(renderToStream(<PostRunFrame />))
     document.body.innerHTML = pageHtml
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/post-run.js' && exportName === 'PostRunFrame') return PostRunFrame
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -1987,7 +2163,7 @@ describe('run', () => {
         async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
       )
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/mounted-frame.js' && exportName === 'MountedFrame') {
           return MountedFrame
@@ -2044,7 +2220,7 @@ describe('run', () => {
 
     expect(document.getElementById('child-frame')?.textContent).toBe('Loading child frame…')
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/js/card.js' && exportName === 'Card') return Card
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -2179,7 +2355,7 @@ describe('run', () => {
     )
     document.body.innerHTML = serverHtml
 
-    let app = run(document, {
+    let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/reload-stream.js' && exportName === 'ReloadStream') {
           return ReloadButton
@@ -2269,6 +2445,48 @@ describe('run', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
+    root.dispose()
+  })
+
+  it('renders RemixNode results from client resolveFrame', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src: string) {
+          if (src === '/html') {
+            return '<div id="stale">Stale content</div>'
+          }
+
+          if (src === '/error') {
+            return (
+              <section id="frame-error">
+                <h2>Frame Error</h2>
+                <p>Retry the page.</p>
+              </section>
+            )
+          }
+
+          throw new Error(`Unexpected src: ${src}`)
+        },
+      },
+    })
+
+    root.render(<Frame src="/html" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#stale')?.textContent).toBe('Stale content')
+
+    root.render(<Frame src="/error" fallback={<p id="fallback">Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#frame-error h2')?.textContent).toBe('Frame Error')
+    expect(rootContainer.querySelector('#frame-error p')?.textContent).toBe('Retry the page.')
+    expect(rootContainer.querySelector('#stale')).toBeNull()
+
     root.dispose()
   })
 })

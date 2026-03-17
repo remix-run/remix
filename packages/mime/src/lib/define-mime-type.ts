@@ -1,3 +1,6 @@
+/**
+ * Definition used to register a custom MIME type.
+ */
 export interface MimeTypeDefinition {
   /** The file extension(s) to register (e.g., ['x-myformat']) */
   extensions: string | string[]

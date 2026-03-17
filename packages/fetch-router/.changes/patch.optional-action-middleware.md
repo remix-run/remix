@@ -1,0 +1,1 @@
+The `Action`/`BuildAction` object form accepted by `router.get(...)`, `router.post(...)`, and `router.map(...)` now uses `{ action, middleware? }`, so you can omit `middleware` entirely instead of writing `middleware: []` when you do not need route middleware.

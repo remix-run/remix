@@ -36,12 +36,12 @@ function App(handle: Handle) {
     <div>
       <h1>Count: {count}</h1>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -81,8 +81,8 @@ For a server-rendered app, define your page as a component, render it with `rend
 ### Server
 
 ```tsx
-import { renderToStream } from '@remix-run/component/server'
-import { Frame } from '@remix-run/component'
+import { renderToStream } from 'remix/component/server'
+import { Frame } from 'remix/component'
 import { Counter } from './assets/counter.tsx'
 
 function App() {
@@ -114,16 +114,16 @@ return new Response(stream, {
 
 ```tsx
 // assets/entry.tsx
-import { run } from '@remix-run/component'
+import { run } from 'remix/component'
 
-let app = run(document, {
+let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src) {
-    let res = await fetch(src, { headers: { accept: 'text/html' } })
-    return await res.text()
+  async resolveFrame(src, signal) {
+    let res = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    return res.body ?? (await res.text())
   },
 })
 
@@ -134,7 +134,7 @@ await app.ready()
 
 ```tsx
 // assets/counter.tsx
-import { clientEntry, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -147,12 +147,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               count++
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           +
         </button>
@@ -169,5 +169,5 @@ export let Counter = clientEntry(
 - [Server Rendering](./server-rendering.md) - `renderToString` and `renderToStream`
 - [Hydration](./hydration.md) - `clientEntry` and `run`
 - [Frames](./frames.md) - Streaming partial server UI with `<Frame>`
-- [Styling](./styling.md) - CSS prop for inline styling
+- [Styling](./styling.md) - CSS mixin for inline styling
 - [Events](./events.md) - Event handling patterns

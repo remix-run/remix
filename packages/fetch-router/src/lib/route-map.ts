@@ -5,9 +5,12 @@ import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
 
 /**
- * A map of route names to `Route` objects or nested `RouteMap` objects.
+ * A map of route names to {@link Route} objects or nested route maps.
  */
 export interface RouteMap<pattern extends string = string> {
+  /**
+   * Named route or nested route map.
+   */
   [name: string]: Route<RequestMethod | 'ANY', pattern> | RouteMap<pattern>
 }
 
@@ -59,7 +62,7 @@ export class Route<
 }
 
 /**
- * Build a `Route` type from a request method and pattern.
+ * Build a {@link Route} type from a request method and pattern.
  */
 // prettier-ignore
 export type BuildRoute<method extends RequestMethod | 'ANY', pattern extends string | RoutePattern> =
@@ -142,6 +145,9 @@ type BuildRouteWithBase<base extends string, def extends RouteDef> =
  * A map of route names to route definitions.
  */
 export interface RouteDefs {
+  /**
+   * Named route definition or nested route definition map.
+   */
   [name: string]: Route | RouteDef | RouteDefs
 }
 

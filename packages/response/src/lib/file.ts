@@ -9,7 +9,7 @@ import {
 import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
 /**
- * Minimal interface for file-like objects used by `createFileResponse`.
+ * Minimal interface for file-like objects used by {@link createFileResponse}.
  */
 export interface FileLike {
   /** File compatibility - included for interface completeness */
@@ -47,7 +47,7 @@ export interface FileLike {
 export type FileDigestFunction<file extends FileLike = File> = (file: file) => Promise<string>
 
 /**
- * Options for creating a file response.
+ * Options for creating a file response with {@link createFileResponse}.
  */
 export interface FileResponseOptions<file extends FileLike = File> {
   /**
@@ -109,7 +109,8 @@ export interface FileResponseOptions<file extends FileLike = File> {
  * Creates a file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  * with full HTTP semantics including ETags, Last-Modified, conditional requests, and Range support.
  *
- * Accepts both native `File` objects and `LazyFile` from `@remix-run/lazy-file`.
+ * Accepts both native `File` objects and
+ * {@link import('@remix-run/lazy-file').LazyFile} values.
  *
  * @param file The file to send (native `File` or `LazyFile`)
  * @param request The request object

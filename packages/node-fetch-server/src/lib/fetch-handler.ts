@@ -32,6 +32,9 @@ export interface ClientAddress {
  * @returns A response to send to the client, or `undefined` for the default error response
  */
 export interface ErrorHandler {
+  /**
+   * Handles a thrown request-processing error and may return a custom response.
+   */
   (error: unknown): void | Response | Promise<void | Response>
 }
 
@@ -47,5 +50,8 @@ export interface ErrorHandler {
  * @returns A response to send to the client
  */
 export interface FetchHandler {
+  /**
+   * Handles an incoming request and returns the response sent to the client.
+   */
   (request: Request, client: ClientAddress): Response | Promise<Response>
 }

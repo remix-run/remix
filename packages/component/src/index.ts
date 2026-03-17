@@ -1,6 +1,9 @@
+/// <reference types="dom-navigation" preserve="true" />
+
 // -- Roots --
 export { run } from './lib/run.ts'
-export type { AppRuntime, RunInit } from './lib/run.ts'
+export type { AppRuntime, AppRuntimeEventMap, RunInit } from './lib/run.ts'
+export type { ComponentErrorEvent } from './lib/error-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
 export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
@@ -27,6 +30,7 @@ export type {
   FrameHandle,
   FrameProps,
 } from './lib/component.ts'
+export type { LoadModule, ResolveFrame } from './lib/frame.ts'
 
 // -- Elements/JSX/Props --
 export { createElement } from './lib/create-element.ts'
@@ -45,6 +49,7 @@ export { TypedEventTarget } from './lib/typed-event-target.ts'
 export { addEventListeners } from './lib/event-listeners.ts'
 export { on } from './lib/mixins/on-mixin.tsx'
 export type { Dispatched } from './lib/mixins/on-mixin.tsx'
+export { link } from './lib/mixins/link-mixin.tsx'
 export { keysEvents } from './lib/mixins/keys-mixin.tsx'
 export { pressEvents } from './lib/mixins/press-mixin.tsx'
 export type { PressEvent } from './lib/mixins/press-mixin.tsx'
@@ -60,3 +65,7 @@ export type { SpringIterator, SpringPreset, SpringOptions } from './lib/spring.t
 
 export { tween, easings } from './lib/tween.ts'
 export type { TweenOptions, BezierCurve } from './lib/tween.ts'
+
+// -- Navigation --
+export { navigate } from './lib/navigation.ts'
+export type { NavigationOptions } from './lib/navigation.ts'

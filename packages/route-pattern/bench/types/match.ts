@@ -10,26 +10,25 @@ bench('match > simple route', () => {
   let pattern = new RoutePattern('/posts/:id')
   let match = pattern.match('https://example.com/posts/123')
   match?.params.id
-}).types([762, 'instantiations'])
+}).types([268, 'instantiations'])
 
 bench('match > complex route', () => {
   let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
   pattern.match('https://example.com/api/v1/users/123')?.params
-}).types([3804, 'instantiations'])
+}).types([971, 'instantiations'])
 
 bench('match > mediarss', async () => {
   let { patterns } = await import('../patterns/mediarss.ts')
   eagerlyEvaluateTypesForMatchParams(patterns)
-}).types([75002, 'instantiations'])
+}).types([12253, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('match > shopify', async () => {
 //   let { patterns } = await import('../patterns/shopify.ts')
-//   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
 //   eagerlyEvaluateTypesForMatchParams(patterns)
-// }).types([5003571, 'instantiations'])
+// }).types([1444090, 'instantiations'])
 
 /** Type-only utility to force eager evaluation of match param types */
 function eagerlyEvaluateTypesForMatchParams<patterns extends ReadonlyArray<string>>(

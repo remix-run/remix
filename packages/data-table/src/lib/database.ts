@@ -169,6 +169,9 @@ type PrimaryKeyInputForRow<
 
 type ReturningInput<row extends Record<string, unknown>> = '*' | (keyof row & string)[]
 
+/**
+ * Table-like metadata accepted by `database.query()`.
+ */
 export type QueryTableInput<
   tableName extends string,
   row extends Record<string, unknown>,
@@ -193,6 +196,9 @@ export type QueryTableInput<
   }
 } & Record<string, unknown>
 
+/**
+ * Query builder type produced for a table-like input.
+ */
 export type QueryBuilderFor<
   tableName extends string,
   row extends Record<string, unknown>,
@@ -206,6 +212,9 @@ export type QueryBuilderFor<
   primaryKey
 >
 
+/**
+ * Signature of the database `query` helper.
+ */
 export type QueryMethod = <
   tableName extends string,
   row extends Record<string, unknown>,
@@ -214,25 +223,40 @@ export type QueryMethod = <
   table: QueryTableInput<tableName, row, primaryKey>,
 ) => QueryBuilderFor<tableName, row, primaryKey>
 
+/**
+ * Result metadata for write operations that do not return rows.
+ */
 export type WriteResult = {
   affectedRows: number
   insertId?: unknown
 }
 
+/**
+ * Result metadata for write operations that return multiple rows.
+ */
 export type WriteRowsResult<row> = {
   affectedRows: number
   insertId?: unknown
   rows: row[]
 }
 
+/**
+ * Result metadata for write operations that return a single row.
+ */
 export type WriteRowResult<row> = {
   affectedRows: number
   insertId?: unknown
   row: row | null
 }
 
+/**
+ * Queryable column type map for a concrete table.
+ */
 export type QueryColumnTypesForTable<table extends AnyTable> = QueryColumnTypeMap<table>
 
+/**
+ * Query builder type produced for a concrete table.
+ */
 export type QueryForTable<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
@@ -244,17 +268,32 @@ export type QueryForTable<
   TablePrimaryKey<table>
 >
 
+/**
+ * Column names accepted in single-table queries.
+ */
 export type SingleTableColumn<table extends AnyTable> = QueryColumns<QueryColumnTypeMap<table>>
 
+/**
+ * `where` input accepted in single-table queries.
+ */
 export type SingleTableWhere<table extends AnyTable> = WhereInput<SingleTableColumn<table>>
 
+/**
+ * Tuple form accepted by `orderBy` for a single table.
+ */
 export type OrderByTuple<table extends AnyTable> = [
   column: SingleTableColumn<table>,
   direction?: OrderDirection,
 ]
 
+/**
+ * `orderBy` input accepted in single-table queries.
+ */
 export type OrderByInput<table extends AnyTable> = OrderByTuple<table> | OrderByTuple<table>[]
 
+/**
+ * Options for loading many rows from a table.
+ */
 export type FindManyOptions<
   table extends AnyTable,
   relations extends RelationMapForSourceName<TableName<table>> = {},
@@ -266,6 +305,9 @@ export type FindManyOptions<
   with?: relations
 }
 
+/**
+ * Options for loading a single row from a table.
+ */
 export type FindOneOptions<
   table extends AnyTable,
   relations extends RelationMapForSourceName<TableName<table>> = {},
@@ -273,6 +315,9 @@ export type FindOneOptions<
   where: SingleTableWhere<table>
 }
 
+/**
+ * Options for updating a single row.
+ */
 export type UpdateOptions<
   table extends AnyTable,
   relations extends RelationMapForSourceName<TableName<table>> = {},
@@ -281,6 +326,9 @@ export type UpdateOptions<
   with?: relations
 }
 
+/**
+ * Options for updating many rows.
+ */
 export type UpdateManyOptions<table extends AnyTable> = {
   where: SingleTableWhere<table>
   orderBy?: OrderByInput<table>
@@ -289,6 +337,9 @@ export type UpdateManyOptions<table extends AnyTable> = {
   touch?: boolean
 }
 
+/**
+ * Options for deleting many rows.
+ */
 export type DeleteManyOptions<table extends AnyTable> = {
   where: SingleTableWhere<table>
   orderBy?: OrderByInput<table>
@@ -296,15 +347,24 @@ export type DeleteManyOptions<table extends AnyTable> = {
   offset?: number
 }
 
+/**
+ * Options for counting rows.
+ */
 export type CountOptions<table extends AnyTable> = {
   where?: SingleTableWhere<table>
 }
 
+/**
+ * Options for create operations that return only write metadata.
+ */
 export type CreateResultOptions = {
   touch?: boolean
   returnRow?: false
 }
 
+/**
+ * Options for create operations that return the inserted row.
+ */
 export type CreateRowOptions<
   table extends AnyTable,
   relations extends RelationMapForSourceName<TableName<table>> = {},
@@ -314,11 +374,17 @@ export type CreateRowOptions<
   returnRow: true
 }
 
+/**
+ * Options for bulk-create operations that return only write metadata.
+ */
 export type CreateManyResultOptions = {
   touch?: boolean
   returnRows?: false
 }
 
+/**
+ * Options for bulk-create operations that return inserted rows.
+ */
 export type CreateManyRowsOptions = {
   touch?: boolean
   returnRows: true
@@ -830,7 +896,7 @@ class DatabaseRuntime implements Database {
  * @param adapter Adapter implementation responsible for SQL execution.
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
- * @returns A `Database` API instance.
+ * @returns A {@link Database} API instance.
  * @example
  * ```ts
  * import { column as c, createDatabase, table } from 'remix/data-table'
@@ -868,7 +934,7 @@ export function createDatabase(
  * @param token Active adapter transaction token.
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
- * @returns A `Database` API instance bound to the provided transaction.
+ * @returns A {@link Database} API instance bound to the provided transaction.
  */
 export function createDatabaseWithTransaction(
   adapter: DatabaseAdapter,
@@ -1163,6 +1229,11 @@ export class QueryBuilder<
     >
   }
 
+  /**
+   * Executes the built select query and hydrates any configured eager-loaded relations.
+   *
+   * @returns Raw rows with eager-loaded relation data applied.
+   */
   async [loadRowsWithRelations](): Promise<Record<string, unknown>[]> {
     let operation = this.#toSelectOperation()
     let result = await this.#database[executeOperation](operation)

@@ -172,5 +172,5 @@ The `preview/main` branch build can be [installed directly](https://pnpm.io/pack
 pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```

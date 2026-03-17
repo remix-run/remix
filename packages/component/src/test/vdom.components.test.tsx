@@ -91,7 +91,7 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<span>0</span><span>1</span><span>2</span>')
     })
 
-    it('hoists head-managed elements on client updates', () => {
+    it('renders head-like elements in place on client updates', () => {
       let container = document.createElement('div')
       document.body.appendChild(container)
 
@@ -136,37 +136,37 @@ describe('vnode rendering', () => {
       root.render(<App />)
       root.flush()
 
-      expect(document.head.querySelector('title')?.textContent).toBe('Page A')
-      expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'A',
-      )
-      expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+      expect(container.querySelector('title')?.textContent).toBe('Page A')
+      expect(container.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('A')
+      expect(container.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
         '{"name":"A"}',
       )
       expect(container.querySelector('script[type="text/javascript"]')).toBeTruthy()
-      expect(container.querySelector('title')).toBeNull()
-      expect(container.querySelector('meta[name="description"]')).toBeNull()
-      expect(container.querySelector('script[type="application/ld+json"]')).toBeNull()
-
-      rerender()
-      root.flush()
-
-      expect(document.head.querySelector('title')?.textContent).toBe('Page B')
-      expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'B',
-      )
-      expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(1)
-      expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
-        '{"name":"B"}',
-      )
-      expect(container.innerHTML).toBe('<div>Phase B</div>')
-
-      rerender()
-      root.flush()
-
       expect(document.head.querySelector('title')).toBeNull()
       expect(document.head.querySelector('meta[name="description"]')).toBeNull()
       expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+
+      rerender()
+      root.flush()
+
+      expect(container.querySelector('title')?.textContent).toBe('Page B')
+      expect(container.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('B')
+      expect(container.querySelectorAll('meta[name="description"]')).toHaveLength(1)
+      expect(container.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+        '{"name":"B"}',
+      )
+      expect(container.querySelector('script[type="text/javascript"]')).toBeNull()
+      expect(container.querySelector('div')?.textContent).toBe('Phase B')
+      expect(document.head.querySelector('title')).toBeNull()
+      expect(document.head.querySelector('meta[name="description"]')).toBeNull()
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+
+      rerender()
+      root.flush()
+
+      expect(container.querySelector('title')).toBeNull()
+      expect(container.querySelector('meta[name="description"]')).toBeNull()
+      expect(container.querySelector('script[type="application/ld+json"]')).toBeNull()
       expect(container.innerHTML).toBe('<div>Phase C</div>')
     })
 

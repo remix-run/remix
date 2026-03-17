@@ -442,8 +442,10 @@ describe('RoutePattern', () => {
 
       it('supports static hostname', () => {
         let pattern = new RoutePattern('://example.com/path')
-        let result = pattern.href()
-        assert.equal(result, 'https://example.com/path')
+        assert.equal(pattern.href(), 'https://example.com/path')
+        assert.equal(pattern.href({}), 'https://example.com/path')
+        assert.equal(pattern.href(null), 'https://example.com/path')
+        assert.equal(pattern.href(undefined), 'https://example.com/path')
       })
 
       describe('with dynamic segment', () => {
@@ -474,7 +476,7 @@ describe('RoutePattern', () => {
 
       it('throws for nameless wildcard', () => {
         let pattern = new RoutePattern('://*.example.com/path')
-        // @ts-expect-error - missing required param
+        // @ts-expect-error - nameless wildcard
         assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 
@@ -502,8 +504,10 @@ describe('RoutePattern', () => {
     describe('pathname', () => {
       it('supports static pathname', () => {
         let pattern = new RoutePattern('/posts')
-        let result = pattern.href()
-        assert.equal(result, '/posts')
+        assert.equal(pattern.href(), '/posts')
+        assert.equal(pattern.href({}), '/posts')
+        assert.equal(pattern.href(null), '/posts')
+        assert.equal(pattern.href(undefined), '/posts')
       })
 
       it('normalizes static pathname without leading slash', () => {
@@ -525,7 +529,7 @@ describe('RoutePattern', () => {
           assert.equal(result, '/posts/123')
         })
 
-        it('ignores unrelated params', () => {
+        it('ignores extra params', () => {
           let pattern = new RoutePattern('/posts/:id')
           let result = pattern.href({ id: '123', page: '2', sort: 'desc' })
           assert.equal(result, '/posts/123')
@@ -536,6 +540,18 @@ describe('RoutePattern', () => {
           // @ts-expect-error - missing required param
           assert.throws(() => pattern.href(), hrefError('missing-params'))
         })
+
+        it('throws when params is null (required params)', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          // @ts-expect-error - null not allowed when required params
+          assert.throws(() => pattern.href(null), hrefError('missing-params'))
+        })
+
+        it('throws when params is undefined (required params)', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          // @ts-expect-error - undefined not allowed when required params
+          assert.throws(() => pattern.href(undefined), hrefError('missing-params'))
+        })
       })
 
       it('supports multiple dynamic segments', () => {
@@ -545,9 +561,14 @@ describe('RoutePattern', () => {
       })
 
       it('supports named wildcard', () => {
-        let pattern = new RoutePattern('/files/*path')
-        let result = pattern.href({ path: 'docs/readme.md' })
-        assert.equal(result, '/files/docs/readme.md')
+        assert.equal(
+          new RoutePattern('/files/*path').href({ path: 'docs/readme.md' }),
+          '/files/docs/readme.md',
+        )
+        assert.equal(
+          new RoutePattern('images/*path.png').href({ path: 'images/hero' }),
+          '/images/images/hero.png',
+        )
       })
 
       it('supports wildcard with number param', () => {
@@ -558,7 +579,7 @@ describe('RoutePattern', () => {
 
       it('throws for unnamed wildcard', () => {
         let pattern = new RoutePattern('/files/*')
-        // @ts-expect-error - missing required param
+        // @ts-expect-error - nameless wildcard
         assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 
@@ -571,9 +592,8 @@ describe('RoutePattern', () => {
 
     describe('pattern with optionals', () => {
       it('includes optional with static content', () => {
-        let pattern = new RoutePattern('/posts(/edit)')
-        let result = pattern.href()
-        assert.equal(result, '/posts/edit')
+        assert.equal(new RoutePattern('/posts(/edit)').href(), '/posts/edit')
+        assert.equal(new RoutePattern('products(.md)').href(), '/products.md')
       })
 
       it('includes optional with variable when provided', () => {
@@ -584,8 +604,10 @@ describe('RoutePattern', () => {
 
       it('omits optional with variable when omitted', () => {
         let pattern = new RoutePattern('/posts(/:id)')
-        let result = pattern.href()
-        assert.equal(result, '/posts')
+        assert.equal(pattern.href(), '/posts')
+        assert.equal(pattern.href({}), '/posts')
+        assert.equal(pattern.href(null), '/posts')
+        assert.equal(pattern.href(undefined), '/posts')
       })
 
       it('includes optional with wildcard when provided', () => {
@@ -596,14 +618,18 @@ describe('RoutePattern', () => {
 
       it('omits optional with wildcard when omitted', () => {
         let pattern = new RoutePattern('/files(/*path)')
-        let result = pattern.href()
-        assert.equal(result, '/files')
+        assert.equal(pattern.href(), '/files')
+        assert.equal(pattern.href({}), '/files')
+        assert.equal(pattern.href(null), '/files')
+        assert.equal(pattern.href(undefined), '/files')
       })
 
       it('omits optional with nameless wildcard', () => {
         let pattern = new RoutePattern('/files(/*)')
-        let result = pattern.href()
-        assert.equal(result, '/files')
+        assert.equal(pattern.href(), '/files')
+        assert.equal(pattern.href({}), '/files')
+        assert.equal(pattern.href(null), '/files')
+        assert.equal(pattern.href(undefined), '/files')
       })
 
       describe('with nested optionals', () => {
@@ -653,15 +679,13 @@ describe('RoutePattern', () => {
 
         it('omits both when neither provided', () => {
           let pattern = new RoutePattern('/posts(/:id)(/:action)')
-          let result = pattern.href()
-          assert.equal(result, '/posts')
+          assert.equal(pattern.href(), '/posts')
         })
       })
 
-      it('handles optional locale and page on home route', () => {
+      it('normalizes to slash when entire pattern is omitted optional', () => {
         let pattern = new RoutePattern('(/:locale)(/:page)')
-        let result = pattern.href()
-        assert.equal(result, '/')
+        assert.equal(pattern.href(), '/')
       })
     })
 
@@ -704,6 +728,17 @@ describe('RoutePattern', () => {
           let pattern = new RoutePattern('/posts?sort=asc')
           let result = pattern.href()
           assert.equal(result, '/posts?sort=asc')
+        })
+
+        it('preserves pattern search when only path params passed', () => {
+          assert.equal(
+            new RoutePattern('products?sort=asc&limit').href(),
+            '/products?sort=asc&limit=',
+          )
+          assert.equal(
+            new RoutePattern('products/:id?sort=asc&limit').href({ id: '1' }),
+            '/products/1?sort=asc&limit=',
+          )
         })
 
         it('prepends user params', () => {

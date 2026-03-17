@@ -25,7 +25,6 @@
     "./migrations/node": "./src/migrations/node.ts",
     "./operators": "./src/operators.ts",
     "./sql-helpers": "./src/sql-helpers.ts",
-    "./sql": "./src/sql.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -49,10 +48,6 @@
       "./sql-helpers": {
         "types": "./dist/sql-helpers.d.ts",
         "default": "./dist/sql-helpers.js"
-      },
-      "./sql": {
-        "types": "./dist/sql.d.ts",
-        "default": "./dist/sql.js"
       },
       "./package.json": "./package.json"
     }

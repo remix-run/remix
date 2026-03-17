@@ -46,25 +46,14 @@
 - **Accessible navigation**: Always use proper `<a>` elements for navigation links. Never use JavaScript `onclick` handlers on non-interactive elements like `<tr>`, `<div>`, or `<span>` for navigation. Links should be keyboard accessible and work with screen readers.
 - **Clean shutdown**: Demo servers should handle `SIGINT` and `SIGTERM` signals to exit cleanly when Ctrl+C is pressed. Close the server and call `process.exit(0)`.
 
+## Documentation
+
+- API documentation is handled by scripts in the docs/ directory
+- We use `typedoc` to process the source code, and then generate markdown files from the typedoc output
+- Markdown API documentation files be generated via `pnpm run docs` in the docs/ directory
+
 ## Changes and Releases
 
-- **Adding changes**: Create `packages/*/.changes/[major|minor|patch].short-description.md` files. See [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-change-file) for details.
-- **Do not edit past changelogs**: Do not modify existing `CHANGELOG.md` entries for already-released versions. Capture new work with change files only.
-- **Remix package changes are generated in CI**: In new PRs, do not manually edit `packages/remix/*` and do not add `packages/remix/.changes/*` files.
-- **Updating changes**: If iterating on an unpublished change with a change file, update it in place rather than creating a new one.
-- **Organizing change files**: Prefer a small set of logically grouped change files (for example, one file for a breaking API shape change and another for additive features) instead of one giant mixed note. API iterations made within the same unmerged PR are not breaking changes and should not be marked as `BREAKING CHANGE:` unless they break behavior relative to `main`.
-- **Versioning**: Follow semver, but ensure you follow 0.x conventions where breaking changes can happen in minor releases:
-  - For **brand-new packages**: Start at version `0.0.0`. The first release should use a `minor` change file so it bumps to `0.1.0`.
-  - For **v0.x packages**: Use "minor" for breaking changes and new features, "patch" for bug fixes. Never use "major" unless explicitly instructed. Change files for breaking changes in v0.x packages should start with `BREAKING CHANGE: ` so they are hoisted to the top.
-  - For **v1.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
-  - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
-  - _For the `remix` package only:_
-    - **Prerelease mode**: An optional `.changes/config.json` file with a `prereleaseChannel` field (e.g. `"alpha"`, `"beta"`, `"rc"`) denotes that the package is in prerelease mode. The channel determines the version suffix, while the npm dist-tag is always `"next"`.
-    - **Bumping prerelease versions**: You can use normal change files. These will bump the prerelease counter (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper Major/Minor/Patch sections, but otherwise the bump type is ignored and only the prerelease counter is bumped.
-    - **Transitioning between prerelease channels** (e.g. `alpha` → `beta`): Update `prereleaseChannel` in `.changes/config.json` and add a change file. Version resets to new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
-    - **Graduating from prerelease to latest stable version**: Remove `prereleaseChannel` from `.changes/config.json` (or delete the file) and add a change file. The prerelease suffix will be stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
-- **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
-- **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, and the commit message.
 - **Automated releases**: When changes are pushed to `main`, the [release-pr workflow](/.github/workflows/release-pr.yaml) automatically opens/updates a "Release" PR. The [publish workflow](/.github/workflows/publish.yaml) runs on every push to `main` and publishes when no change files are present (i.e., after merging the Release PR).
 - **Manual releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, and creates a git commit. Push to `main` and the publish workflow will handle the rest (including tags and GitHub releases).
 - **How publishing works**: The publish workflow checks for change files. If none exist, it runs `pnpm publish --recursive --report-summary`, reads the summary JSON to see what was published, then creates git tags and GitHub releases for each published package.
@@ -76,6 +65,12 @@ A skill is a reusable local instruction set stored in a `SKILL.md` file.
 
 ### Available skills
 
-- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./skills/supersede-pr/SKILL.md`)
-- **make-pr**: Create GitHub pull requests with clear context, issue/feature bullets, and required usage examples for new or changed APIs. (file: `./skills/make-pr/SKILL.md`)
-- **publish-placeholder-package**: Publish a minimal npm package at `0.0.0` to reserve the name and enable npm OIDC setup before CI-based publishing. (file: `./skills/publish-placeholder-package/SKILL.md`)
+- **add-package**: Create or align a package in the Remix monorepo to match existing package conventions. Use when adding a brand new package under packages/, or when fixing an existing package's structure, test setup, TypeScript/build config, code style, and README layout to match the rest of Remix 3. (file: `./.agents/skills/add-package/SKILL.md`)
+- **make-change-file**: Create or update package change files using Remix repo conventions, deterministic naming, and release-note style. (file: `./.agents/skills/make-change-file/SKILL.md`)
+- **make-demo**: Create or revise demos in the Remix repository so they stay focused on Remix packages, strong code hygiene, and production-quality patterns. (file: `./.agents/skills/make-demo/SKILL.md`)
+- **make-pr**: Create GitHub pull requests with clear context, issue/feature bullets, and required usage examples for new or changed APIs. (file: `./.agents/skills/make-pr/SKILL.md`)
+- **publish-placeholder-package**: Publish a minimal npm package at `0.0.0` to reserve the name and enable npm OIDC setup before CI-based publishing. (file: `./.agents/skills/publish-placeholder-package/SKILL.md`)
+- **supersede-pr**: Replace one GitHub PR with another and explicitly close the superseded PR (instead of relying on `Closes #...` keywords). (file: `./.agents/skills/supersede-pr/SKILL.md`)
+- **update-pr**: Rewrite GitHub PR titles and descriptions from scratch so they match the PR as it exists now, and always review the title when updating the body. (file: `./.agents/skills/update-pr/SKILL.md`)
+- **write-api-docs**: Write or audit public API docs for Remix packages. Use when adding or tightening JSDoc on exported functions, classes, interfaces, type aliases, or option objects. (file: `./.agents/skills/write-api-docs/SKILL.md`)
+- **write-readme**: Write or rewrite Remix package READMEs using this repo's structure, installation conventions, production-style examples, and section ordering. (file: `./.agents/skills/write-readme/SKILL.md`)

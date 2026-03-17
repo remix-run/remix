@@ -72,6 +72,9 @@ async function requestHandler(request: Request) {
 }
 ```
 
+To validate the resulting `FormData` object with `remix/data-schema`, use the
+`remix/data-schema/form-data` helpers.
+
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 
 ```ts
@@ -131,6 +134,8 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fo
 
 ## Related Packages
 
+- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny,
+  standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
 - [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 

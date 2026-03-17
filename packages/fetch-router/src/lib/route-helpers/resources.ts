@@ -2,11 +2,17 @@ import type { RoutePattern } from '@remix-run/route-pattern'
 
 import { type BuildRouteMap, createRoutes } from '../route-map.ts'
 
+/**
+ * Named CRUD routes available for resource collections.
+ */
 export type ResourcesMethod = 'index' | 'new' | 'show' | 'create' | 'edit' | 'update' | 'destroy'
 
 // prettier-ignore
 export const ResourcesMethods = ['index', 'new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 
+/**
+ * Options for generating collection resource routes.
+ */
 export type ResourcesOptions = {
   /**
    * The parameter name to use for the resource.

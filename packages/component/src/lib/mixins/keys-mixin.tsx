@@ -86,6 +86,9 @@ type KeysEventsMixin = typeof baseKeysEvents & {
   readonly pageDown: typeof pageDownEventType
 }
 
+/**
+ * Normalizes common keyboard keys into custom key-specific DOM events.
+ */
 export let keysEvents: KeysEventsMixin = Object.assign(baseKeysEvents, {
   escape: escapeEventType,
   enter: enterEventType,

@@ -11,9 +11,15 @@ import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 
 import { AcceptEncoding, CacheControl, Vary } from '@remix-run/headers'
 
+/**
+ * Encodings supported by {@link compressResponse}.
+ */
 export type Encoding = 'br' | 'gzip' | 'deflate'
 const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
 
+/**
+ * Configuration for negotiated response compression in {@link compressResponse}.
+ */
 export interface CompressResponseOptions {
   /**
    * Minimum size in bytes to compress (only enforced if Content-Length is present).

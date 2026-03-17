@@ -13,12 +13,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -36,13 +36,13 @@ function Player(handle: Handle) {
   return () => (
     <button
       disabled={isPlaying}
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           isPlaying = true
           await handle.update()
           stopButton.focus()
-        },
-      }}
+        }),
+      ]}
     >
       Play
     </button>
@@ -69,8 +69,8 @@ function Form(handle: Handle) {
       <input
         type="checkbox"
         checked={showDetails}
-        on={{
-          change(event) {
+        mix={[
+          on('change', (event) => {
             showDetails = event.currentTarget.checked
             handle.update()
             if (showDetails) {
@@ -79,8 +79,8 @@ function Form(handle: Handle) {
                 detailsSection.scrollIntoView({ behavior: 'smooth' })
               })
             }
-          },
-        }}
+          }),
+        ]}
       />
       {showDetails && (
         <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
@@ -106,8 +106,8 @@ function BadExample(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             shouldLoad = true // Setting state just to trigger queueTask
             handle.update()
             handle.queueTask(() => {
@@ -115,8 +115,8 @@ function BadExample(handle: Handle) {
                 // Do work
               }
             })
-          },
-        }}
+          }),
+        ]}
       >
         Load
       </button>
@@ -129,13 +129,13 @@ function GoodExample(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             handle.queueTask(() => {
               // Do work directly - no intermediate state needed
             })
-          },
-        }}
+          }),
+        ]}
       >
         Load
       </button>
@@ -163,7 +163,7 @@ function AsyncExample(handle: Handle) {
     handle.update()
   }
 
-  return () => <button on={{ click: load }}>{loading ? 'Loading...' : 'Load data'}</button>
+  return () => <button mix={[on('click', load)]}>{loading ? 'Loading...' : 'Load data'}</button>
 }
 ```
 
@@ -196,7 +196,7 @@ function Clock(handle: Handle) {
 }
 ```
 
-## `handle.on(target, listeners)`
+## `addEventListeners(target, handle.signal, listeners)`
 
 Listen to an `EventTarget` with automatic cleanup when the component disconnects. Ideal for global event targets like `document` and `window`.
 
@@ -204,7 +204,7 @@ Listen to an `EventTarget` with automatic cleanup when the component disconnects
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown(event) {
       keys.push(event.key)
       handle.update()
@@ -219,15 +219,17 @@ function KeyboardTracker(handle: Handle) {
 
 The root frame for the current runtime tree. This is useful when nested components need to reload the entire page/frame tree instead of only their nearest frame.
 
+When server rendering with `renderToStream()`, pass the `frameSrc` option to populate `handle.frames.top.src` during SSR. For nested frame renders, also pass `topFrameSrc` to keep the top-frame URL fixed while `handle.frame.src` changes per frame.
+
 ```tsx
 function RefreshAllButton(handle: Handle) {
   return () => (
     <button
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           await handle.frames.top.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Refresh everything
     </button>
@@ -248,12 +250,12 @@ Return value:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Update Cart
     </button>
@@ -296,7 +298,9 @@ function App(handle: Handle<{ theme: string }>) {
 
 function Header(handle: Handle) {
   let { theme } = handle.context.get(App)
-  return () => <header css={{ backgroundColor: theme === 'dark' ? '#000' : '#fff' }}>Header</header>
+  return () => (
+    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>Header</header>
+  )
 }
 ```
 

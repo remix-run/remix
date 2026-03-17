@@ -2,7 +2,7 @@ import type * as dom from './dom.d.ts'
 import type { Component, Handle, RenderFn } from './component.ts'
 
 /**
- * Any valid element type accepted by JSX or `createElement`.
+ * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
  * - `string` for host elements (e.g., 'div')
  * - `Function` for user components
  */
@@ -16,13 +16,17 @@ export type ElementType = string | Function
 export type ElementProps = Record<string, any>
 
 /**
- * A virtual element produced by JSX/`createElement` describing UI.  Carries a
- * `$rmx` brand used to distinguish it from plain objects at runtime.
+ * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
+ * describing UI. Carries a `$rmx` brand used to distinguish it from plain objects at runtime.
  */
 export interface RemixElement {
+  /** Host tag or component function for the element. */
   type: ElementType
+  /** Normalized props for the element. */
   props: ElementProps
+  /** Optional reconciliation key. */
   key?: any
+  /** Internal brand used to distinguish Remix elements at runtime. */
   $rmx: true
 }
 
@@ -44,6 +48,20 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  */
 export type RemixNode = Renderable | RemixNode[]
 
+type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+
+type NormalizeMixProp<props> = props extends { mix?: infer mix }
+  ? Omit<props, 'mix'> & {
+      mix?: Array<MixItem<Exclude<mix, undefined>>>
+    }
+  : props
+
+type ExpandMixProp<props> = props extends { mix?: infer mix }
+  ? Omit<props, 'mix'> & {
+      mix?: MixItem<Exclude<mix, undefined>> | ReadonlyArray<MixItem<Exclude<mix, undefined>>>
+    }
+  : props
+
 /**
  * Get the props for a specific element type.
  *
@@ -52,12 +70,30 @@ export type RemixNode = Renderable | RemixNode[]
  *   size: "sm" | "md" | "lg"
  * }
  */
-export type Props<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T]
+export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
+  JSX.IntrinsicElements[T]
+>
 
+/**
+ * Creates a Remix virtual element.
+ *
+ * @param type Host tag or component function.
+ * @param props Element props.
+ * @param key Optional reconciliation key.
+ * @returns A Remix virtual element.
+ */
 export function jsx(type: string, props: ElementProps, key?: string): RemixElement
+/**
+ * Creates a Remix virtual element from a component function.
+ *
+ * @param type Component function.
+ * @param props Element props.
+ * @param key Optional reconciliation key.
+ * @returns A Remix virtual element.
+ */
 export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
 export function jsx(type: any, props: any, key?: any): RemixElement {
-  return { type, props, key, $rmx: true }
+  return { type, props: normalizeElementProps(props), key, $rmx: true }
 }
 
 export { jsx as jsxDEV, jsx as jsxs }
@@ -89,9 +125,10 @@ declare global {
       setup: infer S,
     ) => RenderFn<infer R>
       ? // It's a ComponentFactory - combine setup + props
-        (unknown extends S ? {} : undefined extends S ? { setup?: S } : { setup: S }) & R
+        (unknown extends S ? {} : undefined extends S ? { setup?: S } : { setup: S }) &
+          ExpandMixProp<R>
       : // Otherwise use props as-is (simple function component)
-        props
+        ExpandMixProp<props>
 
     export interface IntrinsicSVGElements {
       svg: dom.SVGProps<SVGSVGElement>
@@ -318,4 +355,21 @@ declare global {
         IntrinsicMathMLElements,
         IntrinsicHTMLElements {}
   }
+}
+
+function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
+  if (!props) return {}
+  if (!('mix' in props)) return props
+
+  let { mix, ...rest } = props
+  let normalizedMix = normalizeMixValue(mix)
+  return normalizedMix === undefined ? rest : { ...rest, mix: normalizedMix }
+}
+
+function normalizeMixValue(mix: unknown): unknown[] | undefined {
+  if (mix == null) return undefined
+  if (Array.isArray(mix)) {
+    return mix.length === 0 ? undefined : [...mix]
+  }
+  return [mix]
 }

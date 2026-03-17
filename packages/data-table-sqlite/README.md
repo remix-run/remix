@@ -34,6 +34,7 @@ let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 ```
 
 This is a good fit for local development, embedded deployments, and single-node services.
+Import any driver-specific types you need directly from `better-sqlite3`.
 
 ## Adapter Capabilities
 

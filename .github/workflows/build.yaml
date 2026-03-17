@@ -9,6 +9,10 @@ on:
       - release-v2
       - v2
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:

@@ -162,21 +162,84 @@ export interface CacheControlInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
  */
 export class CacheControl implements HeaderValue, CacheControlInit {
+  /**
+   * The configured `max-age` directive value in seconds.
+   */
   maxAge?: number
+
+  /**
+   * The configured `max-stale` directive value in seconds.
+   */
   maxStale?: number
+
+  /**
+   * The configured `min-fresh` directive value in seconds.
+   */
   minFresh?: number
+
+  /**
+   * The configured `s-maxage` directive value in seconds.
+   */
   sMaxage?: number
+
+  /**
+   * Whether the `no-cache` directive is present.
+   */
   noCache?: true
+
+  /**
+   * Whether the `no-store` directive is present.
+   */
   noStore?: true
+
+  /**
+   * Whether the `no-transform` directive is present.
+   */
   noTransform?: true
+
+  /**
+   * Whether the `only-if-cached` directive is present.
+   */
   onlyIfCached?: true
+
+  /**
+   * Whether the `must-revalidate` directive is present.
+   */
   mustRevalidate?: true
+
+  /**
+   * Whether the `proxy-revalidate` directive is present.
+   */
   proxyRevalidate?: true
+
+  /**
+   * Whether the `must-understand` directive is present.
+   */
   mustUnderstand?: true
+
+  /**
+   * Whether the `private` directive is present.
+   */
   private?: true
+
+  /**
+   * Whether the `public` directive is present.
+   */
   public?: true
+
+  /**
+   * Whether the `immutable` directive is present.
+   */
   immutable?: true
+
+  /**
+   * The configured `stale-while-revalidate` directive value in seconds.
+   */
   staleWhileRevalidate?: number
+
+  /**
+   * The configured `stale-if-error` directive value in seconds.
+   */
   staleIfError?: number
 
   constructor(init?: string | CacheControlInit) {

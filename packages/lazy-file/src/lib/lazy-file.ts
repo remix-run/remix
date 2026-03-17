@@ -21,7 +21,7 @@ export interface LazyContent {
 }
 
 /**
- * Options for creating a `LazyBlob`.
+ * Options for creating a {@link LazyBlob}.
  */
 export interface LazyBlobOptions {
   /**
@@ -61,6 +61,9 @@ export class LazyBlob {
     this.#content = new BlobContent(parts, options)
   }
 
+  /**
+   * The brand string exposed by `Object.prototype.toString.call()`.
+   */
   get [Symbol.toStringTag](): string {
     return 'LazyBlob'
   }
@@ -166,7 +169,7 @@ export class LazyBlob {
 }
 
 /**
- * Options for creating a `LazyFile`.
+ * Options for creating a {@link LazyFile}.
  */
 export interface LazyFileOptions extends LazyBlobOptions {
   /**
@@ -229,6 +232,9 @@ export class LazyFile {
     this.lastModified = options?.lastModified ?? Date.now()
   }
 
+  /**
+   * The brand string exposed by `Object.prototype.toString.call()`.
+   */
   get [Symbol.toStringTag](): string {
     return 'LazyFile'
   }

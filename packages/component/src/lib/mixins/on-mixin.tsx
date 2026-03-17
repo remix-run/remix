@@ -26,6 +26,7 @@ let onMixin = createMixin<
   let currentHandler: SignaledListener<Event> = () => {}
   let currentType = ''
   let currentCapture = false
+  let currentNode: Element | null = null
   let reentry: AbortController | null = null
 
   let stableHandler = (event: Event) => {
@@ -35,12 +36,14 @@ let onMixin = createMixin<
   }
 
   handle.addEventListener('insert', (event) => {
-    let node = event.node
-    node.addEventListener(currentType, stableHandler, currentCapture)
-    handle.addEventListener('remove', () => {
-      node.removeEventListener(currentType, stableHandler, currentCapture)
-      reentry?.abort(new DOMException('', 'AbortError'))
-    })
+    currentNode = event.node
+    currentNode.addEventListener(currentType, stableHandler, currentCapture)
+  })
+
+  handle.addEventListener('remove', () => {
+    currentNode?.removeEventListener(currentType, stableHandler, currentCapture)
+    currentNode = null
+    reentry?.abort(new DOMException('', 'AbortError'))
   })
 
   return (type, handler, captureBoolean = false) => {
@@ -51,17 +54,23 @@ let onMixin = createMixin<
     currentHandler = handler
     currentCapture = captureBoolean
 
-    if (needsRebind) {
-      handle.queueTask((node) => {
-        node.removeEventListener(previousType, stableHandler, previousCapture)
-        node.addEventListener(type, stableHandler, captureBoolean)
-      })
+    if (needsRebind && currentNode) {
+      currentNode.removeEventListener(previousType, stableHandler, previousCapture)
+      currentNode.addEventListener(type, stableHandler, captureBoolean)
     }
 
     return handle.element
   }
 })
 
+/**
+ * Attaches a typed DOM event handler through the mixin system.
+ *
+ * @param type Event type to listen for.
+ * @param handler Event handler.
+ * @param captureBoolean Whether to listen during capture.
+ * @returns A mixin descriptor for the target element.
+ */
 export function on<
   target extends Element = Element,
   type extends EventType<target> = EventType<target>,

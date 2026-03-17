@@ -15,6 +15,9 @@ export interface Middleware<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
+  /**
+   * Handles a request and optionally delegates to the next middleware or handler.
+   */
   (
     context: RequestContext<params>,
     next: NextFunction,

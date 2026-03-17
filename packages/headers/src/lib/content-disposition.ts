@@ -32,9 +32,24 @@ export interface ContentDispositionInit {
  * [RFC 6266](https://tools.ietf.org/html/rfc6266)
  */
 export class ContentDisposition implements HeaderValue, ContentDispositionInit {
+  /**
+   * The `filename` parameter value.
+   */
   filename?: string
+
+  /**
+   * The RFC 8187-encoded `filename*` parameter value.
+   */
   filenameSplat?: string
+
+  /**
+   * The associated multipart field name.
+   */
   name?: string
+
+  /**
+   * The disposition type such as `attachment` or `inline`.
+   */
   type?: string
 
   constructor(init?: string | ContentDispositionInit) {

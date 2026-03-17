@@ -10,10 +10,13 @@ import {
   type ControllerShape,
   type RequestHandler,
   isController,
-  isActionWithMiddleware,
+  isActionObject,
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
+/**
+ * Normalized route match payload stored in the router matcher.
+ */
 export type MatchData = {
   handler: RequestHandler<any>
   method: RequestMethod | 'ANY'
@@ -190,10 +193,11 @@ export function createRouter(options?: RouterOptions): Router {
     action: Action<method, pattern>,
   ): NormalizedAction
   function normalizeAction(action: Action<any, any>): NormalizedAction {
-    if (isActionWithMiddleware(action)) {
+    if (isActionObject(action)) {
       return {
         handler: action.action,
-        middleware: action.middleware.length > 0 ? action.middleware : undefined,
+        middleware:
+          action.middleware && action.middleware.length > 0 ? action.middleware : undefined,
       }
     }
 

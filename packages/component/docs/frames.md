@@ -5,7 +5,7 @@ A `<Frame>` renders server content into the page. Frames can stream in after the
 ## Basic usage
 
 ```tsx
-import { Frame } from '@remix-run/component'
+import { Frame } from 'remix/component'
 
 function App() {
   return () => (
@@ -45,11 +45,12 @@ The presence of a `fallback` prop determines streaming behavior:
 On the server, `renderToStream` calls your `resolveFrame` function to get the HTML for each frame:
 
 ```tsx
-import { renderToStream } from '@remix-run/component/server'
+import { renderToStream } from 'remix/component/server'
 
 let stream = renderToStream(<App />, {
-  async resolveFrame(src) {
-    let res = await fetch(new URL(src, request.url))
+  frameSrc: request.url,
+  async resolveFrame(src, _target, context) {
+    let res = await fetch(new URL(src, context?.currentFrameSrc ?? request.url))
     return res.body // or res.text() for a string
   },
 })
@@ -63,23 +64,25 @@ let stream = renderToStream(<App />, {
 
 Frame content is itself rendered with `renderToStream`, so frames can contain other frames and client entries. The hydration data from nested frames is merged into the parent response automatically.
 
+When a server frame response is itself rendered with `renderToStream()`, pass `frameSrc` for that frame's URL and forward `topFrameSrc` from `resolveFrame()` if you want nested SSR components to keep seeing the outer document URL through `handle.frames.top.src`.
+
 ## Reloading frames
 
 Client entries inside a frame can trigger a reload via `handle.frame.reload()`:
 
 ```tsx
-import { clientEntry, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let RefreshButton = clientEntry(
   '/assets/refresh.js#RefreshButton',
   function RefreshButton(handle: Handle) {
     return () => (
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             handle.frame.reload()
-          },
-        }}
+          }),
+        ]}
       >
         Refresh
       </button>
@@ -100,13 +103,13 @@ You can also reload adjacent named frames:
 function CartRow(handle: Handle) {
   return () => (
     <button
-      on={{
-        async click() {
+      mix={[
+        on('click', async () => {
           await handle.frames.get('cart-summary')?.reload()
           await handle.frames.get('cart-empty')?.reload()
           await handle.frame.reload()
-        },
-      }}
+        }),
+      ]}
     >
       Save
     </button>
@@ -151,16 +154,20 @@ function OuterFrame() {
 
 Nested frames stream independently. The outer frame can resolve and render while the inner frame is still loading.
 
+During SSR, `handle.frame.src` should point at the frame currently being rendered, while `handle.frames.top.src` should stay fixed at the outer document URL. Use `renderToStream({ frameSrc, topFrameSrc })` inside nested `resolveFrame()` handlers to preserve that distinction.
+
 ## Client-resolved frames
 
 On the client, `run` accepts an optional `resolveFrame` implementation:
 
 ```tsx
-let app = run(document, {
+let app = run({
   loadModule: ...,
-  async resolveFrame(src) {
-    let response = await fetch(src, { headers: { accept: 'text/html' } })
-    return await response.text()
+  async resolveFrame(src, signal, target) {
+    let headers = new Headers({ accept: 'text/html' })
+    if (target) headers.set('x-remix-target', target)
+    let response = await fetch(src, { headers, signal })
+    return response.body ?? (await response.text())
   },
 })
 ```

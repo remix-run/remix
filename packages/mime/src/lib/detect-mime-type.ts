@@ -4,7 +4,8 @@ import { customMimeTypeByExtension } from './define-mime-type.ts'
 /**
  * Detects the MIME type for a given file extension or filename.
  *
- * Custom MIME types registered via `defineMimeType()` take precedence over built-in types.
+ * Custom MIME types registered via {@link import('./define-mime-type.ts').defineMimeType}
+ * take precedence over built-in types.
  *
  * @param extension The file extension (e.g. "txt", ".txt") or filename (e.g. "file.txt")
  * @returns The MIME type string, or undefined if not found

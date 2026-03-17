@@ -12,6 +12,9 @@ import { quoteEtag } from './utils.ts'
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
  */
 export class IfRange implements HeaderValue {
+  /**
+   * Raw header value, either an entity tag or an HTTP date.
+   */
   value: string = ''
 
   constructor(init?: string | Date) {

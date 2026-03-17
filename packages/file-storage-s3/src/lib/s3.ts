@@ -10,6 +10,9 @@ type ListedObject = {
   size: number
 }
 
+/**
+ * Configuration for an S3-backed `FileStorage` implementation.
+ */
 export interface S3FileStorageOptions {
   /**
    * AWS access key ID used to sign S3 requests.

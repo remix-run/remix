@@ -7,7 +7,7 @@ import {
 import type { Middleware } from '@remix-run/fetch-router'
 
 /**
- * Options for the `formData` middleware.
+ * Options for the {@link formData} middleware.
  */
 export interface FormDataOptions extends ParseFormDataOptions {
   /**
@@ -35,6 +35,10 @@ export function formData(options?: FormDataOptions): Middleware {
   let uploadHandler = options?.uploadHandler
 
   return async (context) => {
+    if (context.has(FormData)) {
+      return
+    }
+
     if (context.method === 'GET' || context.method === 'HEAD') {
       return
     }

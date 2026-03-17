@@ -3,7 +3,7 @@ import { parseParams } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 /**
- * Initializer for an `Accept` header value.
+ * Initializer for an {@link Accept} header value.
  */
 export type AcceptInit = Iterable<string | [string, number]> | Record<string, number>
 
@@ -151,6 +151,11 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over media type and weight pairs in preference order.
+   *
+   * @returns An iterator of `[mediaType, weight]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, number]> {
     return this.entries()
   }

@@ -2,7 +2,7 @@ import { ParseError } from './parse.ts'
 import { unreachable } from '../unreachable.ts'
 import * as RE from '../regexp.ts'
 import type { Span } from './split.ts'
-import { HrefError, type HrefParams } from './href.ts'
+import { HrefError } from './href.ts'
 import type { RoutePattern } from '../route-pattern.ts'
 
 type MatchParam = {
@@ -185,7 +185,7 @@ export class PartPattern {
    * @param params The parameters to substitute into the pattern.
    * @returns The partial href for the given params
    */
-  href(pattern: RoutePattern, params: HrefParams): string {
+  href(pattern: RoutePattern, params: Record<string, unknown>): string {
     let missingParams: Array<string> = []
 
     let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]

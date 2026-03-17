@@ -66,6 +66,31 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
+  demos/frame-navigation:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -85,6 +110,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -110,6 +138,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -202,6 +233,10 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/component:
+    dependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
     devDependencies:
       '@vitest/browser':
         specifier: ^3.2.4
@@ -318,6 +353,9 @@ importers:
         specifier: workspace:^
         version: link:../../remix
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -353,6 +391,60 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/cop-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/cors-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/csrf-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -461,6 +553,9 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -633,6 +728,9 @@ importers:
         specifier: workspace:^
         version: link:../multipart-parser
     devDependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -904,6 +1002,15 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/cop-middleware':
+        specifier: workspace:^
+        version: link:../cop-middleware
+      '@remix-run/cors-middleware':
+        specifier: workspace:^
+        version: link:../cors-middleware
+      '@remix-run/csrf-middleware':
+        specifier: workspace:^
+        version: link:../csrf-middleware
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema
@@ -989,6 +1096,9 @@ importers:
         specifier: workspace:^
         version: link:../tar-parser
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

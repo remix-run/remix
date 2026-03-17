@@ -12,12 +12,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>
@@ -86,7 +86,7 @@ expect(container.textContent).toBe('Expected data')
 
 ## Testing Component Removal
 
-Use `root.remove()` to clean up and verify cleanup behavior:
+Use `root.dispose()` to clean up and verify cleanup behavior:
 
 ```tsx
 let root = createRoot(container)
@@ -97,7 +97,7 @@ root.flush()
 expect(container.querySelector('.content')).toBeTruthy()
 
 // Remove and verify cleanup
-root.remove()
+root.dispose()
 expect(container.innerHTML).toBe('')
 ```
 

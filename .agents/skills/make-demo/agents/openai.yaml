@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Make Demo'
+  short_description: 'Create high-quality Remix demos'
+  default_prompt: 'Use $make-demo to add or revise a demo under demos/ that showcases Remix packages with clean, artifact-quality code and strong repo conventions.'

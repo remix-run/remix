@@ -73,14 +73,16 @@ export interface ParseMultipartOptions {
 }
 
 /**
- * Parse a `multipart/*` message from a buffer/iterable and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` message from a buffer/iterable and yield each part as a
+ * {@link MultipartPart} object.
  *
- * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
- * building a web server, consider using `parseMultipartRequest(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the content and boundary.
+ * If you're building a web server, consider using
+ * {@link import('./multipart-request.ts').parseMultipartRequest} instead.
  *
  * @param message The multipart message as a `Uint8Array` or an iterable of `Uint8Array` chunks
  * @param options Options for the parser
- * @returns A generator that yields `MultipartPart` objects
+ * @returns A generator that yields {@link MultipartPart} objects
  */
 export function* parseMultipart(
   message: Uint8Array | Iterable<Uint8Array>,
@@ -107,14 +109,15 @@ export function* parseMultipart(
 }
 
 /**
- * Parse a `multipart/*` message stream and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` message stream and yield each part as a {@link MultipartPart} object.
  *
- * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
- * building a web server, consider using `parseMultipartRequest(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the content and boundary.
+ * If you're building a web server, consider using
+ * {@link import('./multipart-request.ts').parseMultipartRequest} instead.
  *
  * @param stream A stream containing multipart data as a `ReadableStream<Uint8Array>`
  * @param options Options for the parser
- * @returns An async generator that yields `MultipartPart` objects
+ * @returns An async generator that yields {@link MultipartPart} objects
  */
 export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
@@ -137,7 +140,7 @@ export async function* parseMultipartStream(
 }
 
 /**
- * Options for configuring a `MultipartParser`.
+ * Options for configuring a {@link MultipartParser}.
  */
 export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 
@@ -156,8 +159,19 @@ const oneMb = 1024 * oneKb
  * A streaming parser for `multipart/*` HTTP messages.
  */
 export class MultipartParser {
+  /**
+   * Boundary string used to detect part separators.
+   */
   readonly boundary: string
+
+  /**
+   * Maximum header size allowed for each multipart part.
+   */
   readonly maxHeaderSize: number
+
+  /**
+   * Maximum file size allowed for each multipart part.
+   */
   readonly maxFileSize: number
 
   #findOpeningBoundary: SearchFunction

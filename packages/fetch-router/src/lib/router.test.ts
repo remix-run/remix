@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
+import type { BuildAction } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import type { MatchData } from './router.ts'
@@ -566,6 +567,22 @@ describe('inline middleware', () => {
     assert.deepEqual(requestLog, ['action'])
   })
 
+  it('works with action objects that omit middleware', async () => {
+    let requestLog: string[] = []
+    let router = createRouter()
+
+    router.get('/', {
+      action() {
+        requestLog.push('action')
+        return new Response('OK')
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.deepEqual(requestLog, ['action'])
+  })
+
   it('handles middleware that returns a response (short-circuits)', async () => {
     let requestLog: string[] = []
     let router = createRouter()
@@ -645,6 +662,40 @@ describe('inline middleware', () => {
     assert.equal(response2.status, 200)
     assert.equal(await response2.text(), 'Users')
     assert.deepEqual(requestLog, ['auth', 'admin', 'users-middleware', 'users-action'])
+  })
+
+  it('supports route-map action objects that omit middleware', async () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    router.map(routes.home, {
+      action() {
+        return new Response('Home')
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+  })
+
+  it('allows BuildAction object form without middleware', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    if (false as boolean) {
+      let action: BuildAction<'GET', typeof routes.home> = {
+        action() {
+          return new Response('Home')
+        },
+      }
+
+      void action
+    }
   })
 })
 

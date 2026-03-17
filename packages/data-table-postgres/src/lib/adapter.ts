@@ -19,45 +19,9 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
+import type { Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
-
-type Pretty<value> = {
-  [key in keyof value]: value[key]
-} & {}
-
-/**
- * Result shape returned by postgres client `query()` calls.
- */
-export type PostgresQueryResult = {
-  rows: unknown[]
-  rowCount: number | null
-}
-
-/**
- * Minimal postgres client contract used by this adapter.
- */
-export type PostgresDatabaseClient = {
-  query(text: string, values?: unknown[]): Promise<PostgresQueryResult>
-}
-
-/**
- * Postgres transaction client with optional connection release support.
- */
-export type PostgresTransactionClient = Pretty<
-  PostgresDatabaseClient & {
-    release?: () => void
-  }
->
-
-/**
- * Postgres pool-like client contract used by this adapter.
- */
-export type PostgresDatabasePool = Pretty<
-  PostgresDatabaseClient & {
-    connect?: () => Promise<PostgresTransactionClient>
-  }
->
 
 /**
  * Postgres adapter configuration.
@@ -67,22 +31,31 @@ export type PostgresDatabaseAdapterOptions = {
 }
 
 type TransactionState = {
-  client: PostgresTransactionClient
+  client: PostgresPoolClient
   releaseOnClose: boolean
 }
+
+type PostgresQueryable = PostgresPool | PostgresPoolClient
 
 /**
  * `DatabaseAdapter` implementation for postgres-compatible clients.
  */
 export class PostgresDatabaseAdapter implements DatabaseAdapter {
+  /**
+   * The SQL dialect identifier reported by this adapter.
+   */
   dialect = 'postgres'
+
+  /**
+   * Feature flags describing the postgres behaviors supported by this adapter.
+   */
   capabilities
 
-  #client: PostgresDatabasePool
+  #client: PostgresQueryable
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: PostgresDatabasePool, options?: PostgresDatabaseAdapterOptions) {
+  constructor(client: PostgresQueryable, options?: PostgresDatabaseAdapterOptions) {
     this.#client = client
     this.capabilities = {
       returning: options?.capabilities?.returning ?? true,
@@ -93,6 +66,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Compiles a data or migration operation to postgres SQL statements.
+   * @param operation Operation to compile.
+   * @returns Compiled SQL statements.
+   */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
     if (isDataManipulationOperation(operation)) {
       let compiled = compilePostgresOperation(operation)
@@ -102,6 +80,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return compilePostgresMigrationOperations(operation)
   }
 
+  /**
+   * Executes a postgres data-manipulation request.
+   * @param request Request to execute.
+   * @returns Execution result.
+   */
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
     if (request.operation.kind === 'insertMany' && request.operation.values.length === 0) {
       return {
@@ -127,6 +110,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Executes postgres migration operations.
+   * @param request Migration request to execute.
+   * @returns Migration result.
+   */
   async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
     let statements = this.compileSql(request.operation)
     let client = this.#resolveClient(request.transaction)
@@ -140,6 +128,12 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Checks whether a table exists in postgres.
+   * @param table Table reference to inspect.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the table exists.
+   */
   async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
     let relation = toPostgresRelationName(table)
     let client = this.#resolveClient(transaction)
@@ -148,6 +142,13 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return toBooleanExists(row?.exists)
   }
 
+  /**
+   * Checks whether a column exists in postgres.
+   * @param table Table reference to inspect.
+   * @param column Column name to look up.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the column exists.
+   */
   async hasColumn(
     table: TableRef,
     column: string,
@@ -163,11 +164,16 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return toBooleanExists(row?.exists)
   }
 
+  /**
+   * Starts a postgres transaction.
+   * @param options Transaction options.
+   * @returns Transaction token.
+   */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     let releaseOnClose = false
-    let transactionClient: PostgresTransactionClient
+    let transactionClient: PostgresPoolClient
 
-    if (this.#client.connect) {
+    if (isPostgresPool(this.#client)) {
       transactionClient = await this.#client.connect()
       releaseOnClose = true
     } else {
@@ -191,6 +197,11 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return token
   }
 
+  /**
+   * Commits an open postgres transaction.
+   * @param token Transaction token to commit.
+   * @returns A promise that resolves when the transaction is committed.
+   */
   async commitTransaction(token: TransactionToken): Promise<void> {
     let transaction = this.#transactions.get(token.id)
 
@@ -204,11 +215,16 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        transaction.client.release?.()
+        releasePostgresClient(transaction.client)
       }
     }
   }
 
+  /**
+   * Rolls back an open postgres transaction.
+   * @param token Transaction token to roll back.
+   * @returns A promise that resolves when the transaction is rolled back.
+   */
   async rollbackTransaction(token: TransactionToken): Promise<void> {
     let transaction = this.#transactions.get(token.id)
 
@@ -222,35 +238,61 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       this.#transactions.delete(token.id)
 
       if (transaction.releaseOnClose) {
-        transaction.client.release?.()
+        releasePostgresClient(transaction.client)
       }
     }
   }
 
+  /**
+   * Creates a savepoint in an open postgres transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is created.
+   */
   async createSavepoint(token: TransactionToken, name: string): Promise<void> {
     let client = this.#transactionClient(token)
     await client.query('savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Rolls back to a savepoint in an open postgres transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the rollback completes.
+   */
   async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
     let client = this.#transactionClient(token)
     await client.query('rollback to savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Releases a savepoint in an open postgres transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is released.
+   */
   async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
     let client = this.#transactionClient(token)
     await client.query('release savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Acquires the postgres migration lock.
+   * @returns A promise that resolves when the lock is acquired.
+   */
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select pg_advisory_lock(hashtext($1))', ['data_table_migrations'])
   }
 
+  /**
+   * Releases the postgres migration lock.
+   * @returns A promise that resolves when the lock is released.
+   */
   async releaseMigrationLock(): Promise<void> {
     await this.#client.query('select pg_advisory_unlock(hashtext($1))', ['data_table_migrations'])
   }
 
-  #resolveClient(token: TransactionToken | undefined): PostgresDatabaseClient {
+  #resolveClient(token: TransactionToken | undefined): PostgresQueryable {
     if (!token) {
       return this.#client
     }
@@ -258,7 +300,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return this.#transactionClient(token)
   }
 
-  #transactionClient(token: TransactionToken): PostgresTransactionClient {
+  #transactionClient(token: TransactionToken): PostgresPoolClient {
     let transaction = this.#transactions.get(token.id)
 
     if (!transaction) {
@@ -271,7 +313,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a postgres `DatabaseAdapter`.
- * @param client Postgres pool or client.
+ * @param client `pg` pool or pool client.
  * @param options Optional adapter capability overrides.
  * @returns A configured postgres adapter.
  * @example
@@ -286,10 +328,19 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createPostgresDatabaseAdapter(
-  client: PostgresDatabasePool,
+  client: PostgresQueryable,
   options?: PostgresDatabaseAdapterOptions,
 ): PostgresDatabaseAdapter {
   return new PostgresDatabaseAdapter(client, options)
+}
+
+function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
+  return 'connect' in client && typeof client.connect === 'function'
+}
+
+function releasePostgresClient(client: PostgresPoolClient): void {
+  let release = (client as { release?: () => void }).release
+  release?.()
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {
