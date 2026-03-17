@@ -1,5 +1,4 @@
 import * as cp from 'node:child_process'
-import { existsSync } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
@@ -17,21 +16,13 @@ let { values: cliArgs } = util.parseArgs({
       short: 'd',
       default: 'build/site',
     },
-    all: {
-      type: 'boolean',
-      short: 'a',
-    },
   },
 })
 
 const assetsDir = path.join(process.cwd(), 'build', 'assets')
 const outputDir = path.join(process.cwd(), cliArgs.dir)
-const versions = await getVersionsToBuild(outputDir, cliArgs.all === true)
-if (versions) {
-  console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
-} else {
-  console.log('No remix version tags found, defaulting to current version only')
-}
+const versions = await getVersionsToBuild()
+console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
 
 const docsRouter = createRouter(versions)
 
@@ -132,10 +123,7 @@ function resolveRelativeLink(link: string, url: string): string {
   return path.posix.join(base, link)
 }
 
-async function getVersionsToBuild(
-  outputDir: string,
-  all: boolean,
-): Promise<ServerContext['versions'] | undefined> {
+async function getVersionsToBuild(): Promise<ServerContext['versions']> {
   // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
   const remixVersions = cp
     .execSync('git tag', { encoding: 'utf-8' })
@@ -146,23 +134,8 @@ async function getVersionsToBuild(
     .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
     .sort((a, b) => semver.rcompare(a, b))
 
-  if (remixVersions.length === 0) {
-    return undefined
-  } else if (all) {
-    // When --all is specified, crawl all Remix tags that don't currently have a
-    // set of docs on disk
-    let versions = existsSync(outputDir)
-      ? (await fs.readdir(outputDir, { withFileTypes: true }))
-          .filter((entry) => entry.isDirectory() && entry.name.startsWith('v'))
-          .map((entry) => entry.name)
-      : []
-    const alreadyBuilt = new Set(versions)
-    return remixVersions.map((tag) => ({ version: tag, crawl: !alreadyBuilt.has(tag) }))
-  } else {
-    // Otherwise, just crawl the most recent tag
-    return remixVersions.map((tag) => ({
-      version: tag,
-      crawl: tag === remixVersions[0],
-    }))
-  }
+  // Crawl only the most recent tag
+  return remixVersions.length > 0
+    ? remixVersions.map((tag, i) => ({ version: tag, crawl: i === 0 }))
+    : getDefaultVersions()
 }
