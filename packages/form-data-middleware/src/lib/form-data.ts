@@ -35,6 +35,10 @@ export function formData(options?: FormDataOptions): Middleware {
   let uploadHandler = options?.uploadHandler
 
   return async (context) => {
+    if (context.has(FormData)) {
+      return
+    }
+
     if (context.method === 'GET' || context.method === 'HEAD') {
       return
     }
