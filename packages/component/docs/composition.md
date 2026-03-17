@@ -28,7 +28,7 @@ Components can compose other components via `children`:
 ```tsx
 function Layout() {
   return (props: { children: RemixNode }) => (
-    <div css={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div mix={[css({ padding: '20px', maxWidth: '1200px', margin: '0 auto' })]}>
       <header>My App</header>
       <main>{props.children}</main>
       <footer>© 2024</footer>
@@ -58,12 +58,10 @@ function Form(handle: Handle) {
     <form>
       <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
-        on={{
-          click() {
+        mix={[on('click', () => {
             // Focus the input from elsewhere in the form
             inputRef.focus()
-          },
-        }}
+        })]}
       >
         Focus Input
       </button>
@@ -153,9 +151,7 @@ function ReorderableList(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click: reverse,
-        }}
+        mix={[on('click', reverse)]}
       >
         Reverse List
       </button>
