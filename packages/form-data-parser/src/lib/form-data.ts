@@ -50,6 +50,9 @@ export class FileUpload extends File {
  * @returns A value to store in `FormData`, or `void`/`null` to skip
  */
 export interface FileUploadHandler {
+  /**
+   * Transforms an uploaded file into the value stored in the parsed {@link FormData}.
+   */
   (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
 }
 
@@ -82,7 +85,6 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  * cloud storage service.
  *
  * @param request The `Request` object to parse
- * @param options Options for the parser
  * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
  * @returns A `Promise` that resolves to a `FormData` object containing the parsed data
  */
@@ -90,6 +92,11 @@ export async function parseFormData(
   request: Request,
   uploadHandler?: FileUploadHandler,
 ): Promise<FormData>
+/**
+ * @param request The `Request` object to parse
+ * @param options Options for the parser
+ * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
+ */
 export async function parseFormData(
   request: Request,
   options?: ParseFormDataOptions,

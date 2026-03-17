@@ -3,6 +3,8 @@ import * as http from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
+import * as s from '@remix-run/data-schema'
+import * as f from '@remix-run/data-schema/form-data'
 import { createFsFileStorage } from '@remix-run/file-storage/fs'
 import {
   MultipartParseError,
@@ -15,6 +17,10 @@ const PORT = 44100
 
 const oneMb = 1024 * 1024
 const maxFileSize = 10 * oneMb
+const submittedDataSchema = f.object({
+  text1: f.field(s.optional(s.string())),
+  image1: f.file(s.optional(s.instanceof_(File))),
+})
 
 const fileStorage = createFsFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
 
@@ -57,8 +63,7 @@ const server = http.createServer(
           return file.size === 0 ? null : file
         })
 
-        let text = /** @type string | null */ (formData.get('text1'))
-        let image = /** @type File | null */ (formData.get('image1'))
+        let { image1: image, text1: text } = s.parse(submittedDataSchema, formData)
 
         return new Response(
           `<!DOCTYPE html>

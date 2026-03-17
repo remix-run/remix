@@ -1,7 +1,7 @@
 import { SetCookie } from '@remix-run/headers'
 
 /**
- * Options for `createFetchProxy`.
+ * Options for {@link createFetchProxy}.
  */
 export interface FetchProxyOptions {
   /**
@@ -34,13 +34,16 @@ export interface FetchProxyOptions {
 
 /**
  * A [`fetch` function](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch)
- * that forwards requests to another server.
+ * created by {@link createFetchProxy} that forwards requests to another server.
  *
  * @param input The URL or request to forward
  * @param init Optional request init options
  * @returns A promise that resolves to the proxied response
  */
 export interface FetchProxy {
+  /**
+   * Forwards a request to the configured proxy target.
+   */
   (input: URL | RequestInfo, init?: RequestInit): Promise<Response>
 }
 

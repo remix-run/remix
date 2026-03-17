@@ -9,8 +9,7 @@ on:
       - 'packages/session/**'
       - 'packages/session-storage-memcache/**'
       - 'packages/session-storage-redis/**'
-      - 'packages/remix/**'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
   pull_request:
     paths:
@@ -18,8 +17,7 @@ on:
       - 'packages/session/**'
       - 'packages/session-storage-memcache/**'
       - 'packages/session-storage-redis/**'
-      - 'packages/remix/**'
-      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
 
 jobs:

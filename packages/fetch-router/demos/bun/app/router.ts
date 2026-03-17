@@ -1,5 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
+import * as s from '@remix-run/data-schema'
+import * as f from '@remix-run/data-schema/form-data'
 import { Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'
@@ -13,6 +15,15 @@ import type { Middleware } from '@remix-run/fetch-router'
 import { routes } from './routes.ts'
 import * as data from './data.ts'
 import path from 'node:path'
+
+const textField = f.field(s.defaulted(s.string(), ''))
+const loginSchema = f.object({
+  username: textField,
+})
+const postSchema = f.object({
+  title: textField,
+  content: textField,
+})
 
 let sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
@@ -121,7 +132,7 @@ router.map(routes.login, {
     async action({ get }) {
       let session = get(Session)
       let formData = get(FormData)
-      let username = formData.get('username') as string
+      let { username } = s.parse(loginSchema, formData)
 
       if (username) {
         session.set('username', username)
@@ -178,8 +189,7 @@ router.map(routes.posts, {
         return redirect(routes.login.index.href())
       }
 
-      let title = formData.get('title') as string
-      let content = formData.get('content') as string
+      let { content, title } = s.parse(postSchema, formData)
 
       if (!title || !content) {
         return redirect(routes.posts.new.href())

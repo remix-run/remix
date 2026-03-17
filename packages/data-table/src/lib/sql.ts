@@ -12,8 +12,8 @@ export type SqlStatement = {
 /**
  * Tagged-template helper for building parameterized SQL statements.
  * @param strings Template string parts.
- * @param values Interpolated values or nested `SqlStatement` values.
- * @returns A normalized SQL statement.
+ * @param values Interpolated values or nested {@link SqlStatement} values.
+ * @returns A normalized {@link SqlStatement}.
  * @example
  * ```ts
  * import { sql } from 'remix/data-table'
@@ -53,9 +53,9 @@ export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlSta
 }
 
 /**
- * Returns `true` when a value matches the `SqlStatement` shape.
+ * Returns `true` when a value matches the {@link SqlStatement} shape.
  * @param value Value to inspect.
- * @returns Whether the value is a SQL statement object.
+ * @returns Whether the value is a {@link SqlStatement} object.
  */
 export function isSqlStatement(value: unknown): value is SqlStatement {
   if (typeof value !== 'object' || value === null) {

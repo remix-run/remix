@@ -43,7 +43,11 @@ for (let version of versions || getDefaultVersions()) {
   }
 }
 
-await spider(docsRouter, outputDir)
+await spider(
+  docsRouter,
+  outputDir,
+  new Set(['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])]),
+)
 
 // Spider the website served by router, beginning at /
 async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'])) {
@@ -104,9 +108,7 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
         .map((href) => resolveRelativeLink(href!, urlPath))
         .flatMap((href) => {
           let match = routes.docs.match(`http://localhost${href}`)
-          return match
-            ? [href, routes.markdown.href(match.params), routes.fragment.href(match.params)]
-            : [href]
+          return match ? [href, routes.markdown.href(match.params)] : [href]
         }),
     }
   } else {

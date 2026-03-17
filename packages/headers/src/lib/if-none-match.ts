@@ -19,6 +19,9 @@ export interface IfNoneMatchInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
  */
 export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
+  /**
+   * Entity tags carried by the header.
+   */
   tags: string[] = []
 
   constructor(init?: string | string[] | IfNoneMatchInit) {

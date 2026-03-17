@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   format:
-    if: github.repository == 'remix-run/remix'
+    if: "${{ github.repository == 'remix-run/remix' && !startsWith(github.event.head_commit.message, 'chore: format') }}"
     runs-on: ubuntu-latest
 
     steps:
@@ -19,23 +19,61 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.FORMAT_PAT }}
+          fetch-depth: 0
+
+      - name: Detect formatting-relevant changes
+        id: changes
+        run: |
+          base="${{ github.event.before }}"
+
+          if [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            files="$(git ls-files)"
+          else
+            files="$(git diff --name-only "$base" "$GITHUB_SHA")"
+          fi
+
+          if [ -z "$files" ]; then
+            echo "No changed files detected"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          while IFS= read -r file; do
+            case "$file" in
+              .prettierignore|.prettierrc|.prettierrc.json|.prettierrc.yml|.prettierrc.yaml|.prettierrc.js|.prettierrc.cjs|.prettierrc.mjs|*.js|*.jsx|*.cjs|*.mjs|*.ts|*.tsx|*.cts|*.mts|*.json|*.jsonc|*.md|*.mdx|*.yaml|*.yml|*.css|*.scss|*.html)
+                echo "Formatting-relevant change: $file"
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+          done <<EOF
+          $files
+          EOF
+
+          echo "No formatting-relevant files changed"
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
 
       - name: Install pnpm
+        if: steps.changes.outputs.should_run == 'true'
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
+        if: steps.changes.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: 'package.json'
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.changes.outputs.should_run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Format
+        if: steps.changes.outputs.should_run == 'true'
         run: pnpm format
 
       - name: Commit
+        if: steps.changes.outputs.should_run == 'true'
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"

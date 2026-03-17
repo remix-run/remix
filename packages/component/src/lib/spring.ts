@@ -14,12 +14,21 @@
 
 export type SpringPreset = 'smooth' | 'snappy' | 'bouncy'
 
+/**
+ * Options for generating a spring easing iterator.
+ */
 export interface SpringOptions {
+  /** Perceptual duration in milliseconds used to derive spring stiffness. */
   duration?: number // perceptual duration in ms (default: 300) - affects stiffness
+  /** Spring bounce amount from overdamped (`< 0`) to bouncy (`> 0`). */
   bounce?: number // -1 to ~0.95: negative = overdamped, 0 = critical, positive = bouncy
+  /** Initial velocity in units per second. */
   velocity?: number // initial velocity in units per second
 }
 
+/**
+ * Iterator returned by {@link spring}, decorated for CSS and WAAPI use.
+ */
 export interface SpringIterator extends IterableIterator<number> {
   /** Time when spring settles to rest (milliseconds) */
   duration: number
@@ -58,10 +67,23 @@ let frameMs = 1000 / 60 // ~16.67ms per frame
  *   element.style.transform = `translateX(${position * 100}px)`
  * }
  */
+/**
+ * Creates a spring iterator from a named preset.
+ *
+ * @param preset Preset spring profile to start from.
+ * @param overrides Optional preset overrides.
+ * @returns A spring iterator.
+ */
 export function spring(
   preset: SpringPreset,
   overrides?: Omit<SpringOptions, 'bounce'>,
 ): SpringIterator
+/**
+ * Creates a spring iterator from explicit spring options.
+ *
+ * @param options Spring parameters.
+ * @returns A spring iterator.
+ */
 export function spring(options?: SpringOptions): SpringIterator
 export function spring(
   presetOrOptions?: SpringPreset | SpringOptions,

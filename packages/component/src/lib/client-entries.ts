@@ -127,10 +127,22 @@ export function clientEntry(href: string, component: any): any {
 export function isEntry(component: unknown): component is EntryComponent {
   return Boolean(component && typeof component === 'function' && (component as any).$entry === true)
 }
+
+/**
+ * Logs a client-hydration mismatch to the console.
+ *
+ * @param msg Message parts to forward to the logger.
+ */
 export function logHydrationMismatch(...msg: any[]) {
   console.error('Hydration mismatch:', ...msg)
 }
 
+/**
+ * Advances a DOM cursor past consecutive comment nodes.
+ *
+ * @param cursor Starting DOM node.
+ * @returns The first non-comment node, or `null` when none remains.
+ */
 export function skipComments(cursor: Node | null): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
     cursor = cursor.nextSibling

@@ -5,6 +5,9 @@ import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
+/**
+ * Controller object that mirrors a route map with matching action handlers.
+ */
 export type Controller<routes extends RouteMap> = {
   actions: ControllerActions<routes>
   middleware?: Middleware[]
@@ -25,19 +28,19 @@ type ControllerActions<routes extends RouteMap> = routes extends any ?
  * An individual route action.
  */
 export type Action<method extends RequestMethod | 'ANY', pattern extends string> =
-  | RequestHandlerWithMiddleware<method, Params<pattern>>
+  | RequestHandlerObject<method, Params<pattern>>
   | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<
+type RequestHandlerObject<
   method extends RequestMethod | 'ANY',
   params extends Record<string, any>,
 > = {
-  middleware: Middleware<method, params>[]
+  middleware?: Middleware<method, params>[]
   action: RequestHandler<method, params>
 }
 
 /**
- * Build an `Action` type from a string, `RoutePattern`, or `Route`.
+ * Build an {@link Action} type from a string, {@link RoutePattern}, or {@link Route}.
  */
 // prettier-ignore
 export type BuildAction<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =
@@ -56,6 +59,9 @@ export interface RequestHandler<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
+  /**
+   * Handles a matched request and returns the response.
+   */
   (context: RequestContext<params>): Response | Promise<Response>
 }
 
@@ -78,19 +84,19 @@ export function isController(obj: unknown): obj is ControllerShape {
 }
 
 /**
- * Runtime shape for an action with middleware.
+ * Runtime shape for an action object.
  */
-export interface ActionWithMiddlewareShape {
-  middleware: Middleware[]
+export interface ActionObjectShape {
+  middleware?: Middleware[]
   action: RequestHandler<any, any>
 }
 
 /**
- * Check if an object has middleware and an `action` property (action with middleware).
+ * Check if an object has an `action` property (action object).
  *
  * @param obj The object to check
- * @returns `true` if the object is an action with middleware
+ * @returns `true` if the object is an action object
  */
-export function isActionWithMiddleware(obj: unknown): obj is ActionWithMiddlewareShape {
-  return typeof obj === 'object' && obj != null && 'middleware' in obj && 'action' in obj
+export function isActionObject(obj: unknown): obj is ActionObjectShape {
+  return typeof obj === 'object' && obj != null && 'action' in obj
 }

@@ -39,6 +39,9 @@ We currently publish the following packages:
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [component](packages/component): UI components for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
+- [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
+- [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
+- [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
 - [data-table](packages/data-table): A typed, relational query toolkit for Remix
@@ -85,7 +88,7 @@ If you want to play around with the bleeding edge, we also build the latest `mai
 pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```
 
 ## Contributing

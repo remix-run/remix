@@ -9,8 +9,13 @@ on:
       - release-v2
       - v2
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -32,8 +37,41 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Typecheck
         run: pnpm typecheck
 
+  change-files:
+    name: Validate change files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+
       - name: Check change files
-        run: pnpm changes:validate
+        run: node ./scripts/changes-validate.ts

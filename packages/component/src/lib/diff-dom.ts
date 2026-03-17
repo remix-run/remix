@@ -23,6 +23,7 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
         parent.appendChild(n)
       }
     } else if (c && !n) {
+      disposeRemovedSubFrames(c, context)
       parent.removeChild(c)
     } else if (c && n) {
       // Skip hydrated client-entry boundary ranges; hydration pass re-renders
@@ -85,6 +86,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
     // Same tag: update attributes then children
     diffElementAttributes(current, next)
+    if (shouldPreserveElementChildren(current, next)) return
     diffElementChildren(current, next, context)
     return
   }
@@ -102,14 +104,88 @@ function diffElementAttributes(current: Element, next: Element): void {
 
   // Removals
   for (let name of prevAttrNames) {
-    if (!nextNameSet.has(name)) current.removeAttribute(name)
+    if (!nextNameSet.has(name)) {
+      if (shouldPreserveLiveAttribute(current, next, name)) continue
+      current.removeAttribute(name)
+    }
   }
 
   // Additions/updates
   for (let name of nextAttrNames) {
     let prevVal = current.getAttribute(name)
     let nextVal = next.getAttribute(name)
-    if (prevVal !== nextVal) current.setAttribute(name, nextVal == null ? '' : String(nextVal))
+    if (prevVal !== nextVal) {
+      if (shouldPreserveLiveAttribute(current, next, name)) continue
+      current.setAttribute(name, nextVal == null ? '' : String(nextVal))
+    }
+  }
+}
+
+function shouldPreserveLiveAttribute(current: Element, next: Element, name: string): boolean {
+  if (name === 'open') {
+    if (current instanceof HTMLDetailsElement && next instanceof HTMLDetailsElement) {
+      return current.open !== next.open
+    }
+
+    if (current instanceof HTMLDialogElement && next instanceof HTMLDialogElement) {
+      return current.open !== next.open
+    }
+  }
+
+  if (name === 'checked') {
+    if (current instanceof HTMLInputElement && next instanceof HTMLInputElement) {
+      return current.checked !== next.checked
+    }
+  }
+
+  if (name === 'value') {
+    if (
+      current instanceof HTMLInputElement &&
+      next instanceof HTMLInputElement &&
+      shouldPreserveInputValue(current)
+    ) {
+      return current.value !== next.value
+    }
+  }
+
+  if (name === 'selected') {
+    if (current instanceof HTMLOptionElement && next instanceof HTMLOptionElement) {
+      return current.selected !== next.selected
+    }
+  }
+
+  if (name === 'popover') {
+    return isPopoverOpen(current) !== isPopoverOpen(next)
+  }
+
+  return false
+}
+
+function shouldPreserveElementChildren(current: Element, next: Element): boolean {
+  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
+    return current.value !== next.value
+  }
+
+  return false
+}
+
+function shouldPreserveInputValue(input: HTMLInputElement): boolean {
+  return (
+    input.type !== 'button' &&
+    input.type !== 'checkbox' &&
+    input.type !== 'hidden' &&
+    input.type !== 'image' &&
+    input.type !== 'radio' &&
+    input.type !== 'reset' &&
+    input.type !== 'submit'
+  )
+}
+
+function isPopoverOpen(element: Element): boolean {
+  try {
+    return element.matches(':popover-open')
+  } catch {
+    return false
   }
 }
 
@@ -168,6 +244,16 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
         // Fast-forward across a hydrated virtual root region.
         let nextEndIdx = nextChildren.indexOf(cursor)
         let currEndIdx = findHydrationEndIndex(currentChildren, mi)
+
+        // Adjacent hydration regions can pre-match into the next region and leave
+        // an orphaned `<!-- /rmx:h -->` behind. Clear those stale matches first.
+        for (let j = i + 1; j <= nextEndIdx; j++) {
+          let matchedIndex = matchIndexForNext[j]
+          if (matchedIndex > currEndIdx) {
+            used[matchedIndex] = false
+          }
+          matchIndexForNext[j] = -1
+        }
 
         // Mark the entire current region as used to avoid removals.
         for (let k = mi; k <= currEndIdx; k++) used[k] = true
@@ -228,6 +314,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
   // Remove any current children not used
   for (let i = 0; i < currentChildren.length; i++) {
     if (!used[i]) {
+      let nodeToRemove = currentChildren[i]
+      disposeRemovedSubFrames(nodeToRemove, context)
       current.removeChild(currentChildren[i])
     }
   }
@@ -281,6 +369,30 @@ function isElement(node: Node): node is Element {
 
 function isCommentNode(node: Node): node is Comment {
   return node.nodeType === Node.COMMENT_NODE
+}
+
+function isFrameStartMarker(node: Node): node is Comment {
+  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+}
+
+function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
+  let stack: Node[] = [node]
+  while (stack.length > 0) {
+    let next = stack.pop()
+    if (!next) continue
+
+    if (isFrameStartMarker(next)) {
+      let subFrame = context.frameInstances.get(next)
+      if (subFrame) {
+        subFrame.dispose()
+        context.frameInstances.delete(next)
+      }
+    }
+
+    for (let child of Array.from(next.childNodes)) {
+      stack.push(child)
+    }
+  }
 }
 
 function isVirtualRootStartMarker(node: Node): node is Comment {

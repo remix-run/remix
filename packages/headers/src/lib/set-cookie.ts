@@ -86,15 +86,54 @@ export interface SetCookieInit extends CookieProperties {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
  */
 export class SetCookie implements HeaderValue, SetCookieInit {
+  /**
+   * The cookie domain attribute.
+   */
   domain?: string
+
+  /**
+   * The cookie expiration date.
+   */
   expires?: Date
+
+  /**
+   * Whether the `HttpOnly` attribute is present.
+   */
   httpOnly?: boolean
+
+  /**
+   * The `Max-Age` attribute value in seconds.
+   */
   maxAge?: number
+
+  /**
+   * The cookie name.
+   */
   name?: string
+
+  /**
+   * Whether the `Partitioned` attribute is present.
+   */
   partitioned?: boolean
+
+  /**
+   * The cookie path attribute.
+   */
   path?: string
+
+  /**
+   * The `SameSite` attribute value.
+   */
   sameSite?: SameSiteValue
+
+  /**
+   * Whether the `Secure` attribute is present.
+   */
   secure?: boolean
+
+  /**
+   * The cookie value.
+   */
   value?: string
 
   constructor(init?: string | SetCookieInit) {

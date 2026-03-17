@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type { Handle } from '../component.ts'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
 import { ref } from './ref-mixin.tsx'
@@ -62,6 +63,63 @@ describe('ref mixin', () => {
     root.render(null)
     root.flush()
     expect(signal.aborted).toBe(true)
+  })
+
+  it('allows handle.update() during the insert callback', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    function Toggle(handle: Handle) {
+      let ready = false
+
+      return () => (
+        <button
+          mix={[
+            ref(() => {
+              if (ready) return
+              ready = true
+              handle.update()
+            }),
+          ]}
+        >
+          {ready ? 'ready' : 'loading'}
+        </button>
+      )
+    }
+
+    root.render(<Toggle />)
+    root.flush()
+
+    expect(container.textContent).toBe('ready')
+  })
+
+  it('dispatches insert before queued component tasks', () => {
+    let events: string[] = []
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    function Example(handle: Handle) {
+      return () => {
+        handle.queueTask(() => {
+          events.push('task')
+        })
+
+        return (
+          <div
+            mix={[
+              ref(() => {
+                events.push('insert')
+              }),
+            ]}
+          />
+        )
+      }
+    }
+
+    root.render(<Example />)
+    root.flush()
+
+    expect(events).toEqual(['insert', 'task'])
   })
 })
 

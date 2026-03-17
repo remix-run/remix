@@ -3,7 +3,7 @@ import { parseParams, quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
 /**
- * Initializer for a `Cookie` header value.
+ * Initializer for a {@link Cookie} header value.
  */
 export type CookieInit = Iterable<[string, string]> | Record<string, string>
 
@@ -98,6 +98,11 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     return this.#map.entries()
   }
 
+  /**
+   * Iterates over cookie name and value pairs.
+   *
+   * @returns An iterator of `[name, value]` tuples.
+   */
   [Symbol.iterator](): IterableIterator<[string, string]> {
     return this.entries()
   }

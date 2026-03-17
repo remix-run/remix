@@ -19,45 +19,15 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
+import type {
+  Connection as MysqlConnection,
+  Pool as MysqlPool,
+  PoolConnection as MysqlPoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from 'mysql2/promise'
 
 import { compileMysqlOperation } from './sql-compiler.ts'
-
-/**
- * Row-array response shape for mysql query calls.
- */
-export type MysqlQueryRows = Record<string, unknown>[]
-
-/**
- * Metadata shape for mysql write results.
- */
-export type MysqlQueryResultHeader = {
-  affectedRows: number
-  insertId: unknown
-}
-
-/**
- * Supported mysql `query()` response tuple.
- */
-export type MysqlQueryResponse = [result: unknown, fields?: unknown]
-
-/**
- * Single mysql connection contract used by this adapter.
- */
-export type MysqlDatabaseConnection = {
-  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
-  beginTransaction(): Promise<void>
-  commit(): Promise<void>
-  rollback(): Promise<void>
-  release?: () => void
-}
-
-/**
- * Mysql pool contract used by this adapter.
- */
-export type MysqlDatabasePool = {
-  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
-  getConnection(): Promise<MysqlDatabaseConnection>
-}
 
 /**
  * Mysql adapter configuration.
@@ -67,17 +37,30 @@ export type MysqlDatabaseAdapterOptions = {
 }
 
 type TransactionState = {
-  connection: MysqlDatabaseConnection
+  connection: MysqlTransactionConnection
   releaseOnClose: boolean
 }
 
-type MysqlQueryable = MysqlDatabasePool | MysqlDatabaseConnection
+type MysqlQueryRows = RowDataPacket[]
+type MysqlQueryResultHeader = {
+  affectedRows: number
+  insertId: unknown
+}
+type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
+type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
 /**
  * `DatabaseAdapter` implementation for mysql-compatible clients.
  */
 export class MysqlDatabaseAdapter implements DatabaseAdapter {
+  /**
+   * The SQL dialect identifier reported by this adapter.
+   */
   dialect = 'mysql'
+
+  /**
+   * Feature flags describing the mysql behaviors supported by this adapter.
+   */
   capabilities
 
   #client: MysqlQueryable
@@ -95,6 +78,11 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Compiles a data or migration operation to mysql SQL statements.
+   * @param operation Operation to compile.
+   * @returns Compiled SQL statements.
+   */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
     if (isDataManipulationOperation(operation)) {
       let compiled = compileMysqlOperation(operation)
@@ -104,6 +92,11 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return compileMysqlMigrationOperations(operation)
   }
 
+  /**
+   * Executes a mysql data-manipulation request.
+   * @param request Request to execute.
+   * @returns Execution result.
+   */
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
     if (request.operation.kind === 'insertMany' && request.operation.values.length === 0) {
       return {
@@ -136,6 +129,11 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Executes mysql migration operations.
+   * @param request Migration request to execute.
+   * @returns Migration result.
+   */
   async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
     let statements = this.compileSql(request.operation)
     let client = this.#resolveClient(request.transaction)
@@ -149,6 +147,12 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Checks whether a table exists in mysql.
+   * @param table Table reference to inspect.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the table exists.
+   */
   async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
     let schema = table.schema
     let sql = schema
@@ -165,6 +169,13 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return toBooleanExists(result[0]?.exists)
   }
 
+  /**
+   * Checks whether a column exists in mysql.
+   * @param table Table reference to inspect.
+   * @param column Column name to look up.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the column exists.
+   */
   async hasColumn(
     table: TableRef,
     column: string,
@@ -185,9 +196,14 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return toBooleanExists(result[0]?.exists)
   }
 
+  /**
+   * Starts a mysql transaction.
+   * @param options Transaction options.
+   * @returns Transaction token.
+   */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     let releaseOnClose = false
-    let connection: MysqlDatabaseConnection
+    let connection: MysqlTransactionConnection
 
     if (isMysqlPool(this.#client)) {
       connection = await this.#client.getConnection()
@@ -219,6 +235,11 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return token
   }
 
+  /**
+   * Commits an open mysql transaction.
+   * @param token Transaction token to commit.
+   * @returns A promise that resolves when the transaction is committed.
+   */
   async commitTransaction(token: TransactionToken): Promise<void> {
     let transaction = this.#transactions.get(token.id)
 
@@ -231,12 +252,17 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose) {
-        transaction.connection.release?.()
+      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
+        transaction.connection.release()
       }
     }
   }
 
+  /**
+   * Rolls back an open mysql transaction.
+   * @param token Transaction token to roll back.
+   * @returns A promise that resolves when the transaction is rolled back.
+   */
   async rollbackTransaction(token: TransactionToken): Promise<void> {
     let transaction = this.#transactions.get(token.id)
 
@@ -249,36 +275,62 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     } finally {
       this.#transactions.delete(token.id)
 
-      if (transaction.releaseOnClose) {
-        transaction.connection.release?.()
+      if (transaction.releaseOnClose && isMysqlPoolConnection(transaction.connection)) {
+        transaction.connection.release()
       }
     }
   }
 
+  /**
+   * Creates a savepoint in an open mysql transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is created.
+   */
   async createSavepoint(token: TransactionToken, name: string): Promise<void> {
     let connection = this.#transactionConnection(token)
     await connection.query('savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Rolls back to a savepoint in an open mysql transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the rollback completes.
+   */
   async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
     let connection = this.#transactionConnection(token)
     await connection.query('rollback to savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Releases a savepoint in an open mysql transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is released.
+   */
   async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
     let connection = this.#transactionConnection(token)
     await connection.query('release savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Acquires the mysql migration lock.
+   * @returns A promise that resolves when the lock is acquired.
+   */
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select get_lock(?, 60)', ['data_table_migrations'])
   }
 
+  /**
+   * Releases the mysql migration lock.
+   * @returns A promise that resolves when the lock is released.
+   */
   async releaseMigrationLock(): Promise<void> {
     await this.#client.query('select release_lock(?)', ['data_table_migrations'])
   }
 
-  #resolveClient(token: TransactionToken | undefined): MysqlDatabaseConnection | MysqlDatabasePool {
+  #resolveClient(token: TransactionToken | undefined): MysqlQueryable {
     if (!token) {
       return this.#client
     }
@@ -286,7 +338,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     return this.#transactionConnection(token)
   }
 
-  #transactionConnection(token: TransactionToken): MysqlDatabaseConnection {
+  #transactionConnection(token: TransactionToken): MysqlTransactionConnection {
     let transaction = this.#transactions.get(token.id)
 
     if (!transaction) {
@@ -320,8 +372,14 @@ export function createMysqlDatabaseAdapter(
   return new MysqlDatabaseAdapter(client, options)
 }
 
-function isMysqlPool(client: MysqlQueryable): client is MysqlDatabasePool {
-  return typeof (client as MysqlDatabasePool).getConnection === 'function'
+function isMysqlPool(client: MysqlQueryable): client is MysqlPool {
+  return 'getConnection' in client && typeof client.getConnection === 'function'
+}
+
+function isMysqlPoolConnection(
+  connection: MysqlTransactionConnection,
+): connection is MysqlPoolConnection {
+  return 'release' in connection && typeof connection.release === 'function'
 }
 
 function isRowsResult(result: unknown): result is MysqlQueryRows {
@@ -354,7 +412,7 @@ function normalizeRows(rows: MysqlQueryRows): Record<string, unknown>[] {
 
 function normalizeHeader(result: unknown): MysqlQueryResultHeader {
   if (typeof result === 'object' && result !== null) {
-    let header = result as { affectedRows?: unknown; insertId?: unknown }
+    let header = result as Partial<ResultSetHeader>
 
     return {
       affectedRows: typeof header.affectedRows === 'number' ? header.affectedRows : 0,

@@ -88,9 +88,23 @@ type ParseErrorType =
   | 'dangling escape'
   | 'invalid protocol'
 
+/**
+ * Error thrown when a route pattern cannot be parsed.
+ */
 export class ParseError extends Error {
+  /**
+   * The parse failure category.
+   */
   type: ParseErrorType
+
+  /**
+   * Original pattern source being parsed.
+   */
   source: string
+
+  /**
+   * Character index where parsing failed.
+   */
   index: number
 
   constructor(type: ParseErrorType, source: string, index: number) {

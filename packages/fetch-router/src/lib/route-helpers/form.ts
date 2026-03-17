@@ -4,6 +4,9 @@ import type { RequestMethod } from '../request-methods.ts'
 import { createRoutes } from '../route-map.ts'
 import type { BuildRouteMap } from '../route-map.ts'
 
+/**
+ * Options for generating a paired `index`/`action` form route map.
+ */
 export interface FormOptions {
   /**
    * The method the `<form>` uses to submit the action.

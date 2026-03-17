@@ -1,5 +1,6 @@
 export { RoutePattern, type RoutePatternMatch } from './lib/route-pattern.ts'
-export type { Join, Params } from './lib/types/index.ts'
+export type { Join } from './lib/types/index.ts'
+export type { Params } from './lib/route-pattern/params.ts'
 export { ParseError } from './lib/route-pattern/parse.ts'
 export { type HrefArgs, HrefError } from './lib/route-pattern/href.ts'
 

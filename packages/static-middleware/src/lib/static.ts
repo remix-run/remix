@@ -15,7 +15,7 @@ import { generateDirectoryListing } from './directory-listing.ts'
 export type AcceptRangesFunction = (file: File) => boolean
 
 /**
- * Options for the `staticFiles` middleware.
+ * Options for the {@link staticFiles} middleware in addition to {@link FileResponseOptions}.
  */
 export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRanges'> {
   /**

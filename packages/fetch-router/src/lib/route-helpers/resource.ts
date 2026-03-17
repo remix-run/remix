@@ -2,11 +2,17 @@ import type { RoutePattern } from '@remix-run/route-pattern'
 
 import { type BuildRouteMap, createRoutes } from '../route-map.ts'
 
+/**
+ * Named CRUD routes available for singleton resources.
+ */
 export type ResourceMethod = 'new' | 'show' | 'create' | 'edit' | 'update' | 'destroy'
 
 // prettier-ignore
 export const ResourceMethods = ['new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 
+/**
+ * Options for generating singleton resource routes.
+ */
 export type ResourceOptions = {
   /**
    * Custom names to use for the resource routes.

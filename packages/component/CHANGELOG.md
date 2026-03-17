@@ -47,7 +47,7 @@ This is the changelog for [`component`](https://github.com/remix-run/remix/tree/
   - `<Frame>`
   - `renderToStream(node, { resolveFrame })`
   - `clientEntry`
-  - `run(document, { loadModule, resolveFrame })`
+  - `run({ loadModule, resolveFrame })`
   - `handle.frame`
   - `handle.frames`
 

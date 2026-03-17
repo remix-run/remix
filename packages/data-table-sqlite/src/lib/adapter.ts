@@ -24,11 +24,6 @@ import type { Database as BetterSqliteDatabase, RunResult } from 'better-sqlite3
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 /**
- * Better SQLite3 database handle accepted by the sqlite adapter.
- */
-export type SqliteDatabaseConnection = BetterSqliteDatabase
-
-/**
  * Sqlite adapter configuration.
  */
 export type SqliteDatabaseAdapterOptions = {
@@ -39,14 +34,21 @@ export type SqliteDatabaseAdapterOptions = {
  * `DatabaseAdapter` implementation for Better SQLite3.
  */
 export class SqliteDatabaseAdapter implements DatabaseAdapter {
+  /**
+   * The SQL dialect identifier reported by this adapter.
+   */
   dialect = 'sqlite'
+
+  /**
+   * Feature flags describing the sqlite behaviors supported by this adapter.
+   */
   capabilities
 
-  #database: SqliteDatabaseConnection
+  #database: BetterSqliteDatabase
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: SqliteDatabaseConnection, options?: SqliteDatabaseAdapterOptions) {
+  constructor(database: BetterSqliteDatabase, options?: SqliteDatabaseAdapterOptions) {
     this.#database = database
     this.capabilities = {
       returning: options?.capabilities?.returning ?? true,
@@ -57,6 +59,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Compiles a data or migration operation to sqlite SQL statements.
+   * @param operation Operation to compile.
+   * @returns Compiled SQL statements.
+   */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
     if (isDataManipulationOperation(operation)) {
       let compiled = compileSqliteOperation(operation)
@@ -66,6 +73,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     return compileSqliteMigrationOperations(operation)
   }
 
+  /**
+   * Executes a sqlite data-manipulation request.
+   * @param request Request to execute.
+   * @returns Execution result.
+   */
   async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
     if (request.operation.kind === 'insertMany' && request.operation.values.length === 0) {
       return {
@@ -100,6 +112,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Executes sqlite migration operations.
+   * @param request Migration request to execute.
+   * @returns Migration result.
+   */
   async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
     let statements = this.compileSql(request.operation)
 
@@ -113,6 +130,12 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  /**
+   * Checks whether a table exists in sqlite.
+   * @param table Table reference to inspect.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the table exists.
+   */
   async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
     if (transaction) {
       this.#assertTransaction(transaction)
@@ -128,6 +151,13 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     return row !== undefined
   }
 
+  /**
+   * Checks whether a column exists in sqlite.
+   * @param table Table reference to inspect.
+   * @param column Column name to look up.
+   * @param transaction Optional transaction token.
+   * @returns `true` when the column exists.
+   */
   async hasColumn(
     table: TableRef,
     column: string,
@@ -146,6 +176,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     return rows.some((row) => row.name === column)
   }
 
+  /**
+   * Starts a sqlite transaction.
+   * @param options Transaction options.
+   * @returns Transaction token.
+   */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     if (options?.isolationLevel === 'read uncommitted') {
       this.#database.pragma('read_uncommitted = true')
@@ -160,28 +195,56 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     return token
   }
 
+  /**
+   * Commits an open sqlite transaction.
+   * @param token Transaction token to commit.
+   * @returns A promise that resolves when the transaction is committed.
+   */
   async commitTransaction(token: TransactionToken): Promise<void> {
     this.#assertTransaction(token)
     this.#database.exec('commit')
     this.#transactions.delete(token.id)
   }
 
+  /**
+   * Rolls back an open sqlite transaction.
+   * @param token Transaction token to roll back.
+   * @returns A promise that resolves when the transaction is rolled back.
+   */
   async rollbackTransaction(token: TransactionToken): Promise<void> {
     this.#assertTransaction(token)
     this.#database.exec('rollback')
     this.#transactions.delete(token.id)
   }
 
+  /**
+   * Creates a savepoint in an open sqlite transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is created.
+   */
   async createSavepoint(token: TransactionToken, name: string): Promise<void> {
     this.#assertTransaction(token)
     this.#database.exec('savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Rolls back to a savepoint in an open sqlite transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the rollback completes.
+   */
   async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
     this.#assertTransaction(token)
     this.#database.exec('rollback to savepoint ' + quoteIdentifier(name))
   }
 
+  /**
+   * Releases a savepoint in an open sqlite transaction.
+   * @param token Transaction token to use.
+   * @param name Savepoint name.
+   * @returns A promise that resolves when the savepoint is released.
+   */
   async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
     this.#assertTransaction(token)
     this.#database.exec('release savepoint ' + quoteIdentifier(name))
@@ -211,7 +274,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * ```
  */
 export function createSqliteDatabaseAdapter(
-  database: SqliteDatabaseConnection,
+  database: BetterSqliteDatabase,
   options?: SqliteDatabaseAdapterOptions,
 ): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(database, options)

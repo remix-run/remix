@@ -1,3 +1,6 @@
+/**
+ * Event type with `currentTarget` narrowed to the dispatched target.
+ */
 export type Dispatched<event extends Event, target extends EventTarget> = Omit<
   event,
   'currentTarget'
@@ -5,10 +8,16 @@ export type Dispatched<event extends Event, target extends EventTarget> = Omit<
   currentTarget: target
 }
 
+/**
+ * Narrows non-event values to `never` and preserves dispatched event typing otherwise.
+ */
 export type EnsureEvent<event, target extends EventTarget> = event extends Event
   ? Dispatched<event, target>
   : never
 
+/**
+ * Union of event type names supported by the given target.
+ */
 export type EventType<target extends EventTarget> = target extends { __eventMap?: infer eventMap }
   ? keyof eventMap
   : keyof EventMap<target>
@@ -23,16 +32,25 @@ type NavigationTargetEventMap = {
   navigate: NavigationTargetEvent
 }
 
+/**
+ * Listener function type for a specific target and event name.
+ */
 export type ListenerFor<target extends EventTarget, type extends EventType<target>> = (
   event: EnsureEvent<EventMap<target>[type], target>,
   signal: AbortSignal,
 ) => void
 
+/**
+ * Partial map of event listeners keyed by event type.
+ */
 export type EventListeners<target extends EventTarget> = Partial<{
   [k in EventType<target>]: ListenerFor<target, k>
 }>
 
 // prettier-ignore
+/**
+ * Event map resolved for the given DOM or custom event target.
+ */
 export type EventMap<target extends EventTarget> = (
   // TypedEventTarget
   target extends { __eventMap?: infer eventMap } ? eventMap :
@@ -109,6 +127,13 @@ export type EventMap<target extends EventTarget> = (
   GlobalEventHandlersEventMap & Record<string, Event>
 )
 
+/**
+ * Adds typed event listeners and reentry abort signals to a target.
+ *
+ * @param target Event target to attach listeners to.
+ * @param signal Lifetime signal used to remove all listeners.
+ * @param listeners Listener map keyed by event type.
+ */
 export function addEventListeners<target extends EventTarget>(
   target: target,
   signal: AbortSignal,

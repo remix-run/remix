@@ -9,7 +9,7 @@ import {
   type DocumentedInterfaceFunction,
   type DocumentedType,
 } from './documented-api.ts'
-import { debug, verbose, warn } from './utils.ts'
+import { debug, info, verbose, warn } from './utils.ts'
 
 export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: string) {
   for (let comment of comments) {
@@ -40,7 +40,7 @@ const p = (content: string) => `${content}`
 const pre = async (content: string, lang = 'ts') => {
   if (content.includes('(...)')) {
     // Prettier chokes on the ellipsis syntax in function signatures
-    warn(
+    info(
       'Skipping formatting for code block with ellipsis syntax: ',
       content.substring(0, 50) + '...',
     )
@@ -112,10 +112,11 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
     source(comment),
     summary(comment),
     aliases(comment),
+    h2('Signature', await pre(comment.signature)),
     comment.example ? h2('Example', comment.example) : undefined,
     comment.constructor
       ? h2(
-          'Constructor',
+          'Constructor Params',
           [
             comment.constructor.description,
             ...comment.constructor.parameters.map((p) => h3(p.name, p.description)),
@@ -126,6 +127,9 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
       : undefined,
     comment.properties && comment.properties.length > 0
       ? h2('Properties', comment.properties.map((p) => h3(p.name, p.description)).join('\n\n'))
+      : undefined,
+    comment.accessors && comment.accessors.length > 0
+      ? h2('Accessors', comment.accessors.map((p) => h3(p.name, p.description)).join('\n\n'))
       : undefined,
     comment.methods && comment.methods.length > 0
       ? h2(
@@ -150,13 +154,20 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
     frontmatter(comment),
     name(comment),
     source(comment),
-    summary(comment),
+    comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
-    comment.properties && comment.properties.length > 0
+    comment.properties &&
+    comment.properties.length > 0 &&
+    comment.properties.some((p) => p.description)
       ? h2('Properties', comment.properties.map((p) => h3(p.name, p.description)).join('\n\n'))
       : undefined,
-    comment.methods && comment.methods.length > 0
+    comment.accessors &&
+    comment.accessors.length > 0 &&
+    comment.accessors.some((p) => p.description)
+      ? h2('Accessors', comment.accessors.map((p) => h3(p.name, p.description)).join('\n\n'))
+      : undefined,
+    comment.methods && comment.methods.length > 0 && comment.methods.some((m) => m.description)
       ? h2(
           'Methods',
           comment.methods
@@ -179,10 +190,10 @@ async function getInterfaceFunctionMarkdown(comment: DocumentedInterfaceFunction
     frontmatter(comment),
     name(comment),
     source(comment),
-    summary(comment),
+    comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
-    comment.parameters.length > 0
+    comment.parameters.length > 0 && comment.parameters.some((p) => p.description)
       ? h2(
           'Params',
           comment.parameters.map((param) => h3(param.name, param.description)).join('\n\n'),
@@ -199,7 +210,7 @@ async function getTypeMarkdown(comment: DocumentedType): Promise<string> {
     frontmatter(comment),
     name(comment),
     source(comment),
-    summary(comment),
+    comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
   ]

@@ -54,14 +54,24 @@ function cubicBezierDerivative(t: number, p1: number, p2: number): number {
   return 3 * oneMinusT * oneMinusT * p1 + 6 * oneMinusT * t * (p2 - p1) + 3 * t * t * (1 - p2)
 }
 
+/**
+ * Cubic-bezier control points used by {@link tween}.
+ */
 export interface BezierCurve {
+  /** First control point x coordinate. */
   x1: number
+  /** First control point y coordinate. */
   y1: number
+  /** Second control point x coordinate. */
   x2: number
+  /** Second control point y coordinate. */
   y2: number
 }
 
 // Common easing presets
+/**
+ * Common cubic-bezier presets for {@link tween}.
+ */
 export const easings = {
   linear: { x1: 0, y1: 0, x2: 1, y2: 1 },
   ease: { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 },
@@ -70,10 +80,17 @@ export const easings = {
   easeInOut: { x1: 0.42, y1: 0, x2: 0.58, y2: 1 },
 } as const
 
+/**
+ * Options for generating tweened values over time.
+ */
 export interface TweenOptions {
+  /** Starting value for the tween. */
   from: number
+  /** Ending value for the tween. */
   to: number
+  /** Total tween duration in milliseconds. */
   duration: number
+  /** Cubic-bezier curve used to shape the interpolation. */
   curve: BezierCurve
 }
 

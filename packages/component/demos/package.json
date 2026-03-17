@@ -7,6 +7,7 @@
     "remix": "workspace:^"
   },
   "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "concurrently": "^9.2.1",
     "esbuild": "^0.25.11"

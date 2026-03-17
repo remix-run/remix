@@ -2,7 +2,7 @@ import { RequestMethods } from '@remix-run/fetch-router'
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 
 /**
- * Options for the `methodOverride` middleware.
+ * Options for the {@link methodOverride} middleware.
  */
 export interface MethodOverrideOptions {
   /**
@@ -16,8 +16,9 @@ export interface MethodOverrideOptions {
 /**
  * Middleware that overrides `context.method` with the value of the method override field.
  *
- * Note: This middleware must be placed after the `formData` middleware in the middleware chain, or
- * some other middleware that provides `context.get(FormData)`.
+ * Note: This middleware must be placed after the
+ * {@link import('@remix-run/form-data-middleware').formData} middleware in the middleware
+ * chain, or some other middleware that provides `context.get(FormData)`.
  *
  * @param options Options for the method override middleware
  * @returns A middleware that overrides `context.method` with the value of the method override field

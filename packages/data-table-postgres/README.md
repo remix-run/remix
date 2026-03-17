@@ -5,7 +5,7 @@ Use this package when you want `data-table` APIs backed by `pg`.
 
 ## Features
 
-- **Native `pg` Integration**: Works with `Pool` and Postgres connection strings
+- **Native `pg` Integration**: Works with `pg` `Pool` and `PoolClient` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
 - **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
@@ -37,6 +37,7 @@ let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
+Import any driver-specific types you need directly from `pg`.
 
 ## Adapter Capabilities
 

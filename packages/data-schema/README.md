@@ -71,6 +71,36 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
+For `FormData` and `URLSearchParams`, use the `remix/data-schema/form-data` helpers to build
+schemas that plug into the same `parse()` / `parseSafe()` flow:
+
+```ts
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
+import * as checks from 'remix/data-schema/checks'
+import * as coerce from 'remix/data-schema/coerce'
+
+let Login = f.object({
+  email: f.field(coerce.string().pipe(checks.email())),
+  password: f.field(s.string().pipe(checks.minLength(8))),
+})
+
+let credentials = s.parse(Login, await request.formData())
+let filters = s.parse(
+  f.object({
+    query: f.field(s.defaulted(s.string(), '')),
+    tags: f.fields(s.array(s.string())),
+  }),
+  new URL(request.url).searchParams,
+)
+```
+
+`f.object(...)` is the root schema for `FormData` and `URLSearchParams`.
+Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values,
+`f.file(...)` for one uploaded file, and `f.files(...)` for repeated files.
+When you want a fallback value, prefer `s.defaulted(s.string(), '')`.
+File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
+
 You can also customize built-in validation messages with `errorMap`:
 
 ```ts

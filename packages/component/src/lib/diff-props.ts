@@ -76,8 +76,8 @@ function normalizePropName(name: string, isSvg: boolean): { ns?: string; attr: s
   if (name.startsWith('aria-') || name.startsWith('data-')) return { attr: name }
 
   // DOM property -> HTML mappings
+  if (name === 'className') return { attr: 'class' }
   if (!isSvg) {
-    if (name === 'className') return { attr: 'class' }
     if (name === 'htmlFor') return { attr: 'for' }
     if (name === 'tabIndex') return { attr: 'tabindex' }
     if (name === 'acceptCharset') return { attr: 'accept-charset' }
@@ -110,33 +110,31 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
   } catch {}
 }
 
-function normalizeClassProps(props: ElementProps): ElementProps {
-  if (!('class' in props) && !('className' in props)) return props
-
+function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
   let mergedClassName =
     classAttr && className ? `${classAttr} ${className}` : classAttr || className
-  let normalizedProps = { ...props }
-
-  delete normalizedProps.class
-  if (mergedClassName) {
-    normalizedProps.className = mergedClassName
-  } else {
-    delete normalizedProps.className
-  }
-
-  return normalizedProps
+  return mergedClassName || undefined
 }
 
 export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Element) {
   let isSvg = dom.namespaceURI === SVG_NS
-  curr = normalizeClassProps(curr)
-  next = normalizeClassProps(next)
+  let currClassName = getMergedClassName(curr)
+  let nextClassName = getMergedClassName(next)
+
+  if (currClassName !== nextClassName) {
+    if (nextClassName) {
+      dom.setAttribute('class', nextClassName)
+    } else {
+      dom.removeAttribute('class')
+    }
+  }
 
   // Removals
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
+    if (name === 'class' || name === 'className') continue
     if (!(name in next) || next[name] == null) {
       // Clear runtime state for form-like props where removing the attribute is not enough.
       if (canUseProperty(dom, name, isSvg)) {
@@ -152,6 +150,7 @@ export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Eleme
   // Additions/updates
   for (let name in next) {
     if (isFrameworkProp(name)) continue
+    if (name === 'class' || name === 'className') continue
     let nextValue = next[name]
     if (nextValue == null) continue
     let prevValue = curr[name]

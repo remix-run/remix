@@ -1,0 +1,3 @@
+BREAKING CHANGE: `renderToStream()`, hydration, client updates, and frame reloads no longer hoist bare `title`, `meta`, `link`, `style`, or `script[type="application/ld+json"]` elements into `document.head`. Render head content inside an explicit `<head>` instead, or pass values like `title` to a layout component that renders the head.
+
+This removes ordering-sensitive head manipulation from server rendering and client reconciliation. We originally explored this behavior in the spirit of React's head "float" work, but Remix Component's async model is centered on routes and frames rather than async components, so layouts can render head content explicitly without needing to discover and reorder tags from deep in the tree.

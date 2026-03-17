@@ -5,6 +5,9 @@ import { isCompressibleMimeType } from '@remix-run/mime'
 
 type Encoding = 'br' | 'gzip' | 'deflate'
 
+/**
+ * Configuration for automatic response compression.
+ */
 export interface CompressionOptions {
   /**
    * Minimum size in bytes to compress (only enforced if Content-Length present).

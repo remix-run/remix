@@ -1,8 +1,2 @@
-export type {
-  PostgresDatabaseAdapterOptions,
-  PostgresDatabaseClient,
-  PostgresDatabasePool,
-  PostgresQueryResult,
-  PostgresTransactionClient,
-} from './lib/adapter.ts'
+export type { PostgresDatabaseAdapterOptions } from './lib/adapter.ts'
 export { createPostgresDatabaseAdapter, PostgresDatabaseAdapter } from './lib/adapter.ts'

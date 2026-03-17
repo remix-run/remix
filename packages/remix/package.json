@@ -25,9 +25,13 @@
     "./component/server": "./src/component/server.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
+    "./cop-middleware": "./src/cop-middleware.ts",
+    "./cors-middleware": "./src/cors-middleware.ts",
+    "./csrf-middleware": "./src/csrf-middleware.ts",
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
     "./data-table-mysql": "./src/data-table-mysql.ts",
@@ -36,7 +40,6 @@
     "./data-table/migrations": "./src/data-table/migrations.ts",
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
     "./data-table/operators": "./src/data-table/operators.ts",
-    "./data-table/sql": "./src/data-table/sql.ts",
     "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
@@ -105,6 +108,18 @@
         "types": "./dist/cookie.d.ts",
         "default": "./dist/cookie.js"
       },
+      "./cop-middleware": {
+        "types": "./dist/cop-middleware.d.ts",
+        "default": "./dist/cop-middleware.js"
+      },
+      "./cors-middleware": {
+        "types": "./dist/cors-middleware.d.ts",
+        "default": "./dist/cors-middleware.js"
+      },
+      "./csrf-middleware": {
+        "types": "./dist/csrf-middleware.d.ts",
+        "default": "./dist/csrf-middleware.js"
+      },
       "./data-schema": {
         "types": "./dist/data-schema.d.ts",
         "default": "./dist/data-schema.js"
@@ -116,6 +131,10 @@
       "./data-schema/coerce": {
         "types": "./dist/data-schema/coerce.d.ts",
         "default": "./dist/data-schema/coerce.js"
+      },
+      "./data-schema/form-data": {
+        "types": "./dist/data-schema/form-data.d.ts",
+        "default": "./dist/data-schema/form-data.js"
       },
       "./data-schema/lazy": {
         "types": "./dist/data-schema/lazy.d.ts",
@@ -148,10 +167,6 @@
       "./data-table/operators": {
         "types": "./dist/data-table/operators.d.ts",
         "default": "./dist/data-table/operators.js"
-      },
-      "./data-table/sql": {
-        "types": "./dist/data-table/sql.d.ts",
-        "default": "./dist/data-table/sql.js"
       },
       "./data-table/sql-helpers": {
         "types": "./dist/data-table/sql-helpers.d.ts",
@@ -301,6 +316,7 @@
     }
   },
   "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
@@ -308,10 +324,18 @@
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
+    "@remix-run/cors-middleware": "workspace:^",
+    "@remix-run/csrf-middleware": "workspace:^",
     "@remix-run/cookie": "workspace:^",
+    "@remix-run/data-schema": "workspace:^",
+    "@remix-run/data-table": "workspace:^",
+    "@remix-run/data-table-mysql": "workspace:^",
+    "@remix-run/data-table-postgres": "workspace:^",
+    "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/file-storage": "workspace:^",
+    "@remix-run/file-storage-s3": "workspace:^",
     "@remix-run/form-data-middleware": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/fs": "workspace:^",
@@ -325,19 +349,14 @@
     "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/response": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
+    "@remix-run/script-server": "workspace:^",
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
-    "@remix-run/script-server": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^",
-    "@remix-run/data-schema": "workspace:^",
-    "@remix-run/data-table": "workspace:^",
-    "@remix-run/data-table-mysql": "workspace:^",
-    "@remix-run/data-table-postgres": "workspace:^",
-    "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/file-storage-s3": "workspace:^"
+    "@remix-run/cop-middleware": "workspace:^",
+    "@remix-run/static-middleware": "workspace:^",
+    "@remix-run/tar-parser": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

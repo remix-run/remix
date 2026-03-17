@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "types": ["node", "dom-navigation"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
