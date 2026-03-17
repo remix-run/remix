@@ -573,7 +573,7 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
           }
 
           let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
-          href = `${WEBSITE_DOCS_PATH}/${path}`
+          href = `${WEBSITE_DOCS_PATH}/${path}/`
           transformed = `[\`${part.text}\`](${href})`
         } else {
           throw new Error(`Missing/invalid target for @link content: ${part.text}`)
