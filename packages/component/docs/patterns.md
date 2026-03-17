@@ -55,14 +55,12 @@ function SearchForm(handle: Handle) {
 
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let query = formData.get('query') as string
           // Use query for search
-        },
-      }}
+        })]}
     >
       <input name="query" />
       <button type="submit">Search</button>
@@ -74,14 +72,12 @@ function SearchForm(handle: Handle) {
 function SearchForm(handle: Handle) {
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let query = formData.get('query') as string
           // Use query for search - no component state needed
-        },
-      }}
+        })]}
     >
       <input name="query" />
       <button type="submit">Search</button>
@@ -102,12 +98,10 @@ function Toggle(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[on('click', () => {
             isOpen = !isOpen
             handle.update()
-          },
-        }}
+        })]}
       >
         Toggle
       </button>
@@ -182,7 +176,7 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
 
 function EventListener(handle: Handle, setup: DataEmitter) {
   // Set up listeners once with automatic cleanup
-  handle.on(setup, {
+  addEventListeners(setup, handle.signal, {
     data(event) {
       // Handle data
       handle.update()
@@ -201,7 +195,7 @@ function WindowResizeTracker(handle: Handle) {
   let height = window.innerHeight
 
   // Set up global listeners once
-  handle.on(window, {
+  addEventListeners(window, handle.signal, {
     resize() {
       width = window.innerWidth
       height = window.innerHeight
@@ -273,17 +267,14 @@ function Modal(handle: Handle) {
   return () => (
     <div>
       <button
-        mix={[ref((node) => (openButton = node))]}
-        on={{
-          click() {
+        mix={[ref((node) => (openButton = node)), on('click', () => {
             isOpen = true
             handle.update()
             // Queue focus operation after modal renders
             handle.queueTask(() => {
               closeButton.focus()
             })
-          },
-        }}
+          })]}
       >
         Open Modal
       </button>
@@ -291,17 +282,14 @@ function Modal(handle: Handle) {
       {isOpen && (
         <div role="dialog">
           <button
-            mix={[ref((node) => (closeButton = node))]}
-            on={{
-              click() {
+            mix={[ref((node) => (closeButton = node)), on('click', () => {
                 isOpen = false
                 handle.update()
                 // Queue focus operation after modal closes
                 handle.queueTask(() => {
                   openButton.focus()
                 })
-              },
-            }}
+              })]}
           >
             Close
           </button>
@@ -323,9 +311,7 @@ function ScrollableList(handle: Handle) {
   return () => (
     <div>
       <input
-        mix={[ref((node) => (newItemInput = node))]}
-        on={{
-          keydown(event) {
+        mix={[ref((node) => (newItemInput = node)), on('keydown', (event) => {
             if (event.key === 'Enter') {
               let text = event.currentTarget.value
               if (text.trim()) {
@@ -338,15 +324,13 @@ function ScrollableList(handle: Handle) {
                 })
               }
             }
-          },
-        }}
+          })]}
       />
       <div
-        mix={[ref((node) => (listContainer = node))]}
-        css={{
+        mix={[ref((node) => (listContainer = node)), css({
           maxHeight: '300px',
           overflowY: 'auto',
-        }}
+        })]}
       >
         {items.map((item, i) => (
           <div key={i}>{item}</div>
@@ -371,13 +355,11 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        on={{
-          async input(event, signal) {
+        mix={[on('input', async (event, signal) => {
             // Read value directly from the input - no component state needed
             let query = event.currentTarget.value
             // ... use query for search
-          },
-        }}
+          })]}
       />
     </div>
   )
@@ -396,16 +378,14 @@ function SlugForm(handle: Handle) {
       <label>
         <input
           type="checkbox"
-          on={{
-            change(event) {
+          mix={[on('change', (event) => {
               if (event.currentTarget.checked) {
                 generatedSlug = crypto.randomUUID().slice(0, 8)
               } else {
                 generatedSlug = ''
               }
               handle.update()
-            },
-          }}
+            })]}
         />
         Auto-generate slug
       </label>
@@ -415,12 +395,10 @@ function SlugForm(handle: Handle) {
           type="text"
           value={generatedSlug || slug}
           disabled={!!generatedSlug}
-          on={{
-            input(event) {
+          mix={[on('input', (event) => {
               slug = event.currentTarget.value
               handle.update()
-            },
-          }}
+            })]}
         />
       </label>
     </form>
@@ -455,8 +433,7 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        on={{
-          async input(event, signal) {
+        mix={[on('input', async (event, signal) => {
             let query = event.currentTarget.value
             loading = true
             handle.update()
@@ -468,8 +445,7 @@ function SearchInput(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          },
-        }}
+          })]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (

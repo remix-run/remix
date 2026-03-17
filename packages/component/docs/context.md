@@ -15,13 +15,11 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[on('click', () => {
             theme = theme === 'light' ? 'dark' : 'light'
             handle.context.set({ theme })
             handle.update()
-          },
-        }}
+        })]}
       >
         Toggle Theme
       </button>
@@ -34,7 +32,9 @@ function ThemedContent(handle: Handle) {
   let { theme } = handle.context.get(ThemeProvider)
 
   return () => (
-    <div css={{ backgroundColor: theme === 'dark' ? '#000' : '#fff' }}>Current theme: {theme}</div>
+    <div mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>
+      Current theme: {theme}
+    </div>
   )
 }
 ```
@@ -68,12 +68,10 @@ function ThemeProvider(handle: Handle<Theme>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[on('click', () => {
             // No update needed - consumers subscribe to changes
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
+        })]}
       >
         Toggle Theme
       </button>
@@ -86,14 +84,14 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProvider)
 
   // Subscribe to granular updates
-  handle.on(theme, {
+  addEventListeners(theme, handle.signal, {
     change() {
       handle.update()
     },
   })
 
   return () => (
-    <div css={{ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' }}>
+    <div mix={[css({ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' })]}>
       Current theme: {theme.value}
     </div>
   )
@@ -145,7 +143,7 @@ function AppProvider(handle: Handle<AppContext>) {
 function UserDisplay(handle: Handle) {
   let context = handle.context.get(AppProvider)
 
-  handle.on(context, {
+  addEventListeners(context, handle.signal, {
     userChange() {
       handle.update()
     },
@@ -158,4 +156,4 @@ function UserDisplay(handle: Handle) {
 ## See Also
 
 - [Handle API](./handle.md) - `handle.context` reference
-- [Events](./events.md) - `handle.on()` for subscribing to EventTargets
+- [Events](./events.md) - `addEventListeners()` for subscribing to EventTargets

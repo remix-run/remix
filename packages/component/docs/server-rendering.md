@@ -5,14 +5,14 @@ Remix Component can render to HTML on the server using two APIs:
 - `renderToString` - Returns a complete HTML string. Simple, but buffers the entire response.
 - `renderToStream` - Returns a `ReadableStream<Uint8Array>`. Sends the initial HTML immediately and streams frame content as it resolves.
 
-Both are exported from `@remix-run/component/server`.
+Both are exported from `remix/component/server`.
 
 ## renderToString
 
 Renders a component tree to a complete HTML string. Use this when you need the full output before responding (e.g., generating static pages or embedding HTML in an email).
 
 ```tsx
-import { renderToString } from '@remix-run/component/server'
+import { renderToString } from 'remix/component/server'
 
 let html = await renderToString(<App />)
 ```
@@ -22,7 +22,7 @@ let html = await renderToString(<App />)
 Renders a component tree to a streaming response. The initial HTML is sent immediately. Any `<Frame>` components with a `fallback` prop will render the fallback first, then stream the resolved content as it becomes available.
 
 ```tsx
-import { renderToStream } from '@remix-run/component/server'
+import { renderToStream } from 'remix/component/server'
 
 let stream = renderToStream(<App />, {
   frameSrc: request.url,

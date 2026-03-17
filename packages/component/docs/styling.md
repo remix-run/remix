@@ -1,21 +1,21 @@
 # Styling
 
-The `css` prop provides inline styling with support for pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries. It follows modern CSS nesting selector rules.
+The `css(...)` mixin provides inline styling with support for pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries. It follows modern CSS nesting selector rules.
 
-## Basic CSS Prop
+## Basic CSS Mixin
 
 ```tsx
 function Button() {
   return () => (
     <button
-      css={{
+      mix={[css({
         color: 'white',
         backgroundColor: 'blue',
         padding: '12px 24px',
         borderRadius: '4px',
         border: 'none',
         cursor: 'pointer',
-      }}
+      })]}
     >
       Click me
     </button>
@@ -23,21 +23,21 @@ function Button() {
 }
 ```
 
-## CSS Prop vs Style Prop
+## CSS Mixin vs Style Prop
 
-The `css` prop produces static styles that are inserted into the document as CSS rules, while the `style` prop applies styles directly to the element. For **dynamic styles** that change frequently, use the `style` prop for better performance:
+The `css(...)` mixin produces static styles that are inserted into the document as CSS rules, while the `style` prop applies styles directly to the element. For **dynamic styles** that change frequently, use the `style` prop for better performance:
 
 ```tsx
-// ❌ Avoid: Using css prop for dynamic styles
+// ❌ Avoid: Using css(...) for dynamic styles
 function ProgressBar(handle: Handle) {
   let progress = 0
 
   return () => (
     <div
-      css={{
+      mix={[css({
         width: `${progress}%`, // Creates new CSS rule on every update
         backgroundColor: 'blue',
-      }}
+      })]}
     >
       {progress}%
     </div>
@@ -50,9 +50,9 @@ function ProgressBar(handle: Handle) {
 
   return () => (
     <div
-      css={{
-        backgroundColor: 'blue', // Static styles in css prop
-      }}
+      mix={[css({
+        backgroundColor: 'blue', // Static styles in css(...)
+      })]}
       style={{
         width: `${progress}%`, // Dynamic styles in style prop
       }}
@@ -63,7 +63,7 @@ function ProgressBar(handle: Handle) {
 }
 ```
 
-**Use the `css` prop for:**
+**Use the `css(...)` mixin for:**
 
 - Static styles that don't change
 - Styles that need pseudo-selectors (`:hover`, `:focus`, etc.)
@@ -82,7 +82,7 @@ Use `&` to reference the current element in pseudo-selectors:
 function Button() {
   return () => (
     <button
-      css={{
+      mix={[css({
         color: 'white',
         backgroundColor: 'blue',
         padding: '12px 24px',
@@ -105,7 +105,7 @@ function Button() {
           opacity: 0.5,
           cursor: 'not-allowed',
         },
-      }}
+      })]}
     >
       Click me
     </button>
@@ -121,7 +121,7 @@ Use `&::before` and `&::after` for pseudo-elements:
 function Badge() {
   return (props: { count: number }) => (
     <div
-      css={{
+      mix={[css({
         position: 'relative',
         display: 'inline-block',
         '&::before': {
@@ -134,7 +134,7 @@ function Badge() {
           backgroundColor: 'red',
           borderRadius: '50%',
         },
-      }}
+      })]}
     >
       {props.count > 0 && <span>{props.count}</span>}
     </div>
@@ -151,7 +151,7 @@ function Input() {
   return (props: { required?: boolean }) => (
     <input
       required={props.required}
-      css={{
+      mix={[css({
         padding: '8px',
         border: '1px solid #ccc',
         borderRadius: '4px',
@@ -162,7 +162,7 @@ function Input() {
           borderColor: 'red',
           outline: '2px solid red',
         },
-      }}
+      })]}
     />
   )
 }
@@ -176,7 +176,7 @@ Use class names or element selectors directly for descendant selectors:
 function Card() {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
+      mix={[css({
         padding: '20px',
         border: '1px solid #ddd',
         borderRadius: '8px',
@@ -200,7 +200,7 @@ function Card() {
         '& button': {
           marginTop: '16px',
         },
-      }}
+      })]}
     >
       {props.children}
     </div>
@@ -233,22 +233,18 @@ function CardWithJSState(handle: Handle) {
 
   return (props: { children: RemixNode }) => (
     <div
-      on={{
-        mouseenter() {
+      mix={[on('mouseenter', () => {
           isHovered = true
           handle.update()
-        },
-        mouseleave() {
+        }), on('mouseleave', () => {
           isHovered = false
           handle.update()
-        },
-      }}
-      css={{
+        }), css({
         border: `1px solid ${isHovered ? 'blue' : '#ddd'}`,
         // ... more conditional styling based on isHovered
-      }}
+      })]}
     >
-      <div className="title" css={{ color: isHovered ? 'blue' : '#333' }}>
+      <div className="title" mix={[css({ color: isHovered ? 'blue' : '#333' })]}>
         Title
       </div>
     </div>
@@ -259,7 +255,7 @@ function CardWithJSState(handle: Handle) {
 function Card(handle: Handle) {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
+      mix={[css({
         border: '1px solid #ddd',
         borderRadius: '8px',
         padding: '20px',
@@ -283,7 +279,7 @@ function Card(handle: Handle) {
           opacity: 0.7,
           marginTop: '8px',
         },
-      }}
+      })]}
     >
       <div className="title">Title</div>
     </div>
@@ -297,7 +293,7 @@ function Card(handle: Handle) {
 function Button() {
   return () => (
     <button
-      css={{
+      mix={[css({
         backgroundColor: 'blue',
         color: 'white',
         padding: '12px 24px',
@@ -311,7 +307,7 @@ function Button() {
         '&:active': {
           transform: 'scale(0.98)',
         },
-      }}
+      })]}
     >
       Click me
     </button>
@@ -325,7 +321,7 @@ function Button() {
 function Navigation() {
   return () => (
     <nav
-      css={{
+      mix={[css({
         display: 'flex',
         gap: '16px',
         // Styling descendant links - appropriate use of nesting
@@ -344,7 +340,7 @@ function Navigation() {
             color: 'white',
           },
         },
-      }}
+      })]}
     >
       <a href="/">Home</a>
       <a href="/about">About</a>
@@ -362,7 +358,7 @@ Use `@media` for responsive design:
 function ResponsiveGrid() {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
+      mix={[css({
         display: 'grid',
         gap: '16px',
         gridTemplateColumns: '1fr',
@@ -372,7 +368,7 @@ function ResponsiveGrid() {
         '@media (min-width: 1024px)': {
           gridTemplateColumns: 'repeat(3, 1fr)',
         },
-      }}
+      })]}
     >
       {props.children}
     </div>
@@ -388,7 +384,7 @@ Here's a comprehensive example demonstrating parent-state-affecting-children and
 function ProductCard() {
   return (props: { title: string; price: number; image: string }) => (
     <div
-      css={{
+      mix={[css({
         border: '1px solid #ddd',
         borderRadius: '8px',
         overflow: 'hidden',
@@ -410,53 +406,53 @@ function ProductCard() {
             transform: 'translateY(-2px)',
           },
         },
-      }}
+      })]}
     >
       <img
         src={props.image}
         alt={props.title}
-        css={{
+        mix={[css({
           width: '100%',
           height: '200px',
           objectFit: 'cover',
           '@media (max-width: 768px)': {
             height: '150px',
           },
-        }}
+        })]}
       />
       <div
         className="content"
-        css={{
+        mix={[css({
           padding: '16px',
           '@media (max-width: 768px)': {
             padding: '12px',
           },
-        }}
+        })]}
       >
         <h3
           className="title"
-          css={{
+          mix={[css({
             fontSize: '18px',
             fontWeight: 'bold',
             marginTop: 0,
             marginBottom: '8px',
             transition: 'color 0.2s',
-          }}
+          })]}
         >
           {props.title}
         </h3>
         <div
           className="price"
-          css={{
+          mix={[css({
             fontSize: '20px',
             color: 'green',
             fontWeight: 'bold',
-          }}
+          })]}
         >
           ${props.price}
         </div>
         <button
-          css={{
+          mix={[css({
             width: '100%',
             padding: '12px',
             backgroundColor: 'blue',
@@ -468,7 +464,7 @@ function ProductCard() {
             '&:active': {
               transform: 'scale(0.98)',
             },
-          }}
+          })]}
         >
           Add to Cart
         </button>
@@ -481,7 +477,7 @@ function ProductCard() {
 This example demonstrates:
 
 - **Parent hover affecting children**: Card hover changes title color and button background
-- **Styles on elements themselves**: Each element has its own `css` prop
+- **Styles on elements themselves**: Each element has its own `css(...)` mixin
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements
 

@@ -39,31 +39,31 @@ The iterator can be:
 ### Template literal
 
 ```tsx
-css={{
+mix={[css({
   transition: `width ${spring('bouncy')}`
-}}
+})]}
 // → "width 550ms linear(...)"
 ```
 
 ### Multiple properties (same spring)
 
 ```tsx
-css={{
+mix={[css({
   transition: `transform ${spring('bouncy')}, opacity ${spring('bouncy')}`
-}}
+})]}
 ```
 
 ### Using the helper
 
 ```tsx
-css={{
+mix={[css({
   transition: spring.transition('width', 'bouncy')
-}}
+})]}
 // → "width 550ms linear(...)"
 
-css={{
+mix={[css({
   transition: spring.transition(['left', 'top'], 'snappy')
-}}
+})]}
 // → "left 385ms linear(...), top 385ms linear(...)"
 ```
 
@@ -264,18 +264,15 @@ function AnimatedCard(handle: Handle) {
 
   return () => (
     <div
-      css={{
+      mix={[css({
         transition: spring.transition(['width', 'height'], 'bouncy'),
-      }}
+      }), on('click', () => {
+        isExpanded = !isExpanded
+        handle.update()
+      })]}
       style={{
         width: isExpanded ? '300px' : '100px',
         height: isExpanded ? '200px' : '100px',
-      }}
-      on={{
-        click() {
-          isExpanded = !isExpanded
-          handle.update()
-        },
       }}
     >
       Click me
