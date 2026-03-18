@@ -39,7 +39,7 @@
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.25.0",
     "magic-string": "^0.30.21",
-    "typescript": "catalog:"
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/node": "catalog:",

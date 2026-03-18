@@ -1183,7 +1183,7 @@ importers:
         specifier: ^0.30.21
         version: 0.30.21
       typescript:
-        specifier: 'catalog:'
+        specifier: ^5.9.3
         version: 5.9.3
     devDependencies:
       '@types/node':
