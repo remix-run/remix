@@ -37,7 +37,7 @@
     "@remix-run/route-pattern": "workspace:*",
     "@swc/core": "^1.15.18",
     "es-module-lexer": "^2.0.0",
-    "esbuild": "catalog:",
+    "esbuild": "^0.25.0",
     "magic-string": "^0.30.21",
     "typescript": "catalog:"
   },

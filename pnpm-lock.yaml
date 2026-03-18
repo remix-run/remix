@@ -12,9 +12,6 @@ catalogs:
     '@typescript/native-preview':
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
-    esbuild:
-      specifier: ^0.25.0
-      version: 0.25.12
     playwright:
       specifier: ^1.53.1
       version: 1.57.0
@@ -1180,7 +1177,7 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       esbuild:
-        specifier: 'catalog:'
+        specifier: ^0.25.0
         version: 0.25.12
       magic-string:
         specifier: ^0.30.21
