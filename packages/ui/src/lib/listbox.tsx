@@ -1,20 +1,22 @@
 // @jsxRuntime classic
 // @jsx createElement
 import { createElement, on, ref, type Handle, type Props } from '@remix-run/component'
+import { filterText } from './filter-text.tsx'
+import { flashAttribute } from './flash-attribute.ts'
 import { Glyph } from './glyph.tsx'
 import { popover } from './popover.tsx'
 import { ui } from './theme.ts'
+import { waitForCssTransition } from './wait-for-css-transition.ts'
 
 type HighlightOnOpen = 'selectedOrFirst' | 'first' | 'last'
 
 let MENU_POINTER_UP_DELAY = 200
 let SELECTION_FLASH_DELAY = 75
+let enabledOptionSelector = '[role="option"]:not([aria-disabled="true"])'
 
 type ListboxContext = {
   disabled: boolean
   highlightedValue: string | null
-  selectionFeedbackValue: string | null
-  selectionFlashVisible: boolean
   selectedValue: string | null
 }
 
@@ -28,6 +30,19 @@ export interface ListboxOptionProps extends Props<'div'> {
   value: string
 }
 
+function getTargetOptionNode(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return null
+  }
+
+  let node = target.closest(enabledOptionSelector)
+  if (!(node instanceof HTMLElement)) {
+    return null
+  }
+
+  return node
+}
+
 export function Listbox(handle: Handle<ListboxContext>) {
   let highlightedValue: string | null = null
   let buttonPointerDownTime: number | null = null
@@ -36,8 +51,6 @@ export function Listbox(handle: Handle<ListboxContext>) {
   let popupId = `${handle.id}-popup`
   let listId = `${handle.id}-list`
   let selectionActive = false
-  let selectionFeedbackValue: string | null = null
-  let selectionFlashVisible = false
   let selectedValue: string | null = null
   let triggerNode: HTMLButtonElement
   let popupNode: HTMLDivElement
@@ -74,9 +87,9 @@ export function Listbox(handle: Handle<ListboxContext>) {
   })
 
   function getOptionNodes() {
-    return Array.from(
-      popupNode.querySelectorAll('[role="option"]:not([aria-disabled="true"])'),
-    ).filter((node): node is HTMLElement => node instanceof HTMLElement)
+    return Array.from(popupNode.querySelectorAll(enabledOptionSelector)).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    )
   }
 
   function getOptionNodeByValue(value: string | null) {
@@ -93,19 +106,6 @@ export function Listbox(handle: Handle<ListboxContext>) {
 
   function getSelectedOptionNode() {
     return getOptionNodeByValue(selectedValue)
-  }
-
-  function getTargetOptionNode(target: EventTarget | null) {
-    if (!(target instanceof Element)) {
-      return null
-    }
-
-    let node = target.closest('[role="option"]:not([aria-disabled="true"])')
-    if (!(node instanceof HTMLElement)) {
-      return null
-    }
-
-    return node
   }
 
   function setHighlightedValue(value: string | null) {
@@ -172,33 +172,6 @@ export function Listbox(handle: Handle<ListboxContext>) {
     setHighlightedValue(enabledOptions[nextIndex]!.dataset.value ?? null)
   }
 
-  function wait(ms: number) {
-    return new Promise<void>((resolve) => {
-      setTimeout(resolve, ms)
-    })
-  }
-
-  function waitForPopupClose() {
-    return new Promise<void>((resolve) => {
-      function finish(event: TransitionEvent) {
-        if (event.target !== popupNode) {
-          return
-        }
-
-        popupNode.removeEventListener('transitionend', finish)
-        popupNode.removeEventListener('transitioncancel', finish)
-        resolve()
-      }
-
-      popupNode.addEventListener('transitionend', finish, {
-        signal: handle.signal,
-      })
-      popupNode.addEventListener('transitioncancel', finish, {
-        signal: handle.signal,
-      })
-    })
-  }
-
   async function openPopup(disabled: boolean, strategy: HighlightOnOpen = 'selectedOrFirst') {
     if (disabled || open || selectionActive) {
       return
@@ -232,45 +205,21 @@ export function Listbox(handle: Handle<ListboxContext>) {
     }
   }
 
-  async function selectValue(
-    value: string,
-    { focusTrigger = true }: { focusTrigger?: boolean } = {},
-  ) {
-    let option = getOptionNodeByValue(value)
-    if (!(option instanceof HTMLElement) || selectionActive) {
-      return
-    }
-
+  async function selectValue(option: HTMLElement, { focusTrigger = true }: { focusTrigger?: boolean } = {}) {
+    let value = option.dataset.value!
     selectionActive = true
     highlightedValue = null
-    selectionFeedbackValue = value
-    selectionFlashVisible = false
     await handle.update()
 
-    await wait(SELECTION_FLASH_DELAY)
-    if (handle.signal.aborted) {
-      return
-    }
+    await flashAttribute(option, 'data-flash', SELECTION_FLASH_DELAY)
+    if (handle.signal.aborted) return
 
-    selectionFlashVisible = true
-    await handle.update()
-
-    await wait(SELECTION_FLASH_DELAY)
-    if (handle.signal.aborted) {
-      return
-    }
-
-    selectionFlashVisible = false
-    let popupClose = waitForPopupClose()
-    closePopup({ focusTrigger })
-
-    await popupClose
-    if (handle.signal.aborted) {
-      return
-    }
+    await waitForCssTransition(popupNode, handle.signal, () => {
+      closePopup({ focusTrigger })
+    })
+    if (handle.signal.aborted) return
 
     selectionActive = false
-    selectionFeedbackValue = null
     selectedValue = value
     await handle.update()
   }
@@ -281,12 +230,30 @@ export function Listbox(handle: Handle<ListboxContext>) {
       return
     }
 
-    let value = option.dataset.value
-    if (!value) {
+    await selectValue(option)
+  }
+
+  function selectFilteredValue(text: string) {
+    if (selectionActive || text === '') {
       return
     }
 
-    await selectValue(value)
+    let option = getOptionNodes().find(node =>
+      node.dataset.label?.toLowerCase().includes(text.toLowerCase()),
+    )
+    if (!(option instanceof HTMLElement)) {
+      return
+    }
+
+    highlightedValue = null
+    selectedValue = option.dataset.value!
+
+    if (open) {
+      closePopup()
+      return
+    }
+
+    void handle.update()
   }
 
   return (props: ListboxProps) => {
@@ -295,8 +262,6 @@ export function Listbox(handle: Handle<ListboxContext>) {
     handle.context.set({
       disabled: props.disabled === true,
       highlightedValue,
-      selectionFeedbackValue,
-      selectionFlashVisible,
       selectedValue,
     })
 
@@ -312,6 +277,9 @@ export function Listbox(handle: Handle<ListboxContext>) {
           mix,
           ref((node: HTMLButtonElement) => {
             triggerNode = node
+          }),
+          filterText(text => {
+            selectFilteredValue(text)
           }),
           on('click', (event) => {
             event.preventDefault()
@@ -501,14 +469,9 @@ export function Listbox(handle: Handle<ListboxContext>) {
                   return
                 }
 
-                let value = option.dataset.value
-                if (!value) {
-                  return
-                }
-
                 event.preventDefault()
                 event.stopPropagation()
-                void selectValue(value)
+                void selectValue(option)
               }),
             ]}
           >
@@ -529,7 +492,6 @@ export function ListboxOption(handle: Handle) {
       (typeof children === 'string' || typeof children === 'number' ? String(children) : value)
     let resolvedDisabled = listbox.disabled || disabled === true
 
-    let flashed = listbox.selectionFeedbackValue === value && listbox.selectionFlashVisible
     let selected = listbox.selectedValue === value
     let highlighted = listbox.highlightedValue === value
 
@@ -538,7 +500,6 @@ export function ListboxOption(handle: Handle) {
         {...domProps}
         aria-disabled={resolvedDisabled ? true : undefined}
         aria-selected={selected ? true : undefined}
-        data-flash={flashed ? 'true' : undefined}
         data-highlighted={highlighted ? 'true' : undefined}
         data-label={resolvedTextValue}
         data-value={value}
