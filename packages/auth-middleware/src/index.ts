@@ -15,7 +15,7 @@ export type {
   AuthSchemeAuthenticateResult,
   AuthSchemeResult,
   AuthSchemeSuccess,
-  AuthenticatedAuth,
-  UnauthenticatedAuth,
+  GoodAuth,
+  BadAuth,
 } from './lib/auth.ts'
 export type { RequireAuthOptions } from './lib/require-auth.ts'

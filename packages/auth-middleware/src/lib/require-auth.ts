@@ -1,5 +1,5 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import { Auth, type UnauthenticatedAuth } from './auth.ts'
+import { Auth, type BadAuth } from './auth.ts'
 
 /**
  * Options for enforcing authentication on a route.
@@ -8,7 +8,7 @@ export interface RequireAuthOptions {
   /** Custom response builder for unauthenticated requests. */
   onFailure?: (
     context: RequestContext,
-    auth: UnauthenticatedAuth,
+    auth: BadAuth,
   ) => Response | Promise<Response>
   /** HTTP status used by the default failure response. */
   status?: number
@@ -53,7 +53,7 @@ export function requireAuth(options: RequireAuthOptions = {}): Middleware {
 }
 
 async function createFailureResponse(
-  auth: UnauthenticatedAuth,
+  auth: BadAuth,
   context: RequestContext,
   options: RequireAuthOptions,
   status: number,

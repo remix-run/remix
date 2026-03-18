@@ -83,7 +83,7 @@ If you need to create the login route, start an OAuth redirect, finish a provide
 
 `auth({ schemes })` does one thing: it resolves request auth state and stores it at `context.get(Auth)`. It does not start login flows, talk to external providers, or write login state into the session.
 
-- it runs schemes in order
+- it runs [auth schemes](#auth-schemes) in order
 - `null` or `undefined` means "this scheme does not apply"
 - `{ status: 'success', identity }` stops evaluation and stores `{ ok: true, identity, method }`
 - `{ status: 'failure', ... }` stops evaluation and stores `{ ok: false, error }`
@@ -96,7 +96,7 @@ If you need to create the login route, start an OAuth redirect, finish a provide
 An `AuthScheme` is any object with a `name` and an `authenticate(context)` method.
 This package ships with three built-in auth schemes:
 
-- `createBearerTokenAuthScheme()` for bearer tokens in the [HTTP `Authorization` header](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1)
+- `createBearerTokenAuthScheme()` for bearer tokens in the [HTTP `Authorization: Bearer <token>` header](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1)
 - `createAPIAuthScheme()` for API keys in a custom request header
 - `createSessionAuthScheme()` for session-backed auth loaded by [a `session()` middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware)
 
@@ -140,7 +140,7 @@ function createTrustedProxyAuthScheme(): AuthScheme<User> {
 }
 ```
 
-Only use a scheme like this when the app is reachable exclusively through infrastructure you trust to set those headers.
+Note: Only use a scheme like this when the app is reachable exclusively through infrastructure you trust to set the headers you rely on. In this case, the `X-Forwarded-Email` header.
 
 `authenticate(context)` can return:
 
@@ -149,86 +149,6 @@ Only use a scheme like this when the app is reachable exclusively through infras
 - `{ status: 'failure', code?, message?, challenge? }` to stop with an auth error
 
 The scheme `name` becomes `auth.method` when authentication succeeds.
-
-## Built-In Auth Schemes
-
-The built-in helpers all return `AuthScheme` objects. Use them directly, mix them together in fallback order, or combine them with your own custom schemes.
-
-### Bearer Tokens
-
-Use `createBearerTokenAuthScheme()` for APIs that authenticate requests with `Authorization: Bearer <token>`.
-
-```ts
-import { auth, createBearerTokenAuthScheme } from 'remix/auth-middleware'
-
-let router = createRouter({
-  middleware: [
-    auth({
-      schemes: [
-        createBearerTokenAuthScheme({
-          async verify(token) {
-            return usersByToken.get(token) ?? null
-          },
-        }),
-      ],
-    }),
-  ],
-})
-```
-
-### API Keys
-
-Use `createAPIAuthScheme()` for integrations that send a key in a header such as `X-API-Key`.
-
-```ts
-import { auth, createAPIAuthScheme } from 'remix/auth-middleware'
-
-let router = createRouter({
-  middleware: [
-    auth({
-      schemes: [
-        createAPIAuthScheme({
-          async verify(key) {
-            return servicesByKey.get(key) ?? null
-          },
-        }),
-      ],
-    }),
-  ],
-})
-```
-
-### Session-Backed Auth
-
-Use `createSessionAuthScheme()` when another part of the app has already written a small auth record into the session and you want normal requests to resolve that back into the current user.
-
-```ts
-import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
-import { session } from 'remix/session-middleware'
-
-let router = createRouter({
-  middleware: [
-    session(sessionCookie, sessionStorage),
-    auth({
-      schemes: [
-        createSessionAuthScheme({
-          read(session) {
-            return session.get('auth') as { userId: string } | null
-          },
-          async verify(value) {
-            return users.getById(value.userId)
-          },
-          invalidate(session) {
-            session.unset('auth')
-          },
-        }),
-      ],
-    }),
-  ],
-})
-```
-
-This is the scheme to use with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) or any other login flow that persists a session auth record.
 
 ## Route Protection
 

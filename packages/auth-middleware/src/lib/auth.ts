@@ -21,7 +21,7 @@ export interface AuthFailure {
 /**
  * Auth state for a successfully authenticated request.
  */
-export interface AuthenticatedAuth<identity = unknown, method extends string = string> {
+export interface GoodAuth<identity = unknown, method extends string = string> {
   /** Indicates that the current request is authenticated. */
   ok: true
   /** Application-defined identity resolved for the current request. */
@@ -33,7 +33,7 @@ export interface AuthenticatedAuth<identity = unknown, method extends string = s
 /**
  * Auth state for a request that did not authenticate successfully.
  */
-export interface UnauthenticatedAuth {
+export interface BadAuth {
   /** Indicates that the current request is not authenticated. */
   ok: false
   /** Failure details when authentication was attempted and rejected. */
@@ -44,8 +44,8 @@ export interface UnauthenticatedAuth {
  * Request auth state stored in the router context.
  */
 export type Auth<identity = unknown, method extends string = string> =
-  | AuthenticatedAuth<identity, method>
-  | UnauthenticatedAuth
+  | GoodAuth<identity, method>
+  | BadAuth
 
 /**
  * Context key used to read auth state with `context.get(Auth)`.

@@ -57,6 +57,15 @@ export default [
         },
       ],
 
+      // Require interface names to use PascalCase
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'interface',
+          format: ['PascalCase'],
+        },
+      ],
+
       // Prefer native public and #private over TS accessibility modifiers
       // Disallow `public`/`private`/`protected` on class fields, methods, and parameter properties
       'no-restricted-syntax': [
