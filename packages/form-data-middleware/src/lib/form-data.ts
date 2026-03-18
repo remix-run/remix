@@ -1,7 +1,6 @@
 import {
   FormDataParseError,
   MaxFilesExceededError,
-  MaxFieldsExceededError,
   parseFormData,
   type FileUploadHandler,
   type ParseFormDataOptions,
@@ -9,7 +8,7 @@ import {
 import type { Middleware } from '@remix-run/fetch-router'
 
 function isFormDataLimitError(error: unknown): boolean {
-  return error instanceof MaxFilesExceededError || error instanceof MaxFieldsExceededError
+  return error instanceof MaxFilesExceededError
 }
 
 /**

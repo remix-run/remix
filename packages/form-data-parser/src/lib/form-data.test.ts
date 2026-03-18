@@ -5,7 +5,6 @@ import {
   type FileUploadHandler,
   FormDataParseError,
   MaxFilesExceededError,
-  MaxFieldsExceededError,
   parseFormData,
 } from './form-data.ts'
 import { MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
@@ -185,67 +184,6 @@ describe('parseFormData', () => {
       async () => await parseFormData(request, { maxFiles: 2 }),
       MaxFilesExceededError,
     )
-  })
-
-  it('throws when the number of text fields exceeds maxFields', async () => {
-    let request = new Request('https://remix.run', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
-      },
-      body: [
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="field1"',
-        '',
-        'value1',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="field2"',
-        '',
-        'value2',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="field3"',
-        '',
-        'value3',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
-      ].join('\r\n'),
-    })
-
-    await assert.rejects(
-      async () => await parseFormData(request, { maxFields: 2 }),
-      MaxFieldsExceededError,
-    )
-  })
-
-  it('maxFields only counts text fields', async () => {
-    let request = new Request('https://remix.run', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
-      },
-      body: [
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="field1"',
-        '',
-        'value1',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="file1"; filename="example1.txt"',
-        'Content-Type: text/plain',
-        '',
-        'This is the first example file.',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
-        'Content-Disposition: form-data; name="file2"; filename="example2.txt"',
-        'Content-Type: text/plain',
-        '',
-        'This is the second example file.',
-        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
-      ].join('\r\n'),
-    })
-
-    let formData = await parseFormData(request, { maxFields: 1 })
-
-    assert.equal(formData.get('field1'), 'value1')
-    assert.ok(formData.get('file1') instanceof File)
-    assert.ok(formData.get('file2') instanceof File)
   })
 
   it('throws when the number of multipart parts exceeds maxParts', async () => {

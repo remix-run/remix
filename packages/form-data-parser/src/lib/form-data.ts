@@ -30,16 +30,6 @@ export class MaxFilesExceededError extends FormDataParseError {
 }
 
 /**
- * An error thrown when the maximum number of text fields allowed in a request is exceeded.
- */
-export class MaxFieldsExceededError extends FormDataParseError {
-  constructor(maxFields: number) {
-    super(`Maximum number of fields exceeded: ${maxFields}`)
-    this.name = 'MaxFieldsExceededError'
-  }
-}
-
-/**
  * A file that was uploaded as part of a `multipart/form-data` request.
  */
 export class FileUpload extends File {
@@ -78,7 +68,6 @@ function defaultFileUploadHandler(file: FileUpload): File {
 const oneKb = 1024
 const oneMb = oneKb * oneKb
 const defaultMaxFiles = 20
-const defaultMaxFields = 500
 const defaultMaxFileSize = 2 * oneMb
 const defaultMaxParts = 1000
 
@@ -102,13 +91,6 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
    * @default 20
    */
   maxFiles?: number
-  /**
-   * The maximum number of text fields that can be parsed from a multipart request. If this
-   * limit is exceeded, a `MaxFieldsExceededError` will be thrown.
-   *
-   * @default 500
-   */
-  maxFields?: number
 }
 
 /**
@@ -164,7 +146,6 @@ export async function parseFormData(
 
   let {
     maxFiles = defaultMaxFiles,
-    maxFields = defaultMaxFields,
     maxHeaderSize,
     maxFileSize = defaultMaxFileSize,
     maxParts = defaultMaxParts,
@@ -180,7 +161,6 @@ export async function parseFormData(
 
   let formData = new FormData()
   let fileCount = 0
-  let fieldCount = 0
 
   try {
     for await (let part of parseMultipartRequest(request, parserOptions)) {
@@ -197,10 +177,6 @@ export async function parseFormData(
           formData.append(fieldName, value)
         }
       } else {
-        if (++fieldCount > maxFields) {
-          throw new MaxFieldsExceededError(maxFields)
-        }
-
         formData.append(fieldName, part.text)
       }
     }

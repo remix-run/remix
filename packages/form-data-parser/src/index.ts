@@ -3,7 +3,6 @@ export {
   type ParseFormDataOptions,
   FormDataParseError,
   MaxFilesExceededError,
-  MaxFieldsExceededError,
   FileUpload,
   parseFormData,
 } from './lib/form-data.ts'
