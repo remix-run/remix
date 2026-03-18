@@ -14,9 +14,10 @@ let scriptEntryKey = createContextKey<ScriptEntry>()
 
 export function loadScriptEntry(entry = 'app/assets/entry.tsx'): Middleware {
   return async (context, next) => {
+    let src = routes.scripts.href({ path: entry })
     context.set(scriptEntryKey, {
-      src: routes.scripts.href({ path: entry }),
-      preloads: await scriptServer.preloads(entry).catch(() => []),
+      src,
+      preloads: await scriptServer.preloads(src).catch(() => []),
     })
     return next()
   }

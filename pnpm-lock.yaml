@@ -1164,12 +1164,15 @@ importers:
 
   packages/script-server:
     dependencies:
+      '@remix-run/file-storage':
+        specifier: workspace:*
+        version: link:../file-storage
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
-      '@remix-run/mime':
+      '@remix-run/route-pattern':
         specifier: workspace:*
-        version: link:../mime
+        version: link:../route-pattern
       '@swc/core':
         specifier: ^1.15.18
         version: 1.15.18
@@ -1182,21 +1185,32 @@ importers:
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
-      picomatch:
-        specifier: ^4.0.2
-        version: 4.0.3
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@types/picomatch':
-        specifier: ^3.0.2
-        version: 3.0.2
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
-  packages/script-server/bench: {}
+  packages/script-server/bench:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../../component
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   packages/session:
     devDependencies:
@@ -2643,9 +2657,6 @@ packages:
 
   '@types/pg@8.16.0':
     resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
-
-  '@types/picomatch@3.0.2':
-    resolution: {integrity: sha512-n0i8TD3UDB7paoMMxA3Y65vUncFJXjcUf7lQY7YyKGl6031FNjfsLs6pdLFCy2GNFxItPJG8GvvpbZc2skH7WA==}
 
   '@types/qs@6.9.15':
     resolution: {integrity: sha512-uXHQKES6DQKKCLh441Xv/dwxOq1TVS3JPUMlEqoEglvlhR6Mxnlew/Xq/LRVHpLyk7iK3zODe1qYHIMltO7XGg==}
@@ -6368,8 +6379,6 @@ snapshots:
       '@types/node': 24.10.4
       pg-protocol: 1.11.0
       pg-types: 2.2.0
-
-  '@types/picomatch@3.0.2': {}
 
   '@types/qs@6.9.15': {}
 

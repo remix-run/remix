@@ -32,27 +32,26 @@
     }
   },
   "dependencies": {
+    "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
-    "@remix-run/mime": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*",
     "@swc/core": "^1.15.18",
     "es-module-lexer": "^2.0.0",
     "esbuild": "catalog:",
     "magic-string": "^0.30.21",
-    "picomatch": "^4.0.2"
+    "typescript": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "bench": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "bench": "pnpm --dir ./bench run bench",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "typecheck": "tsgo --noEmit && pnpm run typecheck:fixture",
-    "typecheck:fixture": "tsgo --noEmit -p ./bench/fixtures/large-fixture/tsconfig.json"
+    "typecheck": "tsgo --noEmit && pnpm --dir ./bench run typecheck"
   },
   "keywords": [
     "remix",

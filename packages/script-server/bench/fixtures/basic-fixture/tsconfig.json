@@ -6,7 +6,8 @@
     "jsxImportSource": "@remix-run/component",
     "types": ["node", "dom-navigation"],
     "paths": {
-      "#packages/*": ["./packages/*"]
+      "#packages/*": ["./packages/*"],
+      "@bench/*": ["./packages/*"]
     }
   },
   "include": ["project", "packages"],
