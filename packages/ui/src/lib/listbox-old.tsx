@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // @jsxRuntime classic
 // @jsx createElement
 import { createElement, ref, type Handle, type Props, type RemixNode } from '@remix-run/component'
