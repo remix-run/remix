@@ -272,7 +272,7 @@ describe('ui', () => {
           },
           'Hello',
         ),
-        createElement('div', { mix: ui.listbox.root }, [
+        createElement('div', {}, [
           createElement('button', { mix: ui.listbox.trigger }, [
             createElement('span', { mix: ui.listbox.value }, 'Backlog'),
             createElement('span', { mix: ui.listbox.indicator }, 'v'),
@@ -320,7 +320,6 @@ describe('ui', () => {
     expect(html).toMatch(/background-color: transparent/)
     expect(html).toMatch(/text-transform: uppercase/)
     expect(html).toMatch(/box-shadow: var\(--rmx-shadow-xs\)/)
-    expect(html).toMatch(/data-rmx-listbox-part="popup"/)
     expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
     expect(html).toMatch(/:popover-open \{\s*opacity: 1;/)
     expect(html).toMatch(/:not\(:popover-open\) \{\s*transition:/)

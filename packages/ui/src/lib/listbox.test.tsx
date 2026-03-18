@@ -124,6 +124,14 @@ function renderExampleListbox() {
   )
 }
 
+function getPopup(container: HTMLElement) {
+  return container.querySelector('[popover="manual"]') as HTMLElement
+}
+
+function getTrigger(container: HTMLElement) {
+  return container.querySelector('button[role="combobox"]') as HTMLButtonElement
+}
+
 function press(target: HTMLElement, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
 }
@@ -185,8 +193,8 @@ describe('Listbox', () => {
   it('opens as a select-only combobox and highlights the first enabled option', async () => {
     let showPopover = vi.spyOn(HTMLElement.prototype, 'showPopover')
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     expect(popup.dataset.popoverOpen).toBeUndefined()
 
@@ -208,7 +216,7 @@ describe('Listbox', () => {
 
   it('opens from ArrowUp with the last enabled option highlighted', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowUp')
@@ -221,7 +229,7 @@ describe('Listbox', () => {
 
   it('moves highlight with keyboard navigation and skips disabled options', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
@@ -256,7 +264,7 @@ describe('Listbox', () => {
 
   it('selects a matching option from typed text while closed', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 's')
@@ -269,7 +277,7 @@ describe('Listbox', () => {
 
   it('selects a matching option from typed text while open', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
@@ -286,8 +294,8 @@ describe('Listbox', () => {
 
   it('selects the highlighted option on Enter and updates the trigger label', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
@@ -312,8 +320,8 @@ describe('Listbox', () => {
   it('closes on Escape without changing the current label', async () => {
     let hidePopover = vi.spyOn(HTMLElement.prototype, 'hidePopover')
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
@@ -336,7 +344,7 @@ describe('Listbox', () => {
 
   it('closes on focusout without changing the current label', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
     let outside = document.createElement('button')
     document.body.append(outside)
 
@@ -359,7 +367,7 @@ describe('Listbox', () => {
 
   it('keeps focus on the trigger when dismissing with an outside click', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
     let outside = document.createElement('button')
     document.body.append(outside)
 
@@ -387,8 +395,8 @@ describe('Listbox', () => {
 
   it('ignores outside clicks while selection feedback is running', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
     let outside = document.createElement('button')
     document.body.append(outside)
 
@@ -430,8 +438,8 @@ describe('Listbox', () => {
 
   it('commits selection if the close transition is cancelled', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
@@ -461,7 +469,7 @@ describe('Listbox', () => {
 
   it('highlights the first enabled option on Tab', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     trigger.focus()
     press(trigger, 'ArrowUp')
@@ -484,7 +492,7 @@ describe('Listbox', () => {
 
   it('matches popup width to the trigger when open', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let trigger = getTrigger(container)
 
     mockLayout(trigger, { top: 40, left: 200, width: 180, height: 28 })
 
@@ -493,14 +501,14 @@ describe('Listbox', () => {
     root.flush()
     await settle(root)
 
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let popup = getPopup(container)
     expect(popup.style.minWidth).toBe('180px')
   })
 
   it('delegates pointer interactions from the list root', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     pointer(trigger, 'pointerdown')
     root.flush()
@@ -535,8 +543,8 @@ describe('Listbox', () => {
 
   it('does not select from the same click that opens the popup', async () => {
     let { container, root } = renderApp(renderExampleListbox())
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let popup = getPopup(container)
+    let trigger = getTrigger(container)
 
     pointer(trigger, 'pointerdown')
     root.flush()

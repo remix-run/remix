@@ -345,8 +345,6 @@ export type ThemeUi = {
     surface: ThemeMix
   }
   listbox: {
-    root: ThemeMix
-    anchor: ThemeUtility
     trigger: ThemeMix
     value: ThemeMix
     indicator: ThemeMix
@@ -724,9 +722,13 @@ let buttonDefaultsMixin = createMixin<Element, [], ElementProps>((handle, hostTy
 })
 
 let buttonDefaultsUtility = buttonDefaultsMixin()
+
 let primaryButtonToneUtility = createButtonUtility(theme.colors.action.primary)
+
 let secondaryButtonToneUtility = createButtonUtility(theme.colors.action.secondary)
+
 let dangerButtonToneUtility = createButtonUtility(theme.colors.action.danger)
+
 let buttonToneUtilities = {
   primary: primaryButtonToneUtility,
   secondary: secondaryButtonToneUtility,
@@ -842,28 +844,11 @@ let popoverSurfaceUtility = css({
     transitionBehavior: 'allow-discrete',
   },
 })
-let listboxRootUtility = css({
-  position: 'relative',
-  display: 'inline-flex',
-  flexDirection: 'column',
-  alignItems: 'stretch',
-  minWidth: 0,
-})
-let listboxAnchorUtility = css({
-  display: 'inline-flex',
-  alignItems: 'stretch',
-  minWidth: 0,
-})
-let listboxTriggerPartUtility = attrs({ 'data-rmx-listbox-part': 'trigger' })
-let listboxValuePartUtility = attrs({ 'data-rmx-listbox-part': 'value' })
-let listboxIndicatorPartUtility = attrs({ 'aria-hidden': true })
-let listboxPopupPartUtility = attrs({ 'data-rmx-listbox-part': 'popup' })
-let listboxListPartUtility = attrs({ 'data-rmx-listbox-part': 'list' })
-let listboxItemIndicatorPartUtility = attrs({
-  'data-rmx-listbox-part': 'item-indicator',
-  'aria-hidden': true,
-})
-let listboxItemLabelPartUtility = attrs({ 'data-rmx-listbox-part': 'item-label' })
+
+let listboxIndicatorA11yUtility = attrs({ 'aria-hidden': true })
+
+let listboxItemIndicatorA11yUtility = attrs({ 'aria-hidden': true })
+
 let listboxTriggerUtility = css({
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1fr) auto',
@@ -873,6 +858,7 @@ let listboxTriggerUtility = css({
   paddingInlineEnd: theme.space.sm,
   textAlign: 'left',
 })
+
 let listboxValueUtility = css({
   display: 'block',
   minWidth: 0,
@@ -881,6 +867,7 @@ let listboxValueUtility = css({
   whiteSpace: 'nowrap',
   lineHeight: theme.lineHeight.normal,
 })
+
 let listboxIndicatorUtility = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -895,15 +882,18 @@ let listboxIndicatorUtility = css({
     height: '100%',
   },
 })
+
 let listboxPopupUtility = css({
   overflow: 'auto',
 })
+
 let listboxListUtility = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.px,
   outline: 'none',
 })
+
 let listboxItemBaseUtility = css({
   display: 'grid',
   gridTemplateColumns: `${theme.fontSize.sm} minmax(0, 1fr)`,
@@ -920,6 +910,7 @@ let listboxItemBaseUtility = css({
   lineHeight: theme.lineHeight.normal,
   textAlign: 'left',
   userSelect: 'none',
+  '--rmx-listbox-item-indicator-opacity': '0',
   '&[data-highlighted="true"]': {
     backgroundColor: theme.colors.action.primary.background,
     color: theme.colors.action.primary.foreground,
@@ -931,13 +922,11 @@ let listboxItemBaseUtility = css({
   '&[aria-disabled="true"]': {
     opacity: 0.5,
   },
-  '& [data-rmx-listbox-part="item-indicator"]': {
-    opacity: 0,
-  },
-  '&[aria-selected="true"] [data-rmx-listbox-part="item-indicator"]': {
-    opacity: 1,
+  '&[aria-selected="true"]': {
+    '--rmx-listbox-item-indicator-opacity': '1',
   },
 })
+
 let listboxItemIndicatorUtility = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -945,12 +934,14 @@ let listboxItemIndicatorUtility = css({
   width: theme.fontSize.sm,
   height: theme.fontSize.sm,
   color: 'currentColor',
+  opacity: 'var(--rmx-listbox-item-indicator-opacity)',
   '& > svg': {
     display: 'block',
     width: '100%',
     height: '100%',
   },
 })
+
 let listboxItemLabelUtility = css({
   minWidth: 0,
 })
@@ -1275,22 +1266,19 @@ export const ui: ThemeUi = {
     surface: [popoverBaseUtility, surfaceElevatedUtility, popoverSurfaceUtility],
   },
   listbox: {
-    root: listboxRootUtility,
-    anchor: listboxAnchorUtility,
     trigger: [
-      listboxTriggerPartUtility,
       buttonDefaultsUtility,
       buttonBaseStyleUtility,
       buttonSizeMdUtility,
       buttonToneUtilities.secondary,
       listboxTriggerUtility,
     ],
-    value: [listboxValuePartUtility, listboxValueUtility],
-    indicator: [listboxIndicatorPartUtility, listboxIndicatorUtility],
-    popup: [listboxPopupPartUtility, listboxPopupUtility],
-    list: [listboxListPartUtility, listboxListUtility],
-    itemIndicator: [listboxItemIndicatorPartUtility, listboxItemIndicatorUtility],
-    itemLabel: [listboxItemLabelPartUtility, listboxItemLabelUtility],
+    value: listboxValueUtility,
+    indicator: [listboxIndicatorA11yUtility, listboxIndicatorUtility],
+    popup: listboxPopupUtility,
+    list: listboxListUtility,
+    itemIndicator: [listboxItemIndicatorA11yUtility, listboxItemIndicatorUtility],
+    itemLabel: listboxItemLabelUtility,
     item: listboxItemBaseUtility,
   },
 }
