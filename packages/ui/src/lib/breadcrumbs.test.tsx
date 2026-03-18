@@ -28,12 +28,7 @@ describe('Breadcrumbs', () => {
 
   it('renders the default chevron separator', async () => {
     let html = await renderToString(
-      <Breadcrumbs
-        items={[
-          { href: '/', label: 'Home' },
-          { label: 'Breadcrumbs' },
-        ]}
-      />,
+      <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} />,
     )
 
     expect(html).toContain('rmx-glyph-chevronRight')
@@ -42,10 +37,7 @@ describe('Breadcrumbs', () => {
   it('renders a custom separator', async () => {
     let html = await renderToString(
       <Breadcrumbs
-        items={[
-          { href: '/', label: 'Home' },
-          { label: 'Breadcrumbs' },
-        ]}
+        items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]}
         separator="/"
       />,
     )
@@ -55,12 +47,7 @@ describe('Breadcrumbs', () => {
 
   it('defaults the last item to current', async () => {
     let html = await renderToString(
-      <Breadcrumbs
-        items={[
-          { href: '/', label: 'Home' },
-          { label: 'Breadcrumbs' },
-        ]}
-      />,
+      <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} />,
     )
 
     expect(html).toContain('aria-current="page"')
@@ -85,11 +72,7 @@ describe('Breadcrumbs', () => {
   it('renders non-current href items as links and non-link items as text', async () => {
     let html = await renderToString(
       <Breadcrumbs
-        items={[
-          { href: '/', label: 'Home' },
-          { label: 'Components' },
-          { label: 'Breadcrumbs' },
-        ]}
+        items={[{ href: '/', label: 'Home' }, { label: 'Components' }, { label: 'Breadcrumbs' }]}
       />,
     )
 

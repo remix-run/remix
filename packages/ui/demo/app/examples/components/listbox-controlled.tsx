@@ -22,7 +22,7 @@ export default function example(handle: Handle) {
   return () => (
     <div mix={[ui.stack, ui.gap.sm]}>
       <div mix={[ui.row, ui.row.wrap, ui.gap.xs]}>
-        {environmentOptions.map(option => (
+        {environmentOptions.map((option) => (
           <button
             mix={[
               value === option.value ? ui.button.primary : ui.button.secondary,
@@ -40,7 +40,7 @@ export default function example(handle: Handle) {
       <Listbox
         mix={[
           listboxWidthCss,
-          on(Listbox.change, event => {
+          on(Listbox.change, (event) => {
             setValue(event.value)
           }),
         ]}

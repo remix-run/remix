@@ -95,7 +95,10 @@ function renderApp(node: RemixNode) {
   return { container, root }
 }
 
-function mockLayout(element: HTMLElement, rect: { top: number; left: number; width: number; height: number }) {
+function mockLayout(
+  element: HTMLElement,
+  rect: { top: number; left: number; width: number; height: number },
+) {
   Object.defineProperty(element, 'offsetWidth', {
     configurable: true,
     get: () => rect.width,

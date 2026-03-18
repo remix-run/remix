@@ -360,8 +360,9 @@ export default function example() {
 
           let placementRadios = root.querySelectorAll<HTMLInputElement>('input[name="placement"]')
           let positionRadios = root.querySelectorAll<HTMLInputElement>('input[name="position"]')
-          let positioningRadios =
-            root.querySelectorAll<HTMLInputElement>('input[name="positioning"]')
+          let positioningRadios = root.querySelectorAll<HTMLInputElement>(
+            'input[name="positioning"]',
+          )
 
           for (let radio of placementRadios) {
             let onChange = () => {
@@ -499,7 +500,12 @@ export default function example() {
         }),
       ]}
     >
-      <button id="anchor-demo-button" mix={buttonCss} popovertarget="anchor-demo-popover" type="button">
+      <button
+        id="anchor-demo-button"
+        mix={buttonCss}
+        popovertarget="anchor-demo-popover"
+        type="button"
+      >
         Click me!
       </button>
 
@@ -518,8 +524,12 @@ export default function example() {
         <section mix={sectionCss}>
           <h3 mix={headingCss}>Placement Options</h3>
           <div mix={gridCss}>
-            {placements.map(option => (
-              <label key={option.value} htmlFor={`anchor-demo-placement-${option.value}`} mix={optionCss}>
+            {placements.map((option) => (
+              <label
+                key={option.value}
+                htmlFor={`anchor-demo-placement-${option.value}`}
+                mix={optionCss}
+              >
                 <input
                   defaultChecked={option.value === 'bottom'}
                   id={`anchor-demo-placement-${option.value}`}
@@ -562,8 +572,12 @@ export default function example() {
         <section mix={sectionCss}>
           <h3 mix={headingCss}>Button Position</h3>
           <div mix={positionGridCss}>
-            {positions.map(option => (
-              <label key={option.value} htmlFor={`anchor-demo-position-${option.value}`} mix={optionCss}>
+            {positions.map((option) => (
+              <label
+                key={option.value}
+                htmlFor={`anchor-demo-position-${option.value}`}
+                mix={optionCss}
+              >
                 <input
                   defaultChecked={option.value === 'middle-center'}
                   id={`anchor-demo-position-${option.value}`}

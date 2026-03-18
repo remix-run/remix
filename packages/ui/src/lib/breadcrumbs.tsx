@@ -76,7 +76,7 @@ let textCss = css({
 
 export function Breadcrumbs() {
   return ({ 'aria-label': ariaLabel, items, separator, mix, ...navProps }: BreadcrumbsProps) => {
-    let currentIndex = items.findIndex(item => item.current)
+    let currentIndex = items.findIndex((item) => item.current)
     if (currentIndex === -1) {
       currentIndex = Math.max(0, items.length - 1)
     }

@@ -1,14 +1,7 @@
 // @jsxRuntime classic
 // @jsx createElement
 import { createElement, css } from 'remix/component'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  theme,
-  ui,
-} from 'remix/ui'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, theme, ui } from 'remix/ui'
 
 let cardAccordionInsetCss = css({
   paddingInline: theme.space.lg,

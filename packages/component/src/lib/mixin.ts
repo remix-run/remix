@@ -126,7 +126,9 @@ type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
 type NullableMixValue<descriptor> = descriptor | null | undefined
 type NestedMixValue<descriptor, depth extends number = 4> = depth extends 0
   ? NullableMixValue<descriptor> | ReadonlyArray<NullableMixValue<descriptor>>
-  : NullableMixValue<descriptor> | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
+  :
+      | NullableMixValue<descriptor>
+      | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
 
 /**
  * Accepted authoring shape for the `mix` prop on host elements.

@@ -154,11 +154,11 @@ function startServer() {
     stdio: 'pipe',
   })
 
-  serverProcess.stdout?.on('data', chunk => {
+  serverProcess.stdout?.on('data', (chunk) => {
     process.stdout.write(String(chunk))
   })
 
-  serverProcess.stderr?.on('data', chunk => {
+  serverProcess.stderr?.on('data', (chunk) => {
     process.stderr.write(String(chunk))
   })
 
@@ -173,7 +173,7 @@ async function waitForServer() {
       return
     }
 
-    await new Promise(resolve => setTimeout(resolve, 150))
+    await new Promise((resolve) => setTimeout(resolve, 150))
   }
 
   throw new Error(`Timed out waiting for ${BASE_URL}`)
@@ -186,7 +186,7 @@ async function stopServer(serverProcess: ChildProcess) {
 
   serverProcess.kill('SIGTERM')
 
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     serverProcess.once('exit', resolve)
     setTimeout(resolve, 5_000)
   })

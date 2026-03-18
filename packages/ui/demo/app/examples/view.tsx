@@ -20,7 +20,11 @@ export function ExampleDocument() {
         <title>{`${example.title} | RMX_01 Example`}</title>
         <RMX_01 />
       </head>
-      <body mix={pad ? [standaloneExampleBodyCss, standaloneExampleBodyPadCss] : standaloneExampleBodyCss}>
+      <body
+        mix={
+          pad ? [standaloneExampleBodyCss, standaloneExampleBodyPadCss] : standaloneExampleBodyCss
+        }
+      >
         <RMX_01Glyphs />
         {example.preview}
       </body>

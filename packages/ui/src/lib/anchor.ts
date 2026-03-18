@@ -411,14 +411,10 @@ export function anchor(
     throw new TypeError('anchor() expected an anchor HTMLElement')
   }
 
-  let {
-    placement = 'bottom',
-    inset = false,
-    relativeTo,
-    offset = 0,
-  } = options
+  let { placement = 'bottom', inset = false, relativeTo, offset = 0 } = options
 
-  let isFixed = floating.hasAttribute('popover') || getComputedStyle(anchorElement).position === 'fixed'
+  let isFixed =
+    floating.hasAttribute('popover') || getComputedStyle(anchorElement).position === 'fixed'
   let animationFrameId = 0
 
   function updatePosition() {

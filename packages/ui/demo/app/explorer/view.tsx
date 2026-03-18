@@ -1,14 +1,6 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import {
-  createGlyphSheet,
-  Glyph,
-  glyphNames,
-  RMX_01,
-  RMX_01_GLYPHS,
-  theme,
-  ui,
-} from 'remix/ui'
+import { createGlyphSheet, Glyph, glyphNames, RMX_01, RMX_01_GLYPHS, theme, ui } from 'remix/ui'
 import type { ThemeMix } from 'remix/ui'
 import { ExamplePreview } from '../example-preview.tsx'
 import { EXAMPLES } from '../examples/index.tsx'
@@ -58,7 +50,7 @@ function Sidebar() {
   return ({ currentPath }: { currentPath: string }) => (
     <div mix={ui.sidebar.panel}>
       <nav aria-label="Design system pages" mix={ui.nav.list}>
-        {PRIMARY_PAGES.slice(0, 2).map(page => (
+        {PRIMARY_PAGES.slice(0, 2).map((page) => (
           <a
             key={page.path}
             href={page.path}
@@ -73,7 +65,7 @@ function Sidebar() {
       <section mix={ui.sidebar.section}>
         <p mix={ui.sidebar.heading}>Theme Tokens</p>
         <nav aria-label="Theme token pages" mix={ui.nav.list}>
-          {THEME_TOKEN_PAGES.map(tokenPage => (
+          {THEME_TOKEN_PAGES.map((tokenPage) => (
             <a
               key={tokenPage.path}
               href={tokenPage.path}
@@ -99,7 +91,7 @@ function Sidebar() {
       <section mix={ui.sidebar.section}>
         <p mix={ui.sidebar.heading}>UI Mixins</p>
         <nav aria-label="UI mixin pages" mix={ui.nav.list}>
-          {UI_MIXIN_PAGES.map(mixinPage => (
+          {UI_MIXIN_PAGES.map((mixinPage) => (
             <a
               key={mixinPage.path}
               href={mixinPage.path}
@@ -115,7 +107,7 @@ function Sidebar() {
       <section mix={ui.sidebar.section}>
         <p mix={ui.sidebar.heading}>Components</p>
         <nav aria-label="Component pages" mix={ui.nav.list}>
-          {COMPONENT_PAGES.map(componentPage => (
+          {COMPONENT_PAGES.map((componentPage) => (
             <a
               key={componentPage.path}
               href={componentPage.path}
@@ -129,7 +121,7 @@ function Sidebar() {
       </section>
 
       <nav aria-label="Remaining pages" mix={ui.nav.list}>
-        {PRIMARY_PAGES.slice(3).map(page => (
+        {PRIMARY_PAGES.slice(3).map((page) => (
           <a
             key={page.path}
             href={page.path}
@@ -178,7 +170,7 @@ function PageContent() {
       return <ProofSheetPage />
     }
 
-    if (THEME_TOKEN_PAGES.some(tokenPage => tokenPage.id === page.id)) {
+    if (THEME_TOKEN_PAGES.some((tokenPage) => tokenPage.id === page.id)) {
       return <ThemeTokenDetailPage page={page} />
     }
 
@@ -186,7 +178,7 @@ function PageContent() {
       return <GlyphsPage />
     }
 
-    if (UI_MIXIN_PAGES.some(mixinPage => mixinPage.id === page.id)) {
+    if (UI_MIXIN_PAGES.some((mixinPage) => mixinPage.id === page.id)) {
       return <UiRecipeDetailPage page={page} />
     }
 
@@ -250,7 +242,8 @@ function OverviewPage() {
               <h3 mix={ui.card.title}>Blocks handle bigger structure</h3>
               <p mix={ui.card.description}>
                 Cards, sidebars, rails, and shell sections are larger structural pieces that can be
-                built from shared mixins without immediately turning into full behavioral components.
+                built from shared mixins without immediately turning into full behavioral
+                components.
               </p>
             </div>
           </article>
@@ -426,8 +419,8 @@ function ProofSheetPage() {
                       <p mix={ui.card.eyebrow}>Release checklist</p>
                       <h3 mix={ui.card.title}>Readability under operational pressure</h3>
                       <p mix={ui.card.description}>
-                        The proof sheet should reveal whether dense task-oriented surfaces still feel
-                        calm, legible, and trustworthy.
+                        The proof sheet should reveal whether dense task-oriented surfaces still
+                        feel calm, legible, and trustworthy.
                       </p>
                     </div>
                     <span mix={[ui.card.action, statusBadgeCss, ui.status.info]}>Draft</span>
@@ -475,7 +468,9 @@ function ProofSheetPage() {
                       value="team@remix.dev"
                       mix={[ui.field.base, proofInputCss]}
                     />
-                    <p mix={ui.fieldText.help}>Editors can ship changes but cannot manage billing.</p>
+                    <p mix={ui.fieldText.help}>
+                      Editors can ship changes but cannot manage billing.
+                    </p>
                   </div>
                   <div mix={ui.card.footer}>
                     <button mix={ui.button.secondary}>
@@ -521,7 +516,11 @@ function ProofSheetPage() {
                     <h3 mix={ui.card.title}>Floating panels should stay related to the system</h3>
                   </div>
                   <div mix={ui.card.body}>
-                    <div role="menu" aria-label="Project actions" mix={[ui.card.elevated, proofMenuCss]}>
+                    <div
+                      role="menu"
+                      aria-label="Project actions"
+                      mix={[ui.card.elevated, proofMenuCss]}
+                    >
                       <button type="button" role="menuitem" mix={menuItemCss}>
                         <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="search" />
                         Rename project
@@ -530,7 +529,11 @@ function ProofSheetPage() {
                         <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="chevronRight" />
                         Copy environment
                       </button>
-                      <button type="button" role="menuitem" mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        mix={[menuItemCss, menuItemDangerCss, ui.status.danger]}
+                      >
                         <Glyph mix={[ui.icon.sm, menuItemGlyphCss]} name="close" />
                         Archive project
                       </button>
@@ -722,7 +725,9 @@ function ThemeTokenTypographyPage() {
             <div mix={typePreviewStackCss}>
               <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.normal })]}>normal</p>
               <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.medium })]}>medium</p>
-              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.semibold })]}>semibold</p>
+              <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.semibold })]}>
+                semibold
+              </p>
               <p mix={[tokenTextResetCss, css({ fontWeight: theme.fontWeight.bold })]}>bold</p>
             </div>
           </ExamplePreview>
@@ -743,14 +748,13 @@ function ThemeTokenTypographyPage() {
                 text.
               </p>
               <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.normal })]}>
-                Normal line height is the default workhorse for app copy, status messages, and
-                short paragraphs where readability matters but the surface still needs to stay
-                compact.
+                Normal line height is the default workhorse for app copy, status messages, and short
+                paragraphs where readability matters but the surface still needs to stay compact.
               </p>
               <p mix={[tokenTextResetCss, css({ lineHeight: theme.lineHeight.relaxed })]}>
                 Relaxed line height gives longer notes, supporting explanations, and reference text
-                a calmer rhythm so extended reading feels easier inside cards, sidebars, and
-                content areas.
+                a calmer rhythm so extended reading feels easier inside cards, sidebars, and content
+                areas.
               </p>
             </div>
           </ExamplePreview>
@@ -826,10 +830,14 @@ function ThemeTokenColorsPage() {
             title="Surface stack"
           >
             <div mix={colorStackCss}>
-              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.canvas })]}>
+              <div
+                mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.canvas })]}
+              >
                 <code mix={ui.text.code}>theme.colors.background.canvas</code>
               </div>
-              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.surface })]}>
+              <div
+                mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.surface })]}
+              >
                 <code mix={ui.text.code}>theme.colors.background.surface</code>
               </div>
               <div
@@ -840,7 +848,9 @@ function ThemeTokenColorsPage() {
               >
                 <code mix={ui.text.code}>theme.colors.background.surfaceSecondary</code>
               </div>
-              <div mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.inset })]}>
+              <div
+                mix={[colorSwatchRowCss, css({ backgroundColor: theme.colors.background.inset })]}
+              >
                 <code mix={ui.text.code}>theme.colors.background.inset</code>
               </div>
             </div>
@@ -910,10 +920,18 @@ function ThemeTokenShadowPage() {
           title="Shadow samples"
         >
           <div mix={shadowPreviewGridCss}>
-            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.xs })]}>theme.shadow.xs</div>
-            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.sm })]}>theme.shadow.sm</div>
-            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.md })]}>theme.shadow.md</div>
-            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.lg })]}>theme.shadow.lg</div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.xs })]}>
+              theme.shadow.xs
+            </div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.sm })]}>
+              theme.shadow.sm
+            </div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.md })]}>
+              theme.shadow.md
+            </div>
+            <div mix={[shadowTokenSampleCss, css({ boxShadow: theme.shadow.lg })]}>
+              theme.shadow.lg
+            </div>
           </div>
         </ExamplePreview>
       </section>
@@ -971,7 +989,11 @@ function ThemeTokenMotionPage() {
                 Slow duration
               </button>
               <Glyph
-                mix={[ui.icon.md, ui.animation.spin, css({ animationDuration: theme.duration.spin })]}
+                mix={[
+                  ui.icon.md,
+                  ui.animation.spin,
+                  css({ animationDuration: theme.duration.spin }),
+                ]}
                 name="spinner"
               />
             </div>
@@ -1061,13 +1083,14 @@ function GlyphsPage() {
               <p mix={ui.card.eyebrow}>Usage</p>
               <h3 mix={ui.card.title}>Render the sheet once, then reference glyphs anywhere</h3>
               <p mix={ui.card.description}>
-                The style tag stays in the head, while the glyph sprite lives in the body. Components
-                only need the shared glyph names.
+                The style tag stays in the head, while the glyph sprite lives in the body.
+                Components only need the shared glyph names.
               </p>
             </div>
             <div mix={ui.card.body}>
               <pre mix={codeBlockCss}>
-                <code mix={codeTextCss}>{renderHighlightedCode(`import {
+                <code mix={codeTextCss}>
+                  {renderHighlightedCode(`import {
   createGlyphSheet,
   Glyph,
   RMX_01_GLYPHS,
@@ -1094,7 +1117,7 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
               <h3 mix={ui.card.title}>The package owns a stable glyph vocabulary</h3>
             </div>
             <div mix={glyphPreviewGridCss}>
-              {glyphNames.map(name => (
+              {glyphNames.map((name) => (
                 <div key={name} mix={glyphPreviewItemCss}>
                   <Glyph mix={[ui.icon.md, glyphPreviewGlyphCss]} name={name} />
                   <code mix={ui.text.code}>{name}</code>
@@ -1114,8 +1137,8 @@ let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
             <p mix={ui.card.eyebrow}>Shared sizes</p>
             <h3 mix={ui.card.title}>`ui.icon.sm`, `ui.icon.md`, and `ui.icon.lg`</h3>
             <p mix={ui.card.description}>
-              These mixins size the glyph itself. Layout-specific mixins like `ui.button.icon`
-              still handle spacing and alignment inside controls.
+              These mixins size the glyph itself. Layout-specific mixins like `ui.button.icon` still
+              handle spacing and alignment inside controls.
             </p>
           </div>
           <div mix={glyphSizingRowCss}>
@@ -1195,7 +1218,9 @@ function UiRecipeTextPage() {
               <li>`ui.text.eyebrow` for quiet uppercase metadata</li>
               <li>`ui.text.title` and `ui.text.display` for hierarchy</li>
               <li>`ui.text.body` and `ui.text.bodySm` for explanatory copy</li>
-              <li>`ui.text.supporting`, `ui.text.caption`, and `ui.text.code` for secondary needs</li>
+              <li>
+                `ui.text.supporting`, `ui.text.caption`, and `ui.text.code` for secondary needs
+              </li>
             </ul>
           </div>
         </article>
@@ -1231,8 +1256,8 @@ function UiRecipeCardPage() {
               <p mix={ui.card.eyebrow}>Slots</p>
               <h3 mix={ui.card.title}>Reusable structure</h3>
               <p mix={ui.card.description}>
-                These slots are what make cards useful as a layout primitive instead of just a border
-                and background.
+                These slots are what make cards useful as a layout primitive instead of just a
+                border and background.
               </p>
             </div>
             <div mix={anatomyGridCss}>
@@ -1349,11 +1374,26 @@ function UiRecipeButtonPage() {
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
                 <li>`ui.button.primary` is for the main action in a surface or action group.</li>
-                <li>`ui.button.secondary` is the surfaced neutral button for cancel, back, filter, or supporting actions.</li>
-                <li>`ui.button.ghost` is for low-emphasis actions that should read like text until interaction.</li>
-                <li>`ui.button.danger` is only for destructive work like delete, archive, or revoke access.</li>
-                <li>Mixins default real `button` elements to `type="button"`, so use `type="submit"` explicitly when needed.</li>
-                <li>Use the flat aliases for speed, and the composable layers when a first-party component needs to own size or structure.</li>
+                <li>
+                  `ui.button.secondary` is the surfaced neutral button for cancel, back, filter, or
+                  supporting actions.
+                </li>
+                <li>
+                  `ui.button.ghost` is for low-emphasis actions that should read like text until
+                  interaction.
+                </li>
+                <li>
+                  `ui.button.danger` is only for destructive work like delete, archive, or revoke
+                  access.
+                </li>
+                <li>
+                  Mixins default real `button` elements to `type="button"`, so use `type="submit"`
+                  explicitly when needed.
+                </li>
+                <li>
+                  Use the flat aliases for speed, and the composable layers when a first-party
+                  component needs to own size or structure.
+                </li>
               </ul>
             </div>
           </article>
@@ -1499,12 +1539,8 @@ function ComponentsPage() {
             </div>
             <div mix={ui.card.body}>
               <div mix={[ui.row, ui.row.wrap, ui.gap.sm]}>
-                <button mix={ui.button.primary}>
-                  Primary
-                </button>
-                <button mix={ui.button.secondary}>
-                  Secondary
-                </button>
+                <button mix={ui.button.primary}>Primary</button>
+                <button mix={ui.button.secondary}>Secondary</button>
               </div>
             </div>
           </article>
@@ -1533,7 +1569,8 @@ function ComponentsPage() {
               <p mix={ui.card.eyebrow}>Popover shells</p>
               <h3 mix={ui.card.title}>Menus and dialogs should stay on-system</h3>
               <p mix={ui.card.description}>
-                Floating layers should feel like related surfaces instead of separate aesthetic worlds.
+                Floating layers should feel like related surfaces instead of separate aesthetic
+                worlds.
               </p>
             </div>
             <div mix={ui.card.body}>
@@ -1652,11 +1689,26 @@ function ComponentAccordionPage() {
             </div>
             <div mix={ui.card.body}>
               <ul mix={bulletListCss}>
-                <li>Use single mode for compact details and settings panels where focus should stay on one section at a time.</li>
-                <li>Use multiple mode for checklists, diagnostics, and operational surfaces where parallel reading is normal.</li>
-                <li>`AccordionTrigger` owns the heading and button structure so the accessibility wiring stays consistent.</li>
-                <li>Listen for changes with `on(Accordion.change, ...)` on the Accordion itself or any ancestor.</li>
-                <li>Compose extra spacing or surface treatment with mixins and `css()` instead of asking the component for aesthetic variants.</li>
+                <li>
+                  Use single mode for compact details and settings panels where focus should stay on
+                  one section at a time.
+                </li>
+                <li>
+                  Use multiple mode for checklists, diagnostics, and operational surfaces where
+                  parallel reading is normal.
+                </li>
+                <li>
+                  `AccordionTrigger` owns the heading and button structure so the accessibility
+                  wiring stays consistent.
+                </li>
+                <li>
+                  Listen for changes with `on(Accordion.change, ...)` on the Accordion itself or any
+                  ancestor.
+                </li>
+                <li>
+                  Compose extra spacing or surface treatment with mixins and `css()` instead of
+                  asking the component for aesthetic variants.
+                </li>
               </ul>
             </div>
           </article>
@@ -1738,10 +1790,22 @@ function ComponentPopoverPage() {
         <article mix={ui.card.base}>
           <div mix={ui.card.body}>
             <ul mix={bulletListCss}>
-              <li>Use `owner` or a matching `popovertarget` trigger so positioning stays tied to a real anchor element.</li>
-              <li>Compose visuals with `ui.popover.base` and `ui.popover.surface` instead of hand-styling every popup from scratch.</li>
-              <li>Listen for visibility changes with `on(Popover.openChange, ...)` on the popover itself or any ancestor.</li>
-              <li>Reach for Popover first when the surface is anchored and non-modal; save dialog semantics for a later dedicated component.</li>
+              <li>
+                Use `owner` or a matching `popovertarget` trigger so positioning stays tied to a
+                real anchor element.
+              </li>
+              <li>
+                Compose visuals with `ui.popover.base` and `ui.popover.surface` instead of
+                hand-styling every popup from scratch.
+              </li>
+              <li>
+                Listen for visibility changes with `on(Popover.openChange, ...)` on the popover
+                itself or any ancestor.
+              </li>
+              <li>
+                Reach for Popover first when the surface is anchored and non-modal; save dialog
+                semantics for a later dedicated component.
+              </li>
             </ul>
           </div>
         </article>
@@ -1783,11 +1847,24 @@ function ComponentListboxPage() {
         <article mix={ui.card.base}>
           <div mix={ui.card.body}>
             <ul mix={bulletListCss}>
-              <li>Use `Listbox` with `ListboxOption` for the normal case; it renders the trigger, popup, selection indicator, and hidden form input for you.</li>
+              <li>
+                Use `Listbox` with `ListboxOption` for the normal case; it renders the trigger,
+                popup, selection indicator, and hidden form input for you.
+              </li>
               <li>Use the `name` prop when the selected value should submit with a form.</li>
-              <li>Handle changes with `on(Listbox.change, ...)` and visibility with `on(Listbox.openChange, ...)` on the listbox or any ancestor.</li>
-              <li>If you need a custom trigger or popup structure, you can still compose directly with `ui.listbox.trigger`, `ui.listbox.value`, `ui.listbox.popup`, `ui.listbox.list`, and `ui.listbox.item(...)`.</li>
-              <li>The popup width follows the trigger by default, so it works well for compact app controls without extra layout code.</li>
+              <li>
+                Handle changes with `on(Listbox.change, ...)` and visibility with
+                `on(Listbox.openChange, ...)` on the listbox or any ancestor.
+              </li>
+              <li>
+                If you need a custom trigger or popup structure, you can still compose directly with
+                `ui.listbox.trigger`, `ui.listbox.value`, `ui.listbox.popup`, `ui.listbox.list`, and
+                `ui.listbox.item(...)`.
+              </li>
+              <li>
+                The popup width follows the trigger by default, so it works well for compact app
+                controls without extra layout code.
+              </li>
             </ul>
           </div>
         </article>
@@ -1827,8 +1904,8 @@ function LayoutsPage() {
                   <p mix={ui.card.eyebrow}>Settings layout</p>
                   <h3 mix={ui.card.title}>Sticky side navigation + flexible main rail</h3>
                   <p mix={ui.card.description}>
-                    A common app shell pattern that should be easy to build from shared sidebar and card
-                    primitives.
+                    A common app shell pattern that should be easy to build from shared sidebar and
+                    card primitives.
                   </p>
                 </div>
               </div>
@@ -1845,7 +1922,10 @@ function LayoutsPage() {
                 <li>`ui.sidebar.*` for panel rhythm and section labeling</li>
                 <li>`ui.nav.*` for compact application navigation items</li>
                 <li>`ui.card.*` for content rails and side panels</li>
-                <li>Blocks can be composed from those mixins without turning the docs shell itself into package API</li>
+                <li>
+                  Blocks can be composed from those mixins without turning the docs shell itself
+                  into package API
+                </li>
               </ul>
             </div>
           </article>
@@ -1861,8 +1941,8 @@ function LayoutsPage() {
             <p mix={ui.card.eyebrow}>Current takeaway</p>
             <h3 mix={ui.card.title}>The layout layer is where system quality becomes obvious</h3>
             <p mix={ui.card.description}>
-              If nav, cards, typography, buttons, and fields all feel like they belong together inside
-              a practical app shell, the rest of the library gets easier to trust.
+              If nav, cards, typography, buttons, and fields all feel like they belong together
+              inside a practical app shell, the rest of the library gets easier to trust.
             </p>
           </div>
         </article>

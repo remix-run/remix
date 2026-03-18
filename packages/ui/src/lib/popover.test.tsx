@@ -73,7 +73,10 @@ async function flush() {
   await Promise.resolve()
 }
 
-function mockLayout(element: HTMLElement, rect: { top: number; left: number; width: number; height: number }) {
+function mockLayout(
+  element: HTMLElement,
+  rect: { top: number; left: number; width: number; height: number },
+) {
   Object.defineProperty(element, 'offsetWidth', {
     configurable: true,
     get: () => rect.width,
@@ -193,5 +196,4 @@ describe('popover', () => {
     expect(warn).toHaveBeenCalledWith('No popover owner found for #menu')
     expect(popup.getAttribute('popover')).toBe('manual')
   })
-
 })

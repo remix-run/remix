@@ -1,6 +1,15 @@
 // @jsxRuntime classic
 // @jsx createElement
-import { css, createElement, on, pressEvents, ref, type Handle, type Props, type RemixNode } from '@remix-run/component'
+import {
+  css,
+  createElement,
+  on,
+  pressEvents,
+  ref,
+  type Handle,
+  type Props,
+  type RemixNode,
+} from '@remix-run/component'
 import { Glyph } from './glyph.tsx'
 import { ui } from './theme.ts'
 

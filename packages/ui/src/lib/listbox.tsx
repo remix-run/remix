@@ -205,7 +205,10 @@ export function Listbox(handle: Handle<ListboxContext>) {
     }
   }
 
-  async function selectValue(option: HTMLElement, { focusTrigger = true }: { focusTrigger?: boolean } = {}) {
+  async function selectValue(
+    option: HTMLElement,
+    { focusTrigger = true }: { focusTrigger?: boolean } = {},
+  ) {
     let value = option.dataset.value!
     selectionActive = true
     highlightedValue = null
@@ -238,7 +241,7 @@ export function Listbox(handle: Handle<ListboxContext>) {
       return
     }
 
-    let option = getOptionNodes().find(node =>
+    let option = getOptionNodes().find((node) =>
       node.dataset.label?.toLowerCase().includes(text.toLowerCase()),
     )
     if (!(option instanceof HTMLElement)) {
@@ -278,7 +281,7 @@ export function Listbox(handle: Handle<ListboxContext>) {
           ref((node: HTMLButtonElement) => {
             triggerNode = node
           }),
-          filterText(text => {
+          filterText((text) => {
             selectFilteredValue(text)
           }),
           on('click', (event) => {

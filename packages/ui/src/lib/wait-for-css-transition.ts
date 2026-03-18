@@ -1,8 +1,4 @@
-export function waitForCssTransition(
-  node: HTMLElement,
-  signal: AbortSignal,
-  action: () => void,
-) {
+export function waitForCssTransition(node: HTMLElement, signal: AbortSignal, action: () => void) {
   return new Promise<void>((resolve) => {
     function finish(event: TransitionEvent) {
       if (event.target !== node) {

@@ -253,9 +253,7 @@ export let RMX_01_GLYPHS: GlyphValues = {
   },
 }
 
-export function createGlyphSheet(
-  values: GlyphValues,
-): GlyphSheetComponent {
+export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
   let ids = Object.freeze(createGlyphIds(DEFAULT_GLYPH_ID_PREFIX))
 
   function GlyphSheet() {
@@ -282,7 +280,7 @@ export function createGlyphSheet(
           width: props.width ?? '0',
           xmlns: 'http://www.w3.org/2000/svg',
         },
-        glyphNames.map(name => {
+        glyphNames.map((name) => {
           let glyph = values[name]
 
           return createElement(
@@ -327,7 +325,7 @@ export function Glyph() {
 }
 
 function createGlyphIds(idPrefix: string): Record<GlyphName, string> {
-  return Object.fromEntries(glyphNames.map(name => [name, `${idPrefix}-${name}`])) as Record<
+  return Object.fromEntries(glyphNames.map((name) => [name, `${idPrefix}-${name}`])) as Record<
     GlyphName,
     string
   >
@@ -338,7 +336,7 @@ function createGlyphContract(idPrefix: string) {
 
   return Object.freeze(
     Object.fromEntries(
-      glyphNames.map(name => [
+      glyphNames.map((name) => [
         name,
         {
           id: ids[name],

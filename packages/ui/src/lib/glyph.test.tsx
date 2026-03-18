@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { renderToString } from '@remix-run/component/server'
 
-import {
-  createGlyphSheet,
-  Glyph,
-  glyphContract,
-  RMX_01_GLYPHS,
-  type GlyphName,
-} from './glyph.tsx'
+import { createGlyphSheet, Glyph, glyphContract, RMX_01_GLYPHS, type GlyphName } from './glyph.tsx'
 
 describe('createGlyphSheet', () => {
   it('serializes a hidden svg sprite sheet with stable symbol ids', async () => {
@@ -36,9 +30,7 @@ describe('Glyph', () => {
   })
 
   it('preserves svg host props and does not force aria-hidden when labeled', async () => {
-    let html = await renderToString(
-      <Glyph aria-label="Search" mix={[]} name="search" width="24" />,
-    )
+    let html = await renderToString(<Glyph aria-label="Search" mix={[]} name="search" width="24" />)
 
     expect(html).toContain('aria-label="Search"')
     expect(html).toContain('width="24"')

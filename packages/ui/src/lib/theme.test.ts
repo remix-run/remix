@@ -187,7 +187,9 @@ describe('createTheme', () => {
     expect(Theme.cssText).toMatch(/--rmx-color-text-primary: #111827;/)
     expect(Theme.cssText).toMatch(/html, body \{/)
     expect(Theme.cssText).toMatch(/font-family: var\(--rmx-font-family-sans\);/)
-    expect(Theme.cssText).toMatch(/:where\(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, figure, blockquote\) \{/)
+    expect(Theme.cssText).toMatch(
+      /:where\(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, figure, blockquote\) \{/,
+    )
     expect(Theme.cssText).not.toMatch(/:where\(button, input, textarea, select\) \{/)
     expect(Theme.vars['--rmx-color-action-primary-background']).toBe('#2563eb')
   })
@@ -279,11 +281,7 @@ describe('ui', () => {
           ]),
           createElement('div', { mix: ui.listbox.popup }, [
             createElement('div', { mix: ui.listbox.list }, [
-              createElement(
-                'div',
-                { mix: ui.listbox.item },
-                'Backlog',
-              ),
+              createElement('div', { mix: ui.listbox.item }, 'Backlog'),
             ]),
           ]),
         ]),
