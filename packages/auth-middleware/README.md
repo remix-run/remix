@@ -1,15 +1,15 @@
 # auth-middleware
 
-Pluggable authentication middleware for Remix. It resolves identity into request context using `Auth`, supports multiple auth schemes, and lets you enforce authentication with configurable failure behavior. Use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) for browser login flows; this package is the request-time half that loads auth state and protects routes.
+Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.get(Auth)` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes and provider callbacks that write the session auth record in the first place.
 
 ## Features
 
-- **Pluggable Schemes** - Use built-ins or provide your own `AuthScheme`
-- **Multiple Auth Modes** - Optional auth, strict API auth, redirect-based browser auth
-- **Ordered Fallback** - Try Bearer first, then API key (or any order you choose)
-- **Explicit Request State** - Read auth state from `context.get(Auth)` instead of mutating request context objects
-- **Session Bridge** - Use `createSessionAuthScheme()` to convert session data into request auth state
-- **Composable Middleware** - Use globally or per-route
+- **Request auth resolution** - Load the current auth state into `context.get(Auth)` without mutating request objects
+- **Route protection** - Enforce authenticated routes with `requireAuth()` and configurable failure behavior
+- **Built-in auth schemes** - Start with session, bearer token, or API key auth, or provide your own `AuthScheme`
+- **Ordered fallback** - Try multiple schemes in a defined order and stop on the first success or failure
+- **Public and private route support** - Use the same resolved auth state for optional auth, APIs, and browser routes
+- **Designed to pair with browser login** - Read the auth record that `remix/auth` or another login flow persisted earlier
 
 ## Installation
 
@@ -19,31 +19,37 @@ npm i remix
 
 ## Usage
 
+The following example shows the request-time half of a session-backed browser login flow:
+
+- another part of the app has already written `{ userId }` into the session
+- `remix/auth-middleware` reads that value, resolves the current user, and protects the dashboard route
+
 ```ts
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
-import {
-  auth,
-  Auth,
-  createBearerTokenAuthScheme,
-  requireAuth,
-} from 'remix/auth-middleware'
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
+import { session } from 'remix/session-middleware'
 
 let routes = route({
-  private: '/private',
+  app: {
+    dashboard: '/dashboard',
+  },
 })
 
 let router = createRouter({
   middleware: [
+    session(sessionCookie, sessionStorage),
     auth({
       schemes: [
-        createBearerTokenAuthScheme({
-          async verify(token) {
-            if (token === 'token-123') {
-              return { id: 'u1', role: 'user' }
-            }
-
-            return null
+        createSessionAuthScheme({
+          read(session) {
+            return session.get('auth') as { userId: string } | null
+          },
+          verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
           },
         }),
       ],
@@ -51,30 +57,31 @@ let router = createRouter({
   ],
 })
 
-router.map(routes.private, {
+router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
-  action(context) {
-    let auth = context.get(Auth)
+  action({ get }) {
+    let auth = get(Auth)
+
+    if (!auth.ok) {
+      throw new Error('Expected an authenticated session.')
+    }
 
     return Response.json({
-      userId: auth.ok ? auth.identity.id : null,
+      id: auth.identity.id,
+      email: auth.identity.email,
+      method: auth.method,
     })
   },
 })
 ```
 
-`auth()` resolves auth state and stores it at `context.get(Auth)`:
+In this example, `createSessionAuthScheme()` turns a persisted session auth record back into request auth state, `auth()` stores that state at `context.get(Auth)`, and `requireAuth()` rejects anonymous requests.
 
-- `{ ok: true, identity, method }`
-- `{ ok: false, error? }`
-
-When implementing custom schemes, return `null`, `undefined`, or no value from `authenticate()` to skip that scheme.
-
-`requireAuth()` enforces authentication and returns `401 Unauthorized` by default.
+If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
 
 ## Auth State
 
-`auth({ schemes })` does one thing: it resolves request auth state and stores it at `context.get(Auth)`.
+`auth({ schemes })` does one thing: it resolves request auth state and stores it at `context.get(Auth)`. It does not start login flows, talk to external providers, or write login state into the session.
 
 - it runs schemes in order
 - `null` or `undefined` means "this scheme does not apply"
@@ -82,16 +89,18 @@ When implementing custom schemes, return `null`, `undefined`, or no value from `
 - `{ status: 'failure', ... }` stops evaluation and stores `{ ok: false, error }`
 - if every scheme skips, the request continues with `{ ok: false }`
 
-`auth()` does not reject the request by itself. That separation is intentional so the same auth resolution can support public routes, API routes, and browser routes with different failure behavior.
+`auth()` does not reject the request when authentication fails. That job belongs to `requireAuth()`. This separation is intentional so the same auth resolution can support public routes, API routes, and browser routes with different failure behavior.
 
-## Auth Scheme API
+## Auth Schemes
 
-An auth scheme is any object with a `name` and an `authenticate(context)` method.
-This package ships with three auth-scheme helpers:
+An `AuthScheme` is any object with a `name` and an `authenticate(context)` method.
+This package ships with three built-in auth schemes:
 
-- `createBearerTokenAuthScheme()` for bearer tokens in `Authorization`
-- `createAPIAuthScheme()` for API keys in a request header
-- `createSessionAuthScheme()` for session-backed auth loaded by `session()`
+- `createBearerTokenAuthScheme()` for bearer tokens in the [HTTP `Authorization` header](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1)
+- `createAPIAuthScheme()` for API keys in a custom request header
+- `createSessionAuthScheme()` for session-backed auth loaded by [a `session()` middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware)
+
+If none of those match your environment, you can create your own auth scheme easily. A custom scheme usually wraps one auth mechanism behind a small `create*` factory function and returns an `AuthScheme`. For example, apps behind a trusted access proxy can authenticate requests from forwarded identity headers instead of sessions or bearer tokens.
 
 ```ts
 import type { RequestContext } from 'remix/fetch-router'
@@ -102,32 +111,36 @@ type User = {
   role: 'admin' | 'user'
 }
 
-let sessionScheme: AuthScheme<User, 'session'> = {
-  name: 'session',
-  async authenticate(context: RequestContext) {
-    let sessionId = readSessionId(context.headers.get('Cookie'))
+function createTrustedProxyAuthScheme(): AuthScheme<User> {
+  return {
+    name: 'trusted-proxy',
+    async authenticate(context: RequestContext) {
+      let email = context.headers.get('X-Forwarded-Email')
 
-    if (sessionId == null) {
-      return
-    }
-
-    let user = await findUserBySessionId(sessionId)
-
-    if (user == null) {
-      return {
-        status: 'failure',
-        code: 'invalid_credentials',
-        message: 'Invalid session',
+      if (email == null) {
+        return
       }
-    }
 
-    return {
-      status: 'success',
-      identity: user,
-    }
-  },
+      let user = await users.getByEmail(email)
+
+      if (user == null) {
+        return {
+          status: 'failure',
+          code: 'invalid_credentials',
+          message: 'Unknown forwarded user',
+        }
+      }
+
+      return {
+        status: 'success',
+        identity: user,
+      }
+    },
+  }
 }
 ```
+
+Only use a scheme like this when the app is reachable exclusively through infrastructure you trust to set those headers.
 
 `authenticate(context)` can return:
 
@@ -427,7 +440,6 @@ Reads an auth record from `context.get(Session)` and resolves the full request i
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
 import { auth, Auth, requireAuth, createSessionAuthScheme } from 'remix/auth-middleware'
-import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
 
 let routes = route({

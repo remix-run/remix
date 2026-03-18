@@ -95,9 +95,9 @@ export type AuthSchemeAuthenticateResult<identity = unknown> =
 /**
  * Authentication scheme contract consumed by `auth()`.
  */
-export interface AuthScheme<identity = unknown, method extends string = string> {
+export interface AuthScheme<identity = unknown> {
   /** Stable method name exposed on the resolved auth state. */
-  name: method
+  name: string
   /** Authenticates the current request or returns `null`/`undefined` to skip the scheme. */
   authenticate(
     context: RequestContext,

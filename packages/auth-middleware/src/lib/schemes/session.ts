@@ -9,10 +9,9 @@ import type { AuthFailure, AuthScheme } from '../auth.ts'
 export interface SessionAuthSchemeOptions<
   identity,
   session_value = unknown,
-  scheme extends string = 'session',
 > {
   /** Method name exposed on the resolved auth state. */
-  name?: scheme
+  name?: string
   /** Reads the auth value persisted in the session for the current request. */
   read(session: Session, context: RequestContext): session_value | null | undefined
   /** Verifies the session auth value and returns the resolved identity on success. */
@@ -37,11 +36,10 @@ export interface SessionAuthSchemeOptions<
 export function createSessionAuthScheme<
   identity,
   session_value = unknown,
-  scheme extends string = 'session',
 >(
-  options: SessionAuthSchemeOptions<identity, session_value, scheme>,
-): AuthScheme<identity, scheme> {
-  let name = options.name ?? ('session' as scheme)
+  options: SessionAuthSchemeOptions<identity, session_value>,
+): AuthScheme<identity> {
+  let name = options.name ?? 'session'
 
   return {
     name,

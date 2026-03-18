@@ -1,15 +1,15 @@
 # auth
 
-Browser login, OAuth, and OIDC helpers for Remix. This package handles redirect-based sign-in flows, callback processing, and session-backed authentication for standards-based identity providers, common social providers, and email/password login.
+Browser login and callback helpers for Remix. Use this package to start browser sign-in flows, finish provider callbacks, and write a small auth record into the session. Pair it with [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
-- **Standards-based browser auth** - Handle authorization code flows, PKCE, callback validation, and profile loading for OAuth and OpenID Connect providers
+- **Browser login handlers** - Start OAuth and OIDC redirect flows or verify direct credentials submissions with the same request-handler model
 - **Built-in provider support** - Start quickly with Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X, or connect another OpenID Connect provider
-- **Credentials flows** - Support email/password and other direct form-based login flows with the same session model as social login
-- **Session-backed authentication** - Persist a small auth record in the session and load the full identity later on normal app requests
-- **Explicit app control** - Decide exactly what to write into the session, where to redirect after login, and how to handle success and failure cases
-- **Shared request-handler model** - Build login and callback handlers without repeating protocol code across routes
+- **Credentials and provider flows** - Use the same session-writing model for email/password and external providers
+- **App-owned session records** - Decide exactly what auth data to write into the session after login succeeds
+- **Hookable success and failure behavior** - Control redirects, responses, and error handling without rewriting protocol code
+- **Designed to pair with request auth** - Write the session data here, then let `remix/auth-middleware` resolve it on later requests
 
 ## Installation
 
@@ -19,7 +19,12 @@ npm i remix
 
 ## Usage
 
-The following example shows an email/password flow with session-backed authentication and route protection using `requireAuth()` from `remix/auth-middleware`. See the provider sections below for OAuth and OIDC examples.
+The following example shows the two auth packages working together on a simple email/password flow:
+
+- `remix/auth` owns the login route and writes the session auth record
+- `remix/auth-middleware` reads that session auth record on later requests and protects the dashboard route
+
+See the provider sections below for OAuth and OIDC examples.
 
 ```ts
 import { createCookie } from 'remix/cookie'
@@ -137,14 +142,39 @@ router.get(routes.app.dashboard, {
 This example shows the simplest session-backed email/password flow:
 
 - `createAuthLoginRequestHandler()` parses the submitted credentials, verifies them, rotates the session id, and then runs your `writeSession(session, user, context)` hook
-- your `writeSession()` hook writes app-defined auth data, often under `auth`
-- `createSessionAuthScheme()` can read that data and resolve the full request identity into `context.get(Auth)`
+- `writeSession()` writes app-defined auth data, usually a small record like `{ userId }`
+- `createSessionAuthScheme()` from `remix/auth-middleware` later reads that record and resolves the full request identity into `context.get(Auth)`
 - credentials examples assume `formData()` middleware runs before `createAuthLoginRequestHandler(createCredentialsAuthProvider(...))`
 - examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
 
 OAuth and OIDC flows add a provider login route plus `createAuthCallbackRequestHandler()` to finish the redirect flow. See the provider sections below for those examples.
 
 The example also uses `requireAuth()` from `remix/auth-middleware` to turn that resolved auth state into route protection. Use `auth()` to load auth state for the request, then use `requireAuth()` on routes that must reject anonymous requests. See the [`auth-middleware` README](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) for the full request-auth and route-protection API.
+
+## Package Boundary
+
+`remix/auth` owns the requests that actively log a user in.
+
+Use this package when a request needs to:
+
+- start an external provider redirect flow
+- finish an OAuth or OIDC callback
+- verify submitted credentials
+- write the session auth record your app wants to persist
+
+Use [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when a request needs to:
+
+- resolve the current auth state into `context.get(Auth)`
+- authenticate from sessions, bearer tokens, or API keys
+- protect a route with `requireAuth()`
+
+In a session-backed browser flow, the handoff looks like this:
+
+1. `createAuthLoginRequestHandler()` or `createAuthCallbackRequestHandler()` authenticates the user
+2. `writeSession()` stores a small auth record such as `{ userId }`
+3. `createSessionAuthScheme()` reads that record on later requests
+4. `auth()` exposes the resolved identity at `context.get(Auth)`
+5. `requireAuth()` rejects anonymous requests
 
 ## Login Routes
 
@@ -521,9 +551,9 @@ router.get(
 
 Like `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers, custom OAuth providers, and credentials-based auth.
 
-## Session Integration
+## Working With auth-middleware
 
-This package is designed to be paired with `remix/session-middleware` and `remix/auth-middleware`.
+This package is designed to be paired with `remix/session-middleware` and [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware).
 
 ```ts
 import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
@@ -550,8 +580,9 @@ let router = createRouter({
 
 This keeps login mechanics separate from request authentication:
 
-- `remix/auth` creates and persists the session auth record
-- `createSessionAuthScheme()` converts that session record into `context.get(Auth)`
+- `remix/auth` handles the requests that establish login state
+- `writeSession()` persists the app-defined session auth record
+- `createSessionAuthScheme()` converts that record into `context.get(Auth)` on later requests
 - `requireAuth()` protects routes that require a signed-in user
 - `session()` middleware must run before `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()`, or `createSessionAuthScheme()`
 
