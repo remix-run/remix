@@ -51,7 +51,7 @@ async function handleRequest(request: Request): void {
 }
 ```
 
-## Limiting Multipart Size
+## Size Limits
 
 A common use case when handling file uploads is limiting the overall shape of incoming multipart bodies so malicious clients cannot force unbounded growth in memory. Use `maxFileSize` to limit each part, `maxParts` to limit how many parts are accepted, and `maxTotalSize` to limit aggregate part content across the entire request. `multipart-parser` applies finite defaults for each of these limits.
 
