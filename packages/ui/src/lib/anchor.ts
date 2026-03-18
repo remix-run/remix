@@ -418,7 +418,7 @@ export function anchor(
     offset = 0,
   } = options
 
-  let isFixed = getComputedStyle(anchorElement).position === 'fixed'
+  let isFixed = floating.hasAttribute('popover') || getComputedStyle(anchorElement).position === 'fixed'
   let animationFrameId = 0
 
   function updatePosition() {

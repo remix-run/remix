@@ -838,7 +838,7 @@ let popoverSurfaceUtility = css({
     opacity: 1,
   },
   '&:not(:popover-open)': {
-    transition: spring.transition(['opacity', 'overlay', 'display'], 'snappy'),
+    transition: 'opacity 200ms ease-in, overlay 200ms ease-in, display 200ms ease-in',
     transitionBehavior: 'allow-discrete',
   },
 })
@@ -857,10 +857,7 @@ let listboxAnchorUtility = css({
 let listboxTriggerPartUtility = attrs({ 'data-rmx-listbox-part': 'trigger' })
 let listboxValuePartUtility = attrs({ 'data-rmx-listbox-part': 'value' })
 let listboxIndicatorPartUtility = attrs({ 'aria-hidden': true })
-let listboxPopupPartUtility = attrs({
-  'data-rmx-listbox-part': 'popup',
-  popover: 'auto',
-})
+let listboxPopupPartUtility = attrs({ 'data-rmx-listbox-part': 'popup' })
 let listboxListPartUtility = attrs({ 'data-rmx-listbox-part': 'list' })
 let listboxItemIndicatorPartUtility = attrs({
   'data-rmx-listbox-part': 'item-indicator',
@@ -1290,13 +1287,7 @@ export const ui: ThemeUi = {
     ],
     value: [listboxValuePartUtility, listboxValueUtility],
     indicator: [listboxIndicatorPartUtility, listboxIndicatorUtility],
-    popup: [
-      listboxPopupPartUtility,
-      popoverBaseUtility,
-      surfaceElevatedUtility,
-      popoverSurfaceUtility,
-      listboxPopupUtility,
-    ],
+    popup: [listboxPopupPartUtility, listboxPopupUtility],
     list: [listboxListPartUtility, listboxListUtility],
     itemIndicator: [listboxItemIndicatorPartUtility, listboxItemIndicatorUtility],
     itemLabel: [listboxItemLabelPartUtility, listboxItemLabelUtility],
