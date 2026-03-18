@@ -643,7 +643,7 @@ export function resolveModulePath(absolutePath: string): ResolveModuleResult | n
   let resolvedPath: string
 
   try {
-    resolvedPath = fs.realpathSync(absolutePath)
+    resolvedPath = fs.realpathSync(resolveFileSystemPath(absolutePath))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -655,15 +655,14 @@ export function resolveModulePath(absolutePath: string): ResolveModuleResult | n
 
   return {
     identityPath: normalizeActualFilePath(resolvedPath),
-    resolvedPath: normalizeActualFilePath(resolvedPath),
+    resolvedPath,
   }
 }
 
 function resolveActualPath(identityPath: string): string | null {
-  let stripped = stripWindowsDriveSlash(identityPath)
-  let actualPath = path.resolve(stripped)
+  let actualPath = resolveFileSystemPath(identityPath)
   try {
-    return normalizeActualFilePath(fs.realpathSync(actualPath))
+    return fs.realpathSync(actualPath)
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -671,6 +670,14 @@ function resolveActualPath(identityPath: string): string | null {
 }
 
 function normalizeActualFilePath(filePath: string): string {
+  let normalizedInput = filePath.replace(/\\/g, '/')
+  if (/^\/[A-Za-z]:\//.test(normalizedInput)) {
+    return normalizedInput
+  }
+  if (/^[A-Za-z]:\//.test(normalizedInput)) {
+    return `/${normalizedInput}`
+  }
+
   let normalized = path.resolve(filePath).replace(/\\/g, '/')
   if (/^[A-Za-z]:\//.test(normalized)) {
     return `/${normalized}`
@@ -694,6 +701,14 @@ function isSupportedScriptPath(filePath: string): boolean {
 
 function stripWindowsDriveSlash(filePath: string): string {
   return /^\/[A-Za-z]:\//.test(filePath) ? filePath.slice(1) : filePath
+}
+
+function resolveFileSystemPath(filePath: string): string {
+  let normalizedInput = stripWindowsDriveSlash(filePath).replace(/\\/g, '/')
+  if (/^[A-Za-z]:\//.test(normalizedInput)) {
+    return normalizedInput
+  }
+  return path.resolve(normalizedInput)
 }
 
 function sourceStampFromStat(stat: { mtimeMs: number; size: number }): string {
