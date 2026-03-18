@@ -281,7 +281,7 @@ describe('ui', () => {
             createElement('div', { mix: ui.listbox.list }, [
               createElement(
                 'div',
-                { mix: ui.listbox.item('backlog', { textValue: 'Backlog' }) },
+                { mix: ui.listbox.item },
                 'Backlog',
               ),
             ]),
@@ -323,6 +323,8 @@ describe('ui', () => {
     expect(html).toMatch(/data-rmx-listbox-part="popup"/)
     expect(html).toMatch(/popover="auto"/)
     expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
+    expect(html).toMatch(/:popover-open \{\s*opacity: 1;/)
+    expect(html).toMatch(/:not\(:popover-open\) \{\s*transition:/)
   })
 
   it('provides card structure mixins for layout and typography', async () => {

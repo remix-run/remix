@@ -1,17 +1,65 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, on, type RemixNode } from '@remix-run/component'
+import { createRoot, type RemixNode } from '@remix-run/component'
 
-import {
-  hidePopover,
-  isPopoverOpen,
-  popoverFadeDuration,
-  Popover,
-  showPopover,
-} from './popover.tsx'
-import type { PopoverOpenChangeEvent } from './popover.tsx'
+import { popover } from './popover.tsx'
+
+function ensureAdoptedStyleSheets() {
+  if (document.adoptedStyleSheets) {
+    return
+  }
+
+  Object.defineProperty(document, 'adoptedStyleSheets', {
+    configurable: true,
+    value: [],
+    writable: true,
+  })
+}
+
+class MockCSSStyleSheet {
+  cssRules: Array<{ cssText: string }> = []
+
+  insertRule(rule: string) {
+    this.cssRules.push({ cssText: rule })
+    return this.cssRules.length - 1
+  }
+
+  deleteRule(index: number) {
+    this.cssRules.splice(index, 1)
+  }
+}
+
+function ensureConstructableStylesheets() {
+  globalThis.CSSStyleSheet = MockCSSStyleSheet as unknown as typeof CSSStyleSheet
+}
+
+function ensurePopoverMethods() {
+  if (typeof HTMLElement.prototype.showPopover !== 'function') {
+    HTMLElement.prototype.showPopover = function () {
+      let beforetoggle = new Event('beforetoggle')
+      Object.assign(beforetoggle, { newState: 'open', oldState: 'closed' })
+      this.dispatchEvent(beforetoggle)
+      this.dataset.popoverOpen = 'true'
+      let toggle = new Event('toggle')
+      Object.assign(toggle, { newState: 'open', oldState: 'closed' })
+      this.dispatchEvent(toggle)
+    }
+  }
+
+  if (typeof HTMLElement.prototype.hidePopover !== 'function') {
+    HTMLElement.prototype.hidePopover = function () {
+      let beforetoggle = new Event('beforetoggle')
+      Object.assign(beforetoggle, { newState: 'closed', oldState: 'open' })
+      this.dispatchEvent(beforetoggle)
+      delete this.dataset.popoverOpen
+      let toggle = new Event('toggle')
+      Object.assign(toggle, { newState: 'closed', oldState: 'open' })
+      this.dispatchEvent(toggle)
+    }
+  }
+}
 
 function renderApp(node: RemixNode) {
   let container = document.createElement('div')
@@ -19,6 +67,10 @@ function renderApp(node: RemixNode) {
   let root = createRoot(container)
   root.render(node)
   return { container, root }
+}
+
+async function flush() {
+  await Promise.resolve()
 }
 
 function mockLayout(element: HTMLElement, rect: { top: number; left: number; width: number; height: number }) {
@@ -35,142 +87,104 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
   element.getBoundingClientRect = () => new DOMRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-async function flush() {
-  await Promise.resolve()
-}
-
-async function wait(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms))
-}
+ensureAdoptedStyleSheets()
+ensureConstructableStylesheets()
+ensurePopoverMethods()
 
 afterEach(() => {
   document.body.innerHTML = ''
+  vi.restoreAllMocks()
 })
 
-describe('Popover', () => {
-  it('supports uncontrolled defaultOpen', async () => {
-    let { container } = renderApp(
-      <>
-        <button id="owner" />
-        <Popover defaultOpen id="menu" owner="owner">
-          Menu
-        </Popover>
-      </>,
-    )
-
-    let owner = container.querySelector('#owner') as HTMLButtonElement
-    let popover = container.querySelector('#menu') as HTMLDivElement
-
-    mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
-    mockLayout(popover, { top: 0, left: 0, width: 160, height: 96 })
-
-    await flush()
-
-    expect(isPopoverOpen(popover)).toBe(true)
-  })
-
-  it('supports controlled open state', async () => {
+describe('popover', () => {
+  it('defaults to manual and stays closed on insert', async () => {
+    let showPopover = vi.spyOn(HTMLElement.prototype, 'showPopover')
     let { container, root } = renderApp(
-      <>
-        <button id="owner" />
-        <Popover id="menu" open owner="owner">
+      <div>
+        <button popovertarget="menu" type="button">
+          Owner
+        </button>
+        <div id="menu" mix={popover()}>
           Menu
-        </Popover>
-      </>,
-    )
-    let owner = container.querySelector('#owner') as HTMLButtonElement
-    let popover = container.querySelector('#menu') as HTMLDivElement
-
-    mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
-    mockLayout(popover, { top: 0, left: 0, width: 160, height: 96 })
-
-    await flush()
-    root.flush()
-
-    expect(isPopoverOpen(popover)).toBe(true)
-
-    root.render(
-      <>
-        <button id="owner" />
-        <Popover id="menu" open={false} owner="owner">
-          Menu
-        </Popover>
-      </>,
-    )
-    root.flush()
-    await flush()
-    await wait(popoverFadeDuration + 20)
-
-    expect(isPopoverOpen(popover)).toBe(false)
-  })
-
-  it('anchors itself when opening and dispatches a bubbling open-change event', async () => {
-    let captured: PopoverOpenChangeEvent | null = null
-
-    let { container } = renderApp(
-      <div
-        mix={on(Popover.openChange, (event) => {
-          captured = event as PopoverOpenChangeEvent
-        })}
-      >
-        <button id="owner" popovertarget="menu" />
-        <Popover id="menu">
-          Menu
-        </Popover>
+        </div>
       </div>,
     )
-
-    let owner = container.querySelector('#owner') as HTMLButtonElement
-    let popover = container.querySelector('#menu') as HTMLDivElement
-
-    mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
-    mockLayout(popover, { top: 0, left: 0, width: 160, height: 96 })
-
-    showPopover(popover)
+    root.flush()
     await flush()
 
-    expect(isPopoverOpen(popover)).toBe(true)
-    expect(popover.style.top).toBe('68px')
-    expect(popover.style.left).toBe('160px')
-    expect(captured?.open).toBe(true)
+    let popup = container.querySelector('#menu') as HTMLDivElement
 
-    hidePopover(popover)
-    await flush()
-    await wait(popoverFadeDuration + 20)
-
-    expect(captured?.open).toBe(false)
+    expect(popup.id).toBeTruthy()
+    expect(popup.getAttribute('popover')).toBe('manual')
+    expect(showPopover).not.toHaveBeenCalled()
+    expect(popup.dataset.popoverOpen).toBeUndefined()
   })
 
-  it('closes when focus moves outside the owner and popover', async () => {
-    let { container } = renderApp(
-      <>
-        <button id="owner">Owner</button>
-        <Popover defaultOpen id="menu" owner="owner">
-          <button id="inside">Inside</button>
-        </Popover>
-        <button id="outside">Outside</button>
-      </>,
+  it('anchors to a trigger that controls its id', async () => {
+    let { container, root } = renderApp(
+      <div>
+        <button id="owner" popovertarget="menu" type="button">
+          Owner
+        </button>
+        <div id="menu" mix={popover()}>
+          Menu
+        </div>
+      </div>,
     )
+    root.flush()
+    await flush()
 
     let owner = container.querySelector('#owner') as HTMLButtonElement
-    let popover = container.querySelector('#menu') as HTMLDivElement
-    let inside = container.querySelector('#inside') as HTMLButtonElement
-    let outside = container.querySelector('#outside') as HTMLButtonElement
+    let popup = container.querySelector('#menu') as HTMLDivElement
 
     mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
-    mockLayout(popover, { top: 0, left: 0, width: 160, height: 96 })
+    mockLayout(popup, { top: 0, left: 0, width: 160, height: 96 })
+    window.dispatchEvent(new Event('resize'))
 
-    await flush()
-
-    expect(isPopoverOpen(popover)).toBe(true)
-
-    inside.focus()
-    await flush()
-    expect(isPopoverOpen(popover)).toBe(true)
-
-    outside.focus()
-    await flush()
-    await wait(popoverFadeDuration + 20)
-    expect(isPopoverOpen(popover)).toBe(false)
+    expect(popup.style.position).toBe('absolute')
+    expect(popup.style.top).toBe('68px')
+    expect(popup.style.left).toBe('160px')
   })
+
+  it('respects anchor options', async () => {
+    let { container, root } = renderApp(
+      <div>
+        <button id="owner" popovertarget="menu" type="button">
+          Owner
+        </button>
+        <div id="menu" mix={popover({ offset: 8, placement: 'bottom-end' })}>
+          Menu
+        </div>
+      </div>,
+    )
+    root.flush()
+    await flush()
+
+    let owner = container.querySelector('#owner') as HTMLButtonElement
+    let popup = container.querySelector('#menu') as HTMLDivElement
+
+    mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
+    mockLayout(popup, { top: 0, left: 0, width: 160, height: 96 })
+    window.dispatchEvent(new Event('resize'))
+
+    expect(popup.style.top).toBe('76px')
+    expect(popup.style.left).toBe('120px')
+  })
+
+  it('warns when it cannot find an owner', async () => {
+    let warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let { container, root } = renderApp(
+      <div id="menu" mix={popover()}>
+        Menu
+      </div>,
+    )
+    root.flush()
+    await flush()
+
+    let popup = container.querySelector('#menu') as HTMLDivElement
+
+    expect(warn).toHaveBeenCalledWith('No popover owner found for #menu')
+    expect(popup.getAttribute('popover')).toBe('manual')
+  })
+
 })

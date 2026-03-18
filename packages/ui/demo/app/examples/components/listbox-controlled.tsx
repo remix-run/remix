@@ -38,7 +38,6 @@ export default function example(handle: Handle) {
       </div>
 
       <Listbox
-        initialLabel="Choose an environment"
         mix={[
           listboxWidthCss,
           on(Listbox.change, event => {

@@ -1,16 +1,12 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type RemixNode } from '@remix-run/component'
 
 import { Listbox, ListboxOption } from './listbox.tsx'
-import type {
-  ListboxChangeEvent,
-  ListboxOpenChangeEvent,
-  ListboxProps,
-} from './listbox.tsx'
-import { isPopoverOpen, popoverFadeDuration } from './popover.tsx'
+
+let SELECTION_FLASH_DELAY = 75
 
 function ensureAdoptedStyleSheets() {
   if (document.adoptedStyleSheets) {
@@ -41,6 +37,56 @@ function ensureConstructableStylesheets() {
   globalThis.CSSStyleSheet = MockCSSStyleSheet as unknown as typeof CSSStyleSheet
 }
 
+function ensurePopoverMethods() {
+  if (typeof HTMLElement.prototype.showPopover !== 'function') {
+    HTMLElement.prototype.showPopover = function () {
+      let beforetoggle = new Event('beforetoggle')
+      Object.assign(beforetoggle, { newState: 'open', oldState: 'closed' })
+      this.dispatchEvent(beforetoggle)
+      this.dataset.popoverOpen = 'true'
+      let toggle = new Event('toggle')
+      Object.assign(toggle, { newState: 'open', oldState: 'closed' })
+      this.dispatchEvent(toggle)
+    }
+  }
+
+  if (typeof HTMLElement.prototype.hidePopover !== 'function') {
+    HTMLElement.prototype.hidePopover = function () {
+      let beforetoggle = new Event('beforetoggle')
+      Object.assign(beforetoggle, { newState: 'closed', oldState: 'open' })
+      this.dispatchEvent(beforetoggle)
+      delete this.dataset.popoverOpen
+      let toggle = new Event('toggle')
+      Object.assign(toggle, { newState: 'closed', oldState: 'open' })
+      this.dispatchEvent(toggle)
+    }
+  }
+}
+
+function ensureAnimations() {
+  if (typeof HTMLElement.prototype.animate === 'function') {
+    return
+  }
+
+  HTMLElement.prototype.animate = function () {
+    return {
+      playState: 'finished',
+      reverse() {},
+      commitStyles() {},
+      cancel() {},
+      finished: Promise.resolve(),
+    } as unknown as Animation
+  }
+}
+
+function ensureScrollIntoView() {
+  if (typeof HTMLElement.prototype.scrollIntoView === 'function') {
+    return
+  }
+
+  HTMLElement.prototype.scrollIntoView = function () {}
+}
+
 function renderApp(node: RemixNode) {
   let container = document.createElement('div')
   document.body.append(container)
@@ -63,15 +109,16 @@ function mockLayout(element: HTMLElement, rect: { top: number; left: number; wid
   element.getBoundingClientRect = () => new DOMRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-function renderExampleListbox(props: Partial<ListboxProps> = {}) {
+function renderExampleListbox() {
   return (
-    <Listbox defaultValue="backlog" initialLabel="Select a status" {...props}>
-      <ListboxOption value="backlog">Backlog</ListboxOption>
-      <ListboxOption textValue="In progress" value="in-progress">
-        In progress
+    <Listbox initialLabel="Select an environment">
+      <ListboxOption value="local">Local</ListboxOption>
+      <ListboxOption textValue="Staging" value="staging">
+        Staging
       </ListboxOption>
-      <ListboxOption disabled textValue="Done" value="done">
-        Done
+      <ListboxOption value="production">Production</ListboxOption>
+      <ListboxOption disabled value="archived">
+        Archived
       </ListboxOption>
     </Listbox>
   )
@@ -81,364 +128,407 @@ function press(target: HTMLElement, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
 }
 
-async function wait(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms))
+function pointer(target: HTMLElement, type: 'pointerdown' | 'pointermove' | 'pointerup') {
+  target.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 }))
+}
+
+async function settle(root: ReturnType<typeof createRoot>) {
+  await Promise.resolve()
+  root.flush()
+  await Promise.resolve()
+  root.flush()
+}
+
+async function advance(root: ReturnType<typeof createRoot>, ms: number) {
+  await vi.advanceTimersByTimeAsync(ms)
+  await settle(root)
+}
+
+async function finishClose(root: ReturnType<typeof createRoot>, popup: HTMLElement) {
+  let event = new Event('transitionend')
+  popup.dispatchEvent(event)
+  await settle(root)
+}
+
+async function cancelClose(root: ReturnType<typeof createRoot>, popup: HTMLElement) {
+  let event = new Event('transitioncancel')
+  popup.dispatchEvent(event)
+  await settle(root)
 }
 
 ensureAdoptedStyleSheets()
 ensureConstructableStylesheets()
+ensurePopoverMethods()
+ensureAnimations()
+ensureScrollIntoView()
+
+beforeEach(() => {
+  vi.useFakeTimers()
+})
 
 afterEach(() => {
+  vi.useRealTimers()
   document.body.innerHTML = ''
 })
 
 describe('Listbox', () => {
-  it('supports uncontrolled value and name submission', async () => {
-    let { container, root } = renderApp(
-      renderExampleListbox({
-        defaultValue: 'backlog',
-        initialLabel: 'Select a status',
-        name: 'status',
-      }),
-    )
+  it('styles the flash state with the current data attribute', () => {
+    renderApp(renderExampleListbox())
 
+    let cssText = document.adoptedStyleSheets
+      .flatMap((sheet) => Array.from(sheet.cssRules, (rule) => rule.cssText))
+      .join('\n')
+
+    expect(cssText).toContain('[data-flash="true"]')
+  })
+
+  it('opens as a select-only combobox and highlights the first enabled option', async () => {
+    let showPopover = vi.spyOn(HTMLElement.prototype, 'showPopover')
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-    let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
-    root.flush()
 
-    expect(trigger.textContent).toContain('Backlog')
-    expect(hiddenInput.name).toBe('status')
-    expect(hiddenInput.value).toBe('backlog')
+    expect(popup.dataset.popoverOpen).toBeUndefined()
 
     trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
+    await settle(root)
 
-    expect(document.activeElement).toBe(trigger)
+    let list = container.querySelector('[role="listbox"]') as HTMLElement
+    let highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+
     expect(trigger.getAttribute('role')).toBe('combobox')
-
-    press(trigger, 'ArrowDown')
-    press(trigger, 'Enter')
-    await wait(480)
-    root.flush()
-
-    expect(trigger.textContent).toContain('In progress')
-    expect(hiddenInput.value).toBe('in-progress')
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    expect(trigger.getAttribute('aria-activedescendant')).toBe(highlighted.id)
+    expect(highlighted.dataset.value).toBe('local')
+    expect(showPopover).toHaveBeenCalledTimes(1)
+    expect(popup.dataset.popoverOpen).toBe('true')
   })
 
-  it('renders the selected label on initial mount when defaultValue is provided', () => {
-    let { container } = renderApp(
-      renderExampleListbox({
-        defaultValue: 'backlog',
-        initialLabel: 'Select a status',
-      }),
-    )
-
+  it('opens from ArrowUp with the last enabled option highlighted', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
 
-    expect(trigger.textContent).toContain('Backlog')
-    expect(trigger.textContent).not.toContain('Select a status')
+    trigger.focus()
+    press(trigger, 'ArrowUp')
+    root.flush()
+    await settle(root)
+
+    let highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('production')
   })
 
-  it('supports controlled value through bubbling change events', async () => {
-    function App(handle: Handle) {
-      let value: string | null = 'backlog'
+  it('moves highlight with keyboard navigation and skips disabled options', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
 
-      return () => (
-        <div
-          mix={on(Listbox.change, (event) => {
-            value = (event as ListboxChangeEvent).value
-            void handle.update()
-          })}
-        >
-          {renderExampleListbox({ value })}
-        </div>
-      )
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    let highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('staging')
+
+    press(trigger, 'End')
+    root.flush()
+    await settle(root)
+    highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('production')
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+    highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('production')
+
+    press(trigger, 'Home')
+    root.flush()
+    await settle(root)
+    highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('local')
+  })
+
+  it('selects the highlighted option on Enter and updates the trigger label', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'Enter')
+    root.flush()
+    await settle(root)
+
+    await advance(root, SELECTION_FLASH_DELAY * 2)
+    await finishClose(root, popup)
+
+    expect(trigger.textContent).toContain('Staging')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('closes on Escape without changing the current label', async () => {
+    let hidePopover = vi.spyOn(HTMLElement.prototype, 'hidePopover')
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'Escape')
+    root.flush()
+    await settle(root)
+
+    expect(trigger.textContent).toContain('Select an environment')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(hidePopover).toHaveBeenCalledTimes(1)
+    expect(popup.dataset.popoverOpen).toBeUndefined()
+  })
+
+  it('closes on focusout without changing the current label', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let outside = document.createElement('button')
+    document.body.append(outside)
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: outside }))
+    root.flush()
+    await settle(root)
+
+    expect(trigger.textContent).toContain('Select an environment')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('keeps focus on the trigger when dismissing with an outside click', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let outside = document.createElement('button')
+    document.body.append(outside)
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    let event = new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    })
+    outside.dispatchEvent(event)
+    if (!event.defaultPrevented) {
+      outside.focus()
     }
-
-    let { container, root } = renderApp(<App />)
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
     root.flush()
+    await settle(root)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(trigger)
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('ignores outside clicks while selection feedback is running', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    let outside = document.createElement('button')
+    document.body.append(outside)
 
     trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
-
-    expect(document.activeElement).toBe(trigger)
+    await settle(root)
 
     press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
     press(trigger, 'Enter')
-    await wait(480)
     root.flush()
+    await settle(root)
 
-    expect(trigger.textContent).toContain('In progress')
-  })
-
-  it('supports controlled open state through bubbling open-change events', async () => {
-    let { container, root } = renderApp(renderExampleListbox({ open: false }))
-
-    root.render(renderExampleListbox({ open: true }))
+    let event = new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    })
+    outside.dispatchEvent(event)
+    if (!event.defaultPrevented) {
+      outside.focus()
+    }
     root.flush()
+    await settle(root)
 
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    expect(isPopoverOpen(popup)).toBe(true)
-
-    root.render(renderExampleListbox({ open: false }))
-    root.flush()
-    await wait(popoverFadeDuration + 20)
-
-    let nextPopup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    expect(isPopoverOpen(nextPopup)).toBe(false)
-  })
-
-  it('matches popup width to the trigger and skips disabled items during keyboard navigation', () => {
-    let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-
-    mockLayout(trigger, { top: 40, left: 200, width: 180, height: 28 })
-    mockLayout(popup, { top: 0, left: 0, width: 220, height: 140 })
-
-    trigger.focus()
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    expect(popup.style.minWidth).toBe('180px')
-    let highlighted = container.querySelector('[data-rmx-listbox-highlighted="true"]') as HTMLElement
-    expect(highlighted.getAttribute('data-rmx-listbox-value')).toBe('in-progress')
-  })
-
-  it('keeps the popup open on Tab and moves highlight to the first item', () => {
-    let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-
-    trigger.focus()
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-
-    expect(isPopoverOpen(popup)).toBe(true)
-
+    expect(event.defaultPrevented).toBe(true)
     expect(document.activeElement).toBe(trigger)
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+
+    await advance(root, SELECTION_FLASH_DELAY * 2)
+    await finishClose(root, popup)
+
+    expect(trigger.textContent).toContain('Staging')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('commits selection if the close transition is cancelled', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
 
     press(trigger, 'ArrowDown')
     root.flush()
+    await settle(root)
+
+    press(trigger, 'Enter')
+    root.flush()
+    await settle(root)
+
+    await advance(root, SELECTION_FLASH_DELAY * 2)
+    await cancelClose(root, popup)
+
+    expect(trigger.textContent).toContain('Staging')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('highlights the first enabled option on Tab', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowUp')
+    root.flush()
+    await settle(root)
+
+    let highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+    expect(highlighted.dataset.value).toBe('production')
 
     press(trigger, 'Tab')
     root.flush()
+    await settle(root)
 
-    expect(isPopoverOpen(popup)).toBe(true)
-    let highlighted = container.querySelector('[data-rmx-listbox-highlighted="true"]') as HTMLElement
-    expect(highlighted.getAttribute('data-rmx-listbox-value')).toBe('backlog')
+    highlighted = container.querySelector('[data-highlighted="true"]') as HTMLElement
+
+    expect(highlighted.dataset.value).toBe('local')
+    expect(trigger.textContent).toContain('Select an environment')
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
   })
 
-  it('treats outside pointer dismissal like escape and restores focus to the trigger', async () => {
-    let { container, root } = renderApp(
-      <div>
-        {renderExampleListbox()}
-        <button type="button">Outside action</button>
-      </div>,
-    )
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let outsideButton = [...container.querySelectorAll('button')].find(
-      button => button.textContent === 'Outside action',
-    ) as HTMLButtonElement
-
-    expect(isPopoverOpen(popup)).toBe(true)
-
-    outsideButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-    await wait(popoverFadeDuration + 20)
-
-    expect(isPopoverOpen(popup)).toBe(false)
-    expect(document.activeElement).toBe(trigger)
-  })
-
-  it('dehighlights on drag out, rehighlights on re-entry, and selects on pointerup inside', async () => {
-    let { container, root } = renderApp(
-      <div>
-        {renderExampleListbox({ name: 'status' })}
-        <button type="button">Outside action</button>
-      </div>,
-    )
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let backlog = container.querySelector('[data-rmx-listbox-value="backlog"]') as HTMLElement
-    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
-    let outsideButton = [...container.querySelectorAll('button')].find(
-      button => button.textContent === 'Outside action',
-    ) as HTMLButtonElement
-
-    expect(isPopoverOpen(popup)).toBe(true)
-
-    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-
-    expect(inProgress.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
-
-    outsideButton.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
-    root.flush()
-
-    expect(container.querySelector('[data-rmx-listbox-highlighted="true"]')).toBe(null)
-
-    backlog.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
-    root.flush()
-
-    expect(backlog.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
-
-    backlog.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
-    root.flush()
-    await wait(480)
-    root.flush()
-
-    expect(trigger.textContent).toContain('Backlog')
-    expect(isPopoverOpen(popup)).toBe(false)
-  })
-
-  it('keeps highlight when dragging over the option indicator glyph', () => {
+  it('matches popup width to the trigger when open', async () => {
     let { container, root } = renderApp(renderExampleListbox())
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
 
-    press(trigger, 'ArrowDown')
-    root.flush()
-
-    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
-    let indicator = inProgress.querySelector(
-      '[data-rmx-listbox-part="item-indicator"]',
-    ) as HTMLElement
-
-    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-
-    indicator.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
-    root.flush()
-
-    expect(inProgress.getAttribute('data-rmx-listbox-highlighted')).toBe('true')
-  })
-
-  it('keeps focus on the trigger after pointer selection', async () => {
-    let { container, root } = renderApp(renderExampleListbox())
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+    mockLayout(trigger, { top: 40, left: 200, width: 180, height: 28 })
 
     trigger.focus()
     press(trigger, 'ArrowDown')
     root.flush()
-
-    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
-
-    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-
-    inProgress.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
-    root.flush()
-    await wait(480)
-    root.flush()
-
-    expect(document.activeElement).toBe(trigger)
-  })
-
-  it('closes when a drag selection ends outside the popup', async () => {
-    let { container, root } = renderApp(
-      <div>
-        {renderExampleListbox()}
-        <button type="button">Outside action</button>
-      </div>,
-    )
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-
-    press(trigger, 'ArrowDown')
-    root.flush()
+    await settle(root)
 
     let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    let inProgress = container.querySelector('[data-rmx-listbox-value="in-progress"]') as HTMLElement
-    let outsideButton = [...container.querySelectorAll('button')].find(
-      button => button.textContent === 'Outside action',
-    ) as HTMLButtonElement
-
-    inProgress.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-
-    outsideButton.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
-    root.flush()
-
-    expect(container.querySelector('[data-rmx-listbox-highlighted="true"]')).toBe(null)
-
-    outsideButton.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
-    root.flush()
-    await wait(popoverFadeDuration + 20)
-
-    expect(isPopoverOpen(popup)).toBe(false)
-    expect(document.activeElement).toBe(trigger)
+    expect(popup.style.minWidth).toBe('180px')
   })
 
-  it('closes when a trigger press ends outside the popup', async () => {
-    let { container, root } = renderApp(
-      <div>
-        {renderExampleListbox()}
-        <button type="button">Outside action</button>
-      </div>,
-    )
-    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-    let outsideButton = [...container.querySelectorAll('button')].find(
-      button => button.textContent === 'Outside action',
-    ) as HTMLButtonElement
-
-    trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-    root.flush()
-
+  it('delegates pointer interactions from the list root', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
     let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
-    expect(isPopoverOpen(popup)).toBe(true)
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
 
-    outsideButton.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0 }))
+    pointer(trigger, 'pointerdown')
     root.flush()
-    await wait(popoverFadeDuration + 20)
+    await settle(root)
 
-    expect(isPopoverOpen(popup)).toBe(false)
-    expect(document.activeElement).toBe(trigger)
+    let production = container.querySelector('[data-value="production"]') as HTMLElement
+    let archived = container.querySelector('[data-value="archived"]') as HTMLElement
+
+    pointer(production, 'pointermove')
+    root.flush()
+    await settle(root)
+
+    expect(production.dataset.highlighted).toBe('true')
+
+    pointer(archived, 'pointermove')
+    root.flush()
+    await settle(root)
+
+    expect(container.querySelector('[data-highlighted="true"]')).toBe(null)
+
+    pointer(production, 'pointerdown')
+    pointer(production, 'pointerup')
+    root.flush()
+    await settle(root)
+
+    await advance(root, SELECTION_FLASH_DELAY * 2)
+    await finishClose(root, popup)
+
+    expect(trigger.textContent).toContain('Production')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('dispatches bubbling change and open events', async () => {
-    let changeEvent: ListboxChangeEvent | null = null
-    let openEvents: boolean[] = []
-
-    let { container, root } = renderApp(
-      <div
-        mix={[
-          on(Listbox.change, (event) => {
-            changeEvent = event as ListboxChangeEvent
-          }),
-          on(Listbox.openChange, (event) => {
-            openEvents.push((event as ListboxOpenChangeEvent).open)
-          }),
-        ]}
-      >
-        {renderExampleListbox()}
-      </div>,
-    )
-
+  it('does not select from the same click that opens the popup', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement
     let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
-    trigger.focus()
-    press(trigger, 'ArrowDown')
-    root.flush()
 
-    press(trigger, 'Enter')
-    await wait(480)
+    pointer(trigger, 'pointerdown')
     root.flush()
+    await settle(root)
 
-    expect(openEvents).toContain(true)
-    expect(changeEvent?.value).toBe('backlog')
+    let production = container.querySelector('[data-value="production"]') as HTMLElement
+    pointer(production, 'pointerup')
+    root.flush()
+    await settle(root)
+
+    expect(trigger.textContent).toContain('Select an environment')
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+
+    pointer(production, 'pointerdown')
+    pointer(production, 'pointerup')
+    root.flush()
+    await settle(root)
+
+    await advance(root, SELECTION_FLASH_DELAY * 2)
+    await finishClose(root, popup)
+
+    expect(trigger.textContent).toContain('Production')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 })

@@ -354,13 +354,7 @@ export type ThemeUi = {
     list: ThemeMix
     itemIndicator: ThemeMix
     itemLabel: ThemeMix
-    item(
-      value: string,
-      options?: {
-        textValue?: string
-        disabled?: boolean
-      },
-    ): ThemeMix
+    item: ThemeMix
   }
 }
 
@@ -379,7 +373,10 @@ const roundedUtilities = createSinglePropertyUtilities('borderRadius', theme.rad
 const fontSizeUtilities = createSinglePropertyUtilities('fontSize', theme.fontSize)
 const fontWeightUtilities = createSinglePropertyUtilities('fontWeight', theme.fontWeight)
 const textColorUtilities = createSinglePropertyUtilities('color', theme.colors.text)
-const backgroundUtilities = createSinglePropertyUtilities('backgroundColor', theme.colors.background)
+const backgroundUtilities = createSinglePropertyUtilities(
+  'backgroundColor',
+  theme.colors.background,
+)
 const borderColorUtilities = createSinglePropertyUtilities('borderColor', theme.colors.border)
 const shadowUtilities = createSinglePropertyUtilities('boxShadow', theme.shadow)
 
@@ -715,7 +712,7 @@ let stackUtility = Object.assign(stackBaseUtility, {
   wrap: stackWrapUtility,
 }) as ThemeAxisUtility
 
-let buttonDefaultsMixin = createMixin<Element, [], ElementProps>((handle, hostType) => props => {
+let buttonDefaultsMixin = createMixin<Element, [], ElementProps>((handle, hostType) => (props) => {
   if (hostType !== 'button' || props.type !== undefined) {
     return handle.element
   }
@@ -836,6 +833,14 @@ let popoverSurfaceUtility = css({
   minWidth: '12rem',
   maxWidth: `min(24rem, calc(100vw - (${theme.space.lg} * 2)))`,
   padding: theme.space.xs,
+  opacity: 0,
+  '&:popover-open': {
+    opacity: 1,
+  },
+  '&:not(:popover-open)': {
+    transition: spring.transition(['opacity', 'overlay', 'display'], 'snappy'),
+    transitionBehavior: 'allow-discrete',
+  },
 })
 let listboxRootUtility = css({
   position: 'relative',
@@ -918,11 +923,11 @@ let listboxItemBaseUtility = css({
   lineHeight: theme.lineHeight.normal,
   textAlign: 'left',
   userSelect: 'none',
-  '&[data-rmx-listbox-highlighted="true"]': {
+  '&[data-highlighted="true"]': {
     backgroundColor: theme.colors.action.primary.background,
     color: theme.colors.action.primary.foreground,
   },
-  '&[data-rmx-listbox-flash="true"]': {
+  '&[data-flash="true"]': {
     backgroundColor: theme.colors.action.primary.background,
     color: theme.colors.action.primary.foreground,
   },
@@ -1275,26 +1280,27 @@ export const ui: ThemeUi = {
   listbox: {
     root: listboxRootUtility,
     anchor: listboxAnchorUtility,
-    trigger: [listboxTriggerPartUtility, buttonDefaultsUtility, buttonBaseStyleUtility, buttonSizeMdUtility, buttonToneUtilities.secondary, listboxTriggerUtility],
+    trigger: [
+      listboxTriggerPartUtility,
+      buttonDefaultsUtility,
+      buttonBaseStyleUtility,
+      buttonSizeMdUtility,
+      buttonToneUtilities.secondary,
+      listboxTriggerUtility,
+    ],
     value: [listboxValuePartUtility, listboxValueUtility],
     indicator: [listboxIndicatorPartUtility, listboxIndicatorUtility],
-    popup: [listboxPopupPartUtility, popoverBaseUtility, surfaceElevatedUtility, popoverSurfaceUtility, listboxPopupUtility],
+    popup: [
+      listboxPopupPartUtility,
+      popoverBaseUtility,
+      surfaceElevatedUtility,
+      popoverSurfaceUtility,
+      listboxPopupUtility,
+    ],
     list: [listboxListPartUtility, listboxListUtility],
     itemIndicator: [listboxItemIndicatorPartUtility, listboxItemIndicatorUtility],
     itemLabel: [listboxItemLabelPartUtility, listboxItemLabelUtility],
-    item(value, options = {}) {
-      let { textValue, disabled } = options
-
-      return [
-        attrs({
-          'data-rmx-listbox-part': 'item',
-          'data-rmx-listbox-value': value,
-          'data-rmx-listbox-text-value': textValue ?? value,
-          'data-rmx-listbox-disabled': disabled ? 'true' : undefined,
-        }),
-        listboxItemBaseUtility,
-      ]
-    },
+    item: listboxItemBaseUtility,
   },
 }
 
@@ -1328,10 +1334,8 @@ export const RMX_01_VALUES: ThemeValues = {
     '2xl': '28px',
   },
   fontFamily: {
-    sans:
-      '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    mono:
-      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    sans: '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
   },
   lineHeight: {
     tight: '1.25',
@@ -1461,10 +1465,7 @@ export const RMX_01_VALUES: ThemeValues = {
 
 export const RMX_01 = createTheme(RMX_01_VALUES)
 
-export function createTheme(
-  values: ThemeValues,
-  options: CreateThemeOptions = {},
-): ThemeComponent {
+export function createTheme(values: ThemeValues, options: CreateThemeOptions = {}): ThemeComponent {
   let selector = options.selector ?? ':root'
   let reset = options.reset ?? true
   let vars = Object.freeze(collectThemeVars(themeVariableNames, values))
@@ -1490,10 +1491,13 @@ export function createTheme(
 }
 
 function createThemeContract<tree extends ThemeVariableTree>(tree: tree): MapLeaves<tree, string> {
-  return mapTreeLeaves(tree, variableName => `var(${variableName})`) as MapLeaves<tree, string>
+  return mapTreeLeaves(tree, (variableName) => `var(${variableName})`) as MapLeaves<tree, string>
 }
 
-function mapTreeLeaves(tree: ThemeVariableTree, mapLeaf: (value: string) => string): ThemeVariableTree {
+function mapTreeLeaves(
+  tree: ThemeVariableTree,
+  mapLeaf: (value: string) => string,
+): ThemeVariableTree {
   let output: ThemeVariableTree = {}
 
   for (let [key, value] of Object.entries(tree)) {
@@ -1521,7 +1525,9 @@ function collectThemeVars(
 
     if (typeof value === 'string') {
       if (typeof themeValue !== 'string' && typeof themeValue !== 'number') {
-        throw new TypeError(`Expected theme value at "${nextPath.join('.')}" to be a string or number`)
+        throw new TypeError(
+          `Expected theme value at "${nextPath.join('.')}" to be a string or number`,
+        )
       }
 
       vars[value] = String(themeValue)
@@ -1538,11 +1544,7 @@ function collectThemeVars(
   return vars
 }
 
-function serializeThemeCss(
-  selector: string,
-  vars: ThemeVars,
-  options: { reset: boolean },
-): string {
+function serializeThemeCss(selector: string, vars: ThemeVars, options: { reset: boolean }): string {
   let lines = Object.entries(vars)
     .map(([name, value]) => `  ${name}: ${value};`)
     .join('\n')
@@ -1601,11 +1603,7 @@ function createSinglePropertyUtilities<scale extends ThemeScale>(
   return utilities
 }
 
-function createSurfaceUtility(options: {
-  background: string
-  border: string
-  shadow: string
-}) {
+function createSurfaceUtility(options: { background: string; border: string; shadow: string }) {
   return css({
     border: `1px solid ${options.border}`,
     borderRadius: theme.radius.lg,

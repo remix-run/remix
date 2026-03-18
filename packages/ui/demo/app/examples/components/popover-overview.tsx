@@ -1,13 +1,40 @@
-import { css } from 'remix/component'
-import { Glyph, Popover, theme, ui } from 'remix/ui'
+import { css, on, type Handle } from 'remix/component'
+import { Glyph, popover, ui } from 'remix/ui'
 
-let popoverExampleCss = css({
-  display: 'inline-flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
+export default function Example(handle: Handle) {
+  let popoverId = handle.id + '-popover'
+  let open = false
 
-let popoverPanelCss = css({
+  return () => (
+    <div>
+      <button
+        id={handle.id}
+        popovertarget={popoverId}
+        mix={[
+          ui.button.ghost,
+          on('click', (event) => {
+            event.preventDefault()
+            open = !open
+            handle.update()
+          }),
+        ]}
+      >
+        <span mix={ui.button.label}>Open Popover</span>
+        <Glyph mix={ui.button.icon} name="chevronDown" />
+      </button>
+
+      {open ? (
+        <div id={popoverId} key={popoverId} mix={popover({ placement: 'bottom-start' })}>
+          <div mix={panel}>
+            <p mix={ui.text.bodySm}>Popover content</p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+let panel = css({
   display: 'flex',
   flexDirection: 'column',
   width: '18rem',
@@ -15,20 +42,3 @@ let popoverPanelCss = css({
   justifyContent: 'center',
   minHeight: '8rem',
 })
-
-export default function example() {
-  return () => (
-    <div mix={popoverExampleCss}>
-      <button id="popover-overview-trigger" mix={ui.button.secondary} popovertarget="popover-overview">
-        <span mix={ui.button.label}>Deployment actions</span>
-        <Glyph mix={ui.button.icon} name="chevronDown" />
-      </button>
-
-      <Popover id="popover-overview" mix={ui.popover.surface}>
-        <div mix={popoverPanelCss}>
-          <p mix={ui.text.bodySm}>Popover content</p>
-        </div>
-      </Popover>
-    </div>
-  )
-}
