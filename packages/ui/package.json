@@ -20,17 +20,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/component": "workspace:*",
@@ -45,7 +39,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "remix-run/remix#preview/pr-11178&path:packages/component"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
