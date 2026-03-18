@@ -2,7 +2,7 @@
   "name": "remix-the-web",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.26.0",
+  "packageManager": "pnpm@10.32.1",
   "dependencies": {
     "@typescript/native-preview": "catalog:",
     "eslint": "^9.33.0",
