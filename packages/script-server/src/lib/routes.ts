@@ -26,6 +26,14 @@ export function normalizePathname(pathname: string): string {
 }
 
 export function normalizeFilePath(filePath: string): string {
+  let normalizedInput = filePath.replace(/\\/g, '/')
+  if (/^\/[A-Za-z]:\//.test(normalizedInput)) {
+    return normalizedInput
+  }
+  if (/^[A-Za-z]:\//.test(normalizedInput)) {
+    return `/${normalizedInput}`
+  }
+
   let normalized = path.resolve(filePath).replace(/\\/g, '/')
   if (/^[A-Za-z]:\//.test(normalized)) {
     return `/${normalized}`
