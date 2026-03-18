@@ -47,7 +47,7 @@ function isNamelessWildcard(part: PartPattern): boolean {
  * @returns the parsed search constraints
  */
 export function parseSearch(source: string): RoutePattern['ast']['search'] {
-  let constraints: RoutePattern['ast']['search'] = new Map()
+  let constraints: Map<string, Set<string> | null> = new Map()
 
   for (let param of source.split('&')) {
     if (param === '') continue

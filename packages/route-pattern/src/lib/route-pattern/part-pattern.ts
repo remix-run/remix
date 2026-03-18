@@ -23,16 +23,16 @@ export type PartPatternToken =
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 export class PartPattern {
-  readonly tokens: Array<PartPatternToken>
-  readonly optionals: Map<number, number>
+  readonly tokens: ReadonlyArray<PartPatternToken>
+  readonly optionals: ReadonlyMap<number, number>
   readonly type: 'hostname' | 'pathname'
 
   #regexp: { caseSensitive: RegExp; caseInsensitive: RegExp } | undefined
 
   constructor(
     args: {
-      tokens: Array<PartPatternToken>
-      optionals: Map<number, number>
+      tokens: ReadonlyArray<PartPatternToken>
+      optionals: ReadonlyMap<number, number>
     },
     options: { type: 'hostname' | 'pathname' },
   ) {
