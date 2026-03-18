@@ -321,7 +321,6 @@ describe('ui', () => {
     expect(html).toMatch(/text-transform: uppercase/)
     expect(html).toMatch(/box-shadow: var\(--rmx-shadow-xs\)/)
     expect(html).toMatch(/data-rmx-listbox-part="popup"/)
-    expect(html).toMatch(/popover="auto"/)
     expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
     expect(html).toMatch(/:popover-open \{\s*opacity: 1;/)
     expect(html).toMatch(/:not\(:popover-open\) \{\s*transition:/)

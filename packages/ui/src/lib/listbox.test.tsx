@@ -254,6 +254,36 @@ describe('Listbox', () => {
     expect(highlighted.dataset.value).toBe('local')
   })
 
+  it('selects a matching option from typed text while closed', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 's')
+    root.flush()
+    await settle(root)
+
+    expect(trigger.textContent).toContain('Staging')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('selects a matching option from typed text while open', async () => {
+    let { container, root } = renderApp(renderExampleListbox())
+    let trigger = container.querySelector('[data-rmx-listbox-part="trigger"]') as HTMLButtonElement
+
+    trigger.focus()
+    press(trigger, 'ArrowDown')
+    root.flush()
+    await settle(root)
+
+    press(trigger, 'p')
+    root.flush()
+    await settle(root)
+
+    expect(trigger.textContent).toContain('Production')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
+
   it('selects the highlighted option on Enter and updates the trigger label', async () => {
     let { container, root } = renderApp(renderExampleListbox())
     let popup = container.querySelector('[data-rmx-listbox-part="popup"]') as HTMLElement

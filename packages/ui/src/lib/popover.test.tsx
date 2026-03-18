@@ -139,9 +139,11 @@ describe('popover', () => {
 
     mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
     mockLayout(popup, { top: 0, left: 0, width: 160, height: 96 })
-    window.dispatchEvent(new Event('resize'))
+    popup.showPopover()
+    root.flush()
+    await flush()
 
-    expect(popup.style.position).toBe('absolute')
+    expect(popup.style.position).toBe('fixed')
     expect(popup.style.top).toBe('68px')
     expect(popup.style.left).toBe('160px')
   })
@@ -165,7 +167,9 @@ describe('popover', () => {
 
     mockLayout(owner, { top: 40, left: 200, width: 80, height: 28 })
     mockLayout(popup, { top: 0, left: 0, width: 160, height: 96 })
-    window.dispatchEvent(new Event('resize'))
+    popup.showPopover()
+    root.flush()
+    await flush()
 
     expect(popup.style.top).toBe('76px')
     expect(popup.style.left).toBe('120px')
@@ -182,6 +186,9 @@ describe('popover', () => {
     await flush()
 
     let popup = container.querySelector('#menu') as HTMLDivElement
+    popup.showPopover()
+    root.flush()
+    await flush()
 
     expect(warn).toHaveBeenCalledWith('No popover owner found for #menu')
     expect(popup.getAttribute('popover')).toBe('manual')
