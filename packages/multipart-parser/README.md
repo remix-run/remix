@@ -65,7 +65,7 @@ import {
 } from 'remix/multipart-parser/node'
 
 const oneMb = Math.pow(2, 20)
-let limits = {
+const limits = {
   maxFileSize: 10 * oneMb,
   maxParts: 100,
   maxTotalSize: 25 * oneMb,
