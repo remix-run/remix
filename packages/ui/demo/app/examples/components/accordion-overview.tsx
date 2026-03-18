@@ -1,6 +1,4 @@
-// @jsxRuntime classic
-// @jsx createElement
-import { createElement, css } from 'remix/component'
+import { css } from 'remix/component'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, theme, ui } from 'remix/ui'
 
 let accordionBodyTextCss = css({

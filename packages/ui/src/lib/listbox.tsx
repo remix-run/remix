@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import { createElement, on, ref, type Handle, type Props } from '@remix-run/component'
 import { filterText } from './filter-text.tsx'
 import { flashAttribute } from './flash-attribute.ts'

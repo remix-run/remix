@@ -16,10 +16,10 @@
   "scripts": {
     "build:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap",
     "dev": "pnpm run --filter \".\" --parallel \"/^dev:/\"",
-    "dev:server": "NODE_ENV=development tsx watch server.ts",
+    "dev:server": "NODE_ENV=development tsx watch --tsconfig ../tsconfig.json server.ts",
     "dev:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
-    "screenshot": "node --import tsx review/screenshot.ts",
-    "screenshot:card": "node --import tsx review/screenshot.ts --path='/proof-sheet' --selector='[data-proof-card=\"primary\"]' --name='proof-metric-card'",
+    "screenshot": "tsx --tsconfig ../tsconfig.json review/screenshot.ts",
+    "screenshot:card": "tsx watch --tsconfig ../tsconfig.json review/screenshot.ts --path='/proof-sheet' --selector='[data-proof-card=\"primary\"]' --name='proof-metric-card'",
     "start": "pnpm run build:browser && tsx server.ts",
     "typecheck": "tsc --noEmit"
   }
