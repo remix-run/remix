@@ -1,14 +1,23 @@
 import {
-  FormDataParseError,
   MaxFilesExceededError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   parseFormData,
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
 import type { Middleware } from '@remix-run/fetch-router'
 
-function isFormDataLimitError(error: unknown): boolean {
-  return error instanceof MaxFilesExceededError
+function isMultipartLimitError(error: unknown): boolean {
+  return (
+    error instanceof MaxFilesExceededError ||
+    error instanceof MaxHeaderSizeExceededError ||
+    error instanceof MaxFileSizeExceededError ||
+    error instanceof MaxPartsExceededError ||
+    error instanceof MaxTotalSizeExceededError
+  )
 }
 
 /**
@@ -62,11 +71,7 @@ export function formData(options?: FormDataOptions): Middleware {
     try {
       context.set(FormData, await parseFormData(context.request, options, uploadHandler))
     } catch (error) {
-      if (
-        !suppressErrors ||
-        isFormDataLimitError(error) ||
-        !(error instanceof FormDataParseError)
-      ) {
+      if (!suppressErrors || isMultipartLimitError(error)) {
         throw error
       }
 

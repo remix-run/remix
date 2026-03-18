@@ -3,6 +3,9 @@ import { describe, it, mock } from 'node:test'
 
 import {
   FormDataParseError,
+  MaxFilesExceededError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   type FileUploadHandler,
@@ -190,6 +193,110 @@ describe('formData middleware', () => {
       isFormData: true,
       isEmpty: true,
     })
+  })
+
+  it('does not suppress maxFiles errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxFiles: 1 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test2',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxFilesExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxHeaderSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxHeaderSize: 4 * 1024 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          'X-Large-Header: ' + 'X'.repeat(6 * 1024),
+          '',
+          'value1',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxHeaderSizeExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxFileSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxFileSize: 4 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'hello',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxFileSizeExceededError)
+
+    assert.equal(actionCalled, false)
   })
 
   it('does not suppress maxParts errors when suppressErrors is true', async () => {

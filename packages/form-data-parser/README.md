@@ -75,14 +75,15 @@ async function requestHandler(request: Request) {
 To validate the resulting `FormData` object with `remix/data-schema`, use the
 `remix/data-schema/form-data` helpers.
 
-To limit the overall shape of multipart requests, use the `maxFileSize`, `maxFiles`, `maxParts`,
-and `maxTotalSize` options. By default, `parseFormData()` uses `maxFiles = 20`, `maxParts = 1000`,
-and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
+To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`,
+`maxParts`, and `maxTotalSize` options. By default, `parseFormData()` uses `maxFiles = 20`,
+`maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
 
 ```ts
 import {
   MaxFilesExceededError,
   MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
 } from 'remix/form-data-parser'
@@ -100,6 +101,8 @@ try {
 } catch (error) {
   if (error instanceof MaxFilesExceededError) {
     console.error(`Request may not contain more than 5 files`)
+  } else if (error instanceof MaxHeaderSizeExceededError) {
+    console.error(`Multipart headers may not exceed the configured size limit`)
   } else if (error instanceof MaxFileSizeExceededError) {
     console.error(`Files may not be larger than 10 MiB`)
   } else if (error instanceof MaxPartsExceededError) {
