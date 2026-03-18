@@ -4,7 +4,7 @@
 
 - **Build**: `pnpm run build` (all packages) or `pnpm --filter @remix-run/<package> run build` (single package)
 - **Test**: `pnpm test` (all packages) or `pnpm --filter @remix-run/<package> run test` (single package)
-- **Single test file**: `node --disable-warning=ExperimentalWarning --test './packages/<package>/src/**/<filename>.test.ts'`
+- **Single test file**: `node --test './packages/<package>/src/**/<filename>.test.ts'`
 - **Typecheck**: `pnpm run typecheck` (all packages) or `pnpm --filter @remix-run/<package> run typecheck`
 - **Lint**: `pnpm run lint` (check) or `pnpm run lint:fix` (auto-fix)
 - **Before finishing work**: Run `pnpm run lint` and resolve any lint errors before reporting completion.

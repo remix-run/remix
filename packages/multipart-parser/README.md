@@ -165,7 +165,7 @@ The results of running the benchmarks on my laptop:
 
 ```
 > @remix-run/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
-> node --disable-warning=ExperimentalWarning ./bench/runner.ts
+> node ./bench/runner.ts
 
 Platform: Darwin (24.5.0)
 CPU: Apple M1 Pro
