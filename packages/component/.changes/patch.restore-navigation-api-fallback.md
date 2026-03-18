@@ -1,0 +1,1 @@
+Restore graceful frame-navigation fallback when the Navigation API is unavailable so `run()` apps still boot and imperative `navigate()` calls degrade to normal document navigations instead of throwing during startup.

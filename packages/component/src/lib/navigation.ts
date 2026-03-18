@@ -11,6 +11,10 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
+type WindowWithNavigation = Window & {
+  navigation?: Navigation
+}
+
 /**
  * Options for client-side frame-aware navigation.
  */
@@ -28,13 +32,19 @@ export type NavigationOptions = {
  * @param options Navigation options.
  */
 export async function navigate(href: string, options?: NavigationOptions) {
+  let navigation = getNavigation()
+  if (!navigation) {
+    window.location.assign(href)
+    return
+  }
+
   let state = {
     target: options?.target,
     src: options?.src ?? href,
     resetScroll: options?.resetScroll !== false,
     $rmx: true,
   } satisfies NavigationState
-  let transition = window.navigation.navigate(href, { state, history: options?.history })
+  let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
 }
 
@@ -44,7 +54,8 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * @param signal Abort signal used to remove the listener.
  */
 export function startNavigationListener(signal: AbortSignal) {
-  let navigation = window.navigation
+  let navigation = getNavigation()
+  if (!navigation) return
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -116,6 +127,10 @@ function getTraverseNavigationState(event: NavigateEvent): NavigationState | und
   }
 
   return undefined
+}
+
+function getNavigation() {
+  return (window as WindowWithNavigation).navigation
 }
 
 function getSourceElementNavigationState(event: NavigateEvent): NavigationState | undefined {
