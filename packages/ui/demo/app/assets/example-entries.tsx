@@ -1,6 +1,4 @@
-// @jsxRuntime classic
-// @jsx createElement
-import { clientEntry, createElement, type Handle } from 'remix/component'
+import { clientEntry, type Handle } from 'remix/component'
 
 import AccordionCardExample from '../examples/components/accordion-card.tsx'
 import AccordionMultipleExample from '../examples/components/accordion-multiple.tsx'

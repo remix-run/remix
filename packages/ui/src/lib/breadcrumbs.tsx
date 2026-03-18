@@ -1,6 +1,4 @@
-// @jsxRuntime classic
-// @jsx createElement
-import { css, createElement } from '@remix-run/component'
+import { css } from '@remix-run/component'
 import type { Props, RemixNode } from '@remix-run/component'
 
 import { Glyph } from './glyph.tsx'
