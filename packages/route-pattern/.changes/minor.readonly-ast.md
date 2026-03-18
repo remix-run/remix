@@ -38,7 +38,6 @@ pattern.ast.search.set('q', new Set(['x']))
 //                 ~~~
 // Property 'set' does not exist on type 'ReadonlyMap<string, ReadonlySet<string> | null>'. (2339)
 
-
 pattern.ast.pathname.tokens.push({ type: 'text', text: 'x' })
 //                          ~~~~
 // Property 'push' does not exist on type 'ReadonlyArray<PartPatternToken>'. (2339)
