@@ -10,24 +10,15 @@ export interface RequireAuthOptions {
     context: RequestContext,
     auth: BadAuth,
   ) => Response | Promise<Response>
-  /** HTTP status used by the default failure response. */
-  status?: number
-  /** Response body used by the default failure response. */
-  body?: BodyInit | null
-  /** Response headers used by the default failure response. */
-  headers?: HeadersInit
 }
 
 /**
  * Enforces that `auth()` has already resolved a successful auth state for the current request.
  *
- * @param options Failure handling and default response options for unauthenticated requests.
+ * @param options Failure handling options for unauthenticated requests.
  * @returns Middleware that allows authenticated requests through and rejects anonymous ones.
  */
 export function requireAuth(options: RequireAuthOptions = {}): Middleware {
-  let status = options.status ?? 401
-  let body = options.body ?? 'Unauthorized'
-
   return async (context, next) => {
     if (!context.has(Auth)) {
       throw new Error(
@@ -41,7 +32,7 @@ export function requireAuth(options: RequireAuthOptions = {}): Middleware {
       return next()
     }
 
-    let response = await createFailureResponse(auth, context, options, status, body)
+    let response = await createFailureResponse(auth, context, options)
 
     if (auth.error?.challenge != null && response.headers.get('WWW-Authenticate') == null) {
       response = new Response(response.body, response)
@@ -56,15 +47,12 @@ async function createFailureResponse(
   auth: BadAuth,
   context: RequestContext,
   options: RequireAuthOptions,
-  status: number,
-  body: BodyInit | null,
 ): Promise<Response> {
   if (options.onFailure) {
     return options.onFailure(context, auth)
   }
 
-  return new Response(body, {
-    status,
-    headers: options.headers,
+  return new Response('Unauthorized', {
+    status: 401,
   })
 }
