@@ -88,8 +88,8 @@ import {
   MaxTotalSizeExceededError,
 } from 'remix/form-data-parser'
 
-let oneKb = 1024
-let oneMb = 1024 * oneKb
+const oneKb = 1024
+const oneMb = 1024 * oneKb
 
 try {
   let formData = await parseFormData(request, {
