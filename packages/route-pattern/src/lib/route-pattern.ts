@@ -9,10 +9,10 @@ import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
 
 type AST = {
-  protocol: 'http' | 'https' | 'http(s)' | null
-  hostname: PartPattern | null
-  port: string | null
-  pathname: PartPattern
+  readonly protocol: 'http' | 'https' | 'http(s)' | null
+  readonly hostname: PartPattern | null
+  readonly port: string | null
+  readonly pathname: PartPattern
   /**
    * - `null`: key must be present
    * - Empty `Set`: key must be present with a value
@@ -24,7 +24,7 @@ type AST = {
    * new Map([['q', new Set(['x', 'y'])]]) // -> ?q=x&q=y
    * ```
    */
-  search: Map<string, Set<string> | null>
+  readonly search: ReadonlyMap<string, ReadonlySet<string> | null>
 }
 
 /**
