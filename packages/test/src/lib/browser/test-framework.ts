@@ -61,11 +61,6 @@ export function afterAll(fn: () => void | Promise<void>) {
   currentSuite.afterAll = fn
 }
 
-export function resetTestFramework() {
-  rootSuites.length = 0
-  currentSuite = null
-}
-
 export function render(node: RemixNode) {
   let container = document.createElement('div')
   document.body.appendChild(container)

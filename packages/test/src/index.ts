@@ -6,6 +6,4 @@ export {
   beforeAll,
   afterAll,
   render,
-  resetTestFramework,
 } from './lib/browser/test-framework.ts'
-
