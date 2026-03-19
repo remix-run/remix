@@ -21,9 +21,9 @@ import type {
   TableRow,
   TableRowWith,
   TableValidate,
+  tableMetadataKey,
   TimestampConfig,
 } from './table.ts'
-import { tableMetadataKey } from './table.ts'
 import type { Pretty } from './types.ts'
 import type { WhereInput } from './operators.ts'
 
