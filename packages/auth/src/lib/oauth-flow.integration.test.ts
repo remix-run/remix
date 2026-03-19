@@ -7,8 +7,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createAuthCallbackRequestHandler } from './callback.ts'
-import { createAuthLoginRequestHandler } from './login.ts'
+import { createExternalAuthCallbackRequestHandler } from './external-callback.ts'
+import { createExternalAuthLoginRequestHandler } from './external-login.ts'
 import { createOIDCAuthProvider } from './providers/oidc.ts'
 import { createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
 
@@ -61,10 +61,10 @@ describe('OAuth flow integration', () => {
       ],
     })
 
-    router.get('/login/fake', createAuthLoginRequestHandler(provider))
+    router.get('/login/fake', createExternalAuthLoginRequestHandler(provider))
     router.get(
       '/auth/fake/callback',
-      createAuthCallbackRequestHandler(provider, {
+      createExternalAuthCallbackRequestHandler(provider, {
         writeSession(session, result) {
           session.set('auth', { userId: result.profile.sub })
         },

@@ -33,7 +33,7 @@ Then visit http://localhost:44100
   - **`loadAuth()`** installs global `auth()` middleware with a `createSessionAuthScheme()` scheme
   - **`passwordProvider`** uses `createCredentialsAuthProvider()` to verify email/password logins against the demo database
   - **`requireAuth()`** is a thin wrapper around `remix/auth-middleware` that redirects to login with a `returnTo` parameter for post-login redirects
-- [`app/auth.tsx`](app/auth.tsx) uses `createAuthLoginRequestHandler(passwordProvider, ...)` from `remix/auth` for the login POST action, so session rotation and session writes come from the framework abstraction instead of bespoke route code.
+- [`app/auth.tsx`](app/auth.tsx) uses `createCredentialsAuthLoginRequestHandler(passwordProvider, ...)` from `remix/auth` for the login POST action, so session rotation and session writes come from the framework abstraction instead of bespoke route code.
 - [`app/middleware/admin.ts`](app/middleware/admin.ts) shows role-based authorization layered on top of authenticated user state and returns 403 for non-admin users.
 - [`app/utils/context.ts`](app/utils/context.ts) demonstrates sharing data across the request lifecycle without prop drilling. Any code can call `getCurrentUser()` to read the user identity resolved by `context.get(Auth)`.
 - [`app/utils/session.ts`](app/utils/session.ts) configures signed cookies and filesystem-based session storage, which the auth packages reuse for both login routes and request authentication.

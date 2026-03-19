@@ -38,7 +38,7 @@ export interface GoogleAuthProfile extends OIDCAuthProfile {}
  * Creates a Google auth provider backed by the shared OIDC runtime.
  *
  * @param options Google OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
 export function createGoogleAuthProvider(options: GoogleAuthProviderOptions): OAuthProvider<GoogleAuthProfile, 'google'> {
   return createOIDCAuthProvider({

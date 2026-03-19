@@ -1,12 +1,12 @@
 # auth
 
-Browser login and callback helpers for Remix. Use this package to start browser sign-in flows, finish provider callbacks, and write a small auth record into the session. Pair it with [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
+Login request handlers for Remix. Use this package to verify direct credentials submissions, start external browser sign-in flows, finish provider callbacks, and write a small auth record into the session. Pair it with [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
-- **Browser login handlers** - Start OAuth and OIDC redirect flows or verify direct credentials submissions with the same request-handler model
+- **Explicit external and self-hosted flows** - Use one request handler to start OAuth or OIDC redirects and another to verify direct credentials submissions
 - **Built-in provider support** - Start quickly with Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X, or connect another OpenID Connect provider
-- **Credentials and provider flows** - Use the same session-writing model for email/password and external providers
+- **Shared session-writing model** - Persist the same app-owned session record whether login happened locally or through an external provider
 - **App-owned session records** - Decide exactly what auth data to write into the session after login succeeds
 - **Hookable success and failure behavior** - Control redirects, responses, and error handling without rewriting protocol code
 - **Designed to pair with request auth** - Write the session data here, then let `remix/auth-middleware` resolve it on later requests
@@ -19,19 +19,19 @@ npm i remix
 
 ## Usage
 
-The following example shows the two auth packages working together on a simple email/password flow:
+The following example shows the two Remix auth packages working together on a simple email/password flow:
 
 - `remix/auth` owns the login route and writes the session auth record
 - `remix/auth-middleware` reads that session auth record on later requests and protects the dashboard route
 
-See the provider sections below for OAuth and OIDC examples.
+See the [auth providers](#auth-providers) section below for credentials, OIDC, and OAuth examples.
 
 ```ts
 import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
 import { form, route } from 'remix/fetch-router/routes'
 import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
-import { createAuthLoginRequestHandler, createCredentialsAuthProvider } from 'remix/auth'
+import { createCredentialsAuthLoginRequestHandler, createCredentialsAuthProvider } from 'remix/auth'
 import { FormData, formData } from 'remix/form-data-middleware'
 import { Session } from 'remix/session'
 import { session } from 'remix/session-middleware'
@@ -75,8 +75,8 @@ let passwordProvider = createCredentialsAuthProvider({
 
 let router = createRouter({
   middleware: [
-    session(sessionCookie, sessionStorage),
-    formData(), // needed in passwordProvider.parse()
+    session(sessionCookie, sessionStorage), // needed by the session auth scheme
+    formData(), // needed by passwordProvider
     auth({
       schemes: [
         createSessionAuthScheme({
@@ -99,18 +99,19 @@ router.get(routes.auth.session.login.index, () => {
   return new Response('Login page')
 })
 
-router.post(routes.auth.session.login.action, {
-  action: createAuthLoginRequestHandler(passwordProvider, {
+router.post(
+  routes.auth.session.login.action,
+  createCredentialsAuthLoginRequestHandler(passwordProvider, {
     async writeSession(session, user) {
       session.set('auth', { userId: user.id })
     },
     successRedirectTo: routes.app.dashboard.href(),
     failureRedirectTo: routes.auth.session.login.index.href(),
   }),
-})
+)
 
-router.post(routes.auth.session.logout, ({ get }) => {
-  let session = get(Session)
+router.post(routes.auth.session.logout, (context) => {
+  let session = context.get(Session)
   session.unset('auth')
   session.regenerateId()
   return new Response(null, {
@@ -139,58 +140,19 @@ router.get(routes.app.dashboard, {
 })
 ```
 
-This example shows the simplest session-backed email/password flow:
-
-- `createAuthLoginRequestHandler()` parses the submitted credentials, verifies them, rotates the session id, and then runs your `writeSession(session, user, context)` hook
-- `writeSession()` writes app-defined auth data, usually a small record like `{ userId }`
-- `createSessionAuthScheme()` from `remix/auth-middleware` later reads that record and resolves the full request identity into `context.get(Auth)`
-- credentials examples assume `formData()` middleware runs before `createAuthLoginRequestHandler(createCredentialsAuthProvider(...))`
-- examples store `{ userId }` instead of the whole user object to keep session data small and avoid stale user records, especially with cookie-backed sessions
-
-OAuth and OIDC flows add a provider login route plus `createAuthCallbackRequestHandler()` to finish the redirect flow. See the provider sections below for those examples.
-
-The example also uses `requireAuth()` from `remix/auth-middleware` to turn that resolved auth state into route protection. Use `auth()` to load auth state for the request, then use `requireAuth()` on routes that must reject anonymous requests. See the [`auth-middleware` README](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) for the full request-auth and route-protection API.
-
-## Package Boundary
-
-`remix/auth` owns the requests that actively log a user in.
-
-Use this package when a request needs to:
-
-- start an external provider redirect flow
-- finish an OAuth or OIDC callback
-- verify submitted credentials
-- write the session auth record your app wants to persist
-
-Use [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when a request needs to:
-
-- resolve the current auth state into `context.get(Auth)`
-- authenticate from sessions, bearer tokens, or API keys
-- protect a route with `requireAuth()`
-
-In a session-backed browser flow, the handoff looks like this:
-
-1. `createAuthLoginRequestHandler()` or `createAuthCallbackRequestHandler()` authenticates the user
-2. `writeSession()` stores a small auth record such as `{ userId }`
-3. `createSessionAuthScheme()` reads that record on later requests
-4. `auth()` exposes the resolved identity at `context.get(Auth)`
-5. `requireAuth()` rejects anonymous requests
-
 ## Login Routes
 
-`createAuthLoginRequestHandler()` handles both browser redirect flows and direct credentials submissions:
+Remix Auth uses separate request handlers for the two login shapes:
 
-- `createAuthLoginRequestHandler(oauthProvider)` creates an OAuth transaction, stores it in the session under `__auth`, and redirects to the provider
-- `createAuthLoginRequestHandler(credentialsProvider, options)` parses input, verifies the submitted credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects
-
-Both forms support redirect and hook customization for success and failure handling. The examples below are the best reference for how those pieces fit together in real routes.
+- `createExternalAuthLoginRequestHandler(externalProvider, options?)` creates an OAuth or OIDC transaction, stores it in `session.get(options.transactionKey)` (defaults to `__auth`), and redirects to an external auth provider
+- `createCredentialsAuthLoginRequestHandler(credentialsProvider, options)` parses input, verifies the submitted credentials, rotates the session id, runs `writeSession()`, and then either calls `onSuccess()` or redirects. Use this when you can verify credentials directly instead of relying on an external auth provider.
 
 ## Success and Failure Hooks
 
-`writeSession(session, result, context)` is the common success hook across credentials and OAuth callbacks. It receives the authenticated result for the provider you used:
+`writeSession(session, result, context)` is the common success hook across credentials login and external provider callbacks. It receives the authenticated result for the request handler you used:
 
-- credentials: whatever `verify()` returned
-- OAuth and OIDC providers: `{ provider, account, profile, tokens }`
+- credentials login: whatever `verify()` returned
+- external provider callback: `{ provider, account, profile, tokens }`
 
 After `writeSession()` runs:
 
@@ -200,11 +162,12 @@ After `writeSession()` runs:
 On failures:
 
 - credentials login uses `onFailure(context)` for invalid credentials and `onError(error, context)` for unexpected exceptions
-- OAuth login uses `onError(error, context)` when starting the redirect flow fails
-- OAuth callbacks use `onFailure(error, context)` for invalid state, provider errors, token exchange failures, profile fetch failures, or `writeSession()` failures
+- external auth login uses `onError(error, context)` when starting the redirect flow fails
+- external auth callbacks use `onFailure(error, context)` for invalid state, provider errors, token exchange failures, profile fetch failures, or `writeSession()` failures
 
-## Supported Auth Providers
+## Auth Providers
 
+- App-defined credentials flows like email and password
 - [OpenID Connect](https://openid.net) (works with any OpenID Connect auth provider)
 - [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect) provider
 - [Microsoft OAuth 2.0 and OIDC](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols)
@@ -213,17 +176,16 @@ On failures:
 - [GitHub OAuth apps](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
 - [Facebook Login](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/)
 - [X OAuth 2.0 and Log in with X](https://docs.x.com/resources/fundamentals/authentication/guides/log-in-with-x)
-- App-defined credentials flows like email and password
 
-## Creating Your Own Provider
+## Custom Auth Providers
 
 For most custom providers, use `createOIDCAuthProvider()`. That is the public extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint.
 
 ```ts
 import {
-  createAuthCallbackRequestHandler,
+  createExternalAuthCallbackRequestHandler,
+  createExternalAuthLoginRequestHandler,
   createOIDCAuthProvider,
-  createAuthLoginRequestHandler,
 } from 'remix/auth'
 import { route } from 'remix/fetch-router/routes'
 
@@ -257,11 +219,11 @@ let companyProvider = createOIDCAuthProvider({
   },
 })
 
-router.get(routes.auth.company.login, createAuthLoginRequestHandler(companyProvider))
+router.get(routes.auth.company.login, createExternalAuthLoginRequestHandler(companyProvider))
 
 router.get(
   routes.auth.company.callback,
-  createAuthCallbackRequestHandler(companyProvider, {
+  createExternalAuthCallbackRequestHandler(companyProvider, {
     async writeSession(session, result) {
       let user = await users.upsertFromCompanySSO(result.profile)
       session.set('auth', { userId: user.id })
@@ -271,181 +233,12 @@ router.get(
 )
 ```
 
-When you build your own provider with `createOIDCAuthProvider()`:
-
-- set `name` to the identifier you want to see later as `result.provider`
-- set `issuer`, `clientId`, `clientSecret`, and `redirectUri`
-- use `authorizationParams` for provider-specific query params like `prompt`, `audience`, or `access_type`
-- use `mapProfile()` to normalize the provider claims into the profile shape your app wants to consume in `writeSession()`
-- use `metadata` if you want to skip discovery entirely, or `discoveryUrl` if the metadata document lives somewhere other than `/.well-known/openid-configuration`
-
-That is the recommended path for Microsoft Entra tenants, Keycloak, Zitadel, Cognito, GitLab, and other standards-based providers that are not already wrapped by a built-in helper.
-
-If the provider is not OIDC and is not one of the built-in helpers, `remix/auth` does not yet expose a public generic custom OAuth provider factory. In that case:
-
-- prefer `createOIDCAuthProvider()` if the provider supports OIDC at all
-- use a built-in helper like `createGitHubAuthProvider()`, `createFacebookAuthProvider()`, or `createXAuthProvider()` when it matches your provider
-
-Contributions are welcome if you want to add another provider to Remix itself. [Submit a pull request](https://github.com/remix-run/remix/pulls) if you'd like to add one.
-
-## OIDC Providers
-
-Use `createOIDCAuthProvider()` for any standards-compliant OpenID Connect provider. The `createGoogleAuthProvider()`, `createMicrosoftAuthProvider()`, `createOktaAuthProvider()`, and `createAuth0AuthProvider()` helpers are thin wrappers on top of the same OIDC runtime.
-
-```ts
-import {
-  createAuth0AuthProvider,
-  createGoogleAuthProvider,
-  createAuthLoginRequestHandler,
-  createMicrosoftAuthProvider,
-  createOIDCAuthProvider,
-  createOktaAuthProvider,
-} from 'remix/auth'
-import { route } from 'remix/fetch-router/routes'
-
-let routes = route({
-  auth: {
-    google: {
-      login: '/login/google',
-      callback: '/auth/google/callback',
-    },
-    company: {
-      login: '/login/company',
-      callback: '/auth/company/callback',
-    },
-    microsoft: {
-      login: '/login/microsoft',
-      callback: '/auth/microsoft/callback',
-    },
-    okta: {
-      login: '/login/okta',
-      callback: '/auth/okta/callback',
-    },
-    auth0: {
-      login: '/login/auth0',
-      callback: '/auth/auth0/callback',
-    },
-  },
-})
-
-let googleProvider = createGoogleAuthProvider({
-  clientId: env.GOOGLE_CLIENT_ID,
-  clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
-})
-
-let companyProvider = createOIDCAuthProvider({
-  name: 'company-sso',
-  issuer: env.OIDC_ISSUER,
-  clientId: env.OIDC_CLIENT_ID,
-  clientSecret: env.OIDC_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.company.callback.href(), env.APP_ORIGIN),
-  authorizationParams: {
-    prompt: 'login',
-  },
-})
-
-let microsoftProvider = createMicrosoftAuthProvider({
-  tenant: 'organizations',
-  clientId: env.MICROSOFT_CLIENT_ID,
-  clientSecret: env.MICROSOFT_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.microsoft.callback.href(), env.APP_ORIGIN),
-})
-
-let oktaProvider = createOktaAuthProvider({
-  issuer: env.OKTA_ISSUER,
-  clientId: env.OKTA_CLIENT_ID,
-  clientSecret: env.OKTA_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.okta.callback.href(), env.APP_ORIGIN),
-})
-
-let auth0Provider = createAuth0AuthProvider({
-  domain: env.AUTH0_DOMAIN,
-  clientId: env.AUTH0_CLIENT_ID,
-  clientSecret: env.AUTH0_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
-})
-
-router.get(routes.auth.google.login, createAuthLoginRequestHandler(googleProvider))
-router.get(routes.auth.company.login, createAuthLoginRequestHandler(companyProvider))
-router.get(routes.auth.microsoft.login, createAuthLoginRequestHandler(microsoftProvider))
-router.get(routes.auth.okta.login, createAuthLoginRequestHandler(oktaProvider))
-router.get(routes.auth.auth0.login, createAuthLoginRequestHandler(auth0Provider))
-```
-
-Notes:
-
-- `createOIDCAuthProvider()` uses OIDC discovery by default at `/.well-known/openid-configuration`
-- pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
-- default OIDC scopes are `openid profile email`
-- wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
-- `createGoogleAuthProvider()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
-- `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
-- `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
-- `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches `writeSession()`
-
-## Custom OAuth Providers
-
-Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
-
-```ts
-import {
-  createGitHubAuthProvider,
-  createXAuthProvider,
-  createAuthLoginRequestHandler,
-} from 'remix/auth'
-import { route } from 'remix/fetch-router/routes'
-
-let routes = route({
-  auth: {
-    github: {
-      login: '/login/github',
-      callback: '/auth/github/callback',
-    },
-    x: {
-      login: '/login/x',
-      callback: '/auth/x/callback',
-    },
-  },
-})
-
-let githubProvider = createGitHubAuthProvider({
-  clientId: env.GITHUB_CLIENT_ID,
-  clientSecret: env.GITHUB_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
-})
-
-let xProvider = createXAuthProvider({
-  clientId: env.X_CLIENT_ID,
-  clientSecret: env.X_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
-})
-
-router.get(routes.auth.github.login, createAuthLoginRequestHandler(githubProvider))
-router.get(routes.auth.x.login, createAuthLoginRequestHandler(xProvider))
-```
-
-Default scopes:
-
-- GitHub: `read:user user:email`
-- X: `tweet.read users.read`
-
-Pass `scopes` if you need a different set for a provider.
-
-Provider notes:
-
-- `createGitHubAuthProvider()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
-- `createXAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://api.x.com/2/users/me`
-- `createFacebookAuthProvider()` is also available when you want the Facebook Login flow instead of X
-- these helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
-
 ## Credentials Login
 
 Use `createCredentialsAuthProvider()` when you want email/password or some other direct form-based authentication.
 
 ```ts
-import { createCredentialsAuthProvider, createAuthLoginRequestHandler } from 'remix/auth'
+import { createCredentialsAuthLoginRequestHandler, createCredentialsAuthProvider } from 'remix/auth'
 import { FormData, formData } from 'remix/form-data-middleware'
 import { form, route } from 'remix/fetch-router/routes'
 
@@ -476,7 +269,7 @@ let passwordProvider = createCredentialsAuthProvider({
 
 router.post(routes.auth.session.login.action, {
   middleware: [formData()],
-  action: createAuthLoginRequestHandler(passwordProvider, {
+  action: createCredentialsAuthLoginRequestHandler(passwordProvider, {
     async writeSession(session, user) {
       session.set('auth', { userId: user.id })
     },
@@ -486,15 +279,148 @@ router.post(routes.auth.session.login.action, {
 })
 ```
 
-In this example, `verify()` returns the authenticated user object or `null`. `createAuthLoginRequestHandler()` passes that user object to `writeSession(session, user, context)`, which is why the example can read `user.id` there and write it into the session directly.
-
 `writeSession(session, result, context)` gives you one place to normalize every successful login into whatever session record shape your app wants to persist. In most apps that should be a small record like `{ userId }`, not the full user object.
+
+## Built-in OIDC Providers
+
+Remix Auth includes built-in support for Google, Microsoft, Okta, and Auth0 using the same OIDC runtime.
+
+```ts
+import {
+  createAuth0AuthProvider,
+  createExternalAuthLoginRequestHandler,
+  createGoogleAuthProvider,
+  createMicrosoftAuthProvider,
+  createOktaAuthProvider,
+} from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
+    microsoft: {
+      login: '/login/microsoft',
+      callback: '/auth/microsoft/callback',
+    },
+    okta: {
+      login: '/login/okta',
+      callback: '/auth/okta/callback',
+    },
+    auth0: {
+      login: '/login/auth0',
+      callback: '/auth/auth0/callback',
+    },
+  },
+})
+
+let googleProvider = createGoogleAuthProvider({
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
+})
+
+let microsoftProvider = createMicrosoftAuthProvider({
+  tenant: 'organizations',
+  clientId: env.MICROSOFT_CLIENT_ID,
+  clientSecret: env.MICROSOFT_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.microsoft.callback.href(), env.APP_ORIGIN),
+})
+
+let oktaProvider = createOktaAuthProvider({
+  issuer: env.OKTA_ISSUER,
+  clientId: env.OKTA_CLIENT_ID,
+  clientSecret: env.OKTA_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.okta.callback.href(), env.APP_ORIGIN),
+})
+
+let auth0Provider = createAuth0AuthProvider({
+  domain: env.AUTH0_DOMAIN,
+  clientId: env.AUTH0_CLIENT_ID,
+  clientSecret: env.AUTH0_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
+})
+
+router.get(routes.auth.google.login, createExternalAuthLoginRequestHandler(googleProvider))
+router.get(routes.auth.microsoft.login, createExternalAuthLoginRequestHandler(microsoftProvider))
+router.get(routes.auth.okta.login, createExternalAuthLoginRequestHandler(oktaProvider))
+router.get(routes.auth.auth0.login, createExternalAuthLoginRequestHandler(auth0Provider))
+```
+
+Notes:
+
+- OIDC auth providers use discovery by default at `/.well-known/openid-configuration`
+- pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
+- default OIDC scopes are `openid profile email`
+- wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
+- `createGoogleAuthProvider()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
+- `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
+- `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
+- `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
+- use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches `writeSession()`
+
+## Custom OAuth Providers
+
+Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
+
+```ts
+import {
+  createExternalAuthLoginRequestHandler,
+  createGitHubAuthProvider,
+  createXAuthProvider,
+} from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    github: {
+      login: '/login/github',
+      callback: '/auth/github/callback',
+    },
+    x: {
+      login: '/login/x',
+      callback: '/auth/x/callback',
+    },
+  },
+})
+
+let githubProvider = createGitHubAuthProvider({
+  clientId: env.GITHUB_CLIENT_ID,
+  clientSecret: env.GITHUB_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
+})
+
+let xProvider = createXAuthProvider({
+  clientId: env.X_CLIENT_ID,
+  clientSecret: env.X_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
+})
+
+router.get(routes.auth.github.login, createExternalAuthLoginRequestHandler(githubProvider))
+router.get(routes.auth.x.login, createExternalAuthLoginRequestHandler(xProvider))
+```
+
+Default scopes:
+
+- GitHub: `read:user user:email`
+- X: `tweet.read users.read`
+
+Pass `scopes` if you need a different set for a provider.
+
+Provider notes:
+
+- `createGitHubAuthProvider()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
+- `createXAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://api.x.com/2/users/me`
+- `createFacebookAuthProvider()` is also available when you want the Facebook Login flow instead of X
+- these helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
 
 ## Session Lifecycle
 
 The successful auth flow always follows the same order:
 
-1. `createAuthLoginRequestHandler()` stores the OAuth transaction under `__auth` when you start an OAuth redirect flow
+1. `createExternalAuthLoginRequestHandler()` stores the OAuth transaction under `__auth` when you start an OAuth redirect flow
 2. successful credentials login or OAuth callback rotates the session id
 3. `writeSession(session, result, context)` writes your app-defined auth data
 4. `onSuccess(result, context)` runs after the session write, if you provided it
@@ -503,10 +429,10 @@ The successful auth flow always follows the same order:
 
 ## Callback Handling
 
-Use `createAuthCallbackRequestHandler()` on the provider callback route to validate the stored transaction, exchange the authorization code, fetch the provider profile, and persist the session auth record.
+Use `createExternalAuthCallbackRequestHandler()` on the provider callback route to validate the stored transaction, exchange the authorization code, fetch the provider profile, and persist the session auth record.
 
 ```ts
-import { createAuthCallbackRequestHandler, createGitHubAuthProvider } from 'remix/auth'
+import { createExternalAuthCallbackRequestHandler, createGitHubAuthProvider } from 'remix/auth'
 import { form, route } from 'remix/fetch-router/routes'
 
 let routes = route({
@@ -531,7 +457,7 @@ let githubProvider = createGitHubAuthProvider({
 
 router.get(
   routes.auth.github.callback,
-  createAuthCallbackRequestHandler(githubProvider, {
+  createExternalAuthCallbackRequestHandler(githubProvider, {
     async writeSession(session, result) {
       let user = await users.upsertFromGitHub(result.profile)
       session.set('auth', { userId: user.id })
@@ -542,14 +468,14 @@ router.get(
 )
 ```
 
-`createAuthCallbackRequestHandler()` exposes the normalized provider result to `writeSession()` and `onSuccess()`, including:
+`createExternalAuthCallbackRequestHandler()` exposes the normalized provider result to `writeSession()` and `onSuccess()`, including:
 
 - `result.provider`
 - `result.account`
 - `result.profile`
 - `result.tokens`
 
-Like `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers, custom OAuth providers, and credentials-based auth.
+`createExternalAuthCallbackRequestHandler()` supports redirect and hook customization for success and failure handling. The provider examples above show the intended shape for OIDC wrappers and custom OAuth providers.
 
 ## Working With auth-middleware
 
@@ -584,7 +510,7 @@ This keeps login mechanics separate from request authentication:
 - `writeSession()` persists the app-defined session auth record
 - `createSessionAuthScheme()` converts that record into `context.get(Auth)` on later requests
 - `requireAuth()` protects routes that require a signed-in user
-- `session()` middleware must run before `createAuthLoginRequestHandler()`, `createAuthCallbackRequestHandler()`, or `createSessionAuthScheme()`
+- `session()` middleware must run before `createCredentialsAuthLoginRequestHandler()`, `createExternalAuthLoginRequestHandler()`, `createExternalAuthCallbackRequestHandler()`, or `createSessionAuthScheme()`
 
 ## Related Packages
 

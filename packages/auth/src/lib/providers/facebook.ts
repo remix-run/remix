@@ -56,7 +56,7 @@ export interface FacebookAuthProfile {
  * Creates a Facebook Login provider.
  *
  * @param options Facebook OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
 export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES

@@ -124,7 +124,7 @@ export interface OIDCAuthProviderOptions<
  * Creates an OpenID Connect provider backed by discovery metadata or explicit endpoints.
  *
  * @param options OIDC settings, client credentials, and optional profile mapping hooks.
- * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
 export function createOIDCAuthProvider<
   profile extends OIDCAuthProfile = OIDCAuthProfile,

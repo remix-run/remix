@@ -6,7 +6,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createAuthLoginRequestHandler } from '../login.ts'
+import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
 import { mockFetch } from '../test-utils.ts'
 import { createAuth0AuthProvider } from './auth0.ts'
 
@@ -38,7 +38,7 @@ describe('auth0 provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/auth0', createAuthLoginRequestHandler(provider))
+      router.get('/login/auth0', createExternalAuthLoginRequestHandler(provider))
 
       let response = await router.fetch('https://app.example.com/login/auth0')
 

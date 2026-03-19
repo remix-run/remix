@@ -8,12 +8,12 @@ import { Session } from '@remix-run/session'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createAuthCallbackRequestHandler } from './callback.ts'
-import { createAuthLoginRequestHandler } from './login.ts'
+import { createExternalAuthCallbackRequestHandler } from './external-callback.ts'
+import { createExternalAuthLoginRequestHandler } from './external-login.ts'
 import { createGoogleAuthProvider } from './providers/google.ts'
 import { createRequest, mockFetch } from './test-utils.ts'
 
-describe('createAuthCallbackRequestHandler()', () => {
+describe('createExternalAuthCallbackRequestHandler()', () => {
   it('completes a Google callback, preserves returnTo, and authenticates via createSessionAuthScheme()', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
       let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
@@ -70,10 +70,10 @@ describe('createAuthCallbackRequestHandler()', () => {
         ],
       })
 
-      router.get('/login/google', createAuthLoginRequestHandler(provider))
+      router.get('/login/google', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/google/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.profile.sub })
           },
@@ -128,7 +128,7 @@ describe('createAuthCallbackRequestHandler()', () => {
 
     router.get(
       '/auth/google/callback',
-      createAuthCallbackRequestHandler(provider, {
+      createExternalAuthCallbackRequestHandler(provider, {
         writeSession(session, result) {
           session.set('auth', { userId: result.profile.sub })
         },
@@ -189,10 +189,10 @@ describe('createAuthCallbackRequestHandler()', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/google', createAuthLoginRequestHandler(provider))
+      router.get('/login/google', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/google/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.profile.sub })
           },
@@ -258,10 +258,10 @@ describe('createAuthCallbackRequestHandler()', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/google', createAuthLoginRequestHandler(provider))
+      router.get('/login/google', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/google/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession() {
             throw new Error('write failed')
           },
@@ -330,10 +330,10 @@ describe('createAuthCallbackRequestHandler()', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/google', createAuthLoginRequestHandler(provider))
+      router.get('/login/google', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/google/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession() {
             throw new Error('write failed')
           },
@@ -342,7 +342,7 @@ describe('createAuthCallbackRequestHandler()', () => {
       )
       router.get(
         '/auth/google/callback/inspect',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.profile.sub })
           },

@@ -14,7 +14,7 @@ import {
 /**
  * Options for handling an OAuth or OIDC callback request.
  */
-export interface AuthCallbackOptions<profile, provider extends string> {
+export interface ExternalAuthCallbackOptions<profile, provider extends string> {
   /** Session key used to read and clear the in-progress OAuth transaction. */
   transactionKey?: string
   /** Writes application-defined auth state into the session after a successful callback. */
@@ -39,13 +39,13 @@ export interface AuthCallbackOptions<profile, provider extends string> {
 /**
  * Creates a request handler for an OAuth or OIDC callback route.
  *
- * @param provider The provider that initiated the login flow.
+ * @param provider The external provider that initiated the login flow.
  * @param options Options for writing session data and handling callback success or failure.
  * @returns A request handler for the provider callback route.
  */
-export function createAuthCallbackRequestHandler<profile, provider extends string>(
+export function createExternalAuthCallbackRequestHandler<profile, provider extends string>(
   provider: OAuthProvider<profile, provider>,
-  options: AuthCallbackOptions<profile, provider>,
+  options: ExternalAuthCallbackOptions<profile, provider>,
 ): RequestHandler {
   return async context => {
     let session: Session | undefined
@@ -53,7 +53,7 @@ export function createAuthCallbackRequestHandler<profile, provider extends strin
     let transaction: OAuthTransaction | undefined
 
     try {
-      session = getSession(context, 'createAuthCallbackRequestHandler()')
+      session = getSession(context, 'createExternalAuthCallbackRequestHandler()')
       transaction = session.get(transactionKey) as OAuthTransaction | undefined
 
       let callbackError = context.url.searchParams.get('error')

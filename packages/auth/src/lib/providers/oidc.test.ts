@@ -6,8 +6,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createAuthCallbackRequestHandler } from '../callback.ts'
-import { createAuthLoginRequestHandler } from '../login.ts'
+import { createExternalAuthCallbackRequestHandler } from '../external-callback.ts'
+import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 import { createOIDCAuthProvider } from './oidc.ts'
 
@@ -47,7 +47,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
 
       let response1 = await router.fetch('https://app.example.com/login/oidc')
       let response2 = await router.fetch('https://app.example.com/login/oidc')
@@ -102,7 +102,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
 
       await assert.rejects(
         () => router.fetch('https://app.example.com/login/oidc'),
@@ -154,7 +154,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
 
       let response = await router.fetch('https://app.example.com/login/oidc')
       let location = new URL(response.headers.get('Location')!)
@@ -194,7 +194,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
 
       let response = await router.fetch('https://app.example.com/login/oidc')
 
@@ -265,10 +265,10 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/oidc/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.account.providerAccountId })
           },
@@ -343,10 +343,10 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
       router.get(
         '/auth/oidc/callback',
-        createAuthCallbackRequestHandler(provider, {
+        createExternalAuthCallbackRequestHandler(provider, {
           writeSession(session, result) {
             session.set('auth', { userId: result.account.providerAccountId })
           },

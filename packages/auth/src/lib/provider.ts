@@ -43,11 +43,9 @@ export interface OAuthResult<profile, provider extends string = string> {
 }
 
 /**
- * Public shape for an OAuth or OIDC provider used by `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * Public shape for an OAuth or OIDC provider used by external auth request handlers.
  */
 export interface OAuthProvider<profile, provider extends string = string> {
-  /** Discriminator used by `createAuthLoginRequestHandler()` to select the OAuth flow. */
-  kind: 'oauth'
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
 }
@@ -90,7 +88,6 @@ export function createOAuthProvider<profile, provider extends string>(
   runtime: OAuthProviderRuntime<profile, provider>,
 ): OAuthProvider<profile, provider> {
   return {
-    kind: 'oauth',
     name,
     [oauthProviderRuntime]: runtime,
   } as InternalOAuthProvider<profile, provider>

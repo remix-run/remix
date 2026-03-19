@@ -64,7 +64,7 @@ export interface GitHubAuthProviderEmail {
  * Creates a GitHub OAuth App provider.
  *
  * @param options GitHub OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
 export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES

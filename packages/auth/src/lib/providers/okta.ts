@@ -16,7 +16,7 @@ export interface OktaAuthProviderOptions extends Omit<OIDCAuthProviderOptions<Ok
  * Creates an Okta provider backed by the shared OIDC runtime.
  *
  * @param options Okta issuer and client settings for your application.
- * @returns An OAuth provider that can be passed to `createAuthLoginRequestHandler()` and `createAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
 export function createOktaAuthProvider(options: OktaAuthProviderOptions): OAuthProvider<OktaAuthProfile, 'okta'> {
   return createOIDCAuthProvider({
