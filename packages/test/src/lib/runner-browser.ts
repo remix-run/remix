@@ -1,26 +1,11 @@
 import { chromium, type Browser } from 'playwright'
+import { displayResults, type TestResults } from './executor.ts'
 
 export interface TestRunOptions {
   baseUrl: string
   debug?: boolean
   devtools?: boolean
   ui?: boolean
-}
-
-export interface TestResults {
-  passed: number
-  failed: number
-  tests: Array<{
-    name: string
-    suiteName?: string
-    filePath?: string
-    status: 'passed' | 'failed'
-    error?: {
-      message: string
-      stack?: string
-    }
-    duration: number
-  }>
 }
 
 export async function runBrowserTests(options: TestRunOptions): Promise<{
@@ -61,6 +46,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       await close()
       return { results, close: async () => {}, disconnected: Promise.resolve() }
     }
+
+    displayResults(results)
 
     return { results, close, disconnected }
   } catch (error) {

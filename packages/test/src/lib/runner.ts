@@ -1,9 +1,7 @@
 import { tsImport } from 'tsx/esm/api'
-import { runTests } from '../executor.ts'
-import { displayResults } from './result-collector.ts'
-import type { TestResults } from './runner.ts'
+import { displayResults, runTests, type TestResults } from './executor.ts'
 
-export async function runNodeTests(files: string[]): Promise<{ failed: boolean }> {
+export async function runServerTests(files: string[]): Promise<{ failed: boolean }> {
   let allResults: TestResults = { passed: 0, failed: 0, tests: [] }
 
   for (let file of files) {

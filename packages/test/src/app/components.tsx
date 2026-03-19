@@ -1,6 +1,6 @@
 import { clientEntry, on, type Handle } from '@remix-run/component'
-import { runTests } from '../executor.ts'
-import { normalizeFilePath, normalizeLine } from './utils.ts'
+import { runTests } from '../lib/executor.ts'
+import { normalizeFilePath, normalizeLine } from '../lib/utils.ts'
 
 // Matches `file:line:col` at end of a stack frame, e.g. `(fixtures/foo.ts:10:5)` or ` fixtures/foo.ts:10:5`
 let frameLocRe = /([^():\s][^():]*\.[jt]sx?):(\d+):(\d+)/
@@ -42,9 +42,9 @@ type TestResult = {
   duration: number
 }
 
-export const TestStatus = clientEntry(
-  'entry.js#TestStatus',
-  function TestStatus(handle: Handle, setup: { testFiles: string[]; baseDir: string }) {
+export const TestResults = clientEntry(
+  'entry.js#TestResults',
+  function TestResults(handle: Handle, setup: { testFiles: string[]; baseDir: string }) {
     let done = false
     let allResults = { passed: 0, failed: 0, tests: [] as TestResult[] }
 

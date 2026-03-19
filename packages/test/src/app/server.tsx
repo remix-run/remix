@@ -11,7 +11,7 @@ import {
   type ScriptServer,
   type ScriptServerOptions,
 } from '@remix-run/script-server'
-import { TestStatus } from '../browser/status.tsx'
+import { TestResults } from './components.tsx'
 
 // Directory of this server file, used to resolve browser entry point
 let serverDir = path.dirname(fileURLToPath(import.meta.url))
@@ -21,7 +21,10 @@ let routes = route({
   scripts: '/scripts/*path',
 })
 
-export async function startServer(port = 44101, absoluteFiles: string[] = []): Promise<http.Server> {
+export async function startServer(
+  port = 44101,
+  absoluteFiles: string[] = [],
+): Promise<http.Server> {
   let router = getRouter(absoluteFiles)
   let server = http.createServer(createRequestListener(async (req) => await router.fetch(req)))
 
@@ -50,7 +53,7 @@ function getRouter(absoluteFiles: string[]) {
             <title>Tests</title>
           </head>
           <body>
-            <TestStatus setup={{ testFiles, baseDir: process.cwd() }} />
+            <TestResults setup={{ testFiles, baseDir: process.cwd() }} />
             <script type="module" src={routes.scripts.href({ path: '/entry.ts' })} />
           </body>
         </html>,
@@ -88,7 +91,7 @@ function initializeScriptServer(absoluteFiles: string[]) {
     let remixDir = path.resolve(process.cwd(), './node_modules/remix')
 
     // TODO: This is messy - how can we clean this up?
-    let isInRemixMonorepo = serverDir.endsWith('packages/test/src/lib/server')
+    let isInRemixMonorepo = serverDir.endsWith('packages/test/src/app')
     if (isInRemixMonorepo) {
       remixPkgJsonPath = path.resolve(process.cwd(), '../remix/package.json')
       remixDir = path.resolve(process.cwd(), '../remix')
@@ -103,8 +106,16 @@ function initializeScriptServer(absoluteFiles: string[]) {
       base: '/scripts',
       roots: [
         {
-          directory: path.resolve(serverDir, '../browser'),
+          directory: serverDir,
           entryPoints: ['entry.ts'],
+        },
+        {
+          prefix: '/@app',
+          directory: serverDir,
+        },
+        {
+          prefix: '/@lib',
+          directory: path.join(serverDir, '../lib'),
         },
         // Entrypoint per test module
         {

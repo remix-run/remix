@@ -1,5 +1,5 @@
-import { normalizeFilePath, normalizeLine } from '../browser/utils.ts'
-import type { TestResults } from './runner.ts'
+import type { TestResults } from './executor.ts'
+import { normalizeFilePath, normalizeLine } from './utils.ts'
 
 export function displayResults(results: TestResults) {
   let fileMap = new Map<string, typeof results.tests>()

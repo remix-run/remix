@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util'
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
 import type * as http from 'node:http'
 import { tsImport } from 'tsx/esm/api'
-import { discoverTests } from './lib/server/discovery.ts'
-import { runBrowserTests } from './lib/server/runner.ts'
-import { runNodeTests } from './lib/server/node-runner.ts'
-import { displayResults } from './lib/server/result-collector.ts'
+import { runBrowserTests } from './lib/runner-browser.ts'
+import { runServerTests } from './lib/runner.ts'
+import path from 'node:path'
 
-let { startServer } = await tsImport('./lib/server/server.tsx', {
+let { startServer } = await tsImport('./app/server.tsx', {
   parentURL: import.meta.url,
   tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
 })
@@ -40,13 +39,13 @@ let queued = false
 let rerunTimer: NodeJS.Timeout | undefined
 let browserServer: http.Server | undefined
 
-let watchers = new Set<fs.FSWatcher>()
+let watcherControllers = new Set<AbortController>()
 
 function closeWatchers() {
-  for (let watcher of watchers) {
-    watcher.close()
+  for (let controller of watcherControllers) {
+    controller.abort()
   }
-  watchers.clear()
+  watcherControllers.clear()
 }
 
 function cleanupAndExit(code: number) {
@@ -57,18 +56,21 @@ function cleanupAndExit(code: number) {
   process.exit(code)
 }
 
-function updateWatchers(testFiles: string[]) {
-  if (!isWatchMode) return
-
+async function updateWatchers(testFiles: string[]) {
   closeWatchers()
 
   for (let file of testFiles) {
     try {
-      let watcher = fs.watch(file, { recursive: false }, () => {
+      let controller = new AbortController()
+      let watcher = fs.watch(file, { recursive: false, signal: controller.signal })
+      watcherControllers.add(controller)
+      for await (let event of watcher) {
         queueRerun('file changed')
-      })
-      watchers.add(watcher)
-    } catch {
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
       continue
     }
   }
@@ -80,7 +82,7 @@ async function executeRun() {
   running = true
 
   try {
-    let files = await discoverTests(pattern, process.cwd())
+    let files = await discoverTests(pattern)
 
     if (files.length === 0) {
       console.error(`No test files found matching pattern: ${pattern}`)
@@ -92,13 +94,15 @@ async function executeRun() {
     let serverFiles = files.filter((f) => !isBrowserTest(f))
 
     console.log(`Found ${files.length} test file(s)\n`)
-    updateWatchers(files)
+    if (isWatchMode) {
+      updateWatchers(files)
+    }
 
     let serverFailed = false
     let browserFailed = false
 
     if (serverFiles.length > 0) {
-      let { failed } = await runNodeTests(serverFiles)
+      let { failed } = await runServerTests(serverFiles)
       serverFailed = failed
       console.log('\n\n')
     }
@@ -115,7 +119,6 @@ async function executeRun() {
         ui: values.ui,
       })
 
-      displayResults(results)
       browserFailed = results.failed > 0
 
       if (values.ui) {
@@ -144,6 +147,17 @@ async function executeRun() {
       cleanupAndExit(latestExitCode)
     }
   }
+}
+
+async function discoverTests(pattern: string): Promise<string[]> {
+  let files: string[] = []
+  let exclude = ['node_modules/**', '.git/**']
+
+  for await (let file of fs.glob(pattern, { cwd: process.cwd(), exclude })) {
+    files.push(path.resolve(process.cwd(), file))
+  }
+
+  return files.sort()
 }
 
 function queueRerun(reason: string) {

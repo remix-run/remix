@@ -1,1 +1,1 @@
-export { render } from './lib/browser/framework.ts'
+export { render } from './lib/framework-browser.ts'
