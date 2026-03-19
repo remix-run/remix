@@ -1,6 +1,6 @@
 # Social Login Demo
 
-A minimal Remix demo that serves a single login page design at the `home` route.
+A minimal Remix demo that renders a single login page design at the `home` route.
 
 ## Running the Demo
 
@@ -16,4 +16,5 @@ Then visit [http://localhost:44100](http://localhost:44100).
 
 - a minimal `remix/fetch-router` demo setup
 - a single `home` route at `/`
-- serving the provided `login.html` file as the response body without implementing any login behavior yet
+- rendering the login page with `remix/component` JSX and `css(...)` styles instead of serving a raw HTML file
+- keeping the page structure aligned with the original `login.html` source
