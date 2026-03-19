@@ -53,17 +53,21 @@ export const TestResults = clientEntry(
         for (let testFile of setup.testFiles) {
           await import(testFile)
           let { passed, failed, tests } = await runTests()
+          let fileResults = { passed, failed, tests: tests.map((t) => ({ ...t, filePath: testFile })) }
+          await fetch('/file-results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fileResults),
+          })
           allResults.passed += passed
           allResults.failed += failed
           tests.forEach((t) => allResults.tests.push({ ...t, filePath: testFile }))
           handle.update()
         }
-
-        ;(window as any).__testResults = allResults
       } catch (error: any) {
         console.error('Error running tests:', error)
-        ;(window as any).__testResults = { passed: 0, failed: 1, tests: [] }
       }
+      ;(window as any).__testsDone = true
       done = true
       handle.update()
     }

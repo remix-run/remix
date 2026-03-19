@@ -27,9 +27,21 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       page.on('console', (msg) => console.log(`  [Browser] ${msg.text()}`))
     }
 
+    let totalPassed = 0
+    let totalFailed = 0
+
+    await page.route('**/file-results', async (route) => {
+      let results = route.request().postDataJSON() as TestResults
+      displayResults(results, 'browser')
+      totalPassed += results.passed
+      totalFailed += results.failed
+      await route.fulfill({ status: 200 })
+    })
+
     await page.goto(options.baseUrl)
-    await page.waitForFunction('window.__testResults', { timeout: 60000 })
-    let results = (await page.evaluate('window.__testResults')) as TestResults
+    await page.waitForFunction('window.__testsDone', { timeout: 60000 })
+
+    let allResults: TestResults = { passed: totalPassed, failed: totalFailed, tests: [] }
 
     if (!options.ui) {
       await page.close()
@@ -42,14 +54,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     let disconnected = new Promise<void>((resolve) => browser!.on('disconnected', () => resolve()))
 
-    displayResults(results)
-
     if (!options.ui) {
       await close()
-      return { results, close: async () => {}, disconnected: Promise.resolve() }
+      return { results: allResults, close: async () => {}, disconnected: Promise.resolve() }
     }
 
-    return { results, close, disconnected }
+    return { results: allResults, close, disconnected }
   } catch (error) {
     await browser?.close()
     throw error

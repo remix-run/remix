@@ -5,6 +5,7 @@ import type * as http from 'node:http'
 import { tsImport } from 'tsx/esm/api'
 import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
+import { displaySummary } from './lib/executor.ts'
 import path from 'node:path'
 
 let { startServer } = await tsImport('./app/server.tsx', {
@@ -98,43 +99,39 @@ async function executeRun() {
       updateWatchers(files)
     }
 
-    let serverFailed = false
-    let browserFailed = false
-
-    if (serverFiles.length > 0) {
-      let { failed } = await runServerTests(serverFiles)
-      serverFailed = failed
-      console.log('\n\n')
+    if (browserFiles.length > 0 && !browserServer) {
+      browserServer = await startServer(port, browserFiles)
     }
 
-    if (browserFiles.length > 0) {
-      if (!browserServer) {
-        browserServer = await startServer(port, browserFiles)
-      }
+    let [serverResult, browserResult] = await Promise.all([
+      serverFiles.length > 0 ? runServerTests(serverFiles) : null,
+      browserFiles.length > 0
+        ? runBrowserTests({
+            baseUrl: `http://localhost:${port}`,
+            debug: values.debug,
+            devtools: values.devtools,
+            ui: values.ui,
+          })
+        : null,
+    ])
 
-      let { results, close, disconnected } = await runBrowserTests({
-        baseUrl: `http://localhost:${port}`,
-        debug: values.debug,
-        devtools: values.devtools,
-        ui: values.ui,
-      })
+    let totalPassed = (serverResult?.passed ?? 0) + (browserResult?.results.passed ?? 0)
+    let totalFailed = (serverResult?.failed ?? 0) + (browserResult?.results.failed ?? 0)
+    displaySummary(totalPassed, totalFailed)
 
-      browserFailed = results.failed > 0
-
-      if (values.ui) {
-        console.log('\nBrowser is open. Press Ctrl+C to close.')
-        await Promise.race([
-          disconnected,
-          new Promise<void>((resolve) => {
-            process.once('SIGINT', resolve)
-            process.once('SIGTERM', resolve)
-          }),
-        ])
-        await close()
-      }
+    if (values.ui && browserResult) {
+      console.log('\nBrowser is open. Press Ctrl+C to close.')
+      await Promise.race([
+        browserResult.disconnected,
+        new Promise<void>((resolve) => {
+          process.once('SIGINT', resolve)
+          process.once('SIGTERM', resolve)
+        }),
+      ])
+      await browserResult.close()
     }
 
-    latestExitCode = serverFailed || browserFailed ? 1 : 0
+    latestExitCode = totalFailed > 0 ? 1 : 0
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1

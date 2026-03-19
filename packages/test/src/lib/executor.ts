@@ -94,7 +94,7 @@ export async function runTests(): Promise<TestResults> {
   return results
 }
 
-export function displayResults(results: TestResults) {
+export function displayResults(results: TestResults, env?: 'server' | 'browser') {
   let fileMap = new Map<string, typeof results.tests>()
 
   for (let test of results.tests) {
@@ -111,7 +111,8 @@ export function displayResults(results: TestResults) {
   for (let file of fileOrder) {
     let tests = fileMap.get(file)!
     let displayPath = file.replace(`${cwd}/`, './')
-    console.log(`\n${normalizeFilePath(displayPath)}`)
+    let envLabel = env ? ` \x1b[2m[${env}]\x1b[0m` : ''
+    console.log(`\n${normalizeFilePath(displayPath)}${envLabel}`)
 
     let suiteMap = new Map<string, typeof tests>()
     for (let test of tests) {
@@ -145,9 +146,11 @@ export function displayResults(results: TestResults) {
       }
     }
   }
+}
 
+export function displaySummary(passed: number, failed: number) {
   console.log('\n' + '='.repeat(60))
-  let totalColor = results.failed > 0 ? '\x1b[31m' : '\x1b[32m'
-  console.log(`${totalColor}Total: ${results.passed} passed, ${results.failed} failed\x1b[0m`)
+  let totalColor = failed > 0 ? '\x1b[31m' : '\x1b[32m'
+  console.log(`${totalColor}Total: ${passed} passed, ${failed} failed\x1b[0m`)
   console.log('='.repeat(60) + '\n')
 }
