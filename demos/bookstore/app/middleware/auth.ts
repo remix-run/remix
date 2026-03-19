@@ -1,5 +1,6 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
@@ -14,7 +15,8 @@ import { Session } from '../utils/session.ts'
  * Attaches user (if any) to request context.
  */
 export function loadAuth(): Middleware {
-  return async ({ db, get }) => {
+  return async ({ get }) => {
+    let db = get(Database)
     let session = get(Session)
     let userId = parseId(session.get('userId'))
 
@@ -43,7 +45,8 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ db, get, url }) => {
+  return async ({ get, url }) => {
+    let db = get(Database)
     let session = get(Session)
     let userId = parseId(session.get('userId'))
     let user = userId === undefined ? undefined : await db.find(users, userId)

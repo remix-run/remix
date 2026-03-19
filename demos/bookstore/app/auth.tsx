@@ -2,6 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
@@ -105,7 +106,8 @@ export default {
           )
         },
 
-        async action({ db, get, url }) {
+        async action({ get, url }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { email, password } = s.parse(loginSchema, formData)
@@ -168,7 +170,8 @@ export default {
           )
         },
 
-        async action({ db, get }) {
+        async action({ get }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { email, name, password } = s.parse(registrationSchema, formData)
@@ -249,7 +252,8 @@ export default {
           )
         },
 
-        async action({ db, get }) {
+        async action({ get }) {
+          let db = get(Database)
           let formData = get(FormData)
           let { email } = s.parse(forgotPasswordSchema, formData)
           let normalizedEmail = normalizeEmail(email)
@@ -358,7 +362,8 @@ export default {
           )
         },
 
-        async action({ db, get, params }) {
+        async action({ get, params }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { confirmPassword, password } = s.parse(resetPasswordSchema, formData)

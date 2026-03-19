@@ -4,13 +4,14 @@ import { css } from 'remix/component'
 import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
-import { ilike, inList, or } from 'remix/data-table'
+import { Database, ilike, inList, or } from 'remix/data-table'
 import { books } from './data/schema.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
-  async action({ db }) {
+  async action({ get }) {
+    let db = get(Database)
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
     let featuredBookRows = await db.findMany(books, {
@@ -166,7 +167,8 @@ export let contact: Controller<typeof routes.contact> = {
 }
 
 export let search: BuildAction<'GET', typeof routes.search> = {
-  async action({ db, url }) {
+  async action({ get, url }) {
+    let db = get(Database)
     let query = url.searchParams.get('q') ?? ''
     let matchingBooks = query
       ? await db.findMany(books, {

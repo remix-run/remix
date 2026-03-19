@@ -2,7 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { Frame, css } from 'remix/component'
 
 import { routes } from './routes.ts'
-import { ilike } from 'remix/data-table'
+import { Database, ilike } from 'remix/data-table'
 
 import { books } from './data/schema.ts'
 import { BookCard } from './components/book-card.tsx'
@@ -15,7 +15,8 @@ import { ImageCarousel } from './assets/image-carousel.tsx'
 export default {
   middleware: [loadAuth()],
   actions: {
-    async index({ db }) {
+    async index({ get }) {
+      let db = get(Database)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       let genres = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
       let cart = getCurrentCart()
@@ -68,7 +69,8 @@ export default {
       )
     },
 
-    async genre({ params, db }) {
+    async genre({ get, params }) {
+      let db = get(Database)
       let genre = params.genre
       let matchingBooks = await db.findMany(books, {
         where: ilike('genre', genre),
@@ -113,7 +115,8 @@ export default {
       )
     },
 
-    async show({ params, db }) {
+    async show({ get, params }) {
+      let db = get(Database)
       let book = await db.findOne(books, { where: { slug: params.slug } })
 
       if (!book) {

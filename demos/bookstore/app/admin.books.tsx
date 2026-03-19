@@ -3,6 +3,7 @@ import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import * as coerce from 'remix/data-schema/coerce'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
@@ -36,7 +37,8 @@ const bookSchema = f.object({
 
 export default {
   actions: {
-    async index({ db }) {
+    async index({ get }) {
+      let db = get(Database)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
       return render(
@@ -111,7 +113,8 @@ export default {
       )
     },
 
-    async show({ db, params }) {
+    async show({ get, params }) {
+      let db = get(Database)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -262,7 +265,8 @@ export default {
       )
     },
 
-    async create({ db, get }) {
+    async create({ get }) {
+      let db = get(Database)
       let formData = get(FormData)
       let { author, cover, description, genre, inStock, isbn, price, publishedYear, slug, title } =
         s.parse(bookSchema, formData)
@@ -284,7 +288,8 @@ export default {
       return redirect(routes.admin.books.index.href())
     },
 
-    async edit({ db, params }) {
+    async edit({ get, params }) {
+      let db = get(Database)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -410,7 +415,8 @@ export default {
       )
     },
 
-    async update({ db, get, params }) {
+    async update({ get, params }) {
+      let db = get(Database)
       let formData = get(FormData)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
@@ -441,7 +447,8 @@ export default {
       return redirect(routes.admin.books.index.href())
     },
 
-    async destroy({ db, params }) {
+    async destroy({ get, params }) {
+      let db = get(Database)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
       if (book) {

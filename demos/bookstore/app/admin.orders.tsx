@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
+import { Database } from 'remix/data-table'
 
 import { routes } from './routes.ts'
 import { orders, orderItemsWithBook } from './data/schema.ts'
@@ -9,7 +10,8 @@ import { render } from './utils/render.ts'
 
 export default {
   actions: {
-    async index({ db }) {
+    async index({ get }) {
+      let db = get(Database)
       let allOrders = await db.findMany(orders, {
         orderBy: ['created_at', 'asc'],
         with: { items: orderItemsWithBook },
@@ -65,7 +67,8 @@ export default {
       )
     },
 
-    async show({ db, params }) {
+    async show({ get, params }) {
+      let db = get(Database)
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined
