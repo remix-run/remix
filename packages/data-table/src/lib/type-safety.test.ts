@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 
 import { column } from './column.ts'
-import { createDatabase } from './database.ts'
+import { createDatabase, Database } from './database.ts'
 import type {
   QueryBuilder,
   QueryColumnTypesForTable,
@@ -79,6 +79,22 @@ describe('type safety', () => {
     expectType<Equal<Row['happened_at'], unknown>>()
     expectType<Equal<Row['big_counter'], unknown>>()
     expectType<Equal<Row['validated_payload'], unknown>>()
+  })
+
+  it('types direct construction, helper construction, and transaction callbacks as Database', async () => {
+    let direct = new Database(createAdapter())
+    let wrapped = createDatabase(createAdapter())
+
+    expectType<Equal<typeof direct, Database>>()
+    expectType<Equal<typeof wrapped, Database>>()
+
+    await direct.transaction(async (transactionDatabase) => {
+      expectType<Equal<typeof transactionDatabase, Database>>()
+      return undefined
+    })
+
+    assert.equal(direct instanceof Database, true)
+    assert.equal(wrapped instanceof Database, true)
   })
 
   it('exposes query builder generics as column and row output maps', () => {

@@ -7,7 +7,7 @@ import type {
 } from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
 import { QueryBuilder } from './database/query-builder.ts'
-import { DatabaseRuntime } from './database/runtime.ts'
+import { Database, withDatabaseInternals } from './database/runtime.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
 import type {
@@ -332,79 +332,8 @@ export type CreateManyRowsOptions = {
 }
 
 /**
- * High-level database runtime used to build and execute data manipulation operations.
- *
- * Create instances with {@link createDatabase}.
- */
-export type Database = {
-  adapter: DatabaseAdapter
-  now(): unknown
-  query: QueryMethod
-  create<table extends AnyTable>(
-    table: table,
-    values: Partial<TableRow<table>>,
-    options?: CreateResultOptions,
-  ): Promise<WriteResult>
-  create<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
-    table: table,
-    values: Partial<TableRow<table>>,
-    options: CreateRowOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
-  createMany<table extends AnyTable>(
-    table: table,
-    values: Array<Partial<TableRow<table>>>,
-    options?: CreateManyResultOptions,
-  ): Promise<WriteResult>
-  createMany<table extends AnyTable>(
-    table: table,
-    values: Array<Partial<TableRow<table>>>,
-    options: CreateManyRowsOptions,
-  ): Promise<TableRow<table>[]>
-  find<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
-    table: table,
-    value: PrimaryKeyInput<table>,
-    options?: { with?: relations },
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
-  findOne<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    options: FindOneOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
-  findMany<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    options?: FindManyOptions<table, relations>,
-  ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
-  count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number>
-  update<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
-    table: table,
-    value: PrimaryKeyInput<table>,
-    changes: Partial<TableRow<table>>,
-    options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
-  updateMany<table extends AnyTable>(
-    table: table,
-    changes: Partial<TableRow<table>>,
-    options: UpdateManyOptions<table>,
-  ): Promise<WriteResult>
-  delete<table extends AnyTable>(table: table, value: PrimaryKeyInput<table>): Promise<boolean>
-  deleteMany<table extends AnyTable>(
-    table: table,
-    options: DeleteManyOptions<table>,
-  ): Promise<WriteResult>
-  exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
-  transaction<result>(
-    callback: (database: Database) => Promise<result>,
-    options?: TransactionOptions,
-  ): Promise<result>
-}
-
-/**
  * Creates a database runtime from an adapter.
+ * Thin wrapper around `new Database(adapter, options)`.
  * @param adapter Adapter implementation responsible for SQL execution.
  * @param options Optional runtime options.
  * @param options.now Clock function used for auto-managed timestamps.
@@ -429,14 +358,7 @@ export function createDatabase(
   adapter: DatabaseAdapter,
   options?: { now?: () => unknown },
 ): Database {
-  let now = options?.now ?? defaultNow
-
-  return new DatabaseRuntime({
-    adapter,
-    token: undefined,
-    now,
-    savepointCounter: { value: 0 },
-  })
+  return new Database(adapter, options)
 }
 
 /**
@@ -453,18 +375,13 @@ export function createDatabaseWithTransaction(
   token: TransactionToken,
   options?: { now?: () => unknown },
 ): Database {
-  let now = options?.now ?? defaultNow
-
-  return new DatabaseRuntime({
+  return new Database(
     adapter,
-    token,
-    now,
-    savepointCounter: { value: 0 },
-  })
+    withDatabaseInternals(options, {
+      token,
+      savepointCounter: { value: 0 },
+    }),
+  )
 }
 
-function defaultNow(): Date {
-  return new Date()
-}
-
-export { QueryBuilder }
+export { Database, QueryBuilder }

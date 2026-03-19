@@ -3,7 +3,7 @@ import { afterEach, describe, it } from 'node:test'
 
 import type { DataManipulationOperation, DatabaseAdapter } from './adapter.ts'
 import { column } from './column.ts'
-import { createDatabase } from './database.ts'
+import { createDatabase, Database } from './database.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { belongsTo, table, hasMany, hasManyThrough, hasOne, timestamps } from './table.ts'
 import { eq } from './operators.ts'
@@ -103,6 +103,35 @@ afterEach(() => {
 })
 
 describe('query builder', () => {
+  it('supports direct construction and createDatabase wrapper', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+    let direct = new Database(adapter, {
+      now() {
+        return '2026-01-01T00:00:00.000Z'
+      },
+    })
+    let wrapped = createDatabase(adapter, {
+      now() {
+        return '2026-01-01T00:00:00.000Z'
+      },
+    })
+
+    let directRows = await direct.query(accounts).all()
+    let wrappedRows = await wrapped.query(accounts).all()
+
+    assert.equal(direct instanceof Database, true)
+    assert.equal(wrapped instanceof Database, true)
+    assert.equal(direct.now(), '2026-01-01T00:00:00.000Z')
+    assert.equal(wrapped.now(), '2026-01-01T00:00:00.000Z')
+    assert.equal(directRows.length, 1)
+    assert.equal(wrappedRows.length, 1)
+  })
+
   it('is immutable and supports eager hasMany loading', async () => {
     let adapter = createAdapter({
       accounts: [
@@ -2093,7 +2122,7 @@ function createAdapter(
 }
 
 function createTestDatabase(adapter: DatabaseAdapter) {
-  return createDatabase(adapter, {
+  return new Database(adapter, {
     now() {
       return '2026-01-01T00:00:00.000Z'
     },

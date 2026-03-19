@@ -11,7 +11,6 @@ import type {
   CreateManyRowsOptions,
   CreateResultOptions,
   CreateRowOptions,
-  Database,
   DeleteManyOptions,
   FindManyOptions,
   FindOneOptions,
@@ -53,22 +52,64 @@ type SavepointCounter = {
   value: number
 }
 
-export class DatabaseRuntime implements Database, QueryExecutionContext {
+const databaseInternalOptionsKey = Symbol('databaseInternalOptions')
+
+type DatabaseOptions = {
+  now?: () => unknown
+}
+
+type DatabaseInternalOptions = {
+  token?: TransactionToken
+  savepointCounter?: SavepointCounter
+}
+
+type DatabaseOptionsWithInternals = DatabaseOptions & {
+  [databaseInternalOptionsKey]: DatabaseInternalOptions
+}
+
+export function withDatabaseInternals(
+  options: DatabaseOptions | undefined,
+  internal: DatabaseInternalOptions,
+): DatabaseOptions {
+  let databaseOptions: DatabaseOptions = {
+    now: options?.now,
+  }
+
+  Object.defineProperty(databaseOptions, databaseInternalOptionsKey, {
+    value: internal,
+    enumerable: false,
+  })
+
+  return databaseOptions
+}
+
+function hasDatabaseInternals(options: DatabaseOptions): options is DatabaseOptionsWithInternals {
+  return databaseInternalOptionsKey in options
+}
+
+/**
+ * High-level database runtime used to build and execute data manipulation operations.
+ *
+ * Create instances directly with `new Database(adapter, options)` or use
+ * `createDatabase(adapter, options)` as a thin wrapper.
+ */
+export class Database implements QueryExecutionContext {
   #adapter: DatabaseAdapter
   #token?: TransactionToken
   #now: () => unknown
   #savepointCounter: SavepointCounter
 
-  constructor(options: {
-    adapter: DatabaseAdapter
-    token?: TransactionToken
-    now: () => unknown
-    savepointCounter: SavepointCounter
-  }) {
-    this.#adapter = options.adapter
-    this.#token = options.token
-    this.#now = options.now
-    this.#savepointCounter = options.savepointCounter
+  constructor(
+    adapter: DatabaseAdapter,
+    options?: DatabaseOptions,
+  ) {
+    let internal =
+      options && hasDatabaseInternals(options) ? options[databaseInternalOptionsKey] : undefined
+
+    this.#adapter = adapter
+    this.#token = internal?.token
+    this.#now = options?.now ?? defaultNow
+    this.#savepointCounter = internal?.savepointCounter ?? { value: 0 }
   }
 
   get adapter(): DatabaseAdapter {
@@ -431,12 +472,16 @@ export class DatabaseRuntime implements Database, QueryExecutionContext {
   ): Promise<result> {
     if (!this.#token) {
       let token = await this.#adapter.beginTransaction(options)
-      let tx = new DatabaseRuntime({
-        adapter: this.#adapter,
-        token,
-        now: this.#now,
-        savepointCounter: this.#savepointCounter,
-      })
+      let tx = new Database(
+        this.#adapter,
+        withDatabaseInternals(
+          { now: this.#now },
+          {
+            token,
+            savepointCounter: this.#savepointCounter,
+          },
+        ),
+      )
 
       try {
         let result = await callback(tx)
@@ -484,4 +529,9 @@ export class DatabaseRuntime implements Database, QueryExecutionContext {
       })
     }
   }
+}
+
+
+function defaultNow(): Date {
+  return new Date()
 }

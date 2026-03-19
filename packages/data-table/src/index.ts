@@ -177,7 +177,6 @@ export type {
   CreateManyRowsOptions,
   CreateResultOptions,
   CreateRowOptions,
-  Database,
   DeleteManyOptions,
   FindManyOptions,
   FindOneOptions,
@@ -196,4 +195,4 @@ export type {
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export { createDatabase, QueryBuilder } from './lib/database.ts'
+export { createDatabase, Database, QueryBuilder } from './lib/database.ts'
