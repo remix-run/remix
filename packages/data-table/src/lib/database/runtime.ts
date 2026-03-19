@@ -216,16 +216,16 @@ export class DatabaseRuntime implements Database, QueryExecutionContext {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.with) {
-      return query
-        .with(options.with)
-        .find(
-          value as any,
-        ) as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+      return query.with(options.with).find(value as any) as Promise<TableRowWith<
+        table,
+        LoadedRelationMap<relations>
+      > | null>
     }
 
-    return query.find(value as any) as Promise<
-      TableRowWith<table, LoadedRelationMap<relations>> | null
-    >
+    return query.find(value as any) as Promise<TableRowWith<
+      table,
+      LoadedRelationMap<relations>
+    > | null>
   }
 
   async findOne<
