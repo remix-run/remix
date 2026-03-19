@@ -99,10 +99,7 @@ export class Database implements QueryExecutionContext {
   #now: () => unknown
   #savepointCounter: SavepointCounter
 
-  constructor(
-    adapter: DatabaseAdapter,
-    options?: DatabaseOptions,
-  ) {
+  constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
     let internal =
       options && hasDatabaseInternals(options) ? options[databaseInternalOptionsKey] : undefined
 
@@ -530,7 +527,6 @@ export class Database implements QueryExecutionContext {
     }
   }
 }
-
 
 function defaultNow(): Date {
   return new Date()
