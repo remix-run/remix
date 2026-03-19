@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { describe, it } from '@remix-run/test/browser'
 
 describe('Example Test Suite', () => {
   it('passes basic equality', () => {
