@@ -76,7 +76,7 @@ We currently publish the following packages:
 ## Installation
 
 ```sh
-npm install remix
+npm install remix@3.0.0-alpha.3
 
 # Or, just install a single package
 npm install @remix-run/fetch-router
