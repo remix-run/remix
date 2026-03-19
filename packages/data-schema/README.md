@@ -18,7 +18,7 @@ let User = object({
   email: string().pipe(email()),
   username: string().pipe(minLength(3), maxLength(20)),
   age: coerce.number().pipe(min(13)),
-  role: enum_(['admin', 'member', 'guest'] as const),
+  role: enum_(['admin', 'member', 'guest']),
   flags: object({
     beta: coerce.boolean(),
   }),
@@ -153,7 +153,7 @@ import { literal, enum_, union } from '@remix-run/data-schema'
 let yes = literal('yes')
 
 // One of several allowed values
-let Status = enum_(['active', 'inactive', 'pending'] as const)
+let Status = enum_(['active', 'inactive', 'pending'])
 
 // First schema that matches wins
 let StringOrNumber = union([string(), number()])
