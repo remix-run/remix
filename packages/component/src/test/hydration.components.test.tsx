@@ -162,9 +162,7 @@ describe('hydration', () => {
 
     it('hydrates with null elements without breaking the ordering of siblings', async () => {
       let secondElement: Renderable = null
-      let handleForComponent: Handle
       let NullChanging = clientEntry('/with-null.js#WithNull', function WithNull(handle: Handle) {
-        handleForComponent = handle
         return () => (
           <div>
             <span>First</span>
@@ -194,8 +192,8 @@ describe('hydration', () => {
 
       // Now update to a version without the null to ensure ordering is preserved
       secondElement = <span>after First</span>
-      // @ts-expect-error - the handle is being set
-      await handleForComponent.update()
+      root.render(<NullChanging />)
+      root.flush()
 
       let updatedSpans = container.querySelectorAll('span')
       expect(updatedSpans).toHaveLength(3)
