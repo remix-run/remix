@@ -1,19 +1,20 @@
 #!/usr/bin/env node
-import { parseArgs } from 'node:util'
-import * as fs from 'node:fs/promises'
+import * as util from 'node:util'
+import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
+import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
 import { displaySummary } from './lib/executor.ts'
-import path from 'node:path'
+import { createWatcher } from './lib/watcher.ts'
 
 let { startServer } = await tsImport('./app/server.tsx', {
   parentURL: import.meta.url,
   tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
 })
 
-let { values, positionals } = parseArgs({
+let { values, positionals } = util.parseArgs({
   args: process.argv.slice(2),
   options: {
     debug: { type: 'boolean', short: 'd' },
@@ -25,56 +26,30 @@ let { values, positionals } = parseArgs({
   allowPositionals: true,
 })
 
-let pattern = positionals[0] || '**/*.test.{ts,tsx}'
-let port = Number(values.port)
-let isWatchMode = values.watch ?? false
+const isBrowserTest = (f: string) => /\.test\.browser\.[^.]+$/.test(f)
 
-function isBrowserTest(file: string): boolean {
-  return /\.test\.browser\.[^.]+$/.test(file)
-}
+const pattern = positionals[0] || '**/*.test?(.browser).{ts,tsx}'
+const port = Number(values.port)
 
 let hasExited = false
 let latestExitCode = 0
+let watcher: ReturnType<typeof createWatcher> | undefined
 let running = false
 let queued = false
 let rerunTimer: NodeJS.Timeout | undefined
 let browserServer: http.Server | undefined
 
-let watcherControllers = new Set<AbortController>()
+process.on('SIGINT', () => cleanupAndExit(latestExitCode))
+process.on('SIGTERM', () => cleanupAndExit(latestExitCode))
 
-function closeWatchers() {
-  for (let controller of watcherControllers) {
-    controller.abort()
+try {
+  await executeRun()
+
+  if (values.watch) {
+    console.log('Watching for changes. Press Ctrl+C to stop.')
   }
-  watcherControllers.clear()
-}
-
-function cleanupAndExit(code: number) {
-  if (hasExited) return
-  hasExited = true
-  closeWatchers()
-  browserServer?.close()
-  process.exit(code)
-}
-
-async function updateWatchers(testFiles: string[]) {
-  closeWatchers()
-
-  for (let file of testFiles) {
-    try {
-      let controller = new AbortController()
-      let watcher = fs.watch(file, { recursive: false, signal: controller.signal })
-      watcherControllers.add(controller)
-      for await (let event of watcher) {
-        queueRerun('file changed')
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        return
-      }
-      continue
-    }
-  }
+} catch {
+  cleanupAndExit(1)
 }
 
 async function executeRun() {
@@ -94,9 +69,12 @@ async function executeRun() {
     let browserFiles = files.filter(isBrowserTest)
     let serverFiles = files.filter((f) => !isBrowserTest(f))
 
-    console.log(`Found ${files.length} test file(s)\n`)
-    if (isWatchMode) {
-      updateWatchers(files)
+    console.log(
+      `Found ${files.length} test file(s) (${serverFiles.length} server, ${browserFiles.length} browser)\n`,
+    )
+    if (values.watch) {
+      watcher ??= createWatcher((file) => queueRerun(file))
+      watcher.update(files)
     }
 
     if (browserFiles.length > 0 && !browserServer) {
@@ -139,8 +117,8 @@ async function executeRun() {
     running = false
     if (queued) {
       queued = false
-      await executeRun()
-    } else if (!isWatchMode) {
+      queueRerun('queued change')
+    } else if (!values.watch) {
       cleanupAndExit(latestExitCode)
     }
   }
@@ -150,7 +128,7 @@ async function discoverTests(pattern: string): Promise<string[]> {
   let files: string[] = []
   let exclude = ['node_modules/**', '.git/**']
 
-  for await (let file of fs.glob(pattern, { cwd: process.cwd(), exclude })) {
+  for await (let file of fsp.glob(pattern, { cwd: process.cwd(), exclude })) {
     files.push(path.resolve(process.cwd(), file))
   }
 
@@ -158,39 +136,25 @@ async function discoverTests(pattern: string): Promise<string[]> {
 }
 
 function queueRerun(reason: string) {
-  if (!isWatchMode || hasExited) return
+  if (!values.watch || hasExited) return
 
-  if (rerunTimer) {
-    clearTimeout(rerunTimer)
-  }
+  clearTimeout(rerunTimer)
 
   rerunTimer = setTimeout(() => {
     rerunTimer = undefined
     if (running) {
       queued = true
-      return
+    } else {
+      console.log(`\n↻ Change detected (${reason}), re-running tests...\n`)
+      void executeRun()
     }
-
-    console.log(`\n↻ Change detected (${reason}), re-running tests...\n`)
-    void executeRun()
   }, 100)
 }
 
-if (isWatchMode) {
-  process.on('SIGINT', () => cleanupAndExit(latestExitCode))
-  process.on('SIGTERM', () => cleanupAndExit(latestExitCode))
-}
-
-// Handle clean shutdown in non-watch mode too
-process.on('SIGINT', () => cleanupAndExit(latestExitCode))
-process.on('SIGTERM', () => cleanupAndExit(latestExitCode))
-
-try {
-  await executeRun()
-
-  if (isWatchMode) {
-    console.log('Watching for changes. Press Ctrl+C to stop.')
-  }
-} catch {
-  cleanupAndExit(1)
+function cleanupAndExit(code: number) {
+  if (hasExited) return
+  hasExited = true
+  watcher?.close()
+  browserServer?.close()
+  process.exit(code)
 }
