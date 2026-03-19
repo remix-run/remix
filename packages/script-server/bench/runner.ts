@@ -97,7 +97,7 @@ let benchmarks: Benchmark[] = [
       let preloadUrls = await scriptServer.preloads(fixture.entryPointUrl)
       assertPreloadUrls(preloadUrls, fixture)
       let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
-      assert.ok(internalUrls.length > 0, 'expected hashed internal module URLs')
+      assert.ok(internalUrls.length > 0, 'expected fingerprinted internal module URLs')
       assertContainsSubstrings(
         internalUrls.join('\n'),
         fixture.expectedPreloadUrlSubstrings,
@@ -116,7 +116,11 @@ function createBenchScriptServer(
 ): ScriptServer {
   let root = path.resolve(import.meta.dirname, '../../..')
   let options: ScriptServerOptions = {
-    fingerprintInternalModules: true,
+    cacheStrategy: {
+      fingerprint: 'source',
+      entryPoints: [fixture.entryPointPattern],
+      buildId: String(Date.now()),
+    },
     root,
     ...fixture.scriptServer,
     ...overrides,

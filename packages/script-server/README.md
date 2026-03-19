@@ -1,17 +1,26 @@
 # script-server
 
-Compile browser JavaScript/TypeScript modules on demand.
+Compile browser JavaScript and TypeScript modules on demand. Map request URLs to files on disk, compile them as ESM, and serve them with configurable caching and optional fingerprinting.
 
 ## Features
 
-- **Route-Based Serving** - Map public URL patterns to file patterns with the same declarative rules used for request handling and import rewriting
-- **Access Control** - Allowed paths must be configured explicitly, with optional deny rules taking precedence
-- **Customizable Caching** - Serve entry points and internal modules with ETags and `Cache-Control: no-cache` by default, with optional URL-based fingerprinting and cache control headers for internal modules
-- **Preloads** - Generate `<link rel="modulepreload">` URLs or `Link` headers for an entry point
-- **Compiled Asset Storage** - Cache compiled assets with pluggable `file-storage` backends
-- **Source Maps and Minification** - Enable inline or external sourcemaps and minify output when needed
+- **Route-Based Serving** - Map public URL patterns to files on disk
+- **Access Control** - Explicit allow and optional deny rules for served files
+- **Preloads** - Generate `<link rel="modulepreload">` URLs or `Link` headers
+- **Conservative Caching** - Stable URLs, ETags, and `Cache-Control: no-cache` by default
+- **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
+- **File Storage Cache** - Reuse compiled modules across server restarts with a `buildId` and file storage backend
+- **Source Maps** - Server either inline or external sourcemaps
+
+## Installation
+
+```sh
+npm i remix
+```
 
 ## Usage
+
+Use `script-server` to serve browser modules from a URL namespace in your app.
 
 ```ts
 import * as path from 'node:path'
@@ -23,16 +32,9 @@ let root = path.resolve(import.meta.dirname, '..')
 let scriptServer = createScriptServer({
   root,
   routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-    {
-      urlPattern: '/scripts/npm/*path',
-      filePattern: 'node_modules/*path',
-    },
+    { urlPattern: '/scripts/app/*path', filePattern: 'app/*path' },
+    { urlPattern: '/scripts/npm/*path', filePattern: 'node_modules/*path' },
   ],
-  entryPoints: ['app/assets/entry.tsx'],
   allow: ['app/**', 'node_modules/**'],
 })
 
@@ -43,149 +45,92 @@ router.get('/scripts/*path', ({ request }) => {
 })
 ```
 
-With this setup:
-
-- Entry points are served at stable URLs like `/scripts/app/assets/entry.tsx`
-- Internal modules are served at stable URLs by default, and can be requested directly if they match `allow`
-- If you enable `fingerprintInternalModules`, internal imports are rewritten to URLs like `/scripts/app/assets/button.tsx.@abc123`
-- Only supported script module files are served by default: `.js`, `.jsx`, `.mjs`, `.mts`, `.ts`, and `.tsx`
+This gives you a `/scripts/*path` endpoint that serves allow-listed modules from `app` and `node_modules`.
 
 ## Routes
 
-Use `routes` to define the public URLs and the corresponding file paths.
+Use `routes` to map public URLs to file-space paths.
 
 ```ts
 let scriptServer = createScriptServer({
   root,
   routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-    {
-      urlPattern: '/scripts/packages/*path',
-      filePattern: '../packages/*path',
-    },
+    { urlPattern: '/scripts/app/*path', filePattern: 'app/*path' },
+    { urlPattern: '/scripts/packages/*path', filePattern: '../packages/*path' },
   ],
-  entryPoints: ['app/assets/entry.tsx'],
   allow: ['app/**', '../packages/**'],
 })
 ```
 
-Script routes use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URLs and file paths. Wildcards in these route patterns must be named (e.g. `*path` rather than `*`). The same params must be present in both patterns so that they can be used to map incoming requests to files and resolved imports back to URLs.
-
-## Caching and Fingerprints
-
-The default caching strategy is intentionally conservative:
-
-- Entry points always use `Cache-Control: no-cache` with ETags
-- Internal modules default to `Cache-Control: no-cache` with ETags
-- Internal modules default to stable, unhashed URLs with ETags
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
-  allow: ['app/**'],
-})
-```
-
-If you want fingerprinted internal URLs, opt in explicitly:
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
-  allow: ['app/**'],
-  fingerprintInternalModules: true,
-})
-```
-
-Fingerprints are based on `sourceText + version`. This means unchanged modules keep the same internal fingerprint even if one of their own dependencies changes.
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
-  allow: ['app/**'],
-  fingerprintInternalModules: true,
-  version: process.env.RELEASE_ID ?? '',
-  internalModuleCacheControl: 'public, max-age=31536000, immutable',
-})
-```
-
-When you choose stronger browser caching, you are also responsible for choosing a `version` that covers whatever non-source changes should invalidate those cached internal responses.
+Route patterns use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URLs and file paths. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs.
 
 ## Access Control
 
-`allow` is required. `deny` is optional and takes precedence over `allow`.
+You must provide an `allow` list to specify which files are allowed to be served. `deny` is optional and takes precedence over `allow`.
 
 ```ts
 let scriptServer = createScriptServer({
   root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/**', '/absolute/path/to/shared'],
   deny: ['app/private/**'],
 })
 ```
 
-Rules are written as filesystem globs and paths:
+Rules for `allow` and `deny` are file paths or globs. Relative values are resolved from `root`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-- Relative rules are resolved from `root`
-- Absolute file paths match exactly
-- Absolute directory paths allow descendants
-- Recursive patterns like `app/**` use Node's built-in glob matching semantics
+## Caching
 
-## Compiled Asset Storage
+By default, modules are served at stable URLs with ETags and `Cache-Control: no-cache`. The browser revalidates instead of caching forever and receives a 304 Not Modified response if the content has not changed. To enable this, the server checks for file changes on every request.
 
-Compiled JavaScript, sourcemaps, and response metadata can be persisted through `fileStorage`.
+You can customize this behavior by setting the `cacheStrategy` option.
+
+### File Storage Cache
+
+If you're serving a production app, you probably want to reuse compiled artifacts across server restarts for one build, so provide a `buildId` and a shared [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend:
 
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let scriptServer = createScriptServer({
   root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/**'],
-  fileStorage: createFsFileStorage('./.cache/script-server'),
+  cacheStrategy: {
+    buildId: process.env.GITHUB_SHA ?? String(Date.now()),
+    fileStorage: createFsFileStorage('.cache/script-server'),
+  },
 })
 ```
 
-If you omit `fileStorage`, `script-server` uses in-memory storage.
+The `buildId` option serves as the key for this cache. In practice, this should typically be a commit hash or build timestamp. Once `buildId` is present, cached modules are treated as immutable for that build instead of being revalidated against the file system on every request.
+
+### Fingerprinting
+
+If you also want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
+
+```ts
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/**'],
+  cacheStrategy: {
+    fingerprint: 'source',
+    entryPoints: ['app/assets/entry.tsx'],
+    buildId: process.env.GITHUB_SHA ?? String(Date.now()),
+  },
+})
+```
+
+Fingerprints are in the format of `.@<fingerprint>` appended to the end of the module URL.
+
+Modules matching `cacheStrategy.entryPoints` keep stable non-fingerprinted URLs. Other served modules are rewritten to fingerprinted URLs and served with `Cache-Control: public, max-age=31536000, immutable`.
+
+Source fingerprints are based on `sourceText + buildId`. The build ID must change for each deployment so that fingerprinted modules are invalidated together.
 
 ## Preloads
 
-Use `preloads()` when rendering HTML so you can add `<link rel="modulepreload">` tags or `Link` headers for an entry point and its transitive dependencies.
+Use `preloads()` when rendering HTML so you can add `<link rel="modulepreload">` tags or `Link` headers for a stable module URL and its transitive dependencies.
 
 ```ts
 let urls = await scriptServer.preloads('/scripts/app/assets/entry.tsx')
@@ -196,59 +141,43 @@ let urls = await scriptServer.preloads('/scripts/app/assets/entry.tsx')
 // ]
 ```
 
-`preloads()` is URL-oriented. Pass the same request path you would use in your `<script type="module" src="...">` tag.
+Pass the same stable non-fingerprinted request path you would use in your `<script type="module" src="...">` tag. Do not pass a fingerprinted URL.
 
-## Source Maps and Minification
-
-Enable sourcemaps with either `'external'` or `'inline'`:
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
-  allow: ['app/**'],
-  sourceMaps: 'external',
-})
-```
-
-By default, sourcemap `sources` are written as browser-visible script paths. If you want real file system paths instead:
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
-  allow: ['app/**'],
-  sourceMaps: 'inline',
-  sourceMapSourcePaths: 'absolute',
-})
-```
+## Minification
 
 Minification happens during the transform step:
 
 ```ts
 let scriptServer = createScriptServer({
   root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/**'],
   minify: true,
+})
+```
+
+## Source Maps
+
+Enable sourcemaps with either `'external'` or `'inline'`:
+
+```ts
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/**'],
+  sourceMaps: 'external',
+})
+```
+
+By default, sourcemap `sources` use URLs so they're presented alongside the compiled output in your browser's developer tools. You can also use file system paths instead:
+
+```ts
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/**'],
+  sourceMaps: 'inline',
+  sourceMapSourcePaths: 'absolute',
 })
 ```
 
@@ -259,13 +188,7 @@ Use `onError` to report unexpected compilation failures or return a custom respo
 ```ts
 let scriptServer = createScriptServer({
   root,
-  routes: [
-    {
-      urlPattern: '/scripts/app/*path',
-      filePattern: 'app/*path',
-    },
-  ],
-  entryPoints: ['app/assets/entry.tsx'],
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/**'],
   onError(error) {
     console.error(error)
@@ -278,7 +201,7 @@ If `onError` returns nothing, `script-server` responds with `500 Internal Server
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `script-server`
-- [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - The route-pattern syntax used for URL and file-space matching
+- [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage backends for compiled asset persistence
 
 ## License

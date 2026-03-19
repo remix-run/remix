@@ -12,7 +12,7 @@ import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 import { generateETag, matchesETag } from './etag.ts'
 import { hashContent } from './hash.ts'
 import type { CompiledRoutes } from './routes.ts'
-import { getTsconfigTransformOptions, typescriptVersion } from './tsconfig.ts'
+import { getTsconfigTransformOptions } from './tsconfig.ts'
 
 let lexerReady = lexerInit
 let preloadTraversalConcurrency = getPreloadTraversalConcurrency()
@@ -78,7 +78,7 @@ interface CachedDependencyRecord {
 }
 
 interface ModuleCompilerOptions {
-  configFingerprint: string
+  buildId?: string
   external: string[]
   fileStorage?: FileStorage
   fingerprintInternalModules: boolean
@@ -86,9 +86,8 @@ interface ModuleCompilerOptions {
   isEntryPoint(absolutePath: string): boolean
   minify: boolean
   routes: CompiledRoutes
-  sourceMapSourcePaths: 'absolute' | 'virtual'
+  sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
-  version: string
 }
 
 interface ResolveModuleResult {
@@ -110,7 +109,7 @@ interface UnresolvedImport {
 
 export interface ModuleCompiler {
   compileModule(absolutePath: string): Promise<ModuleCompileResult>
-  getPreloadUrls(entryUrl: string): Promise<string[]>
+  getPreloadUrls(moduleUrl: string): Promise<string[]>
   resolveRequestPath(absolutePath: string): ResolveModuleResult | null
 }
 
@@ -120,7 +119,9 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let compiledAssets = new Map<string, CachedAssetRecord>()
   let compileInFlight = new Map<string, Promise<ModuleCompileResult>>()
   let resolvedPathsByIdentity = new Map<string, string>()
+  let cacheNamespace = options.buildId === undefined ? 'live' : encodeURIComponent(options.buildId)
   let fileStorage = options.fileStorage ?? createMemoryFileStorage()
+  let buildIsImmutable = options.buildId !== undefined
 
   return {
     async compileModule(absolutePath) {
@@ -147,14 +148,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         compileInFlight.delete(resolved.identityPath)
       }
     },
-    async getPreloadUrls(entryUrl) {
-      let resolved = resolveEntryFromUrl(entryUrl)
+    async getPreloadUrls(moduleUrl) {
+      let resolved = resolveEntryFromUrl(moduleUrl)
       if (!resolved) {
-        throw new Error(`Entry point "${entryUrl}" is outside all configured routes.`)
-      }
-
-      if (!options.isEntryPoint(resolved.identityPath)) {
-        throw new Error(`Entry point "${entryUrl}" does not match any configured entry points.`)
+        throw new Error(`Module "${moduleUrl}" is outside all configured routes.`)
       }
 
       let visited = new Set([resolved.identityPath])
@@ -193,11 +190,22 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     resolved: ResolveModuleResult,
   ): Promise<ModuleCompileResult> {
     let record = await getDependencyRecordByIdentity(resolved.identityPath, resolved.resolvedPath)
-    let directImportUrls = await Promise.all(record.deps.map((depPath) => getServedUrl(depPath)))
-    let directImportHash = await hashContent(JSON.stringify(directImportUrls))
     let cacheKey = await getCompiledAssetKey(record.identityPath)
 
     let existing = compiledAssets.get(record.identityPath)
+    if (existing && buildIsImmutable) {
+      return toModuleCompileResult(record, existing)
+    }
+
+    let stored = await readCompiledAsset(cacheKey)
+    if (stored && buildIsImmutable) {
+      compiledAssets.set(record.identityPath, stored)
+      return toModuleCompileResult(record, stored)
+    }
+
+    let directImportUrls = await Promise.all(record.deps.map((depPath) => getServedUrl(depPath)))
+    let directImportHash = await hashContent(JSON.stringify(directImportUrls))
+
     if (
       existing &&
       existing.sourceStamp === record.sourceStamp &&
@@ -206,7 +214,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       return toModuleCompileResult(record, existing)
     }
 
-    let stored = await readCompiledAsset(cacheKey)
     if (
       stored &&
       stored.sourceStamp === record.sourceStamp &&
@@ -311,6 +318,33 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     resolvedPath?: string,
   ): Promise<DependencyRecord | PendingDependencyRecord> {
     let cached = dependencyRecords.get(identityPath)
+    if (cached && buildIsImmutable) {
+      return cached
+    }
+
+    let cacheKey = await getDependencyRecordKey(identityPath)
+    if (buildIsImmutable) {
+      let stored = await readDependencyRecord(cacheKey)
+      if (stored) {
+        let record: DependencyRecord = {
+          deps: stored.deps,
+          fingerprint: stored.fingerprint,
+          identityPath,
+          imports: stored.imports,
+          rawCode: stored.rawCode,
+          resolvedPath: stored.resolvedPath,
+          sourceMapHash: stored.sourceMapHash,
+          sourceStamp: stored.sourceStamp,
+          sourcemap: stored.sourcemap,
+          stableUrlPathname: stored.stableUrlPathname,
+          transformConfigHash: stored.transformConfigHash,
+        }
+        resolvedPathsByIdentity.set(identityPath, stored.resolvedPath)
+        dependencyRecords.set(identityPath, record)
+        return record
+      }
+    }
+
     let nextResolvedPath =
       resolvedPath ?? resolvedPathsByIdentity.get(identityPath) ?? resolveActualPath(identityPath)
     if (!nextResolvedPath) {
@@ -331,7 +365,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       return cached
     }
 
-    let cacheKey = await getDependencyRecordKey(identityPath)
     let stored = await readDependencyRecord(cacheKey)
     if (
       stored &&
@@ -378,7 +411,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let sourcemap = analysis.sourcemap
       ? rewriteSourceMap(analysis.sourcemap, nextResolvedPath, stableUrlPathname)
       : null
-    let fingerprint = await hashContent(sourceText + '\0' + options.version)
+    let fingerprint = await hashContent(sourceText + '\0' + (options.buildId ?? ''))
 
     return {
       fingerprint,
@@ -535,11 +568,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   async function getCompiledAssetKey(identityPath: string): Promise<string> {
-    return `compiled/${options.configFingerprint}/${await hashContent(identityPath)}.json`
+    return `compiled/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
   async function getDependencyRecordKey(identityPath: string): Promise<string> {
-    return `dependency-records/${options.configFingerprint}/${await hashContent(identityPath)}.json`
+    return `dependency-records/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
   async function readCompiledAsset(key: string): Promise<CachedAssetRecord | null> {
@@ -613,30 +646,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     if (!resolvedPath) return null
     return resolveModulePath(resolvedPath)
   }
-}
-
-export function createConfigFingerprint(options: {
-  external: string[]
-  fingerprintInternalModules: boolean
-  minify: boolean
-  routes: readonly { filePattern: string; urlPattern: string }[]
-  sourceMapSourcePaths: 'absolute' | 'virtual'
-  sourceMaps?: 'external' | 'inline'
-  version: string
-}): Promise<string> {
-  return hashContent(
-    JSON.stringify({
-      esbuildVersion: esbuild.version,
-      external: options.external,
-      fingerprintInternalModules: options.fingerprintInternalModules,
-      minify: options.minify,
-      routes: options.routes,
-      sourceMapSourcePaths: options.sourceMapSourcePaths,
-      sourceMaps: options.sourceMaps ?? null,
-      typescriptVersion,
-      version: options.version,
-    }),
-  )
 }
 
 export function resolveModulePath(absolutePath: string): ResolveModuleResult | null {

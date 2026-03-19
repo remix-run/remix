@@ -1,13 +1,8 @@
 import * as path from 'node:path'
-import { randomUUID } from 'node:crypto'
-import { createFsFileStorage } from 'remix/file-storage/fs'
 import { createScriptServer } from 'remix/script-server'
 import { scriptsBase } from '../routes.ts'
 
 let repoRoot = path.resolve(import.meta.dirname, '../../../..')
-let scriptServerStorage = createFsFileStorage(
-  path.resolve(import.meta.dirname, '..', '..', 'tmp', 'script-server'),
-)
 let isDevelopment = process.env.NODE_ENV === 'development'
 
 export let scriptServer = createScriptServer({
@@ -22,12 +17,16 @@ export let scriptServer = createScriptServer({
       filePattern: 'packages/*path',
     },
   ],
-  entryPoints: ['demos/bookstore/app/assets/*.tsx'],
   allow: ['demos/bookstore/app/**', 'packages/**'],
-  fileStorage: scriptServerStorage,
-  fingerprintInternalModules: !isDevelopment,
-  internalModuleCacheControl: isDevelopment ? 'no-cache' : 'public, max-age=31536000',
-  minify: !isDevelopment,
   sourceMaps: isDevelopment ? 'external' : undefined,
-  version: isDevelopment ? '' : (process.env.GITHUB_SHA ?? randomUUID()),
+  minify: !isDevelopment,
+  cacheStrategy: isDevelopment
+    ? {
+        fingerprint: false,
+      }
+    : {
+        fingerprint: 'source',
+        entryPoints: ['demos/bookstore/app/assets/*.tsx'],
+        buildId: process.env.GITHUB_SHA ?? String(Date.now()),
+      },
 })

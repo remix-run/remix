@@ -1,13 +1,62 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import type { FileStorage } from '@remix-run/file-storage'
-import {
-  createConfigFingerprint,
-  createModuleCompiler,
-  createResponseForModule,
-} from './modules.ts'
+import { createModuleCompiler, createResponseForModule } from './modules.ts'
 import { compileRoutes, normalizeFilePath } from './routes.ts'
 import type { ScriptRouteDefinition } from './routes.ts'
+
+let fingerprintedCacheControl = 'public, max-age=31536000, immutable'
+
+export type CacheStrategyOptions =
+  | ({
+      /**
+       * Serve all modules at stable non-fingerprinted URLs with `Cache-Control: no-cache`.
+       */
+      fingerprint?: false
+      entryPoints?: never
+    } & (
+      | {
+          buildId?: never
+          fileStorage?: never
+        }
+      | {
+          /**
+           * Per-build cache namespace used for shared transform artifacts.
+           *
+           * When present, cached modules are treated as immutable for that build.
+           */
+          buildId: string
+          /**
+           * Optional shared storage backend for compiled artifact persistence.
+           *
+           * Requires `buildId` so stored artifacts are isolated per build.
+           */
+          fileStorage: FileStorage
+        }
+    ))
+  | {
+      /**
+       * Rewrite non-entry modules to `.@fingerprint` URLs based on source text and `buildId`.
+       * Modules matching `entryPoints` keep their stable non-fingerprinted URLs.
+       */
+      fingerprint: 'source'
+      /**
+       * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs.
+       * Relative values are resolved from `root`.
+       */
+      entryPoints: readonly string[]
+      /**
+       * Per-build invalidation token that must change whenever fingerprinted module URLs
+       * and cached transform artifacts should be invalidated together.
+       */
+      buildId: string
+      /**
+       * Optional shared storage backend for compiled artifact persistence.
+       *
+       * When provided, cached modules are treated as immutable for this build.
+       */
+      fileStorage?: FileStorage
+    }
 
 export interface ScriptServerOptions {
   /** Routes that map public URL patterns to file-space patterns. */
@@ -16,10 +65,6 @@ export interface ScriptServerOptions {
    * Root directory used to resolve relative file-space patterns. Defaults to `process.cwd()`.
    */
   root?: string
-  /**
-   * File-space entry point paths or filesystem glob patterns. Relative values are resolved from `root`.
-   */
-  entryPoints?: readonly string[]
   /**
    * File-space allow-list paths or filesystem glob patterns. Relative values are resolved from `root`.
    */
@@ -36,29 +81,17 @@ export interface ScriptServerOptions {
   sourceMaps?: 'inline' | 'external'
   /**
    * Controls the source paths written into sourcemap `sources`.
-   * - `'virtual'` (default): use the stable server path (e.g. `'/scripts/app/entry.ts'`)
+   * - `'url'` (default): use the stable server path (e.g. `'/scripts/app/entry.ts'`)
    * - `'absolute'`: use the original filesystem path on disk
    */
-  sourceMapSourcePaths?: 'virtual' | 'absolute'
+  sourceMapSourcePaths?: 'url' | 'absolute'
   /**
-   * When true, rewrite non-entry internal modules to `.@fingerprint` URLs derived from source text
-   * and the optional `version`. Defaults to false.
-   */
-  fingerprintInternalModules?: boolean
-  /**
-   * Optional version string used when generating internal module fingerprints.
-   */
-  version?: string
-  /**
-   * Cache-Control value to use for internal modules and their sourcemaps.
+   * Controls how served modules are cached and whether compiled artifacts are reused across
+   * server restarts for a specific build.
    *
-   * @default 'no-cache'
+   * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
    */
-  internalModuleCacheControl?: string
-  /**
-   * Optional file storage backend for compiled artifact persistence. Defaults to in-memory storage.
-   */
-  fileStorage?: FileStorage
+  cacheStrategy?: CacheStrategyOptions
   /**
    * Minify emitted modules.
    */
@@ -79,16 +112,16 @@ export interface ScriptServer {
    */
   fetch(request: Request): Promise<Response | null>
   /**
-   * Returns preload URLs for the given entry request path, ordered shallowest-first.
+   * Returns preload URLs for the given module request path, ordered shallowest-first.
    */
-  preloads(entryPoint: string): Promise<string[]>
+  preloads(moduleUrl: string): Promise<string[]>
 }
 
 /**
  * Create the server-side scripts server.
  *
- * Compiles TypeScript/JavaScript modules on demand with optional source-based internal
- * module fingerprints, ETag revalidation, and configurable route/file-space mapping.
+ * Compiles TypeScript/JavaScript modules on demand with optional source-based URL
+ * fingerprinting, ETag revalidation, and configurable route/file-space mapping.
  *
  * @param options Server configuration
  * @returns A {@link ScriptServer} with `fetch()` and `preloads()` methods
@@ -98,7 +131,6 @@ export interface ScriptServer {
  * let scriptServer = createScriptServer({
  *   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
  *   allow: ['app/**'],
- *   entryPoints: ['app/entry.tsx'],
  * })
  *
  * route('/scripts/*path', ({ request }) => scriptServer.fetch(request))
@@ -107,48 +139,43 @@ export interface ScriptServer {
 export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let root = fs.realpathSync(path.resolve(options.root ?? process.cwd()))
   let sourceMaps = options.sourceMaps
-  let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'virtual'
+  let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
   let externalRaw = options.external
+  let cacheStrategy = normalizeCacheStrategyOptions(options.cacheStrategy)
   let external: string[] = Array.isArray(externalRaw)
     ? externalRaw
     : externalRaw
       ? [externalRaw]
       : []
-  let fingerprintInternalModules = options.fingerprintInternalModules ?? false
-  let version = options.version ?? ''
-  let internalModuleCacheControl = options.internalModuleCacheControl ?? 'no-cache'
+  let fingerprintInternalModules = cacheStrategy.fingerprint === 'source'
+  let buildId = cacheStrategy.buildId
+  let internalModuleCacheControl = fingerprintInternalModules
+    ? fingerprintedCacheControl
+    : 'no-cache'
   let minify = options.minify ?? false
   let onError = options.onError ?? defaultErrorHandler
   let routes = compileRoutes({
     root,
     routes: options.routes,
   })
-  let entryPointMatchers = createEntryPointMatchers(options.entryPoints ?? [], root)
+  let entryPointMatchers = createEntryPointMatchers(
+    cacheStrategy.fingerprint === 'source' ? cacheStrategy.entryPoints : [],
+    root,
+  )
   let allowMatchers = createFileMatchers(options.allow, root)
   let denyMatchers = createFileMatchers(options.deny ?? [], root)
-  let moduleCompilerPromise = createConfigFingerprint({
+  let moduleCompiler = createModuleCompiler({
+    buildId,
     external,
+    fileStorage: cacheStrategy.fileStorage,
     fingerprintInternalModules,
+    isAllowed,
+    isEntryPoint,
     minify,
-    routes: options.routes,
+    routes,
     sourceMapSourcePaths,
     sourceMaps,
-    version,
-  }).then((configFingerprint) =>
-    createModuleCompiler({
-      configFingerprint,
-      external,
-      fileStorage: options.fileStorage,
-      fingerprintInternalModules,
-      isAllowed,
-      isEntryPoint,
-      minify,
-      routes,
-      sourceMapSourcePaths,
-      sourceMaps,
-      version,
-    }),
-  )
+  })
 
   function internalServerError(): Response {
     return new Response('Internal Server Error', {
@@ -190,7 +217,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
-      let moduleCompiler = await moduleCompilerPromise
       let pathname = new URL(request.url).pathname
       let isSourceMapRequest = pathname.endsWith('.map')
       let withoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
@@ -223,7 +249,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
 
         return createResponseForModule(result, {
           cacheControl: isEntry ? 'no-cache' : internalModuleCacheControl,
-          ifNoneMatch: requestedToken === null ? ifNoneMatch : ifNoneMatch,
+          ifNoneMatch,
           isSourceMapRequest,
           method: request.method,
         })
@@ -233,9 +259,14 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       }
     },
 
-    async preloads(entryPoint) {
-      let moduleCompiler = await moduleCompilerPromise
-      return moduleCompiler.getPreloadUrls(entryPoint)
+    async preloads(moduleUrl) {
+      if (/\.@[a-z0-9]+(?:\.map)?$/.test(moduleUrl)) {
+        throw new Error(
+          `Preload URLs must use stable non-fingerprinted module paths, received "${moduleUrl}"`,
+        )
+      }
+
+      return moduleCompiler.getPreloadUrls(moduleUrl)
     },
   }
 }
@@ -300,4 +331,73 @@ function isSameOrDescendantPath(filePath: string, directoryPath: string): boolea
 
 function containsGlobSyntax(pattern: string): boolean {
   return /[*?[\]{}()!+@]/.test(pattern)
+}
+
+function normalizeCacheStrategyOptions(options: CacheStrategyOptions | undefined):
+  | { fingerprint: false; buildId?: undefined; fileStorage?: undefined }
+  | { fingerprint: false; buildId: string; fileStorage: FileStorage }
+  | {
+      buildId: string
+      entryPoints: readonly string[]
+      fileStorage?: FileStorage
+      fingerprint: 'source'
+    } {
+  if (!options) {
+    return { fingerprint: false }
+  }
+
+  if (
+    options.fingerprint !== undefined &&
+    options.fingerprint !== false &&
+    options.fingerprint !== 'source'
+  ) {
+    throw new TypeError(
+      `Invalid cacheStrategy.fingerprint "${String(options.fingerprint)}". Expected false or "source".`,
+    )
+  }
+
+  if (options.fingerprint === 'source') {
+    if (typeof options.buildId !== 'string' || options.buildId.length === 0) {
+      throw new TypeError('cacheStrategy.buildId must be a non-empty string')
+    }
+
+    if (!Array.isArray(options.entryPoints) || options.entryPoints.length === 0) {
+      throw new TypeError('cacheStrategy.entryPoints must be a non-empty array')
+    }
+
+    return {
+      buildId: options.buildId,
+      entryPoints: options.entryPoints,
+      fileStorage: options.fileStorage,
+      fingerprint: 'source',
+    }
+  }
+
+  if (options.entryPoints !== undefined) {
+    throw new TypeError(
+      'cacheStrategy.entryPoints is only supported when cacheStrategy.fingerprint is "source"',
+    )
+  }
+
+  if (options.fileStorage === undefined && options.buildId === undefined) {
+    return { fingerprint: false }
+  }
+
+  if (options.fileStorage === undefined) {
+    throw new TypeError('cacheStrategy.fileStorage is required when cacheStrategy.buildId is set')
+  }
+
+  if (options.buildId === undefined) {
+    throw new TypeError('cacheStrategy.buildId is required when cacheStrategy.fileStorage is set')
+  }
+
+  if (typeof options.buildId !== 'string' || options.buildId.length === 0) {
+    throw new TypeError('cacheStrategy.buildId must be a non-empty string')
+  }
+
+  return {
+    buildId: options.buildId,
+    fileStorage: options.fileStorage,
+    fingerprint: false,
+  }
 }

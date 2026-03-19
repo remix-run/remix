@@ -5,6 +5,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { FileStorage } from '@remix-run/file-storage'
+import type { CacheStrategyOptions } from './script-server.ts'
 
 import { createScriptServer } from './script-server.ts'
 
@@ -29,7 +30,6 @@ function createTestServer(
 ) {
   return createScriptServer({
     allow: ['app/**', 'app/node_modules/**'],
-    entryPoints: ['app/entry.ts', 'app/entry.tsx'],
     routes: [
       { urlPattern: '/scripts/app/*path', filePattern: 'app/*path' },
       { urlPattern: '/scripts/npm/*path', filePattern: 'app/node_modules/*path' },
@@ -85,6 +85,29 @@ function createRecordingFileStorage() {
   }
 
   return { fileStorage: recordingFileStorage, gets, sets }
+}
+
+function sourceCacheStrategy(
+  buildId = 'build',
+  entryPoints: readonly string[] | undefined = ['app/entry.ts', 'app/entry.tsx'],
+  fileStorage?: FileStorage,
+): CacheStrategyOptions {
+  return {
+    fingerprint: 'source',
+    buildId,
+    entryPoints,
+    fileStorage,
+  }
+}
+
+function stableSharedCacheStrategy(
+  buildId = 'build',
+  fileStorage = createMemoryFileStorage(),
+): CacheStrategyOptions {
+  return {
+    buildId,
+    fileStorage,
+  }
 }
 
 async function assertInternalServerError(response: Response): Promise<void> {
@@ -152,7 +175,7 @@ describe('script-server', () => {
   it('supports .mts modules', async () => {
     await write(dir, 'app/entry.mts', 'export const value = 1')
     let scriptServer = createTestServer(dir, {
-      entryPoints: ['app/entry.mts'],
+      cacheStrategy: sourceCacheStrategy('build', ['app/entry.mts']),
     })
 
     let response = await get(scriptServer, '/scripts/app/entry.mts')
@@ -168,25 +191,30 @@ describe('script-server', () => {
     assert.equal(response, null)
   })
 
-  it('uses internalModuleCacheControl only for internal modules', async () => {
+  it('uses immutable caching for fingerprinted modules only', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let scriptServer = createTestServer(dir, {
-      internalModuleCacheControl: 'public, max-age=60',
+      cacheStrategy: sourceCacheStrategy(),
     })
 
     let entryResponse = await get(scriptServer, '/scripts/app/entry.ts')
-    let depResponse = await get(scriptServer, '/scripts/app/dep.ts')
-    assert.ok(entryResponse && depResponse)
+    assert.ok(entryResponse)
+    let entryBody = await entryResponse.text()
+    let depMatch = entryBody.match(/\/scripts\/app\/dep\.ts\.@([a-z0-9]+)/)
+    assert.ok(depMatch)
+
+    let depResponse = await get(scriptServer, `/scripts/app/dep.ts.@${depMatch[1]}`)
+    assert.ok(depResponse)
     assert.equal(entryResponse.headers.get('Cache-Control'), 'no-cache')
-    assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=60')
+    assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
   })
 
   it('fingerprints internal modules with .@fingerprint URLs and returns 404 on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let scriptServer = createTestServer(dir, {
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy(),
     })
 
     let entryResponse = await get(scriptServer, '/scripts/app/entry.ts')
@@ -200,21 +228,21 @@ describe('script-server', () => {
     assert.equal(depResponse.status, 200)
     assert.ok(depResponse.headers.get('ETag'))
 
-    let unhashed = await get(scriptServer, '/scripts/app/dep.ts')
-    assert.equal(unhashed, null)
+    let nonFingerprinted = await get(scriptServer, '/scripts/app/dep.ts')
+    assert.equal(nonFingerprinted, null)
 
     let mismatch = await get(scriptServer, '/scripts/app/dep.ts.@wronghash')
     assert.ok(mismatch)
     assert.equal(mismatch.status, 404)
   })
 
-  it('does not cascade internal fingerprints to unchanged direct importers', async () => {
+  it('keeps fingerprinted module graphs stable within a build', async () => {
     await write(dir, 'app/entry.ts', 'import "./mid.ts"\nexport const entry = true')
     await write(dir, 'app/mid.ts', 'import "./leaf.ts"\nexport const mid = true')
     await write(dir, 'app/leaf.ts', 'export const leaf = 1')
 
     let scriptServer = createTestServer(dir, {
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy(),
     })
 
     let before = await scriptServer.preloads('/scripts/app/entry.ts')
@@ -228,20 +256,18 @@ describe('script-server', () => {
     let afterLeaf = after.find((url) => url.includes('/scripts/app/leaf.ts.@'))
 
     assert.equal(afterMid, beforeMid)
-    assert.notEqual(afterLeaf, beforeLeaf)
+    assert.equal(afterLeaf, beforeLeaf)
   })
 
-  it('uses version to change internal fingerprints', async () => {
+  it('uses buildId to change internal fingerprints', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
     let serverA = createTestServer(dir, {
-      fingerprintInternalModules: true,
-      version: '',
+      cacheStrategy: sourceCacheStrategy('build-a'),
     })
     let serverB = createTestServer(dir, {
-      fingerprintInternalModules: true,
-      version: 'v2',
+      cacheStrategy: sourceCacheStrategy('build-b'),
     })
 
     let bodyA = await (await get(serverA, '/scripts/app/entry.ts'))!.text()
@@ -253,12 +279,44 @@ describe('script-server', () => {
     assert.notEqual(matchA[1], matchB[1])
   })
 
+  it('picks up source changes from disk when buildId is omitted', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let scriptServer = createTestServer(dir)
+
+    let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(firstResponse)
+    assert.match(await firstResponse.text(), /value = 1/)
+
+    await write(dir, 'app/entry.ts', 'export const value = 2')
+
+    let secondResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(secondResponse)
+    assert.match(await secondResponse.text(), /value = 2/)
+  })
+
+  it('keeps serving cached modules within a build when source files change on disk', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let fileStorage = createMemoryFileStorage()
+    let cacheStrategy = stableSharedCacheStrategy('build', fileStorage)
+
+    let firstServer = createTestServer(dir, { cacheStrategy })
+    let firstResponse = await get(firstServer, '/scripts/app/entry.ts')
+    assert.ok(firstResponse)
+    assert.match(await firstResponse.text(), /value = 1/)
+
+    await write(dir, 'app/entry.ts', 'export const value = 2')
+
+    let secondServer = createTestServer(dir, { cacheStrategy })
+    let secondResponse = await get(secondServer, '/scripts/app/entry.ts')
+    assert.ok(secondResponse)
+    assert.match(await secondResponse.text(), /value = 1/)
+  })
+
   it('keeps entry-point imports stable even when entry points are also dependencies', async () => {
     await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
     await write(dir, 'app/b.ts', 'export const b = true')
     let scriptServer = createTestServer(dir, {
-      entryPoints: ['app/a.ts', 'app/b.ts'],
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts']),
     })
 
     let response = await get(scriptServer, '/scripts/app/a.ts')
@@ -272,7 +330,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry: number = 1')
     await write(dir, 'app/dep.ts', 'export const dep: number = 2')
     let scriptServer = createTestServer(dir, {
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy(),
       sourceMaps: 'external',
     })
 
@@ -304,7 +362,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import { value } from "./alias/value.ts"\nexport { value }')
 
     let scriptServer = createTestServer(dir, {
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy(),
     })
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
@@ -321,7 +379,7 @@ describe('script-server', () => {
     await write(dir, 'app/c.ts', 'export const c = true')
 
     let scriptServer = createTestServer(dir, {
-      fingerprintInternalModules: true,
+      cacheStrategy: sourceCacheStrategy(),
     })
 
     let urls = await scriptServer.preloads('/scripts/app/entry.ts')
@@ -329,6 +387,34 @@ describe('script-server', () => {
     assert.match(urls[1], /\/scripts\/app\/a\.ts\.@/)
     assert.match(urls[2], /\/scripts\/app\/b\.ts\.@/)
     assert.match(urls[3], /\/scripts\/app\/c\.ts\.@/)
+  })
+
+  it('preloads accepts stable non-fingerprinted URLs beyond configured entry points', async () => {
+    await write(dir, 'app/entry.ts', 'import "./a.ts"\nexport const entry = true')
+    await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
+    await write(dir, 'app/b.ts', 'export const b = true')
+
+    let scriptServer = createTestServer(dir, {
+      cacheStrategy: sourceCacheStrategy('build', ['app/entry.ts']),
+    })
+
+    let urls = await scriptServer.preloads('/scripts/app/a.ts')
+    assert.match(urls[0], /\/scripts\/app\/a\.ts\.@/)
+    assert.match(urls[1], /\/scripts\/app\/b\.ts\.@/)
+  })
+
+  it('preloads rejects fingerprinted module URLs', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+
+    let scriptServer = createTestServer(dir, {
+      cacheStrategy: sourceCacheStrategy(),
+    })
+
+    await assert.rejects(
+      () => scriptServer.preloads('/scripts/app/dep.ts.@abc123'),
+      /Preload URLs must use stable non-fingerprinted module paths/,
+    )
   })
 
   it('preloads uses jsxImportSource inherited through tsconfig extends', async () => {
@@ -351,7 +437,7 @@ describe('script-server', () => {
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
 
       let scriptServer = createTestServer(caseDir, {
-        fingerprintInternalModules: true,
+        cacheStrategy: sourceCacheStrategy(),
       })
 
       let urls = await scriptServer.preloads('/scripts/app/entry.tsx')
@@ -361,7 +447,7 @@ describe('script-server', () => {
     }
   })
 
-  it('reuses persisted dependency analysis and invalidates it when tsconfig changes', async () => {
+  it('reuses persisted dependency analysis within a build and reloads it for a new build', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writeJson(caseDir, 'tsconfig.base.json', {
@@ -387,8 +473,7 @@ describe('script-server', () => {
 
       let recordingStorage = createRecordingFileStorage()
       let firstServer = createTestServer(caseDir, {
-        fileStorage: recordingStorage.fileStorage,
-        fingerprintInternalModules: true,
+        cacheStrategy: sourceCacheStrategy('build', undefined, recordingStorage.fileStorage),
       })
       let firstUrls = await firstServer.preloads('/scripts/app/entry.tsx')
       assert.ok(firstUrls.some((url) => url.includes('custom-a/jsx-runtime.ts.@')))
@@ -399,8 +484,7 @@ describe('script-server', () => {
 
       let getsBeforeSecondServer = recordingStorage.gets.length
       let secondServer = createTestServer(caseDir, {
-        fileStorage: recordingStorage.fileStorage,
-        fingerprintInternalModules: true,
+        cacheStrategy: sourceCacheStrategy('build', undefined, recordingStorage.fileStorage),
       })
       let secondUrls = await secondServer.preloads('/scripts/app/entry.tsx')
       assert.ok(secondUrls.some((url) => url.includes('custom-a/jsx-runtime.ts.@')))
@@ -419,8 +503,7 @@ describe('script-server', () => {
       })
 
       let thirdServer = createTestServer(caseDir, {
-        fileStorage: recordingStorage.fileStorage,
-        fingerprintInternalModules: true,
+        cacheStrategy: sourceCacheStrategy('build-2', undefined, recordingStorage.fileStorage),
       })
       let thirdUrls = await thirdServer.preloads('/scripts/app/entry.tsx')
       assert.ok(thirdUrls.some((url) => url.includes('custom-b/jsx-runtime.ts.@')))
@@ -433,7 +516,7 @@ describe('script-server', () => {
   it('supports absolute entry-point patterns', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
     let scriptServer = createTestServer(dir, {
-      entryPoints: [entryPath],
+      cacheStrategy: sourceCacheStrategy('build', [entryPath]),
     })
 
     let response = await get(scriptServer, '/scripts/app/entry-abs.ts')
@@ -447,7 +530,6 @@ describe('script-server', () => {
       () =>
         createScriptServer({
           allow: [path.join(dir, 'app')],
-          entryPoints: [path.join(dir, 'app/entry.ts')],
           root: dir,
           routes: [
             {
@@ -455,6 +537,7 @@ describe('script-server', () => {
               filePattern: `${path.join(dir, 'app')}/*path`,
             },
           ],
+          cacheStrategy: sourceCacheStrategy('build', [path.join(dir, 'app/entry.ts')]),
         }),
       /must be relative to script-server root/,
     )
@@ -524,16 +607,69 @@ describe('script-server', () => {
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
   })
 
-  it('reuses compiled assets through a shared fileStorage backend', async () => {
+  it('reuses compiled assets through a shared fileStorage backend in stable mode', async () => {
     await write(dir, 'app/entry.ts', 'export const cached = true')
     let fileStorage = createMemoryFileStorage()
-    let firstServer = createTestServer(dir, { fileStorage })
-    let secondServer = createTestServer(dir, { fileStorage })
+    let cacheStrategy = stableSharedCacheStrategy('build', fileStorage)
+    let firstServer = createTestServer(dir, { cacheStrategy })
+    let secondServer = createTestServer(dir, { cacheStrategy })
 
     let firstResponse = await get(firstServer, '/scripts/app/entry.ts')
     let secondResponse = await get(secondServer, '/scripts/app/entry.ts')
     assert.ok(firstResponse && secondResponse)
     assert.equal(await firstResponse.text(), await secondResponse.text())
+  })
+
+  it('rejects stable shared storage without a buildId', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          cacheStrategy: {
+            fileStorage: createMemoryFileStorage(),
+          } as CacheStrategyOptions,
+        }),
+      /cacheStrategy\.buildId is required when cacheStrategy\.fileStorage is set/,
+    )
+  })
+
+  it('rejects stable buildId without shared storage', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          cacheStrategy: {
+            buildId: 'build',
+          } as CacheStrategyOptions,
+        }),
+      /cacheStrategy\.fileStorage is required when cacheStrategy\.buildId is set/,
+    )
+  })
+
+  it('rejects source fingerprinting without a non-empty buildId', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          cacheStrategy: {
+            fingerprint: 'source',
+            buildId: '',
+            entryPoints: ['app/entry.ts'],
+          },
+        }),
+      /cacheStrategy\.buildId must be a non-empty string/,
+    )
+  })
+
+  it('rejects source fingerprinting without entry points', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          cacheStrategy: { fingerprint: 'source', buildId: 'build' } as CacheStrategyOptions,
+        }),
+      /cacheStrategy\.entryPoints must be a non-empty array/,
+    )
   })
 
   it('calls onError for unexpected compilation failures', async () => {
