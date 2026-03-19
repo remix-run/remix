@@ -30,12 +30,7 @@ import type {
 import type { Predicate, WhereInput } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
 import { normalizeColumnInput } from '../references.ts'
-import type {
-  AnyRelation,
-  AnyTable,
-  LoadedRelationMap,
-  OrderByClause,
-} from '../table.ts'
+import type { AnyRelation, AnyTable, LoadedRelationMap, OrderByClause } from '../table.ts'
 import { getPrimaryKeyObject, getTableColumns, getTableName } from '../table.ts'
 
 import {
