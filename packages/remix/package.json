@@ -74,7 +74,8 @@
     "./session/memory-storage": "./src/session/memory-storage.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
-    "./testing": "./src/testing.ts",
+    "./test": "./src/test.ts",
+    "./test/browser": "./src/test/browser.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -303,9 +304,13 @@
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
       },
-      "./testing": {
-        "types": "./dist/testing.d.ts",
-        "default": "./dist/testing.js"
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
+      },
+      "./test/browser": {
+        "types": "./dist/test/browser.d.ts",
+        "default": "./dist/test/browser.js"
       },
       "./package.json": "./package.json"
     },
