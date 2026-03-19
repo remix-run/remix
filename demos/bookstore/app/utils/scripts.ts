@@ -17,16 +17,14 @@ export let scriptServer = createScriptServer({
       filePattern: 'packages/*path',
     },
   ],
-  allow: ['demos/bookstore/app/**', 'packages/**'],
+  allow: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts', 'packages/*/src/**'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   cacheStrategy: isDevelopment
-    ? {
-        fingerprint: false,
-      }
+    ? undefined
     : {
         fingerprint: 'source',
-        entryPoints: ['demos/bookstore/app/assets/*.tsx'],
+        entryPoints: ['demos/bookstore/app/assets/*'],
         buildId: process.env.GITHUB_SHA ?? String(Date.now()),
       },
 })
