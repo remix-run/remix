@@ -1,5 +1,6 @@
 import type { Controller, RequestContext } from 'remix/fetch-router'
 import { Frame } from 'remix/component'
+import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
@@ -48,7 +49,8 @@ export default {
 
     api: {
       actions: {
-        async add({ db, get }) {
+        async add({ get }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
@@ -75,7 +77,8 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async update({ db, get }) {
+        async update({ get }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { bookId, quantity, redirect: redirectTo } = s.parse(cartUpdateSchema, formData)
@@ -98,7 +101,8 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async remove({ db, get }) {
+        async remove({ get }) {
+          let db = get(Database)
           let session = get(Session)
           let formData = get(FormData)
           let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
@@ -126,7 +130,8 @@ export default {
   },
 } satisfies Controller<typeof routes.cart>
 
-export async function toggleCart({ db, get }: RequestContext) {
+export async function toggleCart({ get }: RequestContext) {
+  let db = get(Database)
   let session = get(Session)
   let formData = get(FormData)
   let { bookId } = s.parse(bookIdSchema, formData)

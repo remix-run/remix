@@ -2,6 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
@@ -120,7 +121,8 @@ export default {
       )
     },
 
-    async action({ db, get }) {
+    async action({ get }) {
+      let db = get(Database)
       let session = get(Session)
       let formData = get(FormData)
       let user = getCurrentUser()
@@ -172,7 +174,8 @@ export default {
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    async confirmation({ db, params }) {
+    async confirmation({ get, params }) {
+      let db = get(Database)
       let user = getCurrentUser()
       let orderId = parseId(params.orderId)
       let order =

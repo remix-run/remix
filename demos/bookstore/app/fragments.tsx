@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
+import { Database } from 'remix/data-table'
 import type { routes } from './routes.ts'
 import { CartButton } from './assets/cart-button.tsx'
 import { CartItems } from './assets/cart-items.tsx'
@@ -14,7 +15,8 @@ import { routes as appRoutes } from './routes.ts'
 export default {
   middleware: [loadAuth()],
   actions: {
-    async cartButton({ db, params }) {
+    async cartButton({ get, params }) {
+      let db = get(Database)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 

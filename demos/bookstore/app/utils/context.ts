@@ -7,13 +7,13 @@ import type { User } from '../data/schema.ts'
 import { Session } from './session.ts'
 
 // Context key for attaching user data to request context
-let USER_KEY = createContextKey<User>()
+const CurrentUser = createContextKey<User>()
 
 /**
  * Get the current authenticated user from request context.
  */
 export function getCurrentUser(): User {
-  return getContext().get(USER_KEY)
+  return getContext().get(CurrentUser)
 }
 
 /**
@@ -32,7 +32,7 @@ export function getCurrentUserSafely(): User | null {
  * Set the current authenticated user in request context.
  */
 export function setCurrentUser(user: User): void {
-  getContext().set(USER_KEY, user)
+  getContext().set(CurrentUser, user)
 }
 
 /**
