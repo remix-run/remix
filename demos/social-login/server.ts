@@ -1,7 +1,14 @@
+import * as fs from 'node:fs'
 import * as http from 'node:http'
+import { fileURLToPath } from 'node:url'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { router } from './app/router.ts'
+let envFilePath = fileURLToPath(new URL('.env', import.meta.url))
+if (fs.existsSync(envFilePath)) {
+  process.loadEnvFile?.(envFilePath)
+}
+
+let { router } = await import('./app/router.ts')
 
 let server = http.createServer(
   createRequestListener(async request => {
