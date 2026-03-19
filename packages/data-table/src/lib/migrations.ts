@@ -1,4 +1,4 @@
-import type { Database as DataManipulationDatabase } from './database.ts'
+import type { Database } from './database.ts'
 import type { ColumnDefinition, ForeignKeyAction, IndexDefinition } from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
 import type { SqlStatement } from './sql.ts'
@@ -8,11 +8,6 @@ import type { AnyTable } from './table.ts'
  * Controls how each migration is wrapped in transactions.
  */
 export type MigrationTransactionMode = 'auto' | 'required' | 'none'
-
-/**
- * Database API available inside migrations.
- */
-export type Database = DataManipulationDatabase
 
 /**
  * Runtime context passed to migration `up`/`down` handlers.

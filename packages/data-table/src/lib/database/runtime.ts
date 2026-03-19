@@ -31,7 +31,6 @@ import type {
   LoadedRelationMap,
   PrimaryKeyInput,
   TableName,
-  TablePrimaryKey,
   TableRow,
   TableRowWith,
 } from '../table.ts'

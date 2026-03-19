@@ -3,3 +3,5 @@ BREAKING CHANGE: Remove the `remix/data-table/sql` export. Import `SqlStatement`
 `remix/data-table/sql-helpers` remains available for adapter-facing SQL utilities.
 
 `remix/data-table` now exports the `Database` class as a runtime value. You can construct a database directly with `new Database(adapter, options)` or keep using `createDatabase(adapter, options)`, which now delegates to the class constructor.
+
+`remix/data-table/migrations` no longer exports a separate `Database` type alias. Import `Database` from `remix/data-table` when you need the migration `db` type directly.

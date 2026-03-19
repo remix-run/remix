@@ -1,25 +1,15 @@
-import type {
-  ColumnDefinition,
-  DatabaseAdapter,
-  DataManipulationResult,
-  TransactionOptions,
-  TransactionToken,
-} from './adapter.ts'
+import type { ColumnDefinition, DatabaseAdapter, TransactionToken } from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
 import { QueryBuilder } from './database/query-builder.ts'
 import { Database, withDatabaseInternals } from './database/runtime.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
-import type { SqlStatement } from './sql.ts'
 import type {
   AnyRelation,
   AnyTable,
-  LoadedRelationMap,
   OrderDirection,
-  PrimaryKeyInput,
   TableName,
   TablePrimaryKey,
   TableRow,
-  TableRowWith,
   TableValidate,
   tableMetadataKey,
   TimestampConfig,

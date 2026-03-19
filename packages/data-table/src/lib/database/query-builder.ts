@@ -20,7 +20,6 @@ import type {
   QueryColumnName,
   QueryColumnTypeMap,
   QueryColumns,
-  QueryForTable,
   RelationMapForSourceName,
   ReturningInput,
   SelectedAliasRow,
@@ -36,9 +35,6 @@ import type {
   AnyTable,
   LoadedRelationMap,
   OrderByClause,
-  TableName,
-  TablePrimaryKey,
-  TableRow,
 } from '../table.ts'
 import { getPrimaryKeyObject, getTableColumns, getTableName } from '../table.ts'
 
