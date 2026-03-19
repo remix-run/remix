@@ -12,6 +12,14 @@ import type {
   TransactionToken,
 } from './adapter.ts'
 import { column } from './column.ts'
+import { toTableRef } from './migrations/helpers.ts'
+import {
+  normalizeChecksum,
+  hasMigrationJournal,
+  loadJournalRows,
+  insertJournalRow,
+  deleteJournalRow,
+} from './migrations/journal-store.ts'
 import { parseMigrationFilename } from './migrations/filename.ts'
 import { createMigrationRegistry } from './migrations/registry.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
@@ -1346,5 +1354,196 @@ describe('migration filename parsing', () => {
       () => parseMigrationFilename('create_users_table.ts'),
       /Expected format YYYYMMDDHHmmss_name\.ts/,
     )
+  })
+})
+
+describe('toTableRef', () => {
+  it('parses a plain table name', () => {
+    assert.deepEqual(toTableRef('users'), { name: 'users' })
+  })
+
+  it('parses a schema-qualified table name', () => {
+    assert.deepEqual(toTableRef('public.users'), { schema: 'public', name: 'users' })
+  })
+
+  it('throws for three dot-separated segments', () => {
+    assert.throws(() => toTableRef('a.b.c'), /Invalid table name/)
+  })
+
+  it('throws for four or more dot-separated segments', () => {
+    assert.throws(() => toTableRef('a.b.c.d'), /Invalid table name/)
+  })
+})
+
+describe('normalizeChecksum', () => {
+  it('returns the explicit checksum when present', () => {
+    let migration = createMigration({ async up() {}, async down() {} })
+    assert.equal(
+      normalizeChecksum({ id: '001', name: 'test', checksum: 'abc123', migration }),
+      'abc123',
+    )
+  })
+
+  it('computes a SHA-256 hex digest when no explicit checksum is given', () => {
+    let migration = createMigration({ async up() {}, async down() {} })
+    let checksum = normalizeChecksum({ id: '001', name: 'test', migration })
+    assert.match(checksum, /^[0-9a-f]{64}$/)
+  })
+
+  it('does not fall back to id:name (old insecure fallback)', () => {
+    let migration = createMigration({ async up() {}, async down() {} })
+    let checksum = normalizeChecksum({ id: '001', name: 'test', migration })
+    assert.notEqual(checksum, '001:test')
+  })
+
+  it('produces different checksums for migrations with different up/down implementations', () => {
+    let migrationA = createMigration({
+      async up({ schema }) {
+        await schema.createTable(createIdTable('users'))
+      },
+      async down() {},
+    })
+    let migrationB = createMigration({
+      async up({ schema }) {
+        await schema.createTable(createIdTable('accounts'))
+      },
+      async down() {},
+    })
+    assert.notEqual(
+      normalizeChecksum({ id: '001', name: 'same_name', migration: migrationA }),
+      normalizeChecksum({ id: '001', name: 'same_name', migration: migrationB }),
+    )
+  })
+
+  it('detects drift when a migration implementation changes and no explicit checksum is provided', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let original = createMigration({
+      async up({ schema }) {
+        await schema.createTable(createIdTable('users'))
+      },
+      async down() {},
+    })
+
+    await createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'create_users', migration: original },
+    ]).up()
+
+    let edited = createMigration({
+      async up({ schema }) {
+        await schema.createTable(createIdTable('accounts'))
+      },
+      async down() {},
+    })
+
+    await assert.rejects(
+      () =>
+        createMigrationRunner(adapter, [
+          { id: '20260101000000', name: 'create_users', migration: edited },
+        ]).up(),
+      /checksum drift detected/,
+    )
+  })
+})
+
+describe('journal store SQL generation', () => {
+  function makeExecuteCapture(dialect = 'memory') {
+    let captured: SqlStatement[] = []
+    let adapter = {
+      dialect,
+      async execute(request: DataManipulationRequest) {
+        if (request.operation.kind === 'raw') {
+          captured.push(request.operation.sql)
+        }
+        return { rows: [] }
+      },
+      async hasTable() {
+        return false
+      },
+    } as unknown as DatabaseAdapter
+    return { adapter, captured }
+  }
+
+  it('quotes table names in loadJournalRows SQL', async () => {
+    let { adapter, captured } = makeExecuteCapture()
+    await loadJournalRows(adapter, 'my_journal')
+    assert.ok(captured[0].text.includes('"my_journal"'), `expected quoted name in: ${captured[0].text}`)
+  })
+
+  it('quotes table names in insertJournalRow SQL', async () => {
+    let { adapter, captured } = makeExecuteCapture()
+    await insertJournalRow(adapter, 'my_journal', { id: '1', name: 'test', checksum: 'abc', batch: 1 })
+    assert.ok(captured[0].text.includes('"my_journal"'), `expected quoted name in: ${captured[0].text}`)
+  })
+
+  it('quotes table names in deleteJournalRow SQL', async () => {
+    let { adapter, captured } = makeExecuteCapture()
+    await deleteJournalRow(adapter, 'my_journal', '1')
+    assert.ok(captured[0].text.includes('"my_journal"'), `expected quoted name in: ${captured[0].text}`)
+  })
+
+  it('quotes schema-qualified table names', async () => {
+    let { adapter, captured } = makeExecuteCapture()
+    await loadJournalRows(adapter, 'myschema.migrations')
+    assert.ok(
+      captured[0].text.includes('"myschema"."migrations"'),
+      `expected quoted schema.table in: ${captured[0].text}`,
+    )
+  })
+
+  it('escapes double-quotes inside table names', async () => {
+    let { adapter, captured } = makeExecuteCapture()
+    await loadJournalRows(adapter, 'tricky"table')
+    assert.ok(
+      captured[0].text.includes('"tricky""table"'),
+      `expected escaped double-quote in: ${captured[0].text}`,
+    )
+  })
+
+  it('uses mysql identifier quoting for raw journal SQL', async () => {
+    let { adapter, captured } = makeExecuteCapture('mysql')
+    await loadJournalRows(adapter, 'my_journal')
+    assert.ok(captured[0].text.includes('`my_journal`'), `expected mysql quote in: ${captured[0].text}`)
+  })
+
+  it('escapes backticks inside mysql table names', async () => {
+    let { adapter, captured } = makeExecuteCapture('mysql')
+    await loadJournalRows(adapter, 'tricky`table')
+    assert.ok(
+      captured[0].text.includes('`tricky``table`'),
+      `expected escaped mysql quote in: ${captured[0].text}`,
+    )
+  })
+})
+
+describe('hasMigrationJournal', () => {
+  it('returns true when the adapter reports the table exists', async () => {
+    let adapter = { async hasTable() { return true } } as unknown as DatabaseAdapter
+    assert.equal(await hasMigrationJournal(adapter, 'migrations'), true)
+  })
+
+  it('returns false when the adapter reports the table does not exist', async () => {
+    let adapter = { async hasTable() { return false } } as unknown as DatabaseAdapter
+    assert.equal(await hasMigrationJournal(adapter, 'migrations'), false)
+  })
+
+  it('passes the parsed table reference to hasTable', async () => {
+    let received: TableRef | undefined
+    let adapter = {
+      async hasTable(table: TableRef) {
+        received = table
+        return false
+      },
+    } as unknown as DatabaseAdapter
+    await hasMigrationJournal(adapter, 'public.migrations')
+    assert.deepEqual(received, { schema: 'public', name: 'migrations' })
+  })
+
+  it('propagates errors from hasTable (previously swallowed by catch {})', async () => {
+    let adapter = {
+      async hasTable() {
+        throw new Error('connection lost')
+      },
+    } as unknown as DatabaseAdapter
+    await assert.rejects(() => hasMigrationJournal(adapter, 'migrations'), /connection lost/)
   })
 })

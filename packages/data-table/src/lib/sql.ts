@@ -1,12 +1,25 @@
 /**
+ * Internal brand symbol used to distinguish genuine `SqlStatement` objects
+ * (produced by `sql\`...\`` or `rawSql()`) from arbitrary plain objects that
+ * happen to share the same shape.  The symbol is intentionally NOT exported so
+ * that user-land objects cannot accidentally or maliciously forge it.
+ */
+const sqlStatementBrand = Symbol('data-table.sqlStatement')
+
+/**
  * Parameterized SQL payload.
  *
  * The `text` may contain positional placeholders (`?`) or dialect-native
  * placeholders (for example `$1`, `$2`) depending on compiler stage.
+ *
+ * Always construct values with `sql\`...\`` or `rawSql()` — only objects
+ * produced by those helpers carry the internal brand that makes them
+ * composable inside `sql\`...\`` template literals.
  */
 export type SqlStatement = {
   text: string
   values: unknown[]
+  readonly [sqlStatementBrand]?: true
 }
 
 /**
@@ -47,24 +60,26 @@ export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlSta
   }
 
   return {
+    [sqlStatementBrand]: true,
     text,
     values: parameters,
   }
 }
 
 /**
- * Returns `true` when a value matches the {@link SqlStatement} shape.
+ * Returns `true` when a value is a branded `SqlStatement` produced by
+ * `sql\`...\`` or `rawSql()`.  Plain objects that merely share the
+ * `{ text, values }` shape are intentionally rejected to prevent
+ * user-controlled data from being interpolated as raw SQL.
  * @param value Value to inspect.
- * @returns Whether the value is a {@link SqlStatement} object.
+ * @returns Whether the value is a branded SQL statement object.
  */
 export function isSqlStatement(value: unknown): value is SqlStatement {
   if (typeof value !== 'object' || value === null) {
     return false
   }
 
-  let statement = value as { text?: unknown; values?: unknown }
-
-  return typeof statement.text === 'string' && Array.isArray(statement.values)
+  return (value as Record<symbol, unknown>)[sqlStatementBrand] === true
 }
 
 /**
@@ -80,5 +95,5 @@ export function isSqlStatement(value: unknown): value is SqlStatement {
  * ```
  */
 export function rawSql(text: string, values: unknown[] = []): SqlStatement {
-  return { text, values }
+  return { [sqlStatementBrand]: true, text, values }
 }

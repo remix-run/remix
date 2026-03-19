@@ -57,7 +57,7 @@ import {
 import type { Predicate, WhereInput } from './operators.ts'
 import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
-import { rawSql, isSqlStatement } from './sql.ts'
+import { rawSql } from './sql.ts'
 import type { DataManipulationOperation } from './adapter.ts'
 import type { Pretty } from './types.ts'
 import { normalizeColumnInput } from './references.ts'
@@ -822,7 +822,7 @@ class DatabaseRuntime implements Database {
     statement: string | SqlStatement,
     values: unknown[] = [],
   ): Promise<DataManipulationResult> {
-    let sqlStatement = isSqlStatement(statement) ? statement : rawSql(statement, values)
+    let sqlStatement = typeof statement === 'string' ? rawSql(statement, values) : statement
 
     return this[executeOperation]({
       kind: 'raw',

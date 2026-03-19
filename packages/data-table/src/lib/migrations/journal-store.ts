@@ -1,13 +1,54 @@
+import { createHash } from 'node:crypto'
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
+import { quoteTableRef } from '../sql-helpers.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
+import { toTableRef } from './helpers.ts'
 
+/**
+ * Returns a stable content-based checksum for a migration.
+ *
+ * If the descriptor already carries an explicit `checksum` (e.g. supplied by
+ * a file-based registry that hashed the source on disk), that value is used
+ * as-is.  Otherwise a SHA-256 digest of the `up` and `down` function source
+ * text is computed.  This catches accidental edits to already-applied
+ * migrations that would previously have gone undetected because the fallback
+ * only used the migration `id` and `name`.
+ * @param migration Migration descriptor to normalize.
+ * @returns Stable checksum string.
+ */
 export function normalizeChecksum(migration: MigrationDescriptor): string {
   if (migration.checksum) {
     return migration.checksum
   }
 
-  return migration.id + ':' + migration.name
+  let content = migration.migration.up.toString() + '\n' + migration.migration.down.toString()
+  return createHash('sha256').update(content).digest('hex')
+}
+
+/**
+ * Quotes an individual SQL identifier using the adapter's native syntax.
+ * @param adapter Database adapter that will execute the SQL.
+ * @param value Identifier text to quote.
+ * @returns Quoted SQL identifier.
+ */
+function quoteIdentifier(adapter: DatabaseAdapter, value: string): string {
+  if (adapter.dialect === 'mysql') {
+    return '`' + value.replace(/`/g, '``') + '`'
+  }
+
+  return '"' + value.replace(/"/g, '""') + '"'
+}
+
+/**
+ * Returns a fully-quoted SQL table reference for use in raw journal SQL.
+ * Handles optional schema-qualified names (e.g. "myschema.migrations").
+ * @param adapter Database adapter that will execute the SQL.
+ * @param tableName Journal table name, optionally schema-qualified.
+ * @returns Fully quoted table reference.
+ */
+function quoteJournalTable(adapter: DatabaseAdapter, tableName: string): string {
+  return quoteTableRef(toTableRef(tableName), (value) => quoteIdentifier(adapter, value))
 }
 
 export async function ensureMigrationJournal(
@@ -17,7 +58,7 @@ export async function ensureMigrationJournal(
   await adapter.migrate({
     operation: {
       kind: 'createTable',
-      table: { name: tableName },
+      table: toTableRef(tableName),
       ifNotExists: true,
       columns: {
         id: { type: 'varchar', length: 64, nullable: false, primaryKey: true },
@@ -34,29 +75,20 @@ export async function hasMigrationJournal(
   adapter: DatabaseAdapter,
   tableName: string,
 ): Promise<boolean> {
-  try {
-    await adapter.execute({
-      operation: {
-        kind: 'raw',
-        sql: rawSql('select 1 from ' + tableName + ' limit 1'),
-      },
-    })
-
-    return true
-  } catch {
-    return false
-  }
+  return adapter.hasTable(toTableRef(tableName))
 }
 
 export async function loadJournalRows(
   adapter: DatabaseAdapter,
   tableName: string,
 ): Promise<MigrationJournalRow[]> {
+  let quotedTable = quoteJournalTable(adapter, tableName)
+
   let result = await adapter.execute({
     operation: {
       kind: 'raw',
       sql: rawSql(
-        'select id, name, checksum, batch, applied_at from ' + tableName + ' order by id asc',
+        'select id, name, checksum, batch, applied_at from ' + quotedTable + ' order by id asc',
       ),
     },
   })
@@ -83,15 +115,15 @@ export async function insertJournalRow(
   },
   transaction?: TransactionToken,
 ): Promise<void> {
+  let quotedTable = quoteJournalTable(adapter, tableName)
+
   await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql('insert into ' + tableName + ' (id, name, checksum, batch) values (?, ?, ?, ?)', [
-        row.id,
-        row.name,
-        row.checksum,
-        row.batch,
-      ]),
+      sql: rawSql(
+        'insert into ' + quotedTable + ' (id, name, checksum, batch) values (?, ?, ?, ?)',
+        [row.id, row.name, row.checksum, row.batch],
+      ),
     },
     transaction,
   })
@@ -103,10 +135,12 @@ export async function deleteJournalRow(
   id: string,
   transaction?: TransactionToken,
 ): Promise<void> {
+  let quotedTable = quoteJournalTable(adapter, tableName)
+
   await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql('delete from ' + tableName + ' where id = ?', [id]),
+      sql: rawSql('delete from ' + quotedTable + ' where id = ?', [id]),
     },
     transaction,
   })
