@@ -178,14 +178,11 @@ let googleProvider = createGoogleAuthProvider({
 })
 
 router.get(routes.auth.session.login, () => {
-  return new Response(
-    `<a href="${routes.auth.google.login.href()}">Login with Google</a>`,
-    {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-      },
+  return new Response(`<a href="${routes.auth.google.login.href()}">Login with Google</a>`, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
     },
-  )
+  })
 })
 
 router.get(routes.auth.google.login, createExternalAuthLoginRequestHandler(googleProvider))
@@ -251,9 +248,140 @@ On failures:
 - [Facebook Login](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/)
 - [X OAuth 2.0 and Log in with X](https://docs.x.com/resources/fundamentals/authentication/guides/log-in-with-x)
 
+## Built-in External Auth Providers
+
+When one of the built-in providers matches your provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, and X use built-in custom OAuth flows.
+
+```ts
+import {
+  createAuth0AuthProvider,
+  createExternalAuthLoginRequestHandler,
+  createFacebookAuthProvider,
+  createGoogleAuthProvider,
+  createGitHubAuthProvider,
+  createMicrosoftAuthProvider,
+  createOktaAuthProvider,
+  createXAuthProvider,
+} from 'remix/auth'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  auth: {
+    auth0: {
+      login: '/login/auth0',
+      callback: '/auth/auth0/callback',
+    },
+    facebook: {
+      login: '/login/facebook',
+      callback: '/auth/facebook/callback',
+    },
+    github: {
+      login: '/login/github',
+      callback: '/auth/github/callback',
+    },
+    google: {
+      login: '/login/google',
+      callback: '/auth/google/callback',
+    },
+    microsoft: {
+      login: '/login/microsoft',
+      callback: '/auth/microsoft/callback',
+    },
+    okta: {
+      login: '/login/okta',
+      callback: '/auth/okta/callback',
+    },
+    x: {
+      login: '/login/x',
+      callback: '/auth/x/callback',
+    },
+  },
+})
+
+let auth0Provider = createAuth0AuthProvider({
+  domain: env.AUTH0_DOMAIN,
+  clientId: env.AUTH0_CLIENT_ID,
+  clientSecret: env.AUTH0_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
+})
+
+let facebookProvider = createFacebookAuthProvider({
+  clientId: env.FACEBOOK_CLIENT_ID,
+  clientSecret: env.FACEBOOK_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.facebook.callback.href(), env.APP_ORIGIN),
+})
+
+let githubProvider = createGitHubAuthProvider({
+  clientId: env.GITHUB_CLIENT_ID,
+  clientSecret: env.GITHUB_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
+})
+
+let googleProvider = createGoogleAuthProvider({
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
+})
+
+let microsoftProvider = createMicrosoftAuthProvider({
+  tenant: 'organizations',
+  clientId: env.MICROSOFT_CLIENT_ID,
+  clientSecret: env.MICROSOFT_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.microsoft.callback.href(), env.APP_ORIGIN),
+})
+
+let oktaProvider = createOktaAuthProvider({
+  issuer: env.OKTA_ISSUER,
+  clientId: env.OKTA_CLIENT_ID,
+  clientSecret: env.OKTA_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.okta.callback.href(), env.APP_ORIGIN),
+})
+
+let xProvider = createXAuthProvider({
+  clientId: env.X_CLIENT_ID,
+  clientSecret: env.X_CLIENT_SECRET,
+  redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
+})
+
+router.get(routes.auth.auth0.login, createExternalAuthLoginRequestHandler(auth0Provider))
+router.get(routes.auth.facebook.login, createExternalAuthLoginRequestHandler(facebookProvider))
+router.get(routes.auth.github.login, createExternalAuthLoginRequestHandler(githubProvider))
+router.get(routes.auth.google.login, createExternalAuthLoginRequestHandler(googleProvider))
+router.get(routes.auth.microsoft.login, createExternalAuthLoginRequestHandler(microsoftProvider))
+router.get(routes.auth.okta.login, createExternalAuthLoginRequestHandler(oktaProvider))
+router.get(routes.auth.x.login, createExternalAuthLoginRequestHandler(xProvider))
+```
+
+Notes:
+
+- OIDC auth providers use discovery by default at `/.well-known/openid-configuration`
+- pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
+- default OIDC scopes are `openid profile email`
+- wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
+- `createGoogleAuthProvider()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
+- `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
+- `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
+- `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
+- use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches `writeSession()`
+
+Default scopes for OAuth providers that don't use OIDC discovery:
+
+- GitHub: `read:user user:email`
+- Facebook: `public_profile email`
+- X: `tweet.read users.read`
+
+Pass `scopes` if you need a different set for a provider.
+
+Provider notes:
+
+- `createGitHubAuthProvider()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
+- `createFacebookAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://graph.facebook.com/me?fields=id,name,email,picture`
+- `createXAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://api.x.com/2/users/me`
+- these helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
+
 ## Custom Auth Providers
 
-For most custom providers, use `createOIDCAuthProvider()`. That is the public extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint.
+Use `createOIDCAuthProvider()` directly for custom external auth providers. This is the extension point for providers that support OpenID Connect discovery, authorization code flow, and a userinfo endpoint. Reach for a custom OAuth provider implementation only when the provider does not support OIDC.
 
 ```ts
 import {
@@ -306,141 +434,6 @@ router.get(
   }),
 )
 ```
-
-## Built-in OIDC Providers
-
-`remix/auth` includes built-in support for Google, Microsoft, Okta, and Auth0 using the same OIDC runtime.
-
-```ts
-import {
-  createAuth0AuthProvider,
-  createExternalAuthLoginRequestHandler,
-  createGoogleAuthProvider,
-  createMicrosoftAuthProvider,
-  createOktaAuthProvider,
-} from 'remix/auth'
-import { route } from 'remix/fetch-router/routes'
-
-let routes = route({
-  auth: {
-    google: {
-      login: '/login/google',
-      callback: '/auth/google/callback',
-    },
-    microsoft: {
-      login: '/login/microsoft',
-      callback: '/auth/microsoft/callback',
-    },
-    okta: {
-      login: '/login/okta',
-      callback: '/auth/okta/callback',
-    },
-    auth0: {
-      login: '/login/auth0',
-      callback: '/auth/auth0/callback',
-    },
-  },
-})
-
-let googleProvider = createGoogleAuthProvider({
-  clientId: env.GOOGLE_CLIENT_ID,
-  clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
-})
-
-let microsoftProvider = createMicrosoftAuthProvider({
-  tenant: 'organizations',
-  clientId: env.MICROSOFT_CLIENT_ID,
-  clientSecret: env.MICROSOFT_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.microsoft.callback.href(), env.APP_ORIGIN),
-})
-
-let oktaProvider = createOktaAuthProvider({
-  issuer: env.OKTA_ISSUER,
-  clientId: env.OKTA_CLIENT_ID,
-  clientSecret: env.OKTA_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.okta.callback.href(), env.APP_ORIGIN),
-})
-
-let auth0Provider = createAuth0AuthProvider({
-  domain: env.AUTH0_DOMAIN,
-  clientId: env.AUTH0_CLIENT_ID,
-  clientSecret: env.AUTH0_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.auth0.callback.href(), env.APP_ORIGIN),
-})
-
-router.get(routes.auth.google.login, createExternalAuthLoginRequestHandler(googleProvider))
-router.get(routes.auth.microsoft.login, createExternalAuthLoginRequestHandler(microsoftProvider))
-router.get(routes.auth.okta.login, createExternalAuthLoginRequestHandler(oktaProvider))
-router.get(routes.auth.auth0.login, createExternalAuthLoginRequestHandler(auth0Provider))
-```
-
-Notes:
-
-- OIDC auth providers use discovery by default at `/.well-known/openid-configuration`
-- pass `metadata` when you want to skip discovery or `discoveryUrl` when the metadata document lives elsewhere
-- default OIDC scopes are `openid profile email`
-- wrappers only fill in provider-specific defaults and names; they do not use a separate auth model
-- `createGoogleAuthProvider()` uses the same OIDC runtime with Google's published endpoints wired in directly, so it does not need a discovery request
-- `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
-- `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
-- `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches `writeSession()`
-
-## Custom OAuth Providers
-
-Use the built-in provider helpers when you want a standard browser redirect flow for providers that need behavior beyond the generic OIDC runtime.
-
-```ts
-import {
-  createExternalAuthLoginRequestHandler,
-  createGitHubAuthProvider,
-  createXAuthProvider,
-} from 'remix/auth'
-import { route } from 'remix/fetch-router/routes'
-
-let routes = route({
-  auth: {
-    github: {
-      login: '/login/github',
-      callback: '/auth/github/callback',
-    },
-    x: {
-      login: '/login/x',
-      callback: '/auth/x/callback',
-    },
-  },
-})
-
-let githubProvider = createGitHubAuthProvider({
-  clientId: env.GITHUB_CLIENT_ID,
-  clientSecret: env.GITHUB_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.github.callback.href(), env.APP_ORIGIN),
-})
-
-let xProvider = createXAuthProvider({
-  clientId: env.X_CLIENT_ID,
-  clientSecret: env.X_CLIENT_SECRET,
-  redirectUri: new URL(routes.auth.x.callback.href(), env.APP_ORIGIN),
-})
-
-router.get(routes.auth.github.login, createExternalAuthLoginRequestHandler(githubProvider))
-router.get(routes.auth.x.login, createExternalAuthLoginRequestHandler(xProvider))
-```
-
-Default scopes:
-
-- GitHub: `read:user user:email`
-- X: `tweet.read users.read`
-
-Pass `scopes` if you need a different set for a provider.
-
-Provider notes:
-
-- `createGitHubAuthProvider()` may issue a second API request to `/user/emails` when the primary profile payload does not include an email address
-- `createXAuthProvider()` uses OAuth 2.0 Authorization Code with PKCE and loads the authenticated user from `https://api.x.com/2/users/me`
-- `createFacebookAuthProvider()` is also available when you want the Facebook Login flow instead of X
-- these helpers expose normalized results through `result.account`, `result.profile`, and `result.tokens` in `writeSession()` and `onSuccess()`
 
 ## Related Packages
 
