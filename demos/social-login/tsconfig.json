@@ -1,14 +1,24 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable",
+      "DOM.AsyncIterable"
+    ],
+    "types": [
+      "node"
+    ],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "remix/component",
+    "preserveSymlinks": true
   }
 }
