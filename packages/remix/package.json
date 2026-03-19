@@ -310,7 +310,7 @@
       "./package.json": "./package.json"
     },
     "bin": {
-      "remix-test": "./node_modules/@remix-run/testing/dist/cli.js"
+      "remix-test": "./node_modules/@remix-run/test/dist/cli.js"
     }
   },
   "devDependencies": {
@@ -351,7 +351,7 @@
     "@remix-run/data-table-sqlite": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
-    "@remix-run/testing": "workspace:^",
+    "@remix-run/test": "workspace:^",
     "@remix-run/assert": "workspace:^"
   },
   "scripts": {
@@ -362,6 +362,6 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix-test": "./node_modules/@remix-run/testing/src/cli.ts"
+    "remix-test": "./node_modules/@remix-run/test/src/cli.ts"
   }
 }

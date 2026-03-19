@@ -24,7 +24,7 @@ packages:
   - packages/script-server/bench
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
-  - packages/testing/demos/*
+  - packages/test/demos/*
   - scripts
 
 shellEmulator: true

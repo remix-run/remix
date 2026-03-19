@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/testing'
+import { describe, it } from '@remix-run/test'
 
 describe('DOM Tests', () => {
   it('can interact with DOM', async () => {

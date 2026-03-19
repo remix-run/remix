@@ -93,7 +93,7 @@ function initializeScriptServer(testPattern: string) {
     let remixDir = path.resolve(process.cwd(), './node_modules/remix')
 
     // TODO: This is messy - how can we clean this up?
-    let isInRemixMonorepo = serverDir.endsWith('packages/testing/src/lib/server')
+    let isInRemixMonorepo = serverDir.endsWith('packages/test/src/lib/server')
     if (isInRemixMonorepo) {
       remixPkgJsonPath = path.resolve(process.cwd(), '../remix/package.json')
       remixDir = path.resolve(process.cwd(), '../remix')
