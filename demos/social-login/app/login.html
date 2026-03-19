@@ -11,6 +11,32 @@
       box-sizing: border-box;
     }
 
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-size: inherit;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       width: 100vw;
@@ -38,7 +64,7 @@
     .login-header h1 {
       margin-bottom: 0.5rem;
       font-size: 1.875rem;
-      font-weight: 700;
+      font-weight: inherit;
       color: #111827;
     }
 
