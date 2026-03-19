@@ -42,12 +42,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     let disconnected = new Promise<void>((resolve) => browser!.on('disconnected', () => resolve()))
 
+    displayResults(results)
+
     if (!options.ui) {
       await close()
       return { results, close: async () => {}, disconnected: Promise.resolve() }
     }
-
-    displayResults(results)
 
     return { results, close, disconnected }
   } catch (error) {
