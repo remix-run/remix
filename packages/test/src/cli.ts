@@ -108,7 +108,7 @@ async function executeRun() {
         browserServer = await startServer(port, browserFiles)
       }
 
-      let { results, close } = await runBrowserTests({
+      let { results, close, disconnected } = await runBrowserTests({
         baseUrl: `http://localhost:${port}`,
         debug: values.debug,
         devtools: values.devtools,
@@ -120,10 +120,13 @@ async function executeRun() {
 
       if (values.ui) {
         console.log('\nBrowser is open. Press Ctrl+C to close.')
-        await new Promise<void>((resolve) => {
-          process.once('SIGINT', resolve)
-          process.once('SIGTERM', resolve)
-        })
+        await Promise.race([
+          disconnected,
+          new Promise<void>((resolve) => {
+            process.once('SIGINT', resolve)
+            process.once('SIGTERM', resolve)
+          }),
+        ])
         await close()
       }
     }

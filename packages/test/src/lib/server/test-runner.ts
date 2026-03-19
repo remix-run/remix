@@ -25,7 +25,7 @@ export interface TestResults {
 
 export async function runBrowserTests(
   options: TestRunOptions,
-): Promise<{ results: TestResults; close: () => Promise<void> }> {
+): Promise<{ results: TestResults; close: () => Promise<void>; disconnected: Promise<void> }> {
   let browser: Browser | undefined
 
   try {
@@ -53,12 +53,14 @@ export async function runBrowserTests(
       browser = undefined
     }
 
+    let disconnected = new Promise<void>((resolve) => browser!.on('disconnected', () => resolve()))
+
     if (!options.ui) {
       await close()
-      return { results, close: async () => {} }
+      return { results, close: async () => {}, disconnected: Promise.resolve() }
     }
 
-    return { results, close }
+    return { results, close, disconnected }
   } catch (error) {
     await browser?.close()
     throw error
