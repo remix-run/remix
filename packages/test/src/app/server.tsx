@@ -87,15 +87,12 @@ function initializeScriptServer(absoluteFiles: string[]) {
     let testPrefix = '@test'
     testFiles = relativeFiles.map((f) => routes.scripts.href({ path: `${testPrefix}/${f}` }))
 
-    let remixPkgJsonPath = path.resolve(process.cwd(), './node_modules/remix/package.json')
-    let remixDir = path.resolve(process.cwd(), './node_modules/remix')
-
     // TODO: This is messy - how can we clean this up?
     let isInRemixMonorepo = serverDir.endsWith('packages/test/src/app')
-    if (isInRemixMonorepo) {
-      remixPkgJsonPath = path.resolve(process.cwd(), '../remix/package.json')
-      remixDir = path.resolve(process.cwd(), '../remix')
-    }
+    let remixPkgJsonPath = isInRemixMonorepo
+      ? path.resolve(serverDir, '../../../../packages/remix/package.json')
+      : fileURLToPath(import.meta.resolve('remix/package.json'))
+    let remixDir = path.dirname(remixPkgJsonPath)
 
     let remixPkgJson = JSON.parse(await fs.readFile(remixPkgJsonPath, 'utf-8'))
     let remixPackages = Object.keys(remixPkgJson.dependencies).filter((dep: string) =>

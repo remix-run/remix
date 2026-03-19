@@ -81,6 +81,7 @@ async function executeRun() {
       browserServer = await startServer(port, browserFiles)
     }
 
+    let startTime = performance.now()
     let [serverResult, browserResult] = await Promise.all([
       serverFiles.length > 0 ? runServerTests(serverFiles) : null,
       browserFiles.length > 0
@@ -95,7 +96,7 @@ async function executeRun() {
 
     let totalPassed = (serverResult?.passed ?? 0) + (browserResult?.results.passed ?? 0)
     let totalFailed = (serverResult?.failed ?? 0) + (browserResult?.results.failed ?? 0)
-    displaySummary(totalPassed, totalFailed)
+    displaySummary(totalPassed, totalFailed, performance.now() - startTime)
 
     if (values.ui && browserResult) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')

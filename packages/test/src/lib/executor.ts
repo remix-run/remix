@@ -112,7 +112,6 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
     let tests = fileMap.get(file)!
     let displayPath = file.replace(`${cwd}/`, './')
     let envLabel = env ? ` \x1b[2m[${env}]\x1b[0m` : ''
-    console.log(`\n${normalizeFilePath(displayPath)}${envLabel}`)
 
     let suiteMap = new Map<string, typeof tests>()
     for (let test of tests) {
@@ -124,17 +123,20 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
     }
 
     for (let [suiteName, suiteTests] of suiteMap) {
-      console.log(`  ${suiteName}:`)
+      let totalDuration = suiteTests.reduce((sum, t) => sum + t.duration, 0)
+      let suiteHasFailed = suiteTests.some((t) => t.status === 'failed')
+      let suiteColor = suiteHasFailed ? '\x1b[31m' : '\x1b[32m'
+      console.log(`\x1b[2m▶\x1b[0m ${suiteColor}${suiteName}\x1b[0m (${totalDuration.toFixed(2)}ms)${envLabel}`)
 
       for (let test of suiteTests) {
         let icon = test.status === 'passed' ? '✓' : '✗'
         let color = test.status === 'passed' ? '\x1b[32m' : '\x1b[31m'
         let reset = '\x1b[0m'
 
-        console.log(`    ${color}${icon}${reset} ${test.name} (${test.duration.toFixed(2)}ms)`)
+        console.log(`  ${color}${icon}${reset} ${test.name} (${test.duration.toFixed(2)}ms)`)
 
         if (test.error) {
-          console.log(`      ${color}Error: ${test.error.message}${reset}`)
+          console.log(`    ${color}Error: ${test.error.message}${reset}`)
           if (test.error.stack) {
             let stack = test.error.stack
               .split('\n')
@@ -148,9 +150,12 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
   }
 }
 
-export function displaySummary(passed: number, failed: number) {
-  console.log('\n' + '='.repeat(60))
-  let totalColor = failed > 0 ? '\x1b[31m' : '\x1b[32m'
-  console.log(`${totalColor}Total: ${passed} passed, ${failed} failed\x1b[0m`)
-  console.log('='.repeat(60) + '\n')
+export function displaySummary(passed: number, failed: number, durationMs: number) {
+  let info = '\x1b[36mℹ\x1b[0m'
+  console.log()
+  console.log(`${info} tests ${passed + failed}`)
+  console.log(`${info} pass ${passed}`)
+  console.log(`${info} fail ${failed}`)
+  console.log(`${info} duration_ms ${durationMs.toFixed(5)}`)
+  console.log()
 }
