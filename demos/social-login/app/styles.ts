@@ -14,7 +14,6 @@ export let pageReset = css({
     font: 'inherit',
   },
   '& h1, & h2, & h3, & h4, & h5, & h6': {
-    fontSize: 'inherit',
     fontWeight: tokens.typography.weight.semibold,
     lineHeight: tokens.typography.lineHeight.heading,
   },
