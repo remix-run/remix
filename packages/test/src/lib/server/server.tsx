@@ -12,7 +12,6 @@ import {
   type ScriptServerOptions,
 } from '@remix-run/script-server'
 import { TestStatus } from '../browser/test-status.tsx'
-import { discoverTests } from './test-discovery.ts'
 
 // Directory of this server file, used to resolve browser entry point
 let serverDir = path.dirname(fileURLToPath(import.meta.url))
@@ -22,11 +21,8 @@ let routes = route({
   scripts: '/scripts/*path',
 })
 
-export async function startServer(
-  port = 44101,
-  pattern = './**/*.test.{ts,tsx}',
-): Promise<http.Server> {
-  let router = getRouter(pattern)
+export async function startServer(port = 44101, absoluteFiles: string[] = []): Promise<http.Server> {
+  let router = getRouter(absoluteFiles)
   let server = http.createServer(createRequestListener(async (req) => await router.fetch(req)))
 
   await new Promise<void>((resolve) => {
@@ -39,9 +35,9 @@ export async function startServer(
   return server
 }
 
-function getRouter(testPattern: string) {
+function getRouter(absoluteFiles: string[]) {
   let router = createRouter({
-    middleware: [initializeScriptServer(testPattern)],
+    middleware: [initializeScriptServer(absoluteFiles)],
   })
 
   router.get(routes.home, async (context) => {
@@ -51,7 +47,7 @@ function getRouter(testPattern: string) {
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Tests: {testPattern}</title>
+            <title>Tests</title>
           </head>
           <body>
             <TestStatus setup={{ testFiles, baseDir: process.cwd() }} />
@@ -74,7 +70,7 @@ function getRouter(testPattern: string) {
 
 let scriptServerKey = createContextKey<{ testFiles: string[]; scriptServer: ScriptServer }>()
 
-function initializeScriptServer(testPattern: string) {
+function initializeScriptServer(absoluteFiles: string[]) {
   let testFiles: string[] | undefined
   let scriptServer: ScriptServer | undefined
 
@@ -84,7 +80,6 @@ function initializeScriptServer(testPattern: string) {
       return
     }
 
-    let absoluteFiles = await discoverTests(testPattern, process.cwd())
     let relativeFiles = absoluteFiles.map((f) => path.relative(process.cwd(), f))
     let testPrefix = '@test'
     testFiles = relativeFiles.map((f) => routes.scripts.href({ path: `${testPrefix}/${f}` }))
@@ -100,7 +95,7 @@ function initializeScriptServer(testPattern: string) {
     }
 
     let remixPkgJson = JSON.parse(await fs.readFile(remixPkgJsonPath, 'utf-8'))
-    let remixPackages = Object.keys(remixPkgJson.dependencies).filter((dep) =>
+    let remixPackages = Object.keys(remixPkgJson.dependencies).filter((dep: string) =>
       dep.startsWith('@remix-run/'),
     )
 
@@ -123,7 +118,7 @@ function initializeScriptServer(testPattern: string) {
           directory: remixDir,
         },
         // And remix will import from `@remix-run/*`
-        ...remixPackages.map((pkg) => ({
+        ...remixPackages.map((pkg: string) => ({
           prefix: `/@pkg/${pkg}`,
           directory: path.join(remixDir, `/node_modules/${pkg}`),
         })),

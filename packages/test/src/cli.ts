@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util'
 import * as fs from 'node:fs'
+import type * as http from 'node:http'
 import { tsImport } from 'tsx/esm/api'
 import { discoverTests } from './lib/server/test-discovery.ts'
-import { runTests } from './lib/server/test-runner.ts'
+import { runBrowserTests } from './lib/server/test-runner.ts'
+import { runNodeTests } from './lib/server/node-runner.ts'
 import { displayResults } from './lib/server/result-collector.ts'
 
 let { startServer } = await tsImport('./lib/server/server.tsx', {
@@ -27,13 +29,16 @@ let pattern = positionals[0] || '**/*.test.{ts,tsx}'
 let port = Number(values.port)
 let isWatchMode = values.watch ?? false
 
-let server = await startServer(port, pattern)
+function isBrowserTest(file: string): boolean {
+  return /\.test\.browser\.[^.]+$/.test(file)
+}
 
 let hasExited = false
 let latestExitCode = 0
 let running = false
 let queued = false
 let rerunTimer: NodeJS.Timeout | undefined
+let browserServer: http.Server | undefined
 
 let watchers = new Set<fs.FSWatcher>()
 
@@ -48,7 +53,7 @@ function cleanupAndExit(code: number) {
   if (hasExited) return
   hasExited = true
   closeWatchers()
-  server.close()
+  browserServer?.close()
   process.exit(code)
 }
 
@@ -57,14 +62,9 @@ function updateWatchers(testFiles: string[]) {
 
   closeWatchers()
 
-  let watchPaths = new Set<string>()
   for (let file of testFiles) {
-    watchPaths.add(file)
-  }
-
-  for (let watchPath of watchPaths) {
     try {
-      let watcher = fs.watch(watchPath, { recursive: false }, () => {
+      let watcher = fs.watch(file, { recursive: false }, () => {
         queueRerun('file changed')
       })
       watchers.add(watcher)
@@ -88,27 +88,47 @@ async function executeRun() {
       return
     }
 
+    let browserFiles = files.filter(isBrowserTest)
+    let serverFiles = files.filter((f) => !isBrowserTest(f))
+
     console.log(`Found ${files.length} test file(s)\n`)
     updateWatchers(files)
 
-    let { results, close } = await runTests({
-      baseUrl: `http://localhost:${port}`,
-      debug: values.debug,
-      devtools: values.devtools,
-      ui: values.ui,
-    })
+    let serverFailed = false
+    let browserFailed = false
 
-    displayResults(results)
-    latestExitCode = results.failed > 0 ? 1 : 0
-
-    if (values.ui) {
-      console.log('\nBrowser is open. Press Ctrl+C to close.')
-      await new Promise<void>((resolve) => {
-        process.once('SIGINT', resolve)
-        process.once('SIGTERM', resolve)
-      })
-      await close()
+    if (serverFiles.length > 0) {
+      let { failed } = await runNodeTests(serverFiles)
+      serverFailed = failed
+      console.log('\n\n')
     }
+
+    if (browserFiles.length > 0) {
+      if (!browserServer) {
+        browserServer = await startServer(port, browserFiles)
+      }
+
+      let { results, close } = await runBrowserTests({
+        baseUrl: `http://localhost:${port}`,
+        debug: values.debug,
+        devtools: values.devtools,
+        ui: values.ui,
+      })
+
+      displayResults(results)
+      browserFailed = results.failed > 0
+
+      if (values.ui) {
+        console.log('\nBrowser is open. Press Ctrl+C to close.')
+        await new Promise<void>((resolve) => {
+          process.once('SIGINT', resolve)
+          process.once('SIGTERM', resolve)
+        })
+        await close()
+      }
+    }
+
+    latestExitCode = serverFailed || browserFailed ? 1 : 0
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1

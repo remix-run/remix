@@ -23,7 +23,7 @@ export interface TestResults {
   }>
 }
 
-export async function runTests(
+export async function runBrowserTests(
   options: TestRunOptions,
 ): Promise<{ results: TestResults; close: () => Promise<void> }> {
   let browser: Browser | undefined
