@@ -1,5 +1,6 @@
 import * as assert from '@remix-run/assert'
-import { describe, it, render } from '@remix-run/test/browser'
+import { describe, it } from '@remix-run/test'
+import { render } from '@remix-run/test/browser'
 import { on, type Handle } from '@remix-run/component'
 
 function Counter(handle: Handle, setup?: number) {

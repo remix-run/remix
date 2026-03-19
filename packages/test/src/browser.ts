@@ -1,1 +1,1 @@
-export { describe, it, beforeEach, afterEach, beforeAll, afterAll, render } from './lib/browser/test-framework.ts'
+export { render } from './lib/browser/framework.ts'

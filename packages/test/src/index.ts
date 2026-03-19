@@ -1,1 +1,1 @@
-export { describe, it, beforeEach, afterEach, before as beforeAll, after as afterAll } from 'node:test'
+export { describe, it, beforeEach, afterEach, beforeAll, afterAll } from './lib/framework.ts'

@@ -1,6 +1,7 @@
 import decamelize from 'decamelize'
 import * as assert from '@remix-run/assert'
-import { describe, it, render } from '@remix-run/test/browser'
+import { describe, it } from '@remix-run/test'
+import { render } from '@remix-run/test/browser'
 
 // This test file demonstrates that ESM third party libraries are ok to import from within test modules
 

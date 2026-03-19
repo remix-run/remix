@@ -3,11 +3,10 @@ import { parseArgs } from 'node:util'
 import * as fs from 'node:fs'
 import type * as http from 'node:http'
 import { tsImport } from 'tsx/esm/api'
-import { discoverTests } from './lib/server/test-discovery.ts'
-import { runBrowserTests } from './lib/server/test-runner.ts'
+import { discoverTests } from './lib/server/discovery.ts'
+import { runBrowserTests } from './lib/server/runner.ts'
 import { runNodeTests } from './lib/server/node-runner.ts'
 import { displayResults } from './lib/server/result-collector.ts'
-import { generateCoverageReport } from './lib/server/coverage.ts'
 
 let { startServer } = await tsImport('./lib/server/server.tsx', {
   parentURL: import.meta.url,
@@ -21,7 +20,6 @@ let { values, positionals } = parseArgs({
     devtools: { type: 'boolean' },
     ui: { type: 'boolean', short: 'u' },
     watch: { type: 'boolean', short: 'w' },
-    coverage: { type: 'boolean', short: 'c' },
     port: { type: 'string', short: 'p', default: '44101' },
   },
   allowPositionals: true,
@@ -100,7 +98,7 @@ async function executeRun() {
     let browserFailed = false
 
     if (serverFiles.length > 0) {
-      let { failed } = await runNodeTests(serverFiles, { coverage: values.coverage })
+      let { failed } = await runNodeTests(serverFiles)
       serverFailed = failed
       console.log('\n\n')
     }
@@ -110,20 +108,15 @@ async function executeRun() {
         browserServer = await startServer(port, browserFiles)
       }
 
-      let { results, close, disconnected, coverage } = await runBrowserTests({
+      let { results, close, disconnected } = await runBrowserTests({
         baseUrl: `http://localhost:${port}`,
         debug: values.debug,
         devtools: values.devtools,
         ui: values.ui,
-        coverage: values.coverage,
       })
 
       displayResults(results)
       browserFailed = results.failed > 0
-
-      if (values.coverage && coverage) {
-        await generateCoverageReport(coverage)
-      }
 
       if (values.ui) {
         console.log('\nBrowser is open. Press Ctrl+C to close.')

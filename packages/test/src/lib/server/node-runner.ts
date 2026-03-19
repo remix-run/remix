@@ -1,26 +1,21 @@
-import { spawn } from 'node:child_process'
-import { createRequire } from 'node:module'
-import { pathToFileURL } from 'node:url'
+import { tsImport } from 'tsx/esm/api'
+import { runTests } from '../executor.ts'
+import { displayResults } from './result-collector.ts'
+import type { TestResults } from './runner.ts'
 
-let require = createRequire(import.meta.url)
-let tsxEsmUrl = pathToFileURL(require.resolve('tsx/esm')).href
+export async function runNodeTests(files: string[]): Promise<{ failed: boolean }> {
+  let allResults: TestResults = { passed: 0, failed: 0, tests: [] }
 
-export async function runNodeTests(
-  files: string[],
-  options: { coverage?: boolean } = {},
-): Promise<{ failed: boolean }> {
-  let args = ['--import', tsxEsmUrl, '--test']
-  if (options.coverage) {
-    args.push('--experimental-test-coverage')
+  for (let file of files) {
+    await tsImport(file, { parentURL: import.meta.url })
+    let results = await runTests()
+    allResults.passed += results.passed
+    allResults.failed += results.failed
+    for (let test of results.tests) {
+      allResults.tests.push({ ...test, filePath: file })
+    }
   }
-  args.push(...files)
 
-  return new Promise((resolve, reject) => {
-    let proc = spawn(process.execPath, args, {
-      stdio: 'inherit',
-    })
-
-    proc.on('close', (code) => resolve({ failed: code !== 0 }))
-    proc.on('error', reject)
-  })
+  displayResults(allResults)
+  return { failed: allResults.failed > 0 }
 }

@@ -1,12 +1,10 @@
 import { chromium, type Browser } from 'playwright'
-import type { CoverageEntry } from './coverage.ts'
 
 export interface TestRunOptions {
   baseUrl: string
   debug?: boolean
   devtools?: boolean
   ui?: boolean
-  coverage?: boolean
 }
 
 export interface TestResults {
@@ -29,7 +27,6 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   results: TestResults
   close: () => Promise<void>
   disconnected: Promise<void>
-  coverage?: CoverageEntry[]
 }> {
   let browser: Browser | undefined
 
@@ -45,18 +42,9 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       page.on('console', (msg) => console.log(`  [Browser] ${msg.text()}`))
     }
 
-    if (options.coverage) {
-      await page.coverage.startJSCoverage()
-    }
-
     await page.goto(options.baseUrl)
     await page.waitForFunction('window.__testResults', { timeout: 60000 })
     let results = (await page.evaluate('window.__testResults')) as TestResults
-
-    let coverage: CoverageEntry[] | undefined
-    if (options.coverage) {
-      coverage = await page.coverage.stopJSCoverage()
-    }
 
     if (!options.ui) {
       await page.close()
@@ -71,10 +59,10 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     if (!options.ui) {
       await close()
-      return { results, close: async () => {}, disconnected: Promise.resolve(), coverage }
+      return { results, close: async () => {}, disconnected: Promise.resolve() }
     }
 
-    return { results, close, disconnected, coverage }
+    return { results, close, disconnected }
   } catch (error) {
     await browser?.close()
     throw error

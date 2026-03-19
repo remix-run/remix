@@ -11,7 +11,7 @@ import {
   type ScriptServer,
   type ScriptServerOptions,
 } from '@remix-run/script-server'
-import { TestStatus } from '../browser/test-status.tsx'
+import { TestStatus } from '../browser/status.tsx'
 
 // Directory of this server file, used to resolve browser entry point
 let serverDir = path.dirname(fileURLToPath(import.meta.url))

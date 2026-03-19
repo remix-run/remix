@@ -1,5 +1,5 @@
 import { clientEntry, on, type Handle } from '@remix-run/component'
-import { runTests } from './test-executor.ts'
+import { runTests } from '../executor.ts'
 import { normalizeFilePath, normalizeLine } from './utils.ts'
 
 // Matches `file:line:col` at end of a stack frame, e.g. `(fixtures/foo.ts:10:5)` or ` fixtures/foo.ts:10:5`
