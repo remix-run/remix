@@ -7,6 +7,7 @@ import {
 import { email, minLength } from 'remix/data-schema/checks'
 import * as f from 'remix/data-schema/form-data'
 import * as s from 'remix/data-schema'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import {
@@ -103,6 +104,7 @@ let authController: Controller<typeof routes.auth> = {
         },
 
         async action(context) {
+          let db = context.get(Database)
           let result = s.parseSafe(signupSchema, context.get(FormData))
           if (!result.success) {
             return render(
@@ -119,7 +121,7 @@ let authController: Controller<typeof routes.auth> = {
           let signup = result.value
           let name = normalizeText(signup.name)
           let emailAddress = normalizeEmail(signup.email)
-          let existingUser = await context.db.findOne(users, { where: { email: emailAddress } })
+          let existingUser = await db.findOne(users, { where: { email: emailAddress } })
 
           if (existingUser != null) {
             return render(
@@ -133,7 +135,7 @@ let authController: Controller<typeof routes.auth> = {
             )
           }
 
-          let user = await context.db.create(
+          let user = await db.create(
             users,
             {
               email: emailAddress,
@@ -167,6 +169,7 @@ let authController: Controller<typeof routes.auth> = {
         },
 
         async action(context) {
+          let db = context.get(Database)
           let result = s.parseSafe(forgotPasswordSchema, context.get(FormData))
           if (!result.success) {
             return render(
@@ -182,12 +185,12 @@ let authController: Controller<typeof routes.auth> = {
 
           let forgotPassword = result.value
           let emailAddress = normalizeEmail(forgotPassword.email)
-          let user = await context.db.findOne(users, { where: { email: emailAddress } })
+          let user = await db.findOne(users, { where: { email: emailAddress } })
           let resetHref: string | undefined
 
           if (user != null) {
             let token = crypto.randomUUID().replaceAll('-', '')
-            await context.db.create(passwordResetTokens, {
+            await db.create(passwordResetTokens, {
               token,
               user_id: user.id,
               expires_at: Date.now() + 1000 * 60 * 60,
@@ -236,6 +239,7 @@ let authController: Controller<typeof routes.auth> = {
         },
 
         async action(context) {
+          let db = context.get(Database)
           let resetToken = await loadResetToken(context, context.params.token)
           if (resetToken == null) {
             return render(
@@ -278,9 +282,9 @@ let authController: Controller<typeof routes.auth> = {
             )
           }
 
-          let user = await context.db.find(users, resetToken.user_id)
+          let user = await db.find(users, resetToken.user_id)
           if (user == null) {
-            await context.db.delete(passwordResetTokens, { token: resetToken.token })
+            await db.delete(passwordResetTokens, { token: resetToken.token })
             return render(
               <ErrorPage
                 title="Account Not Found"
@@ -291,10 +295,10 @@ let authController: Controller<typeof routes.auth> = {
             )
           }
 
-          await context.db.update(users, user.id, {
+          await db.update(users, user.id, {
             password_hash: await hashPassword(resetPassword.password),
           })
-          await context.db.delete(passwordResetTokens, { token: resetToken.token })
+          await db.delete(passwordResetTokens, { token: resetToken.token })
 
           let session = context.get(Session)
           flashSuccess(session, 'Password updated. You can sign in now.')
@@ -366,7 +370,8 @@ function createExternalCallbackAction(providerName: ExternalProviderName): Reque
 
         return createExternalAuthCallbackRequestHandler(provider, {
           async writeSession(session, result, actionContext) {
-            let { user, authAccount } = await resolveExternalLogin(actionContext.db, result)
+            let db = actionContext.get(Database)
+            let { user, authAccount } = await resolveExternalLogin(db, result)
             writeAuthenticatedSession(session, {
               userId: user.id,
               loginMethod: result.provider,
@@ -393,7 +398,8 @@ function createExternalCallbackAction(providerName: ExternalProviderName): Reque
 
         return createExternalAuthCallbackRequestHandler(provider, {
           async writeSession(session, result, actionContext) {
-            let { user, authAccount } = await resolveExternalLogin(actionContext.db, result)
+            let db = actionContext.get(Database)
+            let { user, authAccount } = await resolveExternalLogin(db, result)
             writeAuthenticatedSession(session, {
               userId: user.id,
               loginMethod: result.provider,
@@ -420,7 +426,8 @@ function createExternalCallbackAction(providerName: ExternalProviderName): Reque
 
         return createExternalAuthCallbackRequestHandler(provider, {
           async writeSession(session, result, actionContext) {
-            let { user, authAccount } = await resolveExternalLogin(actionContext.db, result)
+            let db = actionContext.get(Database)
+            let { user, authAccount } = await resolveExternalLogin(db, result)
             writeAuthenticatedSession(session, {
               userId: user.id,
               loginMethod: result.provider,
@@ -450,13 +457,14 @@ function getExternalProvider(providerName: ExternalProviderName, context: Parame
 }
 
 async function loadResetToken(context: Parameters<RequestHandler>[0], token: string) {
-  let resetToken = await context.db.find(passwordResetTokens, { token })
+  let db = context.get(Database)
+  let resetToken = await db.find(passwordResetTokens, { token })
   if (resetToken == null) {
     return null
   }
 
   if (resetToken.expires_at <= Date.now()) {
-    await context.db.delete(passwordResetTokens, { token })
+    await db.delete(passwordResetTokens, { token })
     return null
   }
 

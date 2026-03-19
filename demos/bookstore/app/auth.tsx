@@ -110,25 +110,12 @@ export default {
           )
         },
 
-<<<<<<< HEAD
-        async action({ get, url }) {
-          let db = get(Database)
-          let session = get(Session)
-          let formData = get(FormData)
-          let { email, password } = s.parse(loginSchema, formData)
-          let returnTo = url.searchParams.get('returnTo') ?? undefined
-          let normalizedEmail = normalizeEmail(email)
-
-          let user = await db.findOne(users, { where: { email: normalizedEmail } })
-          if (!user || user.password !== password) {
-=======
         action: authenticateWithCredentials(passwordProvider, {
           writeSession(session, user) {
             writeAuthenticatedSession(session, user)
           },
           onFailure(context) {
             let session = context.get(Session)
->>>>>>> 5083106f7 (Refactor bookstore demo onto Remix auth)
             session.flash('error', 'Invalid email or password. Please try again.')
 
             return redirect(getLoginRedirectURL(context.url))

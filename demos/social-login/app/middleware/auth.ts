@@ -4,6 +4,7 @@ import { Auth, auth, createSessionAuthScheme, requireAuth as requireAuthenticate
 import type { GoodAuth } from 'remix/auth-middleware'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
@@ -32,14 +33,15 @@ export function loadAuth(): Middleware {
           return parseSocialLoginSession(session.get('auth'))
         },
         async verify(value, context) {
-          let user = await context.db.find(users, value.userId)
+          let db = context.get(Database)
+          let user = await db.find(users, value.userId)
           if (user == null) {
             return null
           }
 
           let authAccount =
             value.authAccountId != null
-              ? await context.db.find(authAccounts, value.authAccountId)
+              ? await db.find(authAccounts, value.authAccountId)
               : null
 
           return {
@@ -67,7 +69,8 @@ export let passwordProvider = createCredentialsAuthProvider({
     }
   },
   async verify({ email, password }, context) {
-    let user = await context.db.findOne(users, { where: { email } })
+    let db = context.get(Database)
+    let user = await db.findOne(users, { where: { email } })
 
     if (user == null || typeof user.password_hash !== 'string' || user.password_hash === '') {
       return null
