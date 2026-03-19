@@ -5,9 +5,18 @@ import { pathToFileURL } from 'node:url'
 let require = createRequire(import.meta.url)
 let tsxEsmUrl = pathToFileURL(require.resolve('tsx/esm')).href
 
-export async function runNodeTests(files: string[]): Promise<{ failed: boolean }> {
+export async function runNodeTests(
+  files: string[],
+  options: { coverage?: boolean } = {},
+): Promise<{ failed: boolean }> {
+  let args = ['--import', tsxEsmUrl, '--test']
+  if (options.coverage) {
+    args.push('--experimental-test-coverage')
+  }
+  args.push(...files)
+
   return new Promise((resolve, reject) => {
-    let proc = spawn(process.execPath, ['--import', tsxEsmUrl, '--test', ...files], {
+    let proc = spawn(process.execPath, args, {
       stdio: 'inherit',
     })
 

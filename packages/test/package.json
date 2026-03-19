@@ -53,7 +53,11 @@
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/script-server": "workspace:*"
+    "@remix-run/script-server": "workspace:*",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.2.0",
+    "v8-to-istanbul": "^9.3.0"
   },
   "peerDependencies": {
     "esbuild": "^0.25.0",
@@ -73,6 +77,9 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@types/istanbul-lib-coverage": "^2.0.6",
+    "@types/istanbul-lib-report": "^3.0.3",
+    "@types/istanbul-reports": "^3.0.4",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "decamelize": "^6.0.1"
