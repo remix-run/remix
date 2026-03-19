@@ -28,6 +28,7 @@ The following example shows the request-time half of a session-backed browser lo
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
 import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
+import type { GoodAuth } from 'remix/auth-middleware'
 import { session } from 'remix/session-middleware'
 
 let routes = route({
@@ -59,12 +60,8 @@ let router = createRouter({
 
 router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
-  action({ get }) {
-    let auth = get(Auth)
-
-    if (!auth.ok) {
-      throw new Error('Expected an authenticated session.')
-    }
+  action(context) {
+    let auth = context.get(Auth) as GoodAuth<{ id: string; email: string }>
 
     return Response.json({
       id: auth.identity.id,
