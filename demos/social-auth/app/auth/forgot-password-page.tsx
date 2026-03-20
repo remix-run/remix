@@ -1,10 +1,12 @@
 import { css } from 'remix/component'
 
-import { EmailIcon } from '../shared/index.ts'
-import { TextField } from '../shared/index.ts'
+import { EmailIcon } from '../ui/icons.tsx'
+import { TextField } from '../ui/form-field.tsx'
 import { SimpleFooter } from './simple-footer.tsx'
 import { designSystem } from '../design-system.ts'
-import { AuthCard, Document, Notice } from '../shared/index.ts'
+import { AuthCard } from '../ui/auth-card.tsx'
+import { Document } from '../ui/document.tsx'
+import { Notice } from '../ui/notice.tsx'
 import * as styles from '../styles.ts'
 
 let { tokens } = designSystem

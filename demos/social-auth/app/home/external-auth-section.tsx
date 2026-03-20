@@ -1,9 +1,9 @@
 import { css } from 'remix/component'
 
 import { designSystem } from '../design-system.ts'
+import type { ExternalProviderName } from '../integrations/external-auth-providers.ts'
+import { formatProviderLabel, renderProviderIcon } from '../ui/provider-presentation.tsx'
 import * as styles from '../styles.ts'
-import type { ExternalProviderName } from '../social-auth.ts'
-import { formatProviderLabel, renderProviderIcon } from '../shared/index.ts'
 import { SocialProviderButton } from './social-provider-button.tsx'
 
 let { theme } = designSystem
@@ -14,7 +14,7 @@ export interface ProviderLink {
   disabledReason?: string
 }
 
-export function SocialAuthSection() {
+export function ExternalAuthSection() {
   return ({ providers }: { providers: ProviderLink[] }) => (
     <>
       <div mix={styles.divider}>

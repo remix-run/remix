@@ -1,4 +1,3 @@
-import * as s from 'remix/data-schema'
 import type {
   GitHubAuthProfile,
   GoogleAuthProfile,
@@ -7,26 +6,8 @@ import type {
 } from 'remix/auth'
 import type { Database } from 'remix/data-table'
 
-import { authAccounts, normalizeEmail, users } from './data/schema.ts'
-import type { AuthAccount, User } from './data/schema.ts'
-import type { Session } from './utils/session.ts'
-
-export type ExternalLoginMethod = 'google' | 'github' | 'x'
-export type ExternalProviderName = ExternalLoginMethod
-export type SocialAuthMethod = 'credentials' | ExternalLoginMethod
-
-export interface SocialAuthSession {
-  userId: number
-  loginMethod: SocialAuthMethod
-  authAccountId?: number
-}
-
-export interface SocialAuthIdentity {
-  user: User
-  loginMethod: SocialAuthMethod
-  authAccount: AuthAccount | null
-  providerProfile: unknown | null
-}
+import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
+import type { AuthAccount, User } from '../../data/schema.ts'
 
 type ExternalAuthResult =
   | OAuthResult<GoogleAuthProfile, 'google'>
@@ -42,46 +23,7 @@ type ExternalProfileDetails = {
   profileJson: string
 }
 
-let socialAuthSessionSchema = s.object({
-  userId: s.number().refine(Number.isInteger, 'Expected an integer userId'),
-  loginMethod: s.union([
-    s.literal('credentials'),
-    s.literal('google'),
-    s.literal('github'),
-    s.literal('x'),
-  ]),
-  authAccountId: s.optional(
-    s.number().refine(Number.isInteger, 'Expected an integer authAccountId'),
-  ),
-})
-
-export function parseSocialAuthSession(value: unknown): SocialAuthSession | null {
-  let result = s.parseSafe(socialAuthSessionSchema, value)
-  if (!result.success) {
-    return null
-  }
-
-  let parsed = result.value
-  if (!isSocialAuthMethod(parsed.loginMethod)) {
-    return null
-  }
-
-  return {
-    userId: parsed.userId,
-    loginMethod: parsed.loginMethod,
-    authAccountId: parsed.authAccountId,
-  }
-}
-
-export function writeAuthenticatedSession(session: Session, value: SocialAuthSession): void {
-  session.set('auth', value)
-}
-
-export function clearAuthenticatedSession(session: Session): void {
-  session.unset('auth')
-}
-
-export async function resolveExternalLogin(
+export async function resolveExternalAuth(
   db: Database,
   result: ExternalAuthResult,
 ): Promise<{ user: User; authAccount: AuthAccount }> {
@@ -134,22 +76,6 @@ export async function resolveExternalLogin(
   )
 
   return { user, authAccount }
-}
-
-function isSocialAuthMethod(value: string): value is SocialAuthMethod {
-  return value === 'credentials' || value === 'google' || value === 'github' || value === 'x'
-}
-
-export function parseProviderProfile(authAccount: AuthAccount | null): unknown | null {
-  if (authAccount == null) {
-    return null
-  }
-
-  try {
-    return JSON.parse(authAccount.profile_json)
-  } catch {
-    return null
-  }
 }
 
 function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {

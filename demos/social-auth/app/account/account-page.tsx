@@ -1,16 +1,19 @@
 import { css } from 'remix/component'
 
-import { UserIcon, formatProviderLabel, AuthCard, Document } from '../shared/index.ts'
+import { AuthCard } from '../ui/auth-card.tsx'
+import { Document } from '../ui/document.tsx'
+import { UserIcon } from '../ui/icons.tsx'
+import { formatProviderLabel } from '../ui/provider-presentation.tsx'
 
 import { designSystem } from '../design-system.ts'
 
 import * as styles from '../styles.ts'
-import type { SocialAuthIdentity } from '../social-auth.ts'
+import type { AuthIdentity } from '../models/auth-session.ts'
 
 let { tokens } = designSystem
 
 export interface AccountPageProps {
-  identity: SocialAuthIdentity
+  identity: AuthIdentity
   logoutAction: string
 }
 

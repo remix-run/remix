@@ -3,7 +3,7 @@ import { Cookie, SetCookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
 import { createSocialAuthRouter } from '../app/router.ts'
-import { resetSocialAuthDatabase } from '../app/data/setup.ts'
+import { resetSocialAuthDatabase } from '../data/setup.ts'
 
 export async function createTestRouter() {
   await resetSocialAuthDatabase()

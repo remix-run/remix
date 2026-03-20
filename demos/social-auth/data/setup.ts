@@ -6,15 +6,13 @@ import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
+import { hashPassword } from '../app/models/password-hash.ts'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'
-import { hashPassword } from '../utils/password.ts'
 
-const DEMO_ADMIN_AVATAR_URL =
-  'https://randomuser.me/api/portraits/women/44.jpg'
-const DEMO_USER_AVATAR_URL =
-  'https://randomuser.me/api/portraits/men/32.jpg'
+const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'
+const DEMO_USER_AVATAR_URL = 'https://randomuser.me/api/portraits/men/32.jpg'
 
-let dataDirectoryUrl = new URL('../../data/', import.meta.url)
+let dataDirectoryUrl = new URL('./', import.meta.url)
 let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dataDirectoryUrl))
 let databaseFilePath = getDatabaseFilePath()
 

@@ -11,7 +11,7 @@ import {
   createXAuthProvider,
 } from 'remix/auth'
 
-import { routes } from './routes.ts'
+import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
 
@@ -66,7 +66,7 @@ export function createGoogleProvider(
   context: RequestContext,
 ): OAuthProvider<GoogleAuthProfile, 'google'> | null {
   let credentials = readProviderCredentials('GOOGLE')
-  if (!credentials) {
+  if (credentials == null) {
     return null
   }
 
@@ -81,7 +81,7 @@ export function createGitHubProvider(
   context: RequestContext,
 ): OAuthProvider<GitHubAuthProfile, 'github'> | null {
   let credentials = readProviderCredentials('GITHUB')
-  if (!credentials) {
+  if (credentials == null) {
     return null
   }
 
@@ -94,7 +94,7 @@ export function createGitHubProvider(
 
 export function createXProvider(context: RequestContext): OAuthProvider<XAuthProfile, 'x'> | null {
   let credentials = readProviderCredentials('X')
-  if (!credentials) {
+  if (credentials == null) {
     return null
   }
 

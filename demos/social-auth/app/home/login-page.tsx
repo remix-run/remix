@@ -1,9 +1,11 @@
-import { EmailIcon, PasswordIcon } from '../shared/index.ts'
-import { TextField } from '../shared/index.ts'
+import { EmailIcon, PasswordIcon } from '../ui/icons.tsx'
+import { TextField } from '../ui/form-field.tsx'
 import { LoginFooter } from './login-footer.tsx'
-import { SocialAuthSection } from './social-auth-section.tsx'
-import type { ProviderLink } from './social-auth-section.tsx'
-import { AuthCard, Document, Notice } from '../shared/index.ts'
+import { ExternalAuthSection } from './external-auth-section.tsx'
+import type { ProviderLink } from './external-auth-section.tsx'
+import { AuthCard } from '../ui/auth-card.tsx'
+import { Document } from '../ui/document.tsx'
+import { Notice } from '../ui/notice.tsx'
 import * as styles from '../styles.ts'
 
 
@@ -65,7 +67,7 @@ export function LoginPage() {
           </button>
         </form>
 
-        <SocialAuthSection providers={providers} />
+        <ExternalAuthSection providers={providers} />
       </AuthCard>
     </Document>
   )

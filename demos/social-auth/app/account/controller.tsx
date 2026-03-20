@@ -1,11 +1,11 @@
 import type { BuildAction } from 'remix/fetch-router'
 
-import { AccountPage } from './account/index.ts'
-import { getGoodAuth, requireAuth } from './middleware/auth.ts'
-import { routes } from './routes.ts'
-import { render } from './utils/render.tsx'
+import { AccountPage } from './account-page.tsx'
+import { getGoodAuth, requireAuth } from '../middleware/auth.ts'
+import { routes } from '../routes.ts'
+import { render } from '../utils/render.tsx'
 
-export let account: BuildAction<'GET', typeof routes.account> = {
+export let account = {
   middleware: [requireAuth()],
   action(context) {
     let auth = getGoodAuth(context)
@@ -17,4 +17,4 @@ export let account: BuildAction<'GET', typeof routes.account> = {
       />,
     )
   },
-}
+} satisfies BuildAction<'GET', typeof routes.account>

@@ -9,7 +9,7 @@ if (fs.existsSync(envFilePath)) {
 }
 
 let { router } = await import('./app/router.ts')
-let { getDemoOrigin, getProviderStatuses } = await import('./app/providers.ts')
+let { getDemoOrigin, getProviderStatuses } = await import('./app/integrations/external-auth-providers.ts')
 
 let server = http.createServer(
   createRequestListener(async request => {
@@ -34,7 +34,7 @@ server.listen(port, () => {
   console.log('  admin@example.com / password123')
   console.log('  user@example.com / password123')
   console.log('')
-  console.log('Social login providers:')
+  console.log('Social auth providers:')
   console.log(`  ${formatProviderStatus('Google', providerStatuses.google)}`)
   console.log(`  ${formatProviderStatus('GitHub', providerStatuses.github)}`)
   console.log(`  ${formatProviderStatus('X', providerStatuses.x)}`)

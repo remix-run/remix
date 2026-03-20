@@ -1,23 +1,26 @@
 import type { Middleware } from 'remix/fetch-router'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { Auth, auth, createSessionAuthScheme, requireAuth as requireAuthenticated } from 'remix/auth-middleware'
+import {
+  Auth,
+  auth,
+  createSessionAuthScheme,
+  requireAuth as requireAuthenticated,
+} from 'remix/auth-middleware'
 import type { GoodAuth } from 'remix/auth-middleware'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
-import { routes } from '../routes.ts'
+import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
+import type { AuthIdentity, AuthSession } from '../models/auth-session.ts'
 import {
   clearAuthenticatedSession,
+  parseAuthSession,
   parseProviderProfile,
-  parseSocialAuthSession,
-  type SocialAuthIdentity,
-  type SocialAuthSession,
-  writeAuthenticatedSession,
-} from '../social-auth.ts'
-import { verifyPassword } from '../utils/password.ts'
+} from '../models/auth-session.ts'
+import { verifyPassword } from '../models/password-hash.ts'
+import { routes } from '../routes.ts'
 import type { Session } from '../utils/session.ts'
 
 let loginSchema = f.object({
@@ -28,9 +31,9 @@ let loginSchema = f.object({
 export function loadAuth(): Middleware {
   return auth({
     schemes: [
-      createSessionAuthScheme<SocialAuthIdentity, SocialAuthSession>({
+      createSessionAuthScheme<AuthIdentity, AuthSession>({
         read(session) {
-          return parseSocialAuthSession(session.get('auth'))
+          return parseAuthSession(session.get('auth'))
         },
         async verify(value, context) {
           let db = context.get(Database)
@@ -40,9 +43,7 @@ export function loadAuth(): Middleware {
           }
 
           let authAccount =
-            value.authAccountId != null
-              ? await db.find(authAccounts, value.authAccountId)
-              : null
+            value.authAccountId == null ? null : await db.find(authAccounts, value.authAccountId)
 
           return {
             user,
@@ -72,15 +73,16 @@ export let passwordProvider = createCredentialsAuthProvider({
     let db = context.get(Database)
     let user = await db.findOne(users, { where: { email } })
 
-    if (user == null || typeof user.password_hash !== 'string' || user.password_hash === '') {
+    if (user == null) {
       return null
     }
 
-    if (!(await verifyPassword(password, user.password_hash))) {
-      return null
+    if (typeof user.password_hash === 'string' && user.password_hash !== '') {
+      let verified = await verifyPassword(password, user.password_hash)
+      return verified ? user : null
     }
 
-    return user
+    return null
   },
 })
 
@@ -92,8 +94,8 @@ export function requireAuth(): Middleware {
   })
 }
 
-export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<SocialAuthIdentity> {
-  return context.get(Auth) as GoodAuth<SocialAuthIdentity>
+export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<AuthIdentity> {
+  return context.get(Auth) as GoodAuth<AuthIdentity>
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {
@@ -128,11 +130,7 @@ export function getSafeReturnTo(returnTo: string | null): string | undefined {
     return undefined
   }
 
-  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
-    return undefined
-  }
-
-  return returnTo
+  let isSafePath = returnTo.startsWith('/') && returnTo.startsWith('//') === false
+  return isSafePath ? returnTo : undefined
 }
 
-export { clearAuthenticatedSession, writeAuthenticatedSession }

@@ -1,6 +1,8 @@
 import type { RemixNode } from 'remix/component'
 
-import { AuthCard, Document, Notice } from '../shared/index.ts'
+import { AuthCard } from '../ui/auth-card.tsx'
+import { Document } from '../ui/document.tsx'
+import { Notice } from '../ui/notice.tsx'
 import * as styles from '../styles.ts'
 
 export interface ErrorPageProps {

@@ -1,25 +1,17 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { db, resetSocialAuthDatabase } from './data/setup.ts'
-import { authAccounts } from './data/schema.ts'
-import { parseSocialAuthSession, resolveExternalLogin } from './social-auth.ts'
+import { authAccounts } from '../../data/schema.ts'
+import { db, resetSocialAuthDatabase } from '../../data/setup.ts'
+import { resolveExternalAuth } from './resolve-external-auth.ts'
 
 beforeEach(async () => {
   await resetSocialAuthDatabase()
 })
 
-describe('social auth helpers', () => {
-  it('parses a stored auth session value', () => {
-    assert.deepEqual(
-      parseSocialAuthSession({ userId: 2, loginMethod: 'credentials' }),
-      { userId: 2, loginMethod: 'credentials', authAccountId: undefined },
-    )
-    assert.equal(parseSocialAuthSession({ userId: 'bad', loginMethod: 'credentials' }), null)
-  })
-
+describe('resolve external auth operation', () => {
   it('links an external account to an existing user by email', async () => {
-    let resolved = await resolveExternalLogin(db, {
+    let resolved = await resolveExternalAuth(db, {
       provider: 'google',
       account: { provider: 'google', providerAccountId: 'google-user-1' },
       profile: {
@@ -39,7 +31,7 @@ describe('social auth helpers', () => {
   })
 
   it('updates an existing linked external account on later logins', async () => {
-    let first = await resolveExternalLogin(db, {
+    let first = await resolveExternalAuth(db, {
       provider: 'github',
       account: { provider: 'github', providerAccountId: 'github-user-1' },
       profile: {
@@ -52,7 +44,7 @@ describe('social auth helpers', () => {
       tokens: { accessToken: 'token', tokenType: 'bearer' },
     })
 
-    let second = await resolveExternalLogin(db, {
+    let second = await resolveExternalAuth(db, {
       provider: 'github',
       account: { provider: 'github', providerAccountId: 'github-user-1' },
       profile: {

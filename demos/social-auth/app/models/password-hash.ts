@@ -1,9 +1,9 @@
 import { timingSafeEqual } from 'node:crypto'
 
-let HASH_PREFIX = 'pbkdf2_sha256'
-let ITERATIONS = 100000
-let SALT_LENGTH = 16
-let KEY_LENGTH = 32
+const HASH_PREFIX = 'pbkdf2_sha256'
+const ITERATIONS = 100000
+const SALT_LENGTH = 16
+const KEY_LENGTH = 32
 
 export async function hashPassword(password: string): Promise<string> {
   let salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))

@@ -2,14 +2,14 @@ import type { BuildAction } from 'remix/fetch-router'
 import { Auth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 
-import { getProviderAvailability } from './providers.ts'
-import { LoginPage } from './home/index.ts'
-import { getReturnToQuery, readFlash } from './middleware/auth.ts'
-import { routes } from './routes.ts'
-import { render } from './utils/render.tsx'
-import { Session } from './utils/session.ts'
+import { LoginPage } from './login-page.tsx'
+import { getProviderAvailability } from '../integrations/external-auth-providers.ts'
+import { getReturnToQuery, readFlash } from '../middleware/auth.ts'
+import { routes } from '../routes.ts'
+import { render } from '../utils/render.tsx'
+import { Session } from '../utils/session.ts'
 
-export let home: BuildAction<'GET', typeof routes.home> = {
+export let home = {
   action(context) {
     let auth = context.get(Auth)
     if (auth.ok) {
@@ -58,4 +58,4 @@ export let home: BuildAction<'GET', typeof routes.home> = {
       />,
     )
   },
-}
+} satisfies BuildAction<'GET', typeof routes.home>

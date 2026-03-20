@@ -1,7 +1,8 @@
 import type { RemixNode } from 'remix/component'
 
 import * as styles from '../styles.ts'
-import type { ExternalProviderName, SocialAuthMethod } from '../social-auth.ts'
+import type { ExternalProviderName } from '../integrations/external-auth-providers.ts'
+import type { AuthMethod } from '../models/auth-session.ts'
 import { GitHubIcon, GoogleIcon, XIcon } from './icons.tsx'
 
 export function renderProviderIcon(provider: ExternalProviderName): RemixNode {
@@ -17,7 +18,7 @@ export function renderProviderIcon(provider: ExternalProviderName): RemixNode {
   }
 }
 
-export function formatProviderLabel(provider: SocialAuthMethod): string {
+export function formatProviderLabel(provider: AuthMethod): string {
   switch (provider) {
     case 'credentials':
       return 'Credentials'

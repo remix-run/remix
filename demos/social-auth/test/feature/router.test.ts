@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { db, passwordResetTokens } from './data/setup.ts'
-import { createTestRouter, assertContains, getSessionCookie, requestWithSession } from '../test/helpers.ts'
+import { db, passwordResetTokens } from '../../data/setup.ts'
+import { assertContains, createTestRouter, getSessionCookie, requestWithSession } from '../helpers.ts'
 
 describe('social-auth router', () => {
   it('renders the login page at the home route', async () => {

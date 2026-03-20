@@ -49,6 +49,119 @@ Use only the files the scenario needs, but prefer this shape:
 - `demos/<name>/app/`
 - `demos/<name>/public/` when serving built assets or other static files
 
+## Remix Application Layout
+
+When a demo is a real application, prefer a uniform Remix application layout instead of inventing a
+new structure for each demo.
+
+### Root layout
+
+Use these root directories consistently:
+
+- `app/` for runtime application code
+- `data/` for database lifecycle files such as schema, setup, seeds, migrations, and local SQLite
+  databases
+- `test/` for cross-feature integration tests, fixtures, and test helpers
+- `public/` for static files served as-is
+- `tmp/` for runtime scratch files such as sessions, uploads, and caches
+
+### App layout
+
+Inside `app/`, organize code by responsibility:
+
+- feature folders such as `home/`, `auth/`, or `account/`, each with a `controller.tsx`
+  entrypoint and the UI it owns
+- `ui/` for reusable cross-feature UI primitives
+- `middleware/` for request-layer concerns such as auth, database injection, and sessions
+- `integrations/` for third-party provider and API wiring
+- `operations/` for app-level workflows that coordinate multiple lower-level modules
+- `models/` for app-specific data shapes and domain-level utilities
+- `utils/` only for small generic helpers that are not feature-specific or domain-specific
+
+### Naming and ownership rules
+
+- Keep controllers thin. They should read request context, call application logic, and return a
+  response.
+- Put each controller in its feature folder as `controller.tsx`. Do not split controller files
+  across the app root and feature folders.
+- If a component or helper is only used by one feature, keep it in that feature folder instead of
+  `ui/`.
+- Use `ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping
+  ground.
+- Do not create a generic `app/lib/` dumping ground.
+- Avoid feature barrel files such as `index.ts`. Import feature modules directly.
+- Put cross-feature workflows in `operations/`, not in controllers.
+- Put database schema and setup outside `app/` under `data/`.
+- Co-locate unit tests with the models, operations, or other modules they cover.
+- Keep app-wide request-flow tests under `test/feature/`, and keep shared test helpers under
+  `test/`.
+
+### Example layout
+
+```text
+demos/<name>/
+  app/
+    router.ts
+    routes.ts
+
+    middleware/
+      auth.ts
+      database.ts
+
+    ui/
+      auth-card.tsx
+      document.tsx
+      form-field.tsx
+      notice.tsx
+      icons.tsx
+
+    integrations/
+      external-auth-providers.ts
+
+    models/
+      auth-session.ts
+      auth-session.test.ts
+      password-hash.ts
+
+    operations/
+      resolve-external-auth.ts
+      resolve-external-auth.test.ts
+
+    home/
+      controller.tsx
+      login-page.tsx
+      external-auth-section.tsx
+
+    auth/
+      controller.tsx
+      signup-page.tsx
+      forgot-password-page.tsx
+
+    account/
+      controller.tsx
+      account-page.tsx
+
+    design-system.ts
+    styles.ts
+    utils/
+      render.tsx
+      session.ts
+
+  data/
+    schema.ts
+    setup.ts
+    setup.test.ts
+    migrations/
+
+  test/
+    feature/
+      router.test.ts
+    helpers.ts
+
+  public/
+  tmp/
+```
+
 ## README Expectations
 
 - Explain what the demo proves or teaches.
