@@ -84,6 +84,11 @@ type RouteRegistrar<context extends AnyContext> = {
     pattern: RouteTarget<method, pattern>,
     handler: RouteActionObjectWithMiddleware<method, pattern, context, middleware>,
   ): void
+  <method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: RouteTarget<method, pattern>,
+    handler: Action<method, pattern, context>,
+  ): void
 }
 
 type SingleRouteMapper<context extends AnyContext> = {
@@ -99,6 +104,10 @@ type SingleRouteMapper<context extends AnyContext> = {
     target: MapRouteTarget<method, pattern>,
     handler: RouteActionObjectWithMiddleware<method, pattern, context, middleware>,
   ): void
+  <method extends RequestMethod | 'ANY', pattern extends string>(
+    target: MapRouteTarget<method, pattern>,
+    handler: Action<method, pattern, context>,
+  ): void
 }
 
 type RouteMapMapper<context extends AnyContext> = {
@@ -107,6 +116,7 @@ type RouteMapMapper<context extends AnyContext> = {
     target: target,
     handler: ControllerWithMiddleware<target, context, middleware>,
   ): void
+  <target extends RouteMap>(target: target, handler: Controller<target, context>): void
 }
 
 type MapMethod<context extends AnyContext> = SingleRouteMapper<context> & RouteMapMapper<context>
@@ -123,6 +133,10 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string, middleware extends readonly AnyMiddleware[]>(
     route: RouteTarget<method, pattern>,
     handler: RouteActionObjectWithMiddleware<method, pattern, context, middleware>,
+  ): void
+  <pattern extends string>(
+    route: RouteTarget<method, pattern>,
+    handler: Action<method, pattern, context>,
   ): void
 }
 
