@@ -2,13 +2,22 @@ import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 
 import { column } from './column.ts'
-import { createDatabase } from './database.ts'
+import { createDatabase, Database } from './database.ts'
 import type {
-  QueryBuilder,
   QueryColumnTypesForTable,
   QueryForTable,
+  QueryTableInput,
   WriteResult,
 } from './database.ts'
+import type { AnyQuery, Query } from './query.ts'
+import { query } from './query.ts'
+import type { AnyQuery as PublicAnyQuery } from '../index.ts'
+// @ts-expect-error CountQuery is no longer exported
+import type { CountQuery as _CountQuery } from '../index.ts'
+// @ts-expect-error InsertCommand is no longer exported
+import type { InsertCommand as _InsertCommand } from '../index.ts'
+// @ts-expect-error QueryMethod is no longer exported
+import type { QueryMethod as _QueryMethod } from '../index.ts'
 import { table, hasMany } from './table.ts'
 import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
@@ -81,17 +90,46 @@ describe('type safety', () => {
     expectType<Equal<Row['validated_payload'], unknown>>()
   })
 
-  it('exposes query builder generics as column and row output maps', () => {
+  it('types direct construction, helper construction, and transaction callbacks as Database', async () => {
+    let direct = new Database(createAdapter())
+    let wrapped = createDatabase(createAdapter())
+
+    expectType<Equal<typeof direct, Database>>()
+    expectType<Equal<typeof wrapped, Database>>()
+
+    await direct.transaction(async (transactionDatabase) => {
+      expectType<Equal<typeof transactionDatabase, Database>>()
+      return undefined
+    })
+
+    assert.equal(direct instanceof Database, true)
+    assert.equal(wrapped instanceof Database, true)
+  })
+
+  it('exposes Query generics as column and row output maps', () => {
     let db = createDatabase(createAdapter())
     let query = db.query(accounts)
 
-    type Query = typeof query
+    type QueryType = typeof query
+    type QuerySource = QueryType extends Query<infer source, any, any, any, any> ? source : never
     type QueryColumns =
-      Query extends QueryBuilder<infer columnTypes, any, any, any, any> ? columnTypes : never
-    type QueryRow = Query extends QueryBuilder<any, infer row, any, any, any> ? row : never
-    type QueryTableName = Query extends QueryBuilder<any, any, any, infer name, any> ? name : never
-    type QueryPrimaryKey = Query extends QueryBuilder<any, any, any, any, infer key> ? key : never
+      QueryType extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
+    type QueryRow = QueryType extends Query<any, any, infer row, any, any> ? row : never
+    type QueryTableName = QuerySource extends QueryTableInput<infer name, any, any> ? name : never
+    type QueryPrimaryKey = QuerySource extends QueryTableInput<any, any, infer key> ? key : never
+    type QueryBinding =
+      QueryType extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { binding: infer binding }
+          ? binding
+          : never
+        : never
+    type DatabaseQueryMethod = Database['query']
     type QueryFromTableAlias = QueryForTable<typeof accounts>
+    type QueryMethodReturnsBoundQuery = DatabaseQueryMethod extends (
+      ...args: any[]
+    ) => Query<any, any, any, any, { binding: 'bound'; mode: 'all' }>
+      ? true
+      : false
     type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof accounts>
     type AccountsReference = TableReference<typeof accounts>
     type AccountsReferenceColumns = keyof AccountsReference['columns'] & string
@@ -114,12 +152,108 @@ describe('type safety', () => {
     expectType<Equal<QueryRow, ExpectedRow>>()
     expectType<Equal<QueryTableName, 'accounts'>>()
     expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
-    expectType<Equal<Query, QueryFromTableAlias>>()
+    expectType<Equal<QueryType, QueryFromTableAlias>>()
+    expectType<Equal<PublicAnyQuery, AnyQuery>>()
+    expectType<Equal<QueryMethodReturnsBoundQuery, true>>()
+    expectType<Equal<QueryBinding, 'bound'>>()
     expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()
     expectType<Equal<AccountsReference['kind'], 'table'>>()
     expectType<Equal<AccountsReference['name'], 'accounts'>>()
     expectType<Equal<AccountsReference['primaryKey'], readonly ['id']>>()
     expectType<Equal<AccountsReferenceColumns, 'email' | 'id' | 'status'>>()
+  })
+
+  it('types query(table) and db.exec(...) for unbound queries in every execution mode', async () => {
+    let db = createDatabase(
+      createAdapter({
+        accounts: [
+          { id: 1, email: 'a@example.com', status: 'active' },
+          { id: 2, email: 'b@example.com', status: 'inactive' },
+        ],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
+
+    let unbound = query(accounts).where({ status: 'active' })
+    let firstQuery = query(accounts).first()
+    let updateQuery = query(accounts).where({ status: 'inactive' }).update({ status: 'active' })
+    let rows = await db.exec(unbound)
+    let first = await db.exec(firstQuery)
+    let found = await db.exec(query(accounts).find(1))
+    let count = await db.exec(query(accounts).count())
+    let exists = await db.exec(query(accounts).where({ status: 'active' }).exists())
+    let insertResult = await db.exec(
+      query(accounts).insert({ id: 3, email: 'c@example.com', status: 'inactive' }),
+    )
+    let insertManyResult = await db.exec(
+      query(accounts).insertMany([
+        { id: 4, email: 'd@example.com', status: 'archived' },
+        { id: 5, email: 'e@example.com', status: 'active' },
+      ]),
+    )
+    let updateResult = await db.exec(updateQuery)
+    let deleteResult = await db.exec(query(accounts).where({ id: 4 }).delete())
+    let upsertResult = await db.exec(
+      query(accounts).upsert(
+        { id: 6, email: 'f@example.com', status: 'active' },
+        { conflictTarget: ['id'] },
+      ),
+    )
+
+    assert.equal(rows.length, 1)
+    assert.equal(first?.id, 1)
+    assert.equal(found?.id, 1)
+    assert.equal(count, 2)
+    assert.equal(exists, true)
+    assert.equal(insertResult.affectedRows, 1)
+    assert.equal(insertManyResult.affectedRows, 2)
+    assert.equal(updateResult.affectedRows, 2)
+    assert.equal(deleteResult.affectedRows, 1)
+    assert.equal(upsertResult.affectedRows, 1)
+
+    type Unbound = typeof unbound
+    type FirstQuery = typeof firstQuery
+    type UpdateQuery = typeof updateQuery
+    type UnboundBinding =
+      Unbound extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { binding: infer binding }
+          ? binding
+          : never
+        : never
+    type FirstMode =
+      FirstQuery extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { mode: infer mode }
+          ? mode
+          : never
+        : never
+    type UpdateMode =
+      UpdateQuery extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { mode: infer mode }
+          ? mode
+          : never
+        : never
+    type Row = (typeof rows)[number]
+
+    expectType<Equal<UnboundBinding, 'unbound'>>()
+    expectType<Equal<FirstMode, 'first'>>()
+    expectType<Equal<UpdateMode, 'update'>>()
+    expectType<Equal<Row['id'], number>>()
+    expectType<Equal<Row['email'], string>>()
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unbound queries do not expose all()
+      query(accounts).all()
+      // @ts-expect-error terminal queries do not expose builder methods
+      query(accounts).first().where({ id: 1 })
+      // @ts-expect-error terminal queries do not expose builder methods
+      query(accounts).update({ status: 'active' }).limit(1)
+      // @ts-expect-error values are only accepted for raw SQL exec()
+      db.exec(query(accounts), [])
+      // @ts-expect-error db.exec only accepts Query values or raw SQL
+      db.exec({ kind: 'count' })
+    }
+
+    void verifyTypeErrors
   })
 
   it('narrows select() result types while preserving relation types', async () => {

@@ -1,6 +1,10 @@
 import {
   type MultipartParserOptions,
   type MultipartPart,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   isMultipartRequest,
   parseMultipartRequest,
 } from '@remix-run/multipart-parser'
@@ -59,6 +63,21 @@ export interface FileUploadHandler {
 function defaultFileUploadHandler(file: FileUpload): File {
   // By default just keep the file around in memory.
   return file
+}
+
+const oneKb = 1024
+const oneMb = oneKb * oneKb
+const defaultMaxFiles = 20
+const defaultMaxFileSize = 2 * oneMb
+const defaultMaxParts = 1000
+
+function isMultipartLimitError(error: unknown): boolean {
+  return (
+    error instanceof MaxHeaderSizeExceededError ||
+    error instanceof MaxFileSizeExceededError ||
+    error instanceof MaxPartsExceededError ||
+    error instanceof MaxTotalSizeExceededError
+  )
 }
 
 /**
@@ -125,7 +144,20 @@ export async function parseFormData(
     }
   }
 
-  let { maxFiles = 20, ...parserOptions } = optionsOrUploadHandler
+  let {
+    maxFiles = defaultMaxFiles,
+    maxHeaderSize,
+    maxFileSize = defaultMaxFileSize,
+    maxParts = defaultMaxParts,
+    maxTotalSize = maxFiles * maxFileSize + oneMb,
+  } = optionsOrUploadHandler
+
+  let parserOptions: MultipartParserOptions = {
+    maxHeaderSize,
+    maxFileSize,
+    maxParts,
+    maxTotalSize,
+  }
 
   let formData = new FormData()
   let fileCount = 0
@@ -149,7 +181,7 @@ export async function parseFormData(
       }
     }
   } catch (error) {
-    if (error instanceof FormDataParseError) {
+    if (error instanceof FormDataParseError || isMultipartLimitError(error)) {
       throw error
     }
 

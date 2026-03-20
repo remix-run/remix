@@ -75,11 +75,10 @@ We currently publish the following packages:
 
 ## Installation
 
-```sh
-npm install remix
+To try the current Remix alpha, install the `next` dist-tag:
 
-# Or, just install a single package
-npm install @remix-run/fetch-router
+```sh
+npm install remix@next
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):

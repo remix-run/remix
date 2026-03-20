@@ -5,6 +5,7 @@ import { getRandomBytes } from '../../test/utils.ts'
 import { createMultipartRequest } from '../../test/utils.node.ts'
 
 import type { MultipartPart } from './multipart.ts'
+import { MaxPartsExceededError, MaxTotalSizeExceededError } from './multipart.ts'
 import { parseMultipartRequest } from './multipart.node.ts'
 
 describe('parseMultipartRequest (node)', () => {
@@ -62,5 +63,32 @@ describe('parseMultipartRequest (node)', () => {
     assert.equal(parts[0].filename, 'tesla.jpg')
     assert.equal(parts[0].mediaType, 'image/jpeg')
     assert.deepEqual(parts[0].content, content)
+  })
+
+  it('throws when the number of parts exceeds maxParts', async () => {
+    let request = createMultipartRequest(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+      field3: 'value3',
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, { maxParts: 2 })) {
+        // ...
+      }
+    }, MaxPartsExceededError)
+  })
+
+  it('throws when the aggregate content size exceeds maxTotalSize', async () => {
+    let request = createMultipartRequest(boundary, {
+      field1: 'hello',
+      field2: 'world',
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, { maxTotalSize: 9 })) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
   })
 })

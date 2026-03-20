@@ -75,10 +75,18 @@ async function requestHandler(request: Request) {
 To validate the resulting `FormData` object with `remix/data-schema`, use the
 `remix/data-schema/form-data` helpers.
 
-To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
+To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`,
+`maxParts`, and `maxTotalSize` options. By default, `parseFormData()` uses `maxFiles = 20`,
+`maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
 
 ```ts
-import { MaxFilesExceededError, MaxFileSizeExceededError } from 'remix/form-data-parser'
+import {
+  MaxFilesExceededError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+} from 'remix/form-data-parser'
 
 const oneKb = 1024
 const oneMb = 1024 * oneKb
@@ -87,12 +95,20 @@ try {
   let formData = await parseFormData(request, {
     maxFiles: 5,
     maxFileSize: 10 * oneMb,
+    maxParts: 25,
+    maxTotalSize: 12 * oneMb,
   })
 } catch (error) {
   if (error instanceof MaxFilesExceededError) {
     console.error(`Request may not contain more than 5 files`)
+  } else if (error instanceof MaxHeaderSizeExceededError) {
+    console.error(`Multipart headers may not exceed the configured size limit`)
   } else if (error instanceof MaxFileSizeExceededError) {
     console.error(`Files may not be larger than 10 MiB`)
+  } else if (error instanceof MaxPartsExceededError) {
+    console.error(`Request may not contain more than 25 multipart parts`)
+  } else if (error instanceof MaxTotalSizeExceededError) {
+    console.error(`Multipart request may not exceed 12 MiB of total content`)
   } else {
     console.error(`An unknown error occurred:`, error)
   }

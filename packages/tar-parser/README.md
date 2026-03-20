@@ -46,7 +46,7 @@ await parseTar(response.body, { filenameEncoding: 'latin1' }, (entry) => {
 
 ```
 > @remix-run/tar-parser@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/tar-parser
-> node --disable-warning=ExperimentalWarning ./bench/runner.ts
+> node ./bench/runner.ts
 
 Platform: Darwin (24.0.0)
 CPU: Apple M1 Pro

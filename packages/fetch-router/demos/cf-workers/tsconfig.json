@@ -17,5 +17,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "types": ["./worker-configuration.d.ts", "node"]
-  }
+  },
+  "exclude": ["dist"]
 }

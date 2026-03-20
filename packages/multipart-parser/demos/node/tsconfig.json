@@ -14,5 +14,6 @@
     "skipLibCheck": true,
     "types": ["node"],
     "noEmit": true
-  }
+  },
+  "exclude": ["dist"]
 }

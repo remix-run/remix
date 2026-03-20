@@ -8,7 +8,7 @@ A minimal component system built on JavaScript and DOM primitives. Write compone
 - **Component State** - State managed with plain JavaScript variables
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
 - **Real DOM Events** - Events are real DOM events using the `on()` mixin and `addEventListeners()`
-- **Inline CSS** - CSS prop with pseudo-selectors and nested rules
+- **Inline CSS** - `css(...)` mixin with pseudo-selectors and nested rules
 - **Server Rendering** - Stream full pages or fragments with `renderToStream`
 - **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
 - **Frames** - `<Frame>` streams partial server UI into the page and can be reloaded without a full page navigation
@@ -26,8 +26,8 @@ npm i remix
 Render a full page to a streaming response:
 
 ```tsx
-import { renderToStream } from '@remix-run/component/server'
-import { Frame } from '@remix-run/component'
+import { renderToStream } from 'remix/component/server'
+import { Frame } from 'remix/component'
 import { Counter } from './assets/counter.tsx'
 
 function App() {
@@ -47,7 +47,13 @@ function App() {
 }
 
 let stream = renderToStream(<App />, {
-  resolveFrame: (src) => fetchFrameHtml(src),
+  resolveFrame(src, target, context) {
+    let headers = new Headers({ accept: 'text/html' })
+    if (target) headers.set('x-remix-target', target)
+    return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
+      res.text(),
+    )
+  },
 })
 
 return new Response(stream, {
@@ -60,7 +66,7 @@ return new Response(stream, {
 Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
 
 ```tsx
-import { clientEntry, on, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -95,16 +101,18 @@ The first argument is the module URL and export name the client will use to load
 Boot the client with `run`. It finds all client entries in the page, loads their modules, and hydrates them:
 
 ```tsx
-import { run } from '@remix-run/component'
+import { run } from 'remix/component'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src) {
-    let res = await fetch(src, { headers: { accept: 'text/html' } })
-    return await res.text()
+  async resolveFrame(src, signal, target) {
+    let headers = new Headers({ accept: 'text/html' })
+    if (target) headers.set('x-remix-target', target)
+    let res = await fetch(src, { headers, signal })
+    return res.body ?? (await res.text())
   },
 })
 
@@ -258,13 +266,13 @@ function SearchInput(handle: Handle) {
 }
 ```
 
-You can also listen to global event targets like `document` or `window` using `handle.on()` with automatic cleanup on component removal:
+You can also listen to global event targets like `document` or `window` using `addEventListeners()` with automatic cleanup on component removal:
 
 ```tsx
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown: (event) => {
       keys.push(event.key)
       handle.update()
@@ -275,24 +283,26 @@ function KeyboardTracker(handle: Handle) {
 }
 ```
 
-## CSS Prop
+## CSS Mixin
 
-Use the `css` prop for inline styles with pseudo-selectors and nested rules:
+Use the `css(...)` mixin for inline styles with pseudo-selectors and nested rules:
 
 ```tsx
 function Button(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'blue',
-        '&:hover': {
-          backgroundColor: 'darkblue',
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -335,27 +345,29 @@ The syntax mirrors modern CSS nesting, but in object form. Use `&` to reference 
 function Button(handle: Handle) {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'blue',
-        '&:hover': {
-          backgroundColor: 'darkblue',
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-        },
-        '&[aria-selected="true"]': {
-          border: '2px solid yellow',
-        },
-        '.icon': {
-          width: '16px',
-          height: '16px',
-        },
-        '@media (max-width: 768px)': {
-          padding: '8px',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+          },
+          '&[aria-selected="true"]': {
+            border: '2px solid yellow',
+          },
+          '.icon': {
+            width: '16px',
+            height: '16px',
+          },
+          '@media (max-width: 768px)': {
+            padding: '8px',
+          },
+        }),
+      ]}
     >
       <span className="icon">★</span>
       Click me
@@ -427,7 +439,7 @@ Components receive a `Handle` as their first argument with the following API:
 
 - **`handle.update()`** - Schedule an update and await completion to get an `AbortSignal`.
 - **`handle.queueTask(task)`** - Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements, etc.).
-- **`handle.on(target, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
+- **`addEventListeners(target, handle.signal, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
 - **`handle.id`** - Stable identifier per component instance.
 - **`handle.context`** - Context API for ancestor/descendant communication.
@@ -532,12 +544,14 @@ function Form(handle: Handle) {
       </label>
       {showDetails && (
         <section
-          css={{
-            marginTop: '2rem',
-            padding: '1rem',
-            border: '1px solid #ccc',
-          }}
-          mix={[ref((node) => (detailsSection = node))]}
+          mix={[
+            css({
+              marginTop: '2rem',
+              padding: '1rem',
+              border: '1px solid #ccc',
+            }),
+            ref((node) => (detailsSection = node)),
+          ]}
         >
           <h2>Additional Details</h2>
           <p>This section appears when the checkbox is checked.</p>
@@ -548,7 +562,7 @@ function Form(handle: Handle) {
 }
 ```
 
-### `handle.on(target, listeners)`
+### `addEventListeners(target, handle.signal, listeners)`
 
 Listen to an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) with automatic cleanup when the component disconnects. Ideal for listening to events on global event targets like `document` and `window`.
 
@@ -556,7 +570,7 @@ Listen to an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/Even
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown: (event) => {
       keys.push(event.key)
       handle.update()
@@ -622,13 +636,7 @@ function Header(handle: Handle) {
   // Consume context from App
   let { theme } = handle.context.get(App)
   return () => (
-    <header
-      css={{
-        backgroundColor: theme === 'dark' ? '#000' : '#fff',
-      }}
-    >
-      Header
-    </header>
+    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>Header</header>
   )
 }
 ```
@@ -676,10 +684,10 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(App)
 
   // Subscribe to theme changes and update when it changes
-  handle.on(theme, { change: () => handle.update() })
+  addEventListeners(theme, handle.signal, { change: () => handle.update() })
 
   return () => (
-    <div css={{ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' }}>
+    <div mix={[css({ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' })]}>
       Current theme: {theme.value}
     </div>
   )

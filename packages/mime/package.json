@@ -39,9 +39,9 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.ts",
+    "codegen": "node ./scripts/codegen.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test": "node --test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

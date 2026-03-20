@@ -2,6 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
@@ -24,7 +25,8 @@ const userSchema = f.object({
 
 export default {
   actions: {
-    async index({ db }) {
+    async index({ get }) {
+      let db = get(Database)
       let user = getCurrentUser()
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
@@ -93,7 +95,8 @@ export default {
       )
     },
 
-    async show({ db, params }) {
+    async show({ get, params }) {
+      let db = get(Database)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -146,7 +149,8 @@ export default {
       )
     },
 
-    async edit({ db, params }) {
+    async edit({ get, params }) {
+      let db = get(Database)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -208,7 +212,8 @@ export default {
       )
     },
 
-    async update({ db, get, params }) {
+    async update({ get, params }) {
+      let db = get(Database)
       let formData = get(FormData)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
@@ -225,7 +230,8 @@ export default {
       return redirect(routes.admin.users.index.href())
     },
 
-    async destroy({ db, params }) {
+    async destroy({ get, params }) {
+      let db = get(Database)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
       if (targetUser) {

@@ -1,7 +1,9 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { router } from './app/router.ts'
+import { createBookstoreRouter } from './app/router.ts'
+
+let router = createBookstoreRouter()
 
 let server = http.createServer(
   createRequestListener(async (request) => {
@@ -30,9 +32,8 @@ let shuttingDown = false
 function shutdown() {
   if (shuttingDown) return
   shuttingDown = true
-  server.close(() => {
-    process.exit(0)
-  })
+  server.close(() => process.exit(0))
+  server.closeAllConnections()
 }
 
 process.on('SIGINT', shutdown)

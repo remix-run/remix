@@ -1,10 +1,10 @@
 # Events
 
-Event handling with the `on` prop and signal-based interruption management.
+Event handling with the `on()` mixin and signal-based interruption management.
 
 ## Basic Event Handling
 
-Use the `on` prop to attach event listeners to elements:
+Use the `on()` mixin to attach event listeners to elements:
 
 ```tsx
 function Button(handle: Handle) {
@@ -12,12 +12,12 @@ function Button(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Clicked {count} times
     </button>
@@ -30,16 +30,13 @@ function Button(handle: Handle) {
 Event handlers receive the event object and an optional `AbortSignal`:
 
 ```tsx
-on={{
-  click(event) {
+mix={[on('click', (event) => {
     // event is the DOM event
     event.preventDefault()
-  },
-  async input(event, signal) {
+  }), on('input', async (event, signal) => {
     // signal is aborted when handler is re-entered or component removed
     let response = await fetch('/api', { signal })
-  }
-}}
+  })]}
 ```
 
 ## Signals in Event Handlers
@@ -60,8 +57,8 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        on={{
-          async input(event, signal) {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             loading = true
             handle.update()
@@ -75,8 +72,8 @@ function SearchInput(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (
@@ -103,20 +100,20 @@ function InteractiveBox(handle: Handle) {
 
   return () => (
     <div
-      on={{
-        mouseenter() {
+      mix={[
+        on('mouseenter', () => {
           state = 'hovered'
           handle.update()
-        },
-        mouseleave() {
+        }),
+        on('mouseleave', () => {
           state = 'idle'
           handle.update()
-        },
-        click() {
+        }),
+        on('click', () => {
           state = 'clicked'
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       State: {state}
     </div>
@@ -132,29 +129,29 @@ Common form event patterns:
 function Form(handle: Handle) {
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           // Process form data
-        },
-      }}
+        }),
+      ]}
     >
       <input
         name="email"
-        on={{
-          blur(event) {
+        mix={[
+          on('blur', (event) => {
             // Validate on blur
             let value = event.currentTarget.value
             if (!value.includes('@')) {
               event.currentTarget.setCustomValidity('Invalid email')
             }
-          },
-          input(event) {
+          }),
+          on('input', (event) => {
             // Clear validation on input
             event.currentTarget.setCustomValidity('')
-          },
-        }}
+          }),
+        ]}
       />
       <button type="submit">Submit</button>
     </form>
@@ -174,8 +171,8 @@ function KeyboardNav(handle: Handle) {
   return () => (
     <ul
       tabIndex={0}
-      on={{
-        keydown(event) {
+      mix={[
+        on('keydown', (event) => {
           switch (event.key) {
             case 'ArrowDown':
               event.preventDefault()
@@ -188,11 +185,11 @@ function KeyboardNav(handle: Handle) {
               handle.update()
               break
           }
-        },
-      }}
+        }),
+      ]}
     >
       {items.map((item, i) => (
-        <li key={i} css={{ backgroundColor: i === selectedIndex ? '#eee' : 'transparent' }}>
+        <li key={i} mix={[css({ backgroundColor: i === selectedIndex ? '#eee' : 'transparent' })]}>
           {item}
         </li>
       ))}
@@ -203,7 +200,7 @@ function KeyboardNav(handle: Handle) {
 
 ## Global Event Listeners
 
-Use `handle.on()` for global event targets with automatic cleanup:
+Use `addEventListeners()` for global event targets with automatic cleanup:
 
 ```tsx
 function WindowResizeTracker(handle: Handle) {
@@ -211,7 +208,7 @@ function WindowResizeTracker(handle: Handle) {
   let height = window.innerHeight
 
   // Set up global listeners once in setup
-  handle.on(window, {
+  addEventListeners(window, handle.signal, {
     resize() {
       width = window.innerWidth
       height = window.innerHeight
@@ -231,7 +228,7 @@ function WindowResizeTracker(handle: Handle) {
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown(event) {
       keys.push(event.key)
       handle.update()
@@ -255,10 +252,10 @@ For interactive elements, prefer `press` events over `click`. Press events provi
 
 ```tsx
 // ❌ Avoid: click doesn't handle all interaction modes well
-<button on={{ click() { doAction() } }}>Action</button>
+<button mix={[on('click', () => { doAction() })]}>Action</button>
 
 // ✅ Prefer: press handles mouse, touch, and keyboard uniformly
-<button on={{ press() { doAction() } }}>Action</button>
+<button mix={[pressEvents(), on('press', () => { doAction() })]}>Action</button>
 ```
 
 Use `click` only when you specifically need mouse-click behavior (e.g., detecting right-clicks or modifier keys).
@@ -276,8 +273,8 @@ function SearchResults(handle: Handle) {
   return () => (
     <div>
       <input
-        on={{
-          async input(event, signal) {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             // Do work in handler scope
             loading = true
@@ -291,8 +288,8 @@ function SearchResults(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {results.map((result, i) => (
@@ -308,8 +305,7 @@ function SearchResults(handle: Handle) {
 For async work, always check the signal or pass it to APIs that support it:
 
 ```tsx
-on={{
-  async click(event, signal) {
+mix={[on('click', async (event, signal) => {
     // Option 1: Pass signal to fetch
     let response = await fetch('/api', { signal })
 
@@ -319,11 +315,10 @@ on={{
 
     // Safe to update state
     handle.update()
-  }
-}}
+  })]}
 ```
 
 ## See Also
 
-- [Handle API](./handle.md) - `handle.on()` for global listeners
+- [Handle API](./handle.md) - `addEventListeners()` for global listeners
 - [Patterns](./patterns.md) - Data loading and async patterns

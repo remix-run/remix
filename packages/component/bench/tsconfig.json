@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "exclude": ["frameworks"]
+  "exclude": ["frameworks", "dist"]
 }

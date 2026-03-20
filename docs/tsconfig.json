@@ -15,5 +15,6 @@
       "remix/component/jsx-runtime": ["../packages/remix/src/component/jsx-runtime.ts"],
       "remix/component/jsx-dev-runtime": ["../packages/remix/src/component/jsx-dev-runtime.ts"]
     }
-  }
+  },
+  "exclude": ["dist"]
 }

@@ -12,4 +12,6 @@ export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
 } from '@remix-run/multipart-parser'

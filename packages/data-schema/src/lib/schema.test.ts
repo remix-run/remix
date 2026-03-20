@@ -25,7 +25,14 @@ import {
   union,
 } from './schema.ts'
 import { minLength } from './checks.ts'
-import type { Issue, ValidationResult } from './schema.ts'
+import type { InferOutput, Issue, ValidationResult } from './schema.ts'
+
+type Equal<left, right> =
+  (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
+    ? true
+    : false
+
+function expectType<condition extends true>(_value?: condition): void {}
 
 function assertSuccess<output>(
   result: ValidationResult<output>,
@@ -659,7 +666,7 @@ describe('any', () => {
 
 describe('enum_', () => {
   it('accepts allowed values', () => {
-    let schema = enum_(['active', 'inactive', 'pending'] as const)
+    let schema = enum_(['active', 'inactive', 'pending'])
 
     assertSuccess(schema['~standard'].validate('active'))
     assertSuccess(schema['~standard'].validate('inactive'))
@@ -667,7 +674,7 @@ describe('enum_', () => {
   })
 
   it('rejects values not in the list', () => {
-    let schema = enum_(['active', 'inactive'] as const)
+    let schema = enum_(['active', 'inactive'])
     let result = schema['~standard'].validate('deleted')
 
     assertFailure(result)
@@ -676,16 +683,24 @@ describe('enum_', () => {
   })
 
   it('works with numeric values', () => {
-    let schema = enum_([0, 1, 2] as const)
+    let schema = enum_([0, 1, 2])
 
     assertSuccess(schema['~standard'].validate(1))
     assertFailure(schema['~standard'].validate(3))
   })
 
   it('uses strict equality', () => {
-    let schema = enum_([1, 2, 3] as const)
+    let schema = enum_([1, 2, 3])
 
     assertFailure(schema['~standard'].validate('1'))
+  })
+
+  it('infers literal types without as const', () => {
+    let stringEnum = enum_(['active', 'inactive', 'pending'])
+    expectType<Equal<InferOutput<typeof stringEnum>, 'active' | 'inactive' | 'pending'>>()
+
+    let numericEnum = enum_([0, 1, 2])
+    expectType<Equal<InferOutput<typeof numericEnum>, 0 | 1 | 2>>()
   })
 })
 

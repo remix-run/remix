@@ -123,6 +123,28 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  demos/social-auth:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.8.0
+        version: 12.8.0
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
   demos/sse:
     dependencies:
       '@remix-run/component':
@@ -222,6 +244,59 @@ importers:
         specifier: workspace:^
         version: link:../fetch-router
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/auth:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
+      '@remix-run/auth-middleware':
+        specifier: workspace:*
+        version: link:../auth-middleware
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/auth-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -990,6 +1065,12 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
+      '@remix-run/auth':
+        specifier: workspace:^
+        version: link:../auth
+      '@remix-run/auth-middleware':
+        specifier: workspace:^
+        version: link:../auth-middleware
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
@@ -3038,6 +3119,10 @@ packages:
 
   better-sqlite3@12.6.2:
     resolution: {integrity: sha512-8VYKM3MjCa9WcaSAI3hzwhmyHVlH8tiGFwf0RlTsZPWJ1I5MkzjiudCo4KC4DxOaL/53A5B1sI/IbldNFDbsKA==}
+    engines: {node: 20.x || 22.x || 23.x || 24.x || 25.x}
+
+  better-sqlite3@12.8.0:
+    resolution: {integrity: sha512-RxD2Vd96sQDjQr20kdP+F+dK/1OUNiVOl200vKBZY8u0vTwysfolF6Hq+3ZK2+h8My9YvZhHsF+RSGZW2VYrPQ==}
     engines: {node: 20.x || 22.x || 23.x || 24.x || 25.x}
 
   bindings@1.5.0:
@@ -6841,6 +6926,11 @@ snapshots:
   baseline-browser-mapping@2.9.8: {}
 
   better-sqlite3@12.6.2:
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.3
+
+  better-sqlite3@12.8.0:
     dependencies:
       bindings: 1.5.0
       prebuild-install: 7.1.3

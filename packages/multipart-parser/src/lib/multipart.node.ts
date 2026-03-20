@@ -59,7 +59,8 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
  * Parse a multipart Node.js request and yield each part as a {@link MultipartPart} object.
  *
  * @param req The Node.js `http.IncomingMessage` object containing multipart data
- * @param options Options for the parser
+ * @param options Options for the parser, such as `maxHeaderSize`, `maxFileSize`, `maxParts`,
+ * and `maxTotalSize`
  * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartRequest(
@@ -79,5 +80,7 @@ export async function* parseMultipartRequest(
     boundary,
     maxHeaderSize: options?.maxHeaderSize,
     maxFileSize: options?.maxFileSize,
+    maxParts: options?.maxParts,
+    maxTotalSize: options?.maxTotalSize,
   })
 }

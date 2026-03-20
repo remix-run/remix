@@ -7,6 +7,7 @@ import {
   MaxFilesExceededError,
   parseFormData,
 } from './form-data.ts'
+import { MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -182,6 +183,62 @@ describe('parseFormData', () => {
     await assert.rejects(
       async () => await parseFormData(request, { maxFiles: 2 }),
       MaxFilesExceededError,
+    )
+  })
+
+  it('throws when the number of multipart parts exceeds maxParts', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="field1"',
+        '',
+        'value1',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file1"; filename="example1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is the first example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="field2"',
+        '',
+        'value2',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    })
+
+    await assert.rejects(
+      async () => await parseFormData(request, { maxParts: 2 }),
+      MaxPartsExceededError,
+    )
+  })
+
+  it('throws when aggregate multipart content size exceeds maxTotalSize', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="field1"',
+        '',
+        'hello',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file1"; filename="example1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'world',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    })
+
+    await assert.rejects(
+      async () => await parseFormData(request, { maxTotalSize: 9 }),
+      MaxTotalSizeExceededError,
     )
   })
 

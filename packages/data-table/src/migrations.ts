@@ -1,6 +1,5 @@
 export type {
   AlterTableBuilder,
-  Database,
   CreateMigrationInput,
   Migration,
   MigrationContext,

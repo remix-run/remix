@@ -1,7 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import { FormDataParseError, type FileUploadHandler } from '@remix-run/form-data-parser'
+import {
+  FormDataParseError,
+  MaxFilesExceededError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+  type FileUploadHandler,
+} from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
@@ -187,6 +195,188 @@ describe('formData middleware', () => {
     })
   })
 
+  it('does not suppress maxFiles errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxFiles: 1 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test2',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxFilesExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxHeaderSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxHeaderSize: 4 * 1024 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          'X-Large-Header: ' + 'X'.repeat(6 * 1024),
+          '',
+          'value1',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxHeaderSizeExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxFileSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxFileSize: 4 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'hello',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxFileSizeExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxParts errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxParts: 2 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          '',
+          'value1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'test1',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field2"',
+          '',
+          'value2',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxPartsExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
+  it('does not suppress maxTotalSize errors when suppressErrors is true', async () => {
+    let actionCalled = false
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true, maxTotalSize: 9 })],
+    })
+
+    router.post('/', () => {
+      actionCalled = true
+      return new Response('ok')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="field1"',
+          '',
+          'hello',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+          'Content-Type: text/plain',
+          '',
+          'world',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      })
+    }, MaxTotalSizeExceededError)
+
+    assert.equal(actionCalled, false)
+  })
+
   it('invokes a custom `uploadHandler` for file uploads', async () => {
     let uploadHandler = mock.fn<FileUploadHandler>()
 
@@ -235,5 +425,87 @@ describe('formData middleware', () => {
     assert.equal(upload2.name, 'test2.txt')
     assert.equal(upload2.type, 'text/plain')
     assert.equal(await upload2.text(), 'test 2')
+  })
+
+  it('is a no-op when FormData has already been parsed by an earlier middleware', async () => {
+    let firstUploadHandler = mock.fn<FileUploadHandler>((upload) => `first:${upload.name}`)
+    let secondUploadHandler = mock.fn<FileUploadHandler>((upload) => `second:${upload.name}`)
+
+    let router = createRouter({
+      middleware: [
+        formData({ uploadHandler: firstUploadHandler }),
+        formData({ uploadHandler: secondUploadHandler }),
+      ],
+    })
+
+    router.post('/', (context) =>
+      Response.json({
+        file: context.get(FormData).get('file'),
+      }),
+    )
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      file: 'first:test.txt',
+    })
+    assert.equal(firstUploadHandler.mock.calls.length, 1)
+    assert.equal(secondUploadHandler.mock.calls.length, 0)
+  })
+
+  it('is a no-op when FormData has already been parsed by earlier request pipeline middleware', async () => {
+    let globalUploadHandler = mock.fn<FileUploadHandler>((upload) => `global:${upload.name}`)
+    let routeUploadHandler = mock.fn<FileUploadHandler>((upload) => `route:${upload.name}`)
+
+    let router = createRouter({
+      middleware: [formData({ uploadHandler: globalUploadHandler })],
+    })
+
+    router.post('/', {
+      middleware: [formData({ uploadHandler: routeUploadHandler })],
+      action(context) {
+        return Response.json({
+          file: context.get(FormData).get('file'),
+        })
+      },
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      file: 'global:test.txt',
+    })
+    assert.equal(globalUploadHandler.mock.calls.length, 1)
+    assert.equal(routeUploadHandler.mock.calls.length, 0)
   })
 })

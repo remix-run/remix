@@ -2,6 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
+import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
@@ -118,7 +119,8 @@ export default {
           )
         },
 
-        async update({ db, get }) {
+        async update({ get }) {
+          let db = get(Database)
           let formData = get(FormData)
           let user = getCurrentUser()
 
@@ -138,7 +140,8 @@ export default {
 
     orders: {
       actions: {
-        async index({ db }) {
+        async index({ get }) {
+          let db = get(Database)
           let user = getCurrentUser()
           let userOrders = await db.findMany(orders, {
             where: { user_id: user.id },
@@ -200,7 +203,8 @@ export default {
           )
         },
 
-        async show({ db, params }) {
+        async show({ get, params }) {
+          let db = get(Database)
           let user = getCurrentUser()
           let orderId = parseId(params.orderId)
           let order =

@@ -5,7 +5,7 @@ Typed relational query toolkit for JavaScript runtimes.
 ## Features
 
 - **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
-- **Two Complementary Query Styles**: Use the chainable query builder for advanced queries or high-level database helpers for common CRUD
+- **One Query API**: Build reusable `Query` objects with `query(table)` and execute them with `db.exec(...)`, or use `db.query(table)` as shorthand
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
@@ -15,7 +15,7 @@ Typed relational query toolkit for JavaScript runtimes.
 
 `data-table` gives you two complementary APIs:
 
-- [**Query Builder**](#query-builder) for expressive joins, aggregates, eager loading, and scoped writes
+- [**Query Objects**](#query-objects) for expressive joins, aggregates, eager loading, and scoped writes
 - [**CRUD Helpers**](#crud-helpers) for common create/read/update/delete flows (`find`, `create`, `update`, `delete`)
 
 Both APIs are type-safe. Runtime validation is opt-in with table-level `validate(context)`.
@@ -37,7 +37,7 @@ Define tables once, then create a database with an adapter.
 
 ```ts
 import { Pool } from 'pg'
-import { column as c, createDatabase, table, hasMany } from 'remix/data-table'
+import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
 let users = table({
@@ -67,15 +67,18 @@ let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
-## Query Builder
+## Query Objects
 
-Use `db.query(table)` when you need joins, custom shape selection, eager loading, or aggregate logic.
+Use `query(table)` when you want to build a standalone reusable query object. Execute it later with `db.exec(query)`. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
+
+### Standalone Query Builder
+
+`query(table)` is the primary query-builder API. It gives you an unbound `Query` value that can be composed, stored, reused, and executed against any compatible database instance.
 
 ```ts
-import { eq, ilike } from 'remix/data-table'
+import { eq, ilike, query } from 'remix/data-table'
 
-let recentPendingOrders = await db
-  .query(orders)
+let pendingOrdersForExampleUsers = query(orders)
   .join(users, eq(orders.user_id, users.id))
   .where({ status: 'pending' })
   .where(ilike(users.email, '%@example.com'))
@@ -87,32 +90,51 @@ let recentPendingOrders = await db
   })
   .orderBy(orders.created_at, 'desc')
   .limit(20)
-  .all()
+
+let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
 ```
 
-Load relations with relation-scoped filtering and ordering:
+Unbound queries stay lazy until you pass them to `db.exec(...)`:
 
 ```ts
-let customers = await db
-  .query(users)
+let shippedCustomerQuery = query(users)
   .where({ role: 'customer' })
   .with({
     recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
   })
-  .all()
+
+let customers = await db.exec(shippedCustomerQuery)
 
 // customers[0].recentOrders is fully typed
 ```
 
-Run scoped writes safely with the same chainable API:
+The same standalone query builder also handles terminal read and write operations:
 
 ```ts
-await db
+let nextPendingOrder = await db.exec(
+  query(orders).where({ status: 'pending' }).orderBy('created_at', 'asc').first(),
+)
+
+await db.exec(
+  query(orders)
+    .where({ status: 'pending' })
+    .orderBy('created_at', 'asc')
+    .limit(100)
+    .update({ status: 'processing' }),
+)
+```
+
+### Bound Query Shorthand
+
+If you already have a `db` instance in hand and do not need a standalone query value, `db.query(table)` returns the same query builder already bound to that database:
+
+```ts
+let recentPendingOrders = await db
   .query(orders)
   .where({ status: 'pending' })
-  .orderBy('created_at', 'asc')
-  .limit(100)
-  .update({ status: 'processing' })
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .all()
 ```
 
 ## CRUD Helpers

@@ -13,3 +13,5 @@ Migration callbacks now use split handles: `{ db, schema }`.
 Migration-time DDL, DML, and introspection now share the same transaction token when migration transactions are enabled. In `dryRun`, schema introspection (`schema.hasTable` / `schema.hasColumn`) reads live adapter/database state and does not simulate pending dry-run operations.
 
 Add public subpath exports for migrations, Node migration loading, SQL helpers, operators, and SQL builders. SQL compilation stays adapter-owned, while shared SQL compiler helpers remain available from `remix/data-table/sql-helpers`.
+
+`@remix-run/data-table/migrations` no longer exports a separate `Database` type alias. Migration callbacks still receive `context.db` as the main `Database` runtime, so if you need the type directly, import `Database` from `@remix-run/data-table` instead.

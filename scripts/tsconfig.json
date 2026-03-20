@@ -8,5 +8,6 @@
     "checkJs": true,
     "noEmit": true,
     "allowImportingTsExtensions": true
-  }
+  },
+  "exclude": ["dist"]
 }

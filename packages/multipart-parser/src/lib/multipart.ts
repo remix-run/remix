@@ -48,6 +48,32 @@ export class MaxFileSizeExceededError extends MultipartParseError {
 }
 
 /**
+ * An error thrown when the maximum allowed number of multipart parts is exceeded.
+ */
+export class MaxPartsExceededError extends MultipartParseError {
+  /**
+   * @param maxParts The maximum number of parts that was exceeded
+   */
+  constructor(maxParts: number) {
+    super(`Multipart part count exceeds maximum allowed count of ${maxParts}`)
+    this.name = 'MaxPartsExceededError'
+  }
+}
+
+/**
+ * An error thrown when the maximum allowed aggregate multipart content size is exceeded.
+ */
+export class MaxTotalSizeExceededError extends MultipartParseError {
+  /**
+   * @param maxTotalSize The maximum total size that was exceeded
+   */
+  constructor(maxTotalSize: number) {
+    super(`Multipart content size exceeds maximum allowed size of ${maxTotalSize} bytes`)
+    this.name = 'MaxTotalSizeExceededError'
+  }
+}
+
+/**
  * Options for parsing a multipart message.
  */
 export interface ParseMultipartOptions {
@@ -70,6 +96,20 @@ export interface ParseMultipartOptions {
    * @default 2097152 (2 MiB)
    */
   maxFileSize?: number
+  /**
+   * The maximum allowed number of parts in the multipart message. If this limit
+   * is exceeded, a `MaxPartsExceededError` will be thrown.
+   *
+   * @default 1000
+   */
+  maxParts?: number
+  /**
+   * The maximum allowed aggregate size of all part content in bytes. If this
+   * limit is exceeded, a `MaxTotalSizeExceededError` will be thrown.
+   *
+   * @default `maxFileSize * 20 + 1048576` (1 MiB)
+   */
+  maxTotalSize?: number
 }
 
 /**
@@ -91,6 +131,8 @@ export function* parseMultipart(
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
+    maxParts: options.maxParts,
+    maxTotalSize: options.maxTotalSize,
   })
 
   if (message instanceof Uint8Array) {
@@ -126,6 +168,8 @@ export async function* parseMultipartStream(
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
+    maxParts: options.maxParts,
+    maxTotalSize: options.maxTotalSize,
   })
 
   for await (let chunk of readStream(stream)) {
@@ -154,6 +198,8 @@ const findDoubleNewline = createSearch('\r\n\r\n')
 
 const oneKb = 1024
 const oneMb = 1024 * oneKb
+const defaultMaxParts = 1000
+const defaultMaxTotalSizePartAllowance = 20
 
 /**
  * A streaming parser for `multipart/*` HTTP messages.
@@ -174,6 +220,16 @@ export class MultipartParser {
    */
   readonly maxFileSize: number
 
+  /**
+   * Maximum number of parts allowed in a multipart message.
+   */
+  readonly maxParts: number
+
+  /**
+   * Maximum aggregate content size allowed across all parts.
+   */
+  readonly maxTotalSize: number
+
   #findOpeningBoundary: SearchFunction
   #openingBoundaryLength: number
   #findBoundary: SearchFunction
@@ -186,6 +242,8 @@ export class MultipartParser {
   #currentHeader: Uint8Array | null = null
   #currentContent: Uint8Array[] | null = null
   #contentLength = 0
+  #partCount = 0
+  #totalContentLength = 0
 
   /**
    * @param boundary The boundary string used to separate parts
@@ -195,6 +253,9 @@ export class MultipartParser {
     this.boundary = boundary
     this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
     this.maxFileSize = options?.maxFileSize ?? 2 * oneMb
+    this.maxParts = options?.maxParts ?? defaultMaxParts
+    this.maxTotalSize =
+      options?.maxTotalSize ?? this.maxFileSize * defaultMaxTotalSizePartAllowance + oneMb
 
     this.#findOpeningBoundary = createSearch(`--${boundary}`)
     this.#openingBoundaryLength = 2 + boundary.length // length of '--' + boundary
@@ -243,7 +304,7 @@ export class MultipartParser {
             this.#append(carry.subarray(0, carryResult.start))
           }
 
-          yield new MultipartPart(this.#currentHeader!, this.#currentContent!)
+          yield this.#createPart()
 
           this.#state = MultipartParserStateAfterBoundary
 
@@ -289,7 +350,7 @@ export class MultipartParser {
           this.#append(chunk.subarray(index, boundaryIndex))
         }
 
-        yield new MultipartPart(this.#currentHeader!, this.#currentContent!)
+        yield this.#createPart()
 
         index = boundaryIndex + this.#boundaryLength
 
@@ -370,8 +431,21 @@ export class MultipartParser {
       throw new MaxFileSizeExceededError(this.maxFileSize)
     }
 
+    if (this.#totalContentLength + chunk.length > this.maxTotalSize) {
+      throw new MaxTotalSizeExceededError(this.maxTotalSize)
+    }
+
     this.#currentContent!.push(chunk)
     this.#contentLength += chunk.length
+    this.#totalContentLength += chunk.length
+  }
+
+  #createPart(): MultipartPart {
+    if (++this.#partCount > this.maxParts) {
+      throw new MaxPartsExceededError(this.maxParts)
+    }
+
+    return new MultipartPart(this.#currentHeader!, this.#currentContent!)
   }
 
   #analyzeCarryBoundary(

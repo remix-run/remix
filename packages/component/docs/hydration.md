@@ -9,7 +9,7 @@ Only the components you mark are hydrated. The rest of the page stays as static 
 Use `clientEntry` to mark a component for hydration. The first argument is the module URL and export name the client will use to load the component:
 
 ```tsx
-import { clientEntry, type Handle } from '@remix-run/component'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -22,12 +22,12 @@ export let Counter = clientEntry(
           {props.label}: {count}
         </span>
         <button
-          on={{
-            click() {
+          mix={[
+            on('click', () => {
               count++
               handle.update()
-            },
-          }}
+            }),
+          ]}
         >
           +
         </button>
@@ -46,16 +46,16 @@ On the server, `clientEntry` components render like any other component. The ser
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:
 
 ```tsx
-import { run } from '@remix-run/component'
+import { run } from 'remix/component'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     return mod[exportName]
   },
-  async resolveFrame(src) {
-    let res = await fetch(src, { headers: { accept: 'text/html' } })
-    return await res.text()
+  async resolveFrame(src, signal) {
+    let res = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    return res.body ?? (await res.text())
   },
 })
 
@@ -65,7 +65,7 @@ await app.ready()
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
-- **`resolveFrame(src)`** (optional) - Called when a `<Frame>` needs to load or reload content. If omitted, Remix Component uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
+- **`resolveFrame(src, signal, target)`** (optional) - Called when a `<Frame>` needs to load or reload content. The examples here only use `src` and `signal`, but `target` is also available when frame targeting matters. If omitted, Remix Component uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
 
 ### `app` methods
 

@@ -7,7 +7,7 @@ Fast streaming multipart parsing for JavaScript. `multipart-parser` processes mu
 - **File Upload Parsing** - Parse file uploads (`multipart/form-data`) with automatic field and file detection
 - **Full Multipart Support** - Support for all `multipart/*` content types (mixed, alternative, related, etc.)
 - **Convenient API** - `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
-- **File Size Limiting** - Built-in file size limiting to prevent abuse
+- **Built-in Limits** - Header, per-part, part-count, and aggregate-size limits to prevent abuse
 - **Node.js Support** - First-class Node.js support with native `http.IncomingMessage` compatibility
 - **Runtime Demos** - [Demos for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos)
 
@@ -51,28 +51,38 @@ async function handleRequest(request: Request): void {
 }
 ```
 
-## Limiting File Upload Size
+## Size Limits
 
-A common use case when handling file uploads is limiting the size of uploaded files to prevent malicious users from sending very large files that may overload your server's memory and/or storage capacity. You can set a file upload size limit using the `maxFileSize` option, and return a 413 "Payload Too Large" response when you receive a request that exceeds the limit.
+A common use case when handling file uploads is limiting the overall shape of incoming multipart bodies so malicious clients cannot force unbounded growth in memory. Use `maxFileSize` to limit each part, `maxParts` to limit how many parts are accepted, and `maxTotalSize` to limit aggregate part content across the entire request. `multipart-parser` applies finite defaults for each of these limits.
 
 ```ts
 import {
   MultipartParseError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   parseMultipartRequest,
 } from 'remix/multipart-parser/node'
 
 const oneMb = Math.pow(2, 20)
-const maxFileSize = 10 * oneMb
+const limits = {
+  maxFileSize: 10 * oneMb,
+  maxParts: 100,
+  maxTotalSize: 25 * oneMb,
+}
 
 async function handleRequest(request: Request): Promise<Response> {
   try {
-    for await (let part of parseMultipartRequest(request, { maxFileSize })) {
+    for await (let part of parseMultipartRequest(request, limits)) {
       // ...
     }
   } catch (error) {
     if (error instanceof MaxFileSizeExceededError) {
       return new Response('File size limit exceeded', { status: 413 })
+    } else if (error instanceof MaxPartsExceededError) {
+      return new Response('Too many multipart parts', { status: 413 })
+    } else if (error instanceof MaxTotalSizeExceededError) {
+      return new Response('Multipart request is too large', { status: 413 })
     } else if (error instanceof MultipartParseError) {
       return new Response('Failed to parse multipart request', { status: 400 })
     } else {
@@ -155,7 +165,7 @@ The results of running the benchmarks on my laptop:
 
 ```
 > @remix-run/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
-> node --disable-warning=ExperimentalWarning ./bench/runner.ts
+> node ./bench/runner.ts
 
 Platform: Darwin (24.5.0)
 CPU: Apple M1 Pro

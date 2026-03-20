@@ -9,5 +9,6 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["dist"]
 }

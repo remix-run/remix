@@ -1,8 +1,8 @@
 import { detectMimeType } from 'remix/mime'
 
 import { renderBreadcrumb } from './breadcrumb.ts'
-import type { PackageFile } from './utils/npm.ts'
-import { html, render, formatBytes, icons } from './utils/render.ts'
+import type { PackageFile } from '../../utils/npm.ts'
+import { html, render, formatBytes, icons } from '../ui/render.ts'
 
 export function renderDirectoryListing(
   packageName: string,

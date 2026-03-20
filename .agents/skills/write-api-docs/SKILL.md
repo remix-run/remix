@@ -81,7 +81,7 @@ Good:
  * Creates an {@link AuthProvider} for direct credentials-based authentication.
  *
  * @param options Parsing and verification hooks for submitted credentials.
- * @returns A provider that can be passed to `login()`.
+ * @returns A provider that can be passed to `createAuthLoginRequestHandler()`.
  */
 export function createCredentialsAuthProvider(...) {}
 ```
@@ -90,8 +90,8 @@ Avoid:
 
 ```ts
 /**
- * @param {CredentialsOptions} options - options
- * @returns {CredentialsProvider}
+ * @param {CredentialsAuthProviderOptions} options - options
+ * @returns {CredentialsAuthProvider}
  */
 ```
 

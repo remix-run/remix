@@ -39,7 +39,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test": "node --test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

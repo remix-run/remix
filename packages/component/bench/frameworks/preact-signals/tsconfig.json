@@ -11,5 +11,6 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
-  }
+  },
+  "exclude": ["dist"]
 }

@@ -63,9 +63,27 @@ let router = createRouter({
 })
 ```
 
+### Limit Multipart Growth
+
+`formData()` forwards multipart limit options to `parseFormData()`, so you can cap uploads with
+`maxHeaderSize`, `maxFiles`, `maxFileSize`, `maxParts`, and `maxTotalSize`.
+
+```ts
+let router = createRouter({
+  middleware: [
+    formData({
+      maxFiles: 5,
+      maxFileSize: 10 * 1024 * 1024,
+      maxParts: 25,
+      maxTotalSize: 12 * 1024 * 1024,
+    }),
+  ],
+})
+```
+
 ### Suppress Parse Errors
 
-Some requests may contain invalid form data that cannot be parsed. You can suppress parse errors by setting `suppressErrors` to `true`. In these cases, `context.get(FormData)` will be an empty `FormData` object.
+Some requests may contain invalid form data that cannot be parsed. You can suppress those malformed-body parse errors by setting `suppressErrors` to `true`. In these cases, `context.get(FormData)` will be an empty `FormData` object. Multipart limit violations from `maxHeaderSize`, `maxFiles`, `maxFileSize`, `maxParts`, or `maxTotalSize` are never suppressed.
 
 ```ts
 let router = createRouter({

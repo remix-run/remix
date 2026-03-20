@@ -3,6 +3,8 @@ export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   parseMultipart,
   parseMultipartStream,
   MultipartParser,

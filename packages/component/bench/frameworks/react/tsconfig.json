@@ -10,5 +10,6 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx"
-  }
+  },
+  "exclude": ["dist"]
 }

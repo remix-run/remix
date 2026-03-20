@@ -8,5 +8,6 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
-  }
+  },
+  "exclude": ["dist"]
 }

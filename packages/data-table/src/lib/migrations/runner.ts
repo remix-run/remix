@@ -1,9 +1,8 @@
 import { createDatabase, createDatabaseWithTransaction } from '../database.ts'
-import type { Database as DataManipulationDatabase } from '../database.ts'
+import type { Database } from '../database.ts'
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import type { SqlStatement } from '../sql.ts'
 import type {
-  Database as MigrationDatabase,
   MigrateOptions,
   MigrateResult,
   MigrationContext,
@@ -94,7 +93,7 @@ function assertNoMigrationDrift(
   }
 }
 
-function createDryRunDatabase(adapter: DatabaseAdapter): DataManipulationDatabase {
+function createDryRunDatabase(adapter: DatabaseAdapter): Database {
   let error = new Error('Cannot execute data operations while running migrations with dryRun')
   let throwDryRunError = async (): Promise<never> => {
     throw error
@@ -232,10 +231,8 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
         },
         { transaction: token },
       )
-      let migrationDb: MigrationDatabase = db
-
       let context: MigrationContext = {
-        db: migrationDb,
+        db,
         schema,
       }
 

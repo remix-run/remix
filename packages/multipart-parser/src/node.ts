@@ -4,6 +4,8 @@ export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
   MultipartParser,
   MultipartPart,
 } from './lib/multipart.ts'

@@ -27,10 +27,12 @@ A good demo should:
 ## Rules
 
 - Use Remix library packages for the demo's framework behavior. Do not introduce unrelated routers, component frameworks, state managers, or middleware stacks that distract from the Remix patterns being demonstrated.
+- Treat each demo as its own pnpm workspace consumer. Give it a normal `package.json` with `remix` as a dependency when appropriate, and import from package exports such as `remix/component` instead of reaching back into `packages/` with relative imports.
 - Keep any non-Remix dependency incidental to the runtime environment only. If a database driver, asset bundler, or type package is needed, it should support the demo rather than define its architecture.
 - Demos should push Remix to its limits in a focused way. Prefer realistic edge cases, composition, streaming, middleware, routing, navigation, forms, or request-handling scenarios over toy examples.
-- When demos use `remix/component`, prefer idiomatic Remix component patterns. Use normal JSX composition and built-in styling/mixin props such as `css={...}` or `mix={css(...)}`
-  and `mix={[...]}` instead of dropping down to manual DOM mutation or ad hoc class management.
+- When demos use `remix/component`, prefer idiomatic Remix component patterns. Use normal JSX composition and built-in styling/mixin props such as `css={...}` or `mix={css(...)}` and `mix={[...]}` instead of dropping down to manual DOM mutation or ad hoc class management.
+- When a demo uses `remix/component` JSX, configure that demo's `tsconfig.json` with `jsx: "react-jsx"`, `jsxImportSource: "remix/component"`, and `preserveSymlinks: true`. Do not add `paths` entries that point back into `packages/remix/src`. The goal is for TypeScript to resolve `remix` through the demo's own `node_modules` view, not through repo-relative source paths.
+- For HTML responses rendered with `remix/component`, prefer a tiny local `render()` helper that calls `renderToStream(...)` and wraps it with `createHtmlResponse(...)` from `remix/response/html` instead of manually building HTML `Response` headers or wrapping the stream yourself.
 - Demo code must have good hygiene. Use clear names, small focused modules, explicit control flow, and accessible markup. Avoid hacks, dead code, unexplained shortcuts, or patterns that would be poor examples for users to copy.
 - Make the demo teach good patterns. Assume readers and future agents will study it as an example of how Remix code should be written in this repository.
 - All demo servers should use port `44100`.
@@ -41,10 +43,113 @@ A good demo should:
 Use only the files the scenario needs, but prefer this shape:
 
 - `demos/<name>/package.json`
+- `demos/<name>/tsconfig.json` when the demo has TypeScript or JSX source
 - `demos/<name>/server.ts`
 - `demos/<name>/README.md`
 - `demos/<name>/app/`
 - `demos/<name>/public/` when serving built assets or other static files
+
+## Remix Application Layout
+
+When a demo is a real application, prefer a uniform Remix application layout instead of inventing a new structure for each demo.
+
+### Root layout
+
+Use these root directories consistently:
+
+- `app/` for runtime application code
+- `db/` for database artifacts such as migrations and local SQLite files
+- `test/` for shared test helpers, fixtures, and any true cross-application integration tests
+- `public/` for static files served as-is
+- `tmp/` for runtime scratch files such as sessions, uploads, and caches
+
+### App layout
+
+Inside `app/`, organize code by responsibility:
+
+- `controllers/` for all controller-owned features, with folders such as `controllers/home/`, `controllers/auth/`, or `controllers/account/`, each with a `controller.tsx` entrypoint and the UI it owns
+- `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
+- `data/` for runtime data definitions such as table schema and setup helpers used by the application at startup
+- `middleware/` for request-layer concerns such as auth, database injection, sessions, and other request lifecycle setup
+- `utils/` for shared runtime support code that does not clearly belong to one of the other app layers
+
+### Naming and ownership rules
+
+- Keep controllers thin. They should read request context, talk to the database or other runtime services, and return a response.
+- Put each controller in its controller feature folder as `controller.tsx`. Do not split controller files across the app root and feature folders.
+- If a component or helper is only used by one controller feature, keep it in that controller feature folder instead of `controllers/ui/`.
+- Use `controllers/ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping ground.
+- Do not create a generic `app/lib/` dumping ground.
+- Avoid feature barrel files such as `index.ts`. Import feature modules directly.
+- If a helper is shared only by controllers, keep it under `controllers/`.
+- If a helper is part of request or session setup, keep it under `middleware/`.
+- Keep table definitions, row types, and runtime database setup in `app/data/`.
+- Keep database artifacts such as migrations and SQLite files in `db/`.
+- Use `utils/` only for genuinely cross-layer support code. Prefer a topic-specific name like `utils/external-auth.ts` over catch-all names like `helpers.ts` or `misc.ts`.
+- Co-locate tests with the app modules they cover whenever those tests primarily exercise one implementation file or one small feature area.
+- Use the root `test/` directory only for shared test code, fixtures, and truly broad integration coverage that does not belong to a single app module.
+
+### Example layout
+
+```text
+demos/<name>/
+  app/
+    router.ts
+    router.test.ts
+    routes.ts
+
+    controllers/
+      render.tsx
+
+      home/
+        controller.tsx
+        login-page.tsx
+
+      auth/
+        controller.tsx
+        signup-actions.tsx
+        resolve-external-auth.ts
+
+      account/
+        controller.tsx
+        account-page.tsx
+
+      ui/
+        auth-card.tsx
+        document.tsx
+        form-field.tsx
+        notice.tsx
+        icons.tsx
+        design-system.ts
+        styles.ts
+
+    data/
+      schema.ts
+      setup.ts
+      setup.test.ts
+
+    middleware/
+      auth.ts
+      database.ts
+      session.ts
+
+    utils/
+      auth-session.ts
+      auth-session.test.ts
+      password-hash.ts
+      external-auth.ts
+
+  db/
+    migrations/
+    app.sqlite
+
+  test/
+    fixtures/
+    helpers.ts
+
+  public/
+  tmp/
+```
 
 ## README Expectations
 

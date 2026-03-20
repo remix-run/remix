@@ -1,0 +1,1 @@
+`@remix-run/data-table` now exports `Database` as the runtime class instead of separating the runtime implementation from a structural `Database` type. You can construct databases directly with `new Database(adapter, options)` or keep using `createDatabase(adapter, options)`, which now delegates to the class constructor.

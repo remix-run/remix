@@ -26,9 +26,7 @@ export const getDefaultVersions = (): ServerContext['versions'] => {
   return [{ version, crawl: semver.prerelease(version) === null }]
 }
 
-export function createRouter(versions?: ServerContext['versions']) {
-  versions ??= getDefaultVersions()
-
+export function createRouter(versions: ServerContext['versions']) {
   const router = _createRouter()
 
   const respond = {
