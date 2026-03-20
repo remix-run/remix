@@ -58,7 +58,8 @@ export async function runServerTests(
             }
           },
           (err) => {
-            console.error(`Error running ${file}:`, err)
+            console.error(`Error running ${file}:`, err.message)
+            failed++
             active--
             if (active === 0 && index >= files.length) resolve()
             else dispatch()
