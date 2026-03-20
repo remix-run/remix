@@ -126,7 +126,7 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
-  demos/socialauth:
+  demos/social-auth:
     dependencies:
       better-sqlite3:
         specifier: ^12.8.0

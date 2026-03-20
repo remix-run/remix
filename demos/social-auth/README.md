@@ -12,7 +12,7 @@ and `remix/data-table` to build a small auth application with:
 ## Running the Demo
 
 ```sh
-cd demos/socialauth
+cd demos/social-auth
 cp .env.example .env
 pnpm install
 pnpm start
@@ -64,8 +64,8 @@ If you configure the external providers locally, use these callback URLs:
 
 ## Data Storage
 
-The demo keeps its SQLite database in `demos/socialauth/data/` and its session files in
-`demos/socialauth/tmp/`.
+The demo keeps its SQLite database in `demos/social-auth/data/` and its session files in
+`demos/social-auth/tmp/`.
 
 On successful external login, the demo:
 
