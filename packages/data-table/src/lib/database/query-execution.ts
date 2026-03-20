@@ -11,23 +11,10 @@ import type {
   UpsertOperation,
 } from '../adapter.ts'
 import { DataTableQueryError } from '../errors.ts'
-import type {
-  QueryTableInput,
-  ReturningInput,
-  WriteResult,
-  WriteRowResult,
-  WriteRowsResult,
-} from '../database.ts'
-import type { WhereInput } from '../operators.ts'
-import type {
-  DeleteCommand,
-  ExecutableQueryInput,
-  Query,
-  QueryExecutionResult,
-  QueryState,
-  UpsertCommand,
-} from '../query.ts'
-import { cloneQueryState, createQueryWithState, getQueryInternals, isQuery } from '../query.ts'
+import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
+import { normalizeWhereInput } from '../operators.ts'
+import type { Query, QueryExecutionResult, QueryState } from '../query.ts'
+import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
 
@@ -50,84 +37,91 @@ import {
   runBeforeDeleteHook,
 } from './write-lifecycle.ts'
 
-export async function executeQueryInput<input extends ExecutableQueryInput>(
+export async function executeQuery<input extends Query<any, any, any, any, any, any, any>>(
   database: QueryExecutionContext,
   input: input,
 ): Promise<QueryExecutionResult<input>> {
-  if (isQuery(input)) {
-    let internals = getQueryInternals(input)
-    return (await executeAll(
-      database,
-      internals.table,
-      internals.state,
-    )) as QueryExecutionResult<input>
-  }
+  let snapshot = input[querySnapshot]()
 
-  switch (input.kind) {
+  switch (snapshot.plan.kind) {
+    case 'all':
+      return (await executeAll(
+        database,
+        snapshot.table,
+        snapshot.state,
+      )) as QueryExecutionResult<input>
     case 'first':
-      return (await executeFirst(database, input.table, input.state)) as QueryExecutionResult<input>
+      return (await executeFirst(
+        database,
+        snapshot.table,
+        snapshot.state,
+      )) as QueryExecutionResult<input>
     case 'find':
       return (await executeFind(
         database,
-        input.table,
-        input.state,
-        input.value,
+        snapshot.table,
+        snapshot.state,
+        snapshot.plan.value,
       )) as QueryExecutionResult<input>
     case 'count':
-      return (await executeCount(database, input.table, input.state)) as QueryExecutionResult<input>
+      return (await executeCount(
+        database,
+        snapshot.table,
+        snapshot.state,
+      )) as QueryExecutionResult<input>
     case 'exists':
       return (await executeExists(
         database,
-        input.table,
-        input.state,
+        snapshot.table,
+        snapshot.state,
       )) as QueryExecutionResult<input>
     case 'insert':
       return (await executeInsert(
         database,
-        input.table,
-        input.values,
-        input.options,
+        snapshot.table,
+        snapshot.plan.values as Record<string, unknown>,
+        snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'insertMany':
       return (await executeInsertMany(
         database,
-        input.table,
-        input.values,
-        input.options,
+        snapshot.table,
+        snapshot.plan.values as Record<string, unknown>[],
+        snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'update':
       return (await executeUpdate(
         database,
-        input.table,
-        input.state,
-        input.changes,
-        input.options,
+        snapshot.table,
+        snapshot.state,
+        snapshot.plan.changes as Record<string, unknown>,
+        snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'delete':
       return (await executeDelete(
         database,
-        input.table,
-        input.state,
-        input.options,
+        snapshot.table,
+        snapshot.state,
+        snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'upsert':
       return (await executeUpsert(
         database,
-        input.table,
-        input.values,
-        input.options,
+        snapshot.table,
+        snapshot.plan.values as Record<string, unknown>,
+        snapshot.plan.options,
       )) as QueryExecutionResult<input>
     default:
-      throw new DataTableQueryError('Unknown executable query input')
+      throw new DataTableQueryError('Unknown query execution mode')
   }
 }
 
 export async function loadRowsWithRelationsForQuery(
   database: QueryExecutionContext,
-  input: Query<any, any, any, any, any, any>,
+  input: Query<any, any, any, any, any, any, any>,
 ): Promise<Record<string, unknown>[]> {
-  let internals = getQueryInternals(input)
-  return loadRowsWithRelationsForState(database, internals.table, internals.state)
+  let snapshot = input[querySnapshot]()
+  return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)
 }
 
 export async function loadRowsWithRelationsForState(
@@ -174,13 +168,12 @@ async function executeFind(
   state: QueryState,
   value: unknown,
 ): Promise<Record<string, unknown> | null> {
-  let scopedQuery = createQueryWithState(
-    table as QueryTableInput<any, any, any>,
-    cloneQueryState(state),
-  ).where(getPrimaryKeyObject(table, value as never) as WhereInput<any>)
+  let scopedState = cloneQueryState(state)
+  scopedState.where.push(
+    normalizeWhereInput(getPrimaryKeyObject(table, value as never) as Record<string, unknown>),
+  )
 
-  let internals = getQueryInternals(scopedQuery)
-  return executeFirst(database, internals.table, internals.state)
+  return executeFirst(database, table, scopedState)
 }
 
 async function executeCount(
@@ -394,11 +387,7 @@ async function executeUpdate(
 
   if (hasScopedWriteModifiers(state)) {
     result = await database.transaction(async (tx) => {
-      let primaryKeys = await loadPrimaryKeyRowsForScope(
-        tx as unknown as QueryExecutionContext,
-        table,
-        state,
-      )
+      let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
       if (!primaryKeyPredicate) {
@@ -409,8 +398,7 @@ async function executeUpdate(
         }
       }
 
-      let txRuntime = tx as unknown as QueryExecutionContext
-      return txRuntime[executeOperation]({
+      return tx[executeOperation]({
         kind: 'update',
         table,
         changes: preparedChanges,
@@ -457,7 +445,7 @@ async function executeDelete(
   database: QueryExecutionContext,
   table: AnyTable,
   state: QueryState,
-  options?: DeleteCommand<any, any, any, any, any>['options'],
+  options?: { returning?: ReturningInput<Record<string, unknown>> },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
   assertReturningCapability(database.adapter, 'delete', returning)
@@ -475,11 +463,7 @@ async function executeDelete(
 
   if (hasScopedWriteModifiers(state)) {
     result = await database.transaction(async (tx) => {
-      let primaryKeys = await loadPrimaryKeyRowsForScope(
-        tx as unknown as QueryExecutionContext,
-        table,
-        state,
-      )
+      let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
       if (!primaryKeyPredicate) {
@@ -490,8 +474,7 @@ async function executeDelete(
         }
       }
 
-      let txRuntime = tx as unknown as QueryExecutionContext
-      return txRuntime[executeOperation]({
+      return tx[executeOperation]({
         kind: 'delete',
         table,
         where: [primaryKeyPredicate],
@@ -537,7 +520,12 @@ async function executeUpsert(
   database: QueryExecutionContext,
   table: AnyTable,
   values: Record<string, unknown>,
-  options?: UpsertCommand<any, any, any, any, any>['options'],
+  options?: {
+    returning?: ReturningInput<Record<string, unknown>>
+    touch?: boolean
+    conflictTarget?: string[]
+    update?: Record<string, unknown>
+  },
 ): Promise<WriteResult | WriteRowResult<Record<string, unknown>>> {
   if (!database.adapter.capabilities.upsert) {
     throw new DataTableQueryError('Adapter does not support upsert')

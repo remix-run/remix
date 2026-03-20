@@ -5,7 +5,7 @@ Typed relational query toolkit for JavaScript runtimes.
 ## Features
 
 - **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
-- **Two Complementary Query Styles**: Build reusable `Query` objects with `query(table)` + `db.exec(...)`, or use `db.query(table)` as shorthand
+- **One Query API**: Build reusable `Query` objects with `query(table)` and execute them with `db.exec(...)`, or use `db.query(table)` as shorthand
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
@@ -69,7 +69,7 @@ let db = createDatabase(createPostgresDatabaseAdapter(pool))
 
 ## Query Objects
 
-Use `query(table)` + `db.exec(...)` as the primary query API. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
+Use `query(table)` + `db.exec(...)` as the primary query API. `db.exec(...)` accepts raw SQL or `Query` values. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
 
 ```ts
 import { eq, ilike } from 'remix/data-table'
@@ -94,9 +94,11 @@ Load relations with relation-scoped filtering and ordering:
 
 ```ts
 let customers = await db.exec(
-  query(users).where({ role: 'customer' }).with({
-    recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
-  }),
+  query(users)
+    .where({ role: 'customer' })
+    .with({
+      recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+    }),
 )
 
 // customers[0].recentOrders is fully typed

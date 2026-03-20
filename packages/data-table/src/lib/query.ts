@@ -20,9 +20,37 @@ import type { Predicate, WhereInput } from './operators.ts'
 import { normalizeWhereInput } from './operators.ts'
 import { normalizeColumnInput } from './references.ts'
 import type { AnyRelation, AnyTable, LoadedRelationMap, OrderByClause } from './table.ts'
-import { getPrimaryKeyObject, getTableColumns, getTableName } from './table.ts'
+import { getTableColumns, getTableName } from './table.ts'
 
-export type QueryBindingState = 'bound' | 'unbound'
+type QueryBindingState = 'bound' | 'unbound'
+
+type QueryExecutionMode =
+  | 'all'
+  | 'first'
+  | 'find'
+  | 'count'
+  | 'exists'
+  | 'insert'
+  | 'insertMany'
+  | 'update'
+  | 'delete'
+  | 'upsert'
+
+type InsertQueryOptions<row extends Record<string, unknown>> = {
+  returning?: ReturningInput<row>
+  touch?: boolean
+}
+
+type DeleteQueryOptions<row extends Record<string, unknown>> = {
+  returning?: ReturningInput<row>
+}
+
+type UpsertQueryOptions<row extends Record<string, unknown>> = {
+  returning?: ReturningInput<row>
+  touch?: boolean
+  conflictTarget?: (keyof row & string)[]
+  update?: Partial<row>
+}
 
 export type QueryState = {
   select: '*' | SelectColumn[]
@@ -37,175 +65,111 @@ export type QueryState = {
   with: Record<string, AnyRelation>
 }
 
-export type FirstQuery<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
-  kind: 'first'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
+type QueryPlanAll = {
+  kind: 'all'
 }
 
-export type FindQuery<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanFirst = {
+  kind: 'first'
+}
+
+type QueryPlanFind<row extends Record<string, unknown>, primaryKey extends readonly string[]> = {
   kind: 'find'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
   value: PrimaryKeyInputForRow<row, primaryKey>
 }
 
-export type CountQuery<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanCount = {
   kind: 'count'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
 }
 
-export type ExistsQuery<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanExists = {
   kind: 'exists'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
 }
 
-export type InsertCommand<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanInsert<row extends Record<string, unknown>> = {
   kind: 'insert'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
   values: Partial<row>
-  options?: { returning?: ReturningInput<row>; touch?: boolean }
+  options?: InsertQueryOptions<row>
 }
 
-export type InsertManyCommand<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanInsertMany<row extends Record<string, unknown>> = {
   kind: 'insertMany'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
   values: Partial<row>[]
-  options?: { returning?: ReturningInput<row>; touch?: boolean }
+  options?: InsertQueryOptions<row>
 }
 
-export type UpdateCommand<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanUpdate<row extends Record<string, unknown>> = {
   kind: 'update'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
   changes: Partial<row>
-  options?: { returning?: ReturningInput<row>; touch?: boolean }
+  options?: InsertQueryOptions<row>
 }
 
-export type DeleteCommand<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanDelete<row extends Record<string, unknown>> = {
   kind: 'delete'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
-  options?: { returning?: ReturningInput<row> }
+  options?: DeleteQueryOptions<row>
 }
 
-export type UpsertCommand<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanUpsert<row extends Record<string, unknown>> = {
   kind: 'upsert'
-  table: QueryTableInput<tableName, row, primaryKey>
-  state: QueryState
   values: Partial<row>
-  options?: {
-    returning?: ReturningInput<row>
-    touch?: boolean
-    conflictTarget?: (keyof row & string)[]
-    update?: Partial<row>
-  }
+  options?: UpsertQueryOptions<row>
 }
 
-export type ExecutableQueryInput =
-  | Query<any, any, any, any, any, any>
-  | FirstQuery<any, any, any, any, any>
-  | FindQuery<any, any, any, any, any>
-  | CountQuery<any, any, any, any, any>
-  | ExistsQuery<any, any, any, any, any>
-  | InsertCommand<any, any, any, any, any>
-  | InsertManyCommand<any, any, any, any, any>
-  | UpdateCommand<any, any, any, any, any>
-  | DeleteCommand<any, any, any, any, any>
-  | UpsertCommand<any, any, any, any, any>
+type AnyQueryPlan<row extends Record<string, unknown>, primaryKey extends readonly string[]> =
+  | QueryPlanAll
+  | QueryPlanFirst
+  | QueryPlanFind<row, primaryKey>
+  | QueryPlanCount
+  | QueryPlanExists
+  | QueryPlanInsert<row>
+  | QueryPlanInsertMany<row>
+  | QueryPlanUpdate<row>
+  | QueryPlanDelete<row>
+  | QueryPlanUpsert<row>
+
+type QueryPlan<
+  row extends Record<string, unknown>,
+  primaryKey extends readonly string[],
+  mode extends QueryExecutionMode = QueryExecutionMode,
+> = Extract<AnyQueryPlan<row, primaryKey>, { kind: mode }>
+
+type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<string, unknown>> = {
+  all: Array<row & loaded>
+  first: (row & loaded) | null
+  find: (row & loaded) | null
+  count: number
+  exists: boolean
+  insert: WriteResult | WriteRowResult<row>
+  insertMany: WriteResult | WriteRowsResult<row>
+  update: WriteResult | WriteRowsResult<row>
+  delete: WriteResult | WriteRowsResult<row>
+  upsert: WriteResult | WriteRowResult<row>
+}
 
 export type QueryExecutionResult<input> =
-  input extends Query<any, infer row, infer loaded, any, any, any>
-    ? Array<row & loaded>
-    : input extends FirstQuery<any, infer row, infer loaded, any, any>
-      ? (row & loaded) | null
-      : input extends FindQuery<any, infer row, infer loaded, any, any>
-        ? (row & loaded) | null
-        : input extends CountQuery<any, any, any, any, any>
-          ? number
-          : input extends ExistsQuery<any, any, any, any, any>
-            ? boolean
-            : input extends InsertCommand<any, infer row, any, any, any>
-              ? WriteResult | WriteRowResult<row>
-              : input extends InsertManyCommand<any, infer row, any, any, any>
-                ? WriteResult | WriteRowsResult<row>
-                : input extends UpdateCommand<any, infer row, any, any, any>
-                  ? WriteResult | WriteRowsResult<row>
-                  : input extends DeleteCommand<any, infer row, any, any, any>
-                    ? WriteResult | WriteRowsResult<row>
-                    : input extends UpsertCommand<any, infer row, any, any, any>
-                      ? WriteResult | WriteRowResult<row>
-                      : never
+  input extends Query<any, infer row, infer loaded, any, any, any, infer mode>
+    ? QueryResultMap<row, loaded>[Extract<mode, QueryExecutionMode>]
+    : never
 
 type QueryRuntime = {
-  exec<input extends ExecutableQueryInput>(input: input): Promise<QueryExecutionResult<input>>
+  exec<input extends Query<any, any, any, any, any, any, any>>(
+    input: input,
+  ): Promise<QueryExecutionResult<input>>
 }
 
-type QueryInternals = {
-  table: AnyTable
+type QuerySnapshot<
+  tableName extends string = string,
+  row extends Record<string, unknown> = Record<string, unknown>,
+  primaryKey extends readonly string[] = readonly string[],
+  mode extends QueryExecutionMode = QueryExecutionMode,
+> = {
+  table: QueryTableInput<tableName, row, primaryKey>
   state: QueryState
-  runtime?: QueryRuntime
+  plan: QueryPlan<row, primaryKey, mode>
 }
 
-let queryInternals = new WeakMap<object, QueryInternals>()
+export const bindQueryRuntime = Symbol('bindQueryRuntime')
+export const querySnapshot = Symbol('querySnapshot')
 
 export class Query<
   columnTypes extends Record<string, unknown>,
@@ -214,18 +178,60 @@ export class Query<
   tableName extends string = string,
   primaryKey extends readonly string[] = readonly string[],
   binding extends QueryBindingState = 'unbound',
+  mode extends QueryExecutionMode = 'all',
 > {
+  #table: QueryTableInput<tableName, row, primaryKey>
+  #state: QueryState
+  #plan: QueryPlan<row, primaryKey, mode>
+  #runtime?: QueryRuntime
+
   constructor(table: QueryTableInput<tableName, row, primaryKey>) {
-    queryInternals.set(this, {
-      table,
-      state: createInitialQueryState(),
-    })
+    this.#table = table
+    this.#state = createInitialQueryState()
+    this.#plan = { kind: 'all' } as QueryPlan<row, primaryKey, mode>
+  }
+
+  static #createInternal<
+    columnTypes extends Record<string, unknown>,
+    row extends Record<string, unknown>,
+    loaded extends Record<string, unknown>,
+    tableName extends string,
+    primaryKey extends readonly string[],
+    binding extends QueryBindingState,
+    mode extends QueryExecutionMode,
+  >(
+    table: QueryTableInput<tableName, row, primaryKey>,
+    state: QueryState,
+    plan: QueryPlan<row, primaryKey, mode>,
+    runtime?: QueryRuntime,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, mode> {
+    let output = new Query(table) as Query<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      mode
+    >
+
+    output.#state = cloneQueryState(state)
+    output.#plan = cloneQueryPlan(plan as QueryPlan<row, primaryKey>) as QueryPlan<
+      row,
+      primaryKey,
+      mode
+    >
+    output.#runtime = runtime
+
+    return output
   }
 
   select<selection extends (keyof row & string)[]>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     ...columns: selection
-  ): Query<columnTypes, Pick<row, selection[number]>, loaded, tableName, primaryKey, binding>
+  ): Query<columnTypes, Pick<row, selection[number]>, loaded, tableName, primaryKey, binding, 'all'>
   select<selection extends Record<string, QueryColumnInput<columnTypes>>>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     selection: selection,
   ): Query<
     columnTypes,
@@ -233,11 +239,13 @@ export class Query<
     loaded,
     tableName,
     primaryKey,
-    binding
+    binding,
+    'all'
   >
   select(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
-  ): Query<columnTypes, any, loaded, tableName, primaryKey, binding> {
+  ): Query<columnTypes, any, loaded, tableName, primaryKey, binding, 'all'> {
     if (
       input.length === 1 &&
       typeof input[0] === 'object' &&
@@ -257,7 +265,8 @@ export class Query<
         loaded,
         tableName,
         primaryKey,
-        binding
+        binding,
+        'all'
       >
     }
 
@@ -265,50 +274,48 @@ export class Query<
 
     return this.#clone({
       select: columns.map((column) => ({ column, alias: column })),
-    }) as Query<columnTypes, any, loaded, tableName, primaryKey, binding>
+    }) as Query<columnTypes, any, loaded, tableName, primaryKey, binding, 'all'>
   }
 
-  distinct(value = true): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
+  distinct(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    value = true,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     return this.#clone({ distinct: value })
   }
 
   where(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     input: WhereInput<QueryColumns<columnTypes>>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
-    let internals = getQueryInternals(this)
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
-      createPredicateColumnResolver([
-        internals.table,
-        ...internals.state.joins.map((join) => join.table),
-      ]),
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map((join) => join.table)]),
     )
 
     return this.#clone({
-      where: [...internals.state.where, normalizedPredicate],
+      where: [...this.#state.where, normalizedPredicate],
     })
   }
 
   having(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     input: WhereInput<QueryColumns<columnTypes>>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
-    let internals = getQueryInternals(this)
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
-      createPredicateColumnResolver([
-        internals.table,
-        ...internals.state.joins.map((join) => join.table),
-      ]),
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map((join) => join.table)]),
     )
 
     return this.#clone({
-      having: [...internals.state.having, normalizedPredicate],
+      having: [...this.#state.having, normalizedPredicate],
     })
   }
 
   join<target extends AnyTable>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
     type: JoinType = 'inner',
@@ -318,31 +325,33 @@ export class Query<
     loaded,
     tableName,
     primaryKey,
-    binding
+    binding,
+    'all'
   > {
-    let internals = getQueryInternals(this)
     let normalizedOn = normalizePredicateValues(
       on,
       createPredicateColumnResolver([
-        internals.table,
-        ...internals.state.joins.map((join) => join.table),
+        this.#table,
+        ...this.#state.joins.map((join) => join.table),
         target,
       ]),
     ) as Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>
 
     return this.#clone({
-      joins: [...internals.state.joins, { type, table: target, on: normalizedOn }],
+      joins: [...this.#state.joins, { type, table: target, on: normalizedOn }],
     }) as Query<
       MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
       row,
       loaded,
       tableName,
       primaryKey,
-      binding
+      binding,
+      'all'
     >
   }
 
   leftJoin<target extends AnyTable>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): Query<
@@ -351,12 +360,14 @@ export class Query<
     loaded,
     tableName,
     primaryKey,
-    binding
+    binding,
+    'all'
   > {
     return this.join(target, on, 'left')
   }
 
   rightJoin<target extends AnyTable>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): Query<
@@ -365,44 +376,47 @@ export class Query<
     loaded,
     tableName,
     primaryKey,
-    binding
+    binding,
+    'all'
   > {
     return this.join(target, on, 'right')
   }
 
   orderBy(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     column: QueryColumnInput<columnTypes>,
     direction: 'asc' | 'desc' = 'asc',
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
-    let internals = getQueryInternals(this)
-
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     return this.#clone({
-      orderBy: [...internals.state.orderBy, { column: normalizeColumnInput(column), direction }],
+      orderBy: [...this.#state.orderBy, { column: normalizeColumnInput(column), direction }],
     })
   }
 
   groupBy(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     ...columns: QueryColumnInput<columnTypes>[]
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
-    let internals = getQueryInternals(this)
-
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     return this.#clone({
-      groupBy: [
-        ...internals.state.groupBy,
-        ...columns.map((column) => normalizeColumnInput(column)),
-      ],
+      groupBy: [...this.#state.groupBy, ...columns.map((column) => normalizeColumnInput(column))],
     })
   }
 
-  limit(value: number): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
+  limit(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    value: number,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     return this.#clone({ limit: value })
   }
 
-  offset(value: number): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
+  offset(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    value: number,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
     return this.#clone({ offset: value })
   }
 
   with<relations extends RelationMapForSourceName<tableName>>(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     relations: relations,
   ): Query<
     columnTypes,
@@ -410,13 +424,12 @@ export class Query<
     loaded & LoadedRelationMap<relations>,
     tableName,
     primaryKey,
-    binding
+    binding,
+    'all'
   > {
-    let internals = getQueryInternals(this)
-
     return this.#clone({
       with: {
-        ...internals.state.with,
+        ...this.#state.with,
         ...relations,
       },
     }) as Query<
@@ -425,220 +438,292 @@ export class Query<
       loaded & LoadedRelationMap<relations>,
       tableName,
       primaryKey,
-      binding
+      binding,
+      'all'
     >
   }
 
   all(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
   ): Promise<Array<row & loaded>> {
-    return this.#runtime().exec(this) as Promise<Array<row & loaded>>
+    return this.#boundRuntime().exec(this) as Promise<Array<row & loaded>>
   }
 
   first(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
   ): Promise<(row & loaded) | null>
   first(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
-  ): FirstQuery<columnTypes, row, loaded, tableName, primaryKey>
-  first():
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'first'>
+  first(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+  ):
     | Promise<(row & loaded) | null>
-    | FirstQuery<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createFirstQuery(this)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<(row & loaded) | null>) : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'first'> {
+    let next = this.#withPlan({ kind: 'first' })
+    return this.#runtime ? (this.#runtime.exec(next) as Promise<(row & loaded) | null>) : next
   }
 
   find(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
     value: PrimaryKeyInputForRow<row, primaryKey>,
   ): Promise<(row & loaded) | null>
   find(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
     value: PrimaryKeyInputForRow<row, primaryKey>,
-  ): FindQuery<columnTypes, row, loaded, tableName, primaryKey>
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'find'>
   find(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     value: PrimaryKeyInputForRow<row, primaryKey>,
-  ): Promise<(row & loaded) | null> | FindQuery<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createFindQuery(this, value)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<(row & loaded) | null>) : command
+  ):
+    | Promise<(row & loaded) | null>
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'find'> {
+    let next = this.#withPlan({ kind: 'find', value })
+    return this.#runtime ? (this.#runtime.exec(next) as Promise<(row & loaded) | null>) : next
   }
 
-  count(this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>): Promise<number>
   count(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
-  ): CountQuery<columnTypes, row, loaded, tableName, primaryKey>
-  count(): Promise<number> | CountQuery<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createCountQuery(this)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<number>) : command
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
+  ): Promise<number>
+  count(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'count'>
+  count(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+  ): Promise<number> | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'count'> {
+    let next = this.#withPlan({ kind: 'count' })
+    return this.#runtime ? (this.#runtime.exec(next) as Promise<number>) : next
   }
 
-  exists(this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>): Promise<boolean>
   exists(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
-  ): ExistsQuery<columnTypes, row, loaded, tableName, primaryKey>
-  exists(): Promise<boolean> | ExistsQuery<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createExistsQuery(this)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<boolean>) : command
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
+  ): Promise<boolean>
+  exists(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'exists'>
+  exists(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+  ): Promise<boolean> | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'exists'> {
+    let next = this.#withPlan({ kind: 'exists' })
+    return this.#runtime ? (this.#runtime.exec(next) as Promise<boolean>) : next
   }
 
   insert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
     values: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ): Promise<WriteResult | WriteRowResult<row>>
   insert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
     values: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
-  ): InsertCommand<columnTypes, row, loaded, tableName, primaryKey>
+    options?: InsertQueryOptions<row>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'insert'>
   insert(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ):
     | Promise<WriteResult | WriteRowResult<row>>
-    | InsertCommand<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createInsertCommand(this, values, options)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>>) : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'insert'> {
+    assertWriteState(this.#state, 'insert', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
+
+    let next = this.#withPlan({ kind: 'insert', values, options })
+    return this.#runtime
+      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowResult<row>>)
+      : next
   }
 
   insertMany(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
     values: Partial<row>[],
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ): Promise<WriteResult | WriteRowsResult<row>>
   insertMany(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
     values: Partial<row>[],
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
-  ): InsertManyCommand<columnTypes, row, loaded, tableName, primaryKey>
+    options?: InsertQueryOptions<row>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'insertMany'>
   insertMany(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>[],
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ):
     | Promise<WriteResult | WriteRowsResult<row>>
-    | InsertManyCommand<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createInsertManyCommand(this, values, options)
-    let runtime = getQueryInternals(this).runtime
-    return runtime
-      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
-      : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'insertMany'> {
+    assertWriteState(this.#state, 'insertMany', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
+
+    let next = this.#withPlan({ kind: 'insertMany', values, options })
+    return this.#runtime
+      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
+      : next
   }
 
   update(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
     changes: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ): Promise<WriteResult | WriteRowsResult<row>>
   update(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
     changes: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
-  ): UpdateCommand<columnTypes, row, loaded, tableName, primaryKey>
+    options?: InsertQueryOptions<row>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'update'>
   update(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     changes: Partial<row>,
-    options?: { returning?: ReturningInput<row>; touch?: boolean },
+    options?: InsertQueryOptions<row>,
   ):
     | Promise<WriteResult | WriteRowsResult<row>>
-    | UpdateCommand<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createUpdateCommand(this, changes, options)
-    let runtime = getQueryInternals(this).runtime
-    return runtime
-      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
-      : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'update'> {
+    assertWriteState(this.#state, 'update', {
+      where: true,
+      orderBy: true,
+      limit: true,
+      offset: true,
+    })
+
+    let next = this.#withPlan({ kind: 'update', changes, options })
+    return this.#runtime
+      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
+      : next
   }
 
   delete(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
-    options?: { returning?: ReturningInput<row> },
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
+    options?: DeleteQueryOptions<row>,
   ): Promise<WriteResult | WriteRowsResult<row>>
   delete(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
-    options?: { returning?: ReturningInput<row> },
-  ): DeleteCommand<columnTypes, row, loaded, tableName, primaryKey>
-  delete(options?: {
-    returning?: ReturningInput<row>
-  }):
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
+    options?: DeleteQueryOptions<row>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'delete'>
+  delete(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    options?: DeleteQueryOptions<row>,
+  ):
     | Promise<WriteResult | WriteRowsResult<row>>
-    | DeleteCommand<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createDeleteCommand(this, options)
-    let runtime = getQueryInternals(this).runtime
-    return runtime
-      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
-      : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'delete'> {
+    assertWriteState(this.#state, 'delete', {
+      where: true,
+      orderBy: true,
+      limit: true,
+      offset: true,
+    })
+
+    let next = this.#withPlan({ kind: 'delete', options })
+    return this.#runtime
+      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
+      : next
   }
 
   upsert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
     values: Partial<row>,
-    options?: {
-      returning?: ReturningInput<row>
-      touch?: boolean
-      conflictTarget?: (keyof row & string)[]
-      update?: Partial<row>
-    },
+    options?: UpsertQueryOptions<row>,
   ): Promise<WriteResult | WriteRowResult<row>>
   upsert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
     values: Partial<row>,
-    options?: {
-      returning?: ReturningInput<row>
-      touch?: boolean
-      conflictTarget?: (keyof row & string)[]
-      update?: Partial<row>
-    },
-  ): UpsertCommand<columnTypes, row, loaded, tableName, primaryKey>
+    options?: UpsertQueryOptions<row>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'upsert'>
   upsert(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>,
-    options?: {
-      returning?: ReturningInput<row>
-      touch?: boolean
-      conflictTarget?: (keyof row & string)[]
-      update?: Partial<row>
-    },
+    options?: UpsertQueryOptions<row>,
   ):
     | Promise<WriteResult | WriteRowResult<row>>
-    | UpsertCommand<columnTypes, row, loaded, tableName, primaryKey> {
-    let command = createUpsertCommand(this, values, options)
-    let runtime = getQueryInternals(this).runtime
-    return runtime ? (runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>>) : command
+    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'upsert'> {
+    assertWriteState(this.#state, 'upsert', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
+
+    let next = this.#withPlan({ kind: 'upsert', values, options })
+    return this.#runtime
+      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowResult<row>>)
+      : next
+  }
+
+  [querySnapshot](): QuerySnapshot<tableName, row, primaryKey, mode> {
+    return this.#snapshot()
+  }
+
+  [bindQueryRuntime](
+    runtime: QueryRuntime,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', mode> {
+    return Query.#createInternal<columnTypes, row, loaded, tableName, primaryKey, 'bound', mode>(
+      this.#table,
+      this.#state,
+      this.#plan as QueryPlan<row, primaryKey, mode>,
+      runtime,
+    )
   }
 
   #clone(
     patch: Partial<QueryState>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding> {
-    let internals = getQueryInternals(this)
-
-    return createQueryWithState(
-      internals.table as QueryTableInput<tableName, row, primaryKey>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, mode> {
+    return Query.#createInternal<columnTypes, row, loaded, tableName, primaryKey, binding, mode>(
+      this.#table,
       {
-        select: patch.select ?? cloneSelection(internals.state.select),
-        distinct: patch.distinct ?? internals.state.distinct,
-        joins: patch.joins ? [...patch.joins] : [...internals.state.joins],
-        where: patch.where ? [...patch.where] : [...internals.state.where],
-        groupBy: patch.groupBy ? [...patch.groupBy] : [...internals.state.groupBy],
-        having: patch.having ? [...patch.having] : [...internals.state.having],
-        orderBy: patch.orderBy ? [...patch.orderBy] : [...internals.state.orderBy],
-        limit: patch.limit === undefined ? internals.state.limit : patch.limit,
-        offset: patch.offset === undefined ? internals.state.offset : patch.offset,
-        with: patch.with ? { ...patch.with } : { ...internals.state.with },
+        select: patch.select ?? cloneSelection(this.#state.select),
+        distinct: patch.distinct ?? this.#state.distinct,
+        joins: patch.joins ? [...patch.joins] : [...this.#state.joins],
+        where: patch.where ? [...patch.where] : [...this.#state.where],
+        groupBy: patch.groupBy ? [...patch.groupBy] : [...this.#state.groupBy],
+        having: patch.having ? [...patch.having] : [...this.#state.having],
+        orderBy: patch.orderBy ? [...patch.orderBy] : [...this.#state.orderBy],
+        limit: patch.limit === undefined ? this.#state.limit : patch.limit,
+        offset: patch.offset === undefined ? this.#state.offset : patch.offset,
+        with: patch.with ? { ...patch.with } : { ...this.#state.with },
       },
-      internals.runtime,
-    ) as Query<columnTypes, row, loaded, tableName, primaryKey, binding>
+      this.#plan as QueryPlan<row, primaryKey, mode>,
+      this.#runtime,
+    )
   }
 
-  #runtime(): QueryRuntime {
-    let runtime = getQueryInternals(this).runtime
+  #withPlan<nextMode extends QueryExecutionMode>(
+    plan: QueryPlan<row, primaryKey, nextMode>,
+  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, nextMode> {
+    return Query.#createInternal<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      nextMode
+    >(this.#table, this.#state, plan, this.#runtime)
+  }
 
-    if (!runtime) {
+  #snapshot(): QuerySnapshot<tableName, row, primaryKey, mode> {
+    return {
+      table: this.#table,
+      state: cloneQueryState(this.#state),
+      plan: cloneQueryPlan(this.#plan as QueryPlan<row, primaryKey>) as QueryPlan<
+        row,
+        primaryKey,
+        mode
+      >,
+    }
+  }
+
+  #boundRuntime(): QueryRuntime {
+    if (!this.#runtime) {
       throw new DataTableQueryError('Use db.exec(query) to execute an unbound Query')
     }
 
-    return runtime
+    return this.#runtime
   }
 }
 
@@ -648,48 +733,24 @@ export function query<
   primaryKey extends readonly (keyof row & string)[],
 >(
   table: QueryTableInput<tableName, row, primaryKey>,
-): Query<QueryColumnTypeMapFromRow<tableName, row>, row, {}, tableName, primaryKey, 'unbound'> {
+): Query<
+  QueryColumnTypeMapFromRow<tableName, row>,
+  row,
+  {},
+  tableName,
+  primaryKey,
+  'unbound',
+  'all'
+> {
   return new Query(table) as Query<
     QueryColumnTypeMapFromRow<tableName, row>,
     row,
     {},
     tableName,
     primaryKey,
-    'unbound'
+    'unbound',
+    'all'
   >
-}
-
-export function bindQuery<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
->(
-  input: Query<columnTypes, row, loaded, tableName, primaryKey, any>,
-  runtime: QueryRuntime,
-): Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'> {
-  let internals = getQueryInternals(input)
-
-  return createQueryWithState(
-    internals.table as QueryTableInput<tableName, row, primaryKey>,
-    cloneQueryState(internals.state),
-    runtime,
-  ) as Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>
-}
-
-export function isQuery(input: unknown): input is Query<any, any, any, any, any, any> {
-  return typeof input === 'object' && input !== null && queryInternals.has(input)
-}
-
-export function getQueryInternals(input: Query<any, any, any, any, any, any>): QueryInternals {
-  let internals = queryInternals.get(input)
-
-  if (!internals) {
-    throw new DataTableQueryError('Query internals are unavailable')
-  }
-
-  return internals
 }
 
 export function cloneQueryState(state: QueryState): QueryState {
@@ -707,7 +768,7 @@ export function cloneQueryState(state: QueryState): QueryState {
   }
 }
 
-export function createInitialQueryState(): QueryState {
+function createInitialQueryState(): QueryState {
   return {
     select: '*',
     distinct: false,
@@ -720,181 +781,69 @@ export function createInitialQueryState(): QueryState {
   }
 }
 
-export function createQueryWithState(
-  table: QueryTableInput<any, any, any>,
-  state: QueryState,
-  runtime?: QueryRuntime,
-): Query<any, any, any, any, any, any> {
-  let output = new Query(table)
-  queryInternals.set(output, {
-    table,
-    state,
-    runtime,
-  })
-  return output
-}
-
-function createFirstQuery(
-  input: Query<any, any, any, any, any, any>,
-): FirstQuery<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-
-  return {
-    kind: 'first',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
+function cloneQueryPlan<row extends Record<string, unknown>, primaryKey extends readonly string[]>(
+  plan: QueryPlan<row, primaryKey>,
+): QueryPlan<row, primaryKey> {
+  switch (plan.kind) {
+    case 'all':
+      return { kind: 'all' } as QueryPlan<row, primaryKey>
+    case 'first':
+      return { kind: 'first' } as QueryPlan<row, primaryKey>
+    case 'find':
+      return {
+        kind: 'find',
+        value: clonePrimaryKeyValue(plan.value) as PrimaryKeyInputForRow<row, primaryKey>,
+      } as QueryPlan<row, primaryKey>
+    case 'count':
+      return { kind: 'count' } as QueryPlan<row, primaryKey>
+    case 'exists':
+      return { kind: 'exists' } as QueryPlan<row, primaryKey>
+    case 'insert':
+      return {
+        kind: 'insert',
+        values: { ...plan.values },
+        options: plan.options ? { ...plan.options } : undefined,
+      } as QueryPlan<row, primaryKey>
+    case 'insertMany':
+      return {
+        kind: 'insertMany',
+        values: plan.values.map((value: Partial<row>) => ({ ...value })),
+        options: plan.options ? { ...plan.options } : undefined,
+      } as QueryPlan<row, primaryKey>
+    case 'update':
+      return {
+        kind: 'update',
+        changes: { ...plan.changes },
+        options: plan.options ? { ...plan.options } : undefined,
+      } as QueryPlan<row, primaryKey>
+    case 'delete':
+      return {
+        kind: 'delete',
+        options: plan.options ? { ...plan.options } : undefined,
+      } as QueryPlan<row, primaryKey>
+    case 'upsert':
+      return {
+        kind: 'upsert',
+        values: { ...plan.values },
+        options: plan.options
+          ? {
+              ...plan.options,
+              conflictTarget: plan.options.conflictTarget
+                ? [...plan.options.conflictTarget]
+                : undefined,
+              update: plan.options.update ? { ...plan.options.update } : undefined,
+            }
+          : undefined,
+      } as QueryPlan<row, primaryKey>
   }
 }
 
-function createFindQuery(
-  input: Query<any, any, any, any, any, any>,
-  value: unknown,
-): FindQuery<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-
-  return {
-    kind: 'find',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    value: value as never,
+function clonePrimaryKeyValue(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value
   }
-}
 
-function createCountQuery(
-  input: Query<any, any, any, any, any, any>,
-): CountQuery<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-
-  return {
-    kind: 'count',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-  }
-}
-
-function createExistsQuery(
-  input: Query<any, any, any, any, any, any>,
-): ExistsQuery<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-
-  return {
-    kind: 'exists',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-  }
-}
-
-function createInsertCommand(
-  input: Query<any, any, any, any, any, any>,
-  values: Record<string, unknown>,
-  options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
-): InsertCommand<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-  assertWriteState(internals.state, 'insert', {
-    where: false,
-    orderBy: false,
-    limit: false,
-    offset: false,
-  })
-
-  return {
-    kind: 'insert',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    values,
-    options,
-  }
-}
-
-function createInsertManyCommand(
-  input: Query<any, any, any, any, any, any>,
-  values: Record<string, unknown>[],
-  options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
-): InsertManyCommand<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-  assertWriteState(internals.state, 'insertMany', {
-    where: false,
-    orderBy: false,
-    limit: false,
-    offset: false,
-  })
-
-  return {
-    kind: 'insertMany',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    values,
-    options,
-  }
-}
-
-function createUpdateCommand(
-  input: Query<any, any, any, any, any, any>,
-  changes: Record<string, unknown>,
-  options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
-): UpdateCommand<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-  assertWriteState(internals.state, 'update', {
-    where: true,
-    orderBy: true,
-    limit: true,
-    offset: true,
-  })
-
-  return {
-    kind: 'update',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    changes,
-    options,
-  }
-}
-
-function createDeleteCommand(
-  input: Query<any, any, any, any, any, any>,
-  options?: { returning?: ReturningInput<Record<string, unknown>> },
-): DeleteCommand<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-  assertWriteState(internals.state, 'delete', {
-    where: true,
-    orderBy: true,
-    limit: true,
-    offset: true,
-  })
-
-  return {
-    kind: 'delete',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    options,
-  }
-}
-
-function createUpsertCommand(
-  input: Query<any, any, any, any, any, any>,
-  values: Record<string, unknown>,
-  options?: {
-    returning?: ReturningInput<Record<string, unknown>>
-    touch?: boolean
-    conflictTarget?: string[]
-    update?: Record<string, unknown>
-  },
-): UpsertCommand<any, any, any, any, any> {
-  let internals = getQueryInternals(input)
-  assertWriteState(internals.state, 'upsert', {
-    where: false,
-    orderBy: false,
-    limit: false,
-    offset: false,
-  })
-
-  return {
-    kind: 'upsert',
-    table: internals.table as QueryTableInput<any, any, any>,
-    state: cloneQueryState(internals.state),
-    values,
-    options: options as UpsertCommand<any, any, any, any, any>['options'],
-  }
+  return { ...value }
 }
 
 function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {

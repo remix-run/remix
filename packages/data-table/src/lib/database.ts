@@ -17,9 +17,9 @@ import {
   resolveCreateRowWhere,
   toWriteResult,
 } from './database/helpers.ts'
-import { executeQueryInput } from './database/query-execution.ts'
-import type { ExecutableQueryInput, Query as QueryObject, QueryExecutionResult } from './query.ts'
-import { bindQuery, query as createQuery } from './query.ts'
+import { executeQuery } from './database/query-execution.ts'
+import type { Query as QueryObject, QueryExecutionResult } from './query.ts'
+import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
@@ -150,24 +150,6 @@ export type QueryTableInput<
     validate?: TableValidate<Record<string, unknown>>
   }
 } & Record<string, unknown>
-
-/**
- * Signature of the database `query` helper.
- */
-export type QueryMethod = <
-  tableName extends string,
-  row extends Record<string, unknown>,
-  primaryKey extends readonly (keyof row & string)[],
->(
-  table: QueryTableInput<tableName, row, primaryKey>,
-) => QueryObject<
-  Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
-  row,
-  {},
-  tableName,
-  primaryKey,
-  'bound'
->
 
 /**
  * Result metadata for write operations that do not return rows.
@@ -341,40 +323,16 @@ type SavepointCounter = {
   value: number
 }
 
-const databaseInternalOptionsKey = Symbol('databaseInternalOptions')
-
 type DatabaseOptions = {
   now?: () => unknown
 }
 
-type DatabaseInternalOptions = {
+type DatabaseInternalState = {
   token?: TransactionToken
-  savepointCounter?: SavepointCounter
+  savepointCounter: SavepointCounter
 }
 
-type DatabaseOptionsWithInternals = DatabaseOptions & {
-  [databaseInternalOptionsKey]: DatabaseInternalOptions
-}
-
-function withDatabaseInternals(
-  options: DatabaseOptions | undefined,
-  internal: DatabaseInternalOptions,
-): DatabaseOptions {
-  let databaseOptions: DatabaseOptions = {
-    now: options?.now,
-  }
-
-  Object.defineProperty(databaseOptions, databaseInternalOptionsKey, {
-    value: internal,
-    enumerable: false,
-  })
-
-  return databaseOptions
-}
-
-function hasDatabaseInternals(options: DatabaseOptions): options is DatabaseOptionsWithInternals {
-  return databaseInternalOptionsKey in options
-}
+const createInternalDatabase = Symbol('createInternalDatabase')
 
 /**
  * High-level database runtime used to build and execute data manipulation operations.
@@ -389,13 +347,20 @@ export class Database implements QueryExecutionContext {
   #savepointCounter: SavepointCounter
 
   constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
-    let internal =
-      options && hasDatabaseInternals(options) ? options[databaseInternalOptionsKey] : undefined
-
     this.#adapter = adapter
-    this.#token = internal?.token
     this.#now = options?.now ?? defaultNow
-    this.#savepointCounter = internal?.savepointCounter ?? { value: 0 }
+    this.#savepointCounter = { value: 0 }
+  }
+
+  static [createInternalDatabase](
+    adapter: DatabaseAdapter,
+    options: DatabaseOptions | undefined,
+    internal: DatabaseInternalState,
+  ): Database {
+    let database = new Database(adapter, options)
+    database.#token = internal.token
+    database.#savepointCounter = internal.savepointCounter
+    return database
   }
 
   get adapter(): DatabaseAdapter {
@@ -406,7 +371,7 @@ export class Database implements QueryExecutionContext {
     return this.#now()
   }
 
-  query: QueryMethod = <
+  query<
     tableName extends string,
     row extends Record<string, unknown>,
     primaryKey extends readonly (keyof row & string)[],
@@ -419,8 +384,8 @@ export class Database implements QueryExecutionContext {
     tableName,
     primaryKey,
     'bound'
-  > =>
-    bindQuery(createQuery(table), this) as QueryObject<
+  > {
+    return createQuery(table)[bindQueryRuntime](this) as QueryObject<
       Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
       row,
       {},
@@ -428,6 +393,7 @@ export class Database implements QueryExecutionContext {
       primaryKey,
       'bound'
     >
+  }
 
   create<table extends AnyTable>(
     table: table,
@@ -751,8 +717,10 @@ export class Database implements QueryExecutionContext {
   }
 
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
-  async exec<input extends ExecutableQueryInput>(input: input): Promise<QueryExecutionResult<input>>
-  async exec<input extends ExecutableQueryInput>(
+  async exec<input extends QueryObject<any, any, any, any, any, any, any>>(
+    input: input,
+  ): Promise<QueryExecutionResult<input>>
+  async exec<input extends QueryObject<any, any, any, any, any, any, any>>(
     statementOrInput: string | SqlStatement | input,
     values: unknown[] = [],
   ): Promise<DataManipulationResult | QueryExecutionResult<input>> {
@@ -767,7 +735,7 @@ export class Database implements QueryExecutionContext {
       })
     }
 
-    return executeQueryInput(this, statementOrInput)
+    return executeQuery(this, statementOrInput)
   }
 
   async transaction<result>(
@@ -776,15 +744,13 @@ export class Database implements QueryExecutionContext {
   ): Promise<result> {
     if (!this.#token) {
       let token = await this.#adapter.beginTransaction(options)
-      let tx = new Database(
+      let tx = Database[createInternalDatabase](
         this.#adapter,
-        withDatabaseInternals(
-          { now: this.#now },
-          {
-            token,
-            savepointCounter: this.#savepointCounter,
-          },
-        ),
+        { now: this.#now },
+        {
+          token,
+          savepointCounter: this.#savepointCounter,
+        },
       )
 
       try {
@@ -879,13 +845,10 @@ export function createDatabaseWithTransaction(
   token: TransactionToken,
   options?: { now?: () => unknown },
 ): Database {
-  return new Database(
-    adapter,
-    withDatabaseInternals(options, {
-      token,
-      savepointCounter: { value: 0 },
-    }),
-  )
+  return Database[createInternalDatabase](adapter, options, {
+    token,
+    savepointCounter: { value: 0 },
+  })
 }
 
 function defaultNow(): Date {

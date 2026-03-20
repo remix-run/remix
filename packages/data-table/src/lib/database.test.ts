@@ -133,7 +133,7 @@ describe('queries', () => {
     assert.equal(wrappedRows.length, 1)
   })
 
-  it('executes unbound Query objects through db.exec()', async () => {
+  it('executes unbound Query objects through db.exec() in every execution mode', async () => {
     let db = createTestDatabase(
       createAdapter({
         accounts: [
@@ -148,21 +148,47 @@ describe('queries', () => {
 
     let rows = await db.exec(query(accounts).where({ status: 'active' }).orderBy('id', 'asc'))
     let first = await db.exec(query(accounts).where({ id: 1 }).first())
+    let found = await db.exec(query(accounts).find(1))
     let count = await db.exec(query(accounts).where({ status: 'active' }).count())
     let exists = await db.exec(query(accounts).where({ status: 'archived' }).exists())
+    let insertResult = await db.exec(
+      query(accounts).insert({ id: 3, email: 'casey@studio.test', status: 'inactive' }),
+    )
+    let insertManyResult = await db.exec(
+      query(accounts).insertMany([
+        { id: 4, email: 'devon@studio.test', status: 'archived' },
+        { id: 5, email: 'elliot@studio.test', status: 'active' },
+      ]),
+    )
     let updateResult = await db.exec(
       query(accounts).where({ status: 'inactive' }).update({ status: 'active' }),
+    )
+    let deleteResult = await db.exec(query(accounts).where({ id: 4 }).delete())
+    let upsertResult = await db.exec(
+      query(accounts).upsert(
+        { id: 6, email: 'fran@studio.test', status: 'active' },
+        { conflictTarget: ['id'] },
+      ),
     )
 
     assert.equal(rows.length, 1)
     assert.equal(rows[0].email, 'amy@studio.test')
     assert.equal(first?.id, 1)
+    assert.equal(found?.id, 1)
     assert.equal(count, 1)
     assert.equal(exists, false)
-    assert.equal(updateResult.affectedRows, 1)
+    assert.equal(insertResult.affectedRows, 1)
+    assert.equal(insertManyResult.affectedRows, 2)
+    assert.equal(updateResult.affectedRows, 2)
+    assert.equal(deleteResult.affectedRows, 1)
+    assert.equal(upsertResult.affectedRows, 1)
 
     let reloaded = await db.query(accounts).orderBy('id', 'asc').all()
+    assert.equal(reloaded.length, 5)
     assert.equal(reloaded[1].status, 'active')
+    assert.equal(reloaded[2].status, 'active')
+    assert.equal(reloaded[3].email, 'elliot@studio.test')
+    assert.equal(reloaded[4].email, 'fran@studio.test')
   })
 
   it('is immutable and supports eager hasMany loading', async () => {

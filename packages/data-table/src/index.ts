@@ -184,7 +184,6 @@ export type {
   OrderByTuple,
   QueryColumnTypesForTable,
   QueryForTable,
-  QueryMethod,
   QueryTableInput,
   SingleTableColumn,
   SingleTableWhere,
@@ -195,15 +194,4 @@ export type {
   WriteRowsResult,
 } from './lib/database.ts'
 export { createDatabase, Database } from './lib/database.ts'
-export type {
-  CountQuery,
-  DeleteCommand,
-  ExistsQuery,
-  FindQuery,
-  FirstQuery,
-  InsertCommand,
-  InsertManyCommand,
-  UpdateCommand,
-  UpsertCommand,
-} from './lib/query.ts'
 export { Query, query } from './lib/query.ts'
