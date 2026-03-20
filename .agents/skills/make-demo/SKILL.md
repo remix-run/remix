@@ -75,12 +75,8 @@ Inside `app/`, organize code by responsibility:
 - `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
 - `middleware/` for request-layer concerns such as auth, database injection, sessions, and other
   request lifecycle setup
-- `integrations/` for third-party provider and API wiring
 - `models/` for app-specific data shapes and domain-level utilities
-
-Do not create generic `operations/` or `utils/` directories by default. Put code with the layer
-that owns it. Split an integration into multiple modules only when it is large enough to justify
-that complexity.
+- `utils/` for shared support code that does not clearly belong to one of the other app layers
 
 ### Naming and ownership rules
 
@@ -96,7 +92,9 @@ that complexity.
 - Avoid feature barrel files such as `index.ts`. Import feature modules directly.
 - If a helper is shared only by controllers, keep it under `controllers/`.
 - If a helper is part of request/session setup, keep it under `middleware/`.
-- If a helper talks to an external system, keep it under `integrations/`.
+- If a helper is domain/data logic, keep it under `models/`.
+- Use `utils/` only for genuinely cross-layer support code. Prefer a topic-specific name like
+  `utils/external-auth.ts` over catch-all names like `helpers.ts` or `misc.ts`.
 - Put database schema and setup outside `app/` under `data/`.
 - Co-locate unit tests with the models or other modules they cover.
 - Keep app-wide request-flow tests under `test/feature/`, and keep shared test helpers under
@@ -142,13 +140,13 @@ demos/<name>/
       database.ts
       session.ts
 
-    integrations/
-      external-auth.ts
-
     models/
       auth-session.ts
       auth-session.test.ts
       password-hash.ts
+
+    utils/
+      external-auth.ts
 
   data/
     schema.ts
