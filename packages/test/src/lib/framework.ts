@@ -26,12 +26,14 @@ let rootSuites: TestSuite[] = []
 ;(globalThis as any).__testSuites = rootSuites
 
 function registerDescribe(name: string, fn: () => void, flags?: { only?: boolean; skip?: boolean }) {
-  if (currentSuite) throw new Error('Nested describe() not supported')
-  let suite: TestSuite = { name, tests: [], ...flags }
+  // Nested describes are flattened: "Parent > Child"
+  let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+  let suite: TestSuite = { name: fullName, tests: [], ...flags }
   rootSuites.push(suite)
+  let prevSuite = currentSuite
   currentSuite = suite
   fn()
-  currentSuite = null
+  currentSuite = prevSuite
 }
 
 export const describe = Object.assign(
@@ -40,8 +42,8 @@ export const describe = Object.assign(
     skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
     only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
     todo: (name: string) => {
-      if (currentSuite) throw new Error('Nested describe() not supported')
-      rootSuites.push({ name, tests: [], todo: true })
+      let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+      rootSuites.push({ name: fullName, tests: [], todo: true })
     },
   },
 )
