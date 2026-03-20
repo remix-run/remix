@@ -2,13 +2,14 @@ import {
   createExternalAuthCallbackRequestHandler,
   createExternalAuthLoginRequestHandler,
 } from 'remix/auth'
+import type { Controller } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import { defineRoutes, type RouteContext } from '../../router.ts'
+import type { RouteContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import {
   createExternalProvider,
@@ -17,18 +18,28 @@ import {
 } from '../../utils/external-auth.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 
-export let mountExternalProviderRoutes = defineRoutes(router => {
-  mountProviderRoutes('google')
-  mountProviderRoutes('github')
-  mountProviderRoutes('x')
-
-  function mountProviderRoutes(providerName: ExternalProviderName) {
-    router.mount(`/${providerName}`, providerRouter => {
-      providerRouter.get('/login', context => startExternalLogin(providerName, context))
-      providerRouter.get('/callback', context => finishExternalLogin(providerName, context))
-    })
+function createExternalProviderActions(providerName: ExternalProviderName) {
+  return {
+    login(context: RouteContext) {
+      return startExternalLogin(providerName, context)
+    },
+    callback(context: RouteContext) {
+      return finishExternalLogin(providerName, context)
+    },
   }
-})
+}
+
+export let googleAuthController = {
+  actions: createExternalProviderActions('google'),
+} satisfies Controller<typeof routes.auth.google, RouteContext>
+
+export let githubAuthController = {
+  actions: createExternalProviderActions('github'),
+} satisfies Controller<typeof routes.auth.github, RouteContext>
+
+export let xAuthController = {
+  actions: createExternalProviderActions('x'),
+} satisfies Controller<typeof routes.auth.x, RouteContext>
 
 function startExternalLogin(
   providerName: ExternalProviderName,

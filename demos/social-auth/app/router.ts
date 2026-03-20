@@ -3,7 +3,6 @@ import {
   type MiddlewareContext,
   type RequestContext,
   type RequestContextStore,
-  type Router,
 } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
@@ -11,8 +10,8 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { mountAccountRoutes } from './controllers/account/controller.tsx'
-import { mountAuthRoutes } from './controllers/auth/controller.tsx'
+import { accountAction } from './controllers/account/controller.tsx'
+import { authController } from './controllers/auth/controller.tsx'
 import { home } from './controllers/home/controller.tsx'
 import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { loadAuth } from './middleware/auth.ts'
@@ -22,9 +21,7 @@ import { routes } from './routes.ts'
 
 await initializeSocialAuthDatabase()
 
-type RouteParams = Record<string, string>
-
-type AppMiddleware = [
+export type SocialAuthMiddleware = [
   ReturnType<typeof staticFiles>,
   ReturnType<typeof formData>,
   ReturnType<typeof session>,
@@ -32,28 +29,14 @@ type AppMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-type AppStore = MiddlewareContext<AppMiddleware> extends RequestContext<
+type AppStore = MiddlewareContext<SocialAuthMiddleware> extends RequestContext<
   any,
   infer store extends RequestContextStore
 >
   ? store
   : never
 
-export type RouteContext<params extends RouteParams = {}> = RequestContext<params, AppStore>
-
-type AppRouter<params extends RouteParams = {}> = Router<RouteContext<params>, RouteContext<params>>
-
-export function defineRoute<params extends RouteParams = {}>(
-  handler: (context: RouteContext<params>) => Response | Promise<Response>,
-) {
-  return handler
-}
-
-export function defineRoutes<params extends RouteParams = {}>(
-  mount: (router: AppRouter<params>) => void,
-) {
-  return mount
-}
+export type RouteContext<params extends Record<string, string> = {}> = RequestContext<params, AppStore>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
@@ -76,9 +59,9 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   ] as const
   let router = createRouter({ middleware })
 
-  router.get(routes.home, home)
-  router.mount('/account', mountAccountRoutes)
-  router.mount('/auth', mountAuthRoutes)
+  router.map(routes.home, home)
+  router.map(routes.account, accountAction)
+  router.map(routes.auth, authController)
 
   return router
 }

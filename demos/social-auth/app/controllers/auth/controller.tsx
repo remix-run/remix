@@ -1,18 +1,27 @@
-import { mountExternalProviderRoutes } from './external-auth-actions.ts'
-import { mountForgotPasswordRoutes } from './forgot-password-actions.tsx'
+import type { Controller } from 'remix/fetch-router'
+
+import {
+  githubAuthController,
+  googleAuthController,
+  xAuthController,
+} from './external-auth-actions.ts'
+import { forgotPasswordController } from './forgot-password-actions.tsx'
 import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
-import { mountResetPasswordRoutes } from './reset-password-actions.tsx'
-import { mountSignupRoutes } from './signup-actions.tsx'
-import { defineRoutes } from '../../router.ts'
+import { resetPasswordController } from './reset-password-actions.tsx'
+import { signupController } from './signup-actions.tsx'
+import type { RouteContext } from '../../router.ts'
+import type { routes } from '../../routes.ts'
 
-export let mountAuthRoutes = defineRoutes(router => {
-  router.post('/login', login)
-  router.post('/logout', logout)
-
-  router.mount('/signup', mountSignupRoutes)
-  router.mount('/forgot-password', mountForgotPasswordRoutes)
-  router.mount('/reset-password/:token', mountResetPasswordRoutes)
-
-  mountExternalProviderRoutes(router)
-})
+export let authController = {
+  actions: {
+    login,
+    logout,
+    signup: signupController,
+    forgotPassword: forgotPasswordController,
+    resetPassword: resetPasswordController,
+    google: googleAuthController,
+    github: githubAuthController,
+    x: xAuthController,
+  },
+} satisfies Controller<typeof routes.auth, RouteContext>

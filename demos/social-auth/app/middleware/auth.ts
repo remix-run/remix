@@ -83,13 +83,11 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export function requireAuth() {
-  return requireAuthenticated<AuthIdentity, 'session'>({
-    onFailure() {
-      return redirect(routes.home.href())
-    },
-  })
-}
+export let requireAuth = requireAuthenticated<AuthIdentity, 'session'>({
+  onFailure() {
+    return redirect(routes.home.href())
+  },
+})
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
