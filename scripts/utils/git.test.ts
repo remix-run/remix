@@ -3,14 +3,14 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { it } from '@remix-run/test'
+import { test } from '@remix-run/test'
 import { findVersionIntroductionCommit, getLocalTagTarget } from './git.ts'
 
 function execGit(args: string[], cwd: string): string {
   return cp.execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf-8' }).trim()
 }
 
-it('findVersionIntroductionCommit returns the commit where the target version was introduced', () => {
+test('findVersionIntroductionCommit returns the commit where the target version was introduced', () => {
   let tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-git-test-'))
   let packageJsonPath = 'packages/example/package.json'
 

@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { it } from '@remix-run/test'
+import { test } from '@remix-run/test'
 import type { PackageRelease } from './changes.ts'
 import { generatePrBody } from './release-pr.ts'
 
@@ -23,7 +23,7 @@ function makeRelease({
   }
 }
 
-it('generatePrBody puts remix first and sorts remaining packages alphabetically', () => {
+test('generatePrBody puts remix first and sorts remaining packages alphabetically', () => {
   let body = generatePrBody([
     makeRelease({
       packageDirName: 'zeta',

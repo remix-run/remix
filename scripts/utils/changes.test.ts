@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { it } from '@remix-run/test'
+import { test } from '@remix-run/test'
 import type { PackageRelease } from './changes.ts'
 import { generateChangelogContent } from './changes.ts'
 
@@ -16,7 +16,7 @@ function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
   }
 }
 
-it('generateChangelogContent groups prerelease changes into a single section', () => {
+test('generateChangelogContent groups prerelease changes into a single section', () => {
   let content = generateChangelogContent(
     makeRelease({
       changes: [
@@ -58,7 +58,7 @@ it('generateChangelogContent groups prerelease changes into a single section', (
   assert.match(content, /\[`router@1\.2\.3`\]\(https:\/\/example\.com\/router\)/)
 })
 
-it('generateChangelogContent keeps stable releases grouped by bump type', () => {
+test('generateChangelogContent keeps stable releases grouped by bump type', () => {
   let content = generateChangelogContent(
     makeRelease({
       currentVersion: '3.0.0',
