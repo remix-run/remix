@@ -21,16 +21,52 @@ function runFile(file: string): Promise<TestResults> {
 export async function runServerTests(
   files: string[],
   reporter: Reporter,
+  concurrency: number,
 ): Promise<{ passed: number; failed: number }> {
   let passed = 0
   let failed = 0
 
-  for (let file of files) {
-    let results = await runFile(file)
-    reporter.onResult({ ...results, tests: results.tests.map((t) => ({ ...t, filePath: file })) }, 'server')
-    passed += results.passed
-    failed += results.failed
-  }
+  // Run up to `concurrency` workers at a time, streaming results to the
+  // reporter as each file finishes rather than waiting for all to complete.
+  let index = 0
+  let active = 0
+
+  await new Promise<void>((resolve) => {
+    function dispatch() {
+      while (active < concurrency && index < files.length) {
+        let file = files[index]
+        index++
+        active++
+
+        runFile(file).then(
+          (results) => {
+            reporter.onResult(
+              { ...results, tests: results.tests.map((t) => ({ ...t, filePath: file })) },
+              'server',
+            )
+            passed += results.passed
+            failed += results.failed
+            active--
+            if (index < files.length) {
+              dispatch()
+            } else if (active === 0) {
+              resolve()
+            }
+          },
+          (err) => {
+            console.error(`Error running ${file}:`, err)
+            active--
+            if (active === 0 && index >= files.length) resolve()
+            else dispatch()
+          },
+        )
+      }
+
+      if (index >= files.length && active === 0) resolve()
+    }
+
+    dispatch()
+  })
 
   return { passed, failed }
 }

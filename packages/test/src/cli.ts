@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as util from 'node:util'
+import * as os from 'node:os'
 import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
@@ -24,6 +25,7 @@ let { values, positionals } = util.parseArgs({
     browserPort: { type: 'string', short: 'p', default: '44101' },
     browserGlob: { type: 'string', default: '**/*.test.browser.{ts,tsx}' },
     reporter: { type: 'string', short: 'r', default: 'spec' },
+    concurrency: { type: 'string', short: 'c', default: String(os.availableParallelism()) },
   },
   allowPositionals: true,
 })
@@ -85,7 +87,7 @@ async function executeRun() {
     let reporter = createReporter(values.reporter!)
     let startTime = performance.now()
     let [serverResult, browserResult] = await Promise.all([
-      serverFiles.length > 0 ? runServerTests(serverFiles, reporter) : null,
+      serverFiles.length > 0 ? runServerTests(serverFiles, reporter, Number(values.concurrency)) : null,
       browserFiles.length > 0
         ? runBrowserTests({
             baseUrl: `http://localhost:${port}`,

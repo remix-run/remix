@@ -180,7 +180,9 @@ async function initialize(): Promise<void> {
 function getDatabaseFilePath(): string {
   let fileName =
     process.env.NODE_ENV === 'test'
-      ? `bookstore.test.${process.pid}.${Date.now()}.sqlite`
+      ? // Random UUID gives each test worker its own DB file so tests can run
+        // in parallel without hitting unique constraint or migration conflicts.
+        `bookstore.test.${crypto.randomUUID()}.sqlite`
       : 'bookstore.sqlite'
 
   return fileURLToPath(new URL(fileName, dataDirectoryUrl))
