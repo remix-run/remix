@@ -351,6 +351,53 @@ describe('vnode rendering', () => {
       )
     })
 
+    it('maintains DOM order when fragment component has multiple renders before changing', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showMiddle = false
+      let capturedUpdate = () => {}
+
+      function Dynamic(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (showMiddle ? <span id="middle">Middle</span> : null)
+      }
+
+      function App() {
+        return () => (
+          <main>
+            <>
+              <Dynamic />
+              <span id="tail">Tail</span>
+            </>
+            <footer id="footer">Footer</footer>
+          </main>
+        )
+      }
+
+      root.render(<App />)
+      let originalTail = container.querySelector('#tail')
+      let originalFooter = container.querySelector('#footer')
+      expect(container.innerHTML).toBe(
+        '<main><span id="tail">Tail</span><footer id="footer">Footer</footer></main>',
+      )
+
+      root.render(<App />)
+      root.flush()
+      expect(container.querySelector('#tail')).toBe(originalTail)
+      expect(container.querySelector('#footer')).toBe(originalFooter)
+
+      showMiddle = true
+      capturedUpdate()
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<main><span id="middle">Middle</span><span id="tail">Tail</span><footer id="footer">Footer</footer></main>',
+      )
+      expect(container.querySelector('#tail')).toBe(originalTail)
+      expect(container.querySelector('#footer')).toBe(originalFooter)
+    })
+
     it('maintains sibling order when a component toggles null in the middle slot', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

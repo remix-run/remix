@@ -389,7 +389,7 @@ export function diffVNodes(
       frame,
       scheduler,
       styles,
-      vParent,
+      next,
       rootTarget,
       undefined,
       anchor,
