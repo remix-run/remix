@@ -1,13 +1,13 @@
 import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import type { RequestContext, RequestContextStore } from './request-context.ts'
+import type { ContextEntries, RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
 type MiddlewareTuple = readonly AnyMiddleware[]
 
 export type MiddlewareContextTransform =
-  | RequestContextStore
+  | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
 
 type IdentityContextTransform = readonly []
@@ -17,12 +17,12 @@ type MiddlewareTransform<middleware> = middleware extends Middleware<any, any, i
   : IdentityContextTransform
 
 export type ApplyContextTransform<current_context extends RequestContext<any, any>, transform> =
-  transform extends RequestContextStore
+  transform extends ContextEntries
     ? current_context extends RequestContext<
         infer params extends Record<string, any>,
-        infer store extends RequestContextStore
+        infer entries extends ContextEntries
       >
-      ? RequestContext<params, [...store, ...transform]>
+      ? RequestContext<params, [...entries, ...transform]>
       : current_context
     : transform extends {
           <input_context extends current_context>(context: input_context): infer output

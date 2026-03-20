@@ -1,5 +1,6 @@
 import {
   createContextKey,
+  type MergeContext,
   type Middleware,
   type RequestContext,
 } from '@remix-run/fetch-router'
@@ -55,6 +56,12 @@ export type Auth<identity = unknown> = AuthState<identity>
  * Context key used to read auth state with `context.get(Auth)`.
  */
 export const Auth = createContextKey<AuthState>()
+
+export type WithAuth<context extends RequestContext<any, any>, identity = unknown> =
+  MergeContext<context, [readonly [typeof Auth, AuthState<identity>]]>
+
+export type WithRequiredAuth<context extends RequestContext<any, any>, identity = unknown> =
+  MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
 
 /**
  * Successful result returned by an auth scheme.

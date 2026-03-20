@@ -1,20 +1,12 @@
 import { Auth } from 'remix/auth-middleware'
-import { createAction } from 'remix/fetch-router'
+import type { BuildAction } from 'remix/fetch-router'
 
 import { AccountPage } from './account-page.tsx'
-import { requireAuth } from '../../middleware/auth.ts'
-import type { RouteContext } from '../../router.ts'
+import type { AuthenticatedRouteContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
-let accountMiddleware = [requireAuth] as const
-
-export let accountAction = createAction<
-  typeof routes.account,
-  RouteContext,
-  typeof accountMiddleware
->(routes.account, {
-  middleware: accountMiddleware,
+export let accountAction = {
   action(context) {
     let auth = context.get(Auth)
 
@@ -25,4 +17,4 @@ export let accountAction = createAction<
       />,
     )
   },
-})
+} satisfies BuildAction<'GET', typeof routes.account, AuthenticatedRouteContext>

@@ -7,13 +7,12 @@ import {
   type GetContextValue,
   type MiddlewareContext,
   type RequestContext,
-  type RequestContextStore,
+  type ContextEntries,
   type Router,
-  type SetContextValue,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
-import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
+import { Auth, auth, type AuthState, type GoodAuth, type WithAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -169,11 +168,11 @@ protectedRouter.get('/settings/:sectionId', context => {
 })
 
 type MountedProtectedContext<
-  context extends RequestContext<Record<string, string>, RequestContextStore>,
-> = SetContextValue<context, typeof Auth, AuthState<APIIdentity>>
+  context extends RequestContext<Record<string, string>, ContextEntries>,
+> = WithAuth<context, APIIdentity>
 
 function mountProtectedSettings<
-  context extends RequestContext<Record<string, string>, RequestContextStore>,
+  context extends RequestContext<Record<string, string>, ContextEntries>,
 >(
   router: Router<context, context> &
     (GetContextValue<context, typeof Auth> extends AuthState<APIIdentity>

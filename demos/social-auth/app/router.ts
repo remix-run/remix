@@ -1,8 +1,8 @@
+import type { WithRequiredAuth } from 'remix/auth-middleware'
 import {
   createRouter,
   type MiddlewareContext,
-  type RequestContext,
-  type RequestContextStore,
+  type WithContextParams,
 } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
@@ -14,10 +14,11 @@ import { accountAction } from './controllers/account/controller.tsx'
 import { authController } from './controllers/auth/controller.tsx'
 import { home } from './controllers/home/controller.tsx'
 import { initializeSocialAuthDatabase } from './data/setup.ts'
-import { loadAuth } from './middleware/auth.ts'
+import { loadAuth, requireAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
+import type { AuthIdentity } from './utils/auth-session.ts'
 
 await initializeSocialAuthDatabase()
 
@@ -29,14 +30,13 @@ export type SocialAuthMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-type AppStore = MiddlewareContext<SocialAuthMiddleware> extends RequestContext<
-  any,
-  infer store extends RequestContextStore
+export type RouteContext<params extends Record<string, string> = {}> = WithContextParams<
+  MiddlewareContext<SocialAuthMiddleware>,
+  params
 >
-  ? store
-  : never
 
-export type RouteContext<params extends Record<string, string> = {}> = RequestContext<params, AppStore>
+export type AuthenticatedRouteContext<params extends Record<string, string> = {}> =
+  WithRequiredAuth<RouteContext<params>, AuthIdentity>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
@@ -60,7 +60,10 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let router = createRouter({ middleware })
 
   router.map(routes.home, home)
-  router.map(routes.account, accountAction)
+  router.get(routes.account, {
+    middleware: [requireAuth] as const,
+    action: accountAction.action,
+  })
   router.map(routes.auth, authController)
 
   return router

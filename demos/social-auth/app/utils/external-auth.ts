@@ -9,7 +9,7 @@ import type {
   OAuthProvider,
   XAuthProfile,
 } from 'remix/auth'
-import type { RequestContext, RequestContextStore } from 'remix/fetch-router'
+import type { RequestContext, ContextEntries } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
 
@@ -56,9 +56,9 @@ export const externalProviderNames = ['google', 'github', 'x'] as const
 
 export function createExternalProvider<
   params extends Record<string, string>,
-  store extends RequestContextStore,
+  entries extends ContextEntries,
   name extends ExternalProviderName,
->(name: name, context: RequestContext<params, store>): ExternalProviderFor<name> | null {
+>(name: name, context: RequestContext<params, entries>): ExternalProviderFor<name> | null {
   switch (name) {
     case 'google':
       return createGoogleProvider(context) as ExternalProviderFor<name> | null
@@ -103,8 +103,8 @@ export function getDemoOrigin(url?: URL): string {
 
 function createGoogleProvider<
   params extends Record<string, string>,
-  store extends RequestContextStore,
->(context: RequestContext<params, store>): OAuthProvider<GoogleAuthProfile, 'google'> | null {
+  entries extends ContextEntries,
+>(context: RequestContext<params, entries>): OAuthProvider<GoogleAuthProfile, 'google'> | null {
   let credentials = readProviderCredentials('GOOGLE')
   if (credentials == null) {
     return null
@@ -119,8 +119,8 @@ function createGoogleProvider<
 
 function createGitHubProvider<
   params extends Record<string, string>,
-  store extends RequestContextStore,
->(context: RequestContext<params, store>): OAuthProvider<GitHubAuthProfile, 'github'> | null {
+  entries extends ContextEntries,
+>(context: RequestContext<params, entries>): OAuthProvider<GitHubAuthProfile, 'github'> | null {
   let credentials = readProviderCredentials('GITHUB')
   if (credentials == null) {
     return null
@@ -135,8 +135,8 @@ function createGitHubProvider<
 
 function createXProvider<
   params extends Record<string, string>,
-  store extends RequestContextStore,
->(context: RequestContext<params, store>): OAuthProvider<XAuthProfile, 'x'> | null {
+  entries extends ContextEntries,
+>(context: RequestContext<params, entries>): OAuthProvider<XAuthProfile, 'x'> | null {
   let credentials = readProviderCredentials('X')
   if (credentials == null) {
     return null

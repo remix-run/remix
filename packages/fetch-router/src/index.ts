@@ -6,9 +6,13 @@ export {
 export type {
   ContextValue,
   GetContextValue,
+  ContextEntries,
+  ContextEntry,
+  MergeContext,
   RequestContextStore,
   RequestContextStoreEntry,
   SetContextValue,
+  WithContextParams,
 } from './lib/request-context.ts'
 
 export {
