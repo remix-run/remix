@@ -8,7 +8,7 @@ import type { Route, RouteMap } from './route-map.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
 
-type ActionObjectWithoutMiddleware<
+export type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
 > = {
@@ -16,7 +16,7 @@ type ActionObjectWithoutMiddleware<
   handler: RequestHandler<params, context>
 }
 
-type ActionObjectWithMiddleware<
+export type ActionObjectWithMiddleware<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
   middleware extends readonly AnyMiddleware[],
@@ -25,7 +25,7 @@ type ActionObjectWithMiddleware<
   handler: RequestHandler<params, ApplyMiddlewareTuple<context, middleware>>
 }
 
-type ActionInput<
+export type ActionInput<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],

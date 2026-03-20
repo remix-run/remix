@@ -6,6 +6,9 @@ import { type ContextParams, RequestContext, type WithParams } from './request-c
 import type { RequestMethod } from './request-methods.ts'
 import {
   type Action,
+  type ActionInput,
+  type ActionObjectWithMiddleware,
+  type ActionObjectWithoutMiddleware,
   type Controller,
   type ControllerInput,
   type ControllerShape,
@@ -35,35 +38,6 @@ type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string
   | RoutePattern<pattern>
   | Route<method, pattern>
 
-type RouteActionObjectWithoutMiddleware<
-  pattern extends string,
-  context extends AnyContext,
-> = {
-  middleware?: undefined
-  handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>
-}
-
-type RouteActionObjectWithMiddleware<
-  pattern extends string,
-  context extends AnyContext,
-  middleware extends readonly AnyMiddleware[],
-> = {
-  middleware: readonly [...middleware]
-  handler: RequestHandler<
-    Params<pattern>,
-    ApplyMiddlewareTuple<RouteContext<context, pattern>, middleware>
-  >
-}
-
-type RouteActionInput<
-  pattern extends string,
-  context extends AnyContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> =
-  | RequestHandler<Params<pattern>, RouteContext<context, pattern>>
-  | RouteActionObjectWithoutMiddleware<pattern, context>
-  | RouteActionObjectWithMiddleware<pattern, context, middleware>
-
 type RouteRegistrar<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
@@ -73,12 +47,16 @@ type RouteRegistrar<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    handler: RouteActionObjectWithoutMiddleware<pattern, context>,
+    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string, middleware extends readonly AnyMiddleware[]>(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    handler: RouteActionObjectWithMiddleware<pattern, context, middleware>,
+    handler: ActionObjectWithMiddleware<
+      Params<pattern>,
+      RouteContext<context, pattern>,
+      middleware
+    >,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
@@ -94,11 +72,15 @@ type SingleRouteMapper<context extends AnyContext> = {
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     target: MapRouteTarget<method, pattern>,
-    handler: RouteActionObjectWithoutMiddleware<pattern, context>,
+    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string, middleware extends readonly AnyMiddleware[]>(
     target: MapRouteTarget<method, pattern>,
-    handler: RouteActionObjectWithMiddleware<pattern, context, middleware>,
+    handler: ActionObjectWithMiddleware<
+      Params<pattern>,
+      RouteContext<context, pattern>,
+      middleware
+    >,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     target: MapRouteTarget<method, pattern>,
@@ -124,11 +106,15 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   ): void
   <pattern extends string>(
     route: RouteTarget<method, pattern>,
-    handler: RouteActionObjectWithoutMiddleware<pattern, context>,
+    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <pattern extends string, middleware extends readonly AnyMiddleware[]>(
     route: RouteTarget<method, pattern>,
-    handler: RouteActionObjectWithMiddleware<pattern, context, middleware>,
+    handler: ActionObjectWithMiddleware<
+      Params<pattern>,
+      RouteContext<context, pattern>,
+      middleware
+    >,
   ): void
   <pattern extends string>(
     route: RouteTarget<method, pattern>,
@@ -455,7 +441,11 @@ export function createRouter<
   function createVerbMethod<method extends RequestMethod>(method: method): VerbMethod<method, RouterContext> {
     return (<pattern extends string, actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[]>(
       route: RouteTarget<method, pattern>,
-      handler: RouteActionInput<pattern, RouterContext, actionMiddleware>,
+      handler: ActionInput<
+        Params<pattern>,
+        RouteContext<RouterContext, pattern>,
+        actionMiddleware
+      >,
     ): void => {
       addRoute(method, route, handler as Action<method, pattern, RouterContext>)
     }) as VerbMethod<method, RouterContext>
@@ -480,7 +470,11 @@ export function createRouter<
     >(
       method: method,
       route: RouteTarget<method, pattern>,
-      handler: RouteActionInput<pattern, RouterContext, actionMiddleware>,
+      handler: ActionInput<
+        Params<pattern>,
+        RouteContext<RouterContext, pattern>,
+        actionMiddleware
+      >,
     ): void {
       addRoute(method, route, handler as Action<method, pattern, RouterContext>)
     },
