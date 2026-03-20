@@ -10,11 +10,6 @@ import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporter.ts'
 import { createWatcher } from './lib/watcher.ts'
 
-let { startServer } = await tsImport('./app/server.tsx', {
-  parentURL: import.meta.url,
-  tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
-})
-
 let { values, positionals } = util.parseArgs({
   args: process.argv.slice(2),
   options: {
@@ -81,13 +76,19 @@ async function executeRun() {
     }
 
     if (browserFiles.length > 0 && !browserServer) {
+      let startServer = await tsImport('./app/server.tsx', {
+        parentURL: import.meta.url,
+        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+      })
       browserServer = await startServer(port, browserFiles)
     }
 
     let reporter = createReporter(values.reporter!)
     let startTime = performance.now()
     let [serverResult, browserResult] = await Promise.all([
-      serverFiles.length > 0 ? runServerTests(serverFiles, reporter, Number(values.concurrency)) : null,
+      serverFiles.length > 0
+        ? runServerTests(serverFiles, reporter, Number(values.concurrency))
+        : null,
       browserFiles.length > 0
         ? runBrowserTests({
             baseUrl: `http://localhost:${port}`,
