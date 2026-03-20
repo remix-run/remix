@@ -1,18 +1,23 @@
 import { describe, it } from 'node:test'
 
 import {
-  createAction,
-  createController,
   createRouter,
+  type BuildAction,
+  type Controller,
   type GetContextValue,
   type MiddlewareContext,
   type RequestContext,
-  type ContextEntries,
-  type Router,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
-import { Auth, auth, type AuthState, type GoodAuth, type WithAuth } from './auth.ts'
+import {
+  Auth,
+  auth,
+  type AuthState,
+  type GoodAuth,
+  type WithAuth,
+  type WithRequiredAuth,
+} from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -53,12 +58,19 @@ const routes = route({
 const routerMiddleware = [typedAuth] as const
 
 type AppContext = MiddlewareContext<typeof routerMiddleware>
+type ProtectedAppContext = WithRequiredAuth<AppContext, APIIdentity>
+
+type AuthContext = WithAuth<RequestContext, APIIdentity>
 
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
 
 expectTypeEquality<IsEqual<typeof personalAccessToken.name, 'pat'>>()
 expectTypeEquality<IsEqual<typeof partnerKey.name, 'partner-key'>>()
+expectTypeEquality<IsEqual<GetContextValue<AuthContext, typeof Auth>, AuthState<APIIdentity>>>()
+expectTypeEquality<
+  IsEqual<GetContextValue<ProtectedAppContext, typeof Auth>, GoodAuth<APIIdentity>>
+>()
 
 router.get(routes.public, context => {
   let currentAuth = context.get(Auth)
@@ -73,8 +85,7 @@ router.get(routes.public, context => {
   currentAuth.identity
 
   if (currentAuth.ok) {
-    let identity: APIIdentity =
-      currentAuth.identity
+    let identity: APIIdentity = currentAuth.identity
     let method: string = currentAuth.method
 
     void identity
@@ -84,33 +95,37 @@ router.get(routes.public, context => {
   return new Response('Public')
 })
 
-const privateAction = createAction<typeof routes.private, AppContext>(routes.private, {
+const privateAction = {
   action(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
-    let authState: AuthState<APIIdentity> = currentAuth
+    let authState: GoodAuth<APIIdentity> = currentAuth
+    let method: string = currentAuth.method
 
     void id
     void authState
+    void method
 
     return new Response('Private')
   },
-})
+} satisfies BuildAction<'GET', typeof routes.private, ProtectedAppContext>
 
-const adminController = createController<typeof routes.admin, AppContext>(routes.admin, {
+const adminController = {
   actions: {
     dashboard(context) {
       let currentAuth = context.get(Auth)
 
-      let authState: AuthState<APIIdentity> = currentAuth
+      let authState: GoodAuth<APIIdentity> = currentAuth
+      let method: string = currentAuth.method
 
       void authState
+      void method
 
       return new Response('Admin')
     },
   },
-})
+} satisfies Controller<typeof routes.admin, ProtectedAppContext>
 
 fallbackRouter.get('/session/:id', {
   middleware: [requireAuth<{ kind: 'session'; id: string }>()] as const,
@@ -129,87 +144,22 @@ fallbackRouter.get('/session/:id', {
   },
 })
 
-router.get(routes.private, privateAction)
-router.map(routes.admin, adminController)
-
-router.mount('/teams/:teamId', team => {
-  team.get('/members/:memberId', context => {
-    let currentAuth = context.get(Auth)
-    let teamId: string = context.params.teamId
-    let memberId: string = context.params.memberId
-
-    let authState: AuthState<APIIdentity> = currentAuth
-
-    void authState
-    void teamId
-    void memberId
-
-    return new Response('Team Member')
-  })
+router.get(routes.private, {
+  middleware: [requireAuth<APIIdentity>()] as const,
+  action: privateAction.action,
 })
 
-const protectedMiddleware = [requireAuth<APIIdentity>()] as const
-const protectedRouter = createRouter<AppContext, typeof protectedMiddleware>({
-  middleware: protectedMiddleware,
+router.map(routes.admin, {
+  middleware: [requireAuth<APIIdentity>()] as const,
+  actions: adminController.actions,
 })
-
-protectedRouter.get('/settings/:sectionId', context => {
-  let currentAuth = context.get(Auth)
-  let sectionId: string = context.params.sectionId
-
-  let authState: GoodAuth<APIIdentity> = currentAuth
-  let method: string = currentAuth.method
-
-  void authState
-  void method
-  void sectionId
-
-  return new Response(currentAuth.method)
-})
-
-type MountedProtectedContext<
-  context extends RequestContext<Record<string, string>, ContextEntries>,
-> = WithAuth<context, APIIdentity>
-
-function mountProtectedSettings<
-  context extends RequestContext<Record<string, string>, ContextEntries>,
->(
-  router: Router<context, context> &
-    (GetContextValue<context, typeof Auth> extends AuthState<APIIdentity>
-      ? unknown
-      : never),
-): void {
-  let mountProtectedMiddleware = [requireAuth<APIIdentity>()] as const
-  let mountedProtectedRouter = createRouter<
-    MountedProtectedContext<context>,
-    typeof mountProtectedMiddleware
-  >({
-    middleware: mountProtectedMiddleware,
-  })
-
-  mountedProtectedRouter.get('/settings/:sectionId', context => {
-    let currentAuth = context.get(Auth)
-    let sectionId: string = context.params.sectionId
-
-    let authState: GoodAuth<APIIdentity> = currentAuth
-    let method: string = currentAuth.method
-
-    void authState
-    void method
-    void sectionId
-
-    return new Response(currentAuth.method)
-  })
-
-  router.mount('/mounted-protected', mountedProtectedRouter)
-}
-
-router.mount('/private', protectedRouter)
-mountProtectedSettings<AppContext>(router)
 
 if (false as boolean) {
-  // @ts-expect-error - reusable mount helper requires auth() to run in the parent router
-  mountProtectedSettings<RequestContext>(fallbackRouter)
+  router.get(routes.private, context => {
+    // @ts-expect-error - router-global auth() alone does not guarantee a good auth state
+    let authState: GoodAuth<APIIdentity> = context.get(Auth)
+    return new Response(authState.method)
+  })
 }
 
 void typedAuth
@@ -217,8 +167,7 @@ void router
 void fallbackRouter
 void privateAction
 void adminController
-void protectedRouter
 
 describe('auth middleware type inference', () => {
-  it('propagates router-global auth into mounted and stored handlers', () => {})
+  it('propagates auth state into controller and action contracts', () => {})
 })

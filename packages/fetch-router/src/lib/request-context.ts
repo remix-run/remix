@@ -183,26 +183,25 @@ export class RequestContext<
     this.#contextMap.set(key, value)
   }
 
-  #router?: Router<any, any>
+  #router?: Router<any>
 
   /**
    * The router handling this request.
    */
-  get router(): Router<RequestContext<any, entries>, any> {
+  get router(): Router<RequestContext<any, entries>> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router as Router<RequestContext<any, entries>, any>
+    return this.#router as Router<RequestContext<any, entries>>
   }
 
-  set router(router: Router<any, any>) {
+  set router(router: Router<any>) {
     this.#router = router
   }
 
   /**
-   * The URL in the current router scope. Mounted sub-routers receive a scoped URL with the
-   * mount prefix stripped from the pathname while preserving origin and search params.
+   * The URL of the current request.
    */
   url: URL
 }

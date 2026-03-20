@@ -1,13 +1,8 @@
 import { describe, it } from 'node:test'
 
-import {
-  type BuildAction,
-  type Controller,
-  createAction,
-  createController,
-} from './controller.ts'
+import type { BuildAction, Controller } from './controller.ts'
 import type { Middleware } from './middleware.ts'
-import { createContextKey, type RequestContext } from './request-context.ts'
+import { createContextKey, type RequestContext, type SetContextValue } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import { createRouter } from './router.ts'
 import type { Router } from './router.ts'
@@ -44,6 +39,7 @@ const routes = route({
     dashboard: '/admin',
     member: '/admin/members/:memberId',
   },
+  reports: '/reports/:reportId',
 })
 
 const plainRouter = createRouter()
@@ -65,74 +61,16 @@ router.get(routes.account, context => {
   expectTypeEquality<IsEqual<typeof user, { id: string }>>()
   expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
-  return new Response(`${accountId}:${user.id}:${role}`)
+  return new Response(accountId + ':' + user.id + ':' + role)
 })
 
-router.mount('/orgs/:orgId', org => {
-  org.get('/users/:userId', context => {
-    let user = context.get(CurrentUser)
-    let role = context.get(CurrentRole)
-    let orgId: string = context.params.orgId
-    let userId: string = context.params.userId
-
-    expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-    expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
-
-    return new Response(`${orgId}:${userId}:${user.id}:${role}`)
-  })
-})
-
-type AppContext = typeof router extends Router<
-  infer context extends RequestContext<any, any>,
-  any
->
+type AppContext = typeof router extends Router<infer context extends RequestContext<any, any>>
   ? context
   : never
 
-type RequiredUserContext = RequestContext<{}, [[typeof CurrentUser, { id: string }]]>
+type AdminAppContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
-const profileRouter = createRouter<RequiredUserContext>()
-profileRouter.get('/settings/:sectionId', context => {
-  let user = context.get(CurrentUser)
-  let sectionId: string = context.params.sectionId
-
-  expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-
-  return new Response(`${sectionId}:${user.id}`)
-})
-
-router.mount('/profile', profileRouter)
-
-const adminMiddleware = [setRole('admin')] as const
-const adminRouter = createRouter<RequiredUserContext, typeof adminMiddleware>({
-  middleware: adminMiddleware,
-})
-adminRouter.get('/members/:memberId', context => {
-  let user = context.get(CurrentUser)
-  let role = context.get(CurrentRole)
-  let memberId: string = context.params.memberId
-
-  expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-  let exactRole: 'admin' = role
-
-  void exactRole
-
-  return new Response(`${memberId}:${user.id}:${role}`)
-})
-
-router.mount('/admin', adminRouter)
-
-if (false as boolean) {
-  router.mount('/orgs/:orgId', org => {
-    org.get('/users/:orgId', context => {
-      // @ts-expect-error - duplicate param names are rejected across mounted routers
-      context.params.orgId
-      return new Response('duplicate')
-    })
-  })
-}
-
-const accountAction = createAction<typeof routes.account, AppContext>(routes.account, {
+const accountAction = {
   action(context) {
     let user = context.get(CurrentUser)
     let role = context.get(CurrentRole)
@@ -141,48 +79,11 @@ const accountAction = createAction<typeof routes.account, AppContext>(routes.acc
     expectTypeEquality<IsEqual<typeof user, { id: string }>>()
     expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
-    return new Response(`${accountId}:${user.id}:${role}`)
-  },
-})
-
-const adminController = createController<typeof routes.admin, AppContext>(routes.admin, {
-  actions: {
-    dashboard(context) {
-      let user = context.get(CurrentUser)
-      let role = context.get(CurrentRole)
-
-      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-      expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
-
-      return new Response(`${user.id}:${role}`)
-    },
-    member(context) {
-      let user = context.get(CurrentUser)
-      let role = context.get(CurrentRole)
-      let memberId: string = context.params.memberId
-
-      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-      expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
-
-      return new Response(`${user.id}:${role}:${memberId}`)
-    },
-  },
-})
-
-const legacyAccountAction = {
-  action(context) {
-    let user = context.get(CurrentUser)
-    let role = context.get(CurrentRole)
-    let accountId: string = context.params.accountId
-
-    expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-    expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
-
-    return new Response(`${accountId}:${user.id}:${role}`)
+    return new Response(accountId + ':' + user.id + ':' + role)
   },
 } satisfies BuildAction<'GET', typeof routes.account, AppContext>
 
-const legacyAdminController = {
+const adminController = {
   actions: {
     dashboard(context) {
       let user = context.get(CurrentUser)
@@ -191,7 +92,7 @@ const legacyAdminController = {
       expectTypeEquality<IsEqual<typeof user, { id: string }>>()
       expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
-      return new Response(`${user.id}:${role}`)
+      return new Response(user.id + ':' + role)
     },
     member(context) {
       let user = context.get(CurrentUser)
@@ -201,81 +102,58 @@ const legacyAdminController = {
       expectTypeEquality<IsEqual<typeof user, { id: string }>>()
       expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
-      return new Response(`${user.id}:${role}:${memberId}`)
+      return new Response(user.id + ':' + role + ':' + memberId)
     },
   },
 } satisfies Controller<typeof routes.admin, AppContext>
 
-router.get(routes.account, accountAction)
-router.map(routes.admin, adminController)
-router.get(routes.account, legacyAccountAction)
-router.map(routes.admin, legacyAdminController)
-
-void plainRouter
-void router
-void profileRouter
-void adminRouter
-void accountAction
-void adminController
-void legacyAccountAction
-void legacyAdminController
-
-router.scope(
-  {
-    middleware: [setRole('admin')] as const,
-  },
-  scoped => {
-    scoped.get('/reports/:reportId', context => {
+const elevatedReportsController = {
+  actions: {
+    reports(context) {
       let user = context.get(CurrentUser)
       let role = context.get(CurrentRole)
       let reportId: string = context.params.reportId
+      let exactRole: 'admin' = role
 
       expectTypeEquality<IsEqual<typeof user, { id: string }>>()
-      let exactRole: 'admin' = role
 
       void exactRole
 
-      return new Response(`${reportId}:${user.id}:${role}`)
-    })
+      return new Response(reportId + ':' + user.id + ':' + role)
+    },
   },
-)
+} satisfies Controller<{ reports: typeof routes.reports }, AdminAppContext>
 
-router.mount('/teams/:teamId', team => {
-  team.scope(
-    {
-      middleware: [setRole('admin')] as const,
-    },
-    scoped => {
-      scoped.get('/members/:memberId', context => {
-        let role = context.get(CurrentRole)
-        let teamId: string = context.params.teamId
-        let memberId: string = context.params.memberId
+const elevatedReportAction = {
+  action(context) {
+    let role = context.get(CurrentRole)
+    let reportId: string = context.params.reportId
+    let exactRole: 'admin' = role
 
-        let exactRole: 'admin' = role
+    void reportId
+    void exactRole
 
-        void exactRole
+    return new Response(role)
+  },
+} satisfies BuildAction<'GET', typeof routes.reports, AdminAppContext>
 
-        return new Response(`${teamId}:${memberId}:${role}`)
-      })
-    },
-  )
-})
-
+router.get(routes.account, accountAction)
+router.map(routes.admin, adminController)
 if (false as boolean) {
-  router.scope(
-    {
-      middleware: [setRole('admin')] as const,
-    },
-    scoped => {
-      scoped.get('/reports/:reportId', context => {
-        // @ts-expect-error - scope middleware overrides the inherited viewer role
-        let inheritedRole: 'viewer' = context.get(CurrentRole)
-        return new Response(inheritedRole)
-      })
-    },
-  )
+  router.get(routes.reports, context => {
+    // @ts-expect-error - the base app context still only guarantees the inherited viewer role
+    let adminRole: 'admin' = context.get(CurrentRole)
+    return new Response(adminRole)
+  })
 }
 
+void plainRouter
+void router
+void accountAction
+void adminController
+void elevatedReportsController
+void elevatedReportAction
+
 describe('router type inference', () => {
-  it('propagates router-global, scoped, mounted, and legacy handlers', () => {})
+  it('propagates router context into controller and action contracts', () => {})
 })

@@ -38,23 +38,6 @@ type RequestHandlerDefinition<
   | RequestHandlerObjectWithoutMiddleware<method, params, context>
   | RequestHandlerObjectWithMiddleware<method, params, context, middleware>
 
-type RouteMethod<route> = route extends Route<infer method extends RequestMethod | 'ANY', any>
-  ? method
-  : RequestMethod | 'ANY'
-
-type RouteParams<route extends string | RoutePattern | Route> = route extends string
-  ? Params<route>
-  : route extends RoutePattern<infer pattern>
-    ? Params<pattern>
-    : route extends Route<infer _, infer pattern>
-      ? Params<pattern>
-      : never
-
-type RouteContext<
-  context extends RequestContext<any, any>,
-  route extends string | RoutePattern | Route,
-> = WithParams<context, RouteParams<route>>
-
 export type ControllerWithoutMiddleware<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
@@ -130,94 +113,6 @@ export type BuildAction<
   never
 
 /**
- * Create a typed action object whose handler context reflects its middleware tuple.
- */
-export function createAction<
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
->(
-  _route: route,
-  action: RequestHandler<RouteMethod<route>, RouteParams<route>, RouteContext<context, route>>,
-): RequestHandler<RouteMethod<route>, RouteParams<route>, RouteContext<context, route>>
-export function createAction<
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
->(
-  _route: route,
-  action: RequestHandlerObjectWithoutMiddleware<
-    RouteMethod<route>,
-    RouteParams<route>,
-    RouteContext<context, route>
-  >,
-): RequestHandlerObjectWithoutMiddleware<
-  RouteMethod<route>,
-  RouteParams<route>,
-  RouteContext<context, route>
->
-export function createAction<
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
->(
-  _route: route,
-  action: RequestHandlerObjectWithMiddleware<
-    RouteMethod<route>,
-    RouteParams<route>,
-    RouteContext<context, route>,
-    middleware
-  >,
-): RequestHandlerObjectWithMiddleware<
-  RouteMethod<route>,
-  RouteParams<route>,
-  RouteContext<context, route>,
-  middleware
->
-export function createAction<
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
->(
-  _route: route,
-  action: RequestHandlerDefinition<
-    RouteMethod<route>,
-    RouteParams<route>,
-    RouteContext<context, route>,
-    middleware
-  >,
-): typeof action {
-  return action
-}
-
-/**
- * Create a typed controller object whose action contexts reflect its middleware tuple.
- */
-export function createController<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = RequestContext,
->(
-  _routes: routes,
-  controller: ControllerWithoutMiddleware<routes, context>,
-): ControllerWithoutMiddleware<routes, context>
-export function createController<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = RequestContext,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
->(
-  _routes: routes,
-  controller: ControllerWithMiddleware<routes, context, middleware>,
-): ControllerWithMiddleware<routes, context, middleware>
-export function createController<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = RequestContext,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
->(
-  _routes: routes,
-  controller: ControllerInput<routes, context, middleware>,
-): typeof controller {
-  return controller
-}
-
-/**
  * A request handler function that returns some kind of response.
  *
  * @param context The request context
@@ -243,7 +138,7 @@ export interface ControllerShape {
 }
 
 /**
- * Check if an object has an `actions` property (controller).
+ * Check if an object has an `actions` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is a controller
@@ -261,7 +156,7 @@ export interface ActionObjectShape {
 }
 
 /**
- * Check if an object has an `action` property (action object).
+ * Check if an object has an `action` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is an action object
