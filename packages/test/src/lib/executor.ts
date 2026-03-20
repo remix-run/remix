@@ -1,4 +1,3 @@
-import { colors, normalizeLine } from './utils.ts'
 
 export interface TestResult {
   name: string
@@ -94,67 +93,3 @@ export async function runTests(): Promise<TestResults> {
   return results
 }
 
-export function displayResults(results: TestResults, env?: 'server' | 'browser') {
-  let fileMap = new Map<string, typeof results.tests>()
-
-  for (let test of results.tests) {
-    let file = test.filePath || 'Unknown'
-    if (!fileMap.has(file)) {
-      fileMap.set(file, [])
-    }
-    fileMap.get(file)!.push(test)
-  }
-
-  let cwd = process.cwd().replace(/\\/g, '/')
-  let fileOrder = Array.from(fileMap.keys()).sort()
-
-  for (let file of fileOrder) {
-    let tests = fileMap.get(file)!
-    let displayPath = file.replace(`${cwd}/`, './')
-    let envLabel = env ? ` ${colors.dim(`[${env}]`)}` : ''
-
-    let suiteMap = new Map<string, typeof tests>()
-    for (let test of tests) {
-      let suite = test.suiteName || 'Global'
-      if (!suiteMap.has(suite)) {
-        suiteMap.set(suite, [])
-      }
-      suiteMap.get(suite)!.push(test)
-    }
-
-    for (let [suiteName, suiteTests] of suiteMap) {
-      let totalDuration = suiteTests.reduce((sum, t) => sum + t.duration, 0)
-      let suiteHasFailed = suiteTests.some((t) => t.status === 'failed')
-      let label = suiteHasFailed ? colors.red(suiteName) : colors.green(suiteName)
-      console.log(`${colors.dim('▶')} ${label} (${totalDuration.toFixed(2)}ms)${envLabel}`)
-
-      for (let test of suiteTests) {
-        let passed = test.status === 'passed'
-        let icon = passed ? colors.green('✓') : colors.red('✗')
-
-        console.log(`  ${icon} ${test.name} (${test.duration.toFixed(2)}ms)`)
-
-        if (test.error) {
-          console.log(`    ${colors.red(`Error: ${test.error.message}`)}`)
-          if (test.error.stack) {
-            let stack = test.error.stack
-              .split('\n')
-              .map((line) => normalizeLine(line))
-              .join('\n')
-            console.log(`      ${stack.split('\n').slice(1, 5).join('\n      ')}`)
-          }
-        }
-      }
-    }
-  }
-}
-
-export function displaySummary(passed: number, failed: number, durationMs: number) {
-  let info = colors.cyan('ℹ')
-  console.log()
-  console.log(`${info} tests ${passed + failed}`)
-  console.log(`${info} pass ${passed}`)
-  console.log(`${info} fail ${failed}`)
-  console.log(`${info} duration_ms ${durationMs.toFixed(5)}`)
-  console.log()
-}

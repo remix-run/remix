@@ -1,5 +1,6 @@
 import { chromium, type Browser } from 'playwright'
-import { displayResults, type TestResults } from './executor.ts'
+import type { TestResults } from './executor.ts'
+import type { Reporter } from './reporter.ts'
 import { colors } from './utils.ts'
 
 export interface TestRunOptions {
@@ -7,6 +8,7 @@ export interface TestRunOptions {
   console?: boolean
   devtools?: boolean
   open?: boolean
+  reporter: Reporter
 }
 
 export async function runBrowserTests(options: TestRunOptions): Promise<{
@@ -33,7 +35,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     await page.route('**/file-results', async (route) => {
       let results = route.request().postDataJSON() as TestResults
-      displayResults(results, 'browser')
+      options.reporter.onResult(results, 'browser')
       totalPassed += results.passed
       totalFailed += results.failed
       await route.fulfill({ status: 200 })

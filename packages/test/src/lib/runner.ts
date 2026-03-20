@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
-import { displayResults, type TestResults } from './executor.ts'
+import type { TestResults } from './executor.ts'
+import type { Reporter } from './reporter.ts'
 
 let workerUrl = new URL('./worker.ts', import.meta.url)
 
@@ -17,13 +18,16 @@ function runFile(file: string): Promise<TestResults> {
   })
 }
 
-export async function runServerTests(files: string[]): Promise<{ passed: number; failed: number }> {
+export async function runServerTests(
+  files: string[],
+  reporter: Reporter,
+): Promise<{ passed: number; failed: number }> {
   let passed = 0
   let failed = 0
 
   for (let file of files) {
     let results = await runFile(file)
-    displayResults({ ...results, tests: results.tests.map((t) => ({ ...t, filePath: file })) }, 'server')
+    reporter.onResult({ ...results, tests: results.tests.map((t) => ({ ...t, filePath: file })) }, 'server')
     passed += results.passed
     failed += results.failed
   }

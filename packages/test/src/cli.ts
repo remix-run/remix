@@ -6,7 +6,7 @@ import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
-import { displaySummary } from './lib/executor.ts'
+import { createReporter } from './lib/reporter.ts'
 import { createWatcher } from './lib/watcher.ts'
 
 let { startServer } = await tsImport('./app/server.tsx', {
@@ -23,6 +23,7 @@ let { values, positionals } = util.parseArgs({
     watch: { type: 'boolean', short: 'w' },
     browserPort: { type: 'string', short: 'p', default: '44101' },
     browserGlob: { type: 'string', default: '**/*.test.browser.{ts,tsx}' },
+    reporter: { type: 'string', short: 'r', default: 'spec' },
   },
   allowPositionals: true,
 })
@@ -81,22 +82,24 @@ async function executeRun() {
       browserServer = await startServer(port, browserFiles)
     }
 
+    let reporter = createReporter(values.reporter!)
     let startTime = performance.now()
     let [serverResult, browserResult] = await Promise.all([
-      serverFiles.length > 0 ? runServerTests(serverFiles) : null,
+      serverFiles.length > 0 ? runServerTests(serverFiles, reporter) : null,
       browserFiles.length > 0
         ? runBrowserTests({
             baseUrl: `http://localhost:${port}`,
             console: values.browserConsole,
             devtools: values.browserDevtools,
             open: values.browserOpen,
+            reporter,
           })
         : null,
     ])
 
     let totalPassed = (serverResult?.passed ?? 0) + (browserResult?.results.passed ?? 0)
     let totalFailed = (serverResult?.failed ?? 0) + (browserResult?.results.failed ?? 0)
-    displaySummary(totalPassed, totalFailed, performance.now() - startTime)
+    reporter.onSummary(totalPassed, totalFailed, performance.now() - startTime)
 
     if (values.browserOpen && browserResult) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')
