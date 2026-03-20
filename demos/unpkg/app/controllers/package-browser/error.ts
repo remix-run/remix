@@ -1,4 +1,4 @@
-import { html, render } from './utils/render.ts'
+import { html, render } from '../ui/render.ts'
 
 export function renderError(title: string, message: string): Response {
   return render(

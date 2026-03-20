@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from './breadcrumb.ts'
-import type { PackageFile } from './utils/npm.ts'
-import { html, render, formatBytes } from './utils/render.ts'
+import type { PackageFile } from '../../utils/npm.ts'
+import { html, render, formatBytes } from '../ui/render.ts'
 
 const TEXT_EXTENSIONS = new Set([
   '.js',
