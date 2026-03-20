@@ -478,7 +478,7 @@ describe('formData middleware', () => {
 
     router.post('/', {
       middleware: [formData({ uploadHandler: routeUploadHandler })],
-      action(context) {
+      handler(context) {
         return Response.json({
           file: context.get(FormData).get('file'),
         })
