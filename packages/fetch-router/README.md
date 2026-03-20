@@ -619,48 +619,35 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 
 ```ts
 import { Auth, requireAuth, type WithRequiredAuth } from 'remix/auth-middleware'
-import {
-  createRouter,
-  type BuildAction,
-  type MiddlewareContext,
-  type WithParams,
-} from 'remix/fetch-router'
+import { type BuildAction, type RequestContext, type WithParams } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
 
 let routes = route({
   account: '/account',
 })
 
-type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
-
 type AppContext<params extends Record<string, string> = {}> = WithParams<
-  MiddlewareContext<RootMiddleware>,
+  RequestContext,
   params
 >
 
+type AuthIdentity = { id: string }
+
 type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
   AppContext<params>,
-  { id: string }
+  AuthIdentity
 >
 
 let accountAction = {
+  middleware: [requireAuth<AuthIdentity>()],
   handler(context) {
     let auth = context.get(Auth)
     return Response.json({ id: auth.identity.id })
   },
 } satisfies BuildAction<'GET', typeof routes.account, AuthenticatedAppContext>
-
-let router = createRouter({
-  middleware: [loadSession(), loadAuth()] satisfies RootMiddleware,
-})
-
-router.get(routes.account, {
-  middleware: [requireAuth<{ id: string }>()],
-  handler: accountAction.handler,
-})
 ```
 
-In this example, the router provides the base app context, the action declares the stronger context it requires, and the route-local middleware makes that contract true at runtime.
+In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
 
 #### Middleware Provider Guidance
 
