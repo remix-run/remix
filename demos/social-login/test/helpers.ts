@@ -2,14 +2,14 @@ import { createCookie } from 'remix/cookie'
 import { Cookie, SetCookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
-import { createSocialLoginRouter } from '../app/router.ts'
-import { resetSocialLoginDatabase } from '../app/data/setup.ts'
+import { createSocialAuthRouter } from '../app/router.ts'
+import { resetSocialAuthDatabase } from '../app/data/setup.ts'
 
 export async function createTestRouter() {
-  await resetSocialLoginDatabase()
+  await resetSocialAuthDatabase()
 
-  let sessionCookie = createCookie('social-login-session', {
-    secrets: ['test-social-login-secret'],
+  let sessionCookie = createCookie('social-auth-session', {
+    secrets: ['test-social-auth-secret'],
     httpOnly: true,
     sameSite: 'Lax',
     maxAge: 60 * 60 * 24 * 30,
@@ -17,7 +17,7 @@ export async function createTestRouter() {
   })
   let sessionStorage = createMemorySessionStorage()
 
-  return createSocialLoginRouter({
+  return createSocialAuthRouter({
     sessionCookie,
     sessionStorage,
   })
@@ -35,11 +35,11 @@ export function getCookie(response: Response, name: string): string | null {
 }
 
 export function getSessionCookie(response: Response): string | null {
-  return getCookie(response, 'social-login-session')
+  return getCookie(response, 'social-auth-session')
 }
 
 export function requestWithSession(url: string, sessionCookie: string, init?: RequestInit): Request {
-  let cookie = new Cookie({ 'social-login-session': sessionCookie })
+  let cookie = new Cookie({ 'social-auth-session': sessionCookie })
 
   return new Request(url, {
     ...init,

@@ -1,8 +1,8 @@
 import { EmailIcon, PasswordIcon } from '../shared/index.ts'
 import { TextField } from '../shared/index.ts'
 import { LoginFooter } from './login-footer.tsx'
-import { SocialLoginSection } from './social-login-section.tsx'
-import type { ProviderLink } from './social-login-section.tsx'
+import { SocialAuthSection } from './social-auth-section.tsx'
+import type { ProviderLink } from './social-auth-section.tsx'
 import { AuthCard, Document, Notice } from '../shared/index.ts'
 import * as styles from '../styles.ts'
 
@@ -18,7 +18,7 @@ export interface LoginPageProps {
 
 export function LoginPage() {
   return ({ formAction, signupHref, forgotPasswordHref, providers, error, success }: LoginPageProps) => (
-    <Document title="Social Login Demo">
+    <Document title="Social Auth Demo">
       <AuthCard
         title="Welcome Back"
         subtitle="Sign in to your account"
@@ -65,7 +65,7 @@ export function LoginPage() {
           </button>
         </form>
 
-        <SocialLoginSection providers={providers} />
+        <SocialAuthSection providers={providers} />
       </AuthCard>
     </Document>
   )

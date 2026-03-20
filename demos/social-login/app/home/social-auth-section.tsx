@@ -14,7 +14,7 @@ export interface ProviderLink {
   disabledReason?: string
 }
 
-export function SocialLoginSection() {
+export function SocialAuthSection() {
   return ({ providers }: { providers: ProviderLink[] }) => (
     <>
       <div mix={styles.divider}>

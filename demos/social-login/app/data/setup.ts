@@ -32,7 +32,7 @@ export let db = createDatabase(adapter)
 
 let initializePromise: Promise<void> | null = null
 
-export async function initializeSocialLoginDatabase(): Promise<void> {
+export async function initializeSocialAuthDatabase(): Promise<void> {
   if (initializePromise == null) {
     initializePromise = initialize()
   }
@@ -53,14 +53,14 @@ async function initialize(): Promise<void> {
 export function getDatabaseFilePath(): string {
   let fileName =
     process.env.NODE_ENV === 'test'
-      ? 'social-login.test.' + process.pid + '.' + Date.now() + '.sqlite'
-      : 'social-login.sqlite'
+      ? 'social-auth.test.' + process.pid + '.' + Date.now() + '.sqlite'
+      : 'social-auth.sqlite'
 
   return fileURLToPath(new URL(fileName, dataDirectoryUrl))
 }
 
-export async function resetSocialLoginDatabase(): Promise<void> {
-  await initializeSocialLoginDatabase()
+export async function resetSocialAuthDatabase(): Promise<void> {
+  await initializeSocialAuthDatabase()
 
   sqlite.exec('DELETE FROM password_reset_tokens')
   sqlite.exec('DELETE FROM auth_accounts')

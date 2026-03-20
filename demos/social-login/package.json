@@ -1,5 +1,5 @@
 {
-  "name": "social-login-demo",
+  "name": "social-auth-demo",
   "private": true,
   "type": "module",
   "dependencies": {

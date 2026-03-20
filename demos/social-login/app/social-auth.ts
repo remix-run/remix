@@ -13,17 +13,17 @@ import type { Session } from './utils/session.ts'
 
 export type ExternalLoginMethod = 'google' | 'github' | 'x'
 export type ExternalProviderName = ExternalLoginMethod
-export type SocialLoginMethod = 'credentials' | ExternalLoginMethod
+export type SocialAuthMethod = 'credentials' | ExternalLoginMethod
 
-export interface SocialLoginSession {
+export interface SocialAuthSession {
   userId: number
-  loginMethod: SocialLoginMethod
+  loginMethod: SocialAuthMethod
   authAccountId?: number
 }
 
-export interface SocialLoginIdentity {
+export interface SocialAuthIdentity {
   user: User
-  loginMethod: SocialLoginMethod
+  loginMethod: SocialAuthMethod
   authAccount: AuthAccount | null
   providerProfile: unknown | null
 }
@@ -42,7 +42,7 @@ type ExternalProfileDetails = {
   profileJson: string
 }
 
-let socialLoginSessionSchema = s.object({
+let socialAuthSessionSchema = s.object({
   userId: s.number().refine(Number.isInteger, 'Expected an integer userId'),
   loginMethod: s.union([
     s.literal('credentials'),
@@ -55,14 +55,14 @@ let socialLoginSessionSchema = s.object({
   ),
 })
 
-export function parseSocialLoginSession(value: unknown): SocialLoginSession | null {
-  let result = s.parseSafe(socialLoginSessionSchema, value)
+export function parseSocialAuthSession(value: unknown): SocialAuthSession | null {
+  let result = s.parseSafe(socialAuthSessionSchema, value)
   if (!result.success) {
     return null
   }
 
   let parsed = result.value
-  if (!isSocialLoginMethod(parsed.loginMethod)) {
+  if (!isSocialAuthMethod(parsed.loginMethod)) {
     return null
   }
 
@@ -73,7 +73,7 @@ export function parseSocialLoginSession(value: unknown): SocialLoginSession | nu
   }
 }
 
-export function writeAuthenticatedSession(session: Session, value: SocialLoginSession): void {
+export function writeAuthenticatedSession(session: Session, value: SocialAuthSession): void {
   session.set('auth', value)
 }
 
@@ -136,7 +136,7 @@ export async function resolveExternalLogin(
   return { user, authAccount }
 }
 
-function isSocialLoginMethod(value: string): value is SocialLoginMethod {
+function isSocialAuthMethod(value: string): value is SocialAuthMethod {
   return value === 'credentials' || value === 'google' || value === 'github' || value === 'x'
 }
 

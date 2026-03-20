@@ -5,12 +5,12 @@ import { UserIcon, formatProviderLabel, AuthCard, Document } from '../shared/ind
 import { designSystem } from '../design-system.ts'
 
 import * as styles from '../styles.ts'
-import type { SocialLoginIdentity } from '../social-auth.ts'
+import type { SocialAuthIdentity } from '../social-auth.ts'
 
 let { tokens } = designSystem
 
 export interface AccountPageProps {
-  identity: SocialLoginIdentity
+  identity: SocialAuthIdentity
   logoutAction: string
 }
 

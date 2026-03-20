@@ -1,4 +1,4 @@
-# Social Login Demo
+# Social Auth Demo
 
 This demo shows how to combine `remix/auth`, `remix/auth-middleware`, `remix/data-schema`,
 and `remix/data-table` to build a small auth application with:

@@ -4,10 +4,10 @@ import { describe, it } from 'node:test'
 import { db, passwordResetTokens } from './data/setup.ts'
 import { createTestRouter, assertContains, getSessionCookie, requestWithSession } from '../test/helpers.ts'
 
-describe('social-login router', () => {
+describe('social-auth router', () => {
   it('renders the login page at the home route', async () => {
     let router = await createTestRouter()
-    let response = await router.fetch('https://social-login.test/')
+    let response = await router.fetch('https://social-auth.test/')
 
     assert.equal(response.status, 200)
     let html = await response.text()
@@ -18,7 +18,7 @@ describe('social-login router', () => {
 
   it('renders disabled social buttons when provider env vars are missing', async () => {
     let router = await createTestRouter()
-    let response = await router.fetch('https://social-login.test/')
+    let response = await router.fetch('https://social-auth.test/')
     let html = await response.text()
 
     assertContains(html, 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET')
@@ -28,7 +28,7 @@ describe('social-login router', () => {
 
   it('logs in with credentials and shows the protected account page', async () => {
     let router = await createTestRouter()
-    let loginResponse = await router.fetch('https://social-login.test/auth/login', {
+    let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'password123' }),
     })
@@ -40,7 +40,7 @@ describe('social-login router', () => {
     assert.ok(sessionCookie)
 
     let accountResponse = await router.fetch(
-      requestWithSession('https://social-login.test/account', sessionCookie),
+      requestWithSession('https://social-auth.test/account', sessionCookie),
     )
     let html = await accountResponse.text()
 
@@ -52,7 +52,7 @@ describe('social-login router', () => {
 
   it('shows an error after invalid credentials', async () => {
     let router = await createTestRouter()
-    let loginResponse = await router.fetch('https://social-login.test/auth/login', {
+    let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'wrong-password' }),
     })
@@ -64,7 +64,7 @@ describe('social-login router', () => {
     assert.ok(sessionCookie)
 
     let homeResponse = await router.fetch(
-      requestWithSession('https://social-login.test/', sessionCookie),
+      requestWithSession('https://social-auth.test/', sessionCookie),
     )
     let html = await homeResponse.text()
 
@@ -73,7 +73,7 @@ describe('social-login router', () => {
 
   it('creates a new user during signup and signs them in', async () => {
     let router = await createTestRouter()
-    let response = await router.fetch('https://social-login.test/auth/signup', {
+    let response = await router.fetch('https://social-auth.test/auth/signup', {
       method: 'POST',
       body: new URLSearchParams({
         name: 'New Demo User',
@@ -89,7 +89,7 @@ describe('social-login router', () => {
     assert.ok(sessionCookie)
 
     let accountResponse = await router.fetch(
-      requestWithSession('https://social-login.test/account', sessionCookie),
+      requestWithSession('https://social-auth.test/account', sessionCookie),
     )
     let html = await accountResponse.text()
 
@@ -99,7 +99,7 @@ describe('social-login router', () => {
 
   it('creates a reset token and allows resetting the password', async () => {
     let router = await createTestRouter()
-    let forgotResponse = await router.fetch('https://social-login.test/auth/forgot-password', {
+    let forgotResponse = await router.fetch('https://social-auth.test/auth/forgot-password', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com' }),
     })
@@ -112,7 +112,7 @@ describe('social-login router', () => {
     assert.ok(token)
 
     let resetResponse = await router.fetch(
-      `https://social-login.test/auth/reset-password/${token.token}`,
+      `https://social-auth.test/auth/reset-password/${token.token}`,
       {
         method: 'POST',
         body: new URLSearchParams({
@@ -126,7 +126,7 @@ describe('social-login router', () => {
     assert.equal(resetResponse.status, 200)
     assertContains(resetHtml, 'Password Updated')
 
-    let loginResponse = await router.fetch('https://social-login.test/auth/login', {
+    let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'newpassword123' }),
     })
@@ -137,7 +137,7 @@ describe('social-login router', () => {
 
   it('logs out and redirects subsequent protected requests back to home', async () => {
     let router = await createTestRouter()
-    let loginResponse = await router.fetch('https://social-login.test/auth/login', {
+    let loginResponse = await router.fetch('https://social-auth.test/auth/login', {
       method: 'POST',
       body: new URLSearchParams({ email: 'user@example.com', password: 'password123' }),
     })
@@ -146,7 +146,7 @@ describe('social-login router', () => {
     assert.ok(sessionCookie)
 
     let logoutResponse = await router.fetch(
-      requestWithSession('https://social-login.test/auth/logout', sessionCookie, {
+      requestWithSession('https://social-auth.test/auth/logout', sessionCookie, {
         method: 'POST',
       }),
     )
@@ -155,7 +155,7 @@ describe('social-login router', () => {
     assert.equal(logoutResponse.headers.get('Location'), '/')
 
     let accountResponse = await router.fetch(
-      requestWithSession('https://social-login.test/account', sessionCookie),
+      requestWithSession('https://social-auth.test/account', sessionCookie),
     )
 
     assert.equal(accountResponse.status, 302)

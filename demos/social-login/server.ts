@@ -28,7 +28,7 @@ server.listen(port, () => {
   let demoUrl = getDemoOrigin()
   let providerStatuses = getProviderStatuses()
 
-  console.log(`social-login demo is running on ${demoUrl}`)
+  console.log(`social-auth demo is running on ${demoUrl}`)
   console.log('')
   console.log('Demo accounts:')
   console.log('  admin@example.com / password123')

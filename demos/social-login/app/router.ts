@@ -4,7 +4,7 @@ import type { Cookie } from 'remix/cookie'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 
-import { initializeSocialLoginDatabase } from './data/setup.ts'
+import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { account } from './account.tsx'
@@ -13,14 +13,14 @@ import { home } from './home.tsx'
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 
-await initializeSocialLoginDatabase()
+await initializeSocialAuthDatabase()
 
-export interface SocialLoginRouterOptions {
+export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
   sessionStorage?: SessionStorage
 }
 
-export function createSocialLoginRouter(options?: SocialLoginRouterOptions) {
+export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let router = createRouter({
@@ -34,4 +34,4 @@ export function createSocialLoginRouter(options?: SocialLoginRouterOptions) {
   return router
 }
 
-export let router = createSocialLoginRouter()
+export let router = createSocialAuthRouter()

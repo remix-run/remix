@@ -12,9 +12,9 @@ import { routes } from '../routes.ts'
 import {
   clearAuthenticatedSession,
   parseProviderProfile,
-  parseSocialLoginSession,
-  type SocialLoginIdentity,
-  type SocialLoginSession,
+  parseSocialAuthSession,
+  type SocialAuthIdentity,
+  type SocialAuthSession,
   writeAuthenticatedSession,
 } from '../social-auth.ts'
 import { verifyPassword } from '../utils/password.ts'
@@ -28,9 +28,9 @@ let loginSchema = f.object({
 export function loadAuth(): Middleware {
   return auth({
     schemes: [
-      createSessionAuthScheme<SocialLoginIdentity, SocialLoginSession>({
+      createSessionAuthScheme<SocialAuthIdentity, SocialAuthSession>({
         read(session) {
-          return parseSocialLoginSession(session.get('auth'))
+          return parseSocialAuthSession(session.get('auth'))
         },
         async verify(value, context) {
           let db = context.get(Database)
@@ -92,8 +92,8 @@ export function requireAuth(): Middleware {
   })
 }
 
-export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<SocialLoginIdentity> {
-  return context.get(Auth) as GoodAuth<SocialLoginIdentity>
+export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<SocialAuthIdentity> {
+  return context.get(Auth) as GoodAuth<SocialAuthIdentity>
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {

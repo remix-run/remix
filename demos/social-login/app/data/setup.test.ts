@@ -1,14 +1,14 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { db, resetSocialLoginDatabase, users } from './setup.ts'
+import { db, resetSocialAuthDatabase, users } from './setup.ts'
 import { verifyPassword } from '../utils/password.ts'
 
 beforeEach(async () => {
-  await resetSocialLoginDatabase()
+  await resetSocialAuthDatabase()
 })
 
-describe('social-login data setup', () => {
+describe('social-auth data setup', () => {
   it('seeds the demo credential users', async () => {
     let admin = await db.findOne(users, { where: { email: 'admin@example.com' } })
     let user = await db.findOne(users, { where: { email: 'user@example.com' } })

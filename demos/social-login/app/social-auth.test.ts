@@ -1,21 +1,21 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { db, resetSocialLoginDatabase } from './data/setup.ts'
+import { db, resetSocialAuthDatabase } from './data/setup.ts'
 import { authAccounts } from './data/schema.ts'
-import { parseSocialLoginSession, resolveExternalLogin } from './social-auth.ts'
+import { parseSocialAuthSession, resolveExternalLogin } from './social-auth.ts'
 
 beforeEach(async () => {
-  await resetSocialLoginDatabase()
+  await resetSocialAuthDatabase()
 })
 
 describe('social auth helpers', () => {
   it('parses a stored auth session value', () => {
     assert.deepEqual(
-      parseSocialLoginSession({ userId: 2, loginMethod: 'credentials' }),
+      parseSocialAuthSession({ userId: 2, loginMethod: 'credentials' }),
       { userId: 2, loginMethod: 'credentials', authAccountId: undefined },
     )
-    assert.equal(parseSocialLoginSession({ userId: 'bad', loginMethod: 'credentials' }), null)
+    assert.equal(parseSocialAuthSession({ userId: 'bad', loginMethod: 'credentials' }), null)
   })
 
   it('links an external account to an existing user by email', async () => {
