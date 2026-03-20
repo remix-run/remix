@@ -23,6 +23,8 @@ export interface ContextKey<value> {
   defaultValue?: value
 }
 
+export type AnyParams = Record<string, string>
+
 export type ContextEntry<key extends object = object, value = unknown> = readonly [
   key,
   value,

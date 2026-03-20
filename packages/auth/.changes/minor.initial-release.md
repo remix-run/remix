@@ -7,3 +7,4 @@ Includes:
 - OAuth provider helpers for Google, GitHub, and Facebook
 - `credentials()` for email/password and other direct login flows
 - `login()` and `callback()` route helpers for session-backed browser authentication
+- request handlers that preserve richer `fetch-router` request context types

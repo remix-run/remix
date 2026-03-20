@@ -1,4 +1,4 @@
-import { createRouter } from 'remix/fetch-router'
+import { createRouter, type AnyParams, type MiddlewareContext, type WithParams } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'
@@ -9,25 +9,35 @@ import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { routes } from './routes.ts'
-import { initializeBookstoreDatabase } from './data/setup.ts'
-import { sessionCookie, sessionStorage } from './utils/session.ts'
-import { uploadHandler } from './utils/uploads.ts'
-
 import adminController from './admin.tsx'
 import accountController from './account.tsx'
 import authController from './auth.tsx'
 import booksController from './books.tsx'
-import cartController from './cart.tsx'
-import { toggleCart } from './cart.tsx'
+import cartController, { toggleCart } from './cart.tsx'
 import checkoutController from './checkout.tsx'
-import * as marketingController from './marketing.tsx'
-import { uploadsAction } from './uploads.tsx'
+import { initializeBookstoreDatabase } from './data/setup.ts'
 import fragmentsController from './fragments.tsx'
+import * as marketingController from './marketing.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { routes } from './routes.ts'
+import { uploadsAction } from './uploads.tsx'
+import { sessionCookie, sessionStorage } from './utils/session.ts'
+import { uploadHandler } from './utils/uploads.ts'
 
 await initializeBookstoreDatabase()
+
+export type RootMiddleware = [
+  ReturnType<typeof formData>,
+  ReturnType<typeof session>,
+  ReturnType<typeof loadDatabase>,
+  ReturnType<typeof loadAuth>,
+]
+
+export type AppContext<params extends AnyParams = AnyParams> = WithParams<
+  MiddlewareContext<RootMiddleware>,
+  params
+>
 
 export interface BookstoreRouterOptions {
   sessionCookie?: Cookie

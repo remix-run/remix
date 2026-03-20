@@ -1,7 +1,7 @@
 import type { RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
-import type { Router } from 'remix/fetch-router'
+import type { RequestContext, Router } from 'remix/fetch-router'
 
 export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
@@ -23,7 +23,11 @@ export function render(node: RemixNode, init?: ResponseInit) {
   return new Response(stream, { ...init, headers })
 }
 
-async function resolveFrame(router: Router, request: Request, src: string) {
+async function resolveFrame<context extends RequestContext<any, any>>(
+  router: Router<context>,
+  request: Request,
+  src: string,
+) {
   let url = new URL(src, request.url)
 
   let headers = new Headers()
