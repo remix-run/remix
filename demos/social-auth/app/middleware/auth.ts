@@ -13,13 +13,13 @@ import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
-import type { AuthIdentity, AuthSession } from '../models/auth-session.ts'
+import type { AuthIdentity, AuthSession } from '../utils/auth-session.ts'
 import {
   clearAuthenticatedSession,
   parseAuthSession,
   parseProviderProfile,
-} from '../models/auth-session.ts'
-import { verifyPassword } from '../models/password-hash.ts'
+} from '../utils/auth-session.ts'
+import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
 import type { Session } from './session.ts'
 

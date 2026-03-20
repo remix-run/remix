@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { verifyPassword } from '../app/models/password-hash.ts'
+import { verifyPassword } from '../app/utils/password-hash.ts'
 import { db, resetSocialAuthDatabase, users } from './setup.ts'
 
 beforeEach(async () => {

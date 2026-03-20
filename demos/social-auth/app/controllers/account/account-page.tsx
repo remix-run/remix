@@ -8,7 +8,7 @@ import { formatProviderLabel } from '../ui/provider-presentation.tsx'
 import { designSystem } from '../ui/design-system.ts'
 
 import * as styles from '../ui/styles.ts'
-import type { AuthIdentity } from '../../models/auth-session.ts'
+import type { AuthIdentity } from '../../utils/auth-session.ts'
 
 let { tokens } = designSystem
 

@@ -2,7 +2,7 @@ import type { BuildAction } from 'remix/fetch-router'
 import { createCredentialsAuthLoginRequestHandler } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 
-import { writeAuthenticatedSession } from '../../models/auth-session.ts'
+import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 import { flashError, getPostAuthRedirect, getReturnToQuery, passwordProvider } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'

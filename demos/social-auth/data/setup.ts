@@ -6,7 +6,7 @@ import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-import { hashPassword } from '../app/models/password-hash.ts'
+import { hashPassword } from '../app/utils/password-hash.ts'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'
 
 const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'

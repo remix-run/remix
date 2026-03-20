@@ -1,7 +1,7 @@
 import type { BuildAction } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
-import { clearAuthenticatedSession } from '../../models/auth-session.ts'
+import { clearAuthenticatedSession } from '../../utils/auth-session.ts'
 import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
 
