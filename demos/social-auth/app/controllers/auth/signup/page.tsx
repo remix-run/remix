@@ -1,6 +1,6 @@
 import { EmailIcon, PasswordIcon, UserIcon } from '../../ui/icons.tsx'
 import { TextField } from '../../ui/form-field.tsx'
-import { SimpleFooter } from '../simple-footer.tsx'
+import { Footer } from '../footer.tsx'
 import { AuthCard } from '../../ui/auth-card.tsx'
 import { Document } from '../../ui/document.tsx'
 import { Notice } from '../../ui/notice.tsx'
@@ -22,7 +22,7 @@ export function SignupPage() {
       <AuthCard
         title="Create Account"
         subtitle="Sign up with email and password"
-        footer={<SimpleFooter prefix="Already have an account?" href={loginHref} label="Sign in" />}
+        footer={<Footer prefix="Already have an account?" href={loginHref} label="Sign in" />}
       >
         {error ? <Notice tone="error">{error}</Notice> : null}
 

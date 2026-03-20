@@ -1,6 +1,6 @@
 import { PasswordIcon } from '../../ui/icons.tsx'
 import { TextField } from '../../ui/form-field.tsx'
-import { SimpleFooter } from '../simple-footer.tsx'
+import { Footer } from '../footer.tsx'
 import { AuthCard } from '../../ui/auth-card.tsx'
 import { Document } from '../../ui/document.tsx'
 import { Notice } from '../../ui/notice.tsx'
@@ -19,7 +19,7 @@ export function ResetPasswordPage() {
         title="Reset Password"
         subtitle="Create a new password for your account"
         footer={
-          <SimpleFooter prefix="Changed your mind?" href={loginHref} label="Back to sign in" />
+          <Footer prefix="Changed your mind?" href={loginHref} label="Back to sign in" />
         }
       >
         {error ? <Notice tone="error">{error}</Notice> : null}

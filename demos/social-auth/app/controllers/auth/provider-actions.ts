@@ -41,10 +41,10 @@ function startExternalLogin(
 
   return createExternalAuthLoginRequestHandler(provider, {
     failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
-    onError(_error, actionContext: AppContext) {
-      let session = actionContext.get(Session)
+    onError(_error, requestContext: AppContext) {
+      let session = requestContext.get(Session)
       flashError(session, `We could not start ${getExternalProviderLabel(providerName)} login.`)
-      return redirect(routes.home.href(undefined, getReturnToQuery(actionContext.url)))
+      return redirect(routes.home.href(undefined, getReturnToQuery(requestContext.url)))
     },
   })(context)
 }
@@ -75,8 +75,8 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   }
 
   return createExternalAuthCallbackRequestHandler(provider, {
-    async writeSession(session, result, actionContext: AppContext) {
-      let db = actionContext.get(Database)
+    async writeSession(session, result, requestContext: AppContext) {
+      let db = requestContext.get(Database)
       // The auth callback factory loses provider/profile correlation through this generic wrapper,
       // but the providerName above still determines the runtime result shape.
       let externalAuthResult = result as Parameters<typeof resolveExternalAuth>[1]
@@ -88,8 +88,8 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
       })
     },
     successRedirectTo: routes.account.href(),
-    onFailure(_error, actionContext: AppContext) {
-      let session = actionContext.get(Session)
+    onFailure(_error, requestContext: AppContext) {
+      let session = requestContext.get(Session)
       flashError(session, `We could not finish ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href())
     },

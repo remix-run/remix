@@ -47,12 +47,6 @@ export interface BadAuth {
 export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
 
 /**
- * @deprecated Use `AuthState` instead.
- * TODO: Remove this alias in the next breaking auth-middleware cleanup pass.
- */
-export type Auth<identity = unknown> = AuthState<identity>
-
-/**
  * Context key used to read auth state with `context.get(Auth)`.
  */
 export const Auth = createContextKey<AuthState>()

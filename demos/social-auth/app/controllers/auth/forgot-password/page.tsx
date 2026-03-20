@@ -2,7 +2,7 @@ import { css } from 'remix/component'
 
 import { EmailIcon } from '../../ui/icons.tsx'
 import { TextField } from '../../ui/form-field.tsx'
-import { SimpleFooter } from '../simple-footer.tsx'
+import { Footer } from '../footer.tsx'
 import { designSystem } from '../../ui/design-system.ts'
 import { AuthCard } from '../../ui/auth-card.tsx'
 import { Document } from '../../ui/document.tsx'
@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
       <AuthCard
         title="Forgot Password"
         subtitle="Enter your email and we will generate a reset link"
-        footer={<SimpleFooter prefix="Remembered it?" href={loginHref} label="Back to sign in" />}
+        footer={<Footer prefix="Remembered it?" href={loginHref} label="Back to sign in" />}
       >
         {error ? <Notice tone="error">{error}</Notice> : null}
 

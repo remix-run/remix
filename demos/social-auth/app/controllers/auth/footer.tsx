@@ -1,6 +1,6 @@
 import * as styles from '../ui/styles.ts'
 
-export function SimpleFooter() {
+export function Footer() {
   return ({ prefix, href, label }: { prefix: string; href: string; label: string }) => (
     <p mix={styles.footerText}>
       {prefix}{' '}
