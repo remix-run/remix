@@ -3,7 +3,13 @@ import type { TestResult, TestResults } from './executor.ts'
 
 export interface Reporter {
   onResult(results: TestResults, env?: 'server' | 'browser'): void
-  onSummary(passed: number, failed: number, durationMs: number, skipped?: number, todo?: number): void
+  onSummary(
+    passed: number,
+    failed: number,
+    durationMs: number,
+    skipped?: number,
+    todo?: number,
+  ): void
 }
 
 // ── Spec ─────────────────────────────────────────────────────────────────────
@@ -18,42 +24,86 @@ export class SpecReporter implements Reporter {
     }
 
     let envLabel = env ? ` ${colors.dim(`[${env}]`)}` : ''
+    let lastParts: string[] = []
 
     for (let [suiteName, suiteTests] of suiteMap) {
-      let totalDuration = suiteTests.reduce((sum, t) => sum + t.duration, 0)
-      let suiteHasFailed = suiteTests.some((t) => t.status === 'failed')
-      let suiteAllSkipped = suiteTests.every((t) => t.status === 'skipped')
-      let suiteAllTodo = suiteTests.every((t) => t.status === 'todo')
-      let label = suiteHasFailed
-        ? colors.red(suiteName)
-        : suiteAllSkipped
-          ? colors.dim(suiteName)
-          : suiteAllTodo
-            ? colors.yellow(suiteName)
-            : colors.green(suiteName)
-      let suiteComment = suiteAllSkipped ? colors.dim(' # skipped') : suiteAllTodo ? colors.yellow(' # todo') : ''
-      let duration = suiteComment ? '' : ` (${totalDuration.toFixed(2)}ms)`
-      console.log(`${colors.dim('▶')} ${label}${duration}${suiteComment}${envLabel}`)
+      let parts = suiteName.split(' > ')
 
+      // Find where this path diverges from the last rendered path
+      let commonLen = 0
+      while (
+        commonLen < lastParts.length &&
+        commonLen < parts.length &&
+        lastParts[commonLen] === parts[commonLen]
+      ) {
+        commonLen++
+      }
+
+      // Print each new path component
+      for (let i = commonLen; i < parts.length; i++) {
+        let indent = '  '.repeat(i)
+        let isLeaf = i === parts.length - 1
+
+        if (isLeaf) {
+          let totalDuration = suiteTests.reduce((sum, t) => sum + t.duration, 0)
+          let suiteHasFailed = suiteTests.some((t) => t.status === 'failed')
+          let suiteAllSkipped = suiteTests.every((t) => t.status === 'skipped')
+          let suiteAllTodo = suiteTests.every((t) => t.status === 'todo')
+          let label = suiteHasFailed
+            ? colors.red(parts[i])
+            : suiteAllSkipped
+              ? colors.dim(parts[i])
+              : suiteAllTodo
+                ? colors.yellow(parts[i])
+                : colors.green(parts[i])
+          let suiteComment = suiteAllSkipped
+            ? colors.dim(' # skipped')
+            : suiteAllTodo
+              ? colors.yellow(' # todo')
+              : ''
+          let duration = suiteComment ? '' : ` (${totalDuration.toFixed(2)}ms)`
+          // Only show the env label on the outermost new level
+          let label2 = i === commonLen ? envLabel : ''
+          console.log(`${indent}${colors.dim('▶')} ${label}${duration}${suiteComment}${label2}`)
+        } else {
+          let label2 = i === commonLen ? envLabel : ''
+          console.log(`${indent}${colors.dim('▶')} ${colors.dim(parts[i])}${label2}`)
+        }
+      }
+
+      lastParts = parts
+
+      // Print tests indented to the suite's depth
+      let testIndent = '  '.repeat(parts.length)
       for (let test of suiteTests) {
         if (test.status === 'passed') {
-          console.log(`  ${colors.green('✓')} ${test.name} (${test.duration.toFixed(2)}ms)`)
+          console.log(
+            `${testIndent}${colors.green('✓')} ${test.name} (${test.duration.toFixed(2)}ms)`,
+          )
         } else if (test.status === 'failed') {
-          console.log(`  ${colors.red('✗')} ${test.name} (${test.duration.toFixed(2)}ms)`)
+          console.log(
+            `${testIndent}${colors.red('✗')} ${test.name} (${test.duration.toFixed(2)}ms)`,
+          )
           if (test.error) {
-            console.log(`    ${colors.red(`Error: ${test.error.message}`)}`)
+            console.log(`${testIndent}  ${colors.red(`Error: ${test.error.message}`)}`)
             if (test.error.stack) {
               let stack = test.error.stack
                 .split('\n')
                 .map((line) => normalizeLine(line))
                 .join('\n')
-              console.log(`      ${stack.split('\n').slice(1, 5).join('\n      ')}`)
+              console.log(
+                `${testIndent}    ${stack.split('\n').slice(1, 5).join(`\n${testIndent}    `)}`,
+              )
             }
           }
         } else if (test.status === 'skipped') {
-          if (test.name) console.log(`  ${colors.dim('↓')} ${colors.dim(`${test.name} # skipped`)}`)
+          if (test.name)
+            console.log(`${testIndent}${colors.dim('↓')} ${colors.dim(`${test.name} # skipped`)}`)
         } else if (test.status === 'todo') {
-          if (test.name) console.log(`  ${colors.yellow('…')} ${colors.yellow(`${test.name} # todo`)}`)
+          if (test.name)
+            console.log(
+              `${testIndent}${colors.yellow('…')} ${colors.yellow(`${test.name} # todo`)}`,
+            )
         }
       }
     }
@@ -88,7 +138,9 @@ export class TapReporter implements Reporter {
     for (let test of results.tests) {
       this.counter++
       this.total++
-      let fullName = test.name ? `${test.suiteName} > ${test.name}${envComment}` : `${test.suiteName}${envComment}`
+      let fullName = test.name
+        ? `${test.suiteName} > ${test.name}${envComment}`
+        : `${test.suiteName}${envComment}`
 
       if (test.status === 'passed') {
         console.log(`ok ${this.counter} - ${fullName}`)
