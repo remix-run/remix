@@ -61,9 +61,12 @@ export function ResetPasswordCompletePage() {
     <Document title="Password Updated">
       <AuthCard title="Password Updated" subtitle="Your password has been changed successfully.">
         <Notice tone="success">You can sign in with your new password now.</Notice>
-        <a href={loginHref} mix={styles.submitButton}>
-          Back to Sign In
-        </a>
+
+        <div mix={styles.buttonRow}>
+          <a href={loginHref} mix={styles.submitButton}>
+            Back to Sign In
+          </a>
+        </div>
       </AuthCard>
     </Document>
   )

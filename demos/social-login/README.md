@@ -18,7 +18,7 @@ pnpm install
 pnpm start
 ```
 
-Then visit [http://localhost:44100](http://localhost:44100).
+Then visit [http://127.0.0.1:44100](http://127.0.0.1:44100).
 
 ## Demo Accounts
 
@@ -47,9 +47,9 @@ visible but disabled on the login page.
 
 If you configure the external providers locally, use these callback URLs:
 
-- `http://localhost:44100/auth/google/callback`
-- `http://localhost:44100/auth/github/callback`
-- `http://localhost:44100/auth/x/callback`
+- `http://127.0.0.1:44100/auth/google/callback`
+- `http://127.0.0.1:44100/auth/github/callback`
+- `http://127.0.0.1:44100/auth/x/callback`
 
 ## What This Demo Shows
 

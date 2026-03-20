@@ -1,15 +1,11 @@
-import { css } from 'remix/component'
-
 import { EmailIcon, PasswordIcon } from '../shared/index.ts'
 import { TextField } from '../shared/index.ts'
 import { LoginFooter } from './login-footer.tsx'
 import { SocialLoginSection } from './social-login-section.tsx'
 import type { ProviderLink } from './social-login-section.tsx'
-import { designSystem } from '../design-system.ts'
 import { AuthCard, Document, Notice } from '../shared/index.ts'
 import * as styles from '../styles.ts'
 
-let { tokens } = designSystem
 
 export interface LoginPageProps {
   formAction: string
@@ -70,14 +66,6 @@ export function LoginPage() {
         </form>
 
         <SocialLoginSection providers={providers} />
-
-        <div mix={styles.infoPanel}>
-          <p mix={css({ fontWeight: tokens.typography.weight.semibold, marginBottom: tokens.space.xs })}>
-            Demo accounts
-          </p>
-          <p>admin@example.com / password123</p>
-          <p>user@example.com / password123</p>
-        </div>
       </AuthCard>
     </Document>
   )

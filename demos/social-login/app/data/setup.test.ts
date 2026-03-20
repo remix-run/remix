@@ -17,6 +17,8 @@ describe('social-login data setup', () => {
     assert.ok(user)
     assert.equal(admin.name, 'Demo Admin')
     assert.equal(user.name, 'Demo User')
+    assert.ok(admin.avatar_url)
+    assert.ok(user.avatar_url)
   })
 
   it('stores verifiable password hashes', async () => {

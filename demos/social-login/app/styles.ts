@@ -134,6 +134,7 @@ export let helperLink = css({
 
 export let submitButton = css({
   width: '100%',
+  display: 'block',
   padding: tokens.space.sm,
   backgroundColor: theme.action.primaryBackground,
   color: theme.text.inverse,
@@ -145,6 +146,10 @@ export let submitButton = css({
   fontWeight: tokens.typography.weight.medium,
   textDecoration: 'none',
   textAlign: 'center',
+  '&:link, &:visited': {
+    color: theme.text.inverse,
+    textDecoration: 'none',
+  },
   '&:hover': {
     backgroundColor: theme.action.primaryBackgroundHover,
   },
@@ -152,6 +157,7 @@ export let submitButton = css({
 
 export let secondaryButton = css({
   width: '100%',
+  display: 'block',
   padding: tokens.space.sm,
   backgroundColor: theme.surface.card,
   color: theme.text.label,
@@ -163,6 +169,10 @@ export let secondaryButton = css({
   textDecoration: 'none',
   textAlign: 'center',
   transition: theme.motion.backgroundFast,
+  '&:link, &:visited': {
+    color: theme.text.label,
+    textDecoration: 'none',
+  },
   '&:hover': {
     backgroundColor: theme.surface.subtleHover,
   },

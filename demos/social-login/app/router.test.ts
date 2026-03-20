@@ -14,7 +14,6 @@ describe('social-login router', () => {
 
     assertContains(html, 'Welcome Back')
     assertContains(html, 'Sign in to your account')
-    assertContains(html, 'admin@example.com / password123')
   })
 
   it('renders disabled social buttons when provider env vars are missing', async () => {

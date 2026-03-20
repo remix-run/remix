@@ -9,6 +9,7 @@ if (fs.existsSync(envFilePath)) {
 }
 
 let { router } = await import('./app/router.ts')
+let { getDemoOrigin, getProviderStatuses } = await import('./app/providers.ts')
 
 let server = http.createServer(
   createRequestListener(async request => {
@@ -24,7 +25,19 @@ let server = http.createServer(
 let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
-  console.log(`social-login demo is running on http://localhost:${port}`)
+  let demoUrl = getDemoOrigin()
+  let providerStatuses = getProviderStatuses()
+
+  console.log(`social-login demo is running on ${demoUrl}`)
+  console.log('')
+  console.log('Demo accounts:')
+  console.log('  admin@example.com / password123')
+  console.log('  user@example.com / password123')
+  console.log('')
+  console.log('Social login providers:')
+  console.log(`  ${formatProviderStatus('Google', providerStatuses.google)}`)
+  console.log(`  ${formatProviderStatus('GitHub', providerStatuses.github)}`)
+  console.log(`  ${formatProviderStatus('X', providerStatuses.x)}`)
 })
 
 let shuttingDown = false
@@ -34,6 +47,21 @@ function shutdown() {
   shuttingDown = true
   server.close(() => process.exit(0))
   server.closeAllConnections()
+}
+
+function formatProviderStatus(
+  label: string,
+  status: { enabled: boolean; missingEnvVars: string[] },
+): string {
+  if (status.enabled) {
+    return `${color('32', '✓')} ${label} enabled`
+  }
+
+  return `${color('31', '✗')} ${label} disabled (missing ${status.missingEnvVars.join(', ')})`
+}
+
+function color(code: string, text: string): string {
+  return `\u001b[${code}m${text}\u001b[0m`
 }
 
 process.on('SIGINT', shutdown)

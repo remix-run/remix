@@ -9,6 +9,11 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'
 import { hashPassword } from '../utils/password.ts'
 
+const DEMO_ADMIN_AVATAR_URL =
+  'https://randomuser.me/api/portraits/women/44.jpg'
+const DEMO_USER_AVATAR_URL =
+  'https://randomuser.me/api/portraits/men/32.jpg'
+
 let dataDirectoryUrl = new URL('../../data/', import.meta.url)
 let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dataDirectoryUrl))
 let databaseFilePath = getDatabaseFilePath()
@@ -28,7 +33,7 @@ export let db = createDatabase(adapter)
 let initializePromise: Promise<void> | null = null
 
 export async function initializeSocialLoginDatabase(): Promise<void> {
-  if (!initializePromise) {
+  if (initializePromise == null) {
     initializePromise = initialize()
   }
 
@@ -48,7 +53,7 @@ async function initialize(): Promise<void> {
 export function getDatabaseFilePath(): string {
   let fileName =
     process.env.NODE_ENV === 'test'
-      ? `social-login.test.${process.pid}.${Date.now()}.sqlite`
+      ? 'social-login.test.' + process.pid + '.' + Date.now() + '.sqlite'
       : 'social-login.sqlite'
 
   return fileURLToPath(new URL(fileName, dataDirectoryUrl))
@@ -70,12 +75,14 @@ async function seedBaseData(): Promise<void> {
       email: 'admin@example.com',
       password_hash: await hashPassword('password123'),
       name: 'Demo Admin',
+      avatar_url: DEMO_ADMIN_AVATAR_URL,
     },
     {
       id: 2,
       email: 'user@example.com',
       password_hash: await hashPassword('password123'),
       name: 'Demo User',
+      avatar_url: DEMO_USER_AVATAR_URL,
     },
   ])
 }
