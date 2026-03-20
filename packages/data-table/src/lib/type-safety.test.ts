@@ -3,7 +3,7 @@ import { afterEach, describe, it } from 'node:test'
 
 import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
-import type { QueryColumnTypesForTable, QueryForTable, WriteResult } from './database.ts'
+import type { QueryColumnTypesForTable, QueryForTable, QueryTableInput, WriteResult } from './database.ts'
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
 import type { AnyQuery as PublicAnyQuery } from '../index.ts'
@@ -106,19 +106,25 @@ describe('type safety', () => {
     let query = db.query(accounts)
 
     type QueryType = typeof query
+    type QuerySource = QueryType extends Query<infer source, any, any, any, any> ? source : never
     type QueryColumns =
-      QueryType extends Query<infer columnTypes, any, any, any, any, any> ? columnTypes : never
-    type QueryRow = QueryType extends Query<any, infer row, any, any, any, any> ? row : never
+      QueryType extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
+    type QueryRow = QueryType extends Query<any, any, infer row, any, any> ? row : never
     type QueryTableName =
-      QueryType extends Query<any, any, any, infer name, any, any> ? name : never
-    type QueryPrimaryKey = QueryType extends Query<any, any, any, any, infer key, any> ? key : never
+      QuerySource extends QueryTableInput<infer name, any, any> ? name : never
+    type QueryPrimaryKey =
+      QuerySource extends QueryTableInput<any, any, infer key> ? key : never
     type QueryBinding =
-      QueryType extends Query<any, any, any, any, any, infer binding> ? binding : never
+      QueryType extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { binding: infer binding }
+          ? binding
+          : never
+        : never
     type DatabaseQueryMethod = Database['query']
     type QueryFromTableAlias = QueryForTable<typeof accounts>
     type QueryMethodReturnsBoundQuery = DatabaseQueryMethod extends (
       ...args: any[]
-    ) => Query<any, any, any, any, any, 'bound', 'all'>
+    ) => Query<any, any, any, any, { binding: 'bound'; mode: 'all' }>
       ? true
       : false
     type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof accounts>
@@ -206,11 +212,23 @@ describe('type safety', () => {
     type FirstQuery = typeof firstQuery
     type UpdateQuery = typeof updateQuery
     type UnboundBinding =
-      Unbound extends Query<any, any, any, any, any, infer binding, any> ? binding : never
+      Unbound extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { binding: infer binding }
+          ? binding
+          : never
+        : never
     type FirstMode =
-      FirstQuery extends Query<any, any, any, any, any, any, infer mode> ? mode : never
+      FirstQuery extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { mode: infer mode }
+          ? mode
+          : never
+        : never
     type UpdateMode =
-      UpdateQuery extends Query<any, any, any, any, any, any, infer mode> ? mode : never
+      UpdateQuery extends Query<any, any, any, any, infer queryPhase>
+        ? queryPhase extends { mode: infer mode }
+          ? mode
+          : never
+        : never
     type Row = (typeof rows)[number]
 
     expectType<Equal<UnboundBinding, 'unbound'>>()

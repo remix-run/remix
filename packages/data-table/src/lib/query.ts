@@ -93,6 +93,40 @@ type QueryPlanMap<
 
 type QueryExecutionMode = keyof QueryPlanMap<Record<string, unknown>, readonly string[]>
 
+type QueryPhase<
+  binding extends QueryBindingState = QueryBindingState,
+  mode extends QueryExecutionMode = QueryExecutionMode,
+> = {
+  binding: binding
+  mode: mode
+}
+
+export type BoundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
+  'bound',
+  mode
+>
+
+export type UnboundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
+  'unbound',
+  mode
+>
+
+type AnyQuerySource = QueryTableInput<string, Record<string, unknown>, readonly string[]>
+
+type QuerySourceTableName<source extends AnyQuerySource> =
+  source extends QueryTableInput<infer tableName, any, any> ? tableName : never
+
+type QuerySourceRow<source extends AnyQuerySource> =
+  source extends QueryTableInput<any, infer row, any> ? row : never
+
+type QuerySourcePrimaryKey<source extends AnyQuerySource> =
+  source extends QueryTableInput<any, any, infer primaryKey> ? primaryKey : never
+
+type QuerySourceColumnTypes<source extends AnyQuerySource> = QueryColumnTypeMapFromRow<
+  QuerySourceTableName<source>,
+  QuerySourceRow<source>
+>
+
 type QueryPlan<
   row extends Record<string, unknown>,
   primaryKey extends readonly string[],
@@ -112,45 +146,50 @@ type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<s
   upsert: WriteResult | WriteRowResult<row>
 }
 
-export type AnyQuery = Query<any, any, any, any, any, any, any>
+export type AnyQuery = Query<any, any, any, any, any>
+
+type QuerySource<input extends AnyQuery> = input extends Query<infer source, any, any, any, any>
+  ? source
+  : never
 
 type QueryColumnTypes<input extends AnyQuery> =
-  input extends Query<infer columnTypes, any, any, any, any, any, any> ? columnTypes : never
+  input extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
 
 type QueryRow<input extends AnyQuery> =
-  input extends Query<any, infer row, any, any, any, any, any> ? row : never
+  input extends Query<any, any, infer row, any, any> ? row : never
 
 type QueryLoaded<input extends AnyQuery> =
-  input extends Query<any, any, infer loaded, any, any, any, any> ? loaded : never
+  input extends Query<any, any, any, infer loaded, any> ? loaded : never
 
-type QueryTableName<input extends AnyQuery> =
-  input extends Query<any, any, any, infer tableName, any, any, any> ? tableName : never
+type QueryPhaseOf<input extends AnyQuery> = input extends Query<any, any, any, any, infer phase>
+  ? phase
+  : never
 
-type QueryPrimaryKey<input extends AnyQuery> =
-  input extends Query<any, any, any, any, infer primaryKey, any, any> ? primaryKey : never
+type QueryBinding<input extends AnyQuery> = QueryPhaseOf<input>['binding']
 
-type QueryBinding<input extends AnyQuery> =
-  input extends Query<any, any, any, any, any, infer binding, any> ? binding : never
+type QueryMode<input extends AnyQuery> = QueryPhaseOf<input>['mode']
 
-type QueryMode<input extends AnyQuery> =
-  input extends Query<any, any, any, any, any, any, infer mode> ? mode : never
+type QueryPhaseBinding<phase extends QueryPhase> = phase['binding']
 
-type QueryWith<
-  input extends AnyQuery,
-  binding extends QueryBindingState,
-  mode extends QueryExecutionMode,
-> = Query<
-  QueryColumnTypes<input>,
-  QueryRow<input>,
-  QueryLoaded<input>,
-  QueryTableName<input>,
-  QueryPrimaryKey<input>,
-  binding,
+type QueryPhaseMode<phase extends QueryPhase> = phase['mode']
+
+type QueryAllPhase<phase extends QueryPhase> = QueryPhase<QueryPhaseBinding<phase>, 'all'>
+
+type QueryNextPhase<phase extends QueryPhase, mode extends QueryExecutionMode> = QueryPhase<
+  QueryPhaseBinding<phase>,
   mode
 >
 
+type QueryWith<input extends AnyQuery, phase extends QueryPhase> = Query<
+  QuerySource<input>,
+  QueryColumnTypes<input>,
+  QueryRow<input>,
+  QueryLoaded<input>,
+  phase
+>
+
 type QueryTerminalResult<input extends AnyQuery, mode extends QueryExecutionMode, result> =
-  QueryBinding<input> extends 'bound' ? Promise<result> : QueryWith<input, 'unbound', mode>
+  QueryBinding<input> extends 'bound' ? Promise<result> : QueryWith<input, UnboundQueryPhase<mode>>
 
 export type QueryExecutionResult<input> =
   input extends AnyQuery
@@ -162,14 +201,13 @@ type QueryRuntime = {
 }
 
 type QuerySnapshot<
-  tableName extends string = string,
+  source extends AnyQuerySource = AnyQuerySource,
   row extends Record<string, unknown> = Record<string, unknown>,
-  primaryKey extends readonly string[] = readonly string[],
   mode extends QueryExecutionMode = QueryExecutionMode,
 > = {
-  table: QueryTableInput<tableName, row, primaryKey>
+  table: source
   state: QueryState
-  plan: QueryPlan<row, primaryKey, mode>
+  plan: QueryPlan<row, QuerySourcePrimaryKey<source>, mode>
 }
 
 export const bindQueryRuntime = Symbol('bindQueryRuntime')
@@ -178,85 +216,67 @@ export const querySnapshot = Symbol('querySnapshot')
 declare const queryTypeBrand: unique symbol
 
 export class Query<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
+  source extends AnyQuerySource,
+  columnTypes extends Record<string, unknown> = QuerySourceColumnTypes<source>,
+  row extends Record<string, unknown> = QuerySourceRow<source>,
   loaded extends Record<string, unknown> = {},
-  tableName extends string = string,
-  primaryKey extends readonly string[] = readonly string[],
-  binding extends QueryBindingState = 'unbound',
-  mode extends QueryExecutionMode = 'all',
+  phase extends QueryPhase = UnboundQueryPhase<'all'>,
 > {
   declare readonly [queryTypeBrand]: {
-    binding: binding
-    mode: mode
+    binding: QueryPhaseBinding<phase>
+    mode: QueryPhaseMode<phase>
   }
 
-  #table: QueryTableInput<tableName, row, primaryKey>
+  #table: source
   #state: QueryState
-  #plan: QueryPlan<row, primaryKey, mode>
+  #plan: QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>
   #runtime?: QueryRuntime
 
-  constructor(table: QueryTableInput<tableName, row, primaryKey>) {
+  constructor(table: source) {
     this.#table = table
     this.#state = createInitialQueryState()
-    this.#plan = { kind: 'all' } as QueryPlan<row, primaryKey, mode>
+    this.#plan = { kind: 'all' } as QueryPlan<
+      row,
+      QuerySourcePrimaryKey<source>,
+      QueryPhaseMode<phase>
+    >
   }
 
   static #createInternal<
+    source extends AnyQuerySource,
     columnTypes extends Record<string, unknown>,
     row extends Record<string, unknown>,
     loaded extends Record<string, unknown>,
-    tableName extends string,
-    primaryKey extends readonly string[],
-    binding extends QueryBindingState,
-    mode extends QueryExecutionMode,
+    phase extends QueryPhase,
   >(
-    table: QueryTableInput<tableName, row, primaryKey>,
+    table: source,
     state: QueryState,
-    plan: QueryPlan<row, primaryKey, mode>,
+    plan: QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
     runtime?: QueryRuntime,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, mode> {
-    let output = new Query(table) as Query<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      mode
-    >
+  ): Query<source, columnTypes, row, loaded, phase> {
+    let output = new Query(table) as Query<source, columnTypes, row, loaded, phase>
 
     output.#state = cloneQueryState(state)
-    output.#plan = cloneQueryPlan(plan as QueryPlan<row, primaryKey>) as QueryPlan<
-      row,
-      primaryKey,
-      mode
-    >
+    output.#plan = cloneQueryPlan(
+      plan as QueryPlan<row, QuerySourcePrimaryKey<source>>,
+    ) as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>
     output.#runtime = runtime
 
     return output
   }
 
   select<selection extends (keyof row & string)[]>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...columns: selection
-  ): Query<columnTypes, Pick<row, selection[number]>, loaded, tableName, primaryKey, binding, 'all'>
+  ): Query<source, columnTypes, Pick<row, selection[number]>, loaded, QueryAllPhase<phase>>
   select<selection extends Record<string, QueryColumnInput<columnTypes>>>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     selection: selection,
-  ): Query<
-    columnTypes,
-    SelectedAliasRow<columnTypes, selection>,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
-    'all'
-  >
+  ): Query<source, columnTypes, SelectedAliasRow<columnTypes, selection>, loaded, QueryAllPhase<phase>>
   select(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
-  ): Query<columnTypes, any, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, any, loaded, QueryAllPhase<phase>> {
     if (
       input.length === 1 &&
       typeof input[0] === 'object' &&
@@ -270,35 +290,27 @@ export class Query<
         alias,
       }))
 
-      return this.#clone({ select }) as Query<
-        columnTypes,
-        any,
-        loaded,
-        tableName,
-        primaryKey,
-        binding,
-        'all'
-      >
+      return this.#clone({ select }) as Query<source, columnTypes, any, loaded, QueryAllPhase<phase>>
     }
 
     let columns = input as (keyof row & string)[]
 
     return this.#clone({
       select: columns.map((column) => ({ column, alias: column })),
-    }) as Query<columnTypes, any, loaded, tableName, primaryKey, binding, 'all'>
+    }) as Query<source, columnTypes, any, loaded, QueryAllPhase<phase>>
   }
 
   distinct(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     value = true,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     return this.#clone({ distinct: value })
   }
 
   where(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     input: WhereInput<QueryColumns<columnTypes>>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -311,9 +323,9 @@ export class Query<
   }
 
   having(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     input: WhereInput<QueryColumns<columnTypes>>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -326,18 +338,16 @@ export class Query<
   }
 
   join<target extends AnyTable>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
     type: JoinType = 'inner',
   ): Query<
+    source,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
     row,
     loaded,
-    tableName,
-    primaryKey,
-    binding,
-    'all'
+    QueryAllPhase<phase>
   > {
     let normalizedOn = normalizePredicateValues(
       on,
@@ -351,92 +361,84 @@ export class Query<
     return this.#clone({
       joins: [...this.#state.joins, { type, table: target, on: normalizedOn }],
     }) as Query<
+      source,
       MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
       row,
       loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'all'
+      QueryAllPhase<phase>
     >
   }
 
   leftJoin<target extends AnyTable>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): Query<
+    source,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
     row,
     loaded,
-    tableName,
-    primaryKey,
-    binding,
-    'all'
+    QueryAllPhase<phase>
   > {
     return this.join(target, on, 'left')
   }
 
   rightJoin<target extends AnyTable>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): Query<
+    source,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
     row,
     loaded,
-    tableName,
-    primaryKey,
-    binding,
-    'all'
+    QueryAllPhase<phase>
   > {
     return this.join(target, on, 'right')
   }
 
   orderBy(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     column: QueryColumnInput<columnTypes>,
     direction: 'asc' | 'desc' = 'asc',
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     return this.#clone({
       orderBy: [...this.#state.orderBy, { column: normalizeColumnInput(column), direction }],
     })
   }
 
   groupBy(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...columns: QueryColumnInput<columnTypes>[]
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     return this.#clone({
       groupBy: [...this.#state.groupBy, ...columns.map((column) => normalizeColumnInput(column))],
     })
   }
 
   limit(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     value: number,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     return this.#clone({ limit: value })
   }
 
   offset(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     value: number,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'> {
+  ): Query<source, columnTypes, row, loaded, QueryAllPhase<phase>> {
     return this.#clone({ offset: value })
   }
 
-  with<relations extends RelationMapForSourceName<tableName>>(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+  with<relations extends RelationMapForSourceName<QuerySourceTableName<source>>>(
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     relations: relations,
   ): Query<
+    source,
     columnTypes,
     row,
     loaded & LoadedRelationMap<relations>,
-    tableName,
-    primaryKey,
-    binding,
-    'all'
+    QueryAllPhase<phase>
   > {
     return this.#clone({
       with: {
@@ -444,26 +446,24 @@ export class Query<
         ...relations,
       },
     }) as Query<
+      source,
       columnTypes,
       row,
       loaded & LoadedRelationMap<relations>,
-      tableName,
-      primaryKey,
-      binding,
-      'all'
+      QueryAllPhase<phase>
     >
   }
 
   all(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
+    this: Query<source, columnTypes, row, loaded, BoundQueryPhase<'all'>>,
   ): Promise<Array<row & loaded>> {
     return this.#boundRuntime().exec(this) as Promise<Array<row & loaded>>
   }
 
   first(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'first',
     (row & loaded) | null
   > {
@@ -471,10 +471,10 @@ export class Query<
   }
 
   find(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-    value: PrimaryKeyInputForRow<row, primaryKey>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
+    value: PrimaryKeyInputForRow<row, QuerySourcePrimaryKey<source>>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'find',
     (row & loaded) | null
   > {
@@ -482,9 +482,9 @@ export class Query<
   }
 
   count(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'count',
     number
   > {
@@ -492,9 +492,9 @@ export class Query<
   }
 
   exists(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'exists',
     boolean
   > {
@@ -502,11 +502,11 @@ export class Query<
   }
 
   insert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     values: Partial<row>,
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'insert',
     WriteResult | WriteRowResult<row>
   > {
@@ -521,11 +521,11 @@ export class Query<
   }
 
   insertMany(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     values: Partial<row>[],
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'insertMany',
     WriteResult | WriteRowsResult<row>
   > {
@@ -540,11 +540,11 @@ export class Query<
   }
 
   update(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     changes: Partial<row>,
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'update',
     WriteResult | WriteRowsResult<row>
   > {
@@ -559,10 +559,10 @@ export class Query<
   }
 
   delete(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     options?: DeleteQueryOptions<row>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'delete',
     WriteResult | WriteRowsResult<row>
   > {
@@ -577,11 +577,11 @@ export class Query<
   }
 
   upsert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     values: Partial<row>,
     options?: UpsertQueryOptions<row>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     'upsert',
     WriteResult | WriteRowResult<row>
   > {
@@ -595,20 +595,20 @@ export class Query<
     return this.#resolveTerminal({ kind: 'upsert', values, options })
   }
 
-  [querySnapshot](): QuerySnapshot<tableName, row, primaryKey, mode> {
+  [querySnapshot](): QuerySnapshot<source, row, QueryPhaseMode<phase>> {
     return this.#snapshot()
   }
 
   #resolveTerminal<nextMode extends QueryExecutionMode, result>(
-    plan: QueryPlan<row, primaryKey, nextMode>,
+    plan: QueryPlan<row, QuerySourcePrimaryKey<source>, nextMode>,
   ): QueryTerminalResult<
-    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     nextMode,
     result
   > {
     let next = this.#withPlan(plan)
     return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+      Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
       nextMode,
       result
     >
@@ -616,19 +616,25 @@ export class Query<
 
   [bindQueryRuntime](
     runtime: QueryRuntime,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', mode> {
-    return Query.#createInternal<columnTypes, row, loaded, tableName, primaryKey, 'bound', mode>(
+  ): Query<source, columnTypes, row, loaded, BoundQueryPhase<QueryPhaseMode<phase>>> {
+    return Query.#createInternal<
+      source,
+      columnTypes,
+      row,
+      loaded,
+      BoundQueryPhase<QueryPhaseMode<phase>>
+    >(
       this.#table,
       this.#state,
-      this.#plan as QueryPlan<row, primaryKey, mode>,
+      this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
       runtime,
     )
   }
 
   #clone(
     patch: Partial<QueryState>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, mode> {
-    return Query.#createInternal<columnTypes, row, loaded, tableName, primaryKey, binding, mode>(
+  ): Query<source, columnTypes, row, loaded, phase> {
+    return Query.#createInternal<source, columnTypes, row, loaded, phase>(
       this.#table,
       {
         select: patch.select ?? cloneSelection(this.#state.select),
@@ -642,34 +648,30 @@ export class Query<
         offset: patch.offset === undefined ? this.#state.offset : patch.offset,
         with: patch.with ? { ...patch.with } : { ...this.#state.with },
       },
-      this.#plan as QueryPlan<row, primaryKey, mode>,
+      this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
       this.#runtime,
     )
   }
 
   #withPlan<nextMode extends QueryExecutionMode>(
-    plan: QueryPlan<row, primaryKey, nextMode>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, binding, nextMode> {
+    plan: QueryPlan<row, QuerySourcePrimaryKey<source>, nextMode>,
+  ): Query<source, columnTypes, row, loaded, QueryNextPhase<phase, nextMode>> {
     return Query.#createInternal<
+      source,
       columnTypes,
       row,
       loaded,
-      tableName,
-      primaryKey,
-      binding,
-      nextMode
+      QueryNextPhase<phase, nextMode>
     >(this.#table, this.#state, plan, this.#runtime)
   }
 
-  #snapshot(): QuerySnapshot<tableName, row, primaryKey, mode> {
+  #snapshot(): QuerySnapshot<source, row, QueryPhaseMode<phase>> {
     return {
       table: this.#table,
       state: cloneQueryState(this.#state),
-      plan: cloneQueryPlan(this.#plan as QueryPlan<row, primaryKey>) as QueryPlan<
-        row,
-        primaryKey,
-        mode
-      >,
+      plan: cloneQueryPlan(
+        this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>>,
+      ) as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
     }
   }
 
@@ -689,22 +691,18 @@ export function query<
 >(
   table: QueryTableInput<tableName, row, primaryKey>,
 ): Query<
+  QueryTableInput<tableName, row, primaryKey>,
   QueryColumnTypeMapFromRow<tableName, row>,
   row,
   {},
-  tableName,
-  primaryKey,
-  'unbound',
-  'all'
+  UnboundQueryPhase<'all'>
 > {
   return new Query(table) as Query<
+    QueryTableInput<tableName, row, primaryKey>,
     QueryColumnTypeMapFromRow<tableName, row>,
     row,
     {},
-    tableName,
-    primaryKey,
-    'unbound',
-    'all'
+    UnboundQueryPhase<'all'>
   >
 }
 

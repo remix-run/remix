@@ -18,7 +18,7 @@ import {
   toWriteResult,
 } from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
-import type { AnyQuery, Query as QueryObject, QueryExecutionResult } from './query.ts'
+import type { AnyQuery, BoundQueryPhase, Query as QueryObject, QueryExecutionResult } from './query.ts'
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
@@ -189,12 +189,11 @@ export type QueryForTable<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
 > = QueryObject<
+  QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
   QueryColumnTypesForTable<table>,
   TableRow<table>,
   loaded,
-  TableName<table>,
-  TablePrimaryKey<table>,
-  'bound'
+  BoundQueryPhase<'all'>
 >
 
 /**
@@ -378,20 +377,18 @@ export class Database implements QueryExecutionContext {
   >(
     table: QueryTableInput<tableName, row, primaryKey>,
   ): QueryObject<
+    QueryTableInput<tableName, row, primaryKey>,
     Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
     row,
     {},
-    tableName,
-    primaryKey,
-    'bound'
+    BoundQueryPhase<'all'>
   > {
     return createQuery(table)[bindQueryRuntime](this) as QueryObject<
+      QueryTableInput<tableName, row, primaryKey>,
       Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
       row,
       {},
-      tableName,
-      primaryKey,
-      'bound'
+      BoundQueryPhase<'all'>
     >
   }
 

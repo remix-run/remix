@@ -10,7 +10,13 @@ import { getCompositeKey, getTableName, getTablePrimaryKey } from '../table.ts'
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 
-type RelationQuery = Query<any, Record<string, unknown>, any, any, readonly string[], any, 'all'>
+type RelationQuery = Query<
+  any,
+  Record<string, unknown>,
+  Record<string, unknown>,
+  any,
+  { binding: 'unbound'; mode: 'all' }
+>
 
 export async function loadRelationsForRows(
   database: QueryExecutionContext,
