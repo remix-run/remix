@@ -431,6 +431,8 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe(
         '<main><span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span></main>',
       )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
 
       mode = 'false'
       capturedUpdate()
@@ -438,6 +440,8 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe(
         '<main><span id="first">First</span><span id="second">Second</span></main>',
       )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
 
       mode = 'element'
       capturedUpdate()
@@ -484,6 +488,8 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe(
         '<span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span>',
       )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
 
       showMiddle = false
       capturedUpdate()
