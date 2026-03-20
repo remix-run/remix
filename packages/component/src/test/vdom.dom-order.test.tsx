@@ -349,5 +349,164 @@ describe('vnode rendering', () => {
         '<main><span>0</span><span>1</span><span>2</span><footer>Footer</footer></main>',
       )
     })
+
+    it('maintains sibling order when a component toggles null in the middle slot', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let middleVisible = false
+      let capturedUpdate = () => {}
+
+      function Middle(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (middleVisible ? <span id="middle">Middle</span> : null)
+      }
+
+      root.render(
+        <main>
+          <span id="first">First</span>
+          <Middle />
+          <span id="second">Second</span>
+        </main>,
+      )
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="second">Second</span></main>',
+      )
+
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
+
+      middleVisible = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span></main>',
+      )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
+
+      middleVisible = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="second">Second</span></main>',
+      )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
+    })
+
+    it('maintains sibling order when a component toggles undefined and booleans', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let mode: 'undefined' | 'false' | 'element' = 'undefined'
+      let capturedUpdate = () => {}
+
+      function Middle(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => {
+          if (mode === 'element') return <span id="middle">Middle</span>
+          if (mode === 'false') return false
+          return undefined
+        }
+      }
+
+      root.render(
+        <main>
+          <span id="first">First</span>
+          <Middle />
+          <span id="second">Second</span>
+        </main>,
+      )
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="second">Second</span></main>',
+      )
+
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
+
+      mode = 'element'
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span></main>',
+      )
+
+      mode = 'false'
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="second">Second</span></main>',
+      )
+
+      mode = 'element'
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span></main>',
+      )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
+    })
+
+    it('maintains DOM order when replacing a component with non-render middle content', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showMiddle = false
+      let capturedUpdate = () => {}
+
+      function PageA() {
+        return () => <div>Page A</div>
+      }
+
+      function PageB(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (
+          <>
+            <span>Start</span>
+            {showMiddle ? <span>Middle</span> : null}
+            <span>End</span>
+          </>
+        )
+      }
+
+      let Page: typeof PageA | typeof PageB = PageA
+
+      function App() {
+        return () => (
+          <main>
+            <nav>Nav</nav>
+            <Page />
+            <footer>Footer</footer>
+          </main>
+        )
+      }
+
+      root.render(<App />)
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><div>Page A</div><footer>Footer</footer></main>',
+      )
+
+      Page = PageB
+      root.render(<App />)
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><span>Start</span><span>End</span><footer>Footer</footer></main>',
+      )
+
+      showMiddle = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><span>Start</span><span>Middle</span><span>End</span><footer>Footer</footer></main>',
+      )
+
+      showMiddle = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><span>Start</span><span>End</span><footer>Footer</footer></main>',
+      )
+    })
   })
 })
