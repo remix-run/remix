@@ -66,16 +66,23 @@ export const describe = Object.assign(
   },
 )
 
-function registerIt(name: string, fn: (t?: any) => void | Promise<void>, flags?: { only?: boolean; skip?: boolean }) {
+type TestMeta = { skip?: boolean; only?: boolean }
+type TestFn = (t?: any) => void | Promise<void>
+
+function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: boolean }) {
   if (!currentSuite) throw new Error('it() must be called inside describe()')
   currentSuite.tests.push({ name, fn, suite: currentSuite, ...flags })
 }
 
 export const it = Object.assign(
-  (name: string, fn: (t?: any) => void | Promise<void>) => registerIt(name, fn),
+  (name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn) => {
+    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+    let testFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+    registerIt(name, testFn, meta)
+  },
   {
-    skip: (name: string, fn?: (t?: any) => void | Promise<void>) => registerIt(name, fn ?? (() => {}), { skip: true }),
-    only: (name: string, fn: (t?: any) => void | Promise<void>) => registerIt(name, fn, { only: true }),
+    skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
+    only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
     todo: (name: string) => {
       if (!currentSuite) throw new Error('it.todo() must be called inside describe()')
       currentSuite.tests.push({ name, fn: () => {}, suite: currentSuite, todo: true })
