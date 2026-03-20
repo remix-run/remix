@@ -1480,6 +1480,9 @@ importers:
       playwright:
         specifier: ^1.0.0
         version: 1.57.0
+      remix:
+        specifier: workspace:*
+        version: link:../remix
       tsx:
         specifier: ^4.0.0
         version: 4.21.0

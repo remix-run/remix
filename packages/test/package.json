@@ -11,6 +11,7 @@
   },
   "homepage": "https://github.com/remix-run/remix/tree/main/packages/test#readme",
   "files": [
+    "tsconfig.json",
     "LICENSE",
     "README.md",
     "dist",
@@ -62,6 +63,7 @@
   "peerDependencies": {
     "esbuild": "^0.25.0",
     "playwright": "^1.0.0",
+    "remix": "workspace:*",
     "tsx": "^4.0.0"
   },
   "peerDependenciesMeta": {

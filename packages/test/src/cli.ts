@@ -79,7 +79,7 @@ async function executeRun() {
     if (browserFiles.length > 0 && !browserServer) {
       let { startServer } = await tsImport('./app/server.tsx', {
         parentURL: import.meta.url,
-        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname.slice(1),
       })
       ;({ server: browserServer, port: browserPort } = await startServer(defaultBrowserPort, browserFiles, retryBrowserPort))
     }

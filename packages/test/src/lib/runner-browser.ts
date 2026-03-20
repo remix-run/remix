@@ -42,7 +42,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     })
 
     await page.goto(options.baseUrl)
-    await page.waitForFunction('window.__testsDone', { timeout: 60000 })
+    await page.waitForFunction('window.__testsDone', { timeout: 60000 }).catch(async (reason) => {
+      console.log(
+        await page.content()
+      )
+      throw reason
+    })
 
     let allResults: TestResults = { passed: totalPassed, failed: totalFailed, skipped: 0, todo: 0, tests: [] }
 

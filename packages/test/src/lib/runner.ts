@@ -1,5 +1,5 @@
 import { Worker } from 'node:worker_threads'
-import { fileURLToPath } from 'node:url'
+import { pathToFileURL } from 'node:url'
 import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporter.ts'
 
@@ -7,8 +7,8 @@ let workerUrl = new URL('./worker.ts', import.meta.url)
 
 function runFile(file: string): Promise<TestResults> {
   return new Promise((resolve, reject) => {
-    let worker = new Worker(fileURLToPath(workerUrl), {
-      workerData: { file },
+    let worker = new Worker(workerUrl, {
+      workerData: { file: pathToFileURL(file).href },
     })
     worker.once('message', resolve)
     worker.once('error', reject)
@@ -59,6 +59,7 @@ export async function runServerTests(
           },
           (err) => {
             console.error(`Error running ${file}:`, err.message)
+            console.error(err)
             failed++
             active--
             if (active === 0 && index >= files.length) resolve()
