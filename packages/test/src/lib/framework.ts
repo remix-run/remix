@@ -12,7 +12,7 @@ interface TestSuite {
 
 interface Test {
   name: string
-  fn: () => void | Promise<void>
+  fn: (t?: any) => void | Promise<void>
   suite: TestSuite
   only?: boolean
   skip?: boolean
@@ -29,6 +29,15 @@ function registerDescribe(name: string, fn: () => void, flags?: { only?: boolean
   // Nested describes are flattened: "Parent > Child"
   let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
   let suite: TestSuite = { name: fullName, tests: [], ...flags }
+
+  // Inherit parent lifecycle hooks so nested suites get outer beforeEach/afterEach etc.
+  if (currentSuite) {
+    if (currentSuite.beforeEach) suite.beforeEach = currentSuite.beforeEach
+    if (currentSuite.afterEach) suite.afterEach = currentSuite.afterEach
+    if (currentSuite.beforeAll) suite.beforeAll = currentSuite.beforeAll
+    if (currentSuite.afterAll) suite.afterAll = currentSuite.afterAll
+  }
+
   rootSuites.push(suite)
   let prevSuite = currentSuite
   currentSuite = suite
@@ -48,16 +57,16 @@ export const describe = Object.assign(
   },
 )
 
-function registerIt(name: string, fn: () => void | Promise<void>, flags?: { only?: boolean; skip?: boolean }) {
+function registerIt(name: string, fn: (t?: any) => void | Promise<void>, flags?: { only?: boolean; skip?: boolean }) {
   if (!currentSuite) throw new Error('it() must be called inside describe()')
   currentSuite.tests.push({ name, fn, suite: currentSuite, ...flags })
 }
 
 export const it = Object.assign(
-  (name: string, fn: () => void | Promise<void>) => registerIt(name, fn),
+  (name: string, fn: (t?: any) => void | Promise<void>) => registerIt(name, fn),
   {
-    skip: (name: string, fn?: () => void | Promise<void>) => registerIt(name, fn ?? (() => {}), { skip: true }),
-    only: (name: string, fn: () => void | Promise<void>) => registerIt(name, fn, { only: true }),
+    skip: (name: string, fn?: (t?: any) => void | Promise<void>) => registerIt(name, fn ?? (() => {}), { skip: true }),
+    only: (name: string, fn: (t?: any) => void | Promise<void>) => registerIt(name, fn, { only: true }),
     todo: (name: string) => {
       if (!currentSuite) throw new Error('it.todo() must be called inside describe()')
       currentSuite.tests.push({ name, fn: () => {}, suite: currentSuite, todo: true })
@@ -70,22 +79,43 @@ export const test = it
 
 export function beforeEach(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('beforeEach() must be called inside describe()')
-  currentSuite.beforeEach = fn
+  let existing = currentSuite.beforeEach
+  if (existing) {
+    currentSuite.beforeEach = async () => { await existing(); await fn() }
+  } else {
+    currentSuite.beforeEach = fn
+  }
 }
 
 export function afterEach(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('afterEach() must be called inside describe()')
-  currentSuite.afterEach = fn
+  let existing = currentSuite.afterEach
+  if (existing) {
+    // Child runs first, then parent (reverse order)
+    currentSuite.afterEach = async () => { await fn(); await existing() }
+  } else {
+    currentSuite.afterEach = fn
+  }
 }
 
 export function beforeAll(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('beforeAll() must be called inside describe()')
-  currentSuite.beforeAll = fn
+  let existing = currentSuite.beforeAll
+  if (existing) {
+    currentSuite.beforeAll = async () => { await existing(); await fn() }
+  } else {
+    currentSuite.beforeAll = fn
+  }
 }
 
 export function afterAll(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('afterAll() must be called inside describe()')
-  currentSuite.afterAll = fn
+  let existing = currentSuite.afterAll
+  if (existing) {
+    currentSuite.afterAll = async () => { await fn(); await existing() }
+  } else {
+    currentSuite.afterAll = fn
+  }
 }
 
 // Aliases matching node:test API

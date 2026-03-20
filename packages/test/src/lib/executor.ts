@@ -19,6 +19,8 @@ export interface TestResults {
   tests: TestResult[]
 }
 
+import { createTestContext } from './mock.ts'
+
 export async function runTests(): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
   let results: TestResults = {
@@ -89,12 +91,13 @@ export async function runTests(): Promise<TestResults> {
         duration: 0,
       }
 
+      let ctx = createTestContext()
       try {
         if (suite.beforeEach) {
           await suite.beforeEach()
         }
 
-        await test.fn()
+        await test.fn(ctx)
 
         result.status = 'passed'
         results.passed++
@@ -109,6 +112,7 @@ export async function runTests(): Promise<TestResults> {
         results.failed++
         console.error(`Test failed: ${suite.name} > ${test.name}`, error)
       } finally {
+        ctx.restore()
         if (suite.afterEach) {
           try {
             await suite.afterEach()

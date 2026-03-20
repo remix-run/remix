@@ -55,3 +55,32 @@ export const mock = {
   fn: createMockFn,
   method: createMethodMock,
 }
+
+export interface TestContext {
+  mock: {
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+    method<T extends object, K extends keyof T>(
+      obj: T,
+      method: K,
+      impl?: T[K] extends (...args: any[]) => any ? T[K] : never,
+    ): MockFunction
+  }
+}
+
+export function createTestContext(): TestContext & { restore(): void } {
+  let tracked: Array<() => void> = []
+  return {
+    mock: {
+      fn: createMockFn,
+      method(obj, method, impl) {
+        let mockFn = createMethodMock(obj, method, impl as any)
+        if (mockFn.mock.restore) tracked.push(mockFn.mock.restore)
+        return mockFn
+      },
+    },
+    restore() {
+      for (let r of tracked) r()
+      tracked.length = 0
+    },
+  }
+}
