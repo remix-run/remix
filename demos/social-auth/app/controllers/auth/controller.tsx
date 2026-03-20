@@ -10,7 +10,7 @@ import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
 import { resetPasswordController } from './reset-password-actions.tsx'
 import { signupController } from './signup-actions.tsx'
-import type { RouteContext } from '../../router.ts'
+import type { AppContext } from '../../router.ts'
 import type { routes } from '../../routes.ts'
 
 export let authController = {
@@ -24,4 +24,4 @@ export let authController = {
     github: githubAuthController,
     x: xAuthController,
   },
-} satisfies Controller<typeof routes.auth, RouteContext>
+} satisfies Controller<typeof routes.auth, AppContext>

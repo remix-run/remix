@@ -18,7 +18,7 @@ import type { AuthIdentity } from './utils/auth-session.ts'
 
 await initializeSocialAuthDatabase()
 
-export type SocialAuthMiddleware = [
+export type RootMiddleware = [
   ReturnType<typeof staticFiles>,
   ReturnType<typeof formData>,
   ReturnType<typeof session>,
@@ -26,13 +26,13 @@ export type SocialAuthMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-export type RouteContext<params extends Record<string, string> = {}> = WithParams<
-  MiddlewareContext<SocialAuthMiddleware>,
+export type AppContext<params extends Record<string, string> = {}> = WithParams<
+  MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedRouteContext<params extends Record<string, string> = {}> =
-  WithRequiredAuth<RouteContext<params>, AuthIdentity>
+export type AuthenticatedAppContext<params extends Record<string, string> = {}> =
+  WithRequiredAuth<AppContext<params>, AuthIdentity>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
@@ -53,7 +53,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
       session(cookie, storage),
       loadDatabase(),
       loadAuth(),
-    ] satisfies SocialAuthMiddleware,
+    ] satisfies RootMiddleware,
   })
 
   router.map(routes.home, home)

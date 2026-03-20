@@ -2,7 +2,7 @@ import { Auth } from 'remix/auth-middleware'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { AccountPage } from './account-page.tsx'
-import type { AuthenticatedRouteContext } from '../../router.ts'
+import type { AuthenticatedAppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
@@ -17,4 +17,4 @@ export let accountAction = {
       />,
     )
   },
-} satisfies BuildAction<'GET', typeof routes.account, AuthenticatedRouteContext>
+} satisfies BuildAction<'GET', typeof routes.account, AuthenticatedAppContext>

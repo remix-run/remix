@@ -9,7 +9,7 @@ import { redirect } from 'remix/response/redirect'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { RouteContext } from '../../router.ts'
+import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import {
   createExternalProvider,
@@ -20,10 +20,10 @@ import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 
 function createExternalProviderActions(providerName: ExternalProviderName) {
   return {
-    login(context: RouteContext) {
+    login(context: AppContext) {
       return startExternalLogin(providerName, context)
     },
-    callback(context: RouteContext) {
+    callback(context: AppContext) {
       return finishExternalLogin(providerName, context)
     },
   }
@@ -31,19 +31,19 @@ function createExternalProviderActions(providerName: ExternalProviderName) {
 
 export let googleAuthController = {
   actions: createExternalProviderActions('google'),
-} satisfies Controller<typeof routes.auth.google, RouteContext>
+} satisfies Controller<typeof routes.auth.google, AppContext>
 
 export let githubAuthController = {
   actions: createExternalProviderActions('github'),
-} satisfies Controller<typeof routes.auth.github, RouteContext>
+} satisfies Controller<typeof routes.auth.github, AppContext>
 
 export let xAuthController = {
   actions: createExternalProviderActions('x'),
-} satisfies Controller<typeof routes.auth.x, RouteContext>
+} satisfies Controller<typeof routes.auth.x, AppContext>
 
 function startExternalLogin(
   providerName: ExternalProviderName,
-  context: RouteContext,
+  context: AppContext,
 ): Response | Promise<Response> {
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
@@ -54,7 +54,7 @@ function startExternalLogin(
 
   return createExternalAuthLoginRequestHandler(provider, {
     failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
-    onError(_error, actionContext: RouteContext) {
+    onError(_error, actionContext: AppContext) {
       let session = actionContext.get(Session)
       flashError(session, `We could not start ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href(undefined, getReturnToQuery(actionContext.url)))
@@ -64,7 +64,7 @@ function startExternalLogin(
 
 function finishExternalLogin(
   providerName: ExternalProviderName,
-  context: RouteContext,
+  context: AppContext,
 ): Response | Promise<Response> {
   switch (providerName) {
     case 'google':
@@ -78,7 +78,7 @@ function finishExternalLogin(
 
 function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   providerName: name,
-  context: RouteContext,
+  context: AppContext,
 ): Response | Promise<Response> {
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
@@ -88,7 +88,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   }
 
   return createExternalAuthCallbackRequestHandler(provider, {
-    async writeSession(session, result, actionContext: RouteContext) {
+    async writeSession(session, result, actionContext: AppContext) {
       let db = actionContext.get(Database)
       // The auth callback factory loses provider/profile correlation through this generic wrapper,
       // but the providerName above still determines the runtime result shape.
@@ -101,7 +101,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
       })
     },
     successRedirectTo: routes.account.href(),
-    onFailure(_error, actionContext: RouteContext) {
+    onFailure(_error, actionContext: AppContext) {
       let session = actionContext.get(Session)
       flashError(session, `We could not finish ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href())

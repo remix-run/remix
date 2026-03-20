@@ -7,7 +7,7 @@ import { getIssueMessage, readField } from './form-utils.ts'
 import { forgotPasswordSchema } from './schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../data/schema.ts'
 import { getReturnToQuery } from '../../middleware/auth.ts'
-import type { RouteContext } from '../../router.ts'
+import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
@@ -61,4 +61,4 @@ export let forgotPasswordController = {
       )
     },
   },
-} satisfies Controller<typeof routes.auth.forgotPassword, RouteContext>
+} satisfies Controller<typeof routes.auth.forgotPassword, AppContext>

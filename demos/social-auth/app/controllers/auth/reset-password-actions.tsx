@@ -9,12 +9,12 @@ import { resetPasswordSchema } from './schemas.ts'
 import { passwordResetTokens, users } from '../../data/schema.ts'
 import { flashSuccess, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { RouteContext } from '../../router.ts'
+import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
 import { render } from '../render.tsx'
 
-async function loadResetToken(context: RouteContext<{ token: string }>) {
+async function loadResetToken(context: AppContext<{ token: string }>) {
   let db = context.get(Database)
   let token = context.params.token
   let resetToken = await db.find(passwordResetTokens, { token })
@@ -128,4 +128,4 @@ export let resetPasswordController = {
       )
     },
   },
-} satisfies Controller<typeof routes.auth.resetPassword, RouteContext>
+} satisfies Controller<typeof routes.auth.resetPassword, AppContext>
