@@ -7,7 +7,6 @@ import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
-type MiddlewareTuple = readonly AnyMiddleware[]
 
 type RequestHandlerObjectWithoutMiddleware<
   method extends RequestMethod | 'ANY',
@@ -22,7 +21,7 @@ type RequestHandlerObjectWithMiddleware<
   method extends RequestMethod | 'ANY',
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
-  middleware extends MiddlewareTuple,
+  middleware extends readonly AnyMiddleware[],
 > = {
   middleware: readonly [...middleware]
   handler: RequestHandler<method, params, ApplyMiddlewareTuple<context, middleware>>
@@ -32,7 +31,7 @@ type RequestHandlerDefinition<
   method extends RequestMethod | 'ANY',
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > =
   | RequestHandler<method, params, context>
   | RequestHandlerObjectWithoutMiddleware<method, params, context>
@@ -49,21 +48,24 @@ export type ControllerWithoutMiddleware<
 export type ControllerWithMiddleware<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
-  middleware extends MiddlewareTuple,
+  middleware extends readonly AnyMiddleware[],
 > = {
   middleware: readonly [...middleware]
   actions: ControllerActions<routes, ApplyMiddlewareTuple<context, middleware>>
 }
 
 /**
- * Controller object that mirrors a route map with matching action handlers.
+ * A controller object that mirrors a route map with matching action handlers.
+ *
+ * Controllers let you store a subtree of route handlers in one object while preserving the
+ * params and request-context contract for each nested action.
  */
 export type Controller<
   routes extends RouteMap,
   context extends RequestContext<any, any> = RequestContext,
 > =
   | ControllerWithoutMiddleware<routes, context>
-  | ControllerWithMiddleware<routes, context, MiddlewareTuple>
+  | ControllerWithMiddleware<routes, context, readonly AnyMiddleware[]>
 
 // prettier-ignore
 type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
@@ -79,13 +81,15 @@ type ControllerActions<routes extends RouteMap, context extends RequestContext<a
 export type ControllerInput<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
-  middleware extends MiddlewareTuple = MiddlewareTuple,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > =
   | ControllerWithoutMiddleware<routes, context>
   | ControllerWithMiddleware<routes, context, middleware>
 
 /**
  * An individual route action.
+ *
+ * Actions can be plain handler functions or action objects with optional inline middleware.
  */
 export type Action<
   method extends RequestMethod | 'ANY',
@@ -95,11 +99,11 @@ export type Action<
   method,
   Params<pattern>,
   WithParams<context, Params<pattern>>,
-  MiddlewareTuple
+  readonly AnyMiddleware[]
 >
 
 /**
- * Build an {@link Action} type from a string, {@link RoutePattern}, or {@link Route}.
+ * Builds an {@link Action} type from a string pattern, {@link RoutePattern}, or {@link Route}.
  */
 // prettier-ignore
 export type BuildAction<

@@ -4,8 +4,10 @@ import type { ContextEntries, RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
-type MiddlewareTuple = readonly AnyMiddleware[]
 
+/**
+ * The type-level effect a middleware can apply to request context.
+ */
 export type MiddlewareContextTransform =
   | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
@@ -16,27 +18,36 @@ type MiddlewareTransform<middleware> = middleware extends Middleware<any, any, i
   ? transform
   : IdentityContextTransform
 
-export type ApplyContextTransform<current_context extends RequestContext<any, any>, transform> =
+/**
+ * Applies a middleware context transform to a request-context type.
+ */
+export type ApplyContextTransform<currentContext extends RequestContext<any, any>, transform> =
   transform extends ContextEntries
-    ? current_context extends RequestContext<
+    ? currentContext extends RequestContext<
         infer params extends Record<string, any>,
         infer entries extends ContextEntries
       >
       ? RequestContext<params, [...entries, ...transform]>
-      : current_context
+      : currentContext
     : transform extends {
-          <input_context extends current_context>(context: input_context): infer output
+          <inputContext extends currentContext>(context: inputContext): infer output
         }
       ? output extends RequestContext<any, any>
         ? output
-        : current_context
-      : current_context
+        : currentContext
+      : currentContext
 
+/**
+ * Applies the declared context effect of a single middleware to a request-context type.
+ */
 export type ApplyMiddleware<context extends RequestContext<any, any>, middleware> =
   ApplyContextTransform<context, MiddlewareTransform<middleware>>
 
+/**
+ * Applies an ordered middleware array to a request-context type from left to right.
+ */
 export type ApplyMiddlewareTuple<context extends RequestContext<any, any>, middleware> =
-  middleware extends MiddlewareTuple
+  middleware extends readonly AnyMiddleware[]
     ? number extends middleware['length']
       ? context
       : middleware extends readonly [infer first, ...infer rest]
@@ -44,7 +55,10 @@ export type ApplyMiddlewareTuple<context extends RequestContext<any, any>, middl
         : context
     : context
 
-export type MiddlewareContext<middleware extends MiddlewareTuple> = ApplyMiddlewareTuple<
+/**
+ * Resolves the request-context type produced by a router middleware array.
+ */
+export type MiddlewareContext<middleware extends readonly AnyMiddleware[]> = ApplyMiddlewareTuple<
   RequestContext,
   middleware
 >
@@ -70,6 +84,9 @@ export interface Middleware<
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 
+  /**
+   * Type-only metadata that carries the middleware's declared context effect.
+   */
   readonly '~contextTransform'?: transform | undefined
 }
 

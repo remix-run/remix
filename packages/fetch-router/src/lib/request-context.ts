@@ -23,15 +23,27 @@ export interface ContextKey<value> {
   defaultValue?: value
 }
 
+/**
+ * A broad params shape for APIs that cannot know an exact route pattern ahead of time.
+ */
 export type AnyParams = Record<string, string>
 
+/**
+ * A single request-context entry that associates a context key with its stored value type.
+ */
 export type ContextEntry<key extends object = object, value = unknown> = readonly [
   key,
   value,
 ]
 
+/**
+ * An ordered list of request-context entries. Later entries override earlier ones for the same key.
+ */
 export type ContextEntries = readonly ContextEntry[]
 
+/**
+ * Resolves the value type associated with a request-context key.
+ */
 export type ContextValue<key> =
   key extends ContextKey<infer value>
     ? value
@@ -39,6 +51,9 @@ export type ContextValue<key> =
       ? instance
       : never
 
+/**
+ * Extracts the route params type from a {@link RequestContext}.
+ */
 export type ContextParams<context> = context extends RequestContext<
   infer params extends Record<string, any>,
   any
@@ -51,11 +66,17 @@ type DuplicateParamNames<
   right extends Record<string, any>,
 > = Extract<keyof left, keyof right>
 
+/**
+ * Merges two params objects and fails with `never` when they define the same param name.
+ */
 export type MergeContextParams<
   left extends Record<string, any>,
   right extends Record<string, any>,
 > = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
 
+/**
+ * Replaces the params type of a {@link RequestContext} while preserving its existing context entries.
+ */
 export type WithParams<context, params extends Record<string, any>> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? MergeContextParams<ContextParams<context>, params> extends infer merged
@@ -80,11 +101,17 @@ type ResolveContextEntryValue<
     : ResolveContextEntryValue<rest, key, fallback>
   : fallback
 
+/**
+ * Resolves the value type returned by `context.get(key)` for the given context and key.
+ */
 export type GetContextValue<context, key extends object> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? ResolveContextEntryValue<entries, key, ContextValue<key>>
     : ContextValue<key>
 
+/**
+ * Appends context entries to an existing {@link RequestContext}.
+ */
 export type MergeContext<context, additions extends ContextEntries> =
   context extends RequestContext<
     infer params extends Record<string, any>,
@@ -93,6 +120,9 @@ export type MergeContext<context, additions extends ContextEntries> =
     ? RequestContext<params, [...entries, ...additions]>
     : never
 
+/**
+ * Replaces or adds the value type for a single context key in a {@link RequestContext}.
+ */
 export type SetContextValue<context, key extends object, value> = MergeContext<
   context,
   [readonly [key, value]]
