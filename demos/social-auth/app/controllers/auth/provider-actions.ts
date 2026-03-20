@@ -6,7 +6,7 @@ import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from './resolve-external-auth.ts'
-import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
+import { getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
@@ -15,7 +15,6 @@ import {
   getExternalProviderLabel,
   type ExternalProviderName,
 } from '../../utils/external-auth.ts'
-import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 
 export function createExternalProviderActions(providerName: ExternalProviderName) {
   return {
@@ -35,7 +34,7 @@ function startExternalLogin(
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
     let session = context.get(Session)
-    flashError(session, `${getExternalProviderLabel(providerName)} login is not configured.`)
+    session.flash('error', `${getExternalProviderLabel(providerName)} login is not configured.`)
     return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
   }
 
@@ -43,7 +42,7 @@ function startExternalLogin(
     failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
     onError(_error, requestContext: AppContext) {
       let session = requestContext.get(Session)
-      flashError(session, `We could not start ${getExternalProviderLabel(providerName)} login.`)
+      session.flash('error', `We could not start ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href(undefined, getReturnToQuery(requestContext.url)))
     },
   })(context)
@@ -70,7 +69,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
     let session = context.get(Session)
-    flashError(session, `${getExternalProviderLabel(providerName)} login is not configured.`)
+    session.flash('error', `${getExternalProviderLabel(providerName)} login is not configured.`)
     return redirect(routes.home.href())
   }
 
@@ -81,7 +80,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
       // but the providerName above still determines the runtime result shape.
       let externalAuthResult = result as Parameters<typeof resolveExternalAuth>[1]
       let { user, authAccount } = await resolveExternalAuth(db, externalAuthResult)
-      writeAuthenticatedSession(session, {
+      session.set('auth', {
         userId: user.id,
         loginMethod: result.provider,
         authAccountId: authAccount.id,
@@ -90,7 +89,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
     successRedirectTo: routes.account.href(),
     onFailure(_error, requestContext: AppContext) {
       let session = requestContext.get(Session)
-      flashError(session, `We could not finish ${getExternalProviderLabel(providerName)} login.`)
+      session.flash('error', `We could not finish ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href())
     },
   })(context)

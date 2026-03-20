@@ -5,12 +5,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../layout.tsx'
-import {
-  getLoginRedirectURL,
-  getPostAuthRedirect,
-  passwordProvider,
-  writeAuthenticatedSession,
-} from '../../middleware/auth.ts'
+import { getLoginRedirectURL, getPostAuthRedirect, passwordProvider } from '../../middleware/auth.ts'
 import { render } from '../../utils/render.ts'
 import { Session } from '../../utils/session.ts'
 import { authCardStyle } from '../shared.ts'
@@ -87,7 +82,7 @@ let loginController = {
 
     action: authenticateWithCredentials(passwordProvider, {
       writeSession(session, user) {
-        writeAuthenticatedSession(session, user)
+        session.set('auth', { userId: user.id })
       },
       onFailure(context) {
         let session = context.get(Session)

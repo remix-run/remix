@@ -12,7 +12,6 @@ import { users } from '../data/schema.ts'
 import type { User } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { parseId } from '../utils/ids.ts'
-import type { Session } from '../utils/session.ts'
 
 interface BookstoreAuthSession {
   userId: number
@@ -76,14 +75,6 @@ export function requireAuth(options?: RequireAuthOptions) {
       )
     },
   })
-}
-
-export function writeAuthenticatedSession(session: Session, user: Pick<User, 'id'>): void {
-  session.set('auth', { userId: user.id })
-}
-
-export function clearAuthenticatedSession(session: Session): void {
-  session.unset('auth')
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {

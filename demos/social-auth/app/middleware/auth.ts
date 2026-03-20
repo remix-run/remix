@@ -11,14 +11,9 @@ import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
 import type { AuthIdentity, AuthSession } from '../utils/auth-session.ts'
-import {
-  clearAuthenticatedSession,
-  parseAuthSession,
-  parseProviderProfile,
-} from '../utils/auth-session.ts'
+import { parseAuthSession, parseProviderProfile } from '../utils/auth-session.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
-import type { Session } from './session.ts'
 
 let loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),
@@ -50,7 +45,7 @@ export function loadAuth() {
           }
         },
         invalidate(session) {
-          clearAuthenticatedSession(session)
+          session.unset('auth')
         },
       }),
     ],
@@ -96,24 +91,6 @@ export function getPostAuthRedirect(url: URL, fallback = routes.account.href()):
 export function getReturnToQuery(url: URL): { returnTo?: string } {
   let returnTo = getSafeReturnTo(url.searchParams.get('returnTo'))
   return returnTo ? { returnTo } : {}
-}
-
-export function flashError(session: Session, message: string): void {
-  session.flash('error', message)
-}
-
-export function flashSuccess(session: Session, message: string): void {
-  session.flash('success', message)
-}
-
-export function readFlash(session: Session): { error?: string; success?: string } {
-  let error = session.get('error')
-  let success = session.get('success')
-
-  return {
-    error: typeof error === 'string' ? error : undefined,
-    success: typeof success === 'string' ? success : undefined,
-  }
 }
 
 export function getSafeReturnTo(returnTo: string | null): string | undefined {

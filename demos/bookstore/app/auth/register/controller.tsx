@@ -7,7 +7,6 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from '../../routes.ts'
 import { users } from '../../data/schema.ts'
 import { Document } from '../../layout.tsx'
-import { writeAuthenticatedSession } from '../../middleware/auth.ts'
 import { render } from '../../utils/render.ts'
 import { Session } from '../../utils/session.ts'
 import { authCardStyle, normalizeEmail, registrationSchema } from '../shared.ts'
@@ -95,7 +94,7 @@ let registerController = {
       )
 
       session.regenerateId(true)
-      writeAuthenticatedSession(session, user)
+      session.set('auth', { userId: user.id })
 
       return redirect(routes.account.index.href())
     },

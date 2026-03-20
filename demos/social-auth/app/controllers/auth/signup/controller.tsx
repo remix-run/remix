@@ -11,7 +11,6 @@ import { getPostAuthRedirect, getReturnToQuery } from '../../../middleware/auth.
 import { Session } from '../../../middleware/session.ts'
 import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
-import { writeAuthenticatedSession } from '../../../utils/auth-session.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../render.tsx'
 
@@ -70,7 +69,7 @@ export let signupController = {
 
       let session = context.get(Session)
       session.regenerateId(true)
-      writeAuthenticatedSession(session, {
+      session.set('auth', {
         userId: user.id,
         loginMethod: 'credentials',
       })

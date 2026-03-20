@@ -2,7 +2,7 @@ import { Auth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { LoginPage } from './page.tsx'
-import { getReturnToQuery, readFlash } from '../../middleware/auth.ts'
+import { getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
 import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
@@ -16,7 +16,8 @@ export function home(context: AppContext) {
   }
 
   let session = context.get(Session)
-  let flash = readFlash(session)
+  let error = session.get('error')
+  let success = session.get('success')
   let returnToQuery = getReturnToQuery(context.url)
 
   return render(
@@ -25,8 +26,8 @@ export function home(context: AppContext) {
       signupHref={routes.auth.signup.index.href(undefined, returnToQuery)}
       forgotPasswordHref={routes.auth.forgotPassword.index.href(undefined, returnToQuery)}
       providers={readExternalProviderLinks(returnToQuery)}
-      error={flash.error}
-      success={flash.success}
+      error={typeof error === 'string' ? error : undefined}
+      success={typeof success === 'string' ? success : undefined}
     />,
   )
 }

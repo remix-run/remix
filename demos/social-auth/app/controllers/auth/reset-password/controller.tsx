@@ -7,7 +7,7 @@ import { getIssueMessage } from '../form-utils.ts'
 import { ResetPasswordCompletePage, ResetPasswordPage } from './page.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
-import { flashSuccess, getReturnToQuery } from '../../../middleware/auth.ts'
+import { getReturnToQuery } from '../../../middleware/auth.ts'
 import { Session } from '../../../middleware/session.ts'
 import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
@@ -119,7 +119,7 @@ export let resetPasswordController = {
       await db.delete(passwordResetTokens, { token: resetToken.token })
 
       let session = context.get(Session)
-      flashSuccess(session, 'Password updated. You can sign in now.')
+      session.flash('success', 'Password updated. You can sign in now.')
 
       return render(
         <ResetPasswordCompletePage

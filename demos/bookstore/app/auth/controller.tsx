@@ -2,7 +2,6 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
-import { clearAuthenticatedSession } from '../middleware/auth.ts'
 import { Session } from '../utils/session.ts'
 import forgotPasswordController from './forgot-password/controller.tsx'
 import loginController from './login/controller.tsx'
@@ -15,7 +14,7 @@ export default {
     register: registerController,
     logout({ get }) {
       let session = get(Session)
-      clearAuthenticatedSession(session)
+      session.unset('auth')
       session.regenerateId(true)
       return redirect(routes.home.href())
     },
