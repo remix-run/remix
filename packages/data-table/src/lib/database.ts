@@ -18,7 +18,7 @@ import {
   toWriteResult,
 } from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
-import type { Query as QueryObject, QueryExecutionResult } from './query.ts'
+import type { AnyQuery, Query as QueryObject, QueryExecutionResult } from './query.ts'
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
@@ -717,11 +717,8 @@ export class Database implements QueryExecutionContext {
   }
 
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
-  async exec<input extends QueryObject<any, any, any, any, any, any, any>>(
-    input: input,
-  ): Promise<QueryExecutionResult<input>>
-  async exec<input extends QueryObject<any, any, any, any, any, any, any>>(
-    statementOrInput: string | SqlStatement | input,
+  async exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
+  async exec<input extends AnyQuery>(statementOrInput: string | SqlStatement | input,
     values: unknown[] = [],
   ): Promise<DataManipulationResult | QueryExecutionResult<input>> {
     if (typeof statementOrInput === 'string' || isSqlStatement(statementOrInput)) {

@@ -4,8 +4,9 @@ import { afterEach, describe, it } from 'node:test'
 import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
 import type { QueryColumnTypesForTable, QueryForTable, WriteResult } from './database.ts'
-import type { Query } from './query.ts'
+import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
+import type { AnyQuery as PublicAnyQuery } from '../index.ts'
 // @ts-expect-error CountQuery is no longer exported
 import type { CountQuery as _CountQuery } from '../index.ts'
 // @ts-expect-error InsertCommand is no longer exported
@@ -143,6 +144,7 @@ describe('type safety', () => {
     expectType<Equal<QueryTableName, 'accounts'>>()
     expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
     expectType<Equal<QueryType, QueryFromTableAlias>>()
+    expectType<Equal<PublicAnyQuery, AnyQuery>>()
     expectType<Equal<QueryMethodReturnsBoundQuery, true>>()
     expectType<Equal<QueryBinding, 'bound'>>()
     expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()

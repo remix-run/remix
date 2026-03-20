@@ -10,6 +10,8 @@ import { getCompositeKey, getTableName, getTablePrimaryKey } from '../table.ts'
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 
+type RelationQuery = Query<any, Record<string, unknown>, any, any, readonly string[], any, 'all'>
+
 export async function loadRelationsForRows(
   database: QueryExecutionContext,
   sourceTable: AnyTable,
@@ -202,10 +204,10 @@ async function loadHasManyThroughValues(
 }
 
 function applyRelationModifiers<table extends AnyTable>(
-  query: Query<any, Record<string, unknown>, any, any, readonly string[]>,
+  query: RelationQuery,
   relation: Relation<any, table, any, any>,
   options: { includePagination: boolean },
-): Query<any, Record<string, unknown>, any, any, readonly string[]> {
+): RelationQuery {
   let next = query
 
   for (let predicate of relation.modifiers.where) {

@@ -13,7 +13,7 @@ import type {
 import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
 import { normalizeWhereInput } from '../operators.ts'
-import type { Query, QueryExecutionResult, QueryState } from '../query.ts'
+import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
@@ -37,7 +37,7 @@ import {
   runBeforeDeleteHook,
 } from './write-lifecycle.ts'
 
-export async function executeQuery<input extends Query<any, any, any, any, any, any, any>>(
+export async function executeQuery<input extends AnyQuery>(
   database: QueryExecutionContext,
   input: input,
 ): Promise<QueryExecutionResult<input>> {
@@ -118,7 +118,7 @@ export async function executeQuery<input extends Query<any, any, any, any, any, 
 
 export async function loadRowsWithRelationsForQuery(
   database: QueryExecutionContext,
-  input: Query<any, any, any, any, any, any, any>,
+  input: AnyQuery,
 ): Promise<Record<string, unknown>[]> {
   let snapshot = input[querySnapshot]()
   return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)

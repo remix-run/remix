@@ -24,18 +24,6 @@ import { getTableColumns, getTableName } from './table.ts'
 
 type QueryBindingState = 'bound' | 'unbound'
 
-type QueryExecutionMode =
-  | 'all'
-  | 'first'
-  | 'find'
-  | 'count'
-  | 'exists'
-  | 'insert'
-  | 'insertMany'
-  | 'update'
-  | 'delete'
-  | 'upsert'
-
 type InsertQueryOptions<row extends Record<string, unknown>> = {
   returning?: ReturningInput<row>
   touch?: boolean
@@ -65,73 +53,51 @@ export type QueryState = {
   with: Record<string, AnyRelation>
 }
 
-type QueryPlanAll = {
-  kind: 'all'
+type QueryPlanMap<
+  row extends Record<string, unknown>,
+  primaryKey extends readonly string[],
+> = {
+  all: { kind: 'all' }
+  first: { kind: 'first' }
+  find: {
+    kind: 'find'
+    value: PrimaryKeyInputForRow<row, primaryKey>
+  }
+  count: { kind: 'count' }
+  exists: { kind: 'exists' }
+  insert: {
+    kind: 'insert'
+    values: Partial<row>
+    options?: InsertQueryOptions<row>
+  }
+  insertMany: {
+    kind: 'insertMany'
+    values: Partial<row>[]
+    options?: InsertQueryOptions<row>
+  }
+  update: {
+    kind: 'update'
+    changes: Partial<row>
+    options?: InsertQueryOptions<row>
+  }
+  delete: {
+    kind: 'delete'
+    options?: DeleteQueryOptions<row>
+  }
+  upsert: {
+    kind: 'upsert'
+    values: Partial<row>
+    options?: UpsertQueryOptions<row>
+  }
 }
 
-type QueryPlanFirst = {
-  kind: 'first'
-}
-
-type QueryPlanFind<row extends Record<string, unknown>, primaryKey extends readonly string[]> = {
-  kind: 'find'
-  value: PrimaryKeyInputForRow<row, primaryKey>
-}
-
-type QueryPlanCount = {
-  kind: 'count'
-}
-
-type QueryPlanExists = {
-  kind: 'exists'
-}
-
-type QueryPlanInsert<row extends Record<string, unknown>> = {
-  kind: 'insert'
-  values: Partial<row>
-  options?: InsertQueryOptions<row>
-}
-
-type QueryPlanInsertMany<row extends Record<string, unknown>> = {
-  kind: 'insertMany'
-  values: Partial<row>[]
-  options?: InsertQueryOptions<row>
-}
-
-type QueryPlanUpdate<row extends Record<string, unknown>> = {
-  kind: 'update'
-  changes: Partial<row>
-  options?: InsertQueryOptions<row>
-}
-
-type QueryPlanDelete<row extends Record<string, unknown>> = {
-  kind: 'delete'
-  options?: DeleteQueryOptions<row>
-}
-
-type QueryPlanUpsert<row extends Record<string, unknown>> = {
-  kind: 'upsert'
-  values: Partial<row>
-  options?: UpsertQueryOptions<row>
-}
-
-type AnyQueryPlan<row extends Record<string, unknown>, primaryKey extends readonly string[]> =
-  | QueryPlanAll
-  | QueryPlanFirst
-  | QueryPlanFind<row, primaryKey>
-  | QueryPlanCount
-  | QueryPlanExists
-  | QueryPlanInsert<row>
-  | QueryPlanInsertMany<row>
-  | QueryPlanUpdate<row>
-  | QueryPlanDelete<row>
-  | QueryPlanUpsert<row>
+type QueryExecutionMode = keyof QueryPlanMap<Record<string, unknown>, readonly string[]>
 
 type QueryPlan<
   row extends Record<string, unknown>,
   primaryKey extends readonly string[],
   mode extends QueryExecutionMode = QueryExecutionMode,
-> = Extract<AnyQueryPlan<row, primaryKey>, { kind: mode }>
+> = QueryPlanMap<row, primaryKey>[mode]
 
 type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<string, unknown>> = {
   all: Array<row & loaded>
@@ -146,28 +112,53 @@ type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<s
   upsert: WriteResult | WriteRowResult<row>
 }
 
-type QueryTerminalResult<
-  columnTypes extends Record<string, unknown>,
-  row extends Record<string, unknown>,
-  loaded extends Record<string, unknown>,
-  tableName extends string,
-  primaryKey extends readonly string[],
+export type AnyQuery = Query<any, any, any, any, any, any, any>
+
+type QueryColumnTypes<input extends AnyQuery> =
+  input extends Query<infer columnTypes, any, any, any, any, any, any> ? columnTypes : never
+
+type QueryRow<input extends AnyQuery> =
+  input extends Query<any, infer row, any, any, any, any, any> ? row : never
+
+type QueryLoaded<input extends AnyQuery> =
+  input extends Query<any, any, infer loaded, any, any, any, any> ? loaded : never
+
+type QueryTableName<input extends AnyQuery> =
+  input extends Query<any, any, any, infer tableName, any, any, any> ? tableName : never
+
+type QueryPrimaryKey<input extends AnyQuery> =
+  input extends Query<any, any, any, any, infer primaryKey, any, any> ? primaryKey : never
+
+type QueryBinding<input extends AnyQuery> =
+  input extends Query<any, any, any, any, any, infer binding, any> ? binding : never
+
+type QueryMode<input extends AnyQuery> =
+  input extends Query<any, any, any, any, any, any, infer mode> ? mode : never
+
+type QueryWith<
+  input extends AnyQuery,
   binding extends QueryBindingState,
   mode extends QueryExecutionMode,
-  result,
-> = binding extends 'bound'
-  ? Promise<result>
-  : Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', mode>
+> = Query<
+  QueryColumnTypes<input>,
+  QueryRow<input>,
+  QueryLoaded<input>,
+  QueryTableName<input>,
+  QueryPrimaryKey<input>,
+  binding,
+  mode
+>
+
+type QueryTerminalResult<input extends AnyQuery, mode extends QueryExecutionMode, result> =
+  QueryBinding<input> extends 'bound' ? Promise<result> : QueryWith<input, 'unbound', mode>
 
 export type QueryExecutionResult<input> =
-  input extends Query<any, infer row, infer loaded, any, any, any, infer mode>
-    ? QueryResultMap<row, loaded>[Extract<mode, QueryExecutionMode>]
+  input extends AnyQuery
+    ? QueryResultMap<QueryRow<input>, QueryLoaded<input>>[Extract<QueryMode<input>, QueryExecutionMode>]
     : never
 
 type QueryRuntime = {
-  exec<input extends Query<any, any, any, any, any, any, any>>(
-    input: input,
-  ): Promise<QueryExecutionResult<input>>
+  exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
 }
 
 type QuerySnapshot<
@@ -472,84 +463,42 @@ export class Query<
   first(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'first',
     (row & loaded) | null
   > {
-    let next = this.#withPlan({ kind: 'first' })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'first',
-      (row & loaded) | null
-    >
+    return this.#resolveTerminal({ kind: 'first' })
   }
 
   find(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     value: PrimaryKeyInputForRow<row, primaryKey>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'find',
     (row & loaded) | null
   > {
-    let next = this.#withPlan({ kind: 'find', value })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'find',
-      (row & loaded) | null
-    >
+    return this.#resolveTerminal({ kind: 'find', value })
   }
 
   count(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-  ): QueryTerminalResult<columnTypes, row, loaded, tableName, primaryKey, binding, 'count', number> {
-    let next = this.#withPlan({ kind: 'count' })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'count',
-      number
-    >
+  ): QueryTerminalResult<
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    'count',
+    number
+  > {
+    return this.#resolveTerminal({ kind: 'count' })
   }
 
   exists(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-  ): QueryTerminalResult<columnTypes, row, loaded, tableName, primaryKey, binding, 'exists', boolean> {
-    let next = this.#withPlan({ kind: 'exists' })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'exists',
-      boolean
-    >
+  ): QueryTerminalResult<
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    'exists',
+    boolean
+  > {
+    return this.#resolveTerminal({ kind: 'exists' })
   }
 
   insert(
@@ -557,12 +506,7 @@ export class Query<
     values: Partial<row>,
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'insert',
     WriteResult | WriteRowResult<row>
   > {
@@ -573,17 +517,7 @@ export class Query<
       offset: false,
     })
 
-    let next = this.#withPlan({ kind: 'insert', values, options })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'insert',
-      WriteResult | WriteRowResult<row>
-    >
+    return this.#resolveTerminal({ kind: 'insert', values, options })
   }
 
   insertMany(
@@ -591,12 +525,7 @@ export class Query<
     values: Partial<row>[],
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'insertMany',
     WriteResult | WriteRowsResult<row>
   > {
@@ -607,17 +536,7 @@ export class Query<
       offset: false,
     })
 
-    let next = this.#withPlan({ kind: 'insertMany', values, options })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'insertMany',
-      WriteResult | WriteRowsResult<row>
-    >
+    return this.#resolveTerminal({ kind: 'insertMany', values, options })
   }
 
   update(
@@ -625,12 +544,7 @@ export class Query<
     changes: Partial<row>,
     options?: InsertQueryOptions<row>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'update',
     WriteResult | WriteRowsResult<row>
   > {
@@ -641,29 +555,14 @@ export class Query<
       offset: true,
     })
 
-    let next = this.#withPlan({ kind: 'update', changes, options })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'update',
-      WriteResult | WriteRowsResult<row>
-    >
+    return this.#resolveTerminal({ kind: 'update', changes, options })
   }
 
   delete(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     options?: DeleteQueryOptions<row>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'delete',
     WriteResult | WriteRowsResult<row>
   > {
@@ -674,17 +573,7 @@ export class Query<
       offset: true,
     })
 
-    let next = this.#withPlan({ kind: 'delete', options })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'delete',
-      WriteResult | WriteRowsResult<row>
-    >
+    return this.#resolveTerminal({ kind: 'delete', options })
   }
 
   upsert(
@@ -692,12 +581,7 @@ export class Query<
     values: Partial<row>,
     options?: UpsertQueryOptions<row>,
   ): QueryTerminalResult<
-    columnTypes,
-    row,
-    loaded,
-    tableName,
-    primaryKey,
-    binding,
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     'upsert',
     WriteResult | WriteRowResult<row>
   > {
@@ -708,21 +592,26 @@ export class Query<
       offset: false,
     })
 
-    let next = this.#withPlan({ kind: 'upsert', values, options })
-    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
-      columnTypes,
-      row,
-      loaded,
-      tableName,
-      primaryKey,
-      binding,
-      'upsert',
-      WriteResult | WriteRowResult<row>
-    >
+    return this.#resolveTerminal({ kind: 'upsert', values, options })
   }
 
   [querySnapshot](): QuerySnapshot<tableName, row, primaryKey, mode> {
     return this.#snapshot()
+  }
+
+  #resolveTerminal<nextMode extends QueryExecutionMode, result>(
+    plan: QueryPlan<row, primaryKey, nextMode>,
+  ): QueryTerminalResult<
+    Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+    nextMode,
+    result
+  > {
+    let next = this.#withPlan(plan)
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
+      nextMode,
+      result
+    >
   }
 
   [bindQueryRuntime](
