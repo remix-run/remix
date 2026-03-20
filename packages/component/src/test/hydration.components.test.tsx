@@ -197,9 +197,9 @@ describe('hydration', () => {
 
       let updatedSpans = container.querySelectorAll('span')
       expect(updatedSpans).toHaveLength(3)
-      expect(updatedSpans[0].textContent).toBe('First')
+      expect(updatedSpans[0]).toBe(existingSpans[0])
       expect(updatedSpans[1].textContent).toBe('after First')
-      expect(updatedSpans[2].textContent).toBe('Second')
+      expect(updatedSpans[2]).toBe(existingSpans[1])
     })
   })
 

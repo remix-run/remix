@@ -1,7 +1,7 @@
 import { Fragment } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
-import { isRemixElement, TEXT_NODE, type VNode } from './vnode.ts'
+import { isRemixElement, NON_RENDER_NODE, TEXT_NODE, type VNode } from './vnode.ts'
 
 function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
   return 'children' in node.props
@@ -24,7 +24,7 @@ function flattenRemixNodeArray(nodes: RemixNode[], out: RemixNode[] = []): Remix
 
 export function toVNode(node: RemixNode): VNode {
   if (node === null || node === undefined || typeof node === 'boolean') {
-    return { type: TEXT_NODE, _text: '' }
+    return { type: NON_RENDER_NODE }
   }
 
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {

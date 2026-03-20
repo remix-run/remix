@@ -23,6 +23,7 @@ import {
   isHostNode,
   isTextNode,
   findContextFromAncestry,
+  isNonRenderNode,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { diffHostProps } from './diff-props.ts'
@@ -361,6 +362,10 @@ export function diffVNodes(
     return rootCursor
   }
 
+  if (isNonRenderNode(curr) && isNonRenderNode(next)) {
+    return rootCursor
+  }
+
   if (isCommittedTextNode(curr) && isTextNode(next)) {
     diffText(curr, next, vParent)
     return rootCursor
@@ -424,7 +429,7 @@ function replace(
     return
   }
 
-  let replacementAnchor = findNextSiblingDomAnchor(curr, vParent) ?? anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr) ?? anchor
   remove(curr, domParent, scheduler, styles)
   insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replacementAnchor)
 }
@@ -540,6 +545,10 @@ function insert(
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
     : (dom: Node) => domParent.appendChild(dom)
+
+  if (isNonRenderNode(node)) {
+    return cursor
+  }
 
   if (isTextNode(node)) {
     if (cursor instanceof Text) {
@@ -1641,7 +1650,8 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
-export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | null {
+export function findNextSiblingDomAnchor(curr: VNode): Node | null {
+  let vParent = curr._parent
   if (!vParent || !Array.isArray(vParent._children)) return null
   let children = vParent._children
   let idx = children.indexOf(curr)
