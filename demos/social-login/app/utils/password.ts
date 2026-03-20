@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto'
+
 let HASH_PREFIX = 'pbkdf2_sha256'
 let ITERATIONS = 100000
 let SALT_LENGTH = 16
@@ -10,19 +12,34 @@ export async function hashPassword(password: string): Promise<string> {
   return [
     HASH_PREFIX,
     String(ITERATIONS),
-    encodeBase64(salt),
-    encodeBase64(hash),
+    Buffer.from(salt).toString('base64url'),
+    Buffer.from(hash).toString('base64url'),
   ].join('$')
 }
 
 export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
-  let parsed = parsePasswordHash(encodedHash)
-  if (parsed == null) {
+  let [prefix, iterationsText, saltText, hashText] = encodedHash.split('$')
+  if (prefix !== HASH_PREFIX) {
     return false
   }
 
-  let actual = await derivePasswordHash(password, parsed.salt, parsed.iterations)
-  return constantTimeEqual(actual, parsed.hash)
+  let iterations = Number(iterationsText)
+  if (!Number.isInteger(iterations) || iterations < 1) {
+    return false
+  }
+
+  try {
+    let salt = Buffer.from(saltText, 'base64url')
+    let expectedHash = Buffer.from(hashText, 'base64url')
+    if (salt.length === 0 || expectedHash.length === 0) {
+      return false
+    }
+
+    let actualHash = Buffer.from(await derivePasswordHash(password, salt, iterations))
+    return actualHash.length === expectedHash.length && timingSafeEqual(actualHash, expectedHash)
+  } catch {
+    return false
+  }
 }
 
 async function derivePasswordHash(
@@ -41,7 +58,7 @@ async function derivePasswordHash(
     {
       name: 'PBKDF2',
       hash: 'SHA-256',
-      salt: toArrayBufferView(salt),
+      salt,
       iterations,
     },
     key,
@@ -49,59 +66,4 @@ async function derivePasswordHash(
   )
 
   return new Uint8Array(bits)
-}
-
-function parsePasswordHash(encodedHash: string): {
-  iterations: number
-  salt: Uint8Array
-  hash: Uint8Array
-} | null {
-  let [prefix, iterationsText, saltText, hashText] = encodedHash.split('$')
-
-  if (prefix !== HASH_PREFIX) {
-    return null
-  }
-
-  let iterations = Number(iterationsText)
-  if (!Number.isInteger(iterations) || iterations < 1) {
-    return null
-  }
-
-  try {
-    let salt = decodeBase64(saltText)
-    let hash = decodeBase64(hashText)
-    if (salt.length === 0 || hash.length === 0) {
-      return null
-    }
-
-    return { iterations, salt, hash }
-  } catch {
-    return null
-  }
-}
-
-function encodeBase64(value: Uint8Array): string {
-  return btoa(String.fromCharCode(...value))
-}
-
-function decodeBase64(value: string): Uint8Array {
-  return Uint8Array.from(atob(value), character => character.charCodeAt(0))
-}
-
-function toArrayBufferView(value: Uint8Array): Uint8Array<ArrayBuffer> {
-  return Uint8Array.from(value)
-}
-
-function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false
-  }
-
-  let result = 0
-
-  for (let index = 0; index < left.length; index++) {
-    result |= left[index]! ^ right[index]!
-  }
-
-  return result === 0
 }

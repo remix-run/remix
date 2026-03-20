@@ -45,7 +45,7 @@ let tokens = {
     size: {
       sm: '0.875rem',
       md: '1rem',
-      title: '1.625rem',
+      title: '1.5rem',
     },
     weight: {
       medium: 500,
