@@ -1644,6 +1644,10 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
   if (!vParent || !Array.isArray(vParent._children)) return null
   let children = vParent._children
+  // If there are no children, this node is the only content of its parent component
+  // and the next sibling anchor is whatever comes after the parent component in the DOM.
+  if (children.length === 0) return findNextSiblingDomAnchor(vParent)
+
   let idx = children.indexOf(curr)
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {

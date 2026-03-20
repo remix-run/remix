@@ -455,11 +455,8 @@ describe('vnode rendering', () => {
     })
 
     it('maintains DOM order with non-render content in a fragment', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      let showMiddle = false
       let capturedUpdates: (() => void)[] = []
+      let showMiddle = false
 
       function Middle(handle: Handle) {
         capturedUpdates.push(() => handle.update())
@@ -485,45 +482,68 @@ describe('vnode rendering', () => {
               <span id="fourth">Fourth</span>
             </>
             <div id="div">
-              <Middle id="middle-3" />
+              <>
+                <span id="fifth">Fifth</span>
+                <Middle id="middle-3" />
+                <span id="sixth">Sixth</span>
+              </>
             </div>
-            <span id="fifth">Fifth</span>
+            <span id="seventh">Seventh</span>
           </>
         )
       }
 
-      root.render(<App />)
+      let updateMethods: Array<(root: ReturnType<typeof createRoot>) => void> = [
+        () => capturedUpdates.forEach((update) => update()),
+        (root) => root.render(<App />),
+      ]
 
-      let first = container.querySelector('#first')
-      let second = container.querySelector('#second')
-      invariant(first && second)
-      expect(first.nextSibling).toBe(second)
+      for (let updateMethod of updateMethods) {
+        showMiddle = false
+        let container = document.createElement('div')
+        let root = createRoot(container)
 
-      let third = container.querySelector('#third')
-      let fourth = container.querySelector('#fourth')
-      invariant(third && fourth)
-      expect(second.nextSibling).toBe(third)
-      expect(third.nextSibling).toBe(fourth)
+        root.render(<App />)
 
-      let div = container.querySelector('#div')
-      let fifth = container.querySelector('#fifth')
-      invariant(div && fifth)
-      expect(fourth.nextSibling).toBe(div)
-      expect(div.nextSibling).toBe(fifth)
+        let first = container.querySelector('#first')
+        let second = container.querySelector('#second')
+        invariant(first && second)
+        expect(first.nextSibling).toBe(second)
 
-      showMiddle = true
-      capturedUpdates.forEach((update) => update())
-      root.flush()
+        let third = container.querySelector('#third')
+        let fourth = container.querySelector('#fourth')
+        invariant(third && fourth)
+        expect(second.nextSibling).toBe(third)
+        expect(third.nextSibling).toBe(fourth)
 
-      let middle1 = container.querySelector('#middle-1')
-      let middle2 = container.querySelector('#middle-2')
-      let middle3 = container.querySelector('#middle-3')
-      invariant(middle1 && middle2 && middle3)
-      expect(middle1.previousSibling).toBe(first)
-      expect(middle1.nextSibling).toBe(second)
-      expect(middle2.previousSibling).toBe(third)
-      expect(middle2.nextSibling).toBe(fourth)
-      expect(middle3.parentNode).toBe(div)
+        let div = container.querySelector('#div')
+        let fifth = container.querySelector('#fifth')
+        let sixth = container.querySelector('#sixth')
+        invariant(div && fifth && sixth)
+        expect(fourth.nextSibling).toBe(div)
+        expect(fifth.parentNode).toBe(div)
+        expect(fifth.nextSibling).toBe(sixth)
+
+        let seventh = container.querySelector('#seventh')
+        invariant(seventh)
+        expect(div.nextSibling).toBe(seventh)
+
+        showMiddle = true
+        updateMethod(root)
+        root.flush()
+
+        let middle1 = container.querySelector('#middle-1')
+        let middle2 = container.querySelector('#middle-2')
+        let middle3 = container.querySelector('#middle-3')
+        invariant(middle1 && middle2 && middle3)
+        expect(middle1.previousSibling).toBe(first)
+        expect(middle1.nextSibling).toBe(second)
+        expect(middle2.previousSibling).toBe(third)
+        expect(middle2.nextSibling).toBe(fourth)
+        expect(middle3.parentNode).toBe(div)
+        expect(middle3.previousSibling).toBe(fifth)
+        expect(middle3.nextSibling).toBe(sixth)
+      }
     })
   })
 })
