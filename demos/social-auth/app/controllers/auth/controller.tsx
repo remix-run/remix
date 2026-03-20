@@ -4,12 +4,12 @@ import {
   githubAuthController,
   googleAuthController,
   xAuthController,
-} from './external-auth-actions.ts'
-import { forgotPasswordController } from './forgot-password-actions.tsx'
+} from './external-auth-controllers.ts'
+import { forgotPasswordController } from './forgot-password-controller.tsx'
 import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
-import { resetPasswordController } from './reset-password-actions.tsx'
-import { signupController } from './signup-actions.tsx'
+import { resetPasswordController } from './reset-password-controller.tsx'
+import { signupController } from './signup-controller.tsx'
 import type { AppContext } from '../../router.ts'
 import type { routes } from '../../routes.ts'
 
