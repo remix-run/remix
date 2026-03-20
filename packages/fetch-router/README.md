@@ -588,26 +588,26 @@ router.map(routes.admin.dashboard, {
 Every action and middleware receives a `context` object with useful properties:
 
 ```ts
-let userKey = createContextKey<{ id: string }>()
+const UserKey = createContextKey<{ id: string }>()
 
-router.get('/posts/:id', ({ request, url, params, set, get }) => {
+router.get('/posts/:id', (context) => {
   // request: The original Request object
-  console.log(request.method) // "GET"
-  console.log(request.headers.get('Accept'))
+  console.log(context.request.method) // "GET"
+  console.log(context.request.headers.get('Accept'))
 
   // url: Parsed URL object
-  console.log(url.pathname) // "/posts/123"
-  console.log(url.searchParams.get('sort'))
+  console.log(context.url.pathname) // "/posts/123"
+  console.log(context.url.searchParams.get('sort'))
 
   // params: Route parameters (fully typed!)
-  console.log(params.id) // "123"
+  console.log(context.params.id) // "123"
 
   // set/get: type-safe request-scoped context data on the context object
-  set(userKey, currentUser)
-  let user = get(userKey)
+  context.set(UserKey, currentUser)
+  let user = context.get(UserKey)
   console.log(user.id)
 
-  return new Response(`Post ${params.id}`)
+  return new Response(`Post ${context.params.id}`)
 })
 ```
 
@@ -626,10 +626,7 @@ let routes = route({
   account: '/account',
 })
 
-type AppContext<params extends Record<string, string> = {}> = WithParams<
-  RequestContext,
-  params
->
+type AppContext<params extends Record<string, string> = {}> = WithParams<RequestContext, params>
 
 type AuthIdentity = { id: string }
 
