@@ -85,31 +85,6 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
-  demos/browser-test-harness:
-    dependencies:
-      esbuild:
-        specifier: 'catalog:'
-        version: 0.25.12
-      playwright:
-        specifier: 'catalog:'
-        version: 1.57.0
-      remix:
-        specifier: workspace:*
-        version: link:../../packages/remix
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
   demos/frames:
     dependencies:
       remix:
@@ -1278,12 +1253,6 @@ importers:
         specifier: ^4.0.2
         version: 4.0.3
     devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
