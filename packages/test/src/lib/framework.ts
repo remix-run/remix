@@ -55,7 +55,11 @@ function registerDescribe(name: string, fn: () => void, flags?: { only?: boolean
 }
 
 export const describe = Object.assign(
-  (name: string, fn: () => void) => registerDescribe(name, fn),
+  (name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void) => {
+    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+    let suiteFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+    registerDescribe(name, suiteFn, meta)
+  },
   {
     skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
     only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
@@ -66,6 +70,7 @@ export const describe = Object.assign(
   },
 )
 
+type SuiteMeta = { skip?: boolean; only?: boolean }
 type TestMeta = { skip?: boolean; only?: boolean }
 type TestFn = (t?: any) => void | Promise<void>
 
