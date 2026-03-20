@@ -12,7 +12,7 @@ import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
+import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
 import type { AuthIdentity, AuthSession } from '../utils/auth-session.ts'
 import {
   clearAuthenticatedSession,

@@ -1,6 +1,6 @@
 import { createMigration } from 'remix/data-table/migrations'
 
-import { authAccounts, passwordResetTokens, users } from '../schema.ts'
+import { authAccounts, passwordResetTokens, users } from '../../app/data/schema.ts'
 
 export default createMigration({
   async up({ schema }) {

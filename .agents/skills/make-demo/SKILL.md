@@ -58,7 +58,7 @@ When a demo is a real application, prefer a uniform Remix application layout ins
 Use these root directories consistently:
 
 - `app/` for runtime application code
-- `data/` for database lifecycle files such as schema, setup, seeds, migrations, and local SQLite databases
+- `db/` for database artifacts such as migrations and local SQLite files
 - `test/` for cross-feature integration tests, fixtures, and test helpers
 - `public/` for static files served as-is
 - `tmp/` for runtime scratch files such as sessions, uploads, and caches
@@ -69,12 +69,13 @@ Inside `app/`, organize code by responsibility:
 
 - `controllers/` for all controller-owned features, with folders such as `controllers/home/`, `controllers/auth/`, or `controllers/account/`, each with a `controller.tsx` entrypoint and the UI it owns
 - `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
+- `data/` for runtime data definitions such as table schema and setup helpers used by the application at startup
 - `middleware/` for request-layer concerns such as auth, database injection, sessions, and other request lifecycle setup
 - `utils/` for shared runtime support code that does not clearly belong to one of the other app layers
 
 ### Naming and ownership rules
 
-- Keep controllers thin. They should read request context, call application logic, and return a response.
+- Keep controllers thin. They should read request context, talk to the database or other runtime services, and return a response.
 - Put each controller in its controller feature folder as `controller.tsx`. Do not split controller files across the app root and feature folders.
 - If a component or helper is only used by one controller feature, keep it in that controller feature folder instead of `controllers/ui/`.
 - Use `controllers/ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping ground.
@@ -82,9 +83,9 @@ Inside `app/`, organize code by responsibility:
 - Avoid feature barrel files such as `index.ts`. Import feature modules directly.
 - If a helper is shared only by controllers, keep it under `controllers/`.
 - If a helper is part of request or session setup, keep it under `middleware/`.
-- If code defines persistence structure such as tables, row types, migrations, setup, or seeds, keep it under `data/`.
+- Keep table definitions, row types, and runtime database setup in `app/data/`.
+- Keep database artifacts such as migrations and SQLite files in `db/`.
 - Use `utils/` only for genuinely cross-layer support code. Prefer a topic-specific name like `utils/external-auth.ts` over catch-all names like `helpers.ts` or `misc.ts`.
-- Put database schema and setup outside `app/` under `data/`.
 - Co-locate unit tests with the modules they cover.
 - Keep app-wide request-flow tests under `test/feature/`, and keep shared test helpers under `test/`.
 
@@ -123,6 +124,11 @@ demos/<name>/
         design-system.ts
         styles.ts
 
+    data/
+      schema.ts
+      setup.ts
+      setup.test.ts
+
     middleware/
       auth.ts
       database.ts
@@ -134,11 +140,9 @@ demos/<name>/
       password-hash.ts
       external-auth.ts
 
-  data/
-    schema.ts
-    setup.ts
-    setup.test.ts
+  db/
     migrations/
+    app.sqlite
 
   test/
     feature/

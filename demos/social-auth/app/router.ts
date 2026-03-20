@@ -4,7 +4,7 @@ import type { Cookie } from 'remix/cookie'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 
-import { initializeSocialAuthDatabase } from '../data/setup.ts'
+import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { account } from './controllers/account/controller.tsx'
 import authController from './controllers/auth/controller.tsx'
 import { home } from './controllers/home/controller.tsx'

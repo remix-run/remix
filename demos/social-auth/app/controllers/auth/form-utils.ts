@@ -1,4 +1,4 @@
-import { normalizeOptionalText } from '../../../data/schema.ts'
+import { normalizeOptionalText } from '../../data/schema.ts'
 
 export function getIssueMessage(issues: ReadonlyArray<{ message: string }>): string {
   return issues[0]?.message ?? 'Please review the form and try again.'

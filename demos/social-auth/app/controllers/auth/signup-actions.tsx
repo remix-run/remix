@@ -3,7 +3,7 @@ import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import { normalizeEmail, normalizeText, users } from '../../../data/schema.ts'
+import { normalizeEmail, normalizeText, users } from '../../data/schema.ts'
 import { getIssueMessage, readSignupValues } from './form-utils.ts'
 import { SignupPage } from './signup-page.tsx'
 import { signupSchema } from './schemas.ts'

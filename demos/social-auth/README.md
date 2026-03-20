@@ -64,8 +64,8 @@ If you configure the external providers locally, use these callback URLs:
 
 ## Data Storage
 
-The demo keeps its SQLite database in `demos/social-auth/data/` and its session files in
-`demos/social-auth/tmp/`.
+The demo keeps its runtime schema and setup code in `demos/social-auth/app/data/`, its SQLite
+files and migrations in `demos/social-auth/db/`, and its session files in `demos/social-auth/tmp/`.
 
 On successful external login, the demo:
 

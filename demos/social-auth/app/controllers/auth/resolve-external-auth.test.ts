@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { authAccounts } from '../../../data/schema.ts'
-import { db, resetSocialAuthDatabase } from '../../../data/setup.ts'
+import { authAccounts } from '../../data/schema.ts'
+import { db, resetSocialAuthDatabase } from '../../data/setup.ts'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 
 beforeEach(async () => {

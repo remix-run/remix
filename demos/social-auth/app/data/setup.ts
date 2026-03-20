@@ -6,17 +6,17 @@ import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-import { hashPassword } from '../app/utils/password-hash.ts'
+import { hashPassword } from '../utils/password-hash.ts'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'
 
 const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'
 const DEMO_USER_AVATAR_URL = 'https://randomuser.me/api/portraits/men/32.jpg'
 
-let dataDirectoryUrl = new URL('./', import.meta.url)
-let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dataDirectoryUrl))
+let dbDirectoryUrl = new URL('../../db/', import.meta.url)
+let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dbDirectoryUrl))
 let databaseFilePath = getDatabaseFilePath()
 
-fs.mkdirSync(fileURLToPath(dataDirectoryUrl), { recursive: true })
+fs.mkdirSync(fileURLToPath(dbDirectoryUrl), { recursive: true })
 
 if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
   fs.unlinkSync(databaseFilePath)
@@ -54,7 +54,7 @@ export function getDatabaseFilePath(): string {
       ? 'social-auth.test.' + process.pid + '.' + Date.now() + '.sqlite'
       : 'social-auth.sqlite'
 
-  return fileURLToPath(new URL(fileName, dataDirectoryUrl))
+  return fileURLToPath(new URL(fileName, dbDirectoryUrl))
 }
 
 export async function resetSocialAuthDatabase(): Promise<void> {

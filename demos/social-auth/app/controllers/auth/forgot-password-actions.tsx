@@ -2,7 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 
-import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema.ts'
+import { normalizeEmail, passwordResetTokens, users } from '../../data/schema.ts'
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './forgot-password-page.tsx'
 import { getIssueMessage, readField } from './form-utils.ts'
 import { forgotPasswordSchema } from './schemas.ts'

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { db, passwordResetTokens } from '../../data/setup.ts'
+import { db, passwordResetTokens } from '../../app/data/setup.ts'
 import { assertContains, createTestRouter, getSessionCookie, requestWithSession } from '../helpers.ts'
 
 describe('social-auth router', () => {

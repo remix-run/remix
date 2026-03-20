@@ -2,7 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 
-import { passwordResetTokens, users } from '../../../data/schema.ts'
+import { passwordResetTokens, users } from '../../data/schema.ts'
 import { ErrorPage } from './error-page.tsx'
 import { getIssueMessage } from './form-utils.ts'
 import { ResetPasswordCompletePage, ResetPasswordPage } from './reset-password-page.tsx'

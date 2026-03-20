@@ -6,8 +6,8 @@ import type {
 } from 'remix/auth'
 import type { Database } from 'remix/data-table'
 
-import { authAccounts, normalizeEmail, users } from '../../../data/schema.ts'
-import type { AuthAccount, User } from '../../../data/schema.ts'
+import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
+import type { AuthAccount, User } from '../../data/schema.ts'
 
 type ExternalAuthResult =
   | OAuthResult<GoogleAuthProfile, 'google'>
