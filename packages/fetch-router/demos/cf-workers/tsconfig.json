@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
     "target": "ESNext",
     "moduleResolution": "Bundler",
@@ -20,12 +16,7 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "types": [
-      "./worker-configuration.d.ts",
-      "node"
-    ]
+    "types": ["./worker-configuration.d.ts", "node"]
   },
-  "exclude": [
-    "dist"
-  ]
+  "exclude": ["dist"]
 }

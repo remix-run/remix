@@ -5,11 +5,6 @@
     "declarationMap": true,
     "outDir": "./dist"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "src/**/*.test.ts",
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "dist"]
 }

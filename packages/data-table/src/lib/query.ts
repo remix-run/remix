@@ -53,10 +53,7 @@ export type QueryState = {
   with: Record<string, AnyRelation>
 }
 
-type QueryPlanMap<
-  row extends Record<string, unknown>,
-  primaryKey extends readonly string[],
-> = {
+type QueryPlanMap<row extends Record<string, unknown>, primaryKey extends readonly string[]> = {
   all: { kind: 'all' }
   first: { kind: 'first' }
   find: {
@@ -148,9 +145,8 @@ type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<s
 
 export type AnyQuery = Query<any, any, any, any, any>
 
-type QuerySource<input extends AnyQuery> = input extends Query<infer source, any, any, any, any>
-  ? source
-  : never
+type QuerySource<input extends AnyQuery> =
+  input extends Query<infer source, any, any, any, any> ? source : never
 
 type QueryColumnTypes<input extends AnyQuery> =
   input extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
@@ -161,9 +157,8 @@ type QueryRow<input extends AnyQuery> =
 type QueryLoaded<input extends AnyQuery> =
   input extends Query<any, any, any, infer loaded, any> ? loaded : never
 
-type QueryPhaseOf<input extends AnyQuery> = input extends Query<any, any, any, any, infer phase>
-  ? phase
-  : never
+type QueryPhaseOf<input extends AnyQuery> =
+  input extends Query<any, any, any, any, infer phase> ? phase : never
 
 type QueryBinding<input extends AnyQuery> = QueryPhaseOf<input>['binding']
 
@@ -191,10 +186,12 @@ type QueryWith<input extends AnyQuery, phase extends QueryPhase> = Query<
 type QueryTerminalResult<input extends AnyQuery, mode extends QueryExecutionMode, result> =
   QueryBinding<input> extends 'bound' ? Promise<result> : QueryWith<input, UnboundQueryPhase<mode>>
 
-export type QueryExecutionResult<input> =
-  input extends AnyQuery
-    ? QueryResultMap<QueryRow<input>, QueryLoaded<input>>[Extract<QueryMode<input>, QueryExecutionMode>]
-    : never
+export type QueryExecutionResult<input> = input extends AnyQuery
+  ? QueryResultMap<QueryRow<input>, QueryLoaded<input>>[Extract<
+      QueryMode<input>,
+      QueryExecutionMode
+    >]
+  : never
 
 type QueryRuntime = {
   exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
@@ -272,7 +269,13 @@ export class Query<
   select<selection extends Record<string, QueryColumnInput<columnTypes>>>(
     this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     selection: selection,
-  ): Query<source, columnTypes, SelectedAliasRow<columnTypes, selection>, loaded, QueryAllPhase<phase>>
+  ): Query<
+    source,
+    columnTypes,
+    SelectedAliasRow<columnTypes, selection>,
+    loaded,
+    QueryAllPhase<phase>
+  >
   select(
     this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
@@ -290,7 +293,13 @@ export class Query<
         alias,
       }))
 
-      return this.#clone({ select }) as Query<source, columnTypes, any, loaded, QueryAllPhase<phase>>
+      return this.#clone({ select }) as Query<
+        source,
+        columnTypes,
+        any,
+        loaded,
+        QueryAllPhase<phase>
+      >
     }
 
     let columns = input as (keyof row & string)[]
@@ -433,13 +442,7 @@ export class Query<
   with<relations extends RelationMapForSourceName<QuerySourceTableName<source>>>(
     this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     relations: relations,
-  ): Query<
-    source,
-    columnTypes,
-    row,
-    loaded & LoadedRelationMap<relations>,
-    QueryAllPhase<phase>
-  > {
+  ): Query<source, columnTypes, row, loaded & LoadedRelationMap<relations>, QueryAllPhase<phase>> {
     return this.#clone({
       with: {
         ...this.#state.with,
@@ -631,9 +634,7 @@ export class Query<
     )
   }
 
-  #clone(
-    patch: Partial<QueryState>,
-  ): Query<source, columnTypes, row, loaded, phase> {
+  #clone(patch: Partial<QueryState>): Query<source, columnTypes, row, loaded, phase> {
     return Query.#createInternal<source, columnTypes, row, loaded, phase>(
       this.#table,
       {
@@ -656,13 +657,12 @@ export class Query<
   #withPlan<nextMode extends QueryExecutionMode>(
     plan: QueryPlan<row, QuerySourcePrimaryKey<source>, nextMode>,
   ): Query<source, columnTypes, row, loaded, QueryNextPhase<phase, nextMode>> {
-    return Query.#createInternal<
-      source,
-      columnTypes,
-      row,
-      loaded,
-      QueryNextPhase<phase, nextMode>
-    >(this.#table, this.#state, plan, this.#runtime)
+    return Query.#createInternal<source, columnTypes, row, loaded, QueryNextPhase<phase, nextMode>>(
+      this.#table,
+      this.#state,
+      plan,
+      this.#runtime,
+    )
   }
 
   #snapshot(): QuerySnapshot<source, row, QueryPhaseMode<phase>> {

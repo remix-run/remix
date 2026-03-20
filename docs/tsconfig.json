@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
@@ -15,18 +11,10 @@
     "jsx": "react-jsx",
     "jsxImportSource": "remix/component",
     "paths": {
-      "*": [
-        "./*"
-      ],
-      "remix/component/jsx-runtime": [
-        "../packages/remix/src/component/jsx-runtime.ts"
-      ],
-      "remix/component/jsx-dev-runtime": [
-        "../packages/remix/src/component/jsx-dev-runtime.ts"
-      ]
+      "*": ["./*"],
+      "remix/component/jsx-runtime": ["../packages/remix/src/component/jsx-runtime.ts"],
+      "remix/component/jsx-dev-runtime": ["../packages/remix/src/component/jsx-dev-runtime.ts"]
     }
   },
-  "exclude": [
-    "dist"
-  ]
+  "exclude": ["dist"]
 }

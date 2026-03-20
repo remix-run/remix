@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "ES2024"
-    ],
+    "lib": ["ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
@@ -11,7 +9,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "exclude": [
-    "dist"
-  ]
+  "exclude": ["dist"]
 }

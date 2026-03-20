@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
@@ -13,8 +9,5 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "exclude": [
-    "vendor",
-    "dist"
-  ]
+  "exclude": ["vendor", "dist"]
 }

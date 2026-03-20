@@ -97,9 +97,11 @@ let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
 Unbound queries stay lazy until you pass them to `db.exec(...)`:
 
 ```ts
-let shippedCustomerQuery = query(users).where({ role: 'customer' }).with({
-  recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
-})
+let shippedCustomerQuery = query(users)
+  .where({ role: 'customer' })
+  .with({
+    recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+  })
 
 let customers = await db.exec(shippedCustomerQuery)
 

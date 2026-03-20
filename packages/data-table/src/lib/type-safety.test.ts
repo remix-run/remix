@@ -3,7 +3,12 @@ import { afterEach, describe, it } from 'node:test'
 
 import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
-import type { QueryColumnTypesForTable, QueryForTable, QueryTableInput, WriteResult } from './database.ts'
+import type {
+  QueryColumnTypesForTable,
+  QueryForTable,
+  QueryTableInput,
+  WriteResult,
+} from './database.ts'
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
 import type { AnyQuery as PublicAnyQuery } from '../index.ts'
@@ -110,10 +115,8 @@ describe('type safety', () => {
     type QueryColumns =
       QueryType extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
     type QueryRow = QueryType extends Query<any, any, infer row, any, any> ? row : never
-    type QueryTableName =
-      QuerySource extends QueryTableInput<infer name, any, any> ? name : never
-    type QueryPrimaryKey =
-      QuerySource extends QueryTableInput<any, any, infer key> ? key : never
+    type QueryTableName = QuerySource extends QueryTableInput<infer name, any, any> ? name : never
+    type QueryPrimaryKey = QuerySource extends QueryTableInput<any, any, infer key> ? key : never
     type QueryBinding =
       QueryType extends Query<any, any, any, any, infer queryPhase>
         ? queryPhase extends { binding: infer binding }
