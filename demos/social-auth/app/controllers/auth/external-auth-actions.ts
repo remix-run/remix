@@ -1,4 +1,3 @@
-import type { BuildAction, Controller, RequestContext } from 'remix/fetch-router'
 import {
   createExternalAuthCallbackRequestHandler,
   createExternalAuthLoginRequestHandler,
@@ -6,137 +5,137 @@ import {
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
+import type { SocialAuthRouteContext, SocialAuthRouter } from '../../router.ts'
 import type { ExternalProviderName } from '../../utils/external-auth.ts'
-import { createGitHubProvider } from '../../utils/external-auth.ts'
-import { createGoogleProvider } from '../../utils/external-auth.ts'
-import { createXProvider } from '../../utils/external-auth.ts'
+import {
+  createGitHubProvider,
+  createGoogleProvider,
+  createXProvider,
+} from '../../utils/external-auth.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
-import { resolveExternalAuth } from './resolve-external-auth.ts'
 import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
+import { resolveExternalAuth } from './resolve-external-auth.ts'
 
-export function createExternalProviderActions(providerName: ExternalProviderName) {
-  return {
-    actions: {
-      login: createExternalLoginAction(providerName),
-      callback: createExternalCallbackAction(providerName),
-    },
-  } satisfies Controller<typeof routes.auth.google>
+export function mountExternalProviderRoutes(
+  router: SocialAuthRouter,
+  providerName: ExternalProviderName,
+): void {
+  router.get('/login', context => startExternalLogin(providerName, context))
+  router.get('/callback', context => finishExternalLogin(providerName, context))
 }
 
-function createExternalLoginAction(providerName: ExternalProviderName) {
-  return {
-    async action(context) {
-      let provider = readExternalProvider(providerName, context)
+function startExternalLogin(
+  providerName: ExternalProviderName,
+  context: SocialAuthRouteContext,
+): Response | Promise<Response> {
+  let provider = readExternalProvider(providerName, context)
+  if (provider == null) {
+    let session = context.get(Session)
+    flashError(session, `${formatProviderLabel(providerName)} login is not configured.`)
+    return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+  }
+
+  return createExternalAuthLoginRequestHandler(provider, {
+    failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
+    onError(_error, actionContext: SocialAuthRouteContext) {
+      let session = actionContext.get(Session)
+      flashError(session, `We could not start ${formatProviderLabel(providerName)} login.`)
+      return redirect(routes.home.href(undefined, getReturnToQuery(actionContext.url)))
+    },
+  })(context)
+}
+
+function finishExternalLogin(
+  providerName: ExternalProviderName,
+  context: SocialAuthRouteContext,
+): Response | Promise<Response> {
+  switch (providerName) {
+    case 'google': {
+      let provider = createGoogleProvider(context)
       if (provider == null) {
         let session = context.get(Session)
-        flashError(session, `${formatProviderLabel(providerName)} login is not configured.`)
-        return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+        flashError(session, 'Google login is not configured.')
+        return redirect(routes.home.href())
       }
 
-      return createExternalAuthLoginRequestHandler(provider, {
-        failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
-        onError(_error, actionContext) {
+      return createExternalAuthCallbackRequestHandler(provider, {
+        async writeSession(session, result, actionContext: SocialAuthRouteContext) {
+          let db = actionContext.get(Database)
+          let { user, authAccount } = await resolveExternalAuth(db, result)
+          writeAuthenticatedSession(session, {
+            userId: user.id,
+            loginMethod: result.provider,
+            authAccountId: authAccount.id,
+          })
+        },
+        successRedirectTo: routes.account.href(),
+        onFailure(_error, actionContext: SocialAuthRouteContext) {
           let session = actionContext.get(Session)
-          flashError(session, `We could not start ${formatProviderLabel(providerName)} login.`)
-          return redirect(routes.home.href(undefined, getReturnToQuery(actionContext.url)))
+          flashError(session, 'We could not finish Google login.')
+          return redirect(routes.home.href())
         },
       })(context)
-    },
-  } satisfies BuildAction<'GET', typeof routes.auth.google.login>
-}
+    }
 
-function createExternalCallbackAction(providerName: ExternalProviderName) {
-  return {
-    async action(context) {
-      switch (providerName) {
-        case 'google': {
-          let provider = createGoogleProvider(context)
-          if (provider == null) {
-            let session = context.get(Session)
-            flashError(session, 'Google login is not configured.')
-            return redirect(routes.home.href())
-          }
-
-          return createExternalAuthCallbackRequestHandler(provider, {
-            async writeSession(session, result, actionContext) {
-              let db = actionContext.get(Database)
-              let { user, authAccount } = await resolveExternalAuth(db, result)
-              writeAuthenticatedSession(session, {
-                userId: user.id,
-                loginMethod: result.provider,
-                authAccountId: authAccount.id,
-              })
-            },
-            successRedirectTo: routes.account.href(),
-            onFailure(_error, actionContext) {
-              let session = actionContext.get(Session)
-              flashError(session, 'We could not finish Google login.')
-              return redirect(routes.home.href())
-            },
-          })(context)
-        }
-
-        case 'github': {
-          let provider = createGitHubProvider(context)
-          if (provider == null) {
-            let session = context.get(Session)
-            flashError(session, 'GitHub login is not configured.')
-            return redirect(routes.home.href())
-          }
-
-          return createExternalAuthCallbackRequestHandler(provider, {
-            async writeSession(session, result, actionContext) {
-              let db = actionContext.get(Database)
-              let { user, authAccount } = await resolveExternalAuth(db, result)
-              writeAuthenticatedSession(session, {
-                userId: user.id,
-                loginMethod: result.provider,
-                authAccountId: authAccount.id,
-              })
-            },
-            successRedirectTo: routes.account.href(),
-            onFailure(_error, actionContext) {
-              let session = actionContext.get(Session)
-              flashError(session, 'We could not finish GitHub login.')
-              return redirect(routes.home.href())
-            },
-          })(context)
-        }
-
-        case 'x': {
-          let provider = createXProvider(context)
-          if (provider == null) {
-            let session = context.get(Session)
-            flashError(session, 'X login is not configured.')
-            return redirect(routes.home.href())
-          }
-
-          return createExternalAuthCallbackRequestHandler(provider, {
-            async writeSession(session, result, actionContext) {
-              let db = actionContext.get(Database)
-              let { user, authAccount } = await resolveExternalAuth(db, result)
-              writeAuthenticatedSession(session, {
-                userId: user.id,
-                loginMethod: result.provider,
-                authAccountId: authAccount.id,
-              })
-            },
-            successRedirectTo: routes.account.href(),
-            onFailure(_error, actionContext) {
-              let session = actionContext.get(Session)
-              flashError(session, 'We could not finish X login.')
-              return redirect(routes.home.href())
-            },
-          })(context)
-        }
+    case 'github': {
+      let provider = createGitHubProvider(context)
+      if (provider == null) {
+        let session = context.get(Session)
+        flashError(session, 'GitHub login is not configured.')
+        return redirect(routes.home.href())
       }
-    },
-  } satisfies BuildAction<'GET', typeof routes.auth.google.callback>
+
+      return createExternalAuthCallbackRequestHandler(provider, {
+        async writeSession(session, result, actionContext: SocialAuthRouteContext) {
+          let db = actionContext.get(Database)
+          let { user, authAccount } = await resolveExternalAuth(db, result)
+          writeAuthenticatedSession(session, {
+            userId: user.id,
+            loginMethod: result.provider,
+            authAccountId: authAccount.id,
+          })
+        },
+        successRedirectTo: routes.account.href(),
+        onFailure(_error, actionContext: SocialAuthRouteContext) {
+          let session = actionContext.get(Session)
+          flashError(session, 'We could not finish GitHub login.')
+          return redirect(routes.home.href())
+        },
+      })(context)
+    }
+
+    case 'x': {
+      let provider = createXProvider(context)
+      if (provider == null) {
+        let session = context.get(Session)
+        flashError(session, 'X login is not configured.')
+        return redirect(routes.home.href())
+      }
+
+      return createExternalAuthCallbackRequestHandler(provider, {
+        async writeSession(session, result, actionContext: SocialAuthRouteContext) {
+          let db = actionContext.get(Database)
+          let { user, authAccount } = await resolveExternalAuth(db, result)
+          writeAuthenticatedSession(session, {
+            userId: user.id,
+            loginMethod: result.provider,
+            authAccountId: authAccount.id,
+          })
+        },
+        successRedirectTo: routes.account.href(),
+        onFailure(_error, actionContext: SocialAuthRouteContext) {
+          let session = actionContext.get(Session)
+          flashError(session, 'We could not finish X login.')
+          return redirect(routes.home.href())
+        },
+      })(context)
+    }
+  }
 }
 
-function readExternalProvider(providerName: ExternalProviderName, context: RequestContext) {
+function readExternalProvider(providerName: ExternalProviderName, context: SocialAuthRouteContext) {
   switch (providerName) {
     case 'google':
       return createGoogleProvider(context)
@@ -155,7 +154,5 @@ function formatProviderLabel(providerName: ExternalProviderName): string {
       return 'GitHub'
     case 'x':
       return 'X'
-    default:
-      throw new Error('Unknown provider')
   }
 }

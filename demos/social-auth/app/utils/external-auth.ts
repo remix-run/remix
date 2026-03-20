@@ -4,7 +4,7 @@ import type {
   OAuthProvider,
   XAuthProfile,
 } from 'remix/auth'
-import type { RequestContext } from 'remix/fetch-router'
+import type { RequestContext, RequestContextStore } from 'remix/fetch-router'
 import {
   createGitHubAuthProvider,
   createGoogleAuthProvider,
@@ -62,8 +62,8 @@ export function getDemoOrigin(url?: URL): string {
   return `http://127.0.0.1:${port}`
 }
 
-export function createGoogleProvider(
-  context: RequestContext,
+export function createGoogleProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
+  context: context,
 ): OAuthProvider<GoogleAuthProfile, 'google'> | null {
   let credentials = readProviderCredentials('GOOGLE')
   if (credentials == null) {
@@ -77,8 +77,8 @@ export function createGoogleProvider(
   })
 }
 
-export function createGitHubProvider(
-  context: RequestContext,
+export function createGitHubProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
+  context: context,
 ): OAuthProvider<GitHubAuthProfile, 'github'> | null {
   let credentials = readProviderCredentials('GITHUB')
   if (credentials == null) {
@@ -92,7 +92,9 @@ export function createGitHubProvider(
   })
 }
 
-export function createXProvider(context: RequestContext): OAuthProvider<XAuthProfile, 'x'> | null {
+export function createXProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
+  context: context,
+): OAuthProvider<XAuthProfile, 'x'> | null {
   let credentials = readProviderCredentials('X')
   if (credentials == null) {
     return null

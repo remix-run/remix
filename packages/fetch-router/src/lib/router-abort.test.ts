@@ -208,3 +208,30 @@ describe('abort signal support', () => {
     assert.equal(handlerCalled, false)
   })
 })
+
+describe('mounted child aborts', () => {
+  it('throws AbortError when aborted during mounted child router processing', async () => {
+    let controller = new AbortController()
+    let child = createRouter()
+    let router = createRouter()
+
+    child.get('/slow', async () => {
+      controller.abort()
+      await sleep(10)
+      return new Response('Slow')
+    })
+
+    router.mount('/child', child)
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run/child/slow', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+})

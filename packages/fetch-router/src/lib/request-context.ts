@@ -1,6 +1,7 @@
 import type { Router } from './router.ts'
 
 import type { RequestMethod } from './request-methods.ts'
+import type { Simplify } from './type-utils.ts'
 
 /**
  * Create a request context key with an optional default value.
@@ -36,9 +37,30 @@ export type ContextValue<key> =
       ? instance
       : never
 
+export type ContextParams<context> = context extends RequestContext<
+  infer params extends Record<string, any>,
+  any
+>
+  ? params
+  : {}
+
+type DuplicateParamNames<
+  left extends Record<string, any>,
+  right extends Record<string, any>,
+> = Extract<keyof left, keyof right>
+
+export type MergeContextParams<
+  left extends Record<string, any>,
+  right extends Record<string, any>,
+> = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
+
 export type WithContextParams<context, params extends Record<string, any>> =
   context extends RequestContext<any, infer store extends RequestContextStore>
-    ? RequestContext<params, store>
+    ? MergeContextParams<ContextParams<context>, params> extends infer merged
+      ? [merged] extends [never]
+        ? never
+        : RequestContext<Extract<merged, Record<string, any>>, store>
+      : never
     : RequestContext<params>
 
 type ResolveStoredContextValue<
@@ -156,25 +178,26 @@ export class RequestContext<
     this.#contextMap.set(key, value)
   }
 
-  #router?: Router<any>
+  #router?: Router<any, any>
 
   /**
    * The router handling this request.
    */
-  get router(): Router<RequestContext<any, store>> {
+  get router(): Router<RequestContext<any, store>, any> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router as Router<RequestContext<any, store>>
+    return this.#router as Router<RequestContext<any, store>, any>
   }
 
-  set router(router: Router<any>) {
+  set router(router: Router<any, any>) {
     this.#router = router
   }
 
   /**
-   * The URL that was matched by the route.
+   * The URL in the current router scope. Mounted sub-routers receive a scoped URL with the
+   * mount prefix stripped from the pathname while preserving origin and search params.
    */
   url: URL
 }

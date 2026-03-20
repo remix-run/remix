@@ -1,24 +1,34 @@
-import type { Controller } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
 
-import { createExternalProviderActions } from './external-auth-actions.ts'
-import { forgotPasswordActions } from './forgot-password-actions.tsx'
-import { loginAction } from './login-action.ts'
-import { logoutAction } from './logout-action.ts'
-import { resetPasswordActions } from './reset-password-actions.tsx'
-import { signupActions } from './signup-actions.tsx'
-import type { routes } from '../../routes.ts'
+import { mountExternalProviderRoutes } from './external-auth-actions.ts'
+import { mountForgotPasswordRoutes } from './forgot-password-actions.tsx'
+import { login } from './login-action.ts'
+import { logout } from './logout-action.ts'
+import { mountResetPasswordRoutes } from './reset-password-actions.tsx'
+import { mountSignupRoutes } from './signup-actions.tsx'
+import type { SocialAuthContext } from '../../router.ts'
 
-let authController = {
-  actions: {
-    login: loginAction,
-    logout: logoutAction,
-    signup: signupActions,
-    forgotPassword: forgotPasswordActions,
-    resetPassword: resetPasswordActions,
-    google: createExternalProviderActions('google'),
-    github: createExternalProviderActions('github'),
-    x: createExternalProviderActions('x'),
-  },
-} satisfies Controller<typeof routes.auth>
+export function createAuthRouter() {
+  let router = createRouter<SocialAuthContext>()
 
-export default authController
+  router.post('/login', login)
+  router.post('/logout', logout)
+
+  router.mount('/signup', mountSignupRoutes)
+  router.mount('/forgot-password', mountForgotPasswordRoutes)
+  router.mount('/reset-password/:token', mountResetPasswordRoutes)
+
+  router.mount('/google', google => {
+    mountExternalProviderRoutes(google, 'google')
+  })
+
+  router.mount('/github', github => {
+    mountExternalProviderRoutes(github, 'github')
+  })
+
+  router.mount('/x', x => {
+    mountExternalProviderRoutes(x, 'x')
+  })
+
+  return router
+}

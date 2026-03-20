@@ -1,14 +1,20 @@
 import { Auth } from 'remix/auth-middleware'
-import { createAction } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
 
 import { AccountPage } from './account-page.tsx'
 import { requireAuth } from '../../middleware/auth.ts'
+import type { SocialAuthContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
-export let account = createAction(routes.account, {
-  middleware: [requireAuth()] as const,
-  action(context) {
+const accountMiddleware = [requireAuth()] as const
+
+export function createAccountRouter() {
+  let router = createRouter<SocialAuthContext, typeof accountMiddleware>({
+    middleware: accountMiddleware,
+  })
+
+  router.get('/', context => {
     let auth = context.get(Auth)
 
     return render(
@@ -17,5 +23,7 @@ export let account = createAction(routes.account, {
         logoutAction={routes.auth.logout.href()}
       />,
     )
-  },
-})
+  })
+
+  return router
+}

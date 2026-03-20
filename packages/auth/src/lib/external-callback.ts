@@ -14,14 +14,18 @@ import {
 /**
  * Options for handling an OAuth or OIDC callback request.
  */
-export interface ExternalAuthCallbackOptions<profile, provider extends string> {
+export interface ExternalAuthCallbackOptions<
+  profile,
+  provider extends string,
+  context extends RequestContext<any, any> = RequestContext,
+> {
   /** Session key used to read and clear the in-progress OAuth transaction. */
   transactionKey?: string
   /** Writes application-defined auth state into the session after a successful callback. */
   writeSession(
     session: Session,
     result: OAuthResult<profile, provider>,
-    context: RequestContext,
+    context: context,
   ): void | Promise<void>
   /** Redirect target used when callback succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
@@ -30,10 +34,10 @@ export interface ExternalAuthCallbackOptions<profile, provider extends string> {
   /** Custom success response builder for a completed OAuth callback. */
   onSuccess?(
     result: OAuthResult<profile, provider>,
-    context: RequestContext,
+    context: context,
   ): Response | Promise<Response>
   /** Custom failure response builder for callback validation or provider errors. */
-  onFailure?(error: unknown, context: RequestContext): Response | Promise<Response>
+  onFailure?(error: unknown, context: context): Response | Promise<Response>
 }
 
 /**
@@ -43,10 +47,14 @@ export interface ExternalAuthCallbackOptions<profile, provider extends string> {
  * @param options Options for writing session data and handling callback success or failure.
  * @returns A request handler for the provider callback route.
  */
-export function createExternalAuthCallbackRequestHandler<profile, provider extends string>(
+export function createExternalAuthCallbackRequestHandler<
+  context extends RequestContext<any, any> = RequestContext,
+  profile = never,
+  provider extends string = string,
+>(
   provider: OAuthProvider<profile, provider>,
-  options: ExternalAuthCallbackOptions<profile, provider>,
-): RequestHandler {
+  options: ExternalAuthCallbackOptions<profile, provider, context>,
+): RequestHandler<'GET', {}, context> {
   return async context => {
     let session: Session | undefined
     let transactionKey = options.transactionKey ?? '__auth'

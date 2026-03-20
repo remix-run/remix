@@ -8,23 +8,26 @@ import { createRedirectResponse, getSession } from './utils.ts'
 /**
  * Options for handling a successful credentials login.
  */
-export interface CredentialsAuthLoginOptions<result> {
+export interface CredentialsAuthLoginOptions<
+  result,
+  context extends RequestContext<any, any> = RequestContext,
+> {
   /** Writes application-defined auth state into the session after successful login. */
   writeSession(
     session: Session,
     result: result,
-    context: RequestContext,
+    context: context,
   ): void | Promise<void>
   /** Redirect target used when login succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
   /** Redirect target used when login fails and `onFailure` is not provided. */
   failureRedirectTo?: string | URL
   /** Custom success response builder for a completed credentials login. */
-  onSuccess?(result: result, context: RequestContext): Response | Promise<Response>
+  onSuccess?(result: result, context: context): Response | Promise<Response>
   /** Custom failure response builder for rejected credentials. */
-  onFailure?(context: RequestContext): Response | Promise<Response>
+  onFailure?(context: context): Response | Promise<Response>
   /** Custom error response builder for unexpected login errors. */
-  onError?(error: unknown, context: RequestContext): Response | Promise<Response>
+  onError?(error: unknown, context: context): Response | Promise<Response>
 }
 
 /**
@@ -34,10 +37,14 @@ export interface CredentialsAuthLoginOptions<result> {
  * @param options Options for writing session data and handling success or failure.
  * @returns A request handler for the credentials login route.
  */
-export function createCredentialsAuthLoginRequestHandler<input, result>(
+export function createCredentialsAuthLoginRequestHandler<
+  context extends RequestContext<any, any> = RequestContext,
+  input = never,
+  result = never,
+>(
   provider: CredentialsAuthProvider<input, result>,
-  options: CredentialsAuthLoginOptions<result>,
-): RequestHandler {
+  options: CredentialsAuthLoginOptions<result, context>,
+): RequestHandler<'POST', {}, context> {
   return async context => {
     try {
       let session = getSession(context, 'createCredentialsAuthLoginRequestHandler()')

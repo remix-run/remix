@@ -41,15 +41,11 @@ export interface SessionAuthSchemeOptions<
 export function createSessionAuthScheme<
   identity,
   session_value = unknown,
-  options extends SessionAuthSchemeOptions<identity, session_value, string> = SessionAuthSchemeOptions<
-    identity,
-    session_value,
-    string
-  >,
+  method extends string = 'session',
 >(
-  options: options,
-): AuthScheme<identity, ResolvedMethod<options['name'], 'session'>> {
-  let name = (options.name ?? 'session') as ResolvedMethod<options['name'], 'session'>
+  options: SessionAuthSchemeOptions<identity, session_value, method>,
+): AuthScheme<identity, ResolvedMethod<method, 'session'>> {
+  let name = (options.name ?? 'session') as ResolvedMethod<method, 'session'>
 
   return {
     name,

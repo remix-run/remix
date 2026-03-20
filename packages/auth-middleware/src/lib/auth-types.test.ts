@@ -32,6 +32,8 @@ const partnerKey = createAPIAuthScheme({
   },
 })
 
+type APIIdentity = { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number }
+
 const typedAuth = auth<[typeof personalAccessToken, typeof partnerKey]>({
   schemes: [personalAccessToken, partnerKey],
 })
@@ -59,7 +61,7 @@ router.get(routes.public, context => {
   let id: string = context.params.id
 
   let authState: AuthState<
-    { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number },
+    APIIdentity,
     'pat' | 'partner-key'
   > = currentAuth
 
@@ -70,7 +72,7 @@ router.get(routes.public, context => {
   currentAuth.identity
 
   if (currentAuth.ok) {
-    let identity: { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number } =
+    let identity: APIIdentity =
       currentAuth.identity
     let method: 'pat' | 'partner-key' = currentAuth.method
 
@@ -87,7 +89,7 @@ const privateAction = createAction<typeof routes.private, AppContext>(routes.pri
     let id: string = context.params.id
 
     let authState: AuthState<
-      { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number },
+      APIIdentity,
       'pat' | 'partner-key'
     > = currentAuth
 
@@ -104,7 +106,7 @@ const adminController = createController<typeof routes.admin, AppContext>(routes
       let currentAuth = context.get(Auth)
 
       let authState: AuthState<
-        { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number },
+        APIIdentity,
         'pat' | 'partner-key'
       > = currentAuth
 
@@ -135,12 +137,56 @@ fallbackRouter.get('/session/:id', {
 router.get(routes.private, privateAction)
 router.map(routes.admin, adminController)
 
+router.mount('/teams/:teamId', team => {
+  team.get('/members/:memberId', context => {
+    let currentAuth = context.get(Auth)
+    let teamId: string = context.params.teamId
+    let memberId: string = context.params.memberId
+
+    let authState: AuthState<
+      APIIdentity,
+      'pat' | 'partner-key'
+    > = currentAuth
+
+    void authState
+    void teamId
+    void memberId
+
+    return new Response('Team Member')
+  })
+})
+
+const protectedMiddleware = [requireAuth<APIIdentity, 'pat' | 'partner-key'>()] as const
+const protectedRouter = createRouter<AppContext, typeof protectedMiddleware>({
+  middleware: protectedMiddleware,
+})
+
+protectedRouter.get('/settings/:sectionId', context => {
+  let currentAuth = context.get(Auth)
+  let sectionId: string = context.params.sectionId
+
+  let authState: GoodAuth<
+    APIIdentity,
+    'pat' | 'partner-key'
+  > = currentAuth
+  let method: 'pat' | 'partner-key' = currentAuth.method
+
+  void authState
+  void method
+  void sectionId
+
+  return new Response(currentAuth.method)
+})
+
+router.mount('/private', protectedRouter)
+
 void typedAuth
 void router
 void fallbackRouter
 void privateAction
 void adminController
+void protectedRouter
 
 describe('auth middleware type inference', () => {
-  it('propagates router-global auth into inline and stored handlers', () => {})
+  it('propagates router-global auth into mounted and stored handlers', () => {})
 })

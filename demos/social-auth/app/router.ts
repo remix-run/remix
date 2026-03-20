@@ -1,4 +1,4 @@
-import { createRouter, type Controller, type MiddlewareContext } from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext, type RequestContext, type Router } from 'remix/fetch-router'
 import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
 import type { SessionStorage } from 'remix/session'
@@ -6,8 +6,8 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { initializeSocialAuthDatabase } from './data/setup.ts'
-import { account } from './controllers/account/controller.tsx'
-import authController from './controllers/auth/controller.tsx'
+import { createAccountRouter } from './controllers/account/controller.tsx'
+import { createAuthRouter } from './controllers/auth/controller.tsx'
 import { home } from './controllers/home/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
@@ -25,6 +25,22 @@ export type SocialAuthMiddleware = [
 ]
 
 export type SocialAuthContext = MiddlewareContext<SocialAuthMiddleware>
+export type SocialAuthStore = SocialAuthContext extends RequestContext<
+  infer _params extends Record<string, string>,
+  infer store
+>
+  ? store
+  : never
+
+export type SocialAuthRouteContext<params extends Record<string, string> = {}> = RequestContext<
+  params,
+  SocialAuthStore
+>
+
+export type SocialAuthRouter<params extends Record<string, string> = {}> = Router<
+  SocialAuthRouteContext<params>,
+  SocialAuthRouteContext<params>
+>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
@@ -48,8 +64,8 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let router = createRouter({ middleware })
 
   router.get(routes.home, home)
-  router.get(routes.account, account)
-  router.map(routes.auth, authController as unknown as Controller<typeof routes.auth, SocialAuthContext>)
+  router.mount('/account', createAccountRouter())
+  router.mount('/auth', createAuthRouter())
 
   return router
 }

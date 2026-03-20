@@ -1,4 +1,4 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
+import type { RequestContext, RequestHandler } from '@remix-run/fetch-router'
 
 import { getOAuthProviderRuntime } from './provider.ts'
 import type { OAuthProvider } from './provider.ts'
@@ -7,7 +7,7 @@ import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeRet
 /**
  * Options for starting an OAuth or OIDC login redirect flow.
  */
-export interface ExternalAuthLoginOptions {
+export interface ExternalAuthLoginOptions<context extends RequestContext<any, any> = RequestContext> {
   /** Session key used to store the in-progress OAuth transaction. */
   transactionKey?: string
   /** Query parameter used to capture a post-login return target. */
@@ -15,7 +15,7 @@ export interface ExternalAuthLoginOptions {
   /** Redirect target used when login setup fails and `onError` is not provided. */
   failureRedirectTo?: string | URL
   /** Custom error response builder for unexpected OAuth login setup errors. */
-  onError?(error: unknown, context: Parameters<RequestHandler>[0]): Response | Promise<Response>
+  onError?(error: unknown, context: context): Response | Promise<Response>
 }
 
 /**
@@ -25,10 +25,13 @@ export interface ExternalAuthLoginOptions {
  * @param options Options for transaction storage, error handling, and return-to behavior.
  * @returns A request handler for the external login route.
  */
-export function createExternalAuthLoginRequestHandler<profile>(
+export function createExternalAuthLoginRequestHandler<
+  context extends RequestContext<any, any> = RequestContext,
+  profile = never,
+>(
   provider: OAuthProvider<profile>,
-  options: ExternalAuthLoginOptions = {},
-): RequestHandler {
+  options: ExternalAuthLoginOptions<context> = {},
+): RequestHandler<'GET', {}, context> {
   return async context => {
     try {
       let session = getSession(context, 'createExternalAuthLoginRequestHandler()')

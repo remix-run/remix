@@ -6,10 +6,11 @@ import {
   createAction,
   createController,
 } from './controller.ts'
-import type { Middleware, MiddlewareContext } from './middleware.ts'
-import { createContextKey } from './request-context.ts'
+import type { Middleware } from './middleware.ts'
+import { createContextKey, type RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import { createRouter } from './router.ts'
+import type { Router } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
 function expectTypeEquality<_check extends true>() {}
@@ -54,9 +55,6 @@ plainRouter.get('/public', context => {
 })
 
 const appMiddleware = [requireUser(), setRole('viewer')] as const
-
-type AppContext = MiddlewareContext<typeof appMiddleware>
-
 const router = createRouter({ middleware: appMiddleware })
 
 router.get(routes.account, context => {
@@ -69,6 +67,70 @@ router.get(routes.account, context => {
 
   return new Response(`${accountId}:${user.id}:${role}`)
 })
+
+router.mount('/orgs/:orgId', org => {
+  org.get('/users/:userId', context => {
+    let user = context.get(CurrentUser)
+    let role = context.get(CurrentRole)
+    let orgId: string = context.params.orgId
+    let userId: string = context.params.userId
+
+    expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+    expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
+
+    return new Response(`${orgId}:${userId}:${user.id}:${role}`)
+  })
+})
+
+type AppContext = typeof router extends Router<
+  infer context extends RequestContext<any, any>,
+  any
+>
+  ? context
+  : never
+
+type RequiredUserContext = RequestContext<{}, [[typeof CurrentUser, { id: string }]]>
+
+const profileRouter = createRouter<RequiredUserContext>()
+profileRouter.get('/settings/:sectionId', context => {
+  let user = context.get(CurrentUser)
+  let sectionId: string = context.params.sectionId
+
+  expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+
+  return new Response(`${sectionId}:${user.id}`)
+})
+
+router.mount('/profile', profileRouter)
+
+const adminMiddleware = [setRole('admin')] as const
+const adminRouter = createRouter<RequiredUserContext, typeof adminMiddleware>({
+  middleware: adminMiddleware,
+})
+adminRouter.get('/members/:memberId', context => {
+  let user = context.get(CurrentUser)
+  let role = context.get(CurrentRole)
+  let memberId: string = context.params.memberId
+
+  expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+  let exactRole: 'admin' = role
+
+  void exactRole
+
+  return new Response(`${memberId}:${user.id}:${role}`)
+})
+
+router.mount('/admin', adminRouter)
+
+if (false as boolean) {
+  router.mount('/orgs/:orgId', org => {
+    org.get('/users/:orgId', context => {
+      // @ts-expect-error - duplicate param names are rejected across mounted routers
+      context.params.orgId
+      return new Response('duplicate')
+    })
+  })
+}
 
 const accountAction = createAction<typeof routes.account, AppContext>(routes.account, {
   action(context) {
@@ -151,11 +213,13 @@ router.map(routes.admin, legacyAdminController)
 
 void plainRouter
 void router
+void profileRouter
+void adminRouter
 void accountAction
 void adminController
 void legacyAccountAction
 void legacyAdminController
 
 describe('router type inference', () => {
-  it('propagates router-global middleware into stored and inline handlers', () => {})
+  it('propagates router-global middleware into mounted and legacy handlers', () => {})
 })

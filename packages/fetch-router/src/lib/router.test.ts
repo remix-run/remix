@@ -993,3 +993,97 @@ describe('custom matcher', () => {
     assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
+
+describe('router.mount()', () => {
+  it('composes parent and child params in mount callbacks', async () => {
+    let router = createRouter()
+
+    router.mount('/orgs/:orgId', org => {
+      org.get('/users/:userId', ({ params }) => Response.json(params))
+    })
+
+    let response = await router.fetch('https://remix.run/orgs/acme/users/user-1')
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      orgId: 'acme',
+      userId: 'user-1',
+    })
+  })
+
+  it('runs parent and child router middleware in order', async () => {
+    let requestLog: string[] = []
+    let adminRouter = createRouter({
+      middleware: [
+        ({ url }, next) => {
+          requestLog.push(`child ${url.pathname}`)
+          return next()
+        },
+      ],
+    })
+
+    adminRouter.get('/users', () => {
+      requestLog.push('handler')
+      return new Response('Users')
+    })
+
+    let router = createRouter({
+      middleware: [
+        ({ url }, next) => {
+          requestLog.push(`parent ${url.pathname}`)
+          return next()
+        },
+      ],
+    })
+
+    router.mount('/admin', adminRouter)
+
+    let response = await router.fetch('https://remix.run/admin/users')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Users')
+    assert.deepEqual(requestLog, ['parent /admin/users', 'child /users', 'handler'])
+  })
+
+  it('uses the child default handler inside a mounted subtree', async () => {
+    let projectsRouter = createRouter<RequestContext<{ orgId: string }>>({
+      defaultHandler({ params, url }) {
+        return new Response(`Missing ${params.orgId}:${url.pathname}`, { status: 404 })
+      },
+    })
+
+    let router = createRouter()
+    router.mount('/orgs/:orgId', projectsRouter)
+
+    let response = await router.fetch('https://remix.run/orgs/acme/projects')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Missing acme:/projects')
+  })
+
+  it('rejects duplicate param names across mounted routers', () => {
+    let userRouter = createRouter()
+    userRouter.get('/users/:orgId', () => new Response('duplicate'))
+
+    let router = createRouter()
+
+    assert.throws(() => {
+      router.mount('/orgs/:orgId', userRouter)
+    }, /Duplicate route params across mounted routers/)
+  })
+
+  it('snapshots mounted child routers at mount time', async () => {
+    let child = createRouter()
+    child.get('/', () => new Response('Child'))
+
+    let router = createRouter()
+    router.mount('/child', child)
+
+    child.get('/later', () => new Response('Later'))
+
+    let response = await router.fetch('https://remix.run/child/later')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Not Found: /later')
+  })
+})

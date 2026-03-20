@@ -1,80 +1,78 @@
-import type { Controller } from 'remix/fetch-router'
-import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
+import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 
-import { normalizeEmail, normalizeText, users } from '../../data/schema.ts'
-import { getIssueMessage, readSignupValues } from './form-utils.ts'
 import { SignupPage } from './signup-page.tsx'
+import { getIssueMessage, readSignupValues } from './form-utils.ts'
 import { signupSchema } from './schemas.ts'
-import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
+import type { SocialAuthRouter } from '../../router.ts'
+import { normalizeEmail, normalizeText, users } from '../../data/schema.ts'
 import { getPostAuthRedirect, getReturnToQuery } from '../../middleware/auth.ts'
+import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../render.tsx'
 import { Session } from '../../middleware/session.ts'
+import { render } from '../render.tsx'
 
-export let signupActions = {
-  actions: {
-    index(context) {
+export function mountSignupRoutes(router: SocialAuthRouter): void {
+  router.get('/', context =>
+    render(
+      <SignupPage
+        formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
+        loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+      />,
+    ),
+  )
+
+  router.post('/', async context => {
+    let db = context.get(Database)
+    let result = s.parseSafe(signupSchema, context.get(FormData))
+    if (!result.success) {
       return render(
         <SignupPage
           formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
           loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          error={getIssueMessage(result.issues)}
+          values={readSignupValues(context.get(FormData))}
         />,
+        { status: 400 },
       )
-    },
+    }
 
-    async action(context) {
-      let db = context.get(Database)
-      let result = s.parseSafe(signupSchema, context.get(FormData))
-      if (!result.success) {
-        return render(
-          <SignupPage
-            formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
-            error={getIssueMessage(result.issues)}
-            values={readSignupValues(context.get(FormData))}
-          />,
-          { status: 400 },
-        )
-      }
+    let signup = result.value
+    let name = normalizeText(signup.name)
+    let emailAddress = normalizeEmail(signup.email)
+    let existingUser = await db.findOne(users, { where: { email: emailAddress } })
 
-      let signup = result.value
-      let name = normalizeText(signup.name)
-      let emailAddress = normalizeEmail(signup.email)
-      let existingUser = await db.findOne(users, { where: { email: emailAddress } })
-
-      if (existingUser != null) {
-        return render(
-          <SignupPage
-            formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
-            error="An account with that email already exists."
-            values={{ name, email: emailAddress }}
-          />,
-          { status: 400 },
-        )
-      }
-
-      let user = await db.create(
-        users,
-        {
-          email: emailAddress,
-          password_hash: await hashPassword(signup.password),
-          name,
-        },
-        { returnRow: true },
+    if (existingUser != null) {
+      return render(
+        <SignupPage
+          formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
+          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          error="An account with that email already exists."
+          values={{ name, email: emailAddress }}
+        />,
+        { status: 400 },
       )
+    }
 
-      let session = context.get(Session)
-      session.regenerateId(true)
-      writeAuthenticatedSession(session, {
-        userId: user.id,
-        loginMethod: 'credentials',
-      })
+    let user = await db.create(
+      users,
+      {
+        email: emailAddress,
+        password_hash: await hashPassword(signup.password),
+        name,
+      },
+      { returnRow: true },
+    )
 
-      return redirect(getPostAuthRedirect(context.url))
-    },
-  },
-} satisfies Controller<typeof routes.auth.signup>
+    let session = context.get(Session)
+    session.regenerateId(true)
+    writeAuthenticatedSession(session, {
+      userId: user.id,
+      loginMethod: 'credentials',
+    })
+
+    return redirect(getPostAuthRedirect(context.url))
+  })
+}
