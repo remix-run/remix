@@ -63,6 +63,9 @@ export const it = Object.assign(
   },
 )
 
+export const suite = describe
+export const test = it
+
 export function beforeEach(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('beforeEach() must be called inside describe()')
   currentSuite.beforeEach = fn
