@@ -1,10 +1,10 @@
-import { EmailIcon, PasswordIcon, UserIcon } from '../ui/icons.tsx'
-import { TextField } from '../ui/form-field.tsx'
-import { SimpleFooter } from './simple-footer.tsx'
-import { AuthCard } from '../ui/auth-card.tsx'
-import { Document } from '../ui/document.tsx'
-import { Notice } from '../ui/notice.tsx'
-import * as styles from '../ui/styles.ts'
+import { EmailIcon, PasswordIcon, UserIcon } from '../../ui/icons.tsx'
+import { TextField } from '../../ui/form-field.tsx'
+import { SimpleFooter } from '../simple-footer.tsx'
+import { AuthCard } from '../../ui/auth-card.tsx'
+import { Document } from '../../ui/document.tsx'
+import { Notice } from '../../ui/notice.tsx'
+import * as styles from '../../ui/styles.ts'
 
 export interface SignupPageProps {
   formAction: string

@@ -1,15 +1,15 @@
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 
-import { routes } from './routes.ts'
-import { Layout } from './layout.tsx'
-import { requireAuth } from './middleware/auth.ts'
-import { requireAdmin } from './middleware/admin.ts'
-import { render } from './utils/render.ts'
+import { routes } from '../routes.ts'
+import { Layout } from '../layout.tsx'
+import { requireAuth } from '../middleware/auth.ts'
+import { requireAdmin } from '../middleware/admin.ts'
+import { render } from '../utils/render.ts'
 
-import adminBooksController from './admin.books.tsx'
-import adminOrdersController from './admin.orders.tsx'
-import adminUsersController from './admin.users.tsx'
+import adminBooksController from './books/controller.tsx'
+import adminOrdersController from './orders/controller.tsx'
+import adminUsersController from './users/controller.tsx'
 
 export default {
   middleware: [requireAuth(), requireAdmin()],

@@ -6,12 +6,12 @@ import * as coerce from 'remix/data-schema/coerce'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import { routes } from './routes.ts'
-import { books } from './data/schema.ts'
-import { Layout } from './layout.tsx'
-import { parseId } from './utils/ids.ts'
-import { render } from './utils/render.ts'
-import { RestfulForm } from './components/restful-form.tsx'
+import { routes } from '../../routes.ts'
+import { books } from '../../data/schema.ts'
+import { Layout } from '../../layout.tsx'
+import { parseId } from '../../utils/ids.ts'
+import { render } from '../../utils/render.ts'
+import { RestfulForm } from '../../components/restful-form.tsx'
 
 const textField = f.field(s.defaulted(s.string(), ''))
 const optionalTextField = f.field(s.optional(s.string()))

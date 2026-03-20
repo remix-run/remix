@@ -2,7 +2,6 @@ import {
   createExternalAuthCallbackRequestHandler,
   createExternalAuthLoginRequestHandler,
 } from 'remix/auth'
-import type { Controller } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
@@ -18,7 +17,7 @@ import {
 } from '../../utils/external-auth.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 
-function createExternalProviderActions(providerName: ExternalProviderName) {
+export function createExternalProviderActions(providerName: ExternalProviderName) {
   return {
     login(context: AppContext) {
       return startExternalLogin(providerName, context)
@@ -28,18 +27,6 @@ function createExternalProviderActions(providerName: ExternalProviderName) {
     },
   }
 }
-
-export let googleAuthController = {
-  actions: createExternalProviderActions('google'),
-} satisfies Controller<typeof routes.auth.google, AppContext>
-
-export let githubAuthController = {
-  actions: createExternalProviderActions('github'),
-} satisfies Controller<typeof routes.auth.github, AppContext>
-
-export let xAuthController = {
-  actions: createExternalProviderActions('x'),
-} satisfies Controller<typeof routes.auth.x, AppContext>
 
 function startExternalLogin(
   providerName: ExternalProviderName,

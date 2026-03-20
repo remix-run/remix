@@ -5,13 +5,13 @@ import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import { routes } from './routes.ts'
-import { users } from './data/schema.ts'
-import { Layout } from './layout.tsx'
-import { render } from './utils/render.ts'
-import { getCurrentUser } from './utils/context.ts'
-import { parseId } from './utils/ids.ts'
-import { RestfulForm } from './components/restful-form.tsx'
+import { routes } from '../../routes.ts'
+import { users } from '../../data/schema.ts'
+import { Layout } from '../../layout.tsx'
+import { render } from '../../utils/render.ts'
+import { getCurrentUser } from '../../utils/context.ts'
+import { parseId } from '../../utils/ids.ts'
+import { RestfulForm } from '../../components/restful-form.tsx'
 
 const textField = f.field(s.defaulted(s.string(), ''))
 const roleField = f.field(
