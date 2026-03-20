@@ -1087,3 +1087,70 @@ describe('router.mount()', () => {
     assert.equal(await response.text(), 'Not Found: /later')
   })
 })
+
+describe('router.scope()', () => {
+  it('runs scoped middleware before descendant handlers', async () => {
+    let requestLog: string[] = []
+    let router = createRouter({
+      middleware: [
+        (_context, next) => {
+          requestLog.push('router middleware')
+          return next()
+        },
+      ],
+    })
+
+    router.scope(
+      {
+        middleware: [
+          (_context, next) => {
+            requestLog.push('scope middleware')
+            return next()
+          },
+        ],
+      },
+      scope => {
+        scope.get('/reports/:reportId', ({ params }) => {
+          requestLog.push(`handler ${params.reportId}`)
+          return new Response(params.reportId)
+        })
+      },
+    )
+
+    let response = await router.fetch('https://remix.run/reports/monthly')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'monthly')
+    assert.deepEqual(requestLog, ['router middleware', 'scope middleware', 'handler monthly'])
+  })
+
+  it('does not swallow sibling routes when the scope does not match', async () => {
+    let requestLog: string[] = []
+    let router = createRouter()
+
+    router.scope(
+      {
+        middleware: [
+          (_context, next) => {
+            requestLog.push('scope middleware')
+            return next()
+          },
+        ],
+      },
+      scope => {
+        scope.get('/scoped', () => new Response('Scoped'))
+      },
+    )
+
+    router.get('/public', () => {
+      requestLog.push('public handler')
+      return new Response('Public')
+    })
+
+    let response = await router.fetch('https://remix.run/public')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Public')
+    assert.deepEqual(requestLog, ['public handler'])
+  })
+})

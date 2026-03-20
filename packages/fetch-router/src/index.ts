@@ -37,4 +37,4 @@ export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
 export { createRouter } from './lib/router.ts'
-export type { MatchData, Router, RouterOptions } from './lib/router.ts'
+export type { MatchData, Router, RouterOptions, RouterScopeOptions } from './lib/router.ts'

@@ -190,6 +190,16 @@ export interface RouterOptions<
   middleware?: readonly [...global_middleware]
 }
 
+export interface RouterScopeOptions<
+  incoming_context extends AnyContext = RequestContext,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+> {
+  /**
+   * Middleware to run for every request that enters this scope.
+   */
+  middleware?: readonly [...middleware]
+}
+
 /**
  * A router maps incoming requests to request handlers and mounted child routers.
  */
@@ -220,6 +230,19 @@ export interface Router<
   mount<pattern extends string, child extends Router<any, any>>(
     target: MountTarget<pattern>,
     child: CompatibleMountedRouter<RouteContext<current_context, pattern>, child>,
+  ): void
+  /**
+   * Define a subtree scope that shares this router's pathname prefix.
+   */
+  scope(child: (router: Router<current_context, current_context>) => void): void
+  /**
+   * Define a subtree scope with router-scoped middleware.
+   */
+  scope<scope_middleware extends MiddlewareTuple>(
+    options: RouterScopeOptions<current_context, scope_middleware>,
+    child: (
+      router: Router<ApplyMiddlewareTuple<current_context, scope_middleware>, current_context>,
+    ) => void,
   ): void
   /**
    * Add a route to the router.
@@ -619,6 +642,39 @@ function snapshotRouter(router: RouterRuntime): RouterRuntime {
   }
 }
 
+function flattenScopedRuntime(
+  runtime: RouterRuntime,
+  inheritedMiddleware: Middleware<any, any, any>[] | undefined = undefined,
+): RouterRuntime {
+  let scopeMiddleware = mergeMiddleware(inheritedMiddleware, runtime.middleware)
+  let matcher = runtime.matcherFactory()
+  let entries = runtime.entries.map((entry): InternalMatchData => {
+    if (entry.kind === 'route') {
+      let routeEntry: RouteMatchData = {
+        ...entry,
+        middleware: mergeMiddleware(scopeMiddleware, entry.middleware),
+      }
+      matcher.add(routeEntry.pattern, routeEntry)
+      return routeEntry
+    }
+
+    let mountEntry: InternalMountMatchData = {
+      ...entry,
+      router: flattenScopedRuntime(entry.router, scopeMiddleware),
+    }
+    matcher.add(mountEntry.pattern, mountEntry)
+    return mountEntry
+  })
+
+  return {
+    defaultHandler: runtime.defaultHandler,
+    matcher,
+    matcherFactory: runtime.matcherFactory,
+    middleware: undefined,
+    entries,
+  }
+}
+
 async function withScopedContext(
   context: RequestContext,
   url: URL,
@@ -848,6 +904,72 @@ export function createRouter<
 
       entries.push(entry)
       matcher.add(entry.pattern, entry)
+    },
+    scope<const scope_middleware extends MiddlewareTuple = MiddlewareTuple>(
+      optionsOrChild:
+        | RouterScopeOptions<ApplyMiddlewareTuple<incoming_context, global_middleware>, scope_middleware>
+        | ((
+            router: Router<
+              ApplyMiddlewareTuple<incoming_context, global_middleware>,
+              ApplyMiddlewareTuple<incoming_context, global_middleware>
+            >,
+          ) => void),
+      maybeChild?: (
+        router: Router<
+          ApplyMiddlewareTuple<
+            ApplyMiddlewareTuple<incoming_context, global_middleware>,
+            scope_middleware
+          >,
+          ApplyMiddlewareTuple<incoming_context, global_middleware>
+        >,
+      ) => void,
+    ): void {
+      let options: RouterScopeOptions<
+        ApplyMiddlewareTuple<incoming_context, global_middleware>,
+        scope_middleware
+      >
+      let child: (
+        router: Router<
+          ApplyMiddlewareTuple<
+            ApplyMiddlewareTuple<incoming_context, global_middleware>,
+            scope_middleware
+          >,
+          ApplyMiddlewareTuple<incoming_context, global_middleware>
+        >,
+      ) => void
+
+      if (typeof optionsOrChild === 'function') {
+        options = {}
+        child = optionsOrChild as typeof child
+      } else {
+        options = optionsOrChild
+        if (maybeChild == null) {
+          throw new TypeError('Expected a scope callback')
+        }
+
+        child = maybeChild
+      }
+
+      let childRouter = createRouter<
+        ApplyMiddlewareTuple<incoming_context, global_middleware>,
+        scope_middleware
+      >({
+        middleware: options.middleware,
+      })
+
+      child(childRouter as Router<
+        ApplyMiddlewareTuple<
+          ApplyMiddlewareTuple<incoming_context, global_middleware>,
+          scope_middleware
+        >,
+        ApplyMiddlewareTuple<incoming_context, global_middleware>
+      >)
+
+      let scopedRuntime = flattenScopedRuntime(snapshotRouter(getRuntime(childRouter)))
+      for (let entry of scopedRuntime.entries) {
+        entries.push(entry)
+        matcher.add(entry.pattern, entry)
+      }
     },
     route<
       method extends RequestMethod | 'ANY',

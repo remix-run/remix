@@ -1,19 +1,16 @@
-import type { Router } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './forgot-password-page.tsx'
 import { getIssueMessage, readField } from './form-utils.ts'
 import { forgotPasswordSchema } from './schemas.ts'
-import type { SocialAuthRouteContext } from '../../router.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../data/schema.ts'
 import { getReturnToQuery } from '../../middleware/auth.ts'
+import type { SocialAuthMount } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
-export function mountForgotPasswordRoutes<
-  context extends SocialAuthRouteContext<Record<string, string>>,
->(router: Router<context, context>): void {
+export let mountForgotPasswordRoutes: SocialAuthMount = router => {
   router.get('/', context =>
     render(
       <ForgotPasswordPage

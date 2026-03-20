@@ -1,4 +1,3 @@
-import type { Router } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
@@ -6,18 +5,16 @@ import { redirect } from 'remix/response/redirect'
 import { SignupPage } from './signup-page.tsx'
 import { getIssueMessage, readSignupValues } from './form-utils.ts'
 import { signupSchema } from './schemas.ts'
-import type { SocialAuthRouteContext } from '../../router.ts'
 import { normalizeEmail, normalizeText, users } from '../../data/schema.ts'
 import { getPostAuthRedirect, getReturnToQuery } from '../../middleware/auth.ts'
+import { Session } from '../../middleware/session.ts'
+import type { SocialAuthMount } from '../../router.ts'
+import { routes } from '../../routes.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
-import { routes } from '../../routes.ts'
-import { Session } from '../../middleware/session.ts'
 import { render } from '../render.tsx'
 
-export function mountSignupRoutes<context extends SocialAuthRouteContext<Record<string, string>>>(
-  router: Router<context, context>,
-): void {
+export let mountSignupRoutes: SocialAuthMount = router => {
   router.get('/', context =>
     render(
       <SignupPage

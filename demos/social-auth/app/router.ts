@@ -3,21 +3,22 @@ import {
   type MiddlewareContext,
   type RequestContext,
   type RequestContextStore,
+  type Router,
 } from 'remix/fetch-router'
-import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
+import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { mountAccountRoutes } from './controllers/account/controller.tsx'
 import { mountAuthRoutes } from './controllers/auth/controller.tsx'
 import { home } from './controllers/home/controller.tsx'
+import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
-import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
+import { routes } from './routes.ts'
 
 await initializeSocialAuthDatabase()
 
@@ -30,10 +31,27 @@ export type SocialAuthMiddleware = [
 ]
 
 export type SocialAuthContext = MiddlewareContext<SocialAuthMiddleware>
+
+type SocialAuthContextStore = SocialAuthContext extends RequestContext<
+  any,
+  infer store extends RequestContextStore
+>
+  ? store
+  : never
+
 export type SocialAuthRouteContext<params extends Record<string, string> = {}> = RequestContext<
   params,
-  RequestContextStore
+  SocialAuthContextStore
 >
+
+export type SocialAuthRouter<params extends Record<string, string> = {}> = Router<
+  SocialAuthRouteContext<params>,
+  SocialAuthRouteContext<params>
+>
+
+export type SocialAuthMount<params extends Record<string, string> = {}> = (
+  router: SocialAuthRouter<params>,
+) => void
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie

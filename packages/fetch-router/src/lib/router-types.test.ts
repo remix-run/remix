@@ -220,6 +220,62 @@ void adminController
 void legacyAccountAction
 void legacyAdminController
 
+router.scope(
+  {
+    middleware: [setRole('admin')] as const,
+  },
+  scoped => {
+    scoped.get('/reports/:reportId', context => {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+      let reportId: string = context.params.reportId
+
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      let exactRole: 'admin' = role
+
+      void exactRole
+
+      return new Response(`${reportId}:${user.id}:${role}`)
+    })
+  },
+)
+
+router.mount('/teams/:teamId', team => {
+  team.scope(
+    {
+      middleware: [setRole('admin')] as const,
+    },
+    scoped => {
+      scoped.get('/members/:memberId', context => {
+        let role = context.get(CurrentRole)
+        let teamId: string = context.params.teamId
+        let memberId: string = context.params.memberId
+
+        let exactRole: 'admin' = role
+
+        void exactRole
+
+        return new Response(`${teamId}:${memberId}:${role}`)
+      })
+    },
+  )
+})
+
+if (false as boolean) {
+  router.scope(
+    {
+      middleware: [setRole('admin')] as const,
+    },
+    scoped => {
+      scoped.get('/reports/:reportId', context => {
+        // @ts-expect-error - scope middleware overrides the inherited viewer role
+        let inheritedRole: 'viewer' = context.get(CurrentRole)
+        return new Response(inheritedRole)
+      })
+    },
+  )
+}
+
 describe('router type inference', () => {
-  it('propagates router-global middleware into mounted and legacy handlers', () => {})
+  it('propagates router-global, scoped, mounted, and legacy handlers', () => {})
 })
