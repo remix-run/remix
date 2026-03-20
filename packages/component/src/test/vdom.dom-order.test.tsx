@@ -477,7 +477,11 @@ describe('vnode rendering', () => {
             <span id="second">Second</span>
             <>
               <span id="third">Third</span>
-              <Middle id="middle-2" />
+              <>
+                <>
+                  <Middle id="middle-2" />
+                </>
+              </>
               <span id="fourth">Fourth</span>
             </>
           </>

@@ -1644,10 +1644,7 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
   if (!vParent) return null
 
-  let children =
-    vParent._content && isFragmentNode(vParent._content)
-      ? vParent._content._children
-      : vParent._children
+  let children = vParent._children
   if (!children || children.length === 0) return findNextSiblingDomAnchor(vParent)
 
   let idx = children.indexOf(curr)
@@ -1656,7 +1653,7 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
     let dom = findFirstDomAnchor(children[i])
     if (dom) return dom
   }
-  return null
+  return findNextSiblingDomAnchor(vParent)
 }
 
 function reclaimPersistedMixinNode(
