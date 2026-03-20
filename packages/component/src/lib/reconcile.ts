@@ -711,17 +711,7 @@ function insert(
   if (isFragmentNode(node)) {
     // Insert fragment children in order before the same anchor
     for (let child of node._children) {
-      cursor = insert(
-        child,
-        domParent,
-        frame,
-        scheduler,
-        styles,
-        vParent,
-        rootTarget,
-        anchor,
-        cursor,
-      )
+      cursor = insert(child, domParent, frame, scheduler, styles, node, rootTarget, anchor, cursor)
     }
     return cursor
   }
@@ -1658,7 +1648,7 @@ export function findNextSiblingDomAnchor(curr: VNode): Node | null {
     vParent._content && isFragmentNode(vParent._content)
       ? vParent._content._children
       : vParent._children
-  if (!children) return null
+  if (!children || children.length === 0) return findNextSiblingDomAnchor(vParent)
 
   let idx = children.indexOf(curr)
   if (idx === -1) return null

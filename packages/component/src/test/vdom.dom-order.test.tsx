@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import type { Handle } from '../lib/component.ts'
+import { invariant } from '../lib/invariant.ts'
 
 describe('vnode rendering', () => {
   describe('conditional rendering and DOM order', () => {
@@ -458,47 +459,55 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
 
       let showMiddle = false
-      let capturedUpdate = () => {}
+      let capturedUpdates: (() => void)[] = []
 
       function Middle(handle: Handle) {
-        capturedUpdate = () => handle.update()
-        return () => {
-          if (showMiddle) return <span id="middle">Middle</span>
+        capturedUpdates.push(() => handle.update())
+        return ({ id }: { id: string }) => {
+          if (showMiddle) return <span id={id}>Middle</span>
           return undefined
         }
       }
 
-      root.render(
-        <>
-          <span id="first">First</span>
-          <Middle />
-          <span id="second">Second</span>
-        </>,
-      )
-      expect(container.innerHTML).toBe(
-        '<span id="first">First</span><span id="second">Second</span>',
-      )
+      function App() {
+        return () => (
+          <>
+            <span id="first">First</span>
+            <Middle id="middle-1" />
+            <span id="second">Second</span>
+            <>
+              <span id="third">Third</span>
+              <Middle id="middle-2" />
+              <span id="fourth">Fourth</span>
+            </>
+          </>
+        )
+      }
+
+      root.render(<App />)
 
       let first = container.querySelector('#first')
       let second = container.querySelector('#second')
+      invariant(first && second)
+      expect(first.nextSibling).toBe(second)
+
+      let third = container.querySelector('#third')
+      let fourth = container.querySelector('#fourth')
+      invariant(third && fourth)
+      expect(second.nextSibling).toBe(third)
+      expect(third.nextSibling).toBe(fourth)
 
       showMiddle = true
-      capturedUpdate()
+      capturedUpdates.forEach((update) => update())
       root.flush()
-      expect(container.innerHTML).toBe(
-        '<span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span>',
-      )
-      expect(container.querySelector('#first')).toBe(first)
-      expect(container.querySelector('#second')).toBe(second)
 
-      showMiddle = false
-      capturedUpdate()
-      root.flush()
-      expect(container.innerHTML).toBe(
-        '<span id="first">First</span><span id="second">Second</span>',
-      )
-      expect(container.querySelector('#first')).toBe(first)
-      expect(container.querySelector('#second')).toBe(second)
+      let middle1 = container.querySelector('#middle-1')
+      let middle2 = container.querySelector('#middle-2')
+      invariant(middle1 && middle2)
+      expect(middle1.previousSibling).toBe(first)
+      expect(middle1.nextSibling).toBe(second)
+      expect(middle2.previousSibling).toBe(third)
+      expect(middle2.nextSibling).toBe(fourth)
     })
   })
 })

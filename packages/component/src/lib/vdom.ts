@@ -140,7 +140,6 @@ export function createRangeRoot(
             hydrationCursor,
           )
           vroot = vnode
-          vParent._content = vroot
           hydrationCursor = null
         },
       ])
@@ -226,7 +225,6 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
             hydrationCursor,
           )
           vroot = vnode
-          vParent._content = vnode
           hydrationCursor = undefined
         },
       ])
