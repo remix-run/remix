@@ -27,6 +27,19 @@ let rootHooks: Pick<TestSuite, 'beforeEach' | 'afterEach' | 'beforeAll' | 'after
 let currentSuite: TestSuite | null = null
 let rootSuites: TestSuite[] = []
 
+// Lazily-created suite for top-level it() calls outside any describe().
+// Name '' causes the reporter to display these tests under "Global".
+// We check rootSuites.includes() so the suite is re-created after the executor
+// clears rootSuites between files (suites.length = 0) or after captureRegistration splices it.
+let implicitRootSuite: TestSuite | null = null
+function getImplicitRootSuite(): TestSuite {
+  if (!implicitRootSuite || !rootSuites.includes(implicitRootSuite)) {
+    implicitRootSuite = { name: '', tests: [], ...rootHooks }
+    rootSuites.push(implicitRootSuite)
+  }
+  return implicitRootSuite
+}
+
 // Expose for executor.ts which reads this global
 ;(globalThis as any).__testSuites = rootSuites
 
@@ -79,8 +92,8 @@ type TestMeta = { skip?: boolean; only?: boolean }
 type TestFn = (t?: any) => void | Promise<void>
 
 function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: boolean }) {
-  if (!currentSuite) throw new Error('it() must be called inside describe()')
-  currentSuite.tests.push({ name, fn, suite: currentSuite, ...flags })
+  let suite = currentSuite ?? getImplicitRootSuite()
+  suite.tests.push({ name, fn, suite, ...flags })
 }
 
 export const it = Object.assign(
@@ -93,8 +106,8 @@ export const it = Object.assign(
     skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
     only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
     todo: (name: string) => {
-      if (!currentSuite) throw new Error('it.todo() must be called inside describe()')
-      currentSuite.tests.push({ name, fn: () => {}, suite: currentSuite, todo: true })
+      let suite = currentSuite ?? getImplicitRootSuite()
+      suite.tests.push({ name, fn: () => {}, suite, todo: true })
     },
   },
 )

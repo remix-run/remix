@@ -111,8 +111,11 @@ describe('it', () => {
     assert.equal(typeof it.todo, 'function')
   })
 
-  it('throws when called outside describe', () => {
-    assert.throws(() => it('orphan', () => {}), /must be called inside describe/)
+  it('can be called outside describe (registers on implicit root suite)', () => {
+    let fn = () => {}
+    let captured = captureRegistration(() => it('orphan', fn))
+    let root = captured.find((s: any) => s.name === '')
+    assert.equal(root?.tests.some((t: any) => t.fn === fn), true)
   })
 
   it('registers a test with the given name and fn', () => {
@@ -170,8 +173,11 @@ describe('it.todo', () => {
     assert.equal(s.tests[0].name, 'todo test')
   })
 
-  it('throws when called outside describe', () => {
-    assert.throws(() => it.todo('orphan'), /must be called inside describe/)
+  it('can be called outside describe (registers on implicit root suite)', () => {
+    let captured = captureRegistration(() => it.todo('orphan'))
+    let root = captured.find((s: any) => s.name === '')
+    assert.equal(root?.tests[0]?.name, 'orphan')
+    assert.equal(root?.tests[0]?.todo, true)
   })
 })
 
