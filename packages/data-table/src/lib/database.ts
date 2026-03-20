@@ -1,19 +1,43 @@
-import type { ColumnDefinition, DatabaseAdapter, TransactionToken } from './adapter.ts'
+import type {
+  ColumnDefinition,
+  DataManipulationOperation,
+  DataManipulationResult,
+  DatabaseAdapter,
+  TransactionOptions,
+  TransactionToken,
+} from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
-import { QueryBuilder } from './database/query-builder.ts'
-import { Database, withDatabaseInternals } from './database/runtime.ts'
+import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
+import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
+import {
+  asQueryTableInput,
+  getPrimaryKeyWhere,
+  getPrimaryKeyWhereFromRow,
+  normalizeOrderByInput,
+  resolveCreateRowWhere,
+  toWriteResult,
+} from './database/helpers.ts'
+import { executeQuery } from './database/query-execution.ts'
+import type { AnyQuery, BoundQueryPhase, Query as QueryObject, QueryExecutionResult } from './query.ts'
+import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
+import type { SqlStatement } from './sql.ts'
+import { isSqlStatement, rawSql } from './sql.ts'
 import type {
   AnyRelation,
   AnyTable,
+  LoadedRelationMap,
   OrderDirection,
+  PrimaryKeyInput,
   TableName,
   TablePrimaryKey,
   TableRow,
+  TableRowWith,
   TableValidate,
   tableMetadataKey,
   TimestampConfig,
 } from './table.ts'
+import { getTableName } from './table.ts'
 import type { Pretty } from './types.ts'
 import type { WhereInput } from './operators.ts'
 
@@ -128,33 +152,6 @@ export type QueryTableInput<
 } & Record<string, unknown>
 
 /**
- * Query builder type produced for a table-like input.
- */
-export type QueryBuilderFor<
-  tableName extends string,
-  row extends Record<string, unknown>,
-  primaryKey extends readonly (keyof row & string)[],
-  loaded extends Record<string, unknown> = {},
-> = QueryBuilder<
-  Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
-  row,
-  loaded,
-  tableName,
-  primaryKey
->
-
-/**
- * Signature of the database `query` helper.
- */
-export type QueryMethod = <
-  tableName extends string,
-  row extends Record<string, unknown>,
-  primaryKey extends readonly (keyof row & string)[],
->(
-  table: QueryTableInput<tableName, row, primaryKey>,
-) => QueryBuilderFor<tableName, row, primaryKey>
-
-/**
  * Result metadata for write operations that do not return rows.
  */
 export type WriteResult = {
@@ -186,17 +183,17 @@ export type WriteRowResult<row> = {
 export type QueryColumnTypesForTable<table extends AnyTable> = QueryColumnTypeMap<table>
 
 /**
- * Query builder type produced for a concrete table.
+ * Query type produced for a concrete table.
  */
 export type QueryForTable<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
-> = QueryBuilder<
+> = QueryObject<
+  QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
   QueryColumnTypesForTable<table>,
   TableRow<table>,
   loaded,
-  TableName<table>,
-  TablePrimaryKey<table>
+  BoundQueryPhase<'all'>
 >
 
 /**
@@ -321,6 +318,483 @@ export type CreateManyRowsOptions = {
   returnRows: true
 }
 
+type SavepointCounter = {
+  value: number
+}
+
+type DatabaseOptions = {
+  now?: () => unknown
+}
+
+type DatabaseInternalState = {
+  token?: TransactionToken
+  savepointCounter: SavepointCounter
+}
+
+const createInternalDatabase = Symbol('createInternalDatabase')
+
+/**
+ * High-level database runtime used to build and execute data manipulation operations.
+ *
+ * Create instances directly with `new Database(adapter, options)` or use
+ * `createDatabase(adapter, options)` as a thin wrapper.
+ */
+export class Database implements QueryExecutionContext {
+  #adapter: DatabaseAdapter
+  #token?: TransactionToken
+  #now: () => unknown
+  #savepointCounter: SavepointCounter
+
+  constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
+    this.#adapter = adapter
+    this.#now = options?.now ?? defaultNow
+    this.#savepointCounter = { value: 0 }
+  }
+
+  static [createInternalDatabase](
+    adapter: DatabaseAdapter,
+    options: DatabaseOptions | undefined,
+    internal: DatabaseInternalState,
+  ): Database {
+    let database = new Database(adapter, options)
+    database.#token = internal.token
+    database.#savepointCounter = internal.savepointCounter
+    return database
+  }
+
+  get adapter(): DatabaseAdapter {
+    return this.#adapter
+  }
+
+  now(): unknown {
+    return this.#now()
+  }
+
+  query<
+    tableName extends string,
+    row extends Record<string, unknown>,
+    primaryKey extends readonly (keyof row & string)[],
+  >(
+    table: QueryTableInput<tableName, row, primaryKey>,
+  ): QueryObject<
+    QueryTableInput<tableName, row, primaryKey>,
+    Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
+    row,
+    {},
+    BoundQueryPhase<'all'>
+  > {
+    return createQuery(table)[bindQueryRuntime](this) as QueryObject<
+      QueryTableInput<tableName, row, primaryKey>,
+      Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
+      row,
+      {},
+      BoundQueryPhase<'all'>
+    >
+  }
+
+  create<table extends AnyTable>(
+    table: table,
+    values: Partial<TableRow<table>>,
+    options?: CreateResultOptions,
+  ): Promise<WriteResult>
+  create<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
+    table: table,
+    values: Partial<TableRow<table>>,
+    options: CreateRowOptions<table, relations>,
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
+  async create<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
+    table: table,
+    values: Partial<TableRow<table>>,
+    options?: CreateResultOptions | CreateRowOptions<table, relations>,
+  ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
+    let touch = options?.touch
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.returnRow !== true) {
+      let result = await query.insert(values, { touch })
+      return toWriteResult(result)
+    }
+
+    if (this.#adapter.capabilities.returning) {
+      let result = (await query.insert(values, {
+        returning: '*',
+        touch,
+      })) as { row: TableRow<table> | null }
+      let row = result.row
+
+      if (!row) {
+        throw new DataTableQueryError(
+          'create({ returnRow: true }) failed to return an inserted row',
+        )
+      }
+
+      if (!options.with) {
+        return row as TableRowWith<table, LoadedRelationMap<relations>>
+      }
+
+      let where = getPrimaryKeyWhereFromRow(table, row)
+      let loaded = await this.findOne(table, {
+        where,
+        with: options.with,
+      })
+
+      if (!loaded) {
+        throw new DataTableQueryError('create({ returnRow: true }) failed to load inserted row')
+      }
+
+      return loaded
+    }
+
+    let insertResult = await query.insert(values, { touch })
+    let where = resolveCreateRowWhere(table, values, toWriteResult(insertResult).insertId)
+    let loaded = await this.findOne(table, {
+      where,
+      with: options.with,
+    })
+
+    if (!loaded) {
+      throw new DataTableQueryError('create({ returnRow: true }) failed to load inserted row')
+    }
+
+    return loaded
+  }
+
+  createMany<table extends AnyTable>(
+    table: table,
+    values: Array<Partial<TableRow<table>>>,
+    options?: CreateManyResultOptions,
+  ): Promise<WriteResult>
+  createMany<table extends AnyTable>(
+    table: table,
+    values: Array<Partial<TableRow<table>>>,
+    options: CreateManyRowsOptions,
+  ): Promise<TableRow<table>[]>
+  async createMany<table extends AnyTable>(
+    table: table,
+    values: Array<Partial<TableRow<table>>>,
+    options?: CreateManyResultOptions | CreateManyRowsOptions,
+  ): Promise<WriteResult | TableRow<table>[]> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.returnRows === true) {
+      if (!this.#adapter.capabilities.returning) {
+        throw new DataTableQueryError(
+          'createMany({ returnRows: true }) is not supported by this adapter',
+        )
+      }
+
+      let result = (await query.insertMany(values, {
+        returning: '*',
+        touch: options.touch,
+      })) as { rows: TableRow<table>[] }
+
+      return result.rows
+    }
+
+    let result = await query.insertMany(values, {
+      touch: options?.touch,
+    })
+
+    return toWriteResult(result)
+  }
+
+  async find<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
+    table: table,
+    value: PrimaryKeyInput<table>,
+    options?: { with?: relations },
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
+    if (value == null) {
+      return null
+    }
+
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.with) {
+      return query.with(options.with).find(value as any) as Promise<TableRowWith<
+        table,
+        LoadedRelationMap<relations>
+      > | null>
+    }
+
+    return query.find(value as any) as Promise<TableRowWith<
+      table,
+      LoadedRelationMap<relations>
+    > | null>
+  }
+
+  async findOne<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
+    table: table,
+    options: FindOneOptions<table, relations>,
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
+    let orderBy = normalizeOrderByInput(options.orderBy)
+
+    for (let [column, direction] of orderBy) {
+      query = query.orderBy(column, direction)
+    }
+
+    if (options.with) {
+      return query.with(options.with).first() as Promise<TableRowWith<
+        table,
+        LoadedRelationMap<relations>
+      > | null>
+    }
+
+    return query.first() as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+  }
+
+  async findMany<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
+    table: table,
+    options?: FindManyOptions<table, relations>,
+  ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.where) {
+      query = query.where(options.where)
+    }
+
+    let orderBy = normalizeOrderByInput(options?.orderBy)
+    for (let [column, direction] of orderBy) {
+      query = query.orderBy(column, direction)
+    }
+
+    if (options?.limit !== undefined) {
+      query = query.limit(options.limit)
+    }
+
+    if (options?.offset !== undefined) {
+      query = query.offset(options.offset)
+    }
+
+    if (options?.with) {
+      return query.with(options.with).all() as Promise<
+        Array<TableRowWith<table, LoadedRelationMap<relations>>>
+      >
+    }
+
+    return query.all() as Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
+  }
+
+  async count<table extends AnyTable>(
+    table: table,
+    options?: CountOptions<table>,
+  ): Promise<number> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.where) {
+      query = query.where(options.where)
+    }
+
+    return query.count()
+  }
+
+  async update<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
+    table: table,
+    value: PrimaryKeyInput<table>,
+    changes: Partial<TableRow<table>>,
+    options?: UpdateOptions<table, relations>,
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
+    let where = getPrimaryKeyWhere(table, value)
+
+    if (this.#adapter.capabilities.returning) {
+      let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
+        touch: options?.touch,
+        returning: '*',
+      })) as { rows: TableRow<table>[] }
+      let updatedRow = updateResult.rows[0]
+
+      if (!updatedRow) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      if (!options?.with) {
+        return updatedRow as TableRowWith<table, LoadedRelationMap<relations>>
+      }
+
+      let loaded = await this.findOne(table, {
+        where: getPrimaryKeyWhereFromRow(table, updatedRow),
+        with: options.with,
+      })
+
+      if (!loaded) {
+        throw new DataTableQueryError(
+          'update() failed to find row for table "' + getTableName(table) + '"',
+        )
+      }
+
+      return loaded
+    }
+
+    await this.query(asQueryTableInput(table)).where(where).update(changes, {
+      touch: options?.touch,
+    })
+
+    let loaded = await this.find(table, value, { with: options?.with })
+
+    if (!loaded) {
+      throw new DataTableQueryError(
+        'update() failed to find row for table "' + getTableName(table) + '"',
+      )
+    }
+
+    return loaded
+  }
+
+  async updateMany<table extends AnyTable>(
+    table: table,
+    changes: Partial<TableRow<table>>,
+    options: UpdateManyOptions<table>,
+  ): Promise<WriteResult> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
+    let orderBy = normalizeOrderByInput(options.orderBy)
+
+    for (let [column, direction] of orderBy) {
+      query = query.orderBy(column, direction)
+    }
+
+    if (options.limit !== undefined) {
+      query = query.limit(options.limit)
+    }
+
+    if (options.offset !== undefined) {
+      query = query.offset(options.offset)
+    }
+
+    let result = await query.update(changes, { touch: options.touch })
+    return toWriteResult(result)
+  }
+
+  async delete<table extends AnyTable>(
+    table: table,
+    value: PrimaryKeyInput<table>,
+  ): Promise<boolean> {
+    let where = getPrimaryKeyWhere(table, value)
+    let result = await this.query(asQueryTableInput(table)).where(where).delete()
+    return toWriteResult(result).affectedRows > 0
+  }
+
+  async deleteMany<table extends AnyTable>(
+    table: table,
+    options: DeleteManyOptions<table>,
+  ): Promise<WriteResult> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
+    let orderBy = normalizeOrderByInput(options.orderBy)
+
+    for (let [column, direction] of orderBy) {
+      query = query.orderBy(column, direction)
+    }
+
+    if (options.limit !== undefined) {
+      query = query.limit(options.limit)
+    }
+
+    if (options.offset !== undefined) {
+      query = query.offset(options.offset)
+    }
+
+    let result = await query.delete()
+    return toWriteResult(result)
+  }
+
+  async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
+  async exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
+  async exec<input extends AnyQuery>(statementOrInput: string | SqlStatement | input,
+    values: unknown[] = [],
+  ): Promise<DataManipulationResult | QueryExecutionResult<input>> {
+    if (typeof statementOrInput === 'string' || isSqlStatement(statementOrInput)) {
+      let sqlStatement = isSqlStatement(statementOrInput)
+        ? statementOrInput
+        : rawSql(statementOrInput, values)
+
+      return this[executeOperation]({
+        kind: 'raw',
+        sql: sqlStatement,
+      })
+    }
+
+    return executeQuery(this, statementOrInput)
+  }
+
+  async transaction<result>(
+    callback: (database: Database) => Promise<result>,
+    options?: TransactionOptions,
+  ): Promise<result> {
+    if (!this.#token) {
+      let token = await this.#adapter.beginTransaction(options)
+      let tx = Database[createInternalDatabase](
+        this.#adapter,
+        { now: this.#now },
+        {
+          token,
+          savepointCounter: this.#savepointCounter,
+        },
+      )
+
+      try {
+        let result = await callback(tx)
+        await this.#adapter.commitTransaction(token)
+        return result
+      } catch (error) {
+        await this.#adapter.rollbackTransaction(token)
+        throw error
+      }
+    }
+
+    if (!this.#adapter.capabilities.savepoints) {
+      throw new DataTableQueryError('Nested transactions require adapter savepoint support')
+    }
+
+    let savepointName = 'sp_' + String(this.#savepointCounter.value)
+    this.#savepointCounter.value += 1
+
+    await this.#adapter.createSavepoint(this.#token, savepointName)
+
+    try {
+      let result = await callback(this)
+      await this.#adapter.releaseSavepoint(this.#token, savepointName)
+      return result
+    } catch (error) {
+      await this.#adapter.rollbackToSavepoint(this.#token, savepointName)
+      await this.#adapter.releaseSavepoint(this.#token, savepointName)
+      throw error
+    }
+  }
+
+  async [executeOperation](operation: DataManipulationOperation): Promise<DataManipulationResult> {
+    try {
+      return await this.#adapter.execute({
+        operation,
+        transaction: this.#token,
+      })
+    } catch (error) {
+      throw new DataTableAdapterError('Adapter execution failed', {
+        cause: error,
+        metadata: {
+          dialect: this.#adapter.dialect,
+          operationKind: operation.kind,
+        },
+      })
+    }
+  }
+}
+
 /**
  * Creates a database runtime from an adapter.
  * Thin wrapper around `new Database(adapter, options)`.
@@ -365,13 +839,12 @@ export function createDatabaseWithTransaction(
   token: TransactionToken,
   options?: { now?: () => unknown },
 ): Database {
-  return new Database(
-    adapter,
-    withDatabaseInternals(options, {
-      token,
-      savepointCounter: { value: 0 },
-    }),
-  )
+  return Database[createInternalDatabase](adapter, options, {
+    token,
+    savepointCounter: { value: 0 },
+  })
 }
 
-export { Database, QueryBuilder }
+function defaultNow(): Date {
+  return new Date()
+}

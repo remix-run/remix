@@ -1,11 +1,19 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable",
+      "DOM.AsyncIterable"
+    ],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
-    "types": ["node", "dom-navigation"],
+    "types": [
+      "node",
+      "dom-navigation"
+    ],
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
@@ -13,9 +21,18 @@
     "jsx": "react-jsx",
     "jsxImportSource": "remix/component",
     "paths": {
-      "*": ["./*"],
-      "remix/component/jsx-runtime": ["../../remix/src/component/jsx-runtime.ts"],
-      "remix/component/jsx-dev-runtime": ["../../remix/src/component/jsx-dev-runtime.ts"]
+      "*": [
+        "./*"
+      ],
+      "remix/component/jsx-runtime": [
+        "../../remix/src/component/jsx-runtime.ts"
+      ],
+      "remix/component/jsx-dev-runtime": [
+        "../../remix/src/component/jsx-dev-runtime.ts"
+      ]
     }
-  }
+  },
+  "exclude": [
+    "dist"
+  ]
 }

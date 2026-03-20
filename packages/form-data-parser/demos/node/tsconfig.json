@@ -1,10 +1,16 @@
 {
-  "include": ["server.js"],
+  "include": [
+    "server.js"
+  ],
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
@@ -12,7 +18,12 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "dist"
+  ]
 }

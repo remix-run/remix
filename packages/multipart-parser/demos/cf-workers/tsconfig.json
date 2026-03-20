@@ -1,8 +1,15 @@
 {
-  "include": ["worker-configuration.d.ts", "src/**/*.ts"],
+  "include": [
+    "worker-configuration.d.ts",
+    "src/**/*.ts"
+  ],
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ES2022",
     "target": "ESNext",
     "moduleResolution": "Bundler",
@@ -17,6 +24,12 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "types": ["@cloudflare/workers-types/2023-07-01", "node"]
-  }
+    "types": [
+      "@cloudflare/workers-types/2023-07-01",
+      "node"
+    ]
+  },
+  "exclude": [
+    "dist"
+  ]
 }

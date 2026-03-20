@@ -182,10 +182,8 @@ export type {
   FindOneOptions,
   OrderByInput,
   OrderByTuple,
-  QueryBuilderFor,
   QueryColumnTypesForTable,
   QueryForTable,
-  QueryMethod,
   QueryTableInput,
   SingleTableColumn,
   SingleTableWhere,
@@ -195,4 +193,6 @@ export type {
   WriteRowResult,
   WriteRowsResult,
 } from './lib/database.ts'
-export { createDatabase, Database, QueryBuilder } from './lib/database.ts'
+export { createDatabase, Database } from './lib/database.ts'
+export type { AnyQuery } from './lib/query.ts'
+export { Query, query } from './lib/query.ts'
