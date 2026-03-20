@@ -3,59 +3,55 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
+import { getTsconfig } from 'get-tsconfig'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
+import { IfNoneMatch } from '@remix-run/headers'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
 import type { FileStorage } from '@remix-run/file-storage'
+import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import MagicString from 'magic-string'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
-import { generateETag, matchesETag } from './etag.ts'
-import { hashContent } from './hash.ts'
+import { normalizeFilePath } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
-import { getTsconfigTransformOptions } from './tsconfig.ts'
 
 let lexerReady = lexerInit
 let preloadTraversalConcurrency = getPreloadTraversalConcurrency()
 
-export interface ModuleCompileResult {
+export type ModuleCompileResult = {
   compiledCode: string
   compiledHash: string
-  deps: string[]
   fingerprint: string
   sourcemap: string | null
   sourcemapHash: string | null
-  stableUrlPathname: string
 }
 
-interface DependencyRecord {
+type AnalyzedModule = {
   deps: string[]
   fingerprint: string
   identityPath: string
   imports: ResolvedImport[]
   rawCode: string
   resolvedPath: string
-  sourceMapHash: string
   sourceStamp: string
   sourcemap: string | null
   stableUrlPathname: string
-  transformConfigHash: string
 }
 
-interface PendingDependencyRecord {
+type PendingAnalyzedModule = {
   fingerprint: string
   identityPath: string
   importerDir: string
   rawCode: string
   resolvedPath: string
-  sourceMapHash: string
   sourceStamp: string
   sourcemap: string | null
   stableUrlPathname: string
-  transformConfigHash: string
   unresolvedImports: UnresolvedImport[]
 }
 
-interface CachedAssetRecord {
+type ServedModule = {
   compiledCode: string
   compiledHash: string
   directImportHash: string
@@ -64,20 +60,18 @@ interface CachedAssetRecord {
   sourcemapHash: string | null
 }
 
-interface CachedDependencyRecord {
+type CachedAnalyzedModule = {
   deps: string[]
   fingerprint: string
   imports: ResolvedImport[]
   rawCode: string
   resolvedPath: string
-  sourceMapHash: string
   sourceStamp: string
   sourcemap: string | null
   stableUrlPathname: string
-  transformConfigHash: string
 }
 
-interface ModuleCompilerOptions {
+type ModuleCompilerOptions = {
   buildId?: string
   external: string[]
   fileStorage?: FileStorage
@@ -90,38 +84,41 @@ interface ModuleCompilerOptions {
   sourceMaps?: 'external' | 'inline'
 }
 
-interface ResolveModuleResult {
+type ResolveModuleResult = {
   identityPath: string
   resolvedPath: string
 }
 
-interface ResolvedImport {
+type ResolvedImport = {
   depPath: string
   end: number
+  quote?: '"' | "'" | '`'
   start: number
 }
 
-interface UnresolvedImport {
+type UnresolvedImport = {
   end: number
+  quote?: '"' | "'" | '`'
   specifier: string
   start: number
 }
 
-export interface ModuleCompiler {
+export type ModuleCompiler = {
   compileModule(absolutePath: string): Promise<ModuleCompileResult>
   getPreloadUrls(moduleUrl: string): Promise<string[]>
   resolveRequestPath(absolutePath: string): ResolveModuleResult | null
 }
 
 export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
-  let dependencyRecords = new Map<string, DependencyRecord>()
-  let dependencyInFlight = new Map<string, Promise<DependencyRecord>>()
-  let compiledAssets = new Map<string, CachedAssetRecord>()
+  let analyzedModules = new Map<string, AnalyzedModule>()
+  let analyzedModulesInFlight = new Map<string, Promise<AnalyzedModule>>()
+  let servedModules = new Map<string, ServedModule>()
   let compileInFlight = new Map<string, Promise<ModuleCompileResult>>()
   let resolvedPathsByIdentity = new Map<string, string>()
   let cacheNamespace = options.buildId === undefined ? 'live' : encodeURIComponent(options.buildId)
   let fileStorage = options.fileStorage ?? createMemoryFileStorage()
   let buildIsImmutable = options.buildId !== undefined
+  let getTsconfigTransformOptions = createTsconfigTransformOptionsResolver()
 
   return {
     async compileModule(absolutePath) {
@@ -164,14 +161,14 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         let preparedRecords = await mapWithConcurrency(
           frontier,
           preloadTraversalConcurrency,
-          (identityPath) => prepareDependencyRecord(identityPath),
+          (identityPath) => prepareAnalyzedModule(identityPath),
         )
-        let records = await finalizePreparedDependencyRecords(preparedRecords)
+        let records = await finalizePreparedAnalyzedModules(preparedRecords)
 
-        for (let record of records) {
-          urls.push(getServedUrlFromRecord(record))
+        for (let analyzedModule of records) {
+          urls.push(getServedUrlFromAnalyzedModule(analyzedModule))
 
-          for (let dep of record.deps) {
+          for (let dep of analyzedModule.deps) {
             if (visited.has(dep)) continue
             visited.add(dep)
             queue.push(dep)
@@ -189,159 +186,157 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function compileModuleResolved(
     resolved: ResolveModuleResult,
   ): Promise<ModuleCompileResult> {
-    let record = await getDependencyRecordByIdentity(resolved.identityPath, resolved.resolvedPath)
-    let cacheKey = await getCompiledAssetKey(record.identityPath)
+    let analyzedModule = await getAnalyzedModuleByIdentity(
+      resolved.identityPath,
+      resolved.resolvedPath,
+    )
+    let cacheKey = await getServedModuleKey(analyzedModule.identityPath)
+    let existing = servedModules.get(analyzedModule.identityPath)
+    if (buildIsImmutable) {
+      if (existing) {
+        return toModuleCompileResult(analyzedModule, existing)
+      }
 
-    let existing = compiledAssets.get(record.identityPath)
-    if (existing && buildIsImmutable) {
-      return toModuleCompileResult(record, existing)
+      let stored = await readServedModule(cacheKey)
+      if (stored) {
+        return toModuleCompileResult(
+          analyzedModule,
+          cacheServedModule(analyzedModule.identityPath, stored),
+        )
+      }
     }
 
-    let stored = await readCompiledAsset(cacheKey)
-    if (stored && buildIsImmutable) {
-      compiledAssets.set(record.identityPath, stored)
-      return toModuleCompileResult(record, stored)
-    }
-
-    let directImportUrls = await Promise.all(record.deps.map((depPath) => getServedUrl(depPath)))
+    let directImportUrls = await Promise.all(
+      analyzedModule.deps.map((depPath) => getServedUrl(depPath)),
+    )
     let directImportHash = await hashContent(JSON.stringify(directImportUrls))
-
-    if (
-      existing &&
-      existing.sourceStamp === record.sourceStamp &&
-      existing.directImportHash === directImportHash
-    ) {
-      return toModuleCompileResult(record, existing)
+    if (existing && canReuseServedModule(existing, analyzedModule, directImportHash)) {
+      return toModuleCompileResult(analyzedModule, existing)
     }
 
-    if (
-      stored &&
-      stored.sourceStamp === record.sourceStamp &&
-      stored.directImportHash === directImportHash
-    ) {
-      compiledAssets.set(record.identityPath, stored)
-      return toModuleCompileResult(record, stored)
+    let stored = await readServedModule(cacheKey)
+    if (stored && canReuseServedModule(stored, analyzedModule, directImportHash)) {
+      return toModuleCompileResult(
+        analyzedModule,
+        cacheServedModule(analyzedModule.identityPath, stored),
+      )
     }
 
-    let compiledCode = await rewriteImports(record)
-    let finalCode = compiledCode
-    if (record.sourcemap) {
+    let rewriteResult = await rewriteImports(analyzedModule)
+    let finalCode = rewriteResult.code
+    if (rewriteResult.sourcemap) {
       if (options.sourceMaps === 'inline') {
-        let encoded = Buffer.from(record.sourcemap).toString('base64')
+        let encoded = Buffer.from(rewriteResult.sourcemap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        let mapPath = options.isEntryPoint(record.identityPath)
-          ? `${record.stableUrlPathname}.map`
+        let mapPath = options.isEntryPoint(analyzedModule.identityPath)
+          ? `${analyzedModule.stableUrlPathname}.map`
           : options.fingerprintInternalModules
-            ? `${record.stableUrlPathname}.@${record.fingerprint}.map`
-            : `${record.stableUrlPathname}.map`
+            ? `${analyzedModule.stableUrlPathname}.@${analyzedModule.fingerprint}.map`
+            : `${analyzedModule.stableUrlPathname}.map`
         finalCode += `\n//# sourceMappingURL=${mapPath}`
       }
     }
 
-    let compiledHash = await hashContent(finalCode)
-    let sourcemapHash = record.sourcemap ? await hashContent(record.sourcemap) : null
-
-    let asset: CachedAssetRecord = {
+    let servedModule: ServedModule = {
       compiledCode: finalCode,
-      compiledHash,
+      compiledHash: await hashContent(finalCode),
       directImportHash,
-      sourceStamp: record.sourceStamp,
-      sourcemap: record.sourcemap,
-      sourcemapHash,
+      sourceStamp: analyzedModule.sourceStamp,
+      sourcemap: rewriteResult.sourcemap,
+      sourcemapHash: rewriteResult.sourcemap ? await hashContent(rewriteResult.sourcemap) : null,
     }
 
-    compiledAssets.set(record.identityPath, asset)
-    await writeCompiledAsset(cacheKey, asset)
-
-    return toModuleCompileResult(record, asset)
+    cacheServedModule(analyzedModule.identityPath, servedModule)
+    await writeServedModule(cacheKey, servedModule)
+    return toModuleCompileResult(analyzedModule, servedModule)
   }
 
-  async function rewriteImports(record: DependencyRecord): Promise<string> {
-    let output = new MagicString(record.rawCode)
+  async function rewriteImports(
+    analyzedModule: AnalyzedModule,
+  ): Promise<{ code: string; sourcemap: string | null }> {
+    let output = new MagicString(analyzedModule.rawCode)
 
-    for (let imported of record.imports) {
+    for (let imported of analyzedModule.imports) {
       let url = await getServedUrl(imported.depPath)
-      output.overwrite(imported.start, imported.end, url)
+      output.overwrite(
+        imported.start,
+        imported.end,
+        imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
+      )
     }
 
-    return output.toString()
+    let code = output.toString()
+    let sourcemap =
+      analyzedModule.sourcemap && analyzedModule.imports.length > 0
+        ? composeSourceMaps(
+            output.generateMap({ hires: true }).toString(),
+            analyzedModule.sourcemap,
+          )
+        : analyzedModule.sourcemap
+
+    return { code, sourcemap }
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {
-    let record = await getDependencyRecordByIdentity(identityPath)
-    return getServedUrlFromRecord(record)
+    let analyzedModule = await getAnalyzedModuleByIdentity(identityPath)
+    return getServedUrlFromAnalyzedModule(analyzedModule)
   }
 
-  function getServedUrlFromRecord(record: DependencyRecord): string {
-    if (options.isEntryPoint(record.identityPath) || !options.fingerprintInternalModules) {
-      return record.stableUrlPathname
+  function getServedUrlFromAnalyzedModule(analyzedModule: AnalyzedModule): string {
+    if (options.isEntryPoint(analyzedModule.identityPath) || !options.fingerprintInternalModules) {
+      return analyzedModule.stableUrlPathname
     }
-    return `${record.stableUrlPathname}.@${record.fingerprint}`
+    return `${analyzedModule.stableUrlPathname}.@${analyzedModule.fingerprint}`
   }
 
-  async function getDependencyRecordFromPath(absolutePath: string): Promise<DependencyRecord> {
+  async function getAnalyzedModuleFromPath(absolutePath: string): Promise<AnalyzedModule> {
     let resolved = resolveModulePath(absolutePath)
     if (!resolved) {
       throw Object.assign(new Error(`Module not found: ${absolutePath}`), { code: 'ENOENT' })
     }
-    return getDependencyRecordByIdentity(resolved.identityPath, resolved.resolvedPath)
+    return getAnalyzedModuleByIdentity(resolved.identityPath, resolved.resolvedPath)
   }
 
-  async function getDependencyRecordByIdentity(
+  async function getAnalyzedModuleByIdentity(
     identityPath: string,
     resolvedPath?: string,
-  ): Promise<DependencyRecord> {
-    let existing = dependencyInFlight.get(identityPath)
+  ): Promise<AnalyzedModule> {
+    let existing = analyzedModulesInFlight.get(identityPath)
     if (existing) return existing
 
-    let promise = loadDependencyRecord(identityPath, resolvedPath)
-    dependencyInFlight.set(identityPath, promise)
+    let promise = loadAnalyzedModule(identityPath, resolvedPath)
+    analyzedModulesInFlight.set(identityPath, promise)
 
     try {
       return await promise
     } finally {
-      dependencyInFlight.delete(identityPath)
+      analyzedModulesInFlight.delete(identityPath)
     }
   }
 
-  async function loadDependencyRecord(
+  async function loadAnalyzedModule(
     identityPath: string,
     resolvedPath?: string,
-  ): Promise<DependencyRecord> {
-    let prepared = await prepareDependencyRecord(identityPath, resolvedPath)
-    return finalizePreparedDependencyRecord(prepared)
+  ): Promise<AnalyzedModule> {
+    let prepared = await prepareAnalyzedModule(identityPath, resolvedPath)
+    return finalizePreparedAnalyzedModule(prepared)
   }
 
-  async function prepareDependencyRecord(
+  async function prepareAnalyzedModule(
     identityPath: string,
     resolvedPath?: string,
-  ): Promise<DependencyRecord | PendingDependencyRecord> {
-    let cached = dependencyRecords.get(identityPath)
-    if (cached && buildIsImmutable) {
-      return cached
-    }
-
-    let cacheKey = await getDependencyRecordKey(identityPath)
+  ): Promise<AnalyzedModule | PendingAnalyzedModule> {
+    let cached = analyzedModules.get(identityPath)
+    let cacheKey = await getAnalyzedModuleKey(identityPath)
     if (buildIsImmutable) {
-      let stored = await readDependencyRecord(cacheKey)
+      if (cached) {
+        return cached
+      }
+
+      let stored = await readAnalyzedModule(cacheKey)
       if (stored) {
-        let record: DependencyRecord = {
-          deps: stored.deps,
-          fingerprint: stored.fingerprint,
-          identityPath,
-          imports: stored.imports,
-          rawCode: stored.rawCode,
-          resolvedPath: stored.resolvedPath,
-          sourceMapHash: stored.sourceMapHash,
-          sourceStamp: stored.sourceStamp,
-          sourcemap: stored.sourcemap,
-          stableUrlPathname: stored.stableUrlPathname,
-          transformConfigHash: stored.transformConfigHash,
-        }
-        resolvedPathsByIdentity.set(identityPath, stored.resolvedPath)
-        dependencyRecords.set(identityPath, record)
-        return record
+        return cacheAnalyzedModule(toAnalyzedModule(identityPath, stored))
       }
     }
 
@@ -351,45 +346,20 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       throw Object.assign(new Error(`Module not found: ${identityPath}`), { code: 'ENOENT' })
     }
 
-    let stat = await fsp.stat(nextResolvedPath)
-    let sourceStamp = sourceStampFromStat(stat)
-    let transformOptions = getTsconfigTransformOptions(nextResolvedPath)
-    let transformConfigHash = await hashContent(transformOptions.cacheKey)
-
-    if (
-      cached &&
-      cached.sourceStamp === sourceStamp &&
-      cached.resolvedPath === nextResolvedPath &&
-      cached.transformConfigHash === transformConfigHash
-    ) {
+    let sourceStamp = sourceStampFromStat(await fsp.stat(nextResolvedPath))
+    if (cached && canReuseAnalyzedModule(cached, sourceStamp, nextResolvedPath)) {
       return cached
     }
 
-    let stored = await readDependencyRecord(cacheKey)
-    if (
-      stored &&
-      stored.sourceStamp === sourceStamp &&
-      stored.resolvedPath === nextResolvedPath &&
-      stored.transformConfigHash === transformConfigHash
-    ) {
-      let record: DependencyRecord = {
-        deps: stored.deps,
-        fingerprint: stored.fingerprint,
-        identityPath,
-        imports: stored.imports,
-        rawCode: stored.rawCode,
-        resolvedPath: stored.resolvedPath,
-        sourceMapHash: stored.sourceMapHash,
-        sourceStamp: stored.sourceStamp,
-        sourcemap: stored.sourcemap,
-        stableUrlPathname: stored.stableUrlPathname,
-        transformConfigHash: stored.transformConfigHash,
+    let stored = await readAnalyzedModule(cacheKey)
+    if (stored) {
+      let analyzedModule = toAnalyzedModule(identityPath, stored)
+      if (canReuseAnalyzedModule(analyzedModule, sourceStamp, nextResolvedPath)) {
+        return cacheAnalyzedModule(analyzedModule)
       }
-      resolvedPathsByIdentity.set(identityPath, nextResolvedPath)
-      dependencyRecords.set(identityPath, record)
-      return record
     }
 
+    let transformOptions = getTsconfigTransformOptions(nextResolvedPath)
     let sourceText = await fsp.readFile(nextResolvedPath, 'utf-8')
     let mayContainCommonJS = mayContainCommonJSModuleGlobals(sourceText)
     let analysis = await analyzeModuleSource(sourceText, nextResolvedPath, transformOptions, {
@@ -401,7 +371,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     )
 
     if (mayContainCommonJS && isCommonJS(analysis.rawCode)) {
-      throw new Error(getCommonJsModuleErrorMessage(nextResolvedPath))
+      throw new Error(
+        `CommonJS module detected: ${nextResolvedPath}\n\n` +
+          `This module uses CommonJS (require/module.exports) which is not supported.\n` +
+          `Please use an ESM-compatible module.`,
+      )
     }
 
     let stableUrlPathname = options.routes.toUrlPathname(identityPath)
@@ -411,27 +385,24 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let sourcemap = analysis.sourcemap
       ? rewriteSourceMap(analysis.sourcemap, nextResolvedPath, stableUrlPathname)
       : null
-    let fingerprint = await hashContent(sourceText + '\0' + (options.buildId ?? ''))
 
     return {
-      fingerprint,
+      fingerprint: await hashContent(sourceText + '\0' + (options.buildId ?? '')),
       identityPath,
       importerDir: path.dirname(nextResolvedPath),
       rawCode: analysis.rawCode,
       resolvedPath: nextResolvedPath,
-      sourceMapHash: sourcemap ? await hashContent(sourcemap) : analysis.sourceMapHash,
       sourceStamp,
       sourcemap,
       stableUrlPathname,
-      transformConfigHash,
       unresolvedImports: analysis.unresolvedImports,
     }
   }
 
-  async function finalizePreparedDependencyRecord(
-    prepared: DependencyRecord | PendingDependencyRecord,
-  ): Promise<DependencyRecord> {
-    if (isDependencyRecord(prepared)) return prepared
+  async function finalizePreparedAnalyzedModule(
+    prepared: AnalyzedModule | PendingAnalyzedModule,
+  ): Promise<AnalyzedModule> {
+    if (isAnalyzedModule(prepared)) return prepared
 
     let resolvedImports =
       prepared.unresolvedImports.length > 0
@@ -440,16 +411,16 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
             prepared.importerDir,
           )
         : new Map<string, string>()
-    return finalizeDependencyRecord(prepared, resolvedImports)
+    return finalizeAnalyzedModule(prepared, resolvedImports)
   }
 
-  async function finalizePreparedDependencyRecords(
-    preparedRecords: Array<DependencyRecord | PendingDependencyRecord>,
-  ): Promise<DependencyRecord[]> {
+  async function finalizePreparedAnalyzedModules(
+    preparedAnalyses: Array<AnalyzedModule | PendingAnalyzedModule>,
+  ): Promise<AnalyzedModule[]> {
     let groupedSpecifiers = new Map<string, Set<string>>()
 
-    for (let prepared of preparedRecords) {
-      if (isDependencyRecord(prepared) || prepared.unresolvedImports.length === 0) continue
+    for (let prepared of preparedAnalyses) {
+      if (isAnalyzedModule(prepared) || prepared.unresolvedImports.length === 0) continue
 
       let existing = groupedSpecifiers.get(prepared.importerDir) ?? new Set<string>()
       for (let specifier of getUniqueSpecifiers(prepared.unresolvedImports)) {
@@ -471,9 +442,9 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     )
 
     return Promise.all(
-      preparedRecords.map((prepared) => {
-        if (isDependencyRecord(prepared)) return prepared
-        return finalizeDependencyRecord(
+      preparedAnalyses.map((prepared) => {
+        if (isAnalyzedModule(prepared)) return prepared
+        return finalizeAnalyzedModule(
           prepared,
           resolvedByDirectory.get(prepared.importerDir) ?? new Map<string, string>(),
         )
@@ -481,10 +452,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     )
   }
 
-  async function finalizeDependencyRecord(
-    prepared: PendingDependencyRecord,
+  async function finalizeAnalyzedModule(
+    prepared: PendingAnalyzedModule,
     resolvedImports: Map<string, string>,
-  ): Promise<DependencyRecord> {
+  ): Promise<AnalyzedModule> {
     let importsWithPaths: ResolvedImport[] = []
     let deps = new Set<string>()
 
@@ -492,26 +463,30 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       let resolvedImportPath = resolvedImports.get(unresolved.specifier)
       if (!resolvedImportPath) {
         throw new Error(
-          getUnresolvedImportErrorMessage(prepared.resolvedPath, unresolved.specifier),
+          `Failed to resolve import "${unresolved.specifier}" in ${prepared.resolvedPath}.\n\n` +
+            `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
         )
       }
 
       let resolvedImport = resolveModulePath(resolvedImportPath)
       if (!resolvedImport) {
         throw new Error(
-          getUnsupportedImportErrorMessage(prepared.resolvedPath, unresolved.specifier),
+          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} is not a supported script module.\n\n` +
+            `Supported extensions are .js, .jsx, .mjs, .mts, .ts, and .tsx.`,
         )
       }
       if (!options.isAllowed(resolvedImport.identityPath)) {
         throw new Error(
-          getUnconfiguredImportErrorMessage(prepared.resolvedPath, unresolved.specifier),
+          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+            `Add a matching route and allow rule, or mark this import as external.`,
         )
       }
 
       let stableUrlPathname = options.routes.toUrlPathname(resolvedImport.identityPath)
       if (!stableUrlPathname) {
         throw new Error(
-          getUnconfiguredImportErrorMessage(prepared.resolvedPath, unresolved.specifier),
+          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+            `Add a matching route and allow rule, or mark this import as external.`,
         )
       }
 
@@ -519,33 +494,77 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       importsWithPaths.push({
         depPath: resolvedImport.identityPath,
         end: unresolved.end,
+        quote: unresolved.quote,
         start: unresolved.start,
       })
     }
 
-    let record: DependencyRecord = {
+    let analyzedModule: AnalyzedModule = {
       deps: [...deps],
       fingerprint: prepared.fingerprint,
       identityPath: prepared.identityPath,
       imports: importsWithPaths,
       rawCode: prepared.rawCode,
       resolvedPath: prepared.resolvedPath,
-      sourceMapHash: prepared.sourceMapHash,
       sourceStamp: prepared.sourceStamp,
       sourcemap: prepared.sourcemap,
       stableUrlPathname: prepared.stableUrlPathname,
-      transformConfigHash: prepared.transformConfigHash,
     }
 
-    resolvedPathsByIdentity.set(prepared.identityPath, prepared.resolvedPath)
-    dependencyRecords.set(prepared.identityPath, record)
-    await writeDependencyRecordForRecord(record)
-    return record
+    cacheAnalyzedModule(analyzedModule)
+    await writeAnalyzedModule(analyzedModule)
+    return analyzedModule
   }
 
-  function isDependencyRecord(
-    value: DependencyRecord | PendingDependencyRecord,
-  ): value is DependencyRecord {
+  function canReuseServedModule(
+    servedModule: ServedModule,
+    analyzedModule: AnalyzedModule,
+    directImportHash: string,
+  ): boolean {
+    return (
+      servedModule.sourceStamp === analyzedModule.sourceStamp &&
+      servedModule.directImportHash === directImportHash
+    )
+  }
+
+  function cacheServedModule(identityPath: string, servedModule: ServedModule): ServedModule {
+    servedModules.set(identityPath, servedModule)
+    return servedModule
+  }
+
+  function toAnalyzedModule(identityPath: string, stored: CachedAnalyzedModule): AnalyzedModule {
+    return {
+      deps: stored.deps,
+      fingerprint: stored.fingerprint,
+      identityPath,
+      imports: stored.imports,
+      rawCode: stored.rawCode,
+      resolvedPath: stored.resolvedPath,
+      sourceStamp: stored.sourceStamp,
+      sourcemap: stored.sourcemap,
+      stableUrlPathname: stored.stableUrlPathname,
+    }
+  }
+
+  function cacheAnalyzedModule(analyzedModule: AnalyzedModule): AnalyzedModule {
+    resolvedPathsByIdentity.set(analyzedModule.identityPath, analyzedModule.resolvedPath)
+    analyzedModules.set(analyzedModule.identityPath, analyzedModule)
+    return analyzedModule
+  }
+
+  function canReuseAnalyzedModule(
+    analyzedModule: AnalyzedModule,
+    sourceStamp: string,
+    resolvedPath: string,
+  ): boolean {
+    return (
+      analyzedModule.sourceStamp === sourceStamp && analyzedModule.resolvedPath === resolvedPath
+    )
+  }
+
+  function isAnalyzedModule(
+    value: AnalyzedModule | PendingAnalyzedModule,
+  ): value is AnalyzedModule {
     return 'deps' in value
   }
 
@@ -554,61 +573,55 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     resolvedPath: string,
     stableUrlPathname: string,
   ): string {
-    try {
-      let json = JSON.parse(sourcemap)
-      json.sources = [
-        options.sourceMapSourcePaths === 'absolute'
-          ? stripWindowsDriveSlash(resolvedPath)
-          : stableUrlPathname,
-      ]
-      return JSON.stringify(json)
-    } catch {
-      return sourcemap
-    }
+    let json = JSON.parse(sourcemap) as { sources?: string[] }
+    json.sources = [
+      options.sourceMapSourcePaths === 'absolute'
+        ? stripWindowsDriveSlash(resolvedPath)
+        : stableUrlPathname,
+    ]
+    return JSON.stringify(json)
   }
 
-  async function getCompiledAssetKey(identityPath: string): Promise<string> {
-    return `compiled/${cacheNamespace}/${await hashContent(identityPath)}.json`
+  async function getServedModuleKey(identityPath: string): Promise<string> {
+    return `served-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
-  async function getDependencyRecordKey(identityPath: string): Promise<string> {
-    return `dependency-records/${cacheNamespace}/${await hashContent(identityPath)}.json`
+  async function getAnalyzedModuleKey(identityPath: string): Promise<string> {
+    return `analyzed-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
-  async function readCompiledAsset(key: string): Promise<CachedAssetRecord | null> {
+  async function readServedModule(key: string): Promise<ServedModule | null> {
     let file = await fileStorage.get(key)
     if (!file) return null
-    return JSON.parse(await file.text()) as CachedAssetRecord
+    return JSON.parse(await file.text()) as ServedModule
   }
 
-  async function readDependencyRecord(key: string): Promise<CachedDependencyRecord | null> {
+  async function readAnalyzedModule(key: string): Promise<CachedAnalyzedModule | null> {
     let file = await fileStorage.get(key)
     if (!file) return null
-    return JSON.parse(await file.text()) as CachedDependencyRecord
+    return JSON.parse(await file.text()) as CachedAnalyzedModule
   }
 
-  async function writeCompiledAsset(key: string, record: CachedAssetRecord): Promise<void> {
+  async function writeServedModule(key: string, servedModule: ServedModule): Promise<void> {
     await fileStorage.set(
       key,
-      new File([JSON.stringify(record)], 'compiled-asset.json', {
+      new File([JSON.stringify(servedModule)], 'compiled-asset.json', {
         type: 'application/json',
       }),
     )
   }
 
-  async function writeDependencyRecordForRecord(record: DependencyRecord): Promise<void> {
-    let key = await getDependencyRecordKey(record.identityPath)
-    let cachedRecord: CachedDependencyRecord = {
-      deps: record.deps,
-      fingerprint: record.fingerprint,
-      imports: record.imports,
-      rawCode: record.rawCode,
-      resolvedPath: record.resolvedPath,
-      sourceMapHash: record.sourceMapHash,
-      sourceStamp: record.sourceStamp,
-      sourcemap: record.sourcemap,
-      stableUrlPathname: record.stableUrlPathname,
-      transformConfigHash: record.transformConfigHash,
+  async function writeAnalyzedModule(analyzedModule: AnalyzedModule): Promise<void> {
+    let key = await getAnalyzedModuleKey(analyzedModule.identityPath)
+    let cachedRecord: CachedAnalyzedModule = {
+      deps: analyzedModule.deps,
+      fingerprint: analyzedModule.fingerprint,
+      imports: analyzedModule.imports,
+      rawCode: analyzedModule.rawCode,
+      resolvedPath: analyzedModule.resolvedPath,
+      sourceStamp: analyzedModule.sourceStamp,
+      sourcemap: analyzedModule.sourcemap,
+      stableUrlPathname: analyzedModule.stableUrlPathname,
     }
 
     await fileStorage.set(
@@ -620,17 +633,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   function toModuleCompileResult(
-    record: DependencyRecord,
-    asset: CachedAssetRecord,
+    analyzedModule: AnalyzedModule,
+    servedModule: ServedModule,
   ): ModuleCompileResult {
     return {
-      compiledCode: asset.compiledCode,
-      compiledHash: asset.compiledHash,
-      deps: record.deps,
-      fingerprint: record.fingerprint,
-      sourcemap: asset.sourcemap,
-      sourcemapHash: asset.sourcemapHash,
-      stableUrlPathname: record.stableUrlPathname,
+      compiledCode: servedModule.compiledCode,
+      compiledHash: servedModule.compiledHash,
+      fingerprint: analyzedModule.fingerprint,
+      sourcemap: servedModule.sourcemap,
+      sourcemapHash: servedModule.sourcemapHash,
     }
   }
 
@@ -648,7 +659,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 }
 
-export function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
+function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   let resolvedPath: string
 
   try {
@@ -663,7 +674,7 @@ export function resolveModulePath(absolutePath: string): ResolveModuleResult | n
   }
 
   return {
-    identityPath: normalizeActualFilePath(resolvedPath),
+    identityPath: normalizeFilePath(resolvedPath),
     resolvedPath,
   }
 }
@@ -676,22 +687,6 @@ function resolveActualPath(identityPath: string): string | null {
     if (isNoEntityError(error)) return null
     throw error
   }
-}
-
-function normalizeActualFilePath(filePath: string): string {
-  let normalizedInput = filePath.replace(/\\/g, '/')
-  if (/^\/[A-Za-z]:\//.test(normalizedInput)) {
-    return normalizedInput
-  }
-  if (/^[A-Za-z]:\//.test(normalizedInput)) {
-    return `/${normalizedInput}`
-  }
-
-  let normalized = path.resolve(filePath).replace(/\\/g, '/')
-  if (/^[A-Za-z]:\//.test(normalized)) {
-    return `/${normalized}`
-  }
-  return normalized
 }
 
 function isSupportedScriptPath(filePath: string): boolean {
@@ -712,6 +707,51 @@ function stripWindowsDriveSlash(filePath: string): string {
   return /^\/[A-Za-z]:\//.test(filePath) ? filePath.slice(1) : filePath
 }
 
+function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
+  let rewriteConsumer = new SourceMapConsumer(JSON.parse(rewriteSourceMap))
+  let transformConsumer = new SourceMapConsumer(JSON.parse(transformSourceMap))
+  let generator = new SourceMapGenerator()
+
+  rewriteConsumer.eachMapping((mapping) => {
+    if (
+      mapping.originalLine == null ||
+      mapping.originalColumn == null ||
+      mapping.generatedLine == null ||
+      mapping.generatedColumn == null
+    ) {
+      return
+    }
+
+    let original = transformConsumer.originalPositionFor({
+      line: mapping.originalLine,
+      column: mapping.originalColumn,
+    })
+    if (original.line == null || original.column == null || original.source == null) return
+
+    generator.addMapping({
+      generated: {
+        line: mapping.generatedLine,
+        column: mapping.generatedColumn,
+      },
+      original: {
+        line: original.line,
+        column: original.column,
+      },
+      source: original.source,
+      name: original.name ?? mapping.name ?? undefined,
+    })
+  })
+
+  for (let source of transformConsumer.sources) {
+    let sourceContent = transformConsumer.sourceContentFor(source, true)
+    if (sourceContent !== null) {
+      generator.setSourceContent(source, sourceContent)
+    }
+  }
+
+  return JSON.stringify(generator.toJSON())
+}
+
 function resolveFileSystemPath(filePath: string): string {
   let normalizedInput = stripWindowsDriveSlash(filePath).replace(/\\/g, '/')
   if (/^[A-Za-z]:\//.test(normalizedInput)) {
@@ -724,17 +764,52 @@ function sourceStampFromStat(stat: { mtimeMs: number; size: number }): string {
   return `${stat.size}:${stat.mtimeMs}`
 }
 
-interface ModuleAnalysisResult {
+type ModuleAnalysisResult = {
   rawCode: string
-  sourceMapHash: string
   sourcemap: string | null
   unresolvedImports: UnresolvedImport[]
+}
+
+type TsconfigTransformOptions = {
+  tsconfigRaw?: TsConfigJsonResolved
+}
+
+async function hashContent(content: string): Promise<string> {
+  let encoder = new TextEncoder()
+  let data = encoder.encode(content)
+  let hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Buffer.from(hashBuffer).toString('base64url').slice(0, 6)
+}
+
+function createTsconfigTransformOptionsResolver() {
+  let fileSystemCache: Cache = new Map()
+  let transformOptionsByDirectory = new Map<string, TsconfigTransformOptions>()
+
+  return function getTsconfigTransformOptions(filePath: string): TsconfigTransformOptions {
+    let directory = path.dirname(filePath)
+    let cached = transformOptionsByDirectory.get(directory)
+    if (cached) return cached
+
+    let tsconfig = getTsconfig(directory, 'tsconfig.json', fileSystemCache)
+    if (!tsconfig) {
+      let result = {}
+      transformOptionsByDirectory.set(directory, result)
+      return result
+    }
+
+    let result: TsconfigTransformOptions = {
+      tsconfigRaw: tsconfig.config,
+    }
+
+    transformOptionsByDirectory.set(directory, result)
+    return result
+  }
 }
 
 async function analyzeModuleSource(
   sourceText: string,
   resolvedPath: string,
-  transformOptions: ReturnType<typeof getTsconfigTransformOptions>,
+  transformOptions: TsconfigTransformOptions,
   options: { minify: boolean; sourceMaps?: 'external' | 'inline' },
 ): Promise<ModuleAnalysisResult> {
   let transformResult = await esbuild.transform(sourceText, {
@@ -750,11 +825,10 @@ async function analyzeModuleSource(
   let rawCode = transformResult.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
   let sourcemap = transformResult.map ?? null
   await lexerReady
-  let unresolvedImports = getUnresolvedImportsFromCode(rawCode)
+  let unresolvedImports = getUnresolvedImportsFromCode(rawCode, resolvedPath)
 
   return {
     rawCode,
-    sourceMapHash: sourcemap ? await hashContent(sourcemap) : '',
     sourcemap,
     unresolvedImports,
   }
@@ -787,14 +861,14 @@ async function batchResolveSpecifiers(
   let resolved = await resolveWithEsbuild(specifiers, importerDir)
   for (let match of resolved) {
     if (match.absolutePath) {
-      results.set(match.specifier, normalizeActualFilePath(match.absolutePath))
+      results.set(match.specifier, normalizeFilePath(match.absolutePath))
     }
   }
 
   return results
 }
 
-interface ResolvedSpec {
+type ResolvedSpec = {
   absolutePath: string | null
   specifier: string
 }
@@ -815,13 +889,15 @@ function getUniqueSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
   return [...new Set(unresolvedImports.map((unresolved) => unresolved.specifier))]
 }
 
-function getUnresolvedImportsFromCode(rawCode: string): UnresolvedImport[] {
+type ParsedImportRecord = ReturnType<typeof parseImports>[0][number]
+
+function getUnresolvedImportsFromCode(rawCode: string, resolvedPath: string): UnresolvedImport[] {
   let [imports] = parseImports(rawCode)
   let unresolvedImports: UnresolvedImport[] = []
 
   for (let imported of imports) {
-    if (imported.n == null) continue
-    let specifier = imported.n
+    let specifier = getStaticImportSpecifier(rawCode, imported)
+    if (specifier == null) continue
     if (
       specifier.startsWith('data:') ||
       specifier.startsWith('http://') ||
@@ -829,10 +905,44 @@ function getUnresolvedImportsFromCode(rawCode: string): UnresolvedImport[] {
     ) {
       continue
     }
-    unresolvedImports.push({ specifier, start: imported.s, end: imported.e })
+    unresolvedImports.push({
+      specifier,
+      start: imported.s,
+      end: imported.e,
+      quote: getImportQuote(rawCode, imported.s),
+    })
   }
 
   return unresolvedImports
+}
+
+function getStaticImportSpecifier(source: string, imported: ParsedImportRecord): string | null {
+  if (imported.n != null) {
+    return imported.n
+  }
+
+  if (imported.d < 0) {
+    return null
+  }
+
+  let rawSpecifier = source.slice(imported.s, imported.e)
+  if (!isStaticTemplateLiteral(rawSpecifier)) {
+    return null
+  }
+
+  return rawSpecifier.slice(1, -1)
+}
+
+function isStaticTemplateLiteral(specifier: string): boolean {
+  return specifier.startsWith('`') && specifier.endsWith('`') && !specifier.includes('${')
+}
+
+function getImportQuote(source: string, start: number): '"' | "'" | '`' | undefined {
+  let firstCharacter = source[start]
+  if (firstCharacter === '"' || firstCharacter === "'" || firstCharacter === '`') {
+    return firstCharacter
+  }
+  return undefined
 }
 
 async function mapWithConcurrency<item, result>(
@@ -886,7 +996,10 @@ async function resolveWithEsbuild(
             for (let index = 0; index < specifiers.length; index++) {
               let result = results[index]
               if (result?.errors.length) {
-                throw new Error(getUnresolvedImportErrorMessage(importerDir, specifiers[index]))
+                throw new Error(
+                  `Failed to resolve import "${specifiers[index]}" in ${importerDir}.\n\n` +
+                    `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+                )
               }
 
               let absolutePath =
@@ -908,35 +1021,6 @@ async function resolveWithEsbuild(
   })
 
   return resolved
-}
-
-function getCommonJsModuleErrorMessage(absolutePath: string): string {
-  return (
-    `CommonJS module detected: ${absolutePath}\n\n` +
-    `This module uses CommonJS (require/module.exports) which is not supported.\n` +
-    `Please use an ESM-compatible module.`
-  )
-}
-
-function getUnconfiguredImportErrorMessage(importerPath: string, specifier: string): string {
-  return (
-    `Resolved import "${specifier}" in ${importerPath} points outside the script-server routing/allow configuration.\n\n` +
-    `Add a matching route and allow rule, or mark this import as external.`
-  )
-}
-
-function getUnresolvedImportErrorMessage(importerPath: string, specifier: string): string {
-  return (
-    `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
-    `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`
-  )
-}
-
-function getUnsupportedImportErrorMessage(importerPath: string, specifier: string): string {
-  return (
-    `Resolved import "${specifier}" in ${importerPath} is not a supported script module.\n\n` +
-    `Supported extensions are .js, .jsx, .mjs, .mts, .ts, and .tsx.`
-  )
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
@@ -963,15 +1047,15 @@ export function createResponseForModule(
       return new Response('Not found', { status: 404 })
     }
     body = options.method === 'HEAD' ? null : result.sourcemap
-    etag = generateETag(result.sourcemapHash ?? result.compiledHash)
+    etag = `W/"${result.sourcemapHash ?? result.compiledHash}"`
     contentType = 'application/json; charset=utf-8'
   } else {
     body = options.method === 'HEAD' ? null : result.compiledCode
-    etag = generateETag(result.compiledHash)
+    etag = `W/"${result.compiledHash}"`
     contentType = 'application/javascript; charset=utf-8'
   }
 
-  if (matchesETag(options.ifNoneMatch, etag)) {
+  if (IfNoneMatch.from(options.ifNoneMatch).matches(etag)) {
     return new Response(null, { status: 304, headers: { ETag: etag } })
   }
 

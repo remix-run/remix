@@ -90,7 +90,7 @@ let benchmarks: Benchmark[] = [
   },
   {
     id: 'deep-graph-module-burst',
-    name: 'deep-graph fixture / internal module burst',
+    name: 'deep-graph fixture / warm internal module burst',
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let scriptServer = createBenchScriptServer(fixture)

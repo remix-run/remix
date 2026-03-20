@@ -97,7 +97,7 @@ export interface ScriptServerOptions {
    */
   minify?: boolean
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
-  external?: string | string[]
+  external?: string[]
   /**
    * Handles unexpected compilation errors. Return a `Response` to override the default
    * `500 Internal Server Error` response, or return nothing to use the default.
@@ -140,13 +140,8 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let root = fs.realpathSync(path.resolve(options.root ?? process.cwd()))
   let sourceMaps = options.sourceMaps
   let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
-  let externalRaw = options.external
   let cacheStrategy = normalizeCacheStrategyOptions(options.cacheStrategy)
-  let external: string[] = Array.isArray(externalRaw)
-    ? externalRaw
-    : externalRaw
-      ? [externalRaw]
-      : []
+  let external = options.external ?? []
   let fingerprintInternalModules = cacheStrategy.fingerprint === 'source'
   let buildId = cacheStrategy.buildId
   let internalModuleCacheControl = fingerprintInternalModules
@@ -220,7 +215,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       let pathname = new URL(request.url).pathname
       let isSourceMapRequest = pathname.endsWith('.map')
       let withoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
-      let tokenMatch = withoutMap.match(/\.@([a-z0-9]+)$/)
+      let tokenMatch = withoutMap.match(/\.@([A-Za-z0-9_-]+)$/)
       let requestedToken = tokenMatch ? tokenMatch[1] : null
       let normalizedPath = tokenMatch ? withoutMap.slice(0, -tokenMatch[0].length) : withoutMap
       let resolvedPath = routes.resolveUrlPathname(normalizedPath)
@@ -260,7 +255,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     },
 
     async preloads(moduleUrl) {
-      if (/\.@[a-z0-9]+(?:\.map)?$/.test(moduleUrl)) {
+      if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(moduleUrl)) {
         throw new Error(
           `Preload URLs must use stable non-fingerprinted module paths, received "${moduleUrl}"`,
         )

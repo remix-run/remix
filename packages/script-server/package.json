@@ -38,8 +38,9 @@
     "@swc/core": "^1.15.18",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.25.0",
+    "get-tsconfig": "^4.13.6",
     "magic-string": "^0.30.21",
-    "typescript": "^5.9.3"
+    "source-map-js": "^1.2.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",

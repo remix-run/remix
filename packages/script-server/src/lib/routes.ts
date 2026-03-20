@@ -17,7 +17,7 @@ export interface CompiledRoutes {
   toUrlPathname(filePath: string): string | null
 }
 
-export function normalizePathname(pathname: string): string {
+function normalizePathname(pathname: string): string {
   let normalized = pathname.replace(/\\/g, '/')
   if (!normalized.startsWith('/')) {
     normalized = `/${normalized}`
@@ -41,7 +41,7 @@ export function normalizeFilePath(filePath: string): string {
   return normalized
 }
 
-export function normalizeFilePattern(pattern: string): string {
+function normalizeFilePattern(pattern: string): string {
   if (path.isAbsolute(pattern) || /^[A-Za-z]:[\\/]/.test(pattern)) {
     throw new Error(
       `File route patterns must be relative to script-server root.\nPattern: ${pattern}`,
