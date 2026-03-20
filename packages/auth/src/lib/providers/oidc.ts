@@ -1,10 +1,6 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type {
-  OAuthProvider,
-  OAuthResult,
-  OAuthTokens,
-} from '../provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthTokens } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
@@ -140,7 +136,7 @@ export function createOIDCAuthProvider<
     }
 
     if (metadataPromise == null) {
-      metadataPromise = discoverOIDCMetadata(options, name).catch(error => {
+      metadataPromise = discoverOIDCMetadata(options, name).catch((error) => {
         metadataPromise = undefined
         throw error
       })
@@ -267,7 +263,10 @@ function toURLString(value: string | URL): string {
   return typeof value === 'string' ? value : value.toString()
 }
 
-function validateOIDCMetadata(metadata: OIDCAuthProviderMetadata, name: string): OIDCAuthProviderMetadata {
+function validateOIDCMetadata(
+  metadata: OIDCAuthProviderMetadata,
+  name: string,
+): OIDCAuthProviderMetadata {
   if (typeof metadata.issuer !== 'string' || metadata.issuer.length === 0) {
     throw new Error(`OIDC metadata for "${name}" did not include an issuer.`)
   }

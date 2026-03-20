@@ -10,8 +10,7 @@ describe('credentials provider', () => {
     let parse = (context: RequestContext) => ({
       email: String(context.url.searchParams.get('email') ?? ''),
     })
-    let verify = (input: { email: string }) =>
-      input.email.length > 0 ? { id: 'u1' } : null
+    let verify = (input: { email: string }) => (input.email.length > 0 ? { id: 'u1' } : null)
 
     let provider = createCredentialsAuthProvider({
       parse,

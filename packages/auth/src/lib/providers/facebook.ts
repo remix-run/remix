@@ -58,7 +58,9 @@ export interface FacebookAuthProfile {
  * @param options Facebook OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
-export function createFacebookAuthProvider(options: FacebookAuthProviderOptions): OAuthProvider<FacebookAuthProfile, 'facebook'> {
+export function createFacebookAuthProvider(
+  options: FacebookAuthProviderOptions,
+): OAuthProvider<FacebookAuthProfile, 'facebook'> {
   let scopes = options.scopes ?? DEFAULT_FACEBOOK_SCOPES
 
   return createOAuthProvider('facebook', {
@@ -75,7 +77,10 @@ export function createFacebookAuthProvider(options: FacebookAuthProviderOptions)
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(context, transaction): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
+    async handleCallback(
+      context,
+      transaction,
+    ): Promise<OAuthResult<FacebookAuthProfile, 'facebook'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: FACEBOOK_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -105,10 +110,7 @@ export function createFacebookAuthProvider(options: FacebookAuthProviderOptions)
   })
 }
 
-function createAccount(
-  provider: 'facebook',
-  providerAccountId: string,
-): OAuthAccount<'facebook'> {
+function createAccount(provider: 'facebook', providerAccountId: string): OAuthAccount<'facebook'> {
   return { provider, providerAccountId }
 }
 

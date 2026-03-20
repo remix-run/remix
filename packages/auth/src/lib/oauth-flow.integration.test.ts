@@ -30,9 +30,7 @@ describe('OAuth flow integration', () => {
   it('completes the full browser OIDC flow against a local fake provider', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let users = new Map([
-      ['oauth-user-1', { id: 'oauth-user-1', email: 'oauth@example.com' }],
-    ])
+    let users = new Map([['oauth-user-1', { id: 'oauth-user-1', email: 'oauth@example.com' }]])
     let provider = createOIDCAuthProvider({
       name: 'fake',
       issuer: server.origin,
@@ -72,14 +70,12 @@ describe('OAuth flow integration', () => {
     )
     router.get('/dashboard', {
       middleware: [requireAuth()],
-      action({ get }) {
+      handler({ get }) {
         return Response.json(get(Auth))
       },
     })
 
-    let loginResponse = await router.fetch(
-      'https://app.example.com/login/fake?returnTo=/dashboard',
-    )
+    let loginResponse = await router.fetch('https://app.example.com/login/fake?returnTo=/dashboard')
     let authorizeURL = new URL(loginResponse.headers.get('Location')!)
 
     assert.equal(authorizeURL.origin, server.origin)

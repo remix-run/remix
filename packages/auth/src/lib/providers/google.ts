@@ -1,6 +1,10 @@
 import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider, type OIDCAuthProviderMetadata, type OIDCAuthProfile } from './oidc.ts'
+import {
+  createOIDCAuthProvider,
+  type OIDCAuthProviderMetadata,
+  type OIDCAuthProfile,
+} from './oidc.ts'
 
 const GOOGLE_ISSUER = 'https://accounts.google.com'
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -40,7 +44,9 @@ export interface GoogleAuthProfile extends OIDCAuthProfile {}
  * @param options Google OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
-export function createGoogleAuthProvider(options: GoogleAuthProviderOptions): OAuthProvider<GoogleAuthProfile, 'google'> {
+export function createGoogleAuthProvider(
+  options: GoogleAuthProviderOptions,
+): OAuthProvider<GoogleAuthProfile, 'google'> {
   return createOIDCAuthProvider({
     ...options,
     name: 'google',

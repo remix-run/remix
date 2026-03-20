@@ -16,7 +16,10 @@ export let forgotPasswordController = {
     index(context) {
       return render(
         <ForgotPasswordPage
-          formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(context.url))}
+          formAction={routes.auth.forgotPassword.action.href(
+            undefined,
+            getReturnToQuery(context.url),
+          )}
           loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
         />,
       )
@@ -28,7 +31,10 @@ export let forgotPasswordController = {
       if (!result.success) {
         return render(
           <ForgotPasswordPage
-            formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(context.url))}
+            formAction={routes.auth.forgotPassword.action.href(
+              undefined,
+              getReturnToQuery(context.url),
+            )}
             loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
             error={getIssueMessage(result.issues)}
             email={readField(context.get(FormData), 'email')}
@@ -49,7 +55,10 @@ export let forgotPasswordController = {
           user_id: user.id,
           expires_at: Date.now() + 1000 * 60 * 60,
         })
-        resetHref = new URL(routes.auth.resetPassword.index.href({ token }), context.url.origin).toString()
+        resetHref = new URL(
+          routes.auth.resetPassword.index.href({ token }),
+          context.url.origin,
+        ).toString()
       }
 
       return render(

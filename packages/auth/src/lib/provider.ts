@@ -67,10 +67,12 @@ export interface OAuthProviderRuntime<profile, provider extends string = string>
 
 export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
 
-export type InternalOAuthProvider<profile, provider extends string = string> =
-  OAuthProvider<profile, provider> & {
-    [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
-  }
+export type InternalOAuthProvider<profile, provider extends string = string> = OAuthProvider<
+  profile,
+  provider
+> & {
+  [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
+}
 
 export interface ExchangeAuthorizationCodeOptions {
   tokenEndpoint: string | URL
@@ -241,8 +243,8 @@ function parseScope(value: unknown): string[] | undefined {
 
   return value
     .split(/[,\s]+/)
-    .map(scope => scope.trim())
-    .filter(scope => scope.length > 0)
+    .map((scope) => scope.trim())
+    .filter((scope) => scope.length > 0)
 }
 
 async function readJson(response: Response): Promise<unknown> {

@@ -17,7 +17,9 @@ export function getCurrentUser(): User {
   let auth = getCurrentAuth()
 
   if (!auth.ok) {
-    throw new Error('Expected an authenticated user. Make sure requireAuth() runs before this code.')
+    throw new Error(
+      'Expected an authenticated user. Make sure requireAuth() runs before this code.',
+    )
   }
 
   return auth.identity

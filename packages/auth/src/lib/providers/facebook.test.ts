@@ -66,8 +66,9 @@ describe('facebook provider', () => {
   })
 
   it('normalizes Facebook profiles and tokens', async () => {
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://graph.facebook.com/oauth/access_token') {
         return Response.json({
@@ -153,8 +154,9 @@ describe('facebook provider', () => {
   })
 
   it('fails when the Facebook profile does not include a valid id', async () => {
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://graph.facebook.com/oauth/access_token') {
         return Response.json({

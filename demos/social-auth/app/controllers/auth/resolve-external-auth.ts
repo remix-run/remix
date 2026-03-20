@@ -1,9 +1,4 @@
-import type {
-  GitHubAuthProfile,
-  GoogleAuthProfile,
-  OAuthResult,
-  XAuthProfile,
-} from 'remix/auth'
+import type { GitHubAuthProfile, GoogleAuthProfile, OAuthResult, XAuthProfile } from 'remix/auth'
 import type { Database } from 'remix/data-table'
 
 import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
@@ -80,7 +75,8 @@ export async function resolveExternalAuth(
 
 function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
   if (result.provider === 'google') {
-    let email = typeof result.profile.email === 'string' ? normalizeEmail(result.profile.email) : undefined
+    let email =
+      typeof result.profile.email === 'string' ? normalizeEmail(result.profile.email) : undefined
 
     return {
       email,
@@ -96,7 +92,8 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
   }
 
   if (result.provider === 'github') {
-    let email = typeof result.profile.email === 'string' ? normalizeEmail(result.profile.email) : undefined
+    let email =
+      typeof result.profile.email === 'string' ? normalizeEmail(result.profile.email) : undefined
 
     return {
       email,
@@ -106,7 +103,8 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
         typeof result.profile.name === 'string' && result.profile.name.trim() !== ''
           ? result.profile.name
           : result.profile.login,
-      avatarUrl: typeof result.profile.avatar_url === 'string' ? result.profile.avatar_url : undefined,
+      avatarUrl:
+        typeof result.profile.avatar_url === 'string' ? result.profile.avatar_url : undefined,
       profileJson: JSON.stringify(result.profile),
     }
   }
@@ -122,10 +120,7 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
   }
 }
 
-async function createUserFromProfile(
-  db: Database,
-  profile: ExternalProfileDetails,
-): Promise<User> {
+async function createUserFromProfile(db: Database, profile: ExternalProfileDetails): Promise<User> {
   return db.create(
     users,
     {

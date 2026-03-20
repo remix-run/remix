@@ -16,7 +16,8 @@ import { createRequest, mockFetch } from './test-utils.ts'
 describe('createExternalAuthCallbackRequestHandler()', () => {
   it('completes a Google callback, preserves returnTo, and authenticates via createSessionAuthScheme()', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://oauth2.googleapis.com/token') {
         let body = new URLSearchParams(init?.body as string)
@@ -44,9 +45,7 @@ describe('createExternalAuthCallbackRequestHandler()', () => {
     try {
       let cookie = createCookie('__session', { secrets: ['secret1'] })
       let storage = createMemorySessionStorage()
-      let users = new Map([
-        ['u1', { id: 'u1', email: 'mj@example.com' }],
-      ])
+      let users = new Map([['u1', { id: 'u1', email: 'mj@example.com' }]])
       let provider = createGoogleAuthProvider({
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
@@ -81,7 +80,7 @@ describe('createExternalAuthCallbackRequestHandler()', () => {
       )
       router.get('/dashboard', {
         middleware: [requireAuth()],
-        action({ get }) {
+        handler({ get }) {
           return Response.json(get(Auth))
         },
       })
@@ -155,7 +154,8 @@ describe('createExternalAuthCallbackRequestHandler()', () => {
 
   it('runs onSuccess after writeSession for callbacks', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://oauth2.googleapis.com/token') {
         let body = new URLSearchParams(init?.body as string)
@@ -224,7 +224,8 @@ describe('createExternalAuthCallbackRequestHandler()', () => {
 
   it('uses onFailure when writeSession throws for callbacks', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://oauth2.googleapis.com/token') {
         let body = new URLSearchParams(init?.body as string)
@@ -296,7 +297,8 @@ describe('createExternalAuthCallbackRequestHandler()', () => {
 
   it('clears the callback transaction and redirects when writeSession throws and failureRedirectTo is set', async () => {
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://oauth2.googleapis.com/token') {
         let body = new URLSearchParams(init?.body as string)

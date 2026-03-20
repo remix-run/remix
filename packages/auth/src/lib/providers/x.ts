@@ -58,7 +58,9 @@ interface XProfileResponse {
  * @param options X client settings for your application.
  * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
-export function createXAuthProvider(options: XAuthProviderOptions): OAuthProvider<XAuthProfile, 'x'> {
+export function createXAuthProvider(
+  options: XAuthProviderOptions,
+): OAuthProvider<XAuthProfile, 'x'> {
   let scopes = options.scopes ?? DEFAULT_X_SCOPES
 
   return createOAuthProvider('x', {

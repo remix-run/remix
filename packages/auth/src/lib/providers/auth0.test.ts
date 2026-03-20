@@ -20,8 +20,9 @@ describe('auth0 provider', () => {
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/auth0/callback',
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       assert.equal(url, 'https://tenant.us.auth0.com/.well-known/openid-configuration')
 

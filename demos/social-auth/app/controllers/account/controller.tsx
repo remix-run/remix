@@ -10,11 +10,6 @@ export let accountAction = {
   handler(context) {
     let auth = context.get(Auth)
 
-    return render(
-      <AccountPage
-        identity={auth.identity}
-        logoutAction={routes.auth.logout.href()}
-      />,
-    )
+    return render(<AccountPage identity={auth.identity} logoutAction={routes.auth.logout.href()} />)
   },
 } satisfies BuildAction<'GET', typeof routes.account, AuthenticatedAppContext>

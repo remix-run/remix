@@ -35,10 +35,7 @@ type RequireAuthContextTransform<identity> = <context extends RequestContext<any
  */
 export interface RequireAuthOptions {
   /** Custom response builder for unauthenticated requests. */
-  onFailure?: (
-    context: RequestContext,
-    auth: BadAuth,
-  ) => Response | Promise<Response>
+  onFailure?: (context: RequestContext, auth: BadAuth) => Response | Promise<Response>
 }
 
 /**

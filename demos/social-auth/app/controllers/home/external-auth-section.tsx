@@ -18,7 +18,7 @@ export function ExternalAuthSection() {
       </div>
 
       <div mix={styles.socialButtons}>
-        {providers.map(provider => (
+        {providers.map((provider) => (
           <SocialProviderButton
             key={provider.name}
             label={formatProviderLabel(provider.name)}

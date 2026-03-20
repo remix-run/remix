@@ -1,7 +1,11 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { auth, requireAuth as requireAuthenticatedUser, createSessionAuthScheme } from 'remix/auth-middleware'
+import {
+  auth,
+  requireAuth as requireAuthenticatedUser,
+  createSessionAuthScheme,
+} from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
@@ -66,8 +70,9 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
     onFailure(context) {
       return redirect(
         redirectTo.href(undefined, {
-          returnTo: getSafeReturnTo(context.url.searchParams.get('returnTo'))
-            ?? context.url.pathname + context.url.search,
+          returnTo:
+            getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+            context.url.pathname + context.url.search,
         }),
       )
     },
@@ -86,7 +91,10 @@ export function getPostAuthRedirect(url: URL, fallback = routes.account.index.hr
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
 }
 
-export function getLoginRedirectURL(url: URL, route: Route<any, any> = routes.auth.login.index): string {
+export function getLoginRedirectURL(
+  url: URL,
+  route: Route<any, any> = routes.auth.login.index,
+): string {
   return route.href(undefined, {
     returnTo: getSafeReturnTo(url.searchParams.get('returnTo')),
   })

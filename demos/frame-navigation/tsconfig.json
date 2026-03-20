@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "target": "ESNext",
@@ -17,7 +13,5 @@
     "jsxImportSource": "remix/component",
     "preserveSymlinks": true
   },
-  "exclude": [
-    "dist"
-  ]
+  "exclude": ["dist"]
 }

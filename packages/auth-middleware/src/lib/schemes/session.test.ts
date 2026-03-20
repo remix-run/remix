@@ -33,12 +33,9 @@ describe('createSessionAuthScheme scheme', () => {
 
     router.get('/', () => new Response('OK'))
 
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run/')
-      },
-      new Error('Session not found. Make sure session() middleware runs before createSessionAuthScheme().'),
-    )
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Session not found. Make sure session() middleware runs before createSessionAuthScheme().'))
   })
 
   it('skips when read() returns null', async () => {
@@ -244,7 +241,9 @@ describe('createSessionAuthScheme scheme', () => {
     )
 
     let seedResponse = await router.fetch('https://remix.run/seed')
-    let protectedResponse = await router.fetch(createRequest('https://remix.run/protected', seedResponse))
+    let protectedResponse = await router.fetch(
+      createRequest('https://remix.run/protected', seedResponse),
+    )
 
     assert.equal(protectedResponse.status, 401)
     assert.equal(await protectedResponse.text(), 'Unauthorized')
@@ -267,9 +266,7 @@ function createRequest(url: string, fromResponse?: Response): Request {
   let headers = new Headers()
 
   if (fromResponse != null) {
-    let cookieValues = fromResponse.headers
-      .getSetCookie()
-      .map(value => value.split(';', 1)[0])
+    let cookieValues = fromResponse.headers.getSetCookie().map((value) => value.split(';', 1)[0])
 
     if (cookieValues.length > 0) {
       headers.set('Cookie', cookieValues.join('; '))
