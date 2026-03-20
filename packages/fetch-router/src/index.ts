@@ -1,10 +1,36 @@
-export { createContextKey } from './lib/request-context.ts'
+export {
+  createContextKey,
+  RequestContext,
+} from './lib/request-context.ts'
 
-export type { Controller, Action, BuildAction, RequestHandler } from './lib/controller.ts'
+export type {
+  ContextValue,
+  GetContextValue,
+  RequestContextStore,
+  RequestContextStoreEntry,
+  SetContextValue,
+} from './lib/request-context.ts'
 
-export type { Middleware, NextFunction } from './lib/middleware.ts'
+export {
+  createAction,
+  createController,
+} from './lib/controller.ts'
 
-export { RequestContext } from './lib/request-context.ts'
+export type {
+  Controller,
+  Action,
+  BuildAction,
+  RequestHandler,
+} from './lib/controller.ts'
+
+export type {
+  ApplyContextTransform,
+  ApplyMiddleware,
+  ApplyMiddlewareTuple,
+  Middleware,
+  MiddlewareContextTransform,
+  NextFunction,
+} from './lib/middleware.ts'
 
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'

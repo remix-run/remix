@@ -1,6 +1,6 @@
-import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type Matcher, type Params, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { type Middleware, runMiddleware } from './middleware.ts'
+import { type ApplyMiddlewareTuple, type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -14,18 +14,50 @@ import {
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
+type MiddlewareTuple = readonly Middleware<any, any, any>[]
+
+type RouteActionObjectWithoutMiddleware<
+  method extends RequestMethod | 'ANY',
+  pattern extends string,
+> = {
+  middleware?: undefined
+  action: RequestHandler<method, Params<pattern>, RequestContext<Params<pattern>>>
+}
+
+type RouteActionObjectWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  pattern extends string,
+  middleware extends MiddlewareTuple,
+> = {
+  middleware: readonly [...middleware]
+  action: RequestHandler<
+    method,
+    Params<pattern>,
+    ApplyMiddlewareTuple<RequestContext<Params<pattern>>, middleware>
+  >
+}
+
+type RouteActionInput<
+  method extends RequestMethod | 'ANY',
+  pattern extends string,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+> =
+  | RequestHandler<method, Params<pattern>, RequestContext<Params<pattern>>>
+  | RouteActionObjectWithoutMiddleware<method, pattern>
+  | RouteActionObjectWithMiddleware<method, pattern, middleware>
+
 /**
  * Normalized route match payload stored in the router matcher.
  */
 export type MatchData = {
-  handler: RequestHandler<any>
+  handler: RequestHandler<any, any, any>
   method: RequestMethod | 'ANY'
-  middleware: Middleware<any>[] | undefined
+  middleware: Middleware<any, any, any>[] | undefined
 }
 
 type NormalizedAction = {
-  handler: RequestHandler<any, any>
-  middleware: Middleware<any, any>[] | undefined
+  handler: RequestHandler<any, any, any>
+  middleware: Middleware<any, any, any>[] | undefined
 }
 
 /**
@@ -68,7 +100,7 @@ export interface RouterOptions {
    * Global middleware to run for all routes. This middleware runs on every request before any
    * routes are matched.
    */
-  middleware?: Middleware[]
+  middleware?: Middleware<any, any, any>[]
 }
 
 /**
@@ -93,15 +125,68 @@ export interface Router {
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
-    action: Action<method, pattern>,
+    action: RequestHandler<method, Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  route<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<method, pattern>,
+  ): void
+  route<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends MiddlewareTuple,
+  >(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<method, pattern, middleware>,
+  ): void
+  route<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends MiddlewareTuple = MiddlewareTuple,
+  >(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: RouteActionInput<method, pattern, middleware>,
   ): void
   /**
-   * Map a route or route map to an action or controller.
+   * Map a single route to an action.
    *
-   * @param target The route/pattern or route map to match
-   * @param handler The action or controller to invoke when the route(s) match
+   * @param target The route/pattern to match
+   * @param handler The action to invoke when the route matches
    */
-  map<target extends MapTarget>(target: target, handler: MapHandler<target>): void
+  map<method extends RequestMethod | 'ANY', pattern extends string>(
+    target: pattern | RoutePattern<pattern> | Route<method, pattern>,
+    handler: RequestHandler<method, Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  map<method extends RequestMethod | 'ANY', pattern extends string>(
+    target: pattern | RoutePattern<pattern> | Route<method, pattern>,
+    handler: RouteActionObjectWithoutMiddleware<method, pattern>,
+  ): void
+  map<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends MiddlewareTuple,
+  >(
+    target: pattern | RoutePattern<pattern> | Route<method, pattern>,
+    handler: RouteActionObjectWithMiddleware<method, pattern, middleware>,
+  ): void
+  map<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends MiddlewareTuple = MiddlewareTuple,
+  >(
+    target: pattern | RoutePattern<pattern> | Route<method, pattern>,
+    handler: RouteActionInput<method, pattern, middleware>,
+  ): void
+  /**
+   * Map a route map to a controller.
+   *
+   * @param target The route map to match
+   * @param handler The controller to invoke when the route(s) match
+   */
+  map<target extends RouteMap>(target: target, handler: Controller<target>): void
   /**
    * Map a `GET` route/pattern to an action.
    *
@@ -110,7 +195,19 @@ export interface Router {
    */
   get<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-    action: Action<'GET', pattern>,
+    action: RequestHandler<'GET', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  get<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'GET', pattern>,
+  ): void
+  get<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'GET', pattern, middleware>,
+  ): void
+  get<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    action: RouteActionInput<'GET', pattern, middleware>,
   ): void
   /**
    * Map a `HEAD` route/pattern to an action.
@@ -120,7 +217,19 @@ export interface Router {
    */
   head<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-    action: Action<'HEAD', pattern>,
+    action: RequestHandler<'HEAD', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  head<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'HEAD', pattern>,
+  ): void
+  head<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'HEAD', pattern, middleware>,
+  ): void
+  head<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    action: RouteActionInput<'HEAD', pattern, middleware>,
   ): void
   /**
    * Map a `POST` route/pattern to an action.
@@ -130,7 +239,19 @@ export interface Router {
    */
   post<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-    action: Action<'POST', pattern>,
+    action: RequestHandler<'POST', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  post<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'POST', pattern>,
+  ): void
+  post<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'POST', pattern, middleware>,
+  ): void
+  post<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    action: RouteActionInput<'POST', pattern, middleware>,
   ): void
   /**
    * Map a `PUT` route/pattern to an action.
@@ -140,7 +261,19 @@ export interface Router {
    */
   put<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-    action: Action<'PUT', pattern>,
+    action: RequestHandler<'PUT', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  put<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'PUT', pattern>,
+  ): void
+  put<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'PUT', pattern, middleware>,
+  ): void
+  put<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    action: RouteActionInput<'PUT', pattern, middleware>,
   ): void
   /**
    * Map a `PATCH` route/pattern to an action.
@@ -150,7 +283,19 @@ export interface Router {
    */
   patch<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-    action: Action<'PATCH', pattern>,
+    action: RequestHandler<'PATCH', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  patch<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'PATCH', pattern>,
+  ): void
+  patch<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'PATCH', pattern, middleware>,
+  ): void
+  patch<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    action: RouteActionInput<'PATCH', pattern, middleware>,
   ): void
   /**
    * Map a `DELETE` route/pattern to an action.
@@ -160,7 +305,19 @@ export interface Router {
    */
   delete<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-    action: Action<'DELETE', pattern>,
+    action: RequestHandler<'DELETE', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  delete<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'DELETE', pattern>,
+  ): void
+  delete<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'DELETE', pattern, middleware>,
+  ): void
+  delete<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    action: RouteActionInput<'DELETE', pattern, middleware>,
   ): void
   /**
    * Map an `OPTIONS` route/pattern to an action.
@@ -170,7 +327,19 @@ export interface Router {
    */
   options<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-    action: Action<'OPTIONS', pattern>,
+    action: RequestHandler<'OPTIONS', Params<pattern>, RequestContext<Params<pattern>>>,
+  ): void
+  options<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    action: RouteActionObjectWithoutMiddleware<'OPTIONS', pattern>,
+  ): void
+  options<pattern extends string, middleware extends MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    action: RouteActionObjectWithMiddleware<'OPTIONS', pattern, middleware>,
+  ): void
+  options<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
+    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    action: RouteActionInput<'OPTIONS', pattern, middleware>,
   ): void
 }
 
@@ -202,15 +371,15 @@ export function createRouter(options?: RouterOptions): Router {
     }
 
     return {
-      handler: action as RequestHandler<any, any>,
+      handler: action as RequestHandler<any, any, any>,
       middleware: undefined,
     }
   }
 
   function mergeMiddleware(
-    routeMiddleware: Middleware<any, any>[] | undefined,
-    actionMiddleware: Middleware<any, any>[] | undefined,
-  ): Middleware<any, any>[] | undefined {
+    routeMiddleware: Middleware<any, any, any>[] | undefined,
+    actionMiddleware: Middleware<any, any, any>[] | undefined,
+  ): Middleware<any, any, any>[] | undefined {
     if (!routeMiddleware || routeMiddleware.length === 0) {
       return actionMiddleware
     }
@@ -291,7 +460,7 @@ export function createRouter(options?: RouterOptions): Router {
   function mapController(
     routes: RouteMap,
     controller: ControllerShape,
-    parentMiddleware: Middleware[] = [],
+    parentMiddleware: Middleware<any, any, any>[] = [],
   ): void {
     let middleware = controller.middleware
       ? parentMiddleware.concat(controller.middleware)
@@ -331,49 +500,59 @@ export function createRouter(options?: RouterOptions): Router {
 
       return dispatch(context)
     },
-    route: addRoute,
+    route<
+      method extends RequestMethod | 'ANY',
+      pattern extends string,
+      middleware extends MiddlewareTuple = MiddlewareTuple,
+    >(
+      method: method,
+      route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+      action: RouteActionInput<method, pattern, middleware>,
+    ): void {
+      addRoute(method, route, action as Action<method, pattern>)
+    },
     map: mapRoutes,
-    get<pattern extends string>(
+    get<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-      action: Action<'GET', pattern>,
+      action: RouteActionInput<'GET', pattern, middleware>,
     ): void {
-      addRoute('GET', route, action)
+      addRoute('GET', route, action as Action<'GET', pattern>)
     },
-    head<pattern extends string>(
+    head<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-      action: Action<'HEAD', pattern>,
+      action: RouteActionInput<'HEAD', pattern, middleware>,
     ): void {
-      addRoute('HEAD', route, action)
+      addRoute('HEAD', route, action as Action<'HEAD', pattern>)
     },
-    post<pattern extends string>(
+    post<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-      action: Action<'POST', pattern>,
+      action: RouteActionInput<'POST', pattern, middleware>,
     ): void {
-      addRoute('POST', route, action)
+      addRoute('POST', route, action as Action<'POST', pattern>)
     },
-    put<pattern extends string>(
+    put<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-      action: Action<'PUT', pattern>,
+      action: RouteActionInput<'PUT', pattern, middleware>,
     ): void {
-      addRoute('PUT', route, action)
+      addRoute('PUT', route, action as Action<'PUT', pattern>)
     },
-    patch<pattern extends string>(
+    patch<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-      action: Action<'PATCH', pattern>,
+      action: RouteActionInput<'PATCH', pattern, middleware>,
     ): void {
-      addRoute('PATCH', route, action)
+      addRoute('PATCH', route, action as Action<'PATCH', pattern>)
     },
-    delete<pattern extends string>(
+    delete<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-      action: Action<'DELETE', pattern>,
+      action: RouteActionInput<'DELETE', pattern, middleware>,
     ): void {
-      addRoute('DELETE', route, action)
+      addRoute('DELETE', route, action as Action<'DELETE', pattern>)
     },
-    options<pattern extends string>(
+    options<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
       route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-      action: Action<'OPTIONS', pattern>,
+      action: RouteActionInput<'OPTIONS', pattern, middleware>,
     ): void {
-      addRoute('OPTIONS', route, action)
+      addRoute('OPTIONS', route, action as Action<'OPTIONS', pattern>)
     },
   }
 

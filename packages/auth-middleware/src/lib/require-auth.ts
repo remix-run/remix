@@ -1,5 +1,38 @@
-import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import { Auth, type BadAuth } from './auth.ts'
+import type {
+  GetContextValue,
+  Middleware,
+  RequestContext,
+  SetContextValue,
+} from '@remix-run/fetch-router'
+
+import { Auth, type BadAuth, type GoodAuth } from './auth.ts'
+
+type ExistingGoodAuth<context extends RequestContext<any, any>> = Extract<
+  GetContextValue<context, typeof Auth>,
+  GoodAuth<any, any>
+>
+
+type IsDefaultGoodAuth<auth> = [auth] extends [GoodAuth<unknown, string>]
+  ? [GoodAuth<unknown, string>] extends [auth]
+    ? true
+    : false
+  : false
+
+type ResolvedGoodAuth<
+  context extends RequestContext<any, any>,
+  identity,
+  method extends string,
+> = [ExistingGoodAuth<context>] extends [never]
+  ? GoodAuth<identity, method>
+  : IsDefaultGoodAuth<ExistingGoodAuth<context>> extends true
+    ? GoodAuth<identity, method>
+    : ExistingGoodAuth<context>
+
+type RequireAuthContextTransform<identity, method extends string> = <
+  context extends RequestContext<any, any>,
+>(
+  context: context,
+) => SetContextValue<context, typeof Auth, ResolvedGoodAuth<context, identity, method>>
 
 /**
  * Options for enforcing authentication on a route.
@@ -18,7 +51,9 @@ export interface RequireAuthOptions {
  * @param options Failure handling options for unauthenticated requests.
  * @returns Middleware that allows authenticated requests through and rejects anonymous ones.
  */
-export function requireAuth(options: RequireAuthOptions = {}): Middleware {
+export function requireAuth<identity = unknown, method extends string = string>(
+  options: RequireAuthOptions = {},
+): Middleware<any, any, RequireAuthContextTransform<identity, method>> {
   return async (context, next) => {
     if (!context.has(Auth)) {
       throw new Error(

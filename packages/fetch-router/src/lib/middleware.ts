@@ -3,6 +3,33 @@ import { raceRequestAbort } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 
+export type MiddlewareContextTransform = <context extends RequestContext<any, any>>(
+  context: context,
+) => RequestContext<any, any>
+
+type IdentityContextTransform = <context extends RequestContext<any, any>>(
+  context: context,
+) => context
+
+type MiddlewareTransform<middleware> = middleware extends Middleware<any, any, infer transform>
+  ? transform
+  : IdentityContextTransform
+
+export type ApplyContextTransform<context extends RequestContext<any, any>, transform> =
+  transform extends (context: context) => infer output
+    ? output extends RequestContext<any, any>
+      ? output
+      : context
+    : context
+
+export type ApplyMiddleware<context extends RequestContext<any, any>, middleware> =
+  ApplyContextTransform<context, MiddlewareTransform<middleware>>
+
+export type ApplyMiddlewareTuple<context extends RequestContext<any, any>, middleware> =
+  middleware extends readonly [infer first, ...infer rest]
+    ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
+    : context
+
 /**
  * A special kind of request handler that either returns a response or passes control
  * to the next middleware or request handler in the chain.
@@ -14,6 +41,7 @@ import type { RequestMethod } from './request-methods.ts'
 export interface Middleware<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
+  transform extends MiddlewareContextTransform = IdentityContextTransform,
 > {
   /**
    * Handles a request and optionally delegates to the next middleware or handler.
@@ -22,6 +50,8 @@ export interface Middleware<
     context: RequestContext<params>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
+
+  readonly '~contextTransform'?: transform | undefined
 }
 
 /**
@@ -35,9 +65,9 @@ export function runMiddleware<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 >(
-  middleware: Middleware<method, params>[],
+  middleware: Middleware<method, params, any>[],
   context: RequestContext<params>,
-  handler: RequestHandler<method, params>,
+  handler: RequestHandler<method, params, any>,
 ): Promise<Response> {
   let index = -1
 

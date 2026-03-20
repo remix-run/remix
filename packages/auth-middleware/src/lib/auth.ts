@@ -2,6 +2,7 @@ import {
   createContextKey,
   type Middleware,
   type RequestContext,
+  type SetContextValue,
 } from '@remix-run/fetch-router'
 
 /**
@@ -95,21 +96,36 @@ export type AuthSchemeAuthenticateResult<identity = unknown> =
 /**
  * Authentication scheme contract consumed by `auth()`.
  */
-export interface AuthScheme<identity = unknown> {
+export interface AuthScheme<identity = unknown, method extends string = string> {
   /** Stable method name exposed on the resolved auth state. */
-  name: string
+  name: method
   /** Authenticates the current request or returns `null`/`undefined` to skip the scheme. */
   authenticate(
     context: RequestContext,
   ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
 }
 
+type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity, any> ? identity : never
+
+type AuthSchemeMethod<scheme> = scheme extends AuthScheme<any, infer method extends string>
+  ? method
+  : never
+
+type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = Auth<
+  AuthSchemeIdentity<schemes[number]>,
+  AuthSchemeMethod<schemes[number]>
+>
+
+type SetAuthContextTransform<auth> = <context extends RequestContext<any, any>>(
+  context: context,
+) => SetContextValue<context, typeof Auth, auth>
+
 /**
  * Options for loading auth state for each request.
  */
-export interface AuthOptions {
+export interface AuthOptions<schemes extends readonly AuthScheme<any, any>[] = AuthScheme<any, any>[]> {
   /** Auth schemes to run in order for each request. */
-  schemes: AuthScheme[]
+  schemes: readonly [...schemes]
 }
 
 /**
@@ -118,7 +134,9 @@ export interface AuthOptions {
  * @param options Auth scheme configuration for the middleware.
  * @returns Middleware that resolves auth state into `context.get(Auth)`.
  */
-export function auth(options: AuthOptions): Middleware {
+export function auth<schemes extends readonly AuthScheme<any, any>[]>(
+  options: AuthOptions<schemes>,
+): Middleware<any, any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }
@@ -164,7 +182,7 @@ export function auth(options: AuthOptions): Middleware {
 }
 
 function createFailure(
-  scheme: AuthScheme,
+  scheme: AuthScheme<any, any>,
   result: AuthSchemeFailure,
 ): AuthFailure {
   return {

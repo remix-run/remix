@@ -22,6 +22,13 @@ export interface ContextKey<value> {
   defaultValue?: value
 }
 
+export type RequestContextStoreEntry<key extends object = object, value = unknown> = readonly [
+  key,
+  value,
+]
+
+export type RequestContextStore = readonly RequestContextStoreEntry[]
+
 export type ContextValue<key> =
   key extends ContextKey<infer value>
     ? value
@@ -29,11 +36,42 @@ export type ContextValue<key> =
       ? instance
       : never
 
+type ResolveStoredContextValue<
+  store extends RequestContextStore,
+  key extends object,
+  fallback,
+> = store extends readonly [
+  ...infer rest extends RequestContextStore,
+  infer last extends RequestContextStoreEntry,
+]
+  ? [key] extends [last[0]]
+    ? [last[0]] extends [key]
+      ? last[1]
+      : ResolveStoredContextValue<rest, key, fallback>
+    : ResolveStoredContextValue<rest, key, fallback>
+  : fallback
+
+export type GetContextValue<context, key extends object> =
+  context extends RequestContext<any, infer store extends RequestContextStore>
+    ? ResolveStoredContextValue<store, key, ContextValue<key>>
+    : ContextValue<key>
+
+export type SetContextValue<context, key extends object, value> =
+  context extends RequestContext<
+    infer params extends Record<string, any>,
+    infer store extends RequestContextStore
+  >
+    ? RequestContext<params, [...store, readonly [key, value]]>
+    : never
+
 /**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
-export class RequestContext<params extends Record<string, any> = {}> {
+export class RequestContext<
+  params extends Record<string, any> = {},
+  store extends RequestContextStore = [],
+> {
   /**
    * @param request The incoming request
    */
@@ -82,17 +120,17 @@ export class RequestContext<params extends Record<string, any> = {}> {
    * @param key The key to read
    * @returns The value for the given key
    */
-  get = <key extends object>(key: key): ContextValue<key> => {
+  get = <key extends object>(key: key): GetContextValue<RequestContext<params, store>, key> => {
     if (!this.#contextMap.has(key)) {
-      let contextKey = key as ContextKey<ContextValue<key>>
+      let contextKey = key as ContextKey<GetContextValue<RequestContext<params, store>, key>>
       if (contextKey.defaultValue === undefined) {
         throw new Error(`Missing default value in context for key ${key}`)
       }
 
-      return contextKey.defaultValue
+      return contextKey.defaultValue as GetContextValue<RequestContext<params, store>, key>
     }
 
-    return this.#contextMap.get(key) as ContextValue<key>
+    return this.#contextMap.get(key) as GetContextValue<RequestContext<params, store>, key>
   }
 
   /**

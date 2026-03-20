@@ -1,53 +1,208 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
-import type { Middleware } from './middleware.ts'
-import type { RequestContext } from './request-context.ts'
+import type { ApplyMiddlewareTuple, Middleware } from './middleware.ts'
+import type { RequestContext, RequestContextStore } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
+
+type AnyMiddleware = Middleware<any, any, any>
+type MiddlewareTuple = readonly AnyMiddleware[]
+
+type WithParams<context, params extends Record<string, any>> =
+  context extends RequestContext<any, infer store extends RequestContextStore>
+    ? RequestContext<params, store>
+    : RequestContext<params>
+
+type RequestHandlerObjectWithoutMiddleware<
+  method extends RequestMethod | 'ANY',
+  params extends Record<string, any>,
+  context extends RequestContext<any, any>,
+> = {
+  middleware?: undefined
+  action: RequestHandler<method, params, context>
+}
+
+type RequestHandlerObjectWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  params extends Record<string, any>,
+  context extends RequestContext<any, any>,
+  middleware extends MiddlewareTuple,
+> = {
+  middleware: readonly [...middleware]
+  action: RequestHandler<method, params, ApplyMiddlewareTuple<context, middleware>>
+}
+
+type RequestHandlerDefinition<
+  method extends RequestMethod | 'ANY',
+  params extends Record<string, any>,
+  context extends RequestContext<any, any>,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+> =
+  | RequestHandler<method, params, context>
+  | RequestHandlerObjectWithoutMiddleware<method, params, context>
+  | RequestHandlerObjectWithMiddleware<method, params, context, middleware>
+
+type RouteMethod<route> = route extends Route<infer method extends RequestMethod | 'ANY', any>
+  ? method
+  : RequestMethod | 'ANY'
+
+type RouteParams<route extends string | RoutePattern | Route> = route extends string
+  ? Params<route>
+  : route extends RoutePattern<infer pattern>
+    ? Params<pattern>
+    : route extends Route<infer _, infer pattern>
+      ? Params<pattern>
+      : never
+
+type ControllerWithoutMiddleware<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+> = {
+  middleware?: undefined
+  actions: ControllerActions<routes, context>
+}
+
+type ControllerWithMiddleware<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+  middleware extends MiddlewareTuple,
+> = {
+  middleware: readonly [...middleware]
+  actions: ControllerActions<routes, ApplyMiddlewareTuple<context, middleware>>
+}
 
 /**
  * Controller object that mirrors a route map with matching action handlers.
  */
-export type Controller<routes extends RouteMap> = {
-  actions: ControllerActions<routes>
-  middleware?: Middleware[]
-}
+export type Controller<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = RequestContext,
+> =
+  | ControllerWithoutMiddleware<routes, context>
+  | ControllerWithMiddleware<routes, context, MiddlewareTuple>
 
 // prettier-ignore
-type ControllerActions<routes extends RouteMap> = routes extends any ?
+type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
   {
     [name in keyof routes]: (
-      routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern> :
-      routes[name] extends RouteMap ? Controller<routes[name]> :
+      routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern, context> :
+      routes[name] extends RouteMap ? Controller<routes[name], context> :
       never
     )
   } :
   never
 
+type ControllerInput<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+> =
+  | ControllerWithoutMiddleware<routes, context>
+  | ControllerWithMiddleware<routes, context, middleware>
+
 /**
  * An individual route action.
  */
-export type Action<method extends RequestMethod | 'ANY', pattern extends string> =
-  | RequestHandlerObject<method, Params<pattern>>
-  | RequestHandler<method, Params<pattern>>
-
-type RequestHandlerObject<
+export type Action<
   method extends RequestMethod | 'ANY',
-  params extends Record<string, any>,
-> = {
-  middleware?: Middleware<method, params>[]
-  action: RequestHandler<method, params>
-}
+  pattern extends string,
+  context extends RequestContext<any, any> = RequestContext,
+> = RequestHandlerDefinition<
+  method,
+  Params<pattern>,
+  WithParams<context, Params<pattern>>,
+  MiddlewareTuple
+>
 
 /**
  * Build an {@link Action} type from a string, {@link RoutePattern}, or {@link Route}.
  */
 // prettier-ignore
-export type BuildAction<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =
-  route extends string ? Action<method, route> :
-  route extends RoutePattern<infer pattern> ? Action<method, pattern> :
-  route extends Route<infer _, infer pattern> ? Action<method, pattern> :
+export type BuildAction<
+  method extends RequestMethod | 'ANY',
+  route extends string | RoutePattern | Route,
+  context extends RequestContext<any, any> = RequestContext,
+> =
+  route extends string ? Action<method, route, context> :
+  route extends RoutePattern<infer pattern> ? Action<method, pattern, context> :
+  route extends Route<infer _, infer pattern> ? Action<method, pattern, context> :
   never
+
+/**
+ * Create a typed action object whose handler context reflects its middleware tuple.
+ */
+export function createAction<route extends string | RoutePattern | Route>(
+  _route: route,
+  action: RequestHandler<
+    RouteMethod<route>,
+    RouteParams<route>,
+    RequestContext<RouteParams<route>>
+  >,
+): RequestHandler<RouteMethod<route>, RouteParams<route>, RequestContext<RouteParams<route>>>
+export function createAction<route extends string | RoutePattern | Route>(
+  _route: route,
+  action: RequestHandlerObjectWithoutMiddleware<
+    RouteMethod<route>,
+    RouteParams<route>,
+    RequestContext<RouteParams<route>>
+  >,
+): RequestHandlerObjectWithoutMiddleware<
+  RouteMethod<route>,
+  RouteParams<route>,
+  RequestContext<RouteParams<route>>
+>
+export function createAction<
+  route extends string | RoutePattern | Route,
+  middleware extends MiddlewareTuple,
+>(
+  _route: route,
+  action: RequestHandlerObjectWithMiddleware<
+    RouteMethod<route>,
+    RouteParams<route>,
+    RequestContext<RouteParams<route>>,
+    middleware
+  >,
+): RequestHandlerObjectWithMiddleware<
+  RouteMethod<route>,
+  RouteParams<route>,
+  RequestContext<RouteParams<route>>,
+  middleware
+>
+export function createAction<
+  route extends string | RoutePattern | Route,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+>(
+  _route: route,
+  action: RequestHandlerDefinition<
+    RouteMethod<route>,
+    RouteParams<route>,
+    RequestContext<RouteParams<route>>,
+    middleware
+  >,
+): typeof action {
+  return action
+}
+
+/**
+ * Create a typed controller object whose action contexts reflect its middleware tuple.
+ */
+export function createController<routes extends RouteMap>(
+  _routes: routes,
+  controller: ControllerWithoutMiddleware<routes, RequestContext>,
+): ControllerWithoutMiddleware<routes, RequestContext>
+export function createController<routes extends RouteMap, middleware extends MiddlewareTuple>(
+  _routes: routes,
+  controller: ControllerWithMiddleware<routes, RequestContext, middleware>,
+): ControllerWithMiddleware<routes, RequestContext, middleware>
+export function createController<
+  routes extends RouteMap,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+>(
+  _routes: routes,
+  controller: ControllerInput<routes, RequestContext, middleware>,
+): typeof controller {
+  return controller
+}
 
 /**
  * A request handler function that returns some kind of response.
@@ -58,11 +213,12 @@ export type BuildAction<method extends RequestMethod | 'ANY', route extends stri
 export interface RequestHandler<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
+  context extends RequestContext<any, any> = RequestContext<params>,
 > {
   /**
    * Handles a matched request and returns the response.
    */
-  (context: RequestContext<params>): Response | Promise<Response>
+  (context: context): Response | Promise<Response>
 }
 
 /**
@@ -70,7 +226,7 @@ export interface RequestHandler<
  */
 export interface ControllerShape {
   actions: Record<string, unknown>
-  middleware?: Middleware[]
+  middleware?: Middleware<any, any, any>[]
 }
 
 /**
@@ -87,8 +243,8 @@ export function isController(obj: unknown): obj is ControllerShape {
  * Runtime shape for an action object.
  */
 export interface ActionObjectShape {
-  middleware?: Middleware[]
-  action: RequestHandler<any, any>
+  middleware?: Middleware<any, any, any>[]
+  action: RequestHandler<any, any, any>
 }
 
 /**

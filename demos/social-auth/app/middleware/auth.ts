@@ -1,12 +1,9 @@
-import type { Middleware } from 'remix/fetch-router'
 import { createCredentialsAuthProvider } from 'remix/auth'
 import {
-  Auth,
   auth,
   createSessionAuthScheme,
   requireAuth as requireAuthenticated,
 } from 'remix/auth-middleware'
-import type { GoodAuth } from 'remix/auth-middleware'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
@@ -28,7 +25,7 @@ let loginSchema = f.object({
   password: f.field(s.defaulted(s.string(), '')),
 })
 
-export function loadAuth(): Middleware {
+export function loadAuth() {
   return auth({
     schemes: [
       createSessionAuthScheme<AuthIdentity, AuthSession>({
@@ -86,16 +83,12 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export function requireAuth(): Middleware {
-  return requireAuthenticated({
+export function requireAuth() {
+  return requireAuthenticated<AuthIdentity>({
     onFailure() {
       return redirect(routes.home.href())
     },
   })
-}
-
-export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<AuthIdentity> {
-  return context.get(Auth) as GoodAuth<AuthIdentity>
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {
@@ -133,4 +126,3 @@ export function getSafeReturnTo(returnTo: string | null): string | undefined {
   let isSafePath = returnTo.startsWith('/') && returnTo.startsWith('//') === false
   return isSafePath ? returnTo : undefined
 }
-
