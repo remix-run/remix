@@ -1,3 +1,8 @@
+import {
+  createGitHubAuthProvider,
+  createGoogleAuthProvider,
+  createXAuthProvider,
+} from 'remix/auth'
 import type {
   GitHubAuthProfile,
   GoogleAuthProfile,
@@ -5,15 +10,17 @@ import type {
   XAuthProfile,
 } from 'remix/auth'
 import type { RequestContext, RequestContextStore } from 'remix/fetch-router'
-import {
-  createGitHubAuthProvider,
-  createGoogleAuthProvider,
-  createXAuthProvider,
-} from 'remix/auth'
 
 import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
+
+export type ExternalProviderFor<name extends ExternalProviderName> =
+  name extends 'google'
+    ? OAuthProvider<GoogleAuthProfile, 'google'>
+    : name extends 'github'
+      ? OAuthProvider<GitHubAuthProfile, 'github'>
+      : OAuthProvider<XAuthProfile, 'x'>
 
 type ProviderEnvPrefix = 'GOOGLE' | 'GITHUB' | 'X'
 
@@ -22,10 +29,10 @@ interface ProviderCredentials {
   clientSecret: string
 }
 
-export interface ProviderAvailability {
-  google: boolean
-  github: boolean
-  x: boolean
+export interface ExternalProviderLink {
+  name: ExternalProviderName
+  href?: string
+  disabledReason?: string
 }
 
 export interface ProviderStatus {
@@ -33,28 +40,60 @@ export interface ProviderStatus {
   missingEnvVars: string[]
 }
 
-export interface ProviderStatuses {
-  google: ProviderStatus
-  github: ProviderStatus
-  x: ProviderStatus
-}
+const providerLabels = {
+  google: 'Google',
+  github: 'GitHub',
+  x: 'X',
+} satisfies Record<ExternalProviderName, string>
 
-export function getProviderAvailability(): ProviderAvailability {
-  let statuses = getProviderStatuses()
+const providerEnvPrefixes = {
+  google: 'GOOGLE',
+  github: 'GITHUB',
+  x: 'X',
+} satisfies Record<ExternalProviderName, ProviderEnvPrefix>
 
-  return {
-    google: statuses.google.enabled,
-    github: statuses.github.enabled,
-    x: statuses.x.enabled,
+export const externalProviderNames = ['google', 'github', 'x'] as const
+
+export function createExternalProvider<
+  params extends Record<string, string>,
+  store extends RequestContextStore,
+  name extends ExternalProviderName,
+>(name: name, context: RequestContext<params, store>): ExternalProviderFor<name> | null {
+  switch (name) {
+    case 'google':
+      return createGoogleProvider(context) as ExternalProviderFor<name> | null
+    case 'github':
+      return createGitHubProvider(context) as ExternalProviderFor<name> | null
+    case 'x':
+      return createXProvider(context) as ExternalProviderFor<name> | null
   }
 }
 
-export function getProviderStatuses(): ProviderStatuses {
+export function getExternalProviderLabel(name: ExternalProviderName): string {
+  return providerLabels[name]
+}
+
+export function getExternalProviderStatus(name: ExternalProviderName): ProviderStatus {
+  let missingEnvVars = readMissingProviderEnvVars(providerEnvPrefixes[name])
+
   return {
-    google: getProviderStatus('GOOGLE'),
-    github: getProviderStatus('GITHUB'),
-    x: getProviderStatus('X'),
+    enabled: missingEnvVars.length === 0,
+    missingEnvVars,
   }
+}
+
+export function readExternalProviderLinks(
+  returnToQuery: { returnTo?: string },
+): ExternalProviderLink[] {
+  return externalProviderNames.map(name => {
+    let status = getExternalProviderStatus(name)
+
+    return {
+      name,
+      href: status.enabled ? routes.auth[name].login.href(undefined, returnToQuery) : undefined,
+      disabledReason: status.enabled ? undefined : createDisabledReason(name, status),
+    }
+  })
 }
 
 export function getDemoOrigin(url?: URL): string {
@@ -62,9 +101,10 @@ export function getDemoOrigin(url?: URL): string {
   return `http://127.0.0.1:${port}`
 }
 
-export function createGoogleProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
-  context: context,
-): OAuthProvider<GoogleAuthProfile, 'google'> | null {
+function createGoogleProvider<
+  params extends Record<string, string>,
+  store extends RequestContextStore,
+>(context: RequestContext<params, store>): OAuthProvider<GoogleAuthProfile, 'google'> | null {
   let credentials = readProviderCredentials('GOOGLE')
   if (credentials == null) {
     return null
@@ -77,9 +117,10 @@ export function createGoogleProvider<context extends RequestContext<Record<strin
   })
 }
 
-export function createGitHubProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
-  context: context,
-): OAuthProvider<GitHubAuthProfile, 'github'> | null {
+function createGitHubProvider<
+  params extends Record<string, string>,
+  store extends RequestContextStore,
+>(context: RequestContext<params, store>): OAuthProvider<GitHubAuthProfile, 'github'> | null {
   let credentials = readProviderCredentials('GITHUB')
   if (credentials == null) {
     return null
@@ -92,9 +133,10 @@ export function createGitHubProvider<context extends RequestContext<Record<strin
   })
 }
 
-export function createXProvider<context extends RequestContext<Record<string, string>, RequestContextStore>>(
-  context: context,
-): OAuthProvider<XAuthProfile, 'x'> | null {
+function createXProvider<
+  params extends Record<string, string>,
+  store extends RequestContextStore,
+>(context: RequestContext<params, store>): OAuthProvider<XAuthProfile, 'x'> | null {
   let credentials = readProviderCredentials('X')
   if (credentials == null) {
     return null
@@ -107,16 +149,11 @@ export function createXProvider<context extends RequestContext<Record<string, st
   })
 }
 
-function getProviderStatus(prefix: ProviderEnvPrefix): ProviderStatus {
-  let missingEnvVars = getMissingProviderEnvVars(prefix)
-
-  return {
-    enabled: missingEnvVars.length === 0,
-    missingEnvVars,
-  }
+function createDisabledReason(name: ExternalProviderName, status: ProviderStatus): string {
+  return `Set ${status.missingEnvVars.join(' and ')} to enable ${getExternalProviderLabel(name)} login.`
 }
 
-function getMissingProviderEnvVars(prefix: ProviderEnvPrefix): string[] {
+function readMissingProviderEnvVars(prefix: ProviderEnvPrefix): string[] {
   let missingEnvVars = []
 
   if (!process.env[`${prefix}_CLIENT_ID`]) {

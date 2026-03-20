@@ -14,15 +14,5 @@ export let mountAuthRoutes: SocialAuthMount = router => {
   router.mount('/forgot-password', mountForgotPasswordRoutes)
   router.mount('/reset-password/:token', mountResetPasswordRoutes)
 
-  router.mount('/google', google => {
-    mountExternalProviderRoutes(google, 'google')
-  })
-
-  router.mount('/github', github => {
-    mountExternalProviderRoutes(github, 'github')
-  })
-
-  router.mount('/x', x => {
-    mountExternalProviderRoutes(x, 'x')
-  })
+  mountExternalProviderRoutes(router)
 }

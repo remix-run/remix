@@ -1,19 +1,18 @@
-import { EmailIcon, PasswordIcon } from '../ui/icons.tsx'
-import { TextField } from '../ui/form-field.tsx'
-import { LoginFooter } from './login-footer.tsx'
-import { ExternalAuthSection } from './external-auth-section.tsx'
-import type { ProviderLink } from './external-auth-section.tsx'
+import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 import { AuthCard } from '../ui/auth-card.tsx'
 import { Document } from '../ui/document.tsx'
+import { TextField } from '../ui/form-field.tsx'
+import { EmailIcon, PasswordIcon } from '../ui/icons.tsx'
 import { Notice } from '../ui/notice.tsx'
 import * as styles from '../ui/styles.ts'
-
+import { ExternalAuthSection } from './external-auth-section.tsx'
+import { LoginFooter } from './login-footer.tsx'
 
 export interface LoginPageProps {
   formAction: string
   signupHref: string
   forgotPasswordHref: string
-  providers: ProviderLink[]
+  providers: ExternalProviderLink[]
   error?: string
   success?: string
 }
