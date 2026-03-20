@@ -1,7 +1,10 @@
+import decamelize from 'decamelize'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { render } from '@remix-run/test/browser'
 import { on, type Handle } from '@remix-run/component'
+
+// ── Counter ───────────────────────────────────────────────────────────────────
 
 function Counter(handle: Handle, setup?: number) {
   let count = setup ?? 0
@@ -41,8 +44,6 @@ function Counter(handle: Handle, setup?: number) {
     </div>
   )
 }
-
-// --- Tests ---
 
 describe('Counter', () => {
   it('renders with initial count of 0 when not specified', () => {
@@ -89,3 +90,63 @@ describe('Counter', () => {
     cleanup()
   })
 })
+
+// ── FieldLabel ────────────────────────────────────────────────────────────────
+
+// Demonstrates that ESM third-party libraries are importable from test modules
+
+function FieldLabel(_handle: unknown) {
+  return (props: { name: string }) => (
+    <span data-testid="label">{decamelize(props.name, { separator: ' ' })}</span>
+  )
+}
+
+describe('FieldLabel (using decamelize)', () => {
+  it('renders a single word unchanged', () => {
+    let { $, cleanup } = render(<FieldLabel name="name" />)
+    assert.equal($('[data-testid="label"]')?.textContent, 'name')
+    cleanup()
+  })
+
+  it('converts camelCase to spaced words', () => {
+    let { $, cleanup } = render(<FieldLabel name="firstName" />)
+    assert.equal($('[data-testid="label"]')?.textContent, 'first name')
+    cleanup()
+  })
+
+  it('handles multiple humps', () => {
+    let { $, cleanup } = render(<FieldLabel name="dateOfBirth" />)
+    assert.equal($('[data-testid="label"]')?.textContent, 'date of birth')
+    cleanup()
+  })
+})
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+
+describe('DOM Tests', () => {
+  it('can interact with DOM', async () => {
+    let div = document.createElement('div')
+    div.textContent = 'Hello'
+    assert.equal(div.textContent, 'Hello')
+  })
+
+  it('can test fetch API', async () => {
+    let response = await fetch('data:text/plain,hello')
+    let text = await response.text()
+    assert.equal(text, 'hello')
+  })
+
+  it.skip('skip: can skip tests', () => {
+    assert.equal(true, false)
+  })
+
+  it.todo('todo: can mark tests as todo')
+})
+
+describe.skip('skip: Skipped Test Suite', () => {
+  it('would fail', () => {
+    assert.equal(true, false)
+  })
+})
+
+describe.todo('todo: Test Suite')
