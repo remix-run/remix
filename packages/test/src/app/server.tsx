@@ -24,18 +24,38 @@ let routes = route({
 export async function startServer(
   port = 44101,
   absoluteFiles: string[] = [],
-): Promise<http.Server> {
+  retry = false,
+): Promise<{ server: http.Server; port: number }> {
   let router = getRouter(absoluteFiles)
-  let server = http.createServer(createRequestListener(async (req) => await router.fetch(req)))
+  let handler = createRequestListener(async (req) => await router.fetch(req))
+  let altPort = () => port + 1 + Math.floor(Math.random() * 99)
 
-  await new Promise<void>((resolve) => {
-    server.listen(port, () => {
-      console.log(`Test server running on http://localhost:${port}`)
-      resolve()
-    })
-  })
+  let ports = retry ? [port, altPort(), altPort()] : [port]
 
-  return server
+  let lastError: unknown
+  for (let port of ports) {
+    try {
+      let server = http.createServer(handler)
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject)
+        server.listen(port, () => {
+          server.removeListener('error', reject)
+          console.log(`Test server running on http://localhost:${port}`)
+          resolve()
+        })
+      })
+      return { server, port }
+    } catch (error: any) {
+      if (error.code !== 'EADDRINUSE') throw error
+      lastError = error
+      let next = ports[ports.indexOf(port) + 1]
+      if (next !== undefined) {
+        console.log(`Port ${port} is in use, trying ${next}...`)
+      }
+    }
+  }
+
+  throw lastError
 }
 
 function getRouter(absoluteFiles: string[]) {

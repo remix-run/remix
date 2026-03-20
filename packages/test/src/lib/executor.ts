@@ -1,4 +1,3 @@
-
 export interface TestResult {
   name: string
   suiteName: string
@@ -37,7 +36,12 @@ export async function runTests(): Promise<TestResults> {
     // If any suite uses .only, skip all non-only suites
     if (hasOnlySuites && !suite.only) {
       for (let test of suite.tests) {
-        results.tests.push({ name: test.name, suiteName: suite.name, status: 'skipped', duration: 0 })
+        results.tests.push({
+          name: test.name,
+          suiteName: suite.name,
+          status: 'skipped',
+          duration: 0,
+        })
         results.skipped++
       }
       continue
@@ -71,7 +75,12 @@ export async function runTests(): Promise<TestResults> {
     for (let test of suite.tests) {
       // If any test uses .only, skip all non-only tests in this suite
       if (hasOnlyTests && !test.only) {
-        results.tests.push({ name: test.name, suiteName: suite.name, status: 'skipped', duration: 0 })
+        results.tests.push({
+          name: test.name,
+          suiteName: suite.name,
+          status: 'skipped',
+          duration: 0,
+        })
         results.skipped++
         continue
       }
@@ -103,14 +112,11 @@ export async function runTests(): Promise<TestResults> {
         results.passed++
       } catch (error: any) {
         result.status = 'failed'
-        console.log('Error in test:', error)
-        console.log(error.stack)
         result.error = {
           message: error.message || String(error),
           stack: error.stack,
         }
         results.failed++
-        console.error(`Test failed: ${suite.name} > ${test.name}`, error)
       } finally {
         ctx.restore()
         if (suite.afterEach) {

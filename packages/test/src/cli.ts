@@ -17,7 +17,7 @@ let { values, positionals } = util.parseArgs({
     browserDevtools: { type: 'boolean' },
     browserOpen: { type: 'boolean', short: 'u' },
     watch: { type: 'boolean', short: 'w' },
-    browserPort: { type: 'string', short: 'p', default: '44101' },
+    browserPort: { type: 'string', short: 'p' },
     browserGlob: { type: 'string', default: '**/*.test.browser.{ts,tsx}' },
     reporter: { type: 'string', short: 'r', default: 'spec' },
     concurrency: { type: 'string', short: 'c', default: String(os.availableParallelism()) },
@@ -26,7 +26,8 @@ let { values, positionals } = util.parseArgs({
 })
 
 const pattern = positionals[0] || '**/*.test?(.browser).{ts,tsx}'
-const port = Number(values.browserPort)
+const defaultBrowserPort = Number(values.browserPort ?? 44101)
+const retryBrowserPort = values.browserPort === undefined
 
 let hasExited = false
 let latestExitCode = 0
@@ -35,6 +36,7 @@ let running = false
 let queued = false
 let rerunTimer: NodeJS.Timeout | undefined
 let browserServer: http.Server | undefined
+let browserPort = defaultBrowserPort
 
 process.on('SIGINT', () => cleanupAndExit(latestExitCode))
 process.on('SIGTERM', () => cleanupAndExit(latestExitCode))
@@ -80,7 +82,7 @@ async function executeRun() {
         parentURL: import.meta.url,
         tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
       })
-      browserServer = await startServer(port, browserFiles)
+      ;({ server: browserServer, port: browserPort } = await startServer(defaultBrowserPort, browserFiles, retryBrowserPort))
     }
 
     let reporter = createReporter(values.reporter!)
@@ -91,7 +93,7 @@ async function executeRun() {
         : null,
       browserFiles.length > 0
         ? runBrowserTests({
-            baseUrl: `http://localhost:${port}`,
+            baseUrl: `http://localhost:${browserPort}`,
             console: values.browserConsole,
             devtools: values.browserDevtools,
             open: values.browserOpen,
