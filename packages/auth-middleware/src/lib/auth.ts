@@ -21,13 +21,13 @@ export interface AuthFailure {
 /**
  * Auth state for a successfully authenticated request.
  */
-export interface GoodAuth<identity = unknown, method extends string = string> {
+export interface GoodAuth<identity = unknown> {
   /** Indicates that the current request is authenticated. */
   ok: true
   /** Application-defined identity resolved for the current request. */
   identity: identity
   /** Auth method that successfully authenticated the request. */
-  method: method
+  method: string
 }
 
 /**
@@ -43,15 +43,13 @@ export interface BadAuth {
 /**
  * Request auth state stored in the router context.
  */
-export type AuthState<identity = unknown, method extends string = string> =
-  | GoodAuth<identity, method>
-  | BadAuth
+export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
 
 /**
  * @deprecated Use `AuthState` instead.
  * TODO: Remove this alias in the next breaking auth-middleware cleanup pass.
  */
-export type Auth<identity = unknown, method extends string = string> = AuthState<identity, method>
+export type Auth<identity = unknown> = AuthState<identity>
 
 /**
  * Context key used to read auth state with `context.get(Auth)`.
@@ -112,13 +110,8 @@ export interface AuthScheme<identity = unknown, method extends string = string> 
 
 type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity, any> ? identity : never
 
-type AuthSchemeMethod<scheme> = scheme extends AuthScheme<any, infer method extends string>
-  ? method
-  : never
-
 type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = AuthState<
-  AuthSchemeIdentity<schemes[number]>,
-  AuthSchemeMethod<schemes[number]>
+  AuthSchemeIdentity<schemes[number]>
 >
 
 type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]

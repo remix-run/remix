@@ -83,7 +83,7 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export let requireAuth = requireAuthenticated<AuthIdentity, 'session'>({
+export let requireAuth = requireAuthenticated<AuthIdentity>({
   onFailure() {
     return redirect(routes.home.href())
   },

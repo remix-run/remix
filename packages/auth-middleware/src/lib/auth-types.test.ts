@@ -65,10 +65,7 @@ router.get(routes.public, context => {
   let currentAuth = context.get(Auth)
   let id: string = context.params.id
 
-  let authState: AuthState<
-    APIIdentity,
-    'pat' | 'partner-key'
-  > = currentAuth
+  let authState: AuthState<APIIdentity> = currentAuth
 
   void id
   void authState
@@ -79,7 +76,7 @@ router.get(routes.public, context => {
   if (currentAuth.ok) {
     let identity: APIIdentity =
       currentAuth.identity
-    let method: 'pat' | 'partner-key' = currentAuth.method
+    let method: string = currentAuth.method
 
     void identity
     void method
@@ -93,10 +90,7 @@ const privateAction = createAction<typeof routes.private, AppContext>(routes.pri
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
-    let authState: AuthState<
-      APIIdentity,
-      'pat' | 'partner-key'
-    > = currentAuth
+    let authState: AuthState<APIIdentity> = currentAuth
 
     void id
     void authState
@@ -110,10 +104,7 @@ const adminController = createController<typeof routes.admin, AppContext>(routes
     dashboard(context) {
       let currentAuth = context.get(Auth)
 
-      let authState: AuthState<
-        APIIdentity,
-        'pat' | 'partner-key'
-      > = currentAuth
+      let authState: AuthState<APIIdentity> = currentAuth
 
       void authState
 
@@ -123,15 +114,15 @@ const adminController = createController<typeof routes.admin, AppContext>(routes
 })
 
 fallbackRouter.get('/session/:id', {
-  middleware: [requireAuth<{ kind: 'session'; id: string }, 'session'>()] as const,
+  middleware: [requireAuth<{ kind: 'session'; id: string }>()] as const,
   action(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
     expectTypeEquality<
-      IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }, 'session'>>
+      IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }>>
     >()
-    expectTypeEquality<IsEqual<typeof currentAuth.method, 'session'>>()
+    expectTypeEquality<IsEqual<typeof currentAuth.method, string>>()
 
     void id
 
@@ -148,10 +139,7 @@ router.mount('/teams/:teamId', team => {
     let teamId: string = context.params.teamId
     let memberId: string = context.params.memberId
 
-    let authState: AuthState<
-      APIIdentity,
-      'pat' | 'partner-key'
-    > = currentAuth
+    let authState: AuthState<APIIdentity> = currentAuth
 
     void authState
     void teamId
@@ -161,7 +149,7 @@ router.mount('/teams/:teamId', team => {
   })
 })
 
-const protectedMiddleware = [requireAuth<APIIdentity, 'pat' | 'partner-key'>()] as const
+const protectedMiddleware = [requireAuth<APIIdentity>()] as const
 const protectedRouter = createRouter<AppContext, typeof protectedMiddleware>({
   middleware: protectedMiddleware,
 })
@@ -170,11 +158,8 @@ protectedRouter.get('/settings/:sectionId', context => {
   let currentAuth = context.get(Auth)
   let sectionId: string = context.params.sectionId
 
-  let authState: GoodAuth<
-    APIIdentity,
-    'pat' | 'partner-key'
-  > = currentAuth
-  let method: 'pat' | 'partner-key' = currentAuth.method
+  let authState: GoodAuth<APIIdentity> = currentAuth
+  let method: string = currentAuth.method
 
   void authState
   void method
@@ -185,17 +170,17 @@ protectedRouter.get('/settings/:sectionId', context => {
 
 type MountedProtectedContext<
   context extends RequestContext<Record<string, string>, RequestContextStore>,
-> = SetContextValue<context, typeof Auth, AuthState<APIIdentity, 'pat' | 'partner-key'>>
+> = SetContextValue<context, typeof Auth, AuthState<APIIdentity>>
 
 function mountProtectedSettings<
   context extends RequestContext<Record<string, string>, RequestContextStore>,
 >(
   router: Router<context, context> &
-    (GetContextValue<context, typeof Auth> extends AuthState<APIIdentity, 'pat' | 'partner-key'>
+    (GetContextValue<context, typeof Auth> extends AuthState<APIIdentity>
       ? unknown
       : never),
 ): void {
-  let mountProtectedMiddleware = [requireAuth<APIIdentity, 'pat' | 'partner-key'>()] as const
+  let mountProtectedMiddleware = [requireAuth<APIIdentity>()] as const
   let mountedProtectedRouter = createRouter<
     MountedProtectedContext<context>,
     typeof mountProtectedMiddleware
@@ -207,11 +192,8 @@ function mountProtectedSettings<
     let currentAuth = context.get(Auth)
     let sectionId: string = context.params.sectionId
 
-    let authState: GoodAuth<
-      APIIdentity,
-      'pat' | 'partner-key'
-    > = currentAuth
-    let method: 'pat' | 'partner-key' = currentAuth.method
+    let authState: GoodAuth<APIIdentity> = currentAuth
+    let method: string = currentAuth.method
 
     void authState
     void method
