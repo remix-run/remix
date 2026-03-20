@@ -1,17 +1,13 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { ApplyMiddlewareTuple, Middleware } from './middleware.ts'
-import type { RequestContext, RequestContextStore } from './request-context.ts'
+import type { RequestContext } from './request-context.ts'
+import type { WithContextParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
 type MiddlewareTuple = readonly AnyMiddleware[]
-
-type WithParams<context, params extends Record<string, any>> =
-  context extends RequestContext<any, infer store extends RequestContextStore>
-    ? RequestContext<params, store>
-    : RequestContext<params>
 
 type RequestHandlerObjectWithoutMiddleware<
   method extends RequestMethod | 'ANY',
@@ -54,7 +50,12 @@ type RouteParams<route extends string | RoutePattern | Route> = route extends st
       ? Params<pattern>
       : never
 
-type ControllerWithoutMiddleware<
+type RouteContext<
+  context extends RequestContext<any, any>,
+  route extends string | RoutePattern | Route,
+> = WithContextParams<context, RouteParams<route>>
+
+export type ControllerWithoutMiddleware<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
 > = {
@@ -62,7 +63,7 @@ type ControllerWithoutMiddleware<
   actions: ControllerActions<routes, context>
 }
 
-type ControllerWithMiddleware<
+export type ControllerWithMiddleware<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
   middleware extends MiddlewareTuple,
@@ -92,7 +93,7 @@ type ControllerActions<routes extends RouteMap, context extends RequestContext<a
   } :
   never
 
-type ControllerInput<
+export type ControllerInput<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
   middleware extends MiddlewareTuple = MiddlewareTuple,
@@ -110,7 +111,7 @@ export type Action<
 > = RequestHandlerDefinition<
   method,
   Params<pattern>,
-  WithParams<context, Params<pattern>>,
+  WithContextParams<context, Params<pattern>>,
   MiddlewareTuple
 >
 
@@ -131,52 +132,56 @@ export type BuildAction<
 /**
  * Create a typed action object whose handler context reflects its middleware tuple.
  */
-export function createAction<route extends string | RoutePattern | Route>(
+export function createAction<
+  route extends string | RoutePattern | Route,
+  context extends RequestContext<any, any> = RequestContext,
+>(
   _route: route,
-  action: RequestHandler<
-    RouteMethod<route>,
-    RouteParams<route>,
-    RequestContext<RouteParams<route>>
-  >,
-): RequestHandler<RouteMethod<route>, RouteParams<route>, RequestContext<RouteParams<route>>>
-export function createAction<route extends string | RoutePattern | Route>(
+  action: RequestHandler<RouteMethod<route>, RouteParams<route>, RouteContext<context, route>>,
+): RequestHandler<RouteMethod<route>, RouteParams<route>, RouteContext<context, route>>
+export function createAction<
+  route extends string | RoutePattern | Route,
+  context extends RequestContext<any, any> = RequestContext,
+>(
   _route: route,
   action: RequestHandlerObjectWithoutMiddleware<
     RouteMethod<route>,
     RouteParams<route>,
-    RequestContext<RouteParams<route>>
+    RouteContext<context, route>
   >,
 ): RequestHandlerObjectWithoutMiddleware<
   RouteMethod<route>,
   RouteParams<route>,
-  RequestContext<RouteParams<route>>
+  RouteContext<context, route>
 >
 export function createAction<
   route extends string | RoutePattern | Route,
-  middleware extends MiddlewareTuple,
+  context extends RequestContext<any, any> = RequestContext,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
 >(
   _route: route,
   action: RequestHandlerObjectWithMiddleware<
     RouteMethod<route>,
     RouteParams<route>,
-    RequestContext<RouteParams<route>>,
+    RouteContext<context, route>,
     middleware
   >,
 ): RequestHandlerObjectWithMiddleware<
   RouteMethod<route>,
   RouteParams<route>,
-  RequestContext<RouteParams<route>>,
+  RouteContext<context, route>,
   middleware
 >
 export function createAction<
   route extends string | RoutePattern | Route,
+  context extends RequestContext<any, any> = RequestContext,
   middleware extends MiddlewareTuple = MiddlewareTuple,
 >(
   _route: route,
   action: RequestHandlerDefinition<
     RouteMethod<route>,
     RouteParams<route>,
-    RequestContext<RouteParams<route>>,
+    RouteContext<context, route>,
     middleware
   >,
 ): typeof action {
@@ -186,20 +191,28 @@ export function createAction<
 /**
  * Create a typed controller object whose action contexts reflect its middleware tuple.
  */
-export function createController<routes extends RouteMap>(
-  _routes: routes,
-  controller: ControllerWithoutMiddleware<routes, RequestContext>,
-): ControllerWithoutMiddleware<routes, RequestContext>
-export function createController<routes extends RouteMap, middleware extends MiddlewareTuple>(
-  _routes: routes,
-  controller: ControllerWithMiddleware<routes, RequestContext, middleware>,
-): ControllerWithMiddleware<routes, RequestContext, middleware>
 export function createController<
   routes extends RouteMap,
+  context extends RequestContext<any, any> = RequestContext,
+>(
+  _routes: routes,
+  controller: ControllerWithoutMiddleware<routes, context>,
+): ControllerWithoutMiddleware<routes, context>
+export function createController<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = RequestContext,
   middleware extends MiddlewareTuple = MiddlewareTuple,
 >(
   _routes: routes,
-  controller: ControllerInput<routes, RequestContext, middleware>,
+  controller: ControllerWithMiddleware<routes, context, middleware>,
+): ControllerWithMiddleware<routes, context, middleware>
+export function createController<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = RequestContext,
+  middleware extends MiddlewareTuple = MiddlewareTuple,
+>(
+  _routes: routes,
+  controller: ControllerInput<routes, context, middleware>,
 ): typeof controller {
   return controller
 }

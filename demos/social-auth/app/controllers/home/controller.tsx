@@ -5,6 +5,7 @@ import { redirect } from 'remix/response/redirect'
 import { LoginPage } from './login-page.tsx'
 import { getProviderAvailability } from '../../utils/external-auth.ts'
 import { getReturnToQuery, readFlash } from '../../middleware/auth.ts'
+import type { SocialAuthContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 import { Session } from '../../middleware/session.ts'
@@ -58,4 +59,4 @@ export let home = {
       />,
     )
   },
-} satisfies BuildAction<'GET', typeof routes.home>
+} satisfies BuildAction<'GET', typeof routes.home, SocialAuthContext>

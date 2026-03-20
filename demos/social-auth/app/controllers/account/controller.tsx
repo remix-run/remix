@@ -7,7 +7,7 @@ import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
 export let account = createAction(routes.account, {
-  middleware: [requireAuth()],
+  middleware: [requireAuth()] as const,
   action(context) {
     let auth = context.get(Auth)
 

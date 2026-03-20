@@ -36,6 +36,11 @@ export type ContextValue<key> =
       ? instance
       : never
 
+export type WithContextParams<context, params extends Record<string, any>> =
+  context extends RequestContext<any, infer store extends RequestContextStore>
+    ? RequestContext<params, store>
+    : RequestContext<params>
+
 type ResolveStoredContextValue<
   store extends RequestContextStore,
   key extends object,
@@ -151,20 +156,20 @@ export class RequestContext<
     this.#contextMap.set(key, value)
   }
 
-  #router?: Router
+  #router?: Router<any>
 
   /**
    * The router handling this request.
    */
-  get router(): Router {
+  get router(): Router<RequestContext<any, store>> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router
+    return this.#router as Router<RequestContext<any, store>>
   }
 
-  set router(router: Router) {
+  set router(router: Router<any>) {
     this.#router = router
   }
 

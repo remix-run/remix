@@ -2,7 +2,6 @@ import {
   createContextKey,
   type Middleware,
   type RequestContext,
-  type SetContextValue,
 } from '@remix-run/fetch-router'
 
 /**
@@ -116,9 +115,7 @@ type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = Auth<
   AuthSchemeMethod<schemes[number]>
 >
 
-type SetAuthContextTransform<auth> = <context extends RequestContext<any, any>>(
-  context: context,
-) => SetContextValue<context, typeof Auth, auth>
+type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
 
 /**
  * Options for loading auth state for each request.

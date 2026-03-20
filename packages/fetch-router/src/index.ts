@@ -28,6 +28,7 @@ export type {
   ApplyMiddleware,
   ApplyMiddlewareTuple,
   Middleware,
+  MiddlewareContext,
   MiddlewareContextTransform,
   NextFunction,
 } from './lib/middleware.ts'

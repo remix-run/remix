@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test'
 
-import { createRouter } from '@remix-run/fetch-router'
+import {
+  createAction,
+  createController,
+  createRouter,
+  type MiddlewareContext,
+} from '@remix-run/fetch-router'
+import { route } from '@remix-run/fetch-router/routes'
 
 import { Auth, auth, type Auth as AuthState, type GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
@@ -29,13 +35,53 @@ const partnerKey = createAPIAuthScheme({
 const typedAuth = auth<[typeof personalAccessToken, typeof partnerKey]>({
   schemes: [personalAccessToken, partnerKey],
 })
-const router = createRouter()
+
+const routes = route({
+  public: '/public/:id',
+  private: '/private/:id',
+  admin: {
+    dashboard: '/admin',
+  },
+})
+
+const routerMiddleware = [typedAuth] as const
+
+type AppContext = MiddlewareContext<typeof routerMiddleware>
+
+const router = createRouter({ middleware: routerMiddleware })
+const fallbackRouter = createRouter()
 
 expectTypeEquality<IsEqual<typeof personalAccessToken.name, 'pat'>>()
 expectTypeEquality<IsEqual<typeof partnerKey.name, 'partner-key'>>()
 
-router.get('/public/:id', {
-  middleware: [typedAuth],
+router.get(routes.public, context => {
+  let currentAuth = context.get(Auth)
+  let id: string = context.params.id
+
+  let authState: AuthState<
+    { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number },
+    'pat' | 'partner-key'
+  > = currentAuth
+
+  void id
+  void authState
+
+  // @ts-expect-error - auth must be narrowed before reading identity
+  currentAuth.identity
+
+  if (currentAuth.ok) {
+    let identity: { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number } =
+      currentAuth.identity
+    let method: 'pat' | 'partner-key' = currentAuth.method
+
+    void identity
+    void method
+  }
+
+  return new Response('Public')
+})
+
+const privateAction = createAction<typeof routes.private, AppContext>(routes.private, {
   action(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
@@ -48,24 +94,29 @@ router.get('/public/:id', {
     void id
     void authState
 
-    // @ts-expect-error - auth must be narrowed before reading identity
-    currentAuth.identity
-
-    if (currentAuth.ok) {
-      let identity: { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number } =
-        currentAuth.identity
-      let method: 'pat' | 'partner-key' = currentAuth.method
-
-      void identity
-      void method
-    }
-
-    return new Response('Public')
+    return new Response('Private')
   },
 })
 
-router.get('/private/:id', {
-  middleware: [requireAuth<{ kind: 'session'; id: string }, 'session'>()],
+const adminController = createController<typeof routes.admin, AppContext>(routes.admin, {
+  actions: {
+    dashboard(context) {
+      let currentAuth = context.get(Auth)
+
+      let authState: AuthState<
+        { kind: 'bearer'; id: string } | { kind: 'api-key'; id: number },
+        'pat' | 'partner-key'
+      > = currentAuth
+
+      void authState
+
+      return new Response('Admin')
+    },
+  },
+})
+
+fallbackRouter.get('/session/:id', {
+  middleware: [requireAuth<{ kind: 'session'; id: string }, 'session'>()] as const,
   action(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
@@ -81,9 +132,15 @@ router.get('/private/:id', {
   },
 })
 
+router.get(routes.private, privateAction)
+router.map(routes.admin, adminController)
+
 void typedAuth
 void router
+void fallbackRouter
+void privateAction
+void adminController
 
 describe('auth middleware type inference', () => {
-  it('narrows auth state through route-local middleware tuples', () => {})
+  it('propagates router-global auth into inline and stored handlers', () => {})
 })

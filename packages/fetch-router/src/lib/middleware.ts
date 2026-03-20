@@ -1,41 +1,60 @@
 import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import type { RequestContext } from './request-context.ts'
+import type { RequestContext, RequestContextStore } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 
-export type MiddlewareContextTransform = <context extends RequestContext<any, any>>(
-  context: context,
-) => RequestContext<any, any>
+type AnyMiddleware = Middleware<any, any, any>
+type MiddlewareTuple = readonly AnyMiddleware[]
 
-type IdentityContextTransform = <context extends RequestContext<any, any>>(
-  context: context,
-) => context
+export type MiddlewareContextTransform =
+  | RequestContextStore
+  | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
+
+type IdentityContextTransform = readonly []
 
 type MiddlewareTransform<middleware> = middleware extends Middleware<any, any, infer transform>
   ? transform
   : IdentityContextTransform
 
-export type ApplyContextTransform<context extends RequestContext<any, any>, transform> =
-  transform extends (context: context) => infer output
-    ? output extends RequestContext<any, any>
-      ? output
-      : context
-    : context
+export type ApplyContextTransform<current_context extends RequestContext<any, any>, transform> =
+  transform extends RequestContextStore
+    ? current_context extends RequestContext<
+        infer params extends Record<string, any>,
+        infer store extends RequestContextStore
+      >
+      ? RequestContext<params, [...store, ...transform]>
+      : current_context
+    : transform extends {
+          <input_context extends current_context>(context: input_context): infer output
+        }
+      ? output extends RequestContext<any, any>
+        ? output
+        : current_context
+      : current_context
 
 export type ApplyMiddleware<context extends RequestContext<any, any>, middleware> =
   ApplyContextTransform<context, MiddlewareTransform<middleware>>
 
 export type ApplyMiddlewareTuple<context extends RequestContext<any, any>, middleware> =
-  middleware extends readonly [infer first, ...infer rest]
-    ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
+  middleware extends MiddlewareTuple
+    ? number extends middleware['length']
+      ? context
+      : middleware extends readonly [infer first, ...infer rest]
+        ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
+        : context
     : context
+
+export type MiddlewareContext<middleware extends MiddlewareTuple> = ApplyMiddlewareTuple<
+  RequestContext,
+  middleware
+>
 
 /**
  * A special kind of request handler that either returns a response or passes control
  * to the next middleware or request handler in the chain.
  *
  * @param context The request context
- * @param next A function that invokes the next middleware or handler in the chain
+ * @param next A function that invokes the next middleware or request handler in the chain
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
  */
 export interface Middleware<
