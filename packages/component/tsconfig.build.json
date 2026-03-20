@@ -7,6 +7,13 @@
     "rootDir": "./src",
     "sourceMap": true
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/lib/test"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/lib/test",
+    "dist"
+  ]
 }
