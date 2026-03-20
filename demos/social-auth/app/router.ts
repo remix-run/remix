@@ -59,7 +59,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   router.map(routes.home, home)
   router.get(routes.account, {
     middleware: [requireAuth],
-    action: accountAction.action,
+    handler: accountAction.handler,
   })
   router.map(routes.auth, authController)
 

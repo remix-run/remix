@@ -233,7 +233,7 @@ describe('createSessionAuthScheme scheme', () => {
 
     router.get('/protected', {
       middleware: [requireAuth()],
-      action: () => new Response('OK'),
+      handler: () => new Response('OK'),
     })
 
     router.get('/inspect', ({ get }) =>

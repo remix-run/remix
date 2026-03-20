@@ -15,7 +15,7 @@ type RequestHandlerObjectWithoutMiddleware<
   context extends RequestContext<any, any>,
 > = {
   middleware?: undefined
-  action: RequestHandler<method, params, context>
+  handler: RequestHandler<method, params, context>
 }
 
 type RequestHandlerObjectWithMiddleware<
@@ -25,7 +25,7 @@ type RequestHandlerObjectWithMiddleware<
   middleware extends MiddlewareTuple,
 > = {
   middleware: readonly [...middleware]
-  action: RequestHandler<method, params, ApplyMiddlewareTuple<context, middleware>>
+  handler: RequestHandler<method, params, ApplyMiddlewareTuple<context, middleware>>
 }
 
 type RequestHandlerDefinition<
@@ -152,15 +152,15 @@ export function isController(obj: unknown): obj is ControllerShape {
  */
 export interface ActionObjectShape {
   middleware?: Middleware<any, any, any>[]
-  action: RequestHandler<any, any, any>
+  handler: RequestHandler<any, any, any>
 }
 
 /**
- * Check if an object has an `action` property.
+ * Check if an object has a `handler` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is an action object
  */
 export function isActionObject(obj: unknown): obj is ActionObjectShape {
-  return typeof obj === 'object' && obj != null && 'action' in obj
+  return typeof obj === 'object' && obj != null && 'handler' in obj
 }

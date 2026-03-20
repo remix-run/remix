@@ -71,7 +71,7 @@ type AppContext = typeof router extends Router<infer context extends RequestCont
 type AdminAppContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
 const accountAction = {
-  action(context) {
+  handler(context) {
     let user = context.get(CurrentUser)
     let role = context.get(CurrentRole)
     let accountId: string = context.params.accountId
@@ -125,7 +125,7 @@ const elevatedReportsController = {
 } satisfies Controller<{ reports: typeof routes.reports }, AdminAppContext>
 
 const elevatedReportAction = {
-  action(context) {
+  handler(context) {
     let role = context.get(CurrentRole)
     let reportId: string = context.params.reportId
     let exactRole: 'admin' = role

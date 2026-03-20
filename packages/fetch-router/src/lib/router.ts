@@ -42,7 +42,7 @@ type RouteActionObjectWithoutMiddleware<
   context extends AnyContext,
 > = {
   middleware?: undefined
-  action: RequestHandler<method, Params<pattern>, RouteContext<context, pattern>>
+  handler: RequestHandler<method, Params<pattern>, RouteContext<context, pattern>>
 }
 
 type RouteActionObjectWithMiddleware<
@@ -52,7 +52,7 @@ type RouteActionObjectWithMiddleware<
   middleware extends MiddlewareTuple,
 > = {
   middleware: readonly [...middleware]
-  action: RequestHandler<
+  handler: RequestHandler<
     method,
     Params<pattern>,
     ApplyMiddlewareTuple<RouteContext<context, pattern>, middleware>
@@ -169,7 +169,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    action: RequestHandler<method, Params<pattern>, RouteContext<context, pattern>>,
+    handler: RequestHandler<method, Params<pattern>, RouteContext<context, pattern>>,
   ): void
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
@@ -384,7 +384,7 @@ function noMatchHandler({ url }: RequestContext): Response {
 function normalizeAction(action: unknown): NormalizedAction {
   if (isActionObject(action)) {
     return {
-      handler: action.action,
+      handler: action.handler,
       middleware:
         action.middleware && action.middleware.length > 0 ? [...action.middleware] : undefined,
     }

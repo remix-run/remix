@@ -96,7 +96,7 @@ router.get(routes.public, context => {
 })
 
 const privateAction = {
-  action(context) {
+  handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
@@ -129,7 +129,7 @@ const adminController = {
 
 fallbackRouter.get('/session/:id', {
   middleware: [requireAuth<{ kind: 'session'; id: string }>()] as const,
-  action(context) {
+  handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
@@ -146,7 +146,7 @@ fallbackRouter.get('/session/:id', {
 
 router.get(routes.private, {
   middleware: [requireAuth<APIIdentity>()] as const,
-  action: privateAction.action,
+  handler: privateAction.handler,
 })
 
 router.map(routes.admin, {

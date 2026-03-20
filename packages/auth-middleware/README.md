@@ -60,7 +60,7 @@ let router = createRouter({
 
 router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
-  action(context) {
+  handler(context) {
     let auth = context.get(Auth) as GoodAuth<{ id: string; email: string }>
 
     return Response.json({

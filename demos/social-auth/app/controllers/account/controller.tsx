@@ -7,7 +7,7 @@ import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
 export let accountAction = {
-  action(context) {
+  handler(context) {
     let auth = context.get(Auth)
 
     return render(
