@@ -484,6 +484,10 @@ describe('vnode rendering', () => {
               </>
               <span id="fourth">Fourth</span>
             </>
+            <div id="div">
+              <Middle id="middle-3" />
+            </div>
+            <span id="fifth">Fifth</span>
           </>
         )
       }
@@ -501,17 +505,25 @@ describe('vnode rendering', () => {
       expect(second.nextSibling).toBe(third)
       expect(third.nextSibling).toBe(fourth)
 
+      let div = container.querySelector('#div')
+      let fifth = container.querySelector('#fifth')
+      invariant(div && fifth)
+      expect(fourth.nextSibling).toBe(div)
+      expect(div.nextSibling).toBe(fifth)
+
       showMiddle = true
       capturedUpdates.forEach((update) => update())
       root.flush()
 
       let middle1 = container.querySelector('#middle-1')
       let middle2 = container.querySelector('#middle-2')
-      invariant(middle1 && middle2)
+      let middle3 = container.querySelector('#middle-3')
+      invariant(middle1 && middle2 && middle3)
       expect(middle1.previousSibling).toBe(first)
       expect(middle1.nextSibling).toBe(second)
       expect(middle2.previousSibling).toBe(third)
       expect(middle2.nextSibling).toBe(fourth)
+      expect(middle3.parentNode).toBe(div)
     })
   })
 })

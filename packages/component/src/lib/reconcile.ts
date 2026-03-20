@@ -1642,18 +1642,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
 
 export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
-  if (!vParent) return null
-
+  if (!vParent || !Array.isArray(vParent._children)) return null
   let children = vParent._children
-  if (!children || children.length === 0) return findNextSiblingDomAnchor(vParent)
-
   let idx = children.indexOf(curr)
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])
     if (dom) return dom
   }
-  return findNextSiblingDomAnchor(vParent)
+
+  // If this is a fragment, there may be additional siblings not in this fragment
+  // but that still come after this node in the DOM order.
+  if (isFragmentNode(vParent)) {
+    return findNextSiblingDomAnchor(vParent)
+  }
+  return null
 }
 
 function reclaimPersistedMixinNode(
