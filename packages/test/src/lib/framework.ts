@@ -19,6 +19,11 @@ interface Test {
   todo?: boolean
 }
 
+// Holds lifecycle hooks registered at the top level (outside any describe).
+// Top-level describes inherit these hooks just like nested describes inherit
+// from their parent.
+let rootHooks: Pick<TestSuite, 'beforeEach' | 'afterEach' | 'beforeAll' | 'afterAll'> = {}
+
 let currentSuite: TestSuite | null = null
 let rootSuites: TestSuite[] = []
 
@@ -30,13 +35,12 @@ function registerDescribe(name: string, fn: () => void, flags?: { only?: boolean
   let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
   let suite: TestSuite = { name: fullName, tests: [], ...flags }
 
-  // Inherit parent lifecycle hooks so nested suites get outer beforeEach/afterEach etc.
-  if (currentSuite) {
-    if (currentSuite.beforeEach) suite.beforeEach = currentSuite.beforeEach
-    if (currentSuite.afterEach) suite.afterEach = currentSuite.afterEach
-    if (currentSuite.beforeAll) suite.beforeAll = currentSuite.beforeAll
-    if (currentSuite.afterAll) suite.afterAll = currentSuite.afterAll
-  }
+  // Inherit lifecycle hooks from parent suite (or root hooks if at top level)
+  let parent = currentSuite ?? rootHooks
+  if (parent.beforeEach) suite.beforeEach = parent.beforeEach
+  if (parent.afterEach) suite.afterEach = parent.afterEach
+  if (parent.beforeAll) suite.beforeAll = parent.beforeAll
+  if (parent.afterAll) suite.afterAll = parent.afterAll
 
   let insertedAt = rootSuites.length
   rootSuites.push(suite)
@@ -98,45 +102,33 @@ export const it = Object.assign(
 export const suite = describe
 export const test = it
 
+function chainBefore(existing: (() => void | Promise<void>) | undefined, fn: () => void | Promise<void>) {
+  return existing ? async () => { await existing(); await fn() } : fn
+}
+
+function chainAfter(existing: (() => void | Promise<void>) | undefined, fn: () => void | Promise<void>) {
+  // Child/later runs first, then earlier (reverse order)
+  return existing ? async () => { await fn(); await existing() } : fn
+}
+
 export function beforeEach(fn: () => void | Promise<void>) {
-  if (!currentSuite) throw new Error('beforeEach() must be called inside describe()')
-  let existing = currentSuite.beforeEach
-  if (existing) {
-    currentSuite.beforeEach = async () => { await existing(); await fn() }
-  } else {
-    currentSuite.beforeEach = fn
-  }
+  let target = currentSuite ?? rootHooks
+  target.beforeEach = chainBefore(target.beforeEach, fn)
 }
 
 export function afterEach(fn: () => void | Promise<void>) {
-  if (!currentSuite) throw new Error('afterEach() must be called inside describe()')
-  let existing = currentSuite.afterEach
-  if (existing) {
-    // Child runs first, then parent (reverse order)
-    currentSuite.afterEach = async () => { await fn(); await existing() }
-  } else {
-    currentSuite.afterEach = fn
-  }
+  let target = currentSuite ?? rootHooks
+  target.afterEach = chainAfter(target.afterEach, fn)
 }
 
 export function beforeAll(fn: () => void | Promise<void>) {
-  if (!currentSuite) throw new Error('beforeAll() must be called inside describe()')
-  let existing = currentSuite.beforeAll
-  if (existing) {
-    currentSuite.beforeAll = async () => { await existing(); await fn() }
-  } else {
-    currentSuite.beforeAll = fn
-  }
+  let target = currentSuite ?? rootHooks
+  target.beforeAll = chainBefore(target.beforeAll, fn)
 }
 
 export function afterAll(fn: () => void | Promise<void>) {
-  if (!currentSuite) throw new Error('afterAll() must be called inside describe()')
-  let existing = currentSuite.afterAll
-  if (existing) {
-    currentSuite.afterAll = async () => { await fn(); await existing() }
-  } else {
-    currentSuite.afterAll = fn
-  }
+  let target = currentSuite ?? rootHooks
+  target.afterAll = chainAfter(target.afterAll, fn)
 }
 
 // Aliases matching node:test API

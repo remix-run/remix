@@ -232,20 +232,45 @@ describe('lifecycle hooks', () => {
     assert.equal(s.afterAll, fn)
   })
 
-  it('beforeEach throws when called outside describe', () => {
-    assert.throws(() => beforeEach(() => {}), /must be called inside describe/)
+  it('beforeEach can be called outside describe (registers on root hooks)', () => {
+    // Just verify it doesn't throw — root-level hooks are tested via inheritance
+    assert.doesNotThrow(() => {
+      let [s] = captureRegistration(() => {
+        beforeEach(() => {})
+        describe('suite', () => {})
+      })
+      assert.equal(typeof s.beforeEach, 'function')
+    })
   })
 
-  it('afterEach throws when called outside describe', () => {
-    assert.throws(() => afterEach(() => {}), /must be called inside describe/)
+  it('afterEach can be called outside describe (registers on root hooks)', () => {
+    assert.doesNotThrow(() => {
+      let [s] = captureRegistration(() => {
+        afterEach(() => {})
+        describe('suite', () => {})
+      })
+      assert.equal(typeof s.afterEach, 'function')
+    })
   })
 
-  it('beforeAll throws when called outside describe', () => {
-    assert.throws(() => beforeAll(() => {}), /must be called inside describe/)
+  it('beforeAll can be called outside describe (registers on root hooks)', () => {
+    assert.doesNotThrow(() => {
+      let [s] = captureRegistration(() => {
+        beforeAll(() => {})
+        describe('suite', () => {})
+      })
+      assert.equal(typeof s.beforeAll, 'function')
+    })
   })
 
-  it('afterAll throws when called outside describe', () => {
-    assert.throws(() => afterAll(() => {}), /must be called inside describe/)
+  it('afterAll can be called outside describe (registers on root hooks)', () => {
+    assert.doesNotThrow(() => {
+      let [s] = captureRegistration(() => {
+        afterAll(() => {})
+        describe('suite', () => {})
+      })
+      assert.equal(typeof s.afterAll, 'function')
+    })
   })
 })
 
