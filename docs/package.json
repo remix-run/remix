@@ -22,7 +22,7 @@
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
     "build:browser": "esbuild src/client/*.tsx --outbase=src/client --outdir=build/assets --bundle --splitting --format=esm",
-    "build:public": "mkdir -p build/assets && cp public/* build/assets",
+    "build:public": "node scripts/move-public.ts",
     "dev": "NODE_ENV=development pnpm run --filter \".\" --parallel \"/^dev:/\"",
     "dev:browser": "pnpm run build:browser --sourcemap --watch",
     "dev:server": "tsx --watch src/server/index.ts",
