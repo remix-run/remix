@@ -1,7 +1,7 @@
 import type { RemixNode } from 'remix/component'
 
 import * as styles from './styles.ts'
-import type { ExternalProviderName } from '../../integrations/external-auth/provider-config.ts'
+import type { ExternalProviderName } from '../../integrations/external-auth.ts'
 import type { AuthMethod } from '../../models/auth-session.ts'
 import { GitHubIcon, GoogleIcon, XIcon } from './icons.tsx'
 

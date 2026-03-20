@@ -79,7 +79,8 @@ Inside `app/`, organize code by responsibility:
 - `models/` for app-specific data shapes and domain-level utilities
 
 Do not create generic `operations/` or `utils/` directories by default. Put code with the layer
-that owns it.
+that owns it. Split an integration into multiple modules only when it is large enough to justify
+that complexity.
 
 ### Naming and ownership rules
 
@@ -133,6 +134,8 @@ demos/<name>/
         form-field.tsx
         notice.tsx
         icons.tsx
+        design-system.ts
+        styles.ts
 
     middleware/
       auth.ts
@@ -140,20 +143,12 @@ demos/<name>/
       session.ts
 
     integrations/
-      external-auth/
-        provider-config.ts
-        provider-status.ts
-        google.ts
-        github.ts
-        x.ts
+      external-auth.ts
 
     models/
       auth-session.ts
       auth-session.test.ts
       password-hash.ts
-
-      design-system.ts
-      styles.ts
 
   data/
     schema.ts

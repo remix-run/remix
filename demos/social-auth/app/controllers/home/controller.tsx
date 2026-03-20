@@ -3,7 +3,7 @@ import { Auth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { LoginPage } from './login-page.tsx'
-import { getProviderAvailability } from '../../integrations/external-auth/provider-status.ts'
+import { getProviderAvailability } from '../../integrations/external-auth.ts'
 import { getReturnToQuery, readFlash } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
