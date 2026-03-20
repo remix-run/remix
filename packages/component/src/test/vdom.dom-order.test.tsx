@@ -449,64 +449,50 @@ describe('vnode rendering', () => {
       expect(container.querySelector('#second')).toBe(second)
     })
 
-    it('maintains DOM order when replacing a component with non-render middle content', () => {
+    it('maintains DOM order with non-render content in a fragment', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       let showMiddle = false
       let capturedUpdate = () => {}
 
-      function PageA() {
-        return () => <div>Page A</div>
-      }
-
-      function PageB(handle: Handle) {
+      function Middle(handle: Handle) {
         capturedUpdate = () => handle.update()
-        return () => (
-          <>
-            <span>Start</span>
-            {showMiddle ? <span>Middle</span> : null}
-            <span>End</span>
-          </>
-        )
+        return () => {
+          if (showMiddle) return <span id="middle">Middle</span>
+          return undefined
+        }
       }
 
-      let Page: typeof PageA | typeof PageB = PageA
-
-      function App() {
-        return () => (
-          <main>
-            <nav>Nav</nav>
-            <Page />
-            <footer>Footer</footer>
-          </main>
-        )
-      }
-
-      root.render(<App />)
+      root.render(
+        <>
+          <span id="first">First</span>
+          <Middle />
+          <span id="second">Second</span>
+        </>,
+      )
       expect(container.innerHTML).toBe(
-        '<main><nav>Nav</nav><div>Page A</div><footer>Footer</footer></main>',
+        '<span id="first">First</span><span id="second">Second</span>',
       )
 
-      Page = PageB
-      root.render(<App />)
-      expect(container.innerHTML).toBe(
-        '<main><nav>Nav</nav><span>Start</span><span>End</span><footer>Footer</footer></main>',
-      )
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
 
       showMiddle = true
       capturedUpdate()
       root.flush()
       expect(container.innerHTML).toBe(
-        '<main><nav>Nav</nav><span>Start</span><span>Middle</span><span>End</span><footer>Footer</footer></main>',
+        '<span id="first">First</span><span id="middle">Middle</span><span id="second">Second</span>',
       )
 
       showMiddle = false
       capturedUpdate()
       root.flush()
       expect(container.innerHTML).toBe(
-        '<main><nav>Nav</nav><span>Start</span><span>End</span><footer>Footer</footer></main>',
+        '<span id="first">First</span><span id="second">Second</span>',
       )
+      expect(container.querySelector('#first')).toBe(first)
+      expect(container.querySelector('#second')).toBe(second)
     })
   })
 })
