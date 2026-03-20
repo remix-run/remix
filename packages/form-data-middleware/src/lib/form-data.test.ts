@@ -10,9 +10,22 @@ import {
   MaxTotalSizeExceededError,
   type FileUploadHandler,
 } from '@remix-run/form-data-parser'
-import { createRouter } from '@remix-run/fetch-router'
+import {
+  createRouter,
+  type GetContextValue,
+  type RequestContext,
+} from '@remix-run/fetch-router'
 
-import { formData } from './form-data.ts'
+import { formData, type WithFormData } from './form-data.ts'
+
+type IsEqual<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+
+function expectTypeEquality<_check extends true>() {}
+
+type FormDataContext = WithFormData<RequestContext>
+
+expectTypeEquality<IsEqual<GetContextValue<FormDataContext, typeof FormData>, FormData>>()
 
 describe('formData middleware', () => {
   it('parses application/x-www-form-urlencoded form data from the request body', async () => {

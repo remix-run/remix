@@ -41,6 +41,17 @@ router.post('/users', async (context) => {
 })
 ```
 
+### Typed Context
+
+`formData()` contributes `FormData` to the typed request context automatically. If you need to describe that contract in a stored controller or action, use `WithFormData<context>`.
+
+```ts
+import type { RequestContext } from 'remix/fetch-router'
+import type { WithFormData } from 'remix/form-data-middleware'
+
+type FormActionContext = WithFormData<RequestContext>
+```
+
 ### Custom File Upload Handler
 
 You can use a custom upload handler to customize how file uploads are handled. The return value of the upload handler will be used as the value of the form field in the `FormData` object.

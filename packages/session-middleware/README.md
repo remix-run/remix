@@ -51,6 +51,17 @@ The middleware:
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
 
+### Typed Context
+
+`session()` contributes `Session` to the typed request context automatically. If you need to describe that contract in a stored controller or action, use `WithSession<context>`.
+
+```ts
+import type { RequestContext } from 'remix/fetch-router'
+import type { WithSession } from 'remix/session-middleware'
+
+type SessionContext = WithSession<RequestContext>
+```
+
 ### Login/Logout Flow
 
 A basic login/logout flow could look like this:

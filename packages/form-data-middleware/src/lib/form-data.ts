@@ -8,9 +8,12 @@ import {
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
-import type { Middleware } from '@remix-run/fetch-router'
+import type { MergeContext, Middleware, RequestContext } from '@remix-run/fetch-router'
 
 type SetFormDataContextTransform = readonly [readonly [typeof FormData, FormData]]
+
+export type WithFormData<context extends RequestContext<any, any>> =
+  MergeContext<context, [readonly [typeof FormData, FormData]]>
 
 function isMultipartLimitError(error: unknown): boolean {
   return (

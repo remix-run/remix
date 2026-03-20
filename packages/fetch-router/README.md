@@ -631,18 +631,17 @@ let routes = route({
   account: '/account',
 })
 
-type RootMiddleware = [
-  ReturnType<typeof loadSession>,
-  ReturnType<typeof loadAuth>,
-]
+type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
 
 type AppContext<params extends Record<string, string> = {}> = WithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-type AuthenticatedAppContext<params extends Record<string, string> = {}> =
-  WithRequiredAuth<AppContext<params>, { id: string }>
+type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
+  AppContext<params>,
+  { id: string }
+>
 
 let accountAction = {
   handler(context) {
@@ -662,6 +661,29 @@ router.get(routes.account, {
 ```
 
 In this example, the router provides the base app context, the action declares the stronger context it requires, and the route-local middleware makes that contract true at runtime.
+
+#### Middleware Provider Guidance
+
+If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
+
+- the context key consumers read with `context.get(...)`
+- the middleware that populates that key at runtime
+- one or more `With...` helper types (optional) that let applications describe the resulting request context without touching raw context entries directly
+
+```ts
+import { createContextKey, type MergeContext, type RequestContext } from 'remix/fetch-router'
+
+// The context key that consumers will need to read from `context.get(...)`
+export const CurrentUser = createContextKey<User | null>()
+
+// One or more With* helper types that apps can use to describe the request context
+export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
+  context,
+  [readonly [typeof CurrentUser, User | null]]
+>
+```
+
+Built-in middleware packages may also export `With...` helpers when that makes controller and action contracts clearer, for example `auth-middleware` provides `WithAuth` and `WithRequiredAuth`.
 
 ### Additional Topics
 
