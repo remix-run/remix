@@ -9,6 +9,7 @@ export type { SessionAuthSchemeOptions } from './lib/schemes/session.ts'
 
 export type {
   AuthFailure,
+  AuthState,
   AuthOptions,
   AuthScheme,
   AuthSchemeFailure,

@@ -4,11 +4,16 @@ import {
   createAction,
   createController,
   createRouter,
+  type GetContextValue,
   type MiddlewareContext,
+  type RequestContext,
+  type RequestContextStore,
+  type Router,
+  type SetContextValue,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
-import { Auth, auth, type Auth as AuthState, type GoodAuth } from './auth.ts'
+import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -178,7 +183,53 @@ protectedRouter.get('/settings/:sectionId', context => {
   return new Response(currentAuth.method)
 })
 
+type MountedProtectedContext<
+  context extends RequestContext<Record<string, string>, RequestContextStore>,
+> = SetContextValue<context, typeof Auth, AuthState<APIIdentity, 'pat' | 'partner-key'>>
+
+function mountProtectedSettings<
+  context extends RequestContext<Record<string, string>, RequestContextStore>,
+>(
+  router: Router<context, context> &
+    (GetContextValue<context, typeof Auth> extends AuthState<APIIdentity, 'pat' | 'partner-key'>
+      ? unknown
+      : never),
+): void {
+  let mountProtectedMiddleware = [requireAuth<APIIdentity, 'pat' | 'partner-key'>()] as const
+  let mountedProtectedRouter = createRouter<
+    MountedProtectedContext<context>,
+    typeof mountProtectedMiddleware
+  >({
+    middleware: mountProtectedMiddleware,
+  })
+
+  mountedProtectedRouter.get('/settings/:sectionId', context => {
+    let currentAuth = context.get(Auth)
+    let sectionId: string = context.params.sectionId
+
+    let authState: GoodAuth<
+      APIIdentity,
+      'pat' | 'partner-key'
+    > = currentAuth
+    let method: 'pat' | 'partner-key' = currentAuth.method
+
+    void authState
+    void method
+    void sectionId
+
+    return new Response(currentAuth.method)
+  })
+
+  router.mount('/mounted-protected', mountedProtectedRouter)
+}
+
 router.mount('/private', protectedRouter)
+mountProtectedSettings<AppContext>(router)
+
+if (false as boolean) {
+  // @ts-expect-error - reusable mount helper requires auth() to run in the parent router
+  mountProtectedSettings<RequestContext>(fallbackRouter)
+}
 
 void typedAuth
 void router

@@ -1,3 +1,4 @@
+import type { Router } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
@@ -5,7 +6,7 @@ import { ErrorPage } from './error-page.tsx'
 import { getIssueMessage } from './form-utils.ts'
 import { ResetPasswordCompletePage, ResetPasswordPage } from './reset-password-page.tsx'
 import { resetPasswordSchema } from './schemas.ts'
-import type { SocialAuthRouteContext, SocialAuthRouter } from '../../router.ts'
+import type { SocialAuthRouteContext } from '../../router.ts'
 import { passwordResetTokens, users } from '../../data/schema.ts'
 import { flashSuccess, getReturnToQuery } from '../../middleware/auth.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
@@ -13,7 +14,9 @@ import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
 import { render } from '../render.tsx'
 
-export function mountResetPasswordRoutes(router: SocialAuthRouter<{ token: string }>): void {
+export function mountResetPasswordRoutes<context extends SocialAuthRouteContext<{ token: string }>>(
+  router: Router<context, context>,
+): void {
   router.get('/', async context => {
     let resetToken = await loadResetToken(context)
     if (resetToken == null) {
@@ -111,7 +114,9 @@ export function mountResetPasswordRoutes(router: SocialAuthRouter<{ token: strin
   })
 }
 
-async function loadResetToken(context: SocialAuthRouteContext<{ token: string }>) {
+async function loadResetToken<context extends SocialAuthRouteContext<{ token: string }>>(
+  context: context,
+) {
   let db = context.get(Database)
   let token = context.params.token
   let resetToken = await db.find(passwordResetTokens, { token })

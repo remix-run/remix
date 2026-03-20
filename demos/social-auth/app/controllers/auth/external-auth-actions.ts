@@ -1,3 +1,4 @@
+import type { Router } from 'remix/fetch-router'
 import {
   createExternalAuthCallbackRequestHandler,
   createExternalAuthLoginRequestHandler,
@@ -5,7 +6,7 @@ import {
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
-import type { SocialAuthRouteContext, SocialAuthRouter } from '../../router.ts'
+import type { SocialAuthRouteContext } from '../../router.ts'
 import type { ExternalProviderName } from '../../utils/external-auth.ts'
 import {
   createGitHubProvider,
@@ -18,10 +19,9 @@ import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 
-export function mountExternalProviderRoutes(
-  router: SocialAuthRouter,
-  providerName: ExternalProviderName,
-): void {
+export function mountExternalProviderRoutes<
+  context extends SocialAuthRouteContext<Record<string, string>>,
+>(router: Router<context, context>, providerName: ExternalProviderName): void {
   router.get('/login', context => startExternalLogin(providerName, context))
   router.get('/callback', context => finishExternalLogin(providerName, context))
 }

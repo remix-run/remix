@@ -1,4 +1,4 @@
-import { createRouter } from 'remix/fetch-router'
+import type { Router } from 'remix/fetch-router'
 
 import { mountExternalProviderRoutes } from './external-auth-actions.ts'
 import { mountForgotPasswordRoutes } from './forgot-password-actions.tsx'
@@ -6,11 +6,11 @@ import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
 import { mountResetPasswordRoutes } from './reset-password-actions.tsx'
 import { mountSignupRoutes } from './signup-actions.tsx'
-import type { SocialAuthContext } from '../../router.ts'
+import type { SocialAuthRouteContext } from '../../router.ts'
 
-export function createAuthRouter() {
-  let router = createRouter<SocialAuthContext>()
-
+export function mountAuthRoutes<context extends SocialAuthRouteContext<Record<string, string>>>(
+  router: Router<context, context>,
+): void {
   router.post('/login', login)
   router.post('/logout', logout)
 
@@ -29,6 +29,4 @@ export function createAuthRouter() {
   router.mount('/x', x => {
     mountExternalProviderRoutes(x, 'x')
   })
-
-  return router
 }

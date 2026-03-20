@@ -43,14 +43,20 @@ export interface BadAuth {
 /**
  * Request auth state stored in the router context.
  */
-export type Auth<identity = unknown, method extends string = string> =
+export type AuthState<identity = unknown, method extends string = string> =
   | GoodAuth<identity, method>
   | BadAuth
 
 /**
+ * @deprecated Use `AuthState` instead.
+ * TODO: Remove this alias in the next breaking auth-middleware cleanup pass.
+ */
+export type Auth<identity = unknown, method extends string = string> = AuthState<identity, method>
+
+/**
  * Context key used to read auth state with `context.get(Auth)`.
  */
-export const Auth = createContextKey<Auth>()
+export const Auth = createContextKey<AuthState>()
 
 /**
  * Successful result returned by an auth scheme.
@@ -110,7 +116,7 @@ type AuthSchemeMethod<scheme> = scheme extends AuthScheme<any, infer method exte
   ? method
   : never
 
-type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = Auth<
+type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = AuthState<
   AuthSchemeIdentity<schemes[number]>,
   AuthSchemeMethod<schemes[number]>
 >
@@ -151,7 +157,7 @@ export function auth<schemes extends readonly AuthScheme<any, any>[]>(
           ok: true,
           identity: result.identity,
           method: scheme.name,
-        } satisfies Auth)
+        } satisfies AuthState)
 
         return next()
       }
@@ -165,14 +171,14 @@ export function auth<schemes extends readonly AuthScheme<any, any>[]>(
       context.set(Auth, {
         ok: false,
         error: createFailure(scheme, result),
-      } satisfies Auth)
+      } satisfies AuthState)
 
       return next()
     }
 
     context.set(Auth, {
       ok: false,
-    } satisfies Auth)
+    } satisfies AuthState)
 
     return next()
   }
