@@ -3,6 +3,7 @@ import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { account } from './controllers/account/controller.tsx'
@@ -24,7 +25,17 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let router = createRouter({
-    middleware: [formData(), session(cookie, storage), loadDatabase(), loadAuth()],
+    middleware: [
+      staticFiles('./public', {
+        cacheControl: 'no-store, must-revalidate',
+        etag: false,
+        lastModified: false,
+      }),
+      formData(),
+      session(cookie, storage),
+      loadDatabase(),
+      loadAuth(),
+    ],
   })
 
   router.get(routes.home, home)
