@@ -38,11 +38,20 @@ function registerDescribe(name: string, fn: () => void, flags?: { only?: boolean
     if (currentSuite.afterAll) suite.afterAll = currentSuite.afterAll
   }
 
+  let insertedAt = rootSuites.length
   rootSuites.push(suite)
   let prevSuite = currentSuite
   currentSuite = suite
-  fn()
-  currentSuite = prevSuite
+  try {
+    fn()
+  } catch (error) {
+    // Remove this suite and any suites registered during fn() so they don't
+    // end up in the executor after a failed registration call
+    rootSuites.splice(insertedAt)
+    throw error
+  } finally {
+    currentSuite = prevSuite
+  }
 }
 
 export const describe = Object.assign(

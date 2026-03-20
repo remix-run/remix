@@ -56,12 +56,14 @@ describe('describe', () => {
     assert.equal(s.tests[1].name, 'test two')
   })
 
-  it('throws when nested inside another describe', () => {
-    captureRegistration(() => {
+  it('flattens nested describes into "Outer > Inner" names', () => {
+    let [outer, inner] = captureRegistration(() => {
       describe('outer', () => {
-        assert.throws(() => describe('inner', () => {}), /Nested describe/)
+        describe('inner', () => {})
       })
     })
+    assert.equal(outer.name, 'outer')
+    assert.equal(inner.name, 'outer > inner')
   })
 })
 
