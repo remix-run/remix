@@ -14,10 +14,7 @@ export interface BearerTokenAuthSchemeOptions<identity> {
   /** Authorization scheme prefix expected in the header value. */
   scheme?: string
   /** Verifies a parsed bearer token and returns the resolved identity on success. */
-  verify: (
-    token: string,
-    context: RequestContext,
-  ) => identity | null | Promise<identity | null>
+  verify: (token: string, context: RequestContext) => identity | null | Promise<identity | null>
   /** Challenge value returned when the scheme rejects credentials. */
   challenge?: string
 }

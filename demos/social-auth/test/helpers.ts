@@ -38,7 +38,11 @@ export function getSessionCookie(response: Response): string | null {
   return getCookie(response, 'social-auth-session')
 }
 
-export function requestWithSession(url: string, sessionCookie: string, init?: RequestInit): Request {
+export function requestWithSession(
+  url: string,
+  sessionCookie: string,
+  init?: RequestInit,
+): Request {
   let cookie = new Cookie({ 'social-auth-session': sessionCookie })
 
   return new Request(url, {

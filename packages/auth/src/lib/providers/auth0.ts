@@ -1,6 +1,10 @@
 import type { OAuthProvider } from '../provider.ts'
 
-import { createOIDCAuthProvider, type OIDCAuthProviderOptions, type OIDCAuthProfile } from './oidc.ts'
+import {
+  createOIDCAuthProvider,
+  type OIDCAuthProviderOptions,
+  type OIDCAuthProfile,
+} from './oidc.ts'
 
 /**
  * Profile claims returned by the built-in Auth0 auth provider.
@@ -27,7 +31,9 @@ export interface Auth0AuthProviderOptions
  * @param options Auth0 domain and client settings for your application.
  * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
-export function createAuth0AuthProvider(options: Auth0AuthProviderOptions): OAuthProvider<Auth0AuthProfile, 'auth0'> {
+export function createAuth0AuthProvider(
+  options: Auth0AuthProviderOptions,
+): OAuthProvider<Auth0AuthProfile, 'auth0'> {
   let issuer = createAuth0Issuer(options.domain)
 
   return createOIDCAuthProvider({
@@ -38,7 +44,9 @@ export function createAuth0AuthProvider(options: Auth0AuthProviderOptions): OAut
 }
 
 function createAuth0Issuer(domain: string): string {
-  let url = new URL(domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`)
+  let url = new URL(
+    domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`,
+  )
   url.pathname = '/'
   url.search = ''
   url.hash = ''

@@ -17,9 +17,7 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
   it('authenticates with credentials login and writes session auth state', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let storage = createMemorySessionStorage()
-    let users = new Map([
-      ['u1', { id: 'u1', email: 'mj@example.com' }],
-    ])
+    let users = new Map([['u1', { id: 'u1', email: 'mj@example.com' }]])
     let provider = createCredentialsAuthProvider({
       parse(context) {
         let formData = context.get(FormData)
@@ -57,18 +55,15 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
       ],
     })
 
-    router.post(
-      '/login',
-      {
-        middleware: [formData()],
-        action: createCredentialsAuthLoginRequestHandler(provider, {
-          writeSession(session, user) {
-            session.set('auth', { userId: user.id })
-          },
-          successRedirectTo: '/dashboard',
-        }),
-      },
-    )
+    router.post('/login', {
+      middleware: [formData()],
+      action: createCredentialsAuthLoginRequestHandler(provider, {
+        writeSession(session, user) {
+          session.set('auth', { userId: user.id })
+        },
+        successRedirectTo: '/dashboard',
+      }),
+    })
     router.get('/dashboard', {
       middleware: [requireAuth()],
       action({ get }) {
@@ -122,16 +117,13 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.post(
-      '/login',
-      {
-        middleware: [formData()],
-        action: createCredentialsAuthLoginRequestHandler(provider, {
-          writeSession() {},
-          failureRedirectTo: '/login',
-        }),
-      },
-    )
+    router.post('/login', {
+      middleware: [formData()],
+      action: createCredentialsAuthLoginRequestHandler(provider, {
+        writeSession() {},
+        failureRedirectTo: '/login',
+      }),
+    })
 
     let response = await router.fetch(
       new Request('https://app.example.com/login', {
@@ -168,23 +160,20 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
       },
     })
 
-    router.post(
-      '/login',
-      {
-        middleware: [formData()],
-        action: createCredentialsAuthLoginRequestHandler(provider, {
-          writeSession(session, user) {
-            session.set('auth', { userId: user.id })
-          },
-          onSuccess(_user, context) {
-            let session = context.get(Session)
-            return Response.json({
-              auth: session.get('auth'),
-            })
-          },
-        }),
-      },
-    )
+    router.post('/login', {
+      middleware: [formData()],
+      action: createCredentialsAuthLoginRequestHandler(provider, {
+        writeSession(session, user) {
+          session.set('auth', { userId: user.id })
+        },
+        onSuccess(_user, context) {
+          let session = context.get(Session)
+          return Response.json({
+            auth: session.get('auth'),
+          })
+        },
+      }),
+    })
 
     let response = await router.fetch(
       new Request('https://app.example.com/login', {
@@ -221,25 +210,22 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
       },
     })
 
-    router.post(
-      '/login',
-      {
-        middleware: [formData()],
-        action: createCredentialsAuthLoginRequestHandler(provider, {
-          writeSession() {
-            throw new Error('write failed')
-          },
-          onError(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 500 },
-            )
-          },
-        }),
-      },
-    )
+    router.post('/login', {
+      middleware: [formData()],
+      action: createCredentialsAuthLoginRequestHandler(provider, {
+        writeSession() {
+          throw new Error('write failed')
+        },
+        onError(error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 500 },
+          )
+        },
+      }),
+    })
 
     let response = await router.fetch(
       new Request('https://app.example.com/login', {
@@ -277,18 +263,15 @@ describe('createCredentialsAuthLoginRequestHandler()', () => {
       },
     })
 
-    router.post(
-      '/login',
-      {
-        middleware: [formData()],
-        action: createCredentialsAuthLoginRequestHandler(provider, {
-          writeSession() {
-            throw new Error('write failed')
-          },
-          failureRedirectTo: '/login',
-        }),
-      },
-    )
+    router.post('/login', {
+      middleware: [formData()],
+      action: createCredentialsAuthLoginRequestHandler(provider, {
+        writeSession() {
+          throw new Error('write failed')
+        },
+        failureRedirectTo: '/login',
+      }),
+    })
 
     let response = await router.fetch(
       new Request('https://app.example.com/login', {

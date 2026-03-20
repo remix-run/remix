@@ -24,17 +24,19 @@ export type {
   GitHubAuthProfile,
 } from './lib/providers/github.ts'
 export type { GoogleAuthProviderOptions, GoogleAuthProfile } from './lib/providers/google.ts'
-export type { MicrosoftAuthProviderOptions, MicrosoftAuthProfile } from './lib/providers/microsoft.ts'
-export type { OIDCAuthProviderMetadata, OIDCAuthProviderOptions, OIDCAuthProfile } from './lib/providers/oidc.ts'
+export type {
+  MicrosoftAuthProviderOptions,
+  MicrosoftAuthProfile,
+} from './lib/providers/microsoft.ts'
+export type {
+  OIDCAuthProviderMetadata,
+  OIDCAuthProviderOptions,
+  OIDCAuthProfile,
+} from './lib/providers/oidc.ts'
 export type { OktaAuthProviderOptions, OktaAuthProfile } from './lib/providers/okta.ts'
 export type { XAuthProviderOptions, XAuthProfile } from './lib/providers/x.ts'
 
-export type {
-  OAuthAccount,
-  OAuthProvider,
-  OAuthResult,
-  OAuthTokens,
-} from './lib/provider.ts'
+export type { OAuthAccount, OAuthProvider, OAuthResult, OAuthTokens } from './lib/provider.ts'
 export type { CredentialsAuthProvider } from './lib/providers/credentials.ts'
 export type { CredentialsAuthLoginOptions } from './lib/credentials-login.ts'
 export type { ExternalAuthLoginOptions } from './lib/external-login.ts'

@@ -6,10 +6,7 @@ import { Auth, type BadAuth } from './auth.ts'
  */
 export interface RequireAuthOptions {
   /** Custom response builder for unauthenticated requests. */
-  onFailure?: (
-    context: RequestContext,
-    auth: BadAuth,
-  ) => Response | Promise<Response>
+  onFailure?: (context: RequestContext, auth: BadAuth) => Response | Promise<Response>
 }
 
 /**

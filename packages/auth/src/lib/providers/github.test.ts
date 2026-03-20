@@ -45,8 +45,9 @@ describe('github provider', () => {
   })
 
   it('hydrates missing email addresses from the GitHub email API', async () => {
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://github.com/login/oauth/access_token') {
         return Response.json({
@@ -137,8 +138,9 @@ describe('github provider', () => {
 
   it('uses the primary profile email without calling the GitHub email API', async () => {
     let emailRequests = 0
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://github.com/login/oauth/access_token') {
         return Response.json({
@@ -209,8 +211,9 @@ describe('github provider', () => {
   })
 
   it('keeps the GitHub profile email unchanged when the email API returns no addresses', async () => {
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://github.com/login/oauth/access_token') {
         return Response.json({
@@ -280,8 +283,9 @@ describe('github provider', () => {
   })
 
   it('fails when the GitHub profile does not include a valid id', async () => {
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://github.com/login/oauth/access_token') {
         return Response.json({

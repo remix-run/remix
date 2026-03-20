@@ -66,7 +66,9 @@ export interface GitHubAuthProviderEmail {
  * @param options GitHub OAuth client settings for your application.
  * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
  */
-export function createGitHubAuthProvider(options: GitHubAuthProviderOptions): OAuthProvider<GitHubAuthProfile, 'github'> {
+export function createGitHubAuthProvider(
+  options: GitHubAuthProviderOptions,
+): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {
@@ -140,12 +142,12 @@ function createGitHubHeaders(accessToken: string): HeadersInit {
 }
 
 function pickGitHubEmail(emails: GitHubAuthProviderEmail[]): string | undefined {
-  let primaryVerified = emails.find(email => email.primary && email.verified)
+  let primaryVerified = emails.find((email) => email.primary && email.verified)
   if (primaryVerified != null) {
     return primaryVerified.email
   }
 
-  let verified = emails.find(email => email.verified)
+  let verified = emails.find((email) => email.verified)
   if (verified != null) {
     return verified.email
   }

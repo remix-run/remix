@@ -67,7 +67,8 @@ export function ForgotPasswordSentPage() {
 
         <div mix={styles.infoPanel}>
           <p mix={css({ marginBottom: tokens.space.sm })}>
-            This demo does not send email. If a matching account exists, the reset URL is shown below.
+            This demo does not send email. If a matching account exists, the reset URL is shown
+            below.
           </p>
           {resetHref ? (
             <p>

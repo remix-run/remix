@@ -2,7 +2,12 @@ import type { RequestHandler } from '@remix-run/fetch-router'
 
 import { getOAuthProviderRuntime } from './provider.ts'
 import type { OAuthProvider } from './provider.ts'
-import { createOAuthTransaction, createRedirectResponse, getSession, sanitizeReturnTo } from './utils.ts'
+import {
+  createOAuthTransaction,
+  createRedirectResponse,
+  getSession,
+  sanitizeReturnTo,
+} from './utils.ts'
 
 /**
  * Options for starting an OAuth or OIDC login redirect flow.
@@ -29,16 +34,15 @@ export function createExternalAuthLoginRequestHandler<profile>(
   provider: OAuthProvider<profile>,
   options: ExternalAuthLoginOptions = {},
 ): RequestHandler {
-  return async context => {
+  return async (context) => {
     try {
       let session = getSession(context, 'createExternalAuthLoginRequestHandler()')
       let transaction = createOAuthTransaction(
         provider.name,
         sanitizeReturnTo(context.url.searchParams.get(options.returnToParam ?? 'returnTo')),
       )
-      let authorizationURL = await getOAuthProviderRuntime(provider).createAuthorizationURL(
-        transaction,
-      )
+      let authorizationURL =
+        await getOAuthProviderRuntime(provider).createAuthorizationURL(transaction)
 
       session.set(options.transactionKey ?? '__auth', transaction)
 

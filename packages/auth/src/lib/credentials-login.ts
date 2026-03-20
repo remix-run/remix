@@ -10,11 +10,7 @@ import { createRedirectResponse, getSession } from './utils.ts'
  */
 export interface CredentialsAuthLoginOptions<result> {
   /** Writes application-defined auth state into the session after successful login. */
-  writeSession(
-    session: Session,
-    result: result,
-    context: RequestContext,
-  ): void | Promise<void>
+  writeSession(session: Session, result: result, context: RequestContext): void | Promise<void>
   /** Redirect target used when login succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
   /** Redirect target used when login fails and `onFailure` is not provided. */
@@ -38,7 +34,7 @@ export function createCredentialsAuthLoginRequestHandler<input, result>(
   provider: CredentialsAuthProvider<input, result>,
   options: CredentialsAuthLoginOptions<result>,
 ): RequestHandler {
-  return async context => {
+  return async (context) => {
     try {
       let session = getSession(context, 'createCredentialsAuthLoginRequestHandler()')
       let input = await provider.parse(context)

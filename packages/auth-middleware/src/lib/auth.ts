@@ -1,8 +1,4 @@
-import {
-  createContextKey,
-  type Middleware,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
 
 /**
  * Failure details for an unauthenticated request.
@@ -79,9 +75,7 @@ export interface AuthSchemeFailure {
 /**
  * Non-skipped results an auth scheme can return.
  */
-export type AuthSchemeResult<identity = unknown> =
-  | AuthSchemeSuccess<identity>
-  | AuthSchemeFailure
+export type AuthSchemeResult<identity = unknown> = AuthSchemeSuccess<identity> | AuthSchemeFailure
 
 /**
  * Full return type for an auth scheme, including skipped requests.
@@ -163,10 +157,7 @@ export function auth(options: AuthOptions): Middleware {
   }
 }
 
-function createFailure(
-  scheme: AuthScheme,
-  result: AuthSchemeFailure,
-): AuthFailure {
+function createFailure(scheme: AuthScheme, result: AuthSchemeFailure): AuthFailure {
   return {
     method: scheme.name,
     code: result.code ?? 'invalid_credentials',

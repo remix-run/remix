@@ -1,15 +1,6 @@
-import type {
-  GitHubAuthProfile,
-  GoogleAuthProfile,
-  OAuthProvider,
-  XAuthProfile,
-} from 'remix/auth'
+import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
 import type { RequestContext } from 'remix/fetch-router'
-import {
-  createGitHubAuthProvider,
-  createGoogleAuthProvider,
-  createXAuthProvider,
-} from 'remix/auth'
+import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
 
 import { routes } from '../routes.ts'
 

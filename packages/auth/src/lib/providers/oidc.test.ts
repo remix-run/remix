@@ -26,8 +26,9 @@ describe('oidc provider', () => {
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/oidc/callback',
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://issuer.example.com/.well-known/openid-configuration') {
         discoveryRequests += 1
@@ -76,8 +77,9 @@ describe('oidc provider', () => {
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/oidc/callback',
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://issuer.example.com/.well-known/openid-configuration') {
         discoveryRequests += 1
@@ -134,8 +136,9 @@ describe('oidc provider', () => {
         audience: 'https://api.example.com',
       },
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://issuer.example.com/.well-known/openid-configuration') {
         return Response.json({
@@ -183,9 +186,10 @@ describe('oidc provider', () => {
         userinfo_endpoint: 'https://issuer.example.com/oauth2/v1/userinfo',
       },
     })
-    let restoreFetch = mockFetch(async input => {
+    let restoreFetch = mockFetch(async (input) => {
       fetchCalls += 1
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
       throw new Error(`Unexpected fetch: ${url}`)
     })
 
@@ -200,10 +204,7 @@ describe('oidc provider', () => {
 
       assert.equal(response.status, 302)
       assert.equal(fetchCalls, 0)
-      assert.equal(
-        new URL(response.headers.get('Location')!).origin,
-        'https://issuer.example.com',
-      )
+      assert.equal(new URL(response.headers.get('Location')!).origin, 'https://issuer.example.com')
     } finally {
       restoreFetch()
     }
@@ -227,7 +228,8 @@ describe('oidc provider', () => {
       },
     })
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://issuer.example.com/.well-known/openid-configuration') {
         return Response.json({
@@ -324,7 +326,8 @@ describe('oidc provider', () => {
       },
     })
     let restoreFetch = mockFetch(async (input, init) => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       if (url === 'https://issuer.example.com/oauth2/v1/token') {
         let body = new URLSearchParams(init?.body as string)

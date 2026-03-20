@@ -8,7 +8,10 @@ import { Auth, type AuthScheme } from './auth.ts'
 
 describe('auth middleware', () => {
   it('throws when no schemes are configured', () => {
-    assert.throws(() => auth({ schemes: [] }), new Error('auth() requires at least one authentication scheme'))
+    assert.throws(
+      () => auth({ schemes: [] }),
+      new Error('auth() requires at least one authentication scheme'),
+    )
   })
 
   it('authenticates with the first successful scheme', async () => {
@@ -171,7 +174,7 @@ describe('auth middleware', () => {
     })
   })
 
-  it('rejects legacy { status: \"skip\" } results', async () => {
+  it('rejects legacy { status: "skip" } results', async () => {
     let router = createRouter({
       middleware: [
         auth({
@@ -191,7 +194,7 @@ describe('auth middleware', () => {
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/')
-    }, new Error('Invalid result from "legacy" auth scheme. Return null/undefined to skip, or a { status: \'success\' | \'failure\' } object.'))
+    }, new Error("Invalid result from \"legacy\" auth scheme. Return null/undefined to skip, or a { status: 'success' | 'failure' } object."))
   })
 
   it('stops on failure and records auth error details', async () => {

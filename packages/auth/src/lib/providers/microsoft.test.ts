@@ -20,8 +20,9 @@ describe('microsoft provider', () => {
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/microsoft/callback',
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
       assert.equal(
         url,
@@ -30,7 +31,8 @@ describe('microsoft provider', () => {
 
       return Response.json({
         issuer: 'https://login.microsoftonline.com/organizations/v2.0',
-        authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+        authorization_endpoint:
+          'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
         token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
         userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
       })

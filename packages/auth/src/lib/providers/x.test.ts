@@ -75,10 +75,7 @@ describe('x provider', () => {
           init?.body instanceof URLSearchParams ? init.body.toString() : String(init?.body ?? '')
 
         let headers = new Headers(init?.headers)
-        assert.equal(
-          headers.get('Authorization'),
-          `Basic ${btoa('x-client-id:x-client-secret')}`,
-        )
+        assert.equal(headers.get('Authorization'), `Basic ${btoa('x-client-id:x-client-secret')}`)
         assert.match(body, /grant_type=authorization_code/)
         assert.match(body, /code_verifier=/)
         assert.match(body, /redirect_uri=https%3A%2F%2Fapp\.example\.com%2Fauth%2Fx%2Fcallback/)
@@ -138,7 +135,10 @@ describe('x provider', () => {
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
       let response = await router.fetch(
-        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+        createRequest(
+          `https://app.example.com/auth/x/callback?code=x-code&state=${state}`,
+          loginResponse,
+        ),
       )
 
       let body = await response.json()
@@ -164,7 +164,7 @@ describe('x provider', () => {
   })
 
   it('fails when the X profile does not include a valid id', async () => {
-    let restoreFetch = mockFetch(async input => {
+    let restoreFetch = mockFetch(async (input) => {
       let url =
         typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
@@ -224,7 +224,10 @@ describe('x provider', () => {
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
       let response = await router.fetch(
-        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+        createRequest(
+          `https://app.example.com/auth/x/callback?code=x-code&state=${state}`,
+          loginResponse,
+        ),
       )
 
       assert.equal(response.status, 400)
@@ -237,7 +240,7 @@ describe('x provider', () => {
   })
 
   it('fails when the X profile does not include a valid username', async () => {
-    let restoreFetch = mockFetch(async input => {
+    let restoreFetch = mockFetch(async (input) => {
       let url =
         typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
@@ -297,7 +300,10 @@ describe('x provider', () => {
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
       let response = await router.fetch(
-        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+        createRequest(
+          `https://app.example.com/auth/x/callback?code=x-code&state=${state}`,
+          loginResponse,
+        ),
       )
 
       assert.equal(response.status, 400)
@@ -310,7 +316,7 @@ describe('x provider', () => {
   })
 
   it('fails when the X profile does not include a valid name', async () => {
-    let restoreFetch = mockFetch(async input => {
+    let restoreFetch = mockFetch(async (input) => {
       let url =
         typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
@@ -370,7 +376,10 @@ describe('x provider', () => {
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
       let response = await router.fetch(
-        createRequest(`https://app.example.com/auth/x/callback?code=x-code&state=${state}`, loginResponse),
+        createRequest(
+          `https://app.example.com/auth/x/callback?code=x-code&state=${state}`,
+          loginResponse,
+        ),
       )
 
       assert.equal(response.status, 400)

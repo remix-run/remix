@@ -18,7 +18,9 @@ export function ResetPasswordPage() {
       <AuthCard
         title="Reset Password"
         subtitle="Create a new password for your account"
-        footer={<SimpleFooter prefix="Changed your mind?" href={loginHref} label="Back to sign in" />}
+        footer={
+          <SimpleFooter prefix="Changed your mind?" href={loginHref} label="Back to sign in" />
+        }
       >
         {error ? <Notice tone="error">{error}</Notice> : null}
 

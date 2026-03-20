@@ -15,7 +15,11 @@ export interface CredentialsAuthProvider<input, result, provider extends string 
 /**
  * Options for building a credentials-based auth provider.
  */
-export interface CredentialsAuthProviderOptions<input, result, provider extends string = 'password'> {
+export interface CredentialsAuthProviderOptions<
+  input,
+  result,
+  provider extends string = 'password',
+> {
   /** Provider name used for session metadata and diagnostics. */
   name?: provider
   /** Parses submitted credentials from the current request. */

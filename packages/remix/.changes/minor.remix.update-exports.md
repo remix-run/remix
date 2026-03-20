@@ -11,5 +11,6 @@ BREAKING CHANGE: `remix/data-table` no longer exports `QueryBuilder`. Import `Qu
 The incidental `QueryMethod` type export has also been removed; use `Database['query']` or `QueryForTable<table>` when you need that type shape.
 
 Added `package.json` `exports`:
+
 - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
 - `remix/auth` to re-export APIs from `@remix-run/auth`

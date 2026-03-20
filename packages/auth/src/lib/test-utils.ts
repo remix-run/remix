@@ -5,14 +5,18 @@ import { SetCookie } from '@remix-run/headers'
 
 import { createCodeChallenge } from './utils.ts'
 
-export function createRequest(url: string, fromResponse?: Response, init: RequestInit = {}): Request {
+export function createRequest(
+  url: string,
+  fromResponse?: Response,
+  init: RequestInit = {},
+): Request {
   let headers = new Headers(init.headers)
 
   if (fromResponse != null) {
     let cookieValues = fromResponse.headers
       .getSetCookie()
-      .map(value => new SetCookie(value))
-      .map(cookie => `${cookie.name}=${cookie.value}`)
+      .map((value) => new SetCookie(value))
+      .map((cookie) => `${cookie.name}=${cookie.value}`)
 
     if (cookieValues.length > 0) {
       headers.set('Cookie', cookieValues.join('; '))

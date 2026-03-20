@@ -20,11 +20,11 @@ export interface AccountPageProps {
 export function AccountPage() {
   return ({ identity, logoutAction }: AccountPageProps) => {
     let displayName =
-      identity.user.name
-      ?? identity.authAccount?.display_name
-      ?? identity.authAccount?.username
-      ?? identity.user.email
-      ?? 'Authenticated User'
+      identity.user.name ??
+      identity.authAccount?.display_name ??
+      identity.authAccount?.username ??
+      identity.user.email ??
+      'Authenticated User'
     let avatarUrl = identity.user.avatar_url ?? identity.authAccount?.avatar_url ?? null
     let providerLabel = formatProviderLabel(identity.loginMethod)
     let authDetails = {
@@ -55,8 +55,8 @@ export function AccountPage() {
 
           <div mix={styles.infoPanel}>
             <p>
-              This page shows the local user record together with any linked provider account data saved
-              in SQLite.
+              This page shows the local user record together with any linked provider account data
+              saved in SQLite.
             </p>
           </div>
 

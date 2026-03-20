@@ -8,7 +8,6 @@ import { Document } from '../ui/document.tsx'
 import { Notice } from '../ui/notice.tsx'
 import * as styles from '../ui/styles.ts'
 
-
 export interface LoginPageProps {
   formAction: string
   signupHref: string
@@ -19,7 +18,14 @@ export interface LoginPageProps {
 }
 
 export function LoginPage() {
-  return ({ formAction, signupHref, forgotPasswordHref, providers, error, success }: LoginPageProps) => (
+  return ({
+    formAction,
+    signupHref,
+    forgotPasswordHref,
+    providers,
+    error,
+    success,
+  }: LoginPageProps) => (
     <Document title="Social Auth Demo">
       <AuthCard
         title="Welcome Back"

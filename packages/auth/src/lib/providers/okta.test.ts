@@ -20,13 +20,11 @@ describe('okta provider', () => {
       clientSecret: 'client-secret',
       redirectUri: 'https://app.example.com/auth/okta/callback',
     })
-    let restoreFetch = mockFetch(async input => {
-      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let restoreFetch = mockFetch(async (input) => {
+      let url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
-      assert.equal(
-        url,
-        'https://example.okta.com/oauth2/default/.well-known/openid-configuration',
-      )
+      assert.equal(url, 'https://example.okta.com/oauth2/default/.well-known/openid-configuration')
 
       return Response.json({
         issuer: 'https://example.okta.com/oauth2/default',

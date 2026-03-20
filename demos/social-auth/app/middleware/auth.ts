@@ -133,4 +133,3 @@ export function getSafeReturnTo(returnTo: string | null): string | undefined {
   let isSafePath = returnTo.startsWith('/') && returnTo.startsWith('//') === false
   return isSafePath ? returnTo : undefined
 }
-
