@@ -69,44 +69,50 @@ let db = createDatabase(createPostgresDatabaseAdapter(pool))
 
 ## Query Objects
 
-Use `query(table)` + `db.exec(...)` as the primary query API. `db.exec(...)` accepts raw SQL or `Query` values. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
+Use `query(table)` when you want to build a standalone reusable query object. Execute it later with `db.exec(query)`. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
+
+### Standalone Query Builder
+
+`query(table)` is the primary query-builder API. It gives you an unbound `Query` value that can be composed, stored, reused, and executed against any compatible database instance.
 
 ```ts
-import { eq, ilike } from 'remix/data-table'
+import { eq, ilike, query } from 'remix/data-table'
 
-let recentPendingOrders = await db.exec(
-  query(orders)
-    .join(users, eq(orders.user_id, users.id))
-    .where({ status: 'pending' })
-    .where(ilike(users.email, '%@example.com'))
-    .select({
-      orderId: orders.id,
-      customerEmail: users.email,
-      total: orders.total,
-      placedAt: orders.created_at,
-    })
-    .orderBy(orders.created_at, 'desc')
-    .limit(20),
-)
+let pendingOrdersForExampleUsers = query(orders)
+  .join(users, eq(orders.user_id, users.id))
+  .where({ status: 'pending' })
+  .where(ilike(users.email, '%@example.com'))
+  .select({
+    orderId: orders.id,
+    customerEmail: users.email,
+    total: orders.total,
+    placedAt: orders.created_at,
+  })
+  .orderBy(orders.created_at, 'desc')
+  .limit(20)
+
+let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
 ```
 
-Load relations with relation-scoped filtering and ordering:
+Unbound queries stay lazy until you pass them to `db.exec(...)`:
 
 ```ts
-let customers = await db.exec(
-  query(users)
-    .where({ role: 'customer' })
-    .with({
-      recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
-    }),
-)
+let shippedCustomerQuery = query(users).where({ role: 'customer' }).with({
+  recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+})
+
+let customers = await db.exec(shippedCustomerQuery)
 
 // customers[0].recentOrders is fully typed
 ```
 
-Run scoped writes safely with the same chainable API:
+The same standalone query builder also handles terminal read and write operations:
 
 ```ts
+let nextPendingOrder = await db.exec(
+  query(orders).where({ status: 'pending' }).orderBy('created_at', 'asc').first(),
+)
+
 await db.exec(
   query(orders)
     .where({ status: 'pending' })
@@ -116,7 +122,9 @@ await db.exec(
 )
 ```
 
-Bound-query shorthand is still available when you prefer methods on the database instance itself:
+### Bound Query Shorthand
+
+If you already have a `db` instance in hand and do not need a standalone query value, `db.query(table)` returns the same query builder already bound to that database:
 
 ```ts
 let recentPendingOrders = await db
