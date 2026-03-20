@@ -146,6 +146,19 @@ type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<s
   upsert: WriteResult | WriteRowResult<row>
 }
 
+type QueryTerminalResult<
+  columnTypes extends Record<string, unknown>,
+  row extends Record<string, unknown>,
+  loaded extends Record<string, unknown>,
+  tableName extends string,
+  primaryKey extends readonly string[],
+  binding extends QueryBindingState,
+  mode extends QueryExecutionMode,
+  result,
+> = binding extends 'bound'
+  ? Promise<result>
+  : Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', mode>
+
 export type QueryExecutionResult<input> =
   input extends Query<any, infer row, infer loaded, any, any, any, infer mode>
     ? QueryResultMap<row, loaded>[Extract<mode, QueryExecutionMode>]
@@ -171,6 +184,8 @@ type QuerySnapshot<
 export const bindQueryRuntime = Symbol('bindQueryRuntime')
 export const querySnapshot = Symbol('querySnapshot')
 
+declare const queryTypeBrand: unique symbol
+
 export class Query<
   columnTypes extends Record<string, unknown>,
   row extends Record<string, unknown>,
@@ -180,6 +195,11 @@ export class Query<
   binding extends QueryBindingState = 'unbound',
   mode extends QueryExecutionMode = 'all',
 > {
+  declare readonly [queryTypeBrand]: {
+    binding: binding
+    mode: mode
+  }
+
   #table: QueryTableInput<tableName, row, primaryKey>
   #state: QueryState
   #plan: QueryPlan<row, primaryKey, mode>
@@ -450,81 +470,102 @@ export class Query<
   }
 
   first(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-  ): Promise<(row & loaded) | null>
-  first(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'first'>
-  first(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-  ):
-    | Promise<(row & loaded) | null>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'first'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'first',
+    (row & loaded) | null
+  > {
     let next = this.#withPlan({ kind: 'first' })
-    return this.#runtime ? (this.#runtime.exec(next) as Promise<(row & loaded) | null>) : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'first',
+      (row & loaded) | null
+    >
   }
 
   find(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    value: PrimaryKeyInputForRow<row, primaryKey>,
-  ): Promise<(row & loaded) | null>
-  find(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    value: PrimaryKeyInputForRow<row, primaryKey>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'find'>
-  find(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     value: PrimaryKeyInputForRow<row, primaryKey>,
-  ):
-    | Promise<(row & loaded) | null>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'find'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'find',
+    (row & loaded) | null
+  > {
     let next = this.#withPlan({ kind: 'find', value })
-    return this.#runtime ? (this.#runtime.exec(next) as Promise<(row & loaded) | null>) : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'find',
+      (row & loaded) | null
+    >
   }
 
   count(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-  ): Promise<number>
-  count(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'count'>
-  count(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-  ): Promise<number> | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'count'> {
+  ): QueryTerminalResult<columnTypes, row, loaded, tableName, primaryKey, binding, 'count', number> {
     let next = this.#withPlan({ kind: 'count' })
-    return this.#runtime ? (this.#runtime.exec(next) as Promise<number>) : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'count',
+      number
+    >
   }
 
   exists(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-  ): Promise<boolean>
-  exists(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'exists'>
-  exists(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
-  ): Promise<boolean> | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'exists'> {
+  ): QueryTerminalResult<columnTypes, row, loaded, tableName, primaryKey, binding, 'exists', boolean> {
     let next = this.#withPlan({ kind: 'exists' })
-    return this.#runtime ? (this.#runtime.exec(next) as Promise<boolean>) : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'exists',
+      boolean
+    >
   }
 
-  insert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    values: Partial<row>,
-    options?: InsertQueryOptions<row>,
-  ): Promise<WriteResult | WriteRowResult<row>>
-  insert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    values: Partial<row>,
-    options?: InsertQueryOptions<row>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'insert'>
   insert(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>,
     options?: InsertQueryOptions<row>,
-  ):
-    | Promise<WriteResult | WriteRowResult<row>>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'insert'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'insert',
+    WriteResult | WriteRowResult<row>
+  > {
     assertWriteState(this.#state, 'insert', {
       where: false,
       orderBy: false,
@@ -533,28 +574,32 @@ export class Query<
     })
 
     let next = this.#withPlan({ kind: 'insert', values, options })
-    return this.#runtime
-      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowResult<row>>)
-      : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'insert',
+      WriteResult | WriteRowResult<row>
+    >
   }
 
-  insertMany(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    values: Partial<row>[],
-    options?: InsertQueryOptions<row>,
-  ): Promise<WriteResult | WriteRowsResult<row>>
-  insertMany(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    values: Partial<row>[],
-    options?: InsertQueryOptions<row>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'insertMany'>
   insertMany(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>[],
     options?: InsertQueryOptions<row>,
-  ):
-    | Promise<WriteResult | WriteRowsResult<row>>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'insertMany'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'insertMany',
+    WriteResult | WriteRowsResult<row>
+  > {
     assertWriteState(this.#state, 'insertMany', {
       where: false,
       orderBy: false,
@@ -563,28 +608,32 @@ export class Query<
     })
 
     let next = this.#withPlan({ kind: 'insertMany', values, options })
-    return this.#runtime
-      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
-      : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'insertMany',
+      WriteResult | WriteRowsResult<row>
+    >
   }
 
-  update(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    changes: Partial<row>,
-    options?: InsertQueryOptions<row>,
-  ): Promise<WriteResult | WriteRowsResult<row>>
-  update(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    changes: Partial<row>,
-    options?: InsertQueryOptions<row>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'update'>
   update(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     changes: Partial<row>,
     options?: InsertQueryOptions<row>,
-  ):
-    | Promise<WriteResult | WriteRowsResult<row>>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'update'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'update',
+    WriteResult | WriteRowsResult<row>
+  > {
     assertWriteState(this.#state, 'update', {
       where: true,
       orderBy: true,
@@ -593,25 +642,31 @@ export class Query<
     })
 
     let next = this.#withPlan({ kind: 'update', changes, options })
-    return this.#runtime
-      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
-      : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'update',
+      WriteResult | WriteRowsResult<row>
+    >
   }
 
   delete(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    options?: DeleteQueryOptions<row>,
-  ): Promise<WriteResult | WriteRowsResult<row>>
-  delete(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    options?: DeleteQueryOptions<row>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'delete'>
-  delete(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     options?: DeleteQueryOptions<row>,
-  ):
-    | Promise<WriteResult | WriteRowsResult<row>>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'delete'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'delete',
+    WriteResult | WriteRowsResult<row>
+  > {
     assertWriteState(this.#state, 'delete', {
       where: true,
       orderBy: true,
@@ -620,28 +675,32 @@ export class Query<
     })
 
     let next = this.#withPlan({ kind: 'delete', options })
-    return this.#runtime
-      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowsResult<row>>)
-      : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'delete',
+      WriteResult | WriteRowsResult<row>
+    >
   }
 
-  upsert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound', 'all'>,
-    values: Partial<row>,
-    options?: UpsertQueryOptions<row>,
-  ): Promise<WriteResult | WriteRowResult<row>>
-  upsert(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'all'>,
-    values: Partial<row>,
-    options?: UpsertQueryOptions<row>,
-  ): Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound', 'upsert'>
   upsert(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'all'>,
     values: Partial<row>,
     options?: UpsertQueryOptions<row>,
-  ):
-    | Promise<WriteResult | WriteRowResult<row>>
-    | Query<columnTypes, row, loaded, tableName, primaryKey, binding, 'upsert'> {
+  ): QueryTerminalResult<
+    columnTypes,
+    row,
+    loaded,
+    tableName,
+    primaryKey,
+    binding,
+    'upsert',
+    WriteResult | WriteRowResult<row>
+  > {
     assertWriteState(this.#state, 'upsert', {
       where: false,
       orderBy: false,
@@ -650,9 +709,16 @@ export class Query<
     })
 
     let next = this.#withPlan({ kind: 'upsert', values, options })
-    return this.#runtime
-      ? (this.#runtime.exec(next) as Promise<WriteResult | WriteRowResult<row>>)
-      : next
+    return (this.#runtime ? this.#runtime.exec(next) : next) as QueryTerminalResult<
+      columnTypes,
+      row,
+      loaded,
+      tableName,
+      primaryKey,
+      binding,
+      'upsert',
+      WriteResult | WriteRowResult<row>
+    >
   }
 
   [querySnapshot](): QuerySnapshot<tableName, row, primaryKey, mode> {

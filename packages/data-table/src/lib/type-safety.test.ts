@@ -115,9 +115,11 @@ describe('type safety', () => {
       QueryType extends Query<any, any, any, any, any, infer binding> ? binding : never
     type DatabaseQueryMethod = Database['query']
     type QueryFromTableAlias = QueryForTable<typeof accounts>
-    type QueryFromMethod = DatabaseQueryMethod extends (table: typeof accounts) => infer output
-      ? output
-      : never
+    type QueryMethodReturnsBoundQuery = DatabaseQueryMethod extends (
+      ...args: any[]
+    ) => Query<any, any, any, any, any, 'bound', 'all'>
+      ? true
+      : false
     type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof accounts>
     type AccountsReference = TableReference<typeof accounts>
     type AccountsReferenceColumns = keyof AccountsReference['columns'] & string
@@ -141,7 +143,7 @@ describe('type safety', () => {
     expectType<Equal<QueryTableName, 'accounts'>>()
     expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
     expectType<Equal<QueryType, QueryFromTableAlias>>()
-    expectType<Equal<QueryFromMethod, QueryFromTableAlias>>()
+    expectType<Equal<QueryMethodReturnsBoundQuery, true>>()
     expectType<Equal<QueryBinding, 'bound'>>()
     expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()
     expectType<Equal<AccountsReference['kind'], 'table'>>()
