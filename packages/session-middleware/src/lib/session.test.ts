@@ -5,22 +5,9 @@ import { createCookie } from '@remix-run/cookie'
 import { SetCookie } from '@remix-run/headers'
 import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
-import {
-  createRouter,
-  type GetContextValue,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
 
-import { session as sessionMiddleware, type WithSession } from './session.ts'
-
-type IsEqual<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
-
-function expectTypeEquality<_check extends true>() {}
-
-type SessionContext = WithSession<RequestContext>
-
-expectTypeEquality<IsEqual<GetContextValue<SessionContext, typeof Session>, Session>>()
+import { session as sessionMiddleware } from './session.ts'
 
 // Create a new request using the cookie in the given response
 function createRequest(fromResponse?: Response): Request {

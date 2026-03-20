@@ -1,1 +1,1 @@
-`formData()` now contributes `FormData` to `fetch-router`'s typed request context, so apps deriving context from middleware can read `context.get(FormData)` without manual type assertions. It also exports `WithFormData<context>` so applications can declare that contract directly in stored controller and action types.
+`formData()` now contributes `FormData` to `fetch-router`'s typed request context, so apps deriving context from middleware can read `context.get(FormData)` without manual type assertions.
