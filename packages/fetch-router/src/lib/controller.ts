@@ -2,7 +2,7 @@ import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { ApplyMiddlewareTuple, Middleware } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
-import type { WithContextParams } from './request-context.ts'
+import type { WithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
@@ -53,7 +53,7 @@ type RouteParams<route extends string | RoutePattern | Route> = route extends st
 type RouteContext<
   context extends RequestContext<any, any>,
   route extends string | RoutePattern | Route,
-> = WithContextParams<context, RouteParams<route>>
+> = WithParams<context, RouteParams<route>>
 
 export type ControllerWithoutMiddleware<
   routes extends RouteMap,
@@ -111,7 +111,7 @@ export type Action<
 > = RequestHandlerDefinition<
   method,
   Params<pattern>,
-  WithContextParams<context, Params<pattern>>,
+  WithParams<context, Params<pattern>>,
   MiddlewareTuple
 >
 

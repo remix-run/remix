@@ -1,9 +1,5 @@
 import type { WithRequiredAuth } from 'remix/auth-middleware'
-import {
-  createRouter,
-  type MiddlewareContext,
-  type WithContextParams,
-} from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext, type WithParams } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
@@ -30,7 +26,7 @@ export type SocialAuthMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-export type RouteContext<params extends Record<string, string> = {}> = WithContextParams<
+export type RouteContext<params extends Record<string, string> = {}> = WithParams<
   MiddlewareContext<SocialAuthMiddleware>,
   params
 >
@@ -46,22 +42,23 @@ export interface SocialAuthRouterOptions {
 export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
-  let middleware = [
-    staticFiles('./public', {
-      cacheControl: 'no-store, must-revalidate',
-      etag: false,
-      lastModified: false,
-    }),
-    formData(),
-    session(cookie, storage),
-    loadDatabase(),
-    loadAuth(),
-  ] as const
-  let router = createRouter({ middleware })
+  let router = createRouter({
+    middleware: [
+      staticFiles('./public', {
+        cacheControl: 'no-store, must-revalidate',
+        etag: false,
+        lastModified: false,
+      }),
+      formData(),
+      session(cookie, storage),
+      loadDatabase(),
+      loadAuth(),
+    ] satisfies SocialAuthMiddleware,
+  })
 
   router.map(routes.home, home)
   router.get(routes.account, {
-    middleware: [requireAuth] as const,
+    middleware: [requireAuth],
     action: accountAction.action,
   })
   router.map(routes.auth, authController)

@@ -10,7 +10,7 @@ import { raceRequestAbort } from './request-abort.ts'
 import {
   type ContextParams,
   RequestContext,
-  type WithContextParams,
+  type WithParams,
 } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
@@ -33,7 +33,7 @@ type AnyContext = RequestContext<any, any>
 type RouteContext<
   current_context extends AnyContext,
   pattern extends string,
-> = WithContextParams<current_context, Params<pattern>>
+> = WithParams<current_context, Params<pattern>>
 
 type RouteTarget<method extends RequestMethod | 'ANY', pattern extends string> =
   | pattern

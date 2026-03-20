@@ -10,7 +10,7 @@ export type {
   ContextEntry,
   MergeContext,
   SetContextValue,
-  WithContextParams,
+  WithParams,
 } from './lib/request-context.ts'
 
 export {

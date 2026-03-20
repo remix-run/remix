@@ -54,7 +54,7 @@ export type MergeContextParams<
   right extends Record<string, any>,
 > = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
 
-export type WithContextParams<context, params extends Record<string, any>> =
+export type WithParams<context, params extends Record<string, any>> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? MergeContextParams<ContextParams<context>, params> extends infer merged
       ? [merged] extends [never]
