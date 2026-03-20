@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it, mock } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it, mock } from '@remix-run/test'
 
 import { FormDataParseError, type FileUploadHandler } from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'

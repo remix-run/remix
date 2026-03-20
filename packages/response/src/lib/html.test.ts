@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { html as safeHtml } from '@remix-run/html-template'
 
 import { createHtmlResponse } from './html.ts'

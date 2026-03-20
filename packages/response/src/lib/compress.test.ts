@@ -1,4 +1,4 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import {
   gunzip,
   brotliDecompress,
@@ -11,7 +11,7 @@ import {
 import { promisify } from 'node:util'
 import { Readable } from 'node:stream'
 import { EventEmitter } from 'node:events'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import { Vary } from '@remix-run/headers'
 import { compressResponse, compressStream, type Encoding } from './compress.ts'
