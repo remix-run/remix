@@ -9,8 +9,6 @@ export type {
   ContextEntries,
   ContextEntry,
   MergeContext,
-  RequestContextStore,
-  RequestContextStoreEntry,
   SetContextValue,
   WithContextParams,
 } from './lib/request-context.ts'

@@ -30,17 +30,6 @@ export type ContextEntry<key extends object = object, value = unknown> = readonl
 
 export type ContextEntries = readonly ContextEntry[]
 
-/**
- * @deprecated Use `ContextEntry` instead.
- */
-export type RequestContextStoreEntry<key extends object = object, value = unknown> =
-  ContextEntry<key, value>
-
-/**
- * @deprecated Use `ContextEntries` instead.
- */
-export type RequestContextStore = ContextEntries
-
 export type ContextValue<key> =
   key extends ContextKey<infer value>
     ? value
