@@ -60,8 +60,7 @@ async function executeRun() {
     let files = await discoverTests(pattern)
 
     if (files.length === 0) {
-      console.error(`No test files found matching pattern: ${pattern}`)
-      latestExitCode = 1
+      console.log(`No test files found matching pattern: ${pattern}`)
       return
     }
 
