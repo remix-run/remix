@@ -1652,8 +1652,14 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
 
 export function findNextSiblingDomAnchor(curr: VNode): Node | null {
   let vParent = curr._parent
-  if (!vParent || !Array.isArray(vParent._children)) return null
-  let children = vParent._children
+  if (!vParent) return null
+
+  let children =
+    vParent._content && isFragmentNode(vParent._content)
+      ? vParent._content._children
+      : vParent._children
+  if (!children) return null
+
   let idx = children.indexOf(curr)
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
