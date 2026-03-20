@@ -59,7 +59,7 @@ Use these root directories consistently:
 
 - `app/` for runtime application code
 - `db/` for database artifacts such as migrations and local SQLite files
-- `test/` for cross-feature integration tests, fixtures, and test helpers
+- `test/` for shared test helpers, fixtures, and any true cross-application integration tests
 - `public/` for static files served as-is
 - `tmp/` for runtime scratch files such as sessions, uploads, and caches
 
@@ -86,8 +86,8 @@ Inside `app/`, organize code by responsibility:
 - Keep table definitions, row types, and runtime database setup in `app/data/`.
 - Keep database artifacts such as migrations and SQLite files in `db/`.
 - Use `utils/` only for genuinely cross-layer support code. Prefer a topic-specific name like `utils/external-auth.ts` over catch-all names like `helpers.ts` or `misc.ts`.
-- Co-locate unit tests with the modules they cover.
-- Keep app-wide request-flow tests under `test/feature/`, and keep shared test helpers under `test/`.
+- Co-locate tests with the app modules they cover whenever those tests primarily exercise one implementation file or one small feature area.
+- Use the root `test/` directory only for shared test code, fixtures, and truly broad integration coverage that does not belong to a single app module.
 
 ### Example layout
 
@@ -95,6 +95,7 @@ Inside `app/`, organize code by responsibility:
 demos/<name>/
   app/
     router.ts
+    router.test.ts
     routes.ts
 
     controllers/
@@ -103,11 +104,9 @@ demos/<name>/
       home/
         controller.tsx
         login-page.tsx
-        external-auth-section.tsx
 
       auth/
         controller.tsx
-        login-action.ts
         signup-actions.tsx
         resolve-external-auth.ts
 
@@ -145,8 +144,7 @@ demos/<name>/
     app.sqlite
 
   test/
-    feature/
-      router.test.ts
+    fixtures/
     helpers.ts
 
   public/

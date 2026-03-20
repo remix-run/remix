@@ -6,8 +6,8 @@ import {
   restoreFetchMock,
   addFetchHandler,
   createNpmRegistryMock,
-} from '../mock-fetch.ts'
-import { router } from '../../app/router.ts'
+} from '../test/mock-fetch.ts'
+import { router } from './router.ts'
 
 before(() => {
   installFetchMock()
