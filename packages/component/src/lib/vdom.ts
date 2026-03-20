@@ -140,6 +140,7 @@ export function createRangeRoot(
             hydrationCursor,
           )
           vroot = vnode
+          vParent._content = vroot
           hydrationCursor = null
         },
       ])
