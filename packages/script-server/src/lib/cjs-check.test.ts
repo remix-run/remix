@@ -1,5 +1,5 @@
-import { describe, it } from 'node:test'
-import assert from 'node:assert/strict'
+import { describe, it } from '@remix-run/test'
+import * as assert from '@remix-run/assert'
 import { transformSync } from 'esbuild'
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 

@@ -41,6 +41,8 @@
     "picomatch": "^4.0.2"
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:"
@@ -50,7 +52,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit && pnpm run typecheck:fixture",
     "typecheck:fixture": "tsgo --noEmit -p ./bench/fixtures/large-fixture/tsconfig.json"
   },

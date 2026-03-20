@@ -1,5 +1,5 @@
-import { describe, it, before, after, mock } from 'node:test'
-import assert from 'node:assert/strict'
+import { describe, it, before, after, mock } from '@remix-run/test'
+import * as assert from '@remix-run/assert'
 import * as fsSync from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'

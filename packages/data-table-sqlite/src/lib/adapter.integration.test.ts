@@ -1,4 +1,4 @@
-import { after, before, describe } from 'node:test'
+import { after, before, describe } from '@remix-run/test'
 import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 import { createDatabase } from '@remix-run/data-table'
 

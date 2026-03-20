@@ -32,6 +32,8 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "mime-db": "^1.53.0"
@@ -41,7 +43,7 @@
     "clean": "git clean -fdX",
     "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

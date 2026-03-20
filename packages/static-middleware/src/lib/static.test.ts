@@ -1,8 +1,8 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it, beforeEach, afterEach } from 'node:test'
+import { describe, it, beforeEach, afterEach } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
 import { formData } from '@remix-run/form-data-middleware'
