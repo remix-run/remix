@@ -1,14 +1,14 @@
 import { createContextKey } from 'remix/fetch-router'
 import { getContext } from 'remix/async-context-middleware'
 import { Auth } from 'remix/auth-middleware'
-import type { Auth as RequestAuth } from 'remix/auth-middleware'
+import type { AuthState } from 'remix/auth-middleware'
 
 import { getCart } from '../data/cart.ts'
 import type { Cart } from '../data/cart.ts'
 import type { User } from '../data/schema.ts'
 import { Session } from './session.ts'
 
-let CURRENT_AUTH = createContextKey<RequestAuth<User, string>>()
+let CURRENT_AUTH = createContextKey<AuthState<User>>()
 
 /**
  * Get the current authenticated user from request context.
@@ -42,11 +42,11 @@ export function getCurrentCart(): Cart {
   return getCart(getContext().get(Session).get('cart'))
 }
 
-function getCurrentAuth(): RequestAuth<User, string> {
+function getCurrentAuth(): AuthState<User> {
   let context = getContext()
 
   if (!context.has(CURRENT_AUTH)) {
-    context.set(CURRENT_AUTH, context.get(Auth) as RequestAuth<User, string>)
+    context.set(CURRENT_AUTH, context.get(Auth) as AuthState<User>)
   }
 
   return context.get(CURRENT_AUTH)

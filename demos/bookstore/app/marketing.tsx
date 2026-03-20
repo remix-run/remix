@@ -10,7 +10,7 @@ import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
-  async action({ get }) {
+  async handler({ get }) {
     let db = get(Database)
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
@@ -52,7 +52,7 @@ export let home: BuildAction<'GET', typeof routes.home> = {
 }
 
 export let about: BuildAction<'GET', typeof routes.about> = {
-  action() {
+  handler() {
     return render(
       <Layout>
         <div class="card">
@@ -167,7 +167,7 @@ export let contact: Controller<typeof routes.contact> = {
 }
 
 export let search: BuildAction<'GET', typeof routes.search> = {
-  async action({ get, url }) {
+  async handler({ get, url }) {
     let db = get(Database)
     let query = url.searchParams.get('q') ?? ''
     let matchingBooks = query
