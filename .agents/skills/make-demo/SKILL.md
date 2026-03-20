@@ -69,9 +69,10 @@ Use these root directories consistently:
 
 Inside `app/`, organize code by responsibility:
 
-- feature folders such as `home/`, `auth/`, or `account/`, each with a `controller.tsx`
-  entrypoint and the UI it owns
-- `ui/` for reusable cross-feature UI primitives
+- `controllers/` for all controller-owned features, with folders such as `controllers/home/`,
+  `controllers/auth/`, or `controllers/account/`, each with a `controller.tsx` entrypoint and the
+  UI it owns
+- `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
 - `middleware/` for request-layer concerns such as auth, database injection, and sessions
 - `integrations/` for third-party provider and API wiring
 - `operations/` for app-level workflows that coordinate multiple lower-level modules
@@ -82,12 +83,12 @@ Inside `app/`, organize code by responsibility:
 
 - Keep controllers thin. They should read request context, call application logic, and return a
   response.
-- Put each controller in its feature folder as `controller.tsx`. Do not split controller files
-  across the app root and feature folders.
-- If a component or helper is only used by one feature, keep it in that feature folder instead of
-  `ui/`.
-- Use `ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping
-  ground.
+- Put each controller in its controller feature folder as `controller.tsx`. Do not split
+  controller files across the app root and feature folders.
+- If a component or helper is only used by one feature, keep it in that controller feature folder
+  instead of `controllers/ui/`.
+- Use `controllers/ui/` only for reusable UI primitives. Do not create a generic
+  `app/components/` dumping ground.
 - Do not create a generic `app/lib/` dumping ground.
 - Avoid feature barrel files such as `index.ts`. Import feature modules directly.
 - Put cross-feature workflows in `operations/`, not in controllers.
@@ -104,16 +105,31 @@ demos/<name>/
     router.ts
     routes.ts
 
+    controllers/
+      home/
+        controller.tsx
+        login-page.tsx
+        external-auth-section.tsx
+
+      auth/
+        controller.tsx
+        signup-page.tsx
+        forgot-password-page.tsx
+
+      account/
+        controller.tsx
+        account-page.tsx
+
+      ui/
+        auth-card.tsx
+        document.tsx
+        form-field.tsx
+        notice.tsx
+        icons.tsx
+
     middleware/
       auth.ts
       database.ts
-
-    ui/
-      auth-card.tsx
-      document.tsx
-      form-field.tsx
-      notice.tsx
-      icons.tsx
 
     integrations/
       external-auth-providers.ts
@@ -126,20 +142,6 @@ demos/<name>/
     operations/
       resolve-external-auth.ts
       resolve-external-auth.test.ts
-
-    home/
-      controller.tsx
-      login-page.tsx
-      external-auth-section.tsx
-
-    auth/
-      controller.tsx
-      signup-page.tsx
-      forgot-password-page.tsx
-
-    account/
-      controller.tsx
-      account-page.tsx
 
     design-system.ts
     styles.ts

@@ -1,7 +1,7 @@
 import * as s from 'remix/data-schema'
 
 import type { AuthAccount, User } from '../../data/schema.ts'
-import type { ExternalProviderName } from '../integrations/external-auth-providers.ts'
+import type { ExternalProviderName } from '../integrations/external-auth/provider-config.ts'
 import type { Session } from '../utils/session.ts'
 
 export type AuthMethod = 'credentials' | ExternalProviderName

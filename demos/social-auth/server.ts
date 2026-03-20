@@ -9,7 +9,8 @@ if (fs.existsSync(envFilePath)) {
 }
 
 let { router } = await import('./app/router.ts')
-let { getDemoOrigin, getProviderStatuses } = await import('./app/integrations/external-auth-providers.ts')
+let { getDemoOrigin } = await import('./app/integrations/external-auth/provider-config.ts')
+let { getProviderStatuses } = await import('./app/integrations/external-auth/provider-status.ts')
 
 let server = http.createServer(
   createRequestListener(async request => {
