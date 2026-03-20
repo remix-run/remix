@@ -172,27 +172,28 @@ export type ExecutableQueryInput =
   | DeleteCommand<any, any, any, any, any>
   | UpsertCommand<any, any, any, any, any>
 
-export type QueryExecutionResult<input> = input extends Query<any, infer row, infer loaded, any, any, any>
-  ? Array<row & loaded>
-  : input extends FirstQuery<any, infer row, infer loaded, any, any>
-    ? (row & loaded) | null
-    : input extends FindQuery<any, infer row, infer loaded, any, any>
+export type QueryExecutionResult<input> =
+  input extends Query<any, infer row, infer loaded, any, any, any>
+    ? Array<row & loaded>
+    : input extends FirstQuery<any, infer row, infer loaded, any, any>
       ? (row & loaded) | null
-      : input extends CountQuery<any, any, any, any, any>
-        ? number
-        : input extends ExistsQuery<any, any, any, any, any>
-          ? boolean
-          : input extends InsertCommand<any, infer row, any, any, any>
-            ? WriteResult | WriteRowResult<row>
-            : input extends InsertManyCommand<any, infer row, any, any, any>
-              ? WriteResult | WriteRowsResult<row>
-              : input extends UpdateCommand<any, infer row, any, any, any>
+      : input extends FindQuery<any, infer row, infer loaded, any, any>
+        ? (row & loaded) | null
+        : input extends CountQuery<any, any, any, any, any>
+          ? number
+          : input extends ExistsQuery<any, any, any, any, any>
+            ? boolean
+            : input extends InsertCommand<any, infer row, any, any, any>
+              ? WriteResult | WriteRowResult<row>
+              : input extends InsertManyCommand<any, infer row, any, any, any>
                 ? WriteResult | WriteRowsResult<row>
-                : input extends DeleteCommand<any, infer row, any, any, any>
+                : input extends UpdateCommand<any, infer row, any, any, any>
                   ? WriteResult | WriteRowsResult<row>
-                  : input extends UpsertCommand<any, infer row, any, any, any>
-                    ? WriteResult | WriteRowResult<row>
-                    : never
+                  : input extends DeleteCommand<any, infer row, any, any, any>
+                    ? WriteResult | WriteRowsResult<row>
+                    : input extends UpsertCommand<any, infer row, any, any, any>
+                      ? WriteResult | WriteRowResult<row>
+                      : never
 
 type QueryRuntime = {
   exec<input extends ExecutableQueryInput>(input: input): Promise<QueryExecutionResult<input>>
@@ -250,7 +251,14 @@ export class Query<
         alias,
       }))
 
-      return this.#clone({ select }) as Query<columnTypes, any, loaded, tableName, primaryKey, binding>
+      return this.#clone({ select }) as Query<
+        columnTypes,
+        any,
+        loaded,
+        tableName,
+        primaryKey,
+        binding
+      >
     }
 
     let columns = input as (keyof row & string)[]
@@ -421,7 +429,9 @@ export class Query<
     >
   }
 
-  all(this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>): Promise<Array<row & loaded>> {
+  all(
+    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
+  ): Promise<Array<row & loaded>> {
     return this.#runtime().exec(this) as Promise<Array<row & loaded>>
   }
 
@@ -431,10 +441,12 @@ export class Query<
   first(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
   ): FirstQuery<columnTypes, row, loaded, tableName, primaryKey>
-  first(): Promise<(row & loaded) | null> | FirstQuery<columnTypes, row, loaded, tableName, primaryKey> {
+  first():
+    | Promise<(row & loaded) | null>
+    | FirstQuery<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createFirstQuery(this)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<(row & loaded) | null> : command
+    return runtime ? (runtime.exec(command) as Promise<(row & loaded) | null>) : command
   }
 
   find(
@@ -447,36 +459,30 @@ export class Query<
   ): FindQuery<columnTypes, row, loaded, tableName, primaryKey>
   find(
     value: PrimaryKeyInputForRow<row, primaryKey>,
-  ):
-    | Promise<(row & loaded) | null>
-    | FindQuery<columnTypes, row, loaded, tableName, primaryKey> {
+  ): Promise<(row & loaded) | null> | FindQuery<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createFindQuery(this, value)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<(row & loaded) | null> : command
+    return runtime ? (runtime.exec(command) as Promise<(row & loaded) | null>) : command
   }
 
-  count(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
-  ): Promise<number>
+  count(this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>): Promise<number>
   count(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
   ): CountQuery<columnTypes, row, loaded, tableName, primaryKey>
   count(): Promise<number> | CountQuery<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createCountQuery(this)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<number> : command
+    return runtime ? (runtime.exec(command) as Promise<number>) : command
   }
 
-  exists(
-    this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>,
-  ): Promise<boolean>
+  exists(this: Query<columnTypes, row, loaded, tableName, primaryKey, 'bound'>): Promise<boolean>
   exists(
     this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
   ): ExistsQuery<columnTypes, row, loaded, tableName, primaryKey>
   exists(): Promise<boolean> | ExistsQuery<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createExistsQuery(this)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<boolean> : command
+    return runtime ? (runtime.exec(command) as Promise<boolean>) : command
   }
 
   insert(
@@ -492,10 +498,12 @@ export class Query<
   insert(
     values: Partial<row>,
     options?: { returning?: ReturningInput<row>; touch?: boolean },
-  ): Promise<WriteResult | WriteRowResult<row>> | InsertCommand<columnTypes, row, loaded, tableName, primaryKey> {
+  ):
+    | Promise<WriteResult | WriteRowResult<row>>
+    | InsertCommand<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createInsertCommand(this, values, options)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>> : command
+    return runtime ? (runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>>) : command
   }
 
   insertMany(
@@ -516,7 +524,9 @@ export class Query<
     | InsertManyCommand<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createInsertManyCommand(this, values, options)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>> : command
+    return runtime
+      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
+      : command
   }
 
   update(
@@ -537,7 +547,9 @@ export class Query<
     | UpdateCommand<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createUpdateCommand(this, changes, options)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>> : command
+    return runtime
+      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
+      : command
   }
 
   delete(
@@ -548,14 +560,16 @@ export class Query<
     this: Query<columnTypes, row, loaded, tableName, primaryKey, 'unbound'>,
     options?: { returning?: ReturningInput<row> },
   ): DeleteCommand<columnTypes, row, loaded, tableName, primaryKey>
-  delete(
-    options?: { returning?: ReturningInput<row> },
-  ):
+  delete(options?: {
+    returning?: ReturningInput<row>
+  }):
     | Promise<WriteResult | WriteRowsResult<row>>
     | DeleteCommand<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createDeleteCommand(this, options)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>> : command
+    return runtime
+      ? (runtime.exec(command) as Promise<WriteResult | WriteRowsResult<row>>)
+      : command
   }
 
   upsert(
@@ -591,7 +605,7 @@ export class Query<
     | UpsertCommand<columnTypes, row, loaded, tableName, primaryKey> {
     let command = createUpsertCommand(this, values, options)
     let runtime = getQueryInternals(this).runtime
-    return runtime ? runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>> : command
+    return runtime ? (runtime.exec(command) as Promise<WriteResult | WriteRowResult<row>>) : command
   }
 
   #clone(
@@ -668,9 +682,7 @@ export function isQuery(input: unknown): input is Query<any, any, any, any, any,
   return typeof input === 'object' && input !== null && queryInternals.has(input)
 }
 
-export function getQueryInternals(
-  input: Query<any, any, any, any, any, any>,
-): QueryInternals {
+export function getQueryInternals(input: Query<any, any, any, any, any, any>): QueryInternals {
   let internals = queryInternals.get(input)
 
   if (!internals) {
@@ -708,7 +720,7 @@ export function createInitialQueryState(): QueryState {
   }
 }
 
-function createQueryWithState(
+export function createQueryWithState(
   table: QueryTableInput<any, any, any>,
   state: QueryState,
   runtime?: QueryRuntime,

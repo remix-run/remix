@@ -2,15 +2,13 @@ import { DataTableQueryError } from '../errors.ts'
 import type { QueryColumnName, QueryColumns, QueryColumnTypeMap } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
+import type { Query } from '../query.ts'
+import { query as createQuery } from '../query.ts'
 import type { AnyRelation, AnyTable, Relation } from '../table.ts'
 import { getCompositeKey, getTableName, getTablePrimaryKey } from '../table.ts'
 
-import {
-  createQueryBuilder,
-  loadRowsWithRelations,
-  type QueryExecutionContext,
-} from './execution-context.ts'
-import type { QueryBuilder } from './query-builder.ts'
+import type { QueryExecutionContext } from './execution-context.ts'
+import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 
 export async function loadRelationsForRows(
   database: QueryExecutionContext,
@@ -74,7 +72,7 @@ async function loadDirectRelationValues(
     return sourceRows.map(() => (relation.cardinality === 'many' ? [] : null))
   }
 
-  let query = database[createQueryBuilder](relation.targetTable)
+  let query = createQuery(relation.targetTable)
   let linkPredicate = buildLinkPredicate(relation.targetKey, sourceTuples)
 
   if (linkPredicate) {
@@ -85,7 +83,7 @@ async function loadDirectRelationValues(
     includePagination: false,
   })
 
-  let relatedRows = await query[loadRowsWithRelations]()
+  let relatedRows = await loadRowsWithRelationsForQuery(database, query)
   let grouped = groupRowsByTuple(relatedRows, relation.targetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -121,7 +119,7 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let throughQuery = database[createQueryBuilder](throughRelation.targetTable)
+  let throughQuery = createQuery(throughRelation.targetTable)
   let throughPredicate = buildLinkPredicate(throughRelation.targetKey, sourceTuples)
 
   if (throughPredicate) {
@@ -134,7 +132,7 @@ async function loadHasManyThroughValues(
     includePagination: false,
   })
 
-  let throughRows = await throughQuery[loadRowsWithRelations]()
+  let throughRows = await loadRowsWithRelationsForQuery(database, throughQuery)
 
   if (throughRows.length === 0) {
     return sourceRows.map(() => [])
@@ -163,7 +161,7 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let targetQuery = database[createQueryBuilder](relation.targetTable)
+  let targetQuery = createQuery(relation.targetTable)
   let targetPredicate = buildLinkPredicate(relation.through.throughTargetKey, throughTuples)
 
   if (targetPredicate) {
@@ -176,7 +174,7 @@ async function loadHasManyThroughValues(
     includePagination: false,
   })
 
-  let relatedRows = await targetQuery[loadRowsWithRelations]()
+  let relatedRows = await loadRowsWithRelationsForQuery(database, targetQuery)
   let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -204,10 +202,10 @@ async function loadHasManyThroughValues(
 }
 
 function applyRelationModifiers<table extends AnyTable>(
-  query: QueryBuilder<any, Record<string, unknown>, {}, any, readonly string[]>,
+  query: Query<any, Record<string, unknown>, any, any, readonly string[]>,
   relation: Relation<any, table, any, any>,
   options: { includePagination: boolean },
-): QueryBuilder<any, Record<string, unknown>, any, any, readonly string[]> {
+): Query<any, Record<string, unknown>, any, any, readonly string[]> {
   let next = query
 
   for (let predicate of relation.modifiers.where) {

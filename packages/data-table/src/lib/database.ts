@@ -8,11 +8,7 @@ import type {
 } from './adapter.ts'
 import type { ColumnBuilder } from './column.ts'
 import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
-import {
-  createQueryBuilder,
-  executeOperation,
-  type QueryExecutionContext,
-} from './database/execution-context.ts'
+import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
 import {
   asQueryTableInput,
   getPrimaryKeyWhere,
@@ -21,21 +17,9 @@ import {
   resolveCreateRowWhere,
   toWriteResult,
 } from './database/helpers.ts'
-import { QueryBuilder } from './database/query-builder.ts'
-import type {
-  ExecutableQueryInput,
-  Query as QueryObject,
-  QueryExecutionResult,
-  QueryState,
-} from './query.ts'
-import {
-  bindQuery,
-  cloneQueryState,
-  createInitialQueryState,
-  getQueryInternals,
-  isQuery,
-  query as createQuery,
-} from './query.ts'
+import { executeQueryInput } from './database/query-execution.ts'
+import type { ExecutableQueryInput, Query as QueryObject, QueryExecutionResult } from './query.ts'
+import { bindQuery, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
@@ -176,7 +160,14 @@ export type QueryMethod = <
   primaryKey extends readonly (keyof row & string)[],
 >(
   table: QueryTableInput<tableName, row, primaryKey>,
-) => QueryObject<Pretty<QueryColumnTypeMapFromRow<tableName, row>>, row, {}, tableName, primaryKey, 'bound'>
+) => QueryObject<
+  Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
+  row,
+  {},
+  tableName,
+  primaryKey,
+  'bound'
+>
 
 /**
  * Result metadata for write operations that do not return rows.
@@ -421,7 +412,14 @@ export class Database implements QueryExecutionContext {
     primaryKey extends readonly (keyof row & string)[],
   >(
     table: QueryTableInput<tableName, row, primaryKey>,
-  ): QueryObject<Pretty<QueryColumnTypeMapFromRow<tableName, row>>, row, {}, tableName, primaryKey, 'bound'> =>
+  ): QueryObject<
+    Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
+    row,
+    {},
+    tableName,
+    primaryKey,
+    'bound'
+  > =>
     bindQuery(createQuery(table), this) as QueryObject<
       Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
       row,
@@ -430,22 +428,6 @@ export class Database implements QueryExecutionContext {
       primaryKey,
       'bound'
     >
-
-  [createQueryBuilder]<
-    tableName extends string,
-    row extends Record<string, unknown>,
-    primaryKey extends readonly (keyof row & string)[],
-  >(
-    table: QueryTableInput<tableName, row, primaryKey>,
-  ): QueryBuilder<any, row, {}, tableName, primaryKey> {
-    return new QueryBuilder(this, table, createInitialQueryState()) as QueryBuilder<
-      any,
-      row,
-      {},
-      tableName,
-      primaryKey
-    >
-  }
 
   create<table extends AnyTable>(
     table: table,
@@ -769,9 +751,7 @@ export class Database implements QueryExecutionContext {
   }
 
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
-  async exec<input extends ExecutableQueryInput>(
-    input: input,
-  ): Promise<QueryExecutionResult<input>>
+  async exec<input extends ExecutableQueryInput>(input: input): Promise<QueryExecutionResult<input>>
   async exec<input extends ExecutableQueryInput>(
     statementOrInput: string | SqlStatement | input,
     values: unknown[] = [],
@@ -787,47 +767,7 @@ export class Database implements QueryExecutionContext {
       })
     }
 
-    return this.#execQueryInput(statementOrInput)
-  }
-
-  async #execQueryInput<input extends ExecutableQueryInput>(
-    input: input,
-  ): Promise<QueryExecutionResult<input>> {
-    if (isQuery(input)) {
-      let internals = getQueryInternals(input)
-      let builder = this.#queryBuilderWithState(internals.table, internals.state)
-      return (await builder.all()) as QueryExecutionResult<input>
-    }
-
-    let builder = this.#queryBuilderWithState(input.table, input.state)
-
-    switch (input.kind) {
-      case 'first':
-        return (await builder.first()) as QueryExecutionResult<input>
-      case 'find':
-        return (await builder.find(input.value as never)) as QueryExecutionResult<input>
-      case 'count':
-        return (await builder.count()) as QueryExecutionResult<input>
-      case 'exists':
-        return (await builder.exists()) as QueryExecutionResult<input>
-      case 'insert':
-        return (await builder.insert(input.values, input.options)) as QueryExecutionResult<input>
-      case 'insertMany':
-        return (await builder.insertMany(input.values, input.options)) as QueryExecutionResult<input>
-      case 'update':
-        return (await builder.update(input.changes, input.options)) as QueryExecutionResult<input>
-      case 'delete':
-        return (await builder.delete(input.options)) as QueryExecutionResult<input>
-      case 'upsert':
-        return (await builder.upsert(input.values, input.options)) as QueryExecutionResult<input>
-    }
-  }
-
-  #queryBuilderWithState(
-    table: AnyTable,
-    state: QueryState,
-  ): QueryBuilder<any, Record<string, unknown>, any, any, readonly string[]> {
-    return new QueryBuilder(this, table, cloneQueryState(state))
+    return executeQueryInput(this, statementOrInput)
   }
 
   async transaction<result>(

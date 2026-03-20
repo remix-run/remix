@@ -13,15 +13,12 @@ import type {
 } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
+import { query as createQuery } from '../query.ts'
 import type { AnyTable, PrimaryKeyInput, TableName, TablePrimaryKey, TableRow } from '../table.ts'
 import { getPrimaryKeyObject, getTableName, getTablePrimaryKey } from '../table.ts'
 
-import {
-  createQueryBuilder,
-  loadRowsWithRelations,
-  type QueryExecutionContext,
-} from './execution-context.ts'
-import type { QueryBuilder } from './query-builder.ts'
+import type { QueryExecutionContext } from './execution-context.ts'
+import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 
 export function asQueryTableInput<table extends AnyTable>(
   table: table,
@@ -136,10 +133,9 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     offset?: number
   },
 ): Promise<Record<string, unknown>[]> {
-  let query: QueryBuilder<any, TableRow<table>, {}, TableName<table>, TablePrimaryKey<table>> =
-    database[createQueryBuilder]<TableName<table>, TableRow<table>, TablePrimaryKey<table>>(
-      table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
-    )
+  let query = createQuery(
+    table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
+  )
 
   for (let predicate of state.where) {
     query = query.where(predicate as Predicate<QueryColumnName<table>>)
@@ -160,9 +156,10 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     query = query.offset(state.offset)
   }
 
-  let rows = await query
-    .select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[]))
-    [loadRowsWithRelations]()
+  let rows = await loadRowsWithRelationsForQuery(
+    database,
+    query.select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[])),
+  )
   let primaryKeys = getTablePrimaryKey(table) as string[]
 
   return rows.map((row) => {
