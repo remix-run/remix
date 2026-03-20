@@ -45,7 +45,7 @@ Follow this exactly when creating package files, public exports, tests, and docs
   - `build`: `tsgo -p tsconfig.build.json`
   - `clean`: `git clean -fdX`
   - `prepublishOnly`: `pnpm run build`
-  - `test`: `node --disable-warning=ExperimentalWarning --test`
+  - `test`: `remix-test`
   - `typecheck`: `tsgo --noEmit`
 - Use baseline dev dependencies:
   - `"@types/node": "catalog:"`
