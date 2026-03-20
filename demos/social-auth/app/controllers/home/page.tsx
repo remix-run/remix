@@ -6,7 +6,7 @@ import { EmailIcon, PasswordIcon } from '../ui/icons.tsx'
 import { Notice } from '../ui/notice.tsx'
 import * as styles from '../ui/styles.ts'
 import { ExternalAuthSection } from './external-auth-section.tsx'
-import { LoginFooter } from './login-footer.tsx'
+import { LoginFooter } from './footer.tsx'
 
 export interface LoginPageProps {
   formAction: string
