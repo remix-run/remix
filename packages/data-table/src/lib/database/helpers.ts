@@ -5,7 +5,6 @@ import type {
   QueryColumnName,
   QueryColumns,
   QueryColumnTypeMap,
-  QueryForTable,
   QueryTableInput,
   SingleTableWhere,
   TableColumnName,
@@ -17,7 +16,12 @@ import { and, eq, inList, or } from '../operators.ts'
 import type { AnyTable, PrimaryKeyInput, TableName, TablePrimaryKey, TableRow } from '../table.ts'
 import { getPrimaryKeyObject, getTableName, getTablePrimaryKey } from '../table.ts'
 
-import { loadRowsWithRelations, type QueryExecutionContext } from './execution-context.ts'
+import {
+  createQueryBuilder,
+  loadRowsWithRelations,
+  type QueryExecutionContext,
+} from './execution-context.ts'
+import type { QueryBuilder } from './query-builder.ts'
 
 export function asQueryTableInput<table extends AnyTable>(
   table: table,
@@ -132,11 +136,10 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     offset?: number
   },
 ): Promise<Record<string, unknown>[]> {
-  let query: QueryForTable<table> = database.query<
-    TableName<table>,
-    TableRow<table>,
-    TablePrimaryKey<table>
-  >(table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>)
+  let query: QueryBuilder<any, TableRow<table>, {}, TableName<table>, TablePrimaryKey<table>> =
+    database[createQueryBuilder]<TableName<table>, TableRow<table>, TablePrimaryKey<table>>(
+      table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
+    )
 
   for (let predicate of state.where) {
     query = query.where(predicate as Predicate<QueryColumnName<table>>)

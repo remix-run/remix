@@ -5,7 +5,6 @@ import type {
   ExistsOperation,
   InsertManyOperation,
   InsertOperation,
-  JoinClause,
   JoinType,
   SelectColumn,
   SelectOperation,
@@ -29,8 +28,9 @@ import type {
 } from '../database.ts'
 import type { Predicate, WhereInput } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
+import type { QueryState } from '../query.ts'
 import { normalizeColumnInput } from '../references.ts'
-import type { AnyRelation, AnyTable, LoadedRelationMap, OrderByClause } from '../table.ts'
+import type { AnyTable, LoadedRelationMap } from '../table.ts'
 import { getPrimaryKeyObject, getTableColumns, getTableName } from '../table.ts'
 
 import {
@@ -55,19 +55,6 @@ import {
   runAfterWriteHook,
   runBeforeDeleteHook,
 } from './write-lifecycle.ts'
-
-export type QueryState = {
-  select: '*' | SelectColumn[]
-  distinct: boolean
-  joins: JoinClause[]
-  where: Predicate<string>[]
-  groupBy: string[]
-  having: Predicate<string>[]
-  orderBy: OrderByClause[]
-  limit?: number
-  offset?: number
-  with: Record<string, AnyRelation>
-}
 
 /**
  * Immutable query builder used by `db.query(table)`.
@@ -927,19 +914,6 @@ export class QueryBuilder<
       offset: patch.offset === undefined ? this.#state.offset : patch.offset,
       with: patch.with ? { ...patch.with } : { ...this.#state.with },
     })
-  }
-}
-
-export function createInitialQueryState(): QueryState {
-  return {
-    select: '*',
-    distinct: false,
-    joins: [],
-    where: [],
-    groupBy: [],
-    having: [],
-    orderBy: [],
-    with: {},
   }
 }
 

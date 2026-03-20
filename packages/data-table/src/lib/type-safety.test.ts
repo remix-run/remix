@@ -3,12 +3,9 @@ import { afterEach, describe, it } from 'node:test'
 
 import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
-import type {
-  QueryBuilder,
-  QueryColumnTypesForTable,
-  QueryForTable,
-  WriteResult,
-} from './database.ts'
+import type { QueryColumnTypesForTable, QueryForTable, WriteResult } from './database.ts'
+import type { Query } from './query.ts'
+import { query } from './query.ts'
 import { table, hasMany } from './table.ts'
 import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
@@ -97,16 +94,17 @@ describe('type safety', () => {
     assert.equal(wrapped instanceof Database, true)
   })
 
-  it('exposes query builder generics as column and row output maps', () => {
+  it('exposes Query generics as column and row output maps', () => {
     let db = createDatabase(createAdapter())
     let query = db.query(accounts)
 
-    type Query = typeof query
+    type QueryType = typeof query
     type QueryColumns =
-      Query extends QueryBuilder<infer columnTypes, any, any, any, any> ? columnTypes : never
-    type QueryRow = Query extends QueryBuilder<any, infer row, any, any, any> ? row : never
-    type QueryTableName = Query extends QueryBuilder<any, any, any, infer name, any> ? name : never
-    type QueryPrimaryKey = Query extends QueryBuilder<any, any, any, any, infer key> ? key : never
+      QueryType extends Query<infer columnTypes, any, any, any, any, any> ? columnTypes : never
+    type QueryRow = QueryType extends Query<any, infer row, any, any, any, any> ? row : never
+    type QueryTableName = QueryType extends Query<any, any, any, infer name, any, any> ? name : never
+    type QueryPrimaryKey = QueryType extends Query<any, any, any, any, infer key, any> ? key : never
+    type QueryBinding = QueryType extends Query<any, any, any, any, any, infer binding> ? binding : never
     type QueryFromTableAlias = QueryForTable<typeof accounts>
     type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof accounts>
     type AccountsReference = TableReference<typeof accounts>
@@ -130,12 +128,56 @@ describe('type safety', () => {
     expectType<Equal<QueryRow, ExpectedRow>>()
     expectType<Equal<QueryTableName, 'accounts'>>()
     expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
-    expectType<Equal<Query, QueryFromTableAlias>>()
+    expectType<Equal<QueryType, QueryFromTableAlias>>()
+    expectType<Equal<QueryBinding, 'bound'>>()
     expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()
     expectType<Equal<AccountsReference['kind'], 'table'>>()
     expectType<Equal<AccountsReference['name'], 'accounts'>>()
     expectType<Equal<AccountsReference['primaryKey'], readonly ['id']>>()
     expectType<Equal<AccountsReferenceColumns, 'email' | 'id' | 'status'>>()
+  })
+
+  it('types query(table) and db.exec(...) for unbound queries and commands', async () => {
+    let db = createDatabase(
+      createAdapter({
+        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
+
+    let unbound = query(accounts).where({ status: 'active' })
+    let rows = await db.exec(unbound)
+    let first = await db.exec(query(accounts).first())
+    let count = await db.exec(query(accounts).count())
+    let exists = await db.exec(query(accounts).where({ status: 'active' }).exists())
+    let insertResult = await db.exec(
+      query(accounts).insert({ id: 2, email: 'b@example.com', status: 'inactive' }),
+    )
+
+    assert.equal(rows.length, 1)
+    assert.equal(first?.id, 1)
+    assert.equal(count, 1)
+    assert.equal(exists, true)
+    assert.equal(insertResult.affectedRows, 1)
+
+    type Unbound = typeof unbound
+    type UnboundBinding = Unbound extends Query<any, any, any, any, any, infer binding>
+      ? binding
+      : never
+    type Row = (typeof rows)[number]
+
+    expectType<Equal<UnboundBinding, 'unbound'>>()
+    expectType<Equal<Row['id'], number>>()
+    expectType<Equal<Row['email'], string>>()
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unbound queries do not expose all()
+      query(accounts).all()
+      // @ts-expect-error values are only accepted for raw SQL exec()
+      db.exec(query(accounts), [])
+    }
+
+    void verifyTypeErrors
   })
 
   it('narrows select() result types while preserving relation types', async () => {

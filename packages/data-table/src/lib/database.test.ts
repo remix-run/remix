@@ -4,6 +4,7 @@ import { afterEach, describe, it } from 'node:test'
 import type { DataManipulationOperation, DatabaseAdapter } from './adapter.ts'
 import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
+import { query } from './query.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { belongsTo, table, hasMany, hasManyThrough, hasOne, timestamps } from './table.ts'
 import { eq } from './operators.ts'
@@ -102,7 +103,7 @@ afterEach(() => {
   cleanups.clear()
 })
 
-describe('query builder', () => {
+describe('queries', () => {
   it('supports direct construction and createDatabase wrapper', async () => {
     let adapter = createAdapter({
       accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
@@ -130,6 +131,38 @@ describe('query builder', () => {
     assert.equal(wrapped.now(), '2026-01-01T00:00:00.000Z')
     assert.equal(directRows.length, 1)
     assert.equal(wrappedRows.length, 1)
+  })
+
+  it('executes unbound Query objects through db.exec()', async () => {
+    let db = createTestDatabase(
+      createAdapter({
+        accounts: [
+          { id: 1, email: 'amy@studio.test', status: 'active' },
+          { id: 2, email: 'brad@studio.test', status: 'inactive' },
+        ],
+        projects: [],
+        tasks: [],
+        memberships: [],
+      }),
+    )
+
+    let rows = await db.exec(query(accounts).where({ status: 'active' }).orderBy('id', 'asc'))
+    let first = await db.exec(query(accounts).where({ id: 1 }).first())
+    let count = await db.exec(query(accounts).where({ status: 'active' }).count())
+    let exists = await db.exec(query(accounts).where({ status: 'archived' }).exists())
+    let updateResult = await db.exec(
+      query(accounts).where({ status: 'inactive' }).update({ status: 'active' }),
+    )
+
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].email, 'amy@studio.test')
+    assert.equal(first?.id, 1)
+    assert.equal(count, 1)
+    assert.equal(exists, false)
+    assert.equal(updateResult.affectedRows, 1)
+
+    let reloaded = await db.query(accounts).orderBy('id', 'asc').all()
+    assert.equal(reloaded[1].status, 'active')
   })
 
   it('is immutable and supports eager hasMany loading', async () => {

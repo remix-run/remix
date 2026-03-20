@@ -5,7 +5,7 @@ Typed relational query toolkit for JavaScript runtimes.
 ## Features
 
 - **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
-- **Two Complementary Query Styles**: Use the chainable query builder for advanced queries or high-level database helpers for common CRUD
+- **Two Complementary Query Styles**: Build reusable `Query` objects with `query(table)` + `db.exec(...)`, or use `db.query(table)` as shorthand
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
@@ -15,7 +15,7 @@ Typed relational query toolkit for JavaScript runtimes.
 
 `data-table` gives you two complementary APIs:
 
-- [**Query Builder**](#query-builder) for expressive joins, aggregates, eager loading, and scoped writes
+- [**Query Objects**](#query-objects) for expressive joins, aggregates, eager loading, and scoped writes
 - [**CRUD Helpers**](#crud-helpers) for common create/read/update/delete flows (`find`, `create`, `update`, `delete`)
 
 Both APIs are type-safe. Runtime validation is opt-in with table-level `validate(context)`.
@@ -37,7 +37,7 @@ Define tables once, then create a database with an adapter.
 
 ```ts
 import { Pool } from 'pg'
-import { column as c, createDatabase, table, hasMany } from 'remix/data-table'
+import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
 let users = table({
@@ -67,39 +67,37 @@ let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
-## Query Builder
+## Query Objects
 
-Use `db.query(table)` when you need joins, custom shape selection, eager loading, or aggregate logic.
+Use `query(table)` + `db.exec(...)` as the primary query API. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
 
 ```ts
 import { eq, ilike } from 'remix/data-table'
 
-let recentPendingOrders = await db
-  .query(orders)
-  .join(users, eq(orders.user_id, users.id))
-  .where({ status: 'pending' })
-  .where(ilike(users.email, '%@example.com'))
-  .select({
-    orderId: orders.id,
-    customerEmail: users.email,
-    total: orders.total,
-    placedAt: orders.created_at,
-  })
-  .orderBy(orders.created_at, 'desc')
-  .limit(20)
-  .all()
+let recentPendingOrders = await db.exec(
+  query(orders)
+    .join(users, eq(orders.user_id, users.id))
+    .where({ status: 'pending' })
+    .where(ilike(users.email, '%@example.com'))
+    .select({
+      orderId: orders.id,
+      customerEmail: users.email,
+      total: orders.total,
+      placedAt: orders.created_at,
+    })
+    .orderBy(orders.created_at, 'desc')
+    .limit(20),
+)
 ```
 
 Load relations with relation-scoped filtering and ordering:
 
 ```ts
-let customers = await db
-  .query(users)
-  .where({ role: 'customer' })
-  .with({
+let customers = await db.exec(
+  query(users).where({ role: 'customer' }).with({
     recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
-  })
-  .all()
+  }),
+)
 
 // customers[0].recentOrders is fully typed
 ```
@@ -107,12 +105,24 @@ let customers = await db
 Run scoped writes safely with the same chainable API:
 
 ```ts
-await db
+await db.exec(
+  query(orders)
+    .where({ status: 'pending' })
+    .orderBy('created_at', 'asc')
+    .limit(100)
+    .update({ status: 'processing' }),
+)
+```
+
+Bound-query shorthand is still available when you prefer methods on the database instance itself:
+
+```ts
+let recentPendingOrders = await db
   .query(orders)
   .where({ status: 'pending' })
-  .orderBy('created_at', 'asc')
-  .limit(100)
-  .update({ status: 'processing' })
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .all()
 ```
 
 ## CRUD Helpers

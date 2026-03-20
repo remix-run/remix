@@ -1,16 +1,16 @@
 import { DataTableQueryError } from '../errors.ts'
-import type {
-  QueryColumnName,
-  QueryColumns,
-  QueryColumnTypeMap,
-  QueryForTable,
-} from '../database.ts'
+import type { QueryColumnName, QueryColumns, QueryColumnTypeMap } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import type { AnyRelation, AnyTable, Relation } from '../table.ts'
 import { getCompositeKey, getTableName, getTablePrimaryKey } from '../table.ts'
 
-import { loadRowsWithRelations, type QueryExecutionContext } from './execution-context.ts'
+import {
+  createQueryBuilder,
+  loadRowsWithRelations,
+  type QueryExecutionContext,
+} from './execution-context.ts'
+import type { QueryBuilder } from './query-builder.ts'
 
 export async function loadRelationsForRows(
   database: QueryExecutionContext,
@@ -74,7 +74,7 @@ async function loadDirectRelationValues(
     return sourceRows.map(() => (relation.cardinality === 'many' ? [] : null))
   }
 
-  let query = database.query(relation.targetTable)
+  let query = database[createQueryBuilder](relation.targetTable)
   let linkPredicate = buildLinkPredicate(relation.targetKey, sourceTuples)
 
   if (linkPredicate) {
@@ -121,7 +121,7 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let throughQuery = database.query(throughRelation.targetTable)
+  let throughQuery = database[createQueryBuilder](throughRelation.targetTable)
   let throughPredicate = buildLinkPredicate(throughRelation.targetKey, sourceTuples)
 
   if (throughPredicate) {
@@ -163,7 +163,7 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let targetQuery = database.query(relation.targetTable)
+  let targetQuery = database[createQueryBuilder](relation.targetTable)
   let targetPredicate = buildLinkPredicate(relation.through.throughTargetKey, throughTuples)
 
   if (targetPredicate) {
@@ -204,10 +204,10 @@ async function loadHasManyThroughValues(
 }
 
 function applyRelationModifiers<table extends AnyTable>(
-  query: QueryForTable<table>,
+  query: QueryBuilder<any, Record<string, unknown>, {}, any, readonly string[]>,
   relation: Relation<any, table, any, any>,
   options: { includePagination: boolean },
-): QueryForTable<table, any> {
+): QueryBuilder<any, Record<string, unknown>, any, any, readonly string[]> {
   let next = query
 
   for (let predicate of relation.modifiers.where) {
