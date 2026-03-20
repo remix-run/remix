@@ -20,4 +20,18 @@ describe('Example Test Suite', () => {
       throw new Error('test error')
     }, /test error/)
   })
+
+  it.skip('can skip tests', () => {
+    assert.equal(true, false)
+  })
+
+  it.todo('can mark tests as todo')
 })
+
+describe.skip('Skipped Test Suite', () => {
+  it('would fail', () => {
+    assert.equal(true, false)
+  })
+})
+
+describe.todo('TODO Test Suite')

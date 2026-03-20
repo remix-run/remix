@@ -76,7 +76,7 @@ async function executeRun() {
     }
 
     if (browserFiles.length > 0 && !browserServer) {
-      let startServer = await tsImport('./app/server.tsx', {
+      let { startServer } = await tsImport('./app/server.tsx', {
         parentURL: import.meta.url,
         tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
       })
@@ -102,7 +102,15 @@ async function executeRun() {
 
     let totalPassed = (serverResult?.passed ?? 0) + (browserResult?.results.passed ?? 0)
     let totalFailed = (serverResult?.failed ?? 0) + (browserResult?.results.failed ?? 0)
-    reporter.onSummary(totalPassed, totalFailed, performance.now() - startTime)
+    let totalSkipped = (serverResult?.skipped ?? 0) + (browserResult?.results.skipped ?? 0)
+    let totalTodo = (serverResult?.todo ?? 0) + (browserResult?.results.todo ?? 0)
+    reporter.onSummary(
+      totalPassed,
+      totalFailed,
+      performance.now() - startTime,
+      totalSkipped,
+      totalTodo,
+    )
 
     if (values.browserOpen && browserResult) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')

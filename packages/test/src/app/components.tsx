@@ -6,7 +6,7 @@ type TestResult = {
   name: string
   suiteName: string
   filePath?: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'skipped' | 'todo'
   error?: { message: string; stack?: string }
   duration: number
 }
@@ -38,6 +38,7 @@ let styles = {
   passed: css({ color: '#16a34a' }),
   failed: css({ color: '#dc2626' }),
   muted: css({ color: '#666' }),
+  todo: css({ color: '#a16207' }),
 }
 
 export const Tests = clientEntry(
@@ -45,16 +46,18 @@ export const Tests = clientEntry(
   function Tests(handle: Handle, setup: { testFiles: string[]; baseDir: string }) {
     let done = false
     let startTime = performance.now()
-    let allResults = { passed: 0, failed: 0, tests: [] as TestResult[] }
+    let allResults = { passed: 0, failed: 0, skipped: 0, todo: 0, tests: [] as TestResult[] }
 
     async function run() {
       try {
         for (let testFile of setup.testFiles) {
           await import(testFile)
-          let { passed, failed, tests } = await runTests()
+          let { passed, failed, skipped, todo, tests } = await runTests()
           let fileResults = {
             passed,
             failed,
+            skipped,
+            todo,
             tests: tests.map((t) => ({ ...t, filePath: testFile })),
           }
           await fetch('/file-results', {
@@ -64,6 +67,8 @@ export const Tests = clientEntry(
           })
           allResults.passed += passed
           allResults.failed += failed
+          allResults.skipped += skipped
+          allResults.todo += todo
           tests.forEach((t) => allResults.tests.push({ ...t, filePath: testFile }))
           handle.update()
         }
@@ -93,9 +98,11 @@ export const Tests = clientEntry(
       return (
         <div id="test-status" mix={[styles.container]}>
           <div mix={[styles.summary]}>
-            <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> tests {allResults.passed + allResults.failed}</span>
+            <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> tests {allResults.passed + allResults.failed + allResults.skipped + allResults.todo}</span>
             <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> pass {allResults.passed}</span>
             <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> fail {allResults.failed}</span>
+            {allResults.skipped > 0 && <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> skipped {allResults.skipped}</span>}
+            {allResults.todo > 0 && <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> todo {allResults.todo}</span>}
             {done && <span mix={[styles.summaryRow]}><span mix={[styles.info]}>ℹ</span> duration_ms {durationMs.toFixed(5)}</span>}
           </div>
 
@@ -122,31 +129,47 @@ export const Tests = clientEntry(
 function TestSuite(_handle: Handle, _setup: undefined) {
   return ({ suiteName, tests, baseDir }: { suiteName: string; tests: TestResult[]; baseDir: string }) => {
     let suiteFailed = tests.some((t) => t.status === 'failed')
+    let suiteAllSkipped = tests.every((t) => t.status === 'skipped')
+    let suiteAllTodo = tests.every((t) => t.status === 'todo')
+    let suiteStyle = suiteFailed ? styles.failed : suiteAllSkipped ? styles.muted : suiteAllTodo ? styles.todo : styles.passed
+    let suiteIcon = suiteFailed ? '✗' : suiteAllSkipped ? '↓' : suiteAllTodo ? '…' : '✓'
     return (
       <details open={suiteFailed} mix={[styles.suiteDetails]}>
-        <summary mix={[styles.suiteSummary, suiteFailed ? styles.failed : styles.passed]}>
+        <summary mix={[styles.suiteSummary, suiteStyle]}>
           <span mix={[styles.suiteIcon]}>
-            {suiteFailed ? '✗' : '✓'} {suiteName}
+            {suiteIcon} {suiteName}{suiteAllSkipped ? ' # skipped' : suiteAllTodo ? ' # todo' : ''}
           </span>
         </summary>
         <div mix={[styles.indent]}>
           {tests.map((test) => (
             <div mix={[styles.testItem]}>
-              <div mix={[test.status === 'passed' ? styles.passed : styles.failed]}>
-                {test.status === 'passed' ? '✓' : '✗'} {test.name}{' '}
-                <span mix={[styles.testDuration]}>
-                  ({test.duration.toFixed(2)}ms)
-                </span>
-              </div>
-              {test.error && (
-                <pre mix={[styles.errorPre]}>
-                  {test.error.message}
-                  {test.error.stack && (
-                    <div mix={[styles.errorStack]}>
-                      <Stack stack={test.error.stack} baseDir={baseDir} />
-                    </div>
+              {test.status === 'passed' && (
+                <div mix={[styles.passed]}>
+                  ✓ {test.name}{' '}
+                  <span mix={[styles.testDuration]}>({test.duration.toFixed(2)}ms)</span>
+                </div>
+              )}
+              {test.status === 'failed' && (
+                <div mix={[styles.failed]}>
+                  ✗ {test.name}{' '}
+                  <span mix={[styles.testDuration]}>({test.duration.toFixed(2)}ms)</span>
+                  {test.error && (
+                    <pre mix={[styles.errorPre]}>
+                      {test.error.message}
+                      {test.error.stack && (
+                        <div mix={[styles.errorStack]}>
+                          <Stack stack={test.error.stack} baseDir={baseDir} />
+                        </div>
+                      )}
+                    </pre>
                   )}
-                </pre>
+                </div>
+              )}
+              {test.status === 'skipped' && test.name && (
+                <div mix={[styles.muted]}>↓ {test.name} # skipped</div>
+              )}
+              {test.status === 'todo' && test.name && (
+                <div mix={[styles.todo]}>… {test.name} # todo</div>
               )}
             </div>
           ))}

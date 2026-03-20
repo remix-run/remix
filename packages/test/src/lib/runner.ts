@@ -22,9 +22,11 @@ export async function runServerTests(
   files: string[],
   reporter: Reporter,
   concurrency: number,
-): Promise<{ passed: number; failed: number }> {
+): Promise<{ passed: number; failed: number; skipped: number; todo: number }> {
   let passed = 0
   let failed = 0
+  let skipped = 0
+  let todo = 0
 
   // Run up to `concurrency` workers at a time, streaming results to the
   // reporter as each file finishes rather than waiting for all to complete.
@@ -46,6 +48,8 @@ export async function runServerTests(
             )
             passed += results.passed
             failed += results.failed
+            skipped += results.skipped
+            todo += results.todo
             active--
             if (index < files.length) {
               dispatch()
@@ -68,5 +72,5 @@ export async function runServerTests(
     dispatch()
   })
 
-  return { passed, failed }
+  return { passed, failed, skipped, todo }
 }

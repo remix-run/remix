@@ -13,4 +13,17 @@ describe('DOM Tests', () => {
     let text = await response.text()
     assert.equal(text, 'hello')
   })
+
+  it.skip('canvas rendering')
+
+  it.todo('IndexedDB support')
 })
+
+describe.skip('LocalStorage Tests', () => {
+  it('reads and writes values', () => {
+    localStorage.setItem('key', 'value')
+    assert.equal(localStorage.getItem('key'), 'value')
+  })
+})
+
+describe.todo('WebSocket Tests')

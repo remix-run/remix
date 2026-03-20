@@ -21,7 +21,7 @@ let routes = route({
   scripts: '/scripts/*path',
 })
 
-export default async function startServer(
+export async function startServer(
   port = 44101,
   absoluteFiles: string[] = [],
 ): Promise<http.Server> {
