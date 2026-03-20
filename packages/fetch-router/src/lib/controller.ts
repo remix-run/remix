@@ -8,34 +8,31 @@ import type { Route, RouteMap } from './route-map.ts'
 
 type AnyMiddleware = Middleware<any, any, any>
 
-type RequestHandlerObjectWithoutMiddleware<
-  method extends RequestMethod | 'ANY',
+type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
 > = {
   middleware?: undefined
-  handler: RequestHandler<method, params, context>
+  handler: RequestHandler<params, context>
 }
 
-type RequestHandlerObjectWithMiddleware<
-  method extends RequestMethod | 'ANY',
+type ActionObjectWithMiddleware<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
   middleware extends readonly AnyMiddleware[],
 > = {
   middleware: readonly [...middleware]
-  handler: RequestHandler<method, params, ApplyMiddlewareTuple<context, middleware>>
+  handler: RequestHandler<params, ApplyMiddlewareTuple<context, middleware>>
 }
 
-type RequestHandlerDefinition<
-  method extends RequestMethod | 'ANY',
+type ActionInput<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > =
-  | RequestHandler<method, params, context>
-  | RequestHandlerObjectWithoutMiddleware<method, params, context>
-  | RequestHandlerObjectWithMiddleware<method, params, context, middleware>
+  | RequestHandler<params, context>
+  | ActionObjectWithoutMiddleware<params, context>
+  | ActionObjectWithMiddleware<params, context, middleware>
 
 export type ControllerWithoutMiddleware<
   routes extends RouteMap,
@@ -95,8 +92,7 @@ export type Action<
   method extends RequestMethod | 'ANY',
   pattern extends string,
   context extends RequestContext<any, any> = RequestContext,
-> = RequestHandlerDefinition<
-  method,
+> = ActionInput<
   Params<pattern>,
   WithParams<context, Params<pattern>>,
   readonly AnyMiddleware[]
@@ -123,7 +119,6 @@ export type BuildAction<
  * @returns The response
  */
 export interface RequestHandler<
-  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
   context extends RequestContext<any, any> = RequestContext<params>,
 > {
@@ -156,7 +151,7 @@ export function isController(obj: unknown): obj is ControllerShape {
  */
 export interface ActionObjectShape {
   middleware?: Middleware<any, any, any>[]
-  handler: RequestHandler<any, any, any>
+  handler: RequestHandler<any, any>
 }
 
 /**

@@ -31,7 +31,7 @@ export function createExternalAuthLoginRequestHandler<
 >(
   provider: OAuthProvider<profile>,
   options: ExternalAuthLoginOptions<context> = {},
-): RequestHandler<'GET', {}, context> {
+): RequestHandler<{}, context> {
   return async context => {
     try {
       let session = getSession(context, 'createExternalAuthLoginRequestHandler()')

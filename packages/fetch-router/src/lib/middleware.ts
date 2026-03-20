@@ -103,7 +103,7 @@ export function runMiddleware<
 >(
   middleware: Middleware<method, params, any>[],
   context: RequestContext<params>,
-  handler: RequestHandler<method, params, any>,
+  handler: RequestHandler<params, any>,
 ): Promise<Response> {
   let index = -1
 

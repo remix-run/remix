@@ -54,7 +54,7 @@ export function createExternalAuthCallbackRequestHandler<
 >(
   provider: OAuthProvider<profile, provider>,
   options: ExternalAuthCallbackOptions<profile, provider, context>,
-): RequestHandler<'GET', {}, context> {
+): RequestHandler<{}, context> {
   return async context => {
     let session: Session | undefined
     let transactionKey = options.transactionKey ?? '__auth'

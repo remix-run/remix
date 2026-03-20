@@ -44,7 +44,7 @@ export function createCredentialsAuthLoginRequestHandler<
 >(
   provider: CredentialsAuthProvider<input, result>,
   options: CredentialsAuthLoginOptions<result, context>,
-): RequestHandler<'POST', {}, context> {
+): RequestHandler<{}, context> {
   return async context => {
     try {
       let session = getSession(context, 'createCredentialsAuthLoginRequestHandler()')
