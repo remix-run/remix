@@ -1,11 +1,12 @@
 import { chromium, type Browser } from 'playwright'
 import { displayResults, type TestResults } from './executor.ts'
+import { colors } from './utils.ts'
 
 export interface TestRunOptions {
   baseUrl: string
-  debug?: boolean
+  console?: boolean
   devtools?: boolean
-  ui?: boolean
+  open?: boolean
 }
 
 export async function runBrowserTests(options: TestRunOptions): Promise<{
@@ -17,14 +18,14 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
   try {
     browser = await chromium.launch({
-      headless: !options.ui,
+      headless: !options.open,
       devtools: options.devtools,
     })
 
     let page = await browser.newPage()
 
-    if (options.debug) {
-      page.on('console', (msg) => console.log(`  [Browser] ${msg.text()}`))
+    if (options.console) {
+      page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
     }
 
     let totalPassed = 0
@@ -43,7 +44,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     let allResults: TestResults = { passed: totalPassed, failed: totalFailed, tests: [] }
 
-    if (!options.ui) {
+    if (!options.open) {
       await page.close()
     }
 
@@ -54,7 +55,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     let disconnected = new Promise<void>((resolve) => browser!.on('disconnected', () => resolve()))
 
-    if (!options.ui) {
+    if (!options.open) {
       await close()
       return { results: allResults, close: async () => {}, disconnected: Promise.resolve() }
     }

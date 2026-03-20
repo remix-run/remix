@@ -1,4 +1,4 @@
-import { normalizeFilePath, normalizeLine } from './utils.ts'
+import { colors, normalizeLine } from './utils.ts'
 
 export interface TestResult {
   name: string
@@ -111,7 +111,7 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
   for (let file of fileOrder) {
     let tests = fileMap.get(file)!
     let displayPath = file.replace(`${cwd}/`, './')
-    let envLabel = env ? ` \x1b[2m[${env}]\x1b[0m` : ''
+    let envLabel = env ? ` ${colors.dim(`[${env}]`)}` : ''
 
     let suiteMap = new Map<string, typeof tests>()
     for (let test of tests) {
@@ -125,18 +125,17 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
     for (let [suiteName, suiteTests] of suiteMap) {
       let totalDuration = suiteTests.reduce((sum, t) => sum + t.duration, 0)
       let suiteHasFailed = suiteTests.some((t) => t.status === 'failed')
-      let suiteColor = suiteHasFailed ? '\x1b[31m' : '\x1b[32m'
-      console.log(`\x1b[2m▶\x1b[0m ${suiteColor}${suiteName}\x1b[0m (${totalDuration.toFixed(2)}ms)${envLabel}`)
+      let label = suiteHasFailed ? colors.red(suiteName) : colors.green(suiteName)
+      console.log(`${colors.dim('▶')} ${label} (${totalDuration.toFixed(2)}ms)${envLabel}`)
 
       for (let test of suiteTests) {
-        let icon = test.status === 'passed' ? '✓' : '✗'
-        let color = test.status === 'passed' ? '\x1b[32m' : '\x1b[31m'
-        let reset = '\x1b[0m'
+        let passed = test.status === 'passed'
+        let icon = passed ? colors.green('✓') : colors.red('✗')
 
-        console.log(`  ${color}${icon}${reset} ${test.name} (${test.duration.toFixed(2)}ms)`)
+        console.log(`  ${icon} ${test.name} (${test.duration.toFixed(2)}ms)`)
 
         if (test.error) {
-          console.log(`    ${color}Error: ${test.error.message}${reset}`)
+          console.log(`    ${colors.red(`Error: ${test.error.message}`)}`)
           if (test.error.stack) {
             let stack = test.error.stack
               .split('\n')
@@ -151,7 +150,7 @@ export function displayResults(results: TestResults, env?: 'server' | 'browser')
 }
 
 export function displaySummary(passed: number, failed: number, durationMs: number) {
-  let info = '\x1b[36mℹ\x1b[0m'
+  let info = colors.cyan('ℹ')
   console.log()
   console.log(`${info} tests ${passed + failed}`)
   console.log(`${info} pass ${passed}`)

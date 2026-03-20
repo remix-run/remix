@@ -11,7 +11,7 @@ import {
   type ScriptServer,
   type ScriptServerOptions,
 } from '@remix-run/script-server'
-import { TestResults } from './components.tsx'
+import { Tests } from './components.tsx'
 
 // Directory of this server file, used to resolve browser entry point
 let serverDir = path.dirname(fileURLToPath(import.meta.url))
@@ -53,7 +53,7 @@ function getRouter(absoluteFiles: string[]) {
             <title>Tests</title>
           </head>
           <body>
-            <TestResults setup={{ testFiles, baseDir: process.cwd() }} />
+            <Tests setup={{ testFiles, baseDir: process.cwd() }} />
             <script type="module" src={routes.scripts.href({ path: '/entry.ts' })} />
           </body>
         </html>,

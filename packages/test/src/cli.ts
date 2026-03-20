@@ -17,19 +17,18 @@ let { startServer } = await tsImport('./app/server.tsx', {
 let { values, positionals } = util.parseArgs({
   args: process.argv.slice(2),
   options: {
-    debug: { type: 'boolean', short: 'd' },
-    devtools: { type: 'boolean' },
-    ui: { type: 'boolean', short: 'u' },
+    browserConsole: { type: 'boolean', short: 'd' },
+    browserDevtools: { type: 'boolean' },
+    browserOpen: { type: 'boolean', short: 'u' },
     watch: { type: 'boolean', short: 'w' },
-    port: { type: 'string', short: 'p', default: '44101' },
+    browserPort: { type: 'string', short: 'p', default: '44101' },
+    browserGlob: { type: 'string', default: '**/*.test.browser.{ts,tsx}' },
   },
   allowPositionals: true,
 })
 
-const isBrowserTest = (f: string) => /\.test\.browser\.[^.]+$/.test(f)
-
 const pattern = positionals[0] || '**/*.test?(.browser).{ts,tsx}'
-const port = Number(values.port)
+const port = Number(values.browserPort)
 
 let hasExited = false
 let latestExitCode = 0
@@ -66,8 +65,9 @@ async function executeRun() {
       return
     }
 
-    let browserFiles = files.filter(isBrowserTest)
-    let serverFiles = files.filter((f) => !isBrowserTest(f))
+    let browserSet = new Set(await discoverTests(values.browserGlob!))
+    let browserFiles = files.filter((f) => browserSet.has(f))
+    let serverFiles = files.filter((f) => !browserSet.has(f))
 
     console.log(
       `Found ${files.length} test file(s) (${serverFiles.length} server, ${browserFiles.length} browser)\n`,
@@ -87,9 +87,9 @@ async function executeRun() {
       browserFiles.length > 0
         ? runBrowserTests({
             baseUrl: `http://localhost:${port}`,
-            debug: values.debug,
-            devtools: values.devtools,
-            ui: values.ui,
+            console: values.browserConsole,
+            devtools: values.browserDevtools,
+            open: values.browserOpen,
           })
         : null,
     ])
@@ -98,7 +98,7 @@ async function executeRun() {
     let totalFailed = (serverResult?.failed ?? 0) + (browserResult?.results.failed ?? 0)
     displaySummary(totalPassed, totalFailed, performance.now() - startTime)
 
-    if (values.ui && browserResult) {
+    if (values.browserOpen && browserResult) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')
       await Promise.race([
         browserResult.disconnected,
