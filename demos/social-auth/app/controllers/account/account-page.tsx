@@ -5,9 +5,9 @@ import { Document } from '../ui/document.tsx'
 import { UserIcon } from '../ui/icons.tsx'
 import { formatProviderLabel } from '../ui/provider-presentation.tsx'
 
-import { designSystem } from '../../design-system.ts'
+import { designSystem } from '../ui/design-system.ts'
 
-import * as styles from '../../styles.ts'
+import * as styles from '../ui/styles.ts'
 import type { AuthIdentity } from '../../models/auth-session.ts'
 
 let { tokens } = designSystem

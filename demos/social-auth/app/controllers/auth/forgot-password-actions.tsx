@@ -8,7 +8,7 @@ import { getIssueMessage, readField } from './form-utils.ts'
 import { forgotPasswordSchema } from './schemas.ts'
 import { getReturnToQuery } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
+import { render } from '../render.tsx'
 
 export let forgotPasswordActions = {
   actions: {

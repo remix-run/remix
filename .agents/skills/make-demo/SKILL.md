@@ -73,11 +73,13 @@ Inside `app/`, organize code by responsibility:
   `controllers/auth/`, or `controllers/account/`, each with a `controller.tsx` entrypoint and the
   UI it owns
 - `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
-- `middleware/` for request-layer concerns such as auth, database injection, and sessions
+- `middleware/` for request-layer concerns such as auth, database injection, sessions, and other
+  request lifecycle setup
 - `integrations/` for third-party provider and API wiring
-- `operations/` for app-level workflows that coordinate multiple lower-level modules
 - `models/` for app-specific data shapes and domain-level utilities
-- `utils/` only for small generic helpers that are not feature-specific or domain-specific
+
+Do not create generic `operations/` or `utils/` directories by default. Put code with the layer
+that owns it.
 
 ### Naming and ownership rules
 
@@ -85,15 +87,17 @@ Inside `app/`, organize code by responsibility:
   response.
 - Put each controller in its controller feature folder as `controller.tsx`. Do not split
   controller files across the app root and feature folders.
-- If a component or helper is only used by one feature, keep it in that controller feature folder
-  instead of `controllers/ui/`.
+- If a component or helper is only used by one controller feature, keep it in that controller
+  feature folder instead of `controllers/ui/`.
 - Use `controllers/ui/` only for reusable UI primitives. Do not create a generic
   `app/components/` dumping ground.
 - Do not create a generic `app/lib/` dumping ground.
 - Avoid feature barrel files such as `index.ts`. Import feature modules directly.
-- Put cross-feature workflows in `operations/`, not in controllers.
+- If a helper is shared only by controllers, keep it under `controllers/`.
+- If a helper is part of request/session setup, keep it under `middleware/`.
+- If a helper talks to an external system, keep it under `integrations/`.
 - Put database schema and setup outside `app/` under `data/`.
-- Co-locate unit tests with the models, operations, or other modules they cover.
+- Co-locate unit tests with the models or other modules they cover.
 - Keep app-wide request-flow tests under `test/feature/`, and keep shared test helpers under
   `test/`.
 
@@ -106,6 +110,8 @@ demos/<name>/
     routes.ts
 
     controllers/
+      render.tsx
+
       home/
         controller.tsx
         login-page.tsx
@@ -113,8 +119,9 @@ demos/<name>/
 
       auth/
         controller.tsx
-        signup-page.tsx
-        forgot-password-page.tsx
+        login-action.ts
+        signup-actions.tsx
+        resolve-external-auth.ts
 
       account/
         controller.tsx
@@ -130,24 +137,23 @@ demos/<name>/
     middleware/
       auth.ts
       database.ts
+      session.ts
 
     integrations/
-      external-auth-providers.ts
+      external-auth/
+        provider-config.ts
+        provider-status.ts
+        google.ts
+        github.ts
+        x.ts
 
     models/
       auth-session.ts
       auth-session.test.ts
       password-hash.ts
 
-    operations/
-      resolve-external-auth.ts
-      resolve-external-auth.test.ts
-
-    design-system.ts
-    styles.ts
-    utils/
-      render.tsx
-      session.ts
+      design-system.ts
+      styles.ts
 
   data/
     schema.ts

@@ -1,6 +1,6 @@
 import type { RemixNode } from 'remix/component'
 
-import * as styles from '../../styles.ts'
+import * as styles from './styles.ts'
 
 export interface NoticeProps {
   tone: 'error' | 'success'

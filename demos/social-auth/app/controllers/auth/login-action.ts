@@ -5,7 +5,7 @@ import { redirect } from 'remix/response/redirect'
 import { writeAuthenticatedSession } from '../../models/auth-session.ts'
 import { flashError, getPostAuthRedirect, getReturnToQuery, passwordProvider } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { Session } from '../../utils/session.ts'
+import { Session } from '../../middleware/session.ts'
 
 export let loginAction = createCredentialsAuthLoginRequestHandler(passwordProvider, {
   writeSession(session, user) {

@@ -1,7 +1,7 @@
 import type { MixValue, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import * as styles from '../../styles.ts'
+import * as styles from './styles.ts'
 
 export interface TextFieldProps {
   id: string

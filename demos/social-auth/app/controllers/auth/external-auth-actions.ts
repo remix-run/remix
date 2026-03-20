@@ -12,9 +12,9 @@ import { createGoogleProvider } from '../../integrations/external-auth/google.ts
 import { createXProvider } from '../../integrations/external-auth/x.ts'
 import { writeAuthenticatedSession } from '../../models/auth-session.ts'
 import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
-import { resolveExternalAuth } from '../../operations/resolve-external-auth.ts'
+import { resolveExternalAuth } from './resolve-external-auth.ts'
 import { routes } from '../../routes.ts'
-import { Session } from '../../utils/session.ts'
+import { Session } from '../../middleware/session.ts'
 
 export function createExternalProviderActions(providerName: ExternalProviderName) {
   return {

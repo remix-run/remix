@@ -1,4 +1,4 @@
-import * as styles from '../../styles.ts'
+import * as styles from '../ui/styles.ts'
 
 export function SimpleFooter() {
   return ({ prefix, href, label }: { prefix: string; href: string; label: string }) => (

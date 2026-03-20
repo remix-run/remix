@@ -21,7 +21,7 @@ import {
 } from '../models/auth-session.ts'
 import { verifyPassword } from '../models/password-hash.ts'
 import { routes } from '../routes.ts'
-import type { Session } from '../utils/session.ts'
+import type { Session } from './session.ts'
 
 let loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),

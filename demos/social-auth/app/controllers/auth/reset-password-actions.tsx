@@ -10,8 +10,8 @@ import { resetPasswordSchema } from './schemas.ts'
 import { flashSuccess, getReturnToQuery } from '../../middleware/auth.ts'
 import { hashPassword } from '../../models/password-hash.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
-import { Session } from '../../utils/session.ts'
+import { render } from '../render.tsx'
+import { Session } from '../../middleware/session.ts'
 
 export let resetPasswordActions = {
   actions: {

@@ -6,7 +6,7 @@ import type { ProviderLink } from './external-auth-section.tsx'
 import { AuthCard } from '../ui/auth-card.tsx'
 import { Document } from '../ui/document.tsx'
 import { Notice } from '../ui/notice.tsx'
-import * as styles from '../../styles.ts'
+import * as styles from '../ui/styles.ts'
 
 
 export interface LoginPageProps {

@@ -3,7 +3,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { clearAuthenticatedSession } from '../../models/auth-session.ts'
 import { routes } from '../../routes.ts'
-import { Session } from '../../utils/session.ts'
+import { Session } from '../../middleware/session.ts'
 
 export let logoutAction = {
   action(context) {

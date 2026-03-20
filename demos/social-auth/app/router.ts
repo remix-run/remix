@@ -11,7 +11,7 @@ import { home } from './controllers/home/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { routes } from './routes.ts'
-import { sessionCookie, sessionStorage } from './utils/session.ts'
+import { sessionCookie, sessionStorage } from './middleware/session.ts'
 
 await initializeSocialAuthDatabase()
 

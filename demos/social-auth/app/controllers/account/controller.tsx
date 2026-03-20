@@ -3,7 +3,7 @@ import type { BuildAction } from 'remix/fetch-router'
 import { AccountPage } from './account-page.tsx'
 import { getGoodAuth, requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
+import { render } from '../render.tsx'
 
 export let account = {
   middleware: [requireAuth()],

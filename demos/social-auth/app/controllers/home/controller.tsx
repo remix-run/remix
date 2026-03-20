@@ -6,8 +6,8 @@ import { LoginPage } from './login-page.tsx'
 import { getProviderAvailability } from '../../integrations/external-auth/provider-status.ts'
 import { getReturnToQuery, readFlash } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
-import { Session } from '../../utils/session.ts'
+import { render } from '../render.tsx'
+import { Session } from '../../middleware/session.ts'
 
 export let home = {
   action(context) {

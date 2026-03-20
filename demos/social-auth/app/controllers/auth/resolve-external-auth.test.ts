@@ -1,15 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 
-import { authAccounts } from '../../data/schema.ts'
-import { db, resetSocialAuthDatabase } from '../../data/setup.ts'
+import { authAccounts } from '../../../data/schema.ts'
+import { db, resetSocialAuthDatabase } from '../../../data/setup.ts'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 
 beforeEach(async () => {
   await resetSocialAuthDatabase()
 })
 
-describe('resolve external auth operation', () => {
+describe('resolve external auth helper', () => {
   it('links an external account to an existing user by email', async () => {
     let resolved = await resolveExternalAuth(db, {
       provider: 'google',
