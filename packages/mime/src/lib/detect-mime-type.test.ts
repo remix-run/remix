@@ -74,6 +74,7 @@ describe('detectMimeType()', () => {
     assert.equal(detectMimeType('gif'), 'image/gif')
     assert.equal(detectMimeType('svg'), 'image/svg+xml')
     assert.equal(detectMimeType('webp'), 'image/webp')
+    assert.equal(detectMimeType('ico'), 'image/x-icon')
   })
 
   it('returns MIME type for common video formats', () => {

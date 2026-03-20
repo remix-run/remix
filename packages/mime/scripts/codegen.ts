@@ -72,7 +72,15 @@ export function generateMimeTypesContent(): string {
           if (entry.compressible && !existingEntry.compressible) {
             extensionMap[ext] = mimeType
           }
-          // If both compressible or both not, prefer source=iana
+          // If both compressible or both not, prefer x- over vnd. for vendor types (e.g., image/x-icon over image/vnd.microsoft.icon for .ico)
+          else if (
+            entry.compressible === existingEntry.compressible &&
+            mimeType.includes('/x-') &&
+            !existingMimeType.includes('/x-')
+          ) {
+            extensionMap[ext] = mimeType
+          }
+          // If still tied, prefer source=iana
           else if (entry.compressible === existingEntry.compressible && entry.source === 'iana') {
             extensionMap[ext] = mimeType
           }
