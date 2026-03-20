@@ -4,12 +4,12 @@ import { redirect } from 'remix/response/redirect'
 import { LoginPage } from './login-page.tsx'
 import { getReturnToQuery, readFlash } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { SocialAuthRouteContext } from '../../router.ts'
+import { defineRoute } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { readExternalProviderLinks } from '../../utils/external-auth.ts'
 import { render } from '../render.tsx'
 
-export function home(context: SocialAuthRouteContext): Response | Promise<Response> {
+export let home = defineRoute(context => {
   let auth = context.get(Auth)
   if (auth.ok) {
     return redirect(routes.account.href())
@@ -29,4 +29,4 @@ export function home(context: SocialAuthRouteContext): Response | Promise<Respon
       success={flash.success}
     />,
   )
-}
+})

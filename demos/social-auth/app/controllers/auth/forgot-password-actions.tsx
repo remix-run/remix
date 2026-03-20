@@ -6,11 +6,11 @@ import { getIssueMessage, readField } from './form-utils.ts'
 import { forgotPasswordSchema } from './schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../data/schema.ts'
 import { getReturnToQuery } from '../../middleware/auth.ts'
-import type { SocialAuthMount } from '../../router.ts'
+import { defineRoutes } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 
-export let mountForgotPasswordRoutes: SocialAuthMount = router => {
+export let mountForgotPasswordRoutes = defineRoutes(router => {
   router.get('/', context =>
     render(
       <ForgotPasswordPage
@@ -58,4 +58,4 @@ export let mountForgotPasswordRoutes: SocialAuthMount = router => {
       />,
     )
   })
-}
+})

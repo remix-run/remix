@@ -8,7 +8,7 @@ import { redirect } from 'remix/response/redirect'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 import { flashError, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { SocialAuthRouteContext, SocialAuthRouter } from '../../router.ts'
+import { defineRoutes, type RouteContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import {
   createExternalProvider,
@@ -17,23 +17,22 @@ import {
 } from '../../utils/external-auth.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 
-export function mountExternalProviderRoutes(router: SocialAuthRouter): void {
-  router.mount('/google', google => mountProviderRoutes(google, 'google'))
-  router.mount('/github', github => mountProviderRoutes(github, 'github'))
-  router.mount('/x', x => mountProviderRoutes(x, 'x'))
-}
+export let mountExternalProviderRoutes = defineRoutes(router => {
+  mountProviderRoutes('google')
+  mountProviderRoutes('github')
+  mountProviderRoutes('x')
 
-function mountProviderRoutes<name extends ExternalProviderName>(
-  router: SocialAuthRouter,
-  providerName: name,
-): void {
-  router.get('/login', context => startExternalLogin(providerName, context))
-  router.get('/callback', context => finishExternalLogin(providerName, context))
-}
+  function mountProviderRoutes(providerName: ExternalProviderName) {
+    router.mount(`/${providerName}`, providerRouter => {
+      providerRouter.get('/login', context => startExternalLogin(providerName, context))
+      providerRouter.get('/callback', context => finishExternalLogin(providerName, context))
+    })
+  }
+})
 
-function startExternalLogin<name extends ExternalProviderName>(
-  providerName: name,
-  context: SocialAuthRouteContext,
+function startExternalLogin(
+  providerName: ExternalProviderName,
+  context: RouteContext,
 ): Response | Promise<Response> {
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
@@ -44,7 +43,7 @@ function startExternalLogin<name extends ExternalProviderName>(
 
   return createExternalAuthLoginRequestHandler(provider, {
     failureRedirectTo: routes.home.href(undefined, getReturnToQuery(context.url)),
-    onError(_error, actionContext: SocialAuthRouteContext) {
+    onError(_error, actionContext: RouteContext) {
       let session = actionContext.get(Session)
       flashError(session, `We could not start ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href(undefined, getReturnToQuery(actionContext.url)))
@@ -54,7 +53,7 @@ function startExternalLogin<name extends ExternalProviderName>(
 
 function finishExternalLogin(
   providerName: ExternalProviderName,
-  context: SocialAuthRouteContext,
+  context: RouteContext,
 ): Response | Promise<Response> {
   switch (providerName) {
     case 'google':
@@ -68,7 +67,7 @@ function finishExternalLogin(
 
 function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   providerName: name,
-  context: SocialAuthRouteContext,
+  context: RouteContext,
 ): Response | Promise<Response> {
   let provider = createExternalProvider(providerName, context)
   if (provider == null) {
@@ -78,7 +77,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
   }
 
   return createExternalAuthCallbackRequestHandler(provider, {
-    async writeSession(session, result, actionContext: SocialAuthRouteContext) {
+    async writeSession(session, result, actionContext: RouteContext) {
       let db = actionContext.get(Database)
       // The auth callback factory loses provider/profile correlation through this generic wrapper,
       // but the providerName above still determines the runtime result shape.
@@ -91,7 +90,7 @@ function finishExternalLoginWithProvider<name extends ExternalProviderName>(
       })
     },
     successRedirectTo: routes.account.href(),
-    onFailure(_error, actionContext: SocialAuthRouteContext) {
+    onFailure(_error, actionContext: RouteContext) {
       let session = actionContext.get(Session)
       flashError(session, `We could not finish ${getExternalProviderLabel(providerName)} login.`)
       return redirect(routes.home.href())

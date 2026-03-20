@@ -1,13 +1,13 @@
 import { redirect } from 'remix/response/redirect'
 
-import type { SocialAuthRouteContext } from '../../router.ts'
 import { clearAuthenticatedSession } from '../../utils/auth-session.ts'
-import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
+import { defineRoute } from '../../router.ts'
+import { routes } from '../../routes.ts'
 
-export function logout(context: SocialAuthRouteContext): Response {
+export let logout = defineRoute(context => {
   let session = context.get(Session)
   clearAuthenticatedSession(session)
   session.regenerateId(true)
   return redirect(routes.home.href())
-}
+})

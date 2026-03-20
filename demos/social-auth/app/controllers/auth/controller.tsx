@@ -4,9 +4,9 @@ import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
 import { mountResetPasswordRoutes } from './reset-password-actions.tsx'
 import { mountSignupRoutes } from './signup-actions.tsx'
-import type { SocialAuthMount } from '../../router.ts'
+import { defineRoutes } from '../../router.ts'
 
-export let mountAuthRoutes: SocialAuthMount = router => {
+export let mountAuthRoutes = defineRoutes(router => {
   router.post('/login', login)
   router.post('/logout', logout)
 
@@ -15,4 +15,4 @@ export let mountAuthRoutes: SocialAuthMount = router => {
   router.mount('/reset-password/:token', mountResetPasswordRoutes)
 
   mountExternalProviderRoutes(router)
-}
+})

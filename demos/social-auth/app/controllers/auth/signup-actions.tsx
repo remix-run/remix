@@ -8,13 +8,13 @@ import { signupSchema } from './schemas.ts'
 import { normalizeEmail, normalizeText, users } from '../../data/schema.ts'
 import { getPostAuthRedirect, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { SocialAuthMount } from '../../router.ts'
+import { defineRoutes } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { writeAuthenticatedSession } from '../../utils/auth-session.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
 import { render } from '../render.tsx'
 
-export let mountSignupRoutes: SocialAuthMount = router => {
+export let mountSignupRoutes = defineRoutes(router => {
   router.get('/', context =>
     render(
       <SignupPage
@@ -75,4 +75,4 @@ export let mountSignupRoutes: SocialAuthMount = router => {
 
     return redirect(getPostAuthRedirect(context.url))
   })
-}
+})

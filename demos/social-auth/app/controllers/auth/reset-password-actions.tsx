@@ -8,12 +8,28 @@ import { resetPasswordSchema } from './schemas.ts'
 import { passwordResetTokens, users } from '../../data/schema.ts'
 import { flashSuccess, getReturnToQuery } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { SocialAuthMount, SocialAuthRouteContext } from '../../router.ts'
+import { defineRoutes, type RouteContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { hashPassword } from '../../utils/password-hash.ts'
 import { render } from '../render.tsx'
 
-export let mountResetPasswordRoutes: SocialAuthMount<{ token: string }> = router => {
+export let mountResetPasswordRoutes = defineRoutes<{ token: string }>(router => {
+  async function loadResetToken(context: RouteContext<{ token: string }>) {
+    let db = context.get(Database)
+    let token = context.params.token
+    let resetToken = await db.find(passwordResetTokens, { token })
+    if (resetToken == null) {
+      return null
+    }
+
+    if (resetToken.expires_at <= Date.now()) {
+      await db.delete(passwordResetTokens, { token })
+      return null
+    }
+
+    return resetToken
+  }
+
   router.get('/', async context => {
     let resetToken = await loadResetToken(context)
     if (resetToken == null) {
@@ -109,20 +125,4 @@ export let mountResetPasswordRoutes: SocialAuthMount<{ token: string }> = router
       />,
     )
   })
-}
-
-async function loadResetToken(context: SocialAuthRouteContext<{ token: string }>) {
-  let db = context.get(Database)
-  let token = context.params.token
-  let resetToken = await db.find(passwordResetTokens, { token })
-  if (resetToken == null) {
-    return null
-  }
-
-  if (resetToken.expires_at <= Date.now()) {
-    await db.delete(passwordResetTokens, { token })
-    return null
-  }
-
-  return resetToken
-}
+})

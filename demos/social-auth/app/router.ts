@@ -22,7 +22,9 @@ import { routes } from './routes.ts'
 
 await initializeSocialAuthDatabase()
 
-export type SocialAuthMiddleware = [
+type RouteParams = Record<string, string>
+
+type AppMiddleware = [
   ReturnType<typeof staticFiles>,
   ReturnType<typeof formData>,
   ReturnType<typeof session>,
@@ -30,28 +32,28 @@ export type SocialAuthMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-export type SocialAuthContext = MiddlewareContext<SocialAuthMiddleware>
-
-type SocialAuthContextStore = SocialAuthContext extends RequestContext<
+type AppStore = MiddlewareContext<AppMiddleware> extends RequestContext<
   any,
   infer store extends RequestContextStore
 >
   ? store
   : never
 
-export type SocialAuthRouteContext<params extends Record<string, string> = {}> = RequestContext<
-  params,
-  SocialAuthContextStore
->
+export type RouteContext<params extends RouteParams = {}> = RequestContext<params, AppStore>
 
-export type SocialAuthRouter<params extends Record<string, string> = {}> = Router<
-  SocialAuthRouteContext<params>,
-  SocialAuthRouteContext<params>
->
+type AppRouter<params extends RouteParams = {}> = Router<RouteContext<params>, RouteContext<params>>
 
-export type SocialAuthMount<params extends Record<string, string> = {}> = (
-  router: SocialAuthRouter<params>,
-) => void
+export function defineRoute<params extends RouteParams = {}>(
+  handler: (context: RouteContext<params>) => Response | Promise<Response>,
+) {
+  return handler
+}
+
+export function defineRoutes<params extends RouteParams = {}>(
+  mount: (router: AppRouter<params>) => void,
+) {
+  return mount
+}
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
