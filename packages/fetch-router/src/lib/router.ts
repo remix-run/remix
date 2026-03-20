@@ -257,10 +257,6 @@ export interface Router<context extends AnyContext = RequestContext> {
     route: RouteTarget<'GET', pattern>,
     handler: RouteActionObjectWithMiddleware<'GET', pattern, context, middleware>,
   ): void
-  get<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'GET', pattern>,
-    handler: RouteActionInput<'GET', pattern, context, middleware>,
-  ): void
   /**
    * Map a `HEAD` route/pattern to an action.
    */
@@ -275,10 +271,6 @@ export interface Router<context extends AnyContext = RequestContext> {
   head<pattern extends string, middleware extends MiddlewareTuple>(
     route: RouteTarget<'HEAD', pattern>,
     handler: RouteActionObjectWithMiddleware<'HEAD', pattern, context, middleware>,
-  ): void
-  head<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'HEAD', pattern>,
-    handler: RouteActionInput<'HEAD', pattern, context, middleware>,
   ): void
   /**
    * Map a `POST` route/pattern to an action.
@@ -295,10 +287,6 @@ export interface Router<context extends AnyContext = RequestContext> {
     route: RouteTarget<'POST', pattern>,
     handler: RouteActionObjectWithMiddleware<'POST', pattern, context, middleware>,
   ): void
-  post<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'POST', pattern>,
-    handler: RouteActionInput<'POST', pattern, context, middleware>,
-  ): void
   /**
    * Map a `PUT` route/pattern to an action.
    */
@@ -313,10 +301,6 @@ export interface Router<context extends AnyContext = RequestContext> {
   put<pattern extends string, middleware extends MiddlewareTuple>(
     route: RouteTarget<'PUT', pattern>,
     handler: RouteActionObjectWithMiddleware<'PUT', pattern, context, middleware>,
-  ): void
-  put<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'PUT', pattern>,
-    handler: RouteActionInput<'PUT', pattern, context, middleware>,
   ): void
   /**
    * Map a `PATCH` route/pattern to an action.
@@ -333,10 +317,6 @@ export interface Router<context extends AnyContext = RequestContext> {
     route: RouteTarget<'PATCH', pattern>,
     handler: RouteActionObjectWithMiddleware<'PATCH', pattern, context, middleware>,
   ): void
-  patch<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'PATCH', pattern>,
-    handler: RouteActionInput<'PATCH', pattern, context, middleware>,
-  ): void
   /**
    * Map a `DELETE` route/pattern to an action.
    */
@@ -352,10 +332,6 @@ export interface Router<context extends AnyContext = RequestContext> {
     route: RouteTarget<'DELETE', pattern>,
     handler: RouteActionObjectWithMiddleware<'DELETE', pattern, context, middleware>,
   ): void
-  delete<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'DELETE', pattern>,
-    handler: RouteActionInput<'DELETE', pattern, context, middleware>,
-  ): void
   /**
    * Map an `OPTIONS` route/pattern to an action.
    */
@@ -370,10 +346,6 @@ export interface Router<context extends AnyContext = RequestContext> {
   options<pattern extends string, middleware extends MiddlewareTuple>(
     route: RouteTarget<'OPTIONS', pattern>,
     handler: RouteActionObjectWithMiddleware<'OPTIONS', pattern, context, middleware>,
-  ): void
-  options<pattern extends string, middleware extends MiddlewareTuple = MiddlewareTuple>(
-    route: RouteTarget<'OPTIONS', pattern>,
-    handler: RouteActionInput<'OPTIONS', pattern, context, middleware>,
   ): void
 }
 
