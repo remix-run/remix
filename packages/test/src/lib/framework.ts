@@ -87,3 +87,7 @@ export function afterAll(fn: () => void | Promise<void>) {
   if (!currentSuite) throw new Error('afterAll() must be called inside describe()')
   currentSuite.afterAll = fn
 }
+
+// Aliases matching node:test API
+export const before = beforeAll
+export const after = afterAll
