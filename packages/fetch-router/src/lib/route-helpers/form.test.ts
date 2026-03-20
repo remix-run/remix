@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { createFormRoutes as form } from './form.ts'
 import { createRoutes as route, Route } from '../route-map.ts'
