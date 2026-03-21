@@ -1,0 +1,1 @@
+BREAKING CHANGE: Shrink `@remix-run/data-table-sqlite` to a minimal package root. It now exports only `createSqliteDatabaseAdapter(...)` and `SqliteDatabaseAdapterOptions`; the adapter class is no longer exported.

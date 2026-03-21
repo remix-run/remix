@@ -47,8 +47,8 @@ export type Migration = {
  * @returns A normalized migration object.
  * @example
  * ```ts
- * import { createMigration, column as c } from 'remix/data-table/migrations'
- * import { table } from 'remix/data-table'
+ * import { column as c, table } from 'remix/data-table'
+ * import { createMigration } from 'remix/data-table/migrations'
  *
  * let users = table({
  *   name: 'users',

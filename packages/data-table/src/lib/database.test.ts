@@ -6,7 +6,7 @@ import { column } from './column.ts'
 import { createDatabase, Database } from './database.ts'
 import { query } from './query.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
-import { table, timestamps } from './table.ts'
+import { table } from './table.ts'
 import { belongsTo, hasMany, hasManyThrough, hasOne } from './table-relations.ts'
 import { eq } from './operators.ts'
 import { sql } from './sql.ts'
@@ -19,7 +19,8 @@ let accounts = table({
     id: column.integer(),
     email: column.text(),
     status: column.text(),
-    ...timestamps(),
+    created_at: column.timestamp(),
+    updated_at: column.timestamp(),
   },
   timestamps: true,
   validate({ value }) {
@@ -1118,7 +1119,8 @@ describe('writes and validation', () => {
         id: column.integer(),
         email: column.text(),
         status: column.text(),
-        ...timestamps(),
+        created_at: column.timestamp(),
+        updated_at: column.timestamp(),
       },
       timestamps: true,
       validate({ operation, value }) {
@@ -1271,7 +1273,8 @@ describe('writes and validation', () => {
         id: column.integer(),
         email: column.text(),
         status: column.text(),
-        ...timestamps(),
+        created_at: column.timestamp(),
+        updated_at: column.timestamp(),
       },
       timestamps: true,
       beforeWrite({ value }) {

@@ -2,4 +2,4 @@ Add first-class migration execution support to the sqlite adapter. It now compil
 
 Normal reads/writes continue through `execute(...)`, while migration/DDL work runs through `migrate(...)`.
 
-SQL compilation remains adapter-owned and can share helpers from `remix/data-table/sql-helpers`.
+SQL compilation remains adapter-owned inside this package.

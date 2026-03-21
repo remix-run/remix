@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import type { DataMigrationOperation } from '@remix-run/data-table'
 import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-table'
+import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 

@@ -9,21 +9,93 @@ import type {
   QueryTableInput,
   WriteResult,
 } from './database.ts'
-import type { AnyQuery, Query } from './query.ts'
+import type { Query } from './query.ts'
 import { query } from './query.ts'
-import type { AnyQuery as PublicAnyQuery } from '../index.ts'
+import type * as migrationPublicApi from '../migrations.ts'
+import type * as publicApi from '../index.ts'
+import type {
+  Database as PublicDatabase,
+  Predicate as PublicPredicate,
+  SqlStatement as PublicSqlStatement,
+  Table as PublicTable,
+  TableRow as PublicTableRow,
+  WhereInput as PublicWhereInput,
+} from '../index.ts'
+import type {
+  MigrateOptions as PublicMigrateOptions,
+  MigrateResult as PublicMigrateResult,
+  Migration as PublicMigration,
+  MigrationContext as PublicMigrationContext,
+  MigrationRunner as PublicMigrationRunner,
+  MigrationSchema as PublicMigrationSchema,
+} from '../migrations.ts'
 // @ts-expect-error CountQuery is no longer exported
 import type { CountQuery as _CountQuery } from '../index.ts'
 // @ts-expect-error InsertCommand is no longer exported
 import type { InsertCommand as _InsertCommand } from '../index.ts'
+// @ts-expect-error AnyQuery is no longer exported
+import type { AnyQuery as _PublicAnyQuery } from '../index.ts'
 // @ts-expect-error QueryMethod is no longer exported
 import type { QueryMethod as _QueryMethod } from '../index.ts'
+// @ts-expect-error QueryColumnTypesForTable is no longer exported
+import type { QueryColumnTypesForTable as _PublicQueryColumnTypesForTable } from '../index.ts'
+// @ts-expect-error QueryForTable is no longer exported
+import type { QueryForTable as _PublicQueryForTable } from '../index.ts'
+// @ts-expect-error QueryTableInput is no longer exported
+import type { QueryTableInput as _PublicQueryTableInput } from '../index.ts'
+// @ts-expect-error WriteResult is no longer exported
+import type { WriteResult as _PublicWriteResult } from '../index.ts'
+// @ts-expect-error ColumnBuilder is no longer exported
+import type { ColumnBuilder as _PublicColumnBuilder } from '../index.ts'
+// @ts-expect-error ColumnNamespace is no longer exported
+import type { ColumnNamespace as _PublicColumnNamespace } from '../index.ts'
+// @ts-expect-error TableReference is no longer exported
+import type { TableReference as _PublicTableReference } from '../index.ts'
+// @ts-expect-error AdapterCapabilities is no longer exported
+import type { AdapterCapabilities as _PublicAdapterCapabilities } from '../index.ts'
+// @ts-expect-error DataManipulationOperation is no longer exported
+import type { DataManipulationOperation as _PublicDataManipulationOperation } from '../index.ts'
+// @ts-expect-error CreateMigrationInput is no longer exported
+import type { CreateMigrationInput as _CreateMigrationInput } from '../migrations.ts'
+// @ts-expect-error MigrationDescriptor is no longer exported
+import type { MigrationDescriptor as _MigrationDescriptor } from '../migrations.ts'
+// @ts-expect-error MigrationStatus is no longer exported
+import type { MigrationStatus as _MigrationStatus } from '../migrations.ts'
+// @ts-expect-error MigrationTransactionMode is no longer exported
+import type { MigrationTransactionMode as _MigrationTransactionMode } from '../migrations.ts'
+// @ts-expect-error AlterTableBuilder is no longer exported
+import type { AlterTableBuilder as _AlterTableBuilder } from '../migrations.ts'
+import type {
+  MigrateOptions,
+  MigrateResult,
+  Migration,
+  MigrationContext,
+  MigrationRunner,
+  MigrationSchema,
+} from './migrations.ts'
 import { table } from './table.ts'
 import { hasMany } from './table-relations.ts'
 import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
+import type { Predicate, WhereInput } from './operators.ts'
+import type { SqlStatement } from './sql.ts'
 import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
 import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
+
+// @ts-expect-error fail is no longer exported
+type _Fail = (typeof publicApi)['fail']
+// @ts-expect-error timestamps is no longer exported
+type _Timestamps = (typeof publicApi)['timestamps']
+// @ts-expect-error getTableName is no longer exported
+type _GetTableName = (typeof publicApi)['getTableName']
+// @ts-expect-error getTablePrimaryKey is no longer exported
+type _GetTablePrimaryKey = (typeof publicApi)['getTablePrimaryKey']
+// @ts-expect-error getTableColumnDefinitions is no longer exported
+type _GetTableColumnDefinitions = (typeof publicApi)['getTableColumnDefinitions']
+// @ts-expect-error column is no longer exported
+type _MigrationColumn = (typeof migrationPublicApi)['column']
+// @ts-expect-error parseMigrationFilename is no longer exported
+type _ParseMigrationFilename = (typeof migrationPublicApi)['parseMigrationFilename']
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -78,6 +150,24 @@ afterEach(() => {
 })
 
 describe('type safety', () => {
+  it('keeps the supported public root and migrations type exports aligned with internals', () => {
+    type AccountsIsPublicTable = typeof accounts extends PublicTable<any, any, any> ? true : false
+    type AccountColumns = 'email' | 'id' | 'status'
+
+    expectType<Equal<PublicDatabase, Database>>()
+    expectType<Equal<AccountsIsPublicTable, true>>()
+    expectType<Equal<PublicTableRow<typeof accounts>, TableRow<typeof accounts>>>()
+    expectType<Equal<PublicPredicate<AccountColumns>, Predicate<AccountColumns>>>()
+    expectType<Equal<PublicWhereInput<AccountColumns>, WhereInput<AccountColumns>>>()
+    expectType<Equal<PublicSqlStatement, SqlStatement>>()
+    expectType<Equal<PublicMigration, Migration>>()
+    expectType<Equal<PublicMigrationContext, MigrationContext>>()
+    expectType<Equal<PublicMigrationSchema, MigrationSchema>>()
+    expectType<Equal<PublicMigrationRunner, MigrationRunner>>()
+    expectType<Equal<PublicMigrateOptions, MigrateOptions>>()
+    expectType<Equal<PublicMigrateResult, MigrateResult>>()
+  })
+
   it('infers unvalidated column types from physical types and falls back to unknown', () => {
     type Row = TableRow<typeof inferredColumns>
 
@@ -154,7 +244,6 @@ describe('type safety', () => {
     expectType<Equal<QueryTableName, 'accounts'>>()
     expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
     expectType<Equal<QueryType, QueryFromTableAlias>>()
-    expectType<Equal<PublicAnyQuery, AnyQuery>>()
     expectType<Equal<QueryMethodReturnsBoundQuery, true>>()
     expectType<Equal<QueryBinding, 'bound'>>()
     expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()

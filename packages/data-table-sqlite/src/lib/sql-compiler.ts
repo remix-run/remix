@@ -1,10 +1,9 @@
-import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
-import type { DataManipulationOperation, Predicate, SqlStatement } from '@remix-run/data-table'
-import {
-  collectColumns as collectColumnsHelper,
-  normalizeJoinType as normalizeJoinTypeHelper,
-  quotePath as quotePathHelper,
-} from '@remix-run/data-table/sql-helpers'
+import { getTableName, getTablePrimaryKey } from '@remix-run/data-table/adapter'
+import type {
+  DataManipulationOperation,
+  Predicate,
+  SqlStatement,
+} from '@remix-run/data-table/adapter'
 
 type JoinClause = Extract<DataManipulationOperation, { kind: 'select' }>['joins'][number]
 type UpsertOperation = Extract<DataManipulationOperation, { kind: 'upsert' }>
@@ -458,7 +457,15 @@ function compileComparisonValue(
 }
 
 function normalizeJoinType(type: string): string {
-  return normalizeJoinTypeHelper(type)
+  if (type === 'left') {
+    return 'left'
+  }
+
+  if (type === 'right') {
+    return 'right'
+  }
+
+  return 'inner'
 }
 
 function quoteIdentifier(value: string): string {
@@ -466,7 +473,20 @@ function quoteIdentifier(value: string): string {
 }
 
 function quotePath(path: string): string {
-  return quotePathHelper(path, quoteIdentifier)
+  if (path === '*') {
+    return '*'
+  }
+
+  return path
+    .split('.')
+    .map((segment) => {
+      if (segment === '*') {
+        return '*'
+      }
+
+      return quoteIdentifier(segment)
+    })
+    .join('.')
 }
 
 function pushValue(context: CompileContext, value: unknown): string {
@@ -483,5 +503,19 @@ function normalizeBoundValue(value: unknown): unknown {
 }
 
 function collectColumns(rows: Record<string, unknown>[]): string[] {
-  return collectColumnsHelper(rows)
+  let columns: string[] = []
+  let seen = new Set<string>()
+
+  for (let row of rows) {
+    for (let key in row) {
+      if (!Object.prototype.hasOwnProperty.call(row, key) || seen.has(key)) {
+        continue
+      }
+
+      seen.add(key)
+      columns.push(key)
+    }
+  }
+
+  return columns
 }

@@ -31,7 +31,6 @@ import {
   createIndexName,
   createPrimaryKeyName,
   createUniqueName,
-  normalizeIndexColumns,
   normalizeKeyColumns,
   toTableRef,
 } from './helpers.ts'
@@ -250,7 +249,7 @@ class AlterTableBuilderRuntime implements AlterTableBuilder {
   }
 
   addIndex(columns: string | string[], options?: CreateIndexOptions): void {
-    let normalizedColumns = normalizeIndexColumns(columns)
+    let normalizedColumns = normalizeKeyColumns(columns)
     let { name, ifNotExists, ...indexOptions } = options ?? {}
     this.extraStatements.push({
       kind: 'createIndex',
@@ -319,7 +318,7 @@ export function createMigrationSchema(
     },
     async createIndex(table, columns, options) {
       let tableRef = asTableRef(table)
-      let normalizedColumns = normalizeIndexColumns(columns)
+      let normalizedColumns = normalizeKeyColumns(columns)
       let { name, ifNotExists, ...indexOptions } = options ?? {}
       await emit({
         kind: 'createIndex',

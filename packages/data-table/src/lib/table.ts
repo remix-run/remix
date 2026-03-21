@@ -524,58 +524,6 @@ let defaultTimestampConfig: TimestampConfig = {
 }
 
 /**
- * Creates a lifecycle/validation failure result with one or more issues.
- * @param message A single issue message.
- * @param path Optional issue path.
- * @returns A {@link ValidationFailure} result object for `validate` and lifecycle callbacks.
- * @example
- * ```ts
- * import { column as c, fail, table } from 'remix/data-table'
- *
- * let users = table({
- *   name: 'users',
- *   columns: {
- *     id: c.integer(),
- *     email: c.varchar(255),
- *   },
- *   validate({ value }) {
- *     if (!value.email) {
- *       // Fail with a single issue message and optional path
- *       return fail('Email is required', ['email'])
- *
- *       // Or fail with multiple issues at once
- *       return fail([
- *         { message: 'Id is required', path: ['id'] },
- *         { message: 'Email is required', path: ['email'] },
- *       ])
- *     }
- *
- *     return { value }
- *   },
- * })
- * ```
- */
-export function fail(message: string, path?: Array<string | number>): ValidationFailure
-/**
- * @param issues An array of issues.
- */
-export function fail(issues: ReadonlyArray<ValidationIssue>): ValidationFailure
-export function fail(
-  messageOrIssues: string | ReadonlyArray<ValidationIssue>,
-  path?: Array<string | number>,
-): ValidationFailure {
-  if (typeof messageOrIssues === 'string') {
-    return {
-      issues: [{ message: messageOrIssues, path }],
-    }
-  }
-
-  return {
-    issues: [...messageOrIssues],
-  }
-}
-
-/**
  * Creates a table object with symbol-backed metadata and direct column references.
  * @param options Table declaration options.
  * @returns A frozen table object.
@@ -692,22 +640,6 @@ function resolveTableColumns<columns extends TableColumnsDefinition>(
 
   return Object.freeze(columnDefinitions) as {
     [column in keyof columns & string]: ColumnDefinition
-  }
-}
-
-/**
- * Convenience helper for standard snake_case timestamp columns.
- * @returns Column-builder map for `created_at`/`updated_at`.
- */
-export function timestamps(): Record<
-  'created_at' | 'updated_at',
-  ColumnBuilder<Date | string | number>
-> {
-  let timestampColumn = () => new ColumnBuilder<Date | string | number>({ type: 'timestamp' })
-
-  return {
-    created_at: timestampColumn(),
-    updated_at: timestampColumn(),
   }
 }
 

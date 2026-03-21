@@ -167,7 +167,7 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   return rows.map((row) => {
     let keyObject: Record<string, unknown> = {}
 
-    for (let key of rowKeys(row as Record<string, unknown>, primaryKeys)) {
+    for (let key of primaryKeys) {
       keyObject[key] = (row as Record<string, unknown>)[key]
     }
 
@@ -203,16 +203,4 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   })
 
   return or(...predicates)
-}
-
-function rowKeys(row: Record<string, unknown>, keys: string[]): string[] {
-  let output: string[] = []
-
-  for (let key of keys) {
-    if (Object.prototype.hasOwnProperty.call(row, key)) {
-      output.push(key)
-    }
-  }
-
-  return output
 }

@@ -17,10 +17,9 @@ import {
   ne,
   notInList,
   notNull,
-  type DataManipulationOperation,
-  type DatabaseAdapter,
   or,
 } from '@remix-run/data-table'
+import type { DataManipulationOperation, DatabaseAdapter } from '@remix-run/data-table/adapter'
 
 import { compileMysqlOperation } from './sql-compiler.ts'
 

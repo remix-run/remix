@@ -1,0 +1,1 @@
+BREAKING CHANGE: Shrink `@remix-run/data-table-mysql` to a minimal package root. It now exports only `createMysqlDatabaseAdapter(...)` and `MysqlDatabaseAdapterOptions`; the adapter class is no longer exported.

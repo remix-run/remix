@@ -41,8 +41,6 @@
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
     "./data-table/migrations": "./src/data-table/migrations.ts",
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
-    "./data-table/operators": "./src/data-table/operators.ts",
-    "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
@@ -172,14 +170,6 @@
       "./data-table/migrations/node": {
         "types": "./dist/data-table/migrations/node.d.ts",
         "default": "./dist/data-table/migrations/node.js"
-      },
-      "./data-table/operators": {
-        "types": "./dist/data-table/operators.d.ts",
-        "default": "./dist/data-table/operators.js"
-      },
-      "./data-table/sql-helpers": {
-        "types": "./dist/data-table/sql-helpers.d.ts",
-        "default": "./dist/data-table/sql-helpers.js"
       },
       "./fetch-proxy": {
         "types": "./dist/fetch-proxy.d.ts",

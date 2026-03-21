@@ -7,7 +7,8 @@ Use this package when you want `data-table` APIs backed by `better-sqlite3`.
 
 - **Native `better-sqlite3` Integration**: Works well for local and embedded deployments
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
-- **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
+- **Minimal Public API**: The package root exports `createSqliteDatabaseAdapter(...)` and `SqliteDatabaseAdapterOptions`
+- **Adapter-Owned Compiler**: SQL compilation lives in this adapter package
 - **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
 - **SQLite Capabilities Enabled By Default**:
   - `returning: true`

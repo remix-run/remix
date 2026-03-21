@@ -241,10 +241,10 @@ Return behavior:
 
 - `find`/`findOne` -> row or `null`
 - `findMany` -> rows
-- `create` -> `WriteResult` by default, row when `returnRow: true`
-- `createMany` -> `WriteResult` by default, rows when `returnRows: true` (not supported in MySQL because it doesn't support `RETURNING`)
+- `create` -> write metadata (`affectedRows`, `insertId`) by default, row when `returnRow: true`
+- `createMany` -> write metadata by default, rows when `returnRows: true` (not supported in MySQL because it doesn't support `RETURNING`)
 - `update` -> updated row (throws when target row is missing)
-- `updateMany`/`deleteMany` -> `WriteResult`
+- `updateMany`/`deleteMany` -> write metadata
 - `delete` -> `boolean`
 
 ### Validation and Lifecycle
@@ -253,7 +253,7 @@ Validation is optional and table-scoped. Define `validate(context)` to validate/
 payloads, and add lifecycle callbacks when you need custom read/write/delete behavior.
 
 ```ts
-import { column as c, fail, table } from 'remix/data-table'
+import { column as c, table } from 'remix/data-table'
 
 let payments = table({
   name: 'payments',
@@ -274,7 +274,9 @@ let payments = table({
       let amount = Number(value.amount)
 
       if (!Number.isFinite(amount)) {
-        return fail('Expected a numeric amount', ['amount'])
+        return {
+          issues: [{ message: 'Expected a numeric amount', path: ['amount'] }],
+        }
       }
 
       return { value: { ...value, amount } }
@@ -284,7 +286,9 @@ let payments = table({
   },
   beforeDelete({ where }) {
     if (where.length === 0) {
-      return fail('Refusing unscoped delete')
+      return {
+        issues: [{ message: 'Refusing unscoped delete' }],
+      }
     }
   },
   afterRead({ value }) {
@@ -304,7 +308,7 @@ let payments = table({
 })
 ```
 
-Use `fail(...)` in hooks when you want to return issues without manually building `{ issues: [...] }`.
+Return `{ issues: [...] }` from hooks when you need to reject a write or delete.
 
 Validation and lifecycle semantics:
 
@@ -346,9 +350,7 @@ await db.transaction(async (tx) => {
 
 `data-table` includes a first-class migration system under `remix/data-table/migrations`.
 Migrations are adapter-driven: adapters execute SQL for their dialect/runtime, and SQL compilation
-is handled by adapter-owned compilers (with optional shared pure helpers from `data-table`).
-For adapter authors (including third-party adapters), shared SQL helper utilities are available at
-`remix/data-table/sql-helpers`.
+stays inside each adapter package.
 
 ### Example Setup
 

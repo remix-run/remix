@@ -21,10 +21,9 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./adapter": "./src/adapter.ts",
     "./migrations": "./src/migrations.ts",
     "./migrations/node": "./src/migrations/node.ts",
-    "./operators": "./src/operators.ts",
-    "./sql-helpers": "./src/sql-helpers.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -33,6 +32,10 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./adapter": {
+        "types": "./dist/adapter.d.ts",
+        "default": "./dist/adapter.js"
+      },
       "./migrations": {
         "types": "./dist/migrations.d.ts",
         "default": "./dist/migrations.js"
@@ -40,14 +43,6 @@
       "./migrations/node": {
         "types": "./dist/migrations/node.d.ts",
         "default": "./dist/migrations/node.js"
-      },
-      "./operators": {
-        "types": "./dist/operators.d.ts",
-        "default": "./dist/operators.js"
-      },
-      "./sql-helpers": {
-        "types": "./dist/sql-helpers.d.ts",
-        "default": "./dist/sql-helpers.js"
       },
       "./package.json": "./package.json"
     }

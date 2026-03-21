@@ -147,13 +147,13 @@ export function hasMany<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasManyOptions<source, target>,
 ): Relation<source, target, 'many'> {
-  let sourceKey = normalizeKeySelector(
+  let sourceKey = normalizeKeysForTable(
     source,
     relationOptions?.targetKey,
     'targetKey',
     getTablePrimaryKey(source) as string[],
   )
-  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
+  let targetKey = normalizeKeysForTable(target, relationOptions?.foreignKey, 'foreignKey', [
     inferForeignKey(getTableName(source)),
   ])
 
@@ -181,13 +181,13 @@ export function hasOne<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasOneOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  let sourceKey = normalizeKeySelector(
+  let sourceKey = normalizeKeysForTable(
     source,
     relationOptions?.targetKey,
     'targetKey',
     getTablePrimaryKey(source) as string[],
   )
-  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
+  let targetKey = normalizeKeysForTable(target, relationOptions?.foreignKey, 'foreignKey', [
     inferForeignKey(getTableName(source)),
   ])
 
@@ -215,10 +215,10 @@ export function belongsTo<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: BelongsToOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  let sourceKey = normalizeKeySelector(source, relationOptions?.foreignKey, 'foreignKey', [
+  let sourceKey = normalizeKeysForTable(source, relationOptions?.foreignKey, 'foreignKey', [
     inferForeignKey(getTableName(target)),
   ])
-  let targetKey = normalizeKeySelector(
+  let targetKey = normalizeKeysForTable(
     target,
     relationOptions?.targetKey,
     'targetKey',
@@ -264,7 +264,7 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
     'throughTargetKey',
     getTablePrimaryKey(throughRelation.targetTable),
   )
-  let throughForeignKey = normalizeKeySelector(
+  let throughForeignKey = normalizeKeysForTable(
     target,
     relationOptions.throughForeignKey,
     'throughForeignKey',
@@ -291,15 +291,6 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
       throughTargetKey: throughForeignKey,
     },
   })
-}
-
-function normalizeKeySelector<table extends AnyTable>(
-  table: table,
-  selector: KeySelector<table> | undefined,
-  optionName: string,
-  defaultValue: readonly string[],
-): string[] {
-  return normalizeKeysForTable(table, selector, optionName, defaultValue)
 }
 
 function normalizeKeysForTable(

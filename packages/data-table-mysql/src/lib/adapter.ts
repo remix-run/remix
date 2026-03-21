@@ -1,24 +1,19 @@
 import type {
   AdapterCapabilityOverrides,
-  DataManipulationRequest,
-  DataMigrationRequest,
   DataMigrationResult,
   DataMigrationOperation,
   DataManipulationResult,
   DataManipulationOperation,
   DatabaseAdapter,
   ColumnDefinition,
+  DataManipulationRequest,
+  DataMigrationRequest,
   SqlStatement,
   TableRef,
   TransactionOptions,
   TransactionToken,
-} from '@remix-run/data-table'
-import { getTablePrimaryKey } from '@remix-run/data-table'
-import {
-  isDataManipulationOperation as isDataManipulationOperationHelper,
-  quoteLiteral as quoteLiteralHelper,
-  quoteTableRef as quoteTableRefHelper,
-} from '@remix-run/data-table/sql-helpers'
+} from '@remix-run/data-table/adapter'
+import { getTablePrimaryKey } from '@remix-run/data-table/adapter'
 import type {
   Connection as MysqlConnection,
   Pool as MysqlPool,
@@ -473,11 +468,31 @@ function quoteIdentifier(value: string): string {
 }
 
 function quoteTableRef(table: TableRef): string {
-  return quoteTableRefHelper(table, quoteIdentifier)
+  if (table.schema) {
+    return quoteIdentifier(table.schema) + '.' + quoteIdentifier(table.name)
+  }
+
+  return quoteIdentifier(table.name)
 }
 
 function quoteLiteral(value: unknown): string {
-  return quoteLiteralHelper(value)
+  if (value === null) {
+    return 'null'
+  }
+
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    return String(value)
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false'
+  }
+
+  if (value instanceof Date) {
+    return quoteLiteral(value.toISOString())
+  }
+
+  return "'" + String(value).replace(/'/g, "''") + "'"
 }
 
 function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
@@ -498,7 +513,17 @@ function isInsertOperation(
 function isDataManipulationOperation(
   operation: DataManipulationOperation | DataMigrationOperation,
 ): operation is DataManipulationOperation {
-  return isDataManipulationOperationHelper(operation)
+  return (
+    operation.kind === 'select' ||
+    operation.kind === 'count' ||
+    operation.kind === 'exists' ||
+    operation.kind === 'insert' ||
+    operation.kind === 'insertMany' ||
+    operation.kind === 'update' ||
+    operation.kind === 'delete' ||
+    operation.kind === 'upsert' ||
+    operation.kind === 'raw'
+  )
 }
 
 function compileMysqlMigrationOperations(operation: DataMigrationOperation): SqlStatement[] {

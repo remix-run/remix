@@ -14,10 +14,6 @@ export function toTableRef(name: string): TableRef {
   }
 }
 
-export function normalizeIndexColumns(columns: IndexColumns): string[] {
-  return normalizeKeyColumns(columns)
-}
-
 export function normalizeKeyColumns(columns: KeyColumns): string[] {
   if (Array.isArray(columns)) {
     return [...columns]

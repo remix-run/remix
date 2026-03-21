@@ -17,11 +17,10 @@ import {
   notInList,
   isNull,
   notNull,
-  type DataManipulationOperation,
-  type DatabaseAdapter,
   or,
   and,
 } from '@remix-run/data-table'
+import type { DataManipulationOperation, DatabaseAdapter } from '@remix-run/data-table/adapter'
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 let accounts = table({
