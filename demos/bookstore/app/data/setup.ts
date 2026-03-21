@@ -8,11 +8,11 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 import { books, orderItems, orders, users } from './schema.ts'
 
-let dataDirectoryUrl = new URL('../../data/', import.meta.url)
-let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dataDirectoryUrl))
+let databaseDirectoryUrl = new URL('../../db/', import.meta.url)
+let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', databaseDirectoryUrl))
 let databaseFilePath = getDatabaseFilePath()
 
-fs.mkdirSync(fileURLToPath(dataDirectoryUrl), { recursive: true })
+fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
 
 if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
   fs.unlinkSync(databaseFilePath)
@@ -183,5 +183,5 @@ function getDatabaseFilePath(): string {
       ? `bookstore.test.${process.pid}.${Date.now()}.sqlite`
       : 'bookstore.sqlite'
 
-  return fileURLToPath(new URL(fileName, dataDirectoryUrl))
+  return fileURLToPath(new URL(fileName, databaseDirectoryUrl))
 }

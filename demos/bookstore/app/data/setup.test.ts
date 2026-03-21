@@ -42,7 +42,7 @@ describe('bookstore database setup', () => {
   it('applies migrations and materializes expected schema artifacts', async () => {
     await initializeBookstoreDatabase()
 
-    let migrationsPath = fileURLToPath(new URL('../../data/migrations/', import.meta.url))
+    let migrationsPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
     let migrations = await loadMigrations(migrationsPath)
 
     let journalResult = await db.exec(
