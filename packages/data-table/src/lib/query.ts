@@ -1,6 +1,8 @@
 import type { JoinType } from './adapter.ts'
 import { DataTableQueryError } from './errors.ts'
 import type {
+  AnyQuerySource,
+  BoundQueryPhase,
   MergeColumnTypeMaps,
   PrimaryKeyInputForRow,
   QueryColumnInput,
@@ -8,13 +10,18 @@ import type {
   QueryColumnTypeMap,
   QueryColumnTypeMapFromRow,
   QueryColumns,
+  QueryPhase,
+  QueryResultMap,
+  QuerySourceColumnTypes,
+  QuerySourcePrimaryKey,
+  QuerySourceRow,
+  QuerySourceTableName,
   QueryTableInput,
   RelationMapForSourceName,
   SelectedAliasRow,
-  WriteResult,
-  WriteRowResult,
-  WriteRowsResult,
-} from './database.ts'
+  UnboundQueryPhase,
+} from './query/types.ts'
+import type { WriteResult, WriteRowResult, WriteRowsResult } from './database.ts'
 import type { Predicate, WhereInput } from './operators.ts'
 import { normalizeColumnInput } from './references.ts'
 import type { LoadedRelationMap } from './table-relations.ts'
@@ -31,55 +38,11 @@ import type { QueryState } from './query/state.ts'
 import { cloneQueryState, createInitialQueryState, mergeQueryState } from './query/state.ts'
 import type { QuerySnapshot } from './query/snapshot.ts'
 import { createQuerySnapshot } from './query/snapshot.ts'
-
-type QueryBindingState = 'bound' | 'unbound'
-
-type QueryPhase<
-  binding extends QueryBindingState = QueryBindingState,
-  mode extends QueryExecutionMode = QueryExecutionMode,
-> = {
-  binding: binding
-  mode: mode
-}
-
-export type BoundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
-  'bound',
-  mode
->
-
-export type UnboundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
-  'unbound',
-  mode
->
-
-type AnyQuerySource = QueryTableInput<string, Record<string, unknown>, readonly string[]>
-
-type QuerySourceTableName<source extends AnyQuerySource> =
-  source extends QueryTableInput<infer tableName, any, any> ? tableName : never
-
-type QuerySourceRow<source extends AnyQuerySource> =
-  source extends QueryTableInput<any, infer row, any> ? row : never
-
-type QuerySourcePrimaryKey<source extends AnyQuerySource> =
-  source extends QueryTableInput<any, any, infer primaryKey> ? primaryKey : never
-
-type QuerySourceColumnTypes<source extends AnyQuerySource> = QueryColumnTypeMapFromRow<
-  QuerySourceTableName<source>,
-  QuerySourceRow<source>
->
-
-type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<string, unknown>> = {
-  all: Array<row & loaded>
-  first: (row & loaded) | null
-  find: (row & loaded) | null
-  count: number
-  exists: boolean
-  insert: WriteResult | WriteRowResult<row>
-  insertMany: WriteResult | WriteRowsResult<row>
-  update: WriteResult | WriteRowsResult<row>
-  delete: WriteResult | WriteRowsResult<row>
-  upsert: WriteResult | WriteRowResult<row>
-}
+import {
+  isSelectionMap,
+  normalizeSelectionColumns,
+  normalizeSelectionMap,
+} from './query/selection.ts'
 
 export type AnyQuery = Query<any, any, any, any, any>
 
@@ -208,20 +171,10 @@ export class Query<
     this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
   ): Query<source, columnTypes, any, loaded, QueryAllPhase<phase>> {
-    if (
-      input.length === 1 &&
-      typeof input[0] === 'object' &&
-      input[0] !== null &&
-      !Array.isArray(input[0])
-    ) {
+    if (isSelectionMap(input)) {
       let selection = input[0] as Record<string, QueryColumnInput<columnTypes>>
-      let aliases = Object.keys(selection)
-      let select = aliases.map((alias) => ({
-        column: normalizeColumnInput(selection[alias]),
-        alias,
-      }))
 
-      return this.#clone({ select }) as Query<
+      return this.#clone({ select: normalizeSelectionMap(selection) }) as Query<
         source,
         columnTypes,
         any,
@@ -230,10 +183,8 @@ export class Query<
       >
     }
 
-    let columns = input as (keyof row & string)[]
-
     return this.#clone({
-      select: columns.map((column) => ({ column, alias: column })),
+      select: normalizeSelectionColumns(input as (keyof row & string)[]),
     }) as Query<source, columnTypes, any, loaded, QueryAllPhase<phase>>
   }
 
@@ -605,5 +556,32 @@ export function query<
   >
 }
 
+export type {
+  BoundQueryPhase,
+  CreateManyOptions,
+  CreateOptions,
+  DeleteOptions,
+  FindManyOptions,
+  FindOneOptions,
+  MergeColumnTypeMaps,
+  PrimaryKeyInputForRow,
+  QueryColumnInput,
+  QueryColumnName,
+  QueryColumnTypeMap,
+  QueryColumnTypeMapFromRow,
+  QueryColumns,
+  OrderByInput,
+  OrderByTuple,
+  QueryColumnTypesForTable,
+  QueryTableInput,
+  RelationMapForSourceName,
+  SelectedAliasRow,
+  ReturningInput,
+  SingleTableColumn,
+  SingleTableWhere,
+  UnboundQueryPhase,
+  UpdateManyOptions,
+  UpdateOptions,
+} from './query/types.ts'
 export type { QueryState } from './query/state.ts'
 export { cloneQueryState } from './query/state.ts'

@@ -6,6 +6,7 @@ import { eq } from './operators.ts'
 import { query, querySnapshot } from './query.ts'
 import { createPredicateColumnResolver } from './query/predicate.ts'
 import { cloneQueryPlan } from './query/plan.ts'
+import { isSelectionMap, normalizeSelectionColumns, normalizeSelectionMap } from './query/selection.ts'
 import type { QueryPlan } from './query/plan.ts'
 import { createInitialQueryState, mergeQueryState } from './query/state.ts'
 import { table } from './table.ts'
@@ -28,6 +29,19 @@ let projects = table({
 })
 
 describe('query helpers', () => {
+  it('normalizes select input shapes consistently', () => {
+    assert.equal(isSelectionMap([{ email: 'email' }]), true)
+    assert.equal(isSelectionMap(['email']), false)
+    assert.deepEqual(normalizeSelectionMap({ email: 'status', accountId: 'id' }), [
+      { column: 'status', alias: 'email' },
+      { column: 'id', alias: 'accountId' },
+    ])
+    assert.deepEqual(normalizeSelectionColumns(['id', 'email']), [
+      { column: 'id', alias: 'id' },
+      { column: 'email', alias: 'email' },
+    ])
+  })
+
   it('merges query state without sharing nested state', () => {
     let state = createInitialQueryState()
     let where = [eq('status', 'active')]

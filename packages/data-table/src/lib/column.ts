@@ -317,9 +317,67 @@ export type ColumnNamespace = {
 }
 
 function createColumnBuilder<output = unknown>(
-  type: ColumnDefinition['type'],
+  definition: ColumnDefinition | ColumnDefinition['type'],
 ): ColumnBuilder<output> {
-  return new ColumnBuilder({ type })
+  if (typeof definition === 'string') {
+    return new ColumnBuilder({ type: definition })
+  }
+
+  return new ColumnBuilder(definition)
+}
+
+function createColumnNamespace(): ColumnNamespace {
+  return {
+    varchar(length: number) {
+      return createColumnBuilder<string>({ type: 'varchar', length })
+    },
+    text() {
+      return createColumnBuilder<string>('text')
+    },
+    integer() {
+      return createColumnBuilder<number>('integer')
+    },
+    bigint() {
+      return createColumnBuilder('bigint')
+    },
+    decimal(precision: number, scale: number) {
+      return createColumnBuilder<number>({ type: 'decimal', precision, scale })
+    },
+    boolean() {
+      return createColumnBuilder<boolean>('boolean')
+    },
+    uuid() {
+      return createColumnBuilder<string>('uuid')
+    },
+    date() {
+      return createColumnBuilder('date')
+    },
+    time(options?: { precision?: number; withTimezone?: boolean }) {
+      return createColumnBuilder({
+        type: 'time',
+        precision: options?.precision,
+        withTimezone: options?.withTimezone,
+      })
+    },
+    timestamp(options?: { precision?: number; withTimezone?: boolean }) {
+      return createColumnBuilder({
+        type: 'timestamp',
+        precision: options?.precision,
+        withTimezone: options?.withTimezone,
+      })
+    },
+    json() {
+      return createColumnBuilder('json')
+    },
+    binary(length?: number) {
+      return createColumnBuilder({ type: 'binary', length })
+    },
+    enum<values extends readonly string[]>(values: values) {
+      return createColumnBuilder({ type: 'enum', enumValues: [...values] }) as ColumnBuilder<
+        values[number]
+      >
+    },
+  }
 }
 
 /**
@@ -331,54 +389,4 @@ function createColumnBuilder<output = unknown>(
  * let email = c.varchar(255).notNull().unique('users_email_uq')
  * ```
  */
-export let column: ColumnNamespace = {
-  varchar(length: number) {
-    return new ColumnBuilder({ type: 'varchar', length })
-  },
-  text() {
-    return createColumnBuilder<string>('text')
-  },
-  integer() {
-    return createColumnBuilder<number>('integer')
-  },
-  bigint() {
-    return createColumnBuilder('bigint')
-  },
-  decimal(precision: number, scale: number) {
-    return new ColumnBuilder({ type: 'decimal', precision, scale })
-  },
-  boolean() {
-    return createColumnBuilder<boolean>('boolean')
-  },
-  uuid() {
-    return createColumnBuilder<string>('uuid')
-  },
-  date() {
-    return createColumnBuilder('date')
-  },
-  time(options?: { precision?: number; withTimezone?: boolean }) {
-    return new ColumnBuilder({
-      type: 'time',
-      precision: options?.precision,
-      withTimezone: options?.withTimezone,
-    })
-  },
-  timestamp(options?: { precision?: number; withTimezone?: boolean }) {
-    return new ColumnBuilder({
-      type: 'timestamp',
-      precision: options?.precision,
-      withTimezone: options?.withTimezone,
-    })
-  },
-  json() {
-    return createColumnBuilder('json')
-  },
-  binary(length?: number) {
-    return new ColumnBuilder({ type: 'binary', length })
-  },
-  enum<values extends readonly string[]>(values: values) {
-    return new ColumnBuilder({ type: 'enum', enumValues: [...values] }) as ColumnBuilder<
-      values[number]
-    >
-  },
-}
+export const column = createColumnNamespace()

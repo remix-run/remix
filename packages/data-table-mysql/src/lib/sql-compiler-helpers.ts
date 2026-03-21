@@ -18,58 +18,29 @@ export function compileFromClause(
   let output = ' from ' + quotePath(getTableName(table))
 
   for (let join of joins) {
-    output +=
-      ' ' +
-      normalizeJoinType(join.type) +
-      ' join ' +
-      quotePath(getTableName(join.table)) +
-      ' on ' +
-      compilePredicate(join.on, context)
+    output += compileJoinClause(join, context)
   }
 
   return output
 }
 
 export function compileWhereClause(predicates: Predicate[], context: CompileContext): string {
-  if (predicates.length === 0) {
-    return ''
-  }
-
-  return (
-    ' where ' +
-    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
-  )
+  return compilePredicateClause('where', predicates, context)
 }
 
 export function compileGroupByClause(columns: string[]): string {
-  if (columns.length === 0) {
-    return ''
-  }
-
-  return ' group by ' + columns.map((column) => quotePath(column)).join(', ')
+  return compileDelimitedClause('group by', columns, quotePath)
 }
 
 export function compileHavingClause(predicates: Predicate[], context: CompileContext): string {
-  if (predicates.length === 0) {
-    return ''
-  }
-
-  return (
-    ' having ' +
-    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
-  )
+  return compilePredicateClause('having', predicates, context)
 }
 
 export function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'desc' }[]): string {
-  if (orderBy.length === 0) {
-    return ''
-  }
-
-  return (
-    ' order by ' +
-    orderBy
-      .map((clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase())
-      .join(', ')
+  return compileDelimitedClause(
+    'order by',
+    orderBy,
+    (clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase(),
   )
 }
 
@@ -144,21 +115,64 @@ export function collectColumns(rows: Record<string, unknown>[]): string[] {
   let seen = new Set<string>()
 
   for (let row of rows) {
-    for (let key in row) {
-      if (!Object.prototype.hasOwnProperty.call(row, key)) {
-        continue
-      }
-
-      if (seen.has(key)) {
-        continue
-      }
-
-      seen.add(key)
-      columns.push(key)
-    }
+    appendOwnKeys(row, seen, columns)
   }
 
   return columns
+}
+
+function compilePredicateClause(
+  keyword: 'where' | 'having',
+  predicates: Predicate[],
+  context: CompileContext,
+): string {
+  if (predicates.length === 0) {
+    return ''
+  }
+
+  return ' ' + keyword + ' ' + predicates.map((predicate) => compileWrappedPredicate(predicate, context)).join(' and ')
+}
+
+function compileDelimitedClause<value>(
+  keyword: string,
+  values: value[],
+  compileValue: (value: value) => string,
+): string {
+  if (values.length === 0) {
+    return ''
+  }
+
+  return ' ' + keyword + ' ' + values.map(compileValue).join(', ')
+}
+
+function compileJoinClause(join: JoinClause, context: CompileContext): string {
+  return (
+    ' ' +
+    normalizeJoinType(join.type) +
+    ' join ' +
+    quotePath(getTableName(join.table)) +
+    ' on ' +
+    compilePredicate(join.on, context)
+  )
+}
+
+function compileWrappedPredicate(predicate: Predicate, context: CompileContext): string {
+  return '(' + compilePredicate(predicate, context) + ')'
+}
+
+function appendOwnKeys(
+  row: Record<string, unknown>,
+  seen: Set<string>,
+  columns: string[],
+): void {
+  for (let key in row) {
+    if (!Object.prototype.hasOwnProperty.call(row, key) || seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    columns.push(key)
+  }
 }
 
 function compilePredicate(predicate: Predicate, context: CompileContext): string {

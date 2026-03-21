@@ -62,12 +62,23 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @returns Compiled SQL statements.
    */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
-    if (isDataManipulationOperation(operation)) {
-      let compiled = compileSqliteOperation(operation)
-      return [{ text: compiled.text, values: compiled.values }]
-    }
+    switch (operation.kind) {
+      case 'select':
+      case 'count':
+      case 'exists':
+      case 'insert':
+      case 'insertMany':
+      case 'update':
+      case 'delete':
+      case 'upsert':
+      case 'raw': {
+        let compiled = compileSqliteOperation(operation)
+        return [{ text: compiled.text, values: compiled.values }]
+      }
 
-    return compileSqliteMigrationOperationsFromCompiler(operation)
+      default:
+        return compileSqliteMigrationOperationsFromCompiler(operation)
+    }
   }
 
   /**
@@ -97,7 +108,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       return {
         rows,
         affectedRows: normalizeAffectedRowsForReader(request.operation.kind, rows),
-        insertId: normalizeInsertIdForReader(request.operation.kind, request.operation, rows),
+        insertId: normalizeInsertIdForReader(request.operation, rows),
       }
     }
 
@@ -105,7 +116,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
     return {
       affectedRows: normalizeAffectedRowsForRun(request.operation.kind, result),
-      insertId: normalizeInsertIdForRun(request.operation.kind, request.operation, result),
+      insertId: normalizeInsertIdForRun(request.operation, result),
     }
   }
 
@@ -325,12 +336,17 @@ function normalizeAffectedRowsForReader(
 }
 
 function normalizeInsertIdForReader(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
-    return undefined
+  switch (operation.kind) {
+    case 'insert':
+    case 'insertMany':
+    case 'upsert':
+      break
+
+    default:
+      return undefined
   }
 
   let primaryKey = getTablePrimaryKey(operation.table)
@@ -357,12 +373,17 @@ function normalizeAffectedRowsForRun(
 }
 
 function normalizeInsertIdForRun(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   result: RunResult,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
-    return undefined
+  switch (operation.kind) {
+    case 'insert':
+    case 'insertMany':
+    case 'upsert':
+      break
+
+    default:
+      return undefined
   }
 
   if (getTablePrimaryKey(operation.table).length !== 1) {
@@ -379,36 +400,5 @@ function isWriteOperationKind(kind: DataManipulationRequest['operation']['kind']
     kind === 'update' ||
     kind === 'delete' ||
     kind === 'upsert'
-  )
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
-}
-
-function isInsertOperation(
-  operation: DataManipulationRequest['operation'],
-): operation is Extract<
-  DataManipulationRequest['operation'],
-  { kind: 'insert' | 'insertMany' | 'upsert' }
-> {
-  return (
-    operation.kind === 'insert' || operation.kind === 'insertMany' || operation.kind === 'upsert'
-  )
-}
-
-function isDataManipulationOperation(
-  operation: DataManipulationOperation | DataMigrationOperation,
-): operation is DataManipulationOperation {
-  return (
-    operation.kind === 'select' ||
-    operation.kind === 'count' ||
-    operation.kind === 'exists' ||
-    operation.kind === 'insert' ||
-    operation.kind === 'insertMany' ||
-    operation.kind === 'update' ||
-    operation.kind === 'delete' ||
-    operation.kind === 'upsert' ||
-    operation.kind === 'raw'
   )
 }

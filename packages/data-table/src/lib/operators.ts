@@ -184,13 +184,7 @@ export function inList<column extends string | ColumnReferenceLike>(
   column: column,
   values: readonly unknown[],
 ): Predicate<PredicateColumn<column>> {
-  return {
-    type: 'comparison',
-    operator: 'in',
-    column: resolvePredicateColumn(column),
-    value: [...values],
-    valueType: 'value',
-  }
+  return createListPredicate('in', column, values)
 }
 
 /**
@@ -203,13 +197,7 @@ export function notInList<column extends string | ColumnReferenceLike>(
   column: column,
   values: readonly unknown[],
 ): Predicate<PredicateColumn<column>> {
-  return {
-    type: 'comparison',
-    operator: 'notIn',
-    column: resolvePredicateColumn(column),
-    value: [...values],
-    valueType: 'value',
-  }
+  return createListPredicate('notIn', column, values)
 }
 
 /**
@@ -222,13 +210,7 @@ export function like<column extends string | ColumnReferenceLike>(
   column: column,
   value: string,
 ): Predicate<PredicateColumn<column>> {
-  return {
-    type: 'comparison',
-    operator: 'like',
-    column: resolvePredicateColumn(column),
-    value,
-    valueType: 'value',
-  }
+  return createComparisonPredicate('like', column, value)
 }
 
 /**
@@ -241,13 +223,7 @@ export function ilike<column extends string | ColumnReferenceLike>(
   column: column,
   value: string,
 ): Predicate<PredicateColumn<column>> {
-  return {
-    type: 'comparison',
-    operator: 'ilike',
-    column: resolvePredicateColumn(column),
-    value,
-    valueType: 'value',
-  }
+  return createComparisonPredicate('ilike', column, value)
 }
 
 /**
@@ -262,12 +238,7 @@ export function between<column extends string | ColumnReferenceLike>(
   lower: unknown,
   upper: unknown,
 ): Predicate<PredicateColumn<column>> {
-  return {
-    type: 'between',
-    column: resolvePredicateColumn(column),
-    lower,
-    upper,
-  }
+  return createBetweenPredicate(column, lower, upper)
 }
 
 /**
@@ -278,7 +249,7 @@ export function between<column extends string | ColumnReferenceLike>(
 export function isNull<column extends string | ColumnReferenceLike>(
   column: column,
 ): Predicate<PredicateColumn<column>> {
-  return { type: 'null', operator: 'isNull', column: resolvePredicateColumn(column) }
+  return createNullPredicate('isNull', column)
 }
 
 /**
@@ -289,7 +260,7 @@ export function isNull<column extends string | ColumnReferenceLike>(
 export function notNull<column extends string | ColumnReferenceLike>(
   column: column,
 ): Predicate<PredicateColumn<column>> {
-  return { type: 'null', operator: 'notNull', column: resolvePredicateColumn(column) }
+  return createNullPredicate('notNull', column)
 }
 
 /**
@@ -298,8 +269,7 @@ export function notNull<column extends string | ColumnReferenceLike>(
  * @returns A logical `and` predicate.
  */
 export function and<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'and', predicates: filtered }
+  return createLogicalPredicate('and', predicates)
 }
 
 /**
@@ -308,8 +278,7 @@ export function and<column extends string>(...predicates: Predicate<column>[]): 
  * @returns A logical `or` predicate.
  */
 export function or<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'or', predicates: filtered }
+  return createLogicalPredicate('or', predicates)
 }
 
 /**
@@ -320,15 +289,7 @@ export function or<column extends string>(...predicates: Predicate<column>[]): P
 export function normalizeWhereInput<column extends string>(
   input: WhereInput<column>,
 ): Predicate<column> {
-  if (
-    typeof input === 'object' &&
-    input !== null &&
-    'type' in input &&
-    (input.type === 'comparison' ||
-      input.type === 'between' ||
-      input.type === 'null' ||
-      input.type === 'logical')
-  ) {
+  if (isPredicateInput(input)) {
     return input
   }
 
@@ -360,9 +321,85 @@ function resolveComparisonValue(value: unknown): unknown {
   return value
 }
 
-function createComparisonPredicate(
+function createListPredicate<column extends string | ColumnReferenceLike>(
+  operator: 'in' | 'notIn',
+  column: column,
+  values: readonly unknown[],
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'comparison',
+    operator,
+    column: resolvePredicateColumn(column),
+    value: [...values],
+    valueType: 'value',
+  }
+}
+
+function createBetweenPredicate<column extends string | ColumnReferenceLike>(
+  column: column,
+  lower: unknown,
+  upper: unknown,
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'between',
+    column: resolvePredicateColumn(column),
+    lower,
+    upper,
+  }
+}
+
+function createNullPredicate<column extends string | ColumnReferenceLike>(
+  operator: 'isNull' | 'notNull',
+  column: column,
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'null',
+    operator,
+    column: resolvePredicateColumn(column),
+  }
+}
+
+function createLogicalPredicate<column extends string>(
+  operator: 'and' | 'or',
+  predicates: Predicate<column>[],
+): Predicate<column> {
+  return {
+    type: 'logical',
+    operator,
+    predicates: predicates.filter(Boolean),
+  }
+}
+
+function isPredicateInput<column extends string>(
+  input: WhereInput<column>,
+): input is Predicate<column> {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    'type' in input &&
+    (input.type === 'comparison' ||
+      input.type === 'between' ||
+      input.type === 'null' ||
+      input.type === 'logical')
+  )
+}
+
+function createComparisonPredicate<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
-  column: string | ColumnReferenceLike,
+  column: left,
+  value: right & (right extends `${string}@${string}` ? never : right),
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+function createComparisonPredicate<column extends string | ColumnReferenceLike>(
+  operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+function createComparisonPredicate<column extends string | ColumnReferenceLike>(
+  operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
+  column: column,
   value: unknown,
 ): Predicate<string> {
   let normalizedColumn = resolvePredicateColumn(column)

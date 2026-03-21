@@ -1,13 +1,7 @@
-import type { QueryTableInput } from '../database.ts'
-import { cloneQueryPlan, type QueryExecutionMode, type QueryPlan } from './plan.ts'
+import type { QueryExecutionMode, QueryPlan } from './plan.ts'
+import type { AnyQuerySource, QuerySourcePrimaryKey, QueryTableInput } from './types.ts'
 import { cloneQueryState, type QueryState } from './state.ts'
-
-type AnyQuerySource = QueryTableInput<string, Record<string, unknown>, readonly string[]>
-
-type QuerySourcePrimaryKey<source extends AnyQuerySource> =
-  source extends QueryTableInput<any, any, infer primaryKey extends readonly string[]>
-    ? primaryKey
-    : never
+import { cloneQueryPlan } from './plan.ts'
 
 export type QuerySnapshot<
   source extends AnyQuerySource = AnyQuerySource,

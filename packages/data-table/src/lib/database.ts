@@ -10,9 +10,12 @@ import type { ColumnBuilder } from './column.ts'
 import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
 import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
 import {
+  createScopedQuery,
   getPrimaryKeyWhere,
   getPrimaryKeyWhereFromRow,
+  requireLoadedRow,
   resolveCreateRowWhere,
+  toWriteResult,
 } from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
@@ -196,12 +199,6 @@ export type QueryForTable<
   loaded,
   BoundQueryPhase<'all'>
 >
-
-type ScopedQueryOptions<table extends AnyTable> = {
-  orderBy?: OrderByInput<table>
-  limit?: number
-  offset?: number
-}
 
 /**
  * Column names accepted in single-table queries.
@@ -425,10 +422,7 @@ export class Database implements QueryExecutionContext {
 
     if (options?.returnRow !== true) {
       let result = await query.insert(values, { touch })
-      return {
-        affectedRows: result.affectedRows,
-        insertId: result.insertId,
-      }
+      return toWriteResult(result)
     }
 
     if (this.#adapter.capabilities.returning) {
@@ -436,43 +430,32 @@ export class Database implements QueryExecutionContext {
         returning: '*',
         touch,
       })) as { row: TableRow<table> | null }
-      let row = result.row
-
-      if (!row) {
-        throw new DataTableQueryError(
-          'create({ returnRow: true }) failed to return an inserted row',
-        )
-      }
+      let row = requireLoadedRow(
+        result.row,
+        'create({ returnRow: true }) failed to return an inserted row',
+      )
 
       if (!options.with) {
         return row as TableRowWith<table, LoadedRelationMap<relations>>
       }
 
-      let where = getPrimaryKeyWhereFromRow(table, row)
-      let loaded = await this.findOne(table, {
-        where,
-        with: options.with,
-      })
-
-      if (!loaded) {
-        throw new DataTableQueryError('create({ returnRow: true }) failed to load inserted row')
-      }
-
-      return loaded
+      return requireLoadedRow(
+        await this.findOne(table, {
+          where: getPrimaryKeyWhereFromRow(table, row),
+          with: options.with,
+        }),
+        'create({ returnRow: true }) failed to load inserted row',
+      )
     }
 
     let insertResult = await query.insert(values, { touch })
-    let where = resolveCreateRowWhere(table, values, insertResult.insertId)
-    let loaded = await this.findOne(table, {
-      where,
-      with: options.with,
-    })
-
-    if (!loaded) {
-      throw new DataTableQueryError('create({ returnRow: true }) failed to load inserted row')
-    }
-
-    return loaded
+    return requireLoadedRow(
+      await this.findOne(table, {
+        where: resolveCreateRowWhere(table, values, insertResult.insertId),
+        with: options.with,
+      }),
+      'create({ returnRow: true }) failed to load inserted row',
+    )
   }
 
   createMany<table extends AnyTable>(
@@ -511,10 +494,7 @@ export class Database implements QueryExecutionContext {
       touch: options?.touch,
     })
 
-    return {
-      affectedRows: result.affectedRows,
-      insertId: result.insertId,
-    }
+    return toWriteResult(result)
   }
 
   async find<
@@ -551,7 +531,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
+    let query = createScopedQuery(this.#queryTable(table), options)
 
     if (options.with) {
       return query.with(options.with).first() as Promise<TableRowWith<
@@ -570,13 +550,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
-    let query = this.#queryTable(table)
-
-    if (options?.where) {
-      query = query.where(options.where)
-    }
-
-    query = applyScopedQueryOptions(query, options)
+    let query = createScopedQuery(this.#queryTable(table), options)
 
     if (options?.with) {
       return query.with(options.with).all() as Promise<
@@ -591,12 +565,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options?: CountOptions<table>,
   ): Promise<number> {
-    let query = this.#queryTable(table)
-
-    if (options?.where) {
-      query = query.where(options.where)
-    }
-
+    let query = createScopedQuery(this.#queryTable(table), options)
     return query.count()
   }
 
@@ -618,30 +587,22 @@ export class Database implements QueryExecutionContext {
           touch: options?.touch,
           returning: '*',
         })) as { rows: TableRow<table>[] }
-      let updatedRow = updateResult.rows[0]
-
-      if (!updatedRow) {
-        throw new DataTableQueryError(
-          'update() failed to find row for table "' + getTableName(table) + '"',
-        )
-      }
+      let updatedRow = requireLoadedRow(
+        updateResult.rows[0] ?? null,
+        'update() failed to find row for table "' + getTableName(table) + '"',
+      )
 
       if (!options?.with) {
         return updatedRow as TableRowWith<table, LoadedRelationMap<relations>>
       }
 
-      let loaded = await this.findOne(table, {
-        where: getPrimaryKeyWhereFromRow(table, updatedRow),
-        with: options.with,
-      })
-
-      if (!loaded) {
-        throw new DataTableQueryError(
-          'update() failed to find row for table "' + getTableName(table) + '"',
-        )
-      }
-
-      return loaded
+      return requireLoadedRow(
+        await this.findOne(table, {
+          where: getPrimaryKeyWhereFromRow(table, updatedRow),
+          with: options.with,
+        }),
+        'update() failed to find row for table "' + getTableName(table) + '"',
+      )
     }
 
     await this.#queryTable(table)
@@ -650,15 +611,10 @@ export class Database implements QueryExecutionContext {
         touch: options?.touch,
       })
 
-    let loaded = await this.find(table, value, { with: options?.with })
-
-    if (!loaded) {
-      throw new DataTableQueryError(
-        'update() failed to find row for table "' + getTableName(table) + '"',
-      )
-    }
-
-    return loaded
+    return requireLoadedRow(
+      await this.find(table, value, { with: options?.with }),
+      'update() failed to find row for table "' + getTableName(table) + '"',
+    )
   }
 
   async updateMany<table extends AnyTable>(
@@ -666,13 +622,10 @@ export class Database implements QueryExecutionContext {
     changes: Partial<TableRow<table>>,
     options: UpdateManyOptions<table>,
   ): Promise<WriteResult> {
-    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
+    let query = createScopedQuery(this.#queryTable(table), options)
 
     let result = await query.update(changes, { touch: options.touch })
-    return {
-      affectedRows: result.affectedRows,
-      insertId: result.insertId,
-    }
+    return toWriteResult(result)
   }
 
   async delete<table extends AnyTable>(
@@ -691,13 +644,10 @@ export class Database implements QueryExecutionContext {
     table: table,
     options: DeleteManyOptions<table>,
   ): Promise<WriteResult> {
-    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
+    let query = createScopedQuery(this.#queryTable(table), options)
 
     let result = await query.delete()
-    return {
-      affectedRows: result.affectedRows,
-      insertId: result.insertId,
-    }
+    return toWriteResult(result)
   }
 
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
@@ -808,33 +758,4 @@ export function createDatabase(
 
 function defaultNow(): Date {
   return new Date()
-}
-
-function applyScopedQueryOptions<table extends AnyTable>(
-  query: QueryForTable<table>,
-  options?: ScopedQueryOptions<table>,
-): QueryForTable<table> {
-  if (!options) {
-    return query
-  }
-
-  let orderBy = options.orderBy
-
-  if (orderBy) {
-    let clauses = (Array.isArray(orderBy[0]) ? orderBy : [orderBy]) as OrderByTuple<table>[]
-
-    for (let [column, direction] of clauses) {
-      query = query.orderBy(column, direction)
-    }
-  }
-
-  if (options.limit !== undefined) {
-    query = query.limit(options.limit)
-  }
-
-  if (options.offset !== undefined) {
-    query = query.offset(options.offset)
-  }
-
-  return query
 }

@@ -1,11 +1,15 @@
 import { DataTableQueryError } from '../errors.ts'
 import type {
+  OrderByInput,
+  OrderByTuple,
   QueryColumnName,
   QueryColumns,
   QueryColumnTypeMap,
+  QueryForTable,
   QueryTableInput,
   SingleTableWhere,
   TableColumnName,
+  WriteResult,
 } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
@@ -84,6 +88,57 @@ export function hasScopedWriteModifiers(state: {
   offset?: number
 }): boolean {
   return state.orderBy.length > 0 || state.limit !== undefined || state.offset !== undefined
+}
+
+export function createScopedQuery<table extends AnyTable>(
+  query: QueryForTable<table>,
+  options?: {
+    where?: SingleTableWhere<table>
+    orderBy?: OrderByInput<table>
+    limit?: number
+    offset?: number
+  },
+): QueryForTable<table> {
+  let scopedQuery = query
+
+  if (options?.where) {
+    scopedQuery = scopedQuery.where(options.where)
+  }
+
+  let orderBy = options?.orderBy
+
+  if (orderBy) {
+    let clauses = (Array.isArray(orderBy[0]) ? orderBy : [orderBy]) as OrderByTuple<table>[]
+
+    for (let [column, direction] of clauses) {
+      scopedQuery = scopedQuery.orderBy(column, direction)
+    }
+  }
+
+  if (options?.limit !== undefined) {
+    scopedQuery = scopedQuery.limit(options.limit)
+  }
+
+  if (options?.offset !== undefined) {
+    scopedQuery = scopedQuery.offset(options.offset)
+  }
+
+  return scopedQuery
+}
+
+export function requireLoadedRow<row>(row: row | null, errorMessage: string): row {
+  if (row === null) {
+    throw new DataTableQueryError(errorMessage)
+  }
+
+  return row
+}
+
+export function toWriteResult(result: Pick<WriteResult, 'affectedRows' | 'insertId'>): WriteResult {
+  return {
+    affectedRows: result.affectedRows,
+    insertId: result.insertId,
+  }
 }
 
 export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(

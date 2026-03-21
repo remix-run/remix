@@ -24,6 +24,16 @@ import {
   loadJournalRows,
   normalizeChecksum,
 } from './journal-store.ts'
+import { createDryRunDatabase } from './dry-run-database.ts'
+import {
+  assertMigrateOptions,
+  assertNoMigrationDrift,
+  assertStepOption,
+  assertTargetOption,
+  createMigrationStatusEntries,
+  listMigrations,
+  selectMigrationsToRun,
+} from './planning.ts'
 import { createMigrationSchema } from './schema-api.ts'
 
 type RunMigrationsInput = {
@@ -34,99 +44,11 @@ type RunMigrationsInput = {
   options: MigrateOptions
 }
 
-function listMigrations(
-  migrations: MigrationDescriptor[] | MigrationRegistry,
-): MigrationDescriptor[] {
-  return Array.isArray(migrations)
-    ? [...migrations].sort((left, right) => left.id.localeCompare(right.id))
-    : migrations.list()
-}
-
-function assertStepOption(step: number | undefined): void {
-  if (step === undefined) {
-    return
-  }
-
-  if (!Number.isInteger(step) || step < 1) {
-    throw new Error('Invalid migration step option. Expected a positive integer.')
-  }
-}
-
-function assertMigrateOptions(options: MigrateOptions): void {
-  if (options.to !== undefined && options.step !== undefined) {
-    throw new Error('Cannot combine "to" and "step" migration options in the same run')
-  }
-}
-
-function assertTargetOption(migrations: MigrationDescriptor[], to: string | undefined): void {
-  if (!to) {
-    return
-  }
-
-  let target = migrations.find((migration) => migration.id === to)
-
-  if (!target) {
-    throw new Error('Unknown migration target: ' + to)
-  }
-}
-
-function assertNoMigrationDrift(
-  migrations: MigrationDescriptor[],
-  journal: MigrationJournalRow[],
-): void {
-  let migrationMap = new Map(migrations.map((migration) => [migration.id, migration]))
-
-  for (let row of journal) {
-    let migration = migrationMap.get(row.id)
-
-    if (!migration) {
-      continue
-    }
-
-    let expected = normalizeChecksum(migration)
-
-    if (expected !== row.checksum) {
-      throw new Error(
-        'Migration checksum drift detected for "' +
-          row.id +
-          '" (journal=' +
-          row.checksum +
-          ', current=' +
-          expected +
-          ')',
-      )
-    }
-  }
-}
-
-function createDryRunDatabase(adapter: DatabaseAdapter): Database {
-  let error = new Error('Cannot execute data operations while running migrations with dryRun')
-  let throwDryRunError = async (): Promise<never> => {
-    throw error
-  }
-  let dryRunAdapter: DatabaseAdapter = {
-    dialect: adapter.dialect,
-    capabilities: adapter.capabilities,
-    compileSql(operation) {
-      return adapter.compileSql(operation)
-    },
-    async hasTable(table) {
-      return adapter.hasTable(table)
-    },
-    async hasColumn(table, column) {
-      return adapter.hasColumn(table, column)
-    },
-    execute: throwDryRunError,
-    migrate: throwDryRunError,
-    beginTransaction: throwDryRunError,
-    commitTransaction: throwDryRunError,
-    rollbackTransaction: throwDryRunError,
-    createSavepoint: throwDryRunError,
-    rollbackToSavepoint: throwDryRunError,
-    releaseSavepoint: throwDryRunError,
-  }
-
-  return createDatabase(dryRunAdapter)
+type JournalInsertRow = {
+  id: string
+  name: string
+  checksum: string
+  batch: number
 }
 
 async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> {
@@ -159,39 +81,8 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
       journal = await loadJournalRows(adapter, journalTable)
     }
 
-    let appliedMap = new Map(journal.map((row) => [row.id, row]))
     assertNoMigrationDrift(migrations, journal)
-    let toRun: MigrationDescriptor[] = []
-
-    if (input.direction === 'up') {
-      for (let migration of migrations) {
-        if (!appliedMap.has(migration.id)) {
-          toRun.push(migration)
-        }
-      }
-
-      if (target) {
-        toRun = toRun.filter((migration) => migration.id <= target)
-      }
-
-      if (step !== undefined) {
-        toRun = toRun.slice(0, step)
-      }
-    } else {
-      let appliedMigrations = migrations
-        .filter((migration) => appliedMap.has(migration.id))
-        .reverse()
-
-      if (target) {
-        appliedMigrations = appliedMigrations.filter((migration) => migration.id >= target)
-      }
-
-      if (step !== undefined) {
-        appliedMigrations = appliedMigrations.slice(0, step)
-      }
-
-      toRun = appliedMigrations
-    }
+    let toRun = selectMigrationsToRun(input.direction, migrations, journal, input.options)
 
     let applied: MigrationStatusEntry[] = []
     let reverted: MigrationStatusEntry[] = []
@@ -250,17 +141,7 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
           await migration.migration.up(context)
 
           if (!dryRun) {
-            await insertJournalRow(
-              adapter,
-              journalTable,
-              {
-                id: migration.id,
-                name: migration.name,
-                checksum: normalizeChecksum(migration),
-                batch,
-              },
-              token,
-            )
+            await insertJournalRow(adapter, journalTable, buildJournalRow(migration, batch), token)
           }
 
           applied.push({
@@ -350,34 +231,17 @@ export function createMigrationRunner(
       await ensureMigrationJournal(adapter, journalTable)
 
       let journal = await loadJournalRows(adapter, journalTable)
-      let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = listMigrations(migrations)
-
-      return sortedMigrations.map((migration) => {
-        let journalRow = journalMap.get(migration.id)
-
-        if (!journalRow) {
-          return {
-            id: migration.id,
-            name: migration.name,
-            status: 'pending' as MigrationStatus,
-          }
-        }
-
-        let checksum = normalizeChecksum(migration)
-
-        return {
-          id: migration.id,
-          name: migration.name,
-          status:
-            checksum === journalRow.checksum
-              ? ('applied' as MigrationStatus)
-              : ('drifted' as MigrationStatus),
-          appliedAt: journalRow.appliedAt,
-          batch: journalRow.batch,
-          checksum: journalRow.checksum,
-        }
-      })
+      return createMigrationStatusEntries(sortedMigrations, journal)
     },
+  }
+}
+
+function buildJournalRow(migration: MigrationDescriptor, batch: number): JournalInsertRow {
+  return {
+    id: migration.id,
+    name: migration.name,
+    checksum: normalizeChecksum(migration),
+    batch,
   }
 }

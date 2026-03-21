@@ -81,12 +81,23 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    * @returns Compiled SQL statements.
    */
   compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
-    if (isDataManipulationOperation(operation)) {
-      let compiled = compileMysqlOperation(operation)
-      return [{ text: compiled.text, values: compiled.values }]
-    }
+    switch (operation.kind) {
+      case 'select':
+      case 'count':
+      case 'exists':
+      case 'insert':
+      case 'insertMany':
+      case 'update':
+      case 'delete':
+      case 'upsert':
+      case 'raw': {
+        let compiled = compileMysqlOperation(operation)
+        return [{ text: compiled.text, values: compiled.values }]
+      }
 
-    return compileMysqlMigrationOperationsFromCompiler(operation)
+      default:
+        return compileMysqlMigrationOperationsFromCompiler(operation)
+    }
   }
 
   /**
@@ -122,7 +133,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
     return {
       affectedRows: header.affectedRows,
-      insertId: normalizeInsertId(request.operation.kind, request.operation, header),
+      insertId: normalizeInsertId(request.operation, header),
     }
   }
 
@@ -450,12 +461,17 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   header: MysqlQueryResultHeader,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
-    return undefined
+  switch (operation.kind) {
+    case 'insert':
+    case 'insertMany':
+    case 'upsert':
+      break
+
+    default:
+      return undefined
   }
 
   if (getTablePrimaryKey(operation.table).length !== 1) {
@@ -463,35 +479,4 @@ function normalizeInsertId(
   }
 
   return header.insertId
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
-}
-
-function isInsertOperation(
-  operation: DataManipulationRequest['operation'],
-): operation is Extract<
-  DataManipulationRequest['operation'],
-  { kind: 'insert' | 'insertMany' | 'upsert' }
-> {
-  return (
-    operation.kind === 'insert' || operation.kind === 'insertMany' || operation.kind === 'upsert'
-  )
-}
-
-function isDataManipulationOperation(
-  operation: DataManipulationOperation | DataMigrationOperation,
-): operation is DataManipulationOperation {
-  return (
-    operation.kind === 'select' ||
-    operation.kind === 'count' ||
-    operation.kind === 'exists' ||
-    operation.kind === 'insert' ||
-    operation.kind === 'insertMany' ||
-    operation.kind === 'update' ||
-    operation.kind === 'delete' ||
-    operation.kind === 'upsert' ||
-    operation.kind === 'raw'
-  )
 }

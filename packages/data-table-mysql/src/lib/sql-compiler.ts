@@ -20,101 +20,128 @@ import {
 type UpsertOperation = Extract<DataManipulationOperation, { kind: 'upsert' }>
 
 export function compileMysqlOperation(operation: DataManipulationOperation): SqlStatement {
-  if (operation.kind === 'raw') {
-    return {
-      text: operation.sql.text,
-      values: [...operation.sql.values],
+  switch (operation.kind) {
+    case 'raw':
+      return {
+        text: operation.sql.text,
+        values: [...operation.sql.values],
+      }
+    case 'select': {
+      let context: CompileContext = { values: [] }
+
+      return {
+        text: compileSelectOperation(operation, context),
+        values: context.values,
+      }
     }
-  }
+    case 'count':
+    case 'exists': {
+      let context: CompileContext = { values: [] }
 
-  let context: CompileContext = { values: [] }
-
-  if (operation.kind === 'select') {
-    let selection = '*'
-
-    if (operation.select !== '*') {
-      selection = operation.select
-        .map((field) => quotePath(field.column) + ' as ' + quoteIdentifier(field.alias))
-        .join(', ')
+      return {
+        text: compileCountOperation(operation, context),
+        values: context.values,
+      }
     }
-
-    return {
-      text:
-        'select ' +
-        (operation.distinct ? 'distinct ' : '') +
-        selection +
-        compileFromClause(operation.table, operation.joins, context) +
-        compileWhereClause(operation.where, context) +
-        compileGroupByClause(operation.groupBy) +
-        compileHavingClause(operation.having, context) +
-        compileOrderByClause(operation.orderBy) +
-        compileLimitClause(operation.limit) +
-        compileOffsetClause(operation.offset),
-      values: context.values,
+    case 'insert': {
+      let context: CompileContext = { values: [] }
+      return compileInsertOperation(operation.table, operation.values, context)
     }
-  }
-
-  if (operation.kind === 'count' || operation.kind === 'exists') {
-    let inner =
-      'select 1' +
-      compileFromClause(operation.table, operation.joins, context) +
-      compileWhereClause(operation.where, context) +
-      compileGroupByClause(operation.groupBy) +
-      compileHavingClause(operation.having, context)
-
-    return {
-      text:
-        'select count(*) as ' +
-        quoteIdentifier('count') +
-        ' from (' +
-        inner +
-        ') as ' +
-        quoteIdentifier('__dt_count'),
-      values: context.values,
+    case 'insertMany': {
+      let context: CompileContext = { values: [] }
+      return compileInsertManyOperation(operation.table, operation.values, context)
     }
-  }
+    case 'update': {
+      let context: CompileContext = { values: [] }
 
-  if (operation.kind === 'insert') {
-    return compileInsertOperation(operation.table, operation.values, context)
-  }
-
-  if (operation.kind === 'insertMany') {
-    return compileInsertManyOperation(operation.table, operation.values, context)
-  }
-
-  if (operation.kind === 'update') {
-    let columns = Object.keys(operation.changes)
-
-    return {
-      text:
-        'update ' +
-        quotePath(getTableName(operation.table)) +
-        ' set ' +
-        columns
-          .map(
-            (column) => quotePath(column) + ' = ' + pushValue(context, operation.changes[column]),
-          )
-          .join(', ') +
-        compileWhereClause(operation.where, context),
-      values: context.values,
+      return {
+        text:
+          'update ' +
+          quotePath(getTableName(operation.table)) +
+          ' set ' +
+          compileAssignments(operation.changes, context) +
+          compileWhereClause(operation.where, context),
+        values: context.values,
+      }
     }
-  }
+    case 'delete': {
+      let context: CompileContext = { values: [] }
 
-  if (operation.kind === 'delete') {
-    return {
-      text:
-        'delete from ' +
-        quotePath(getTableName(operation.table)) +
-        compileWhereClause(operation.where, context),
-      values: context.values,
+      return {
+        text:
+          'delete from ' +
+          quotePath(getTableName(operation.table)) +
+          compileWhereClause(operation.where, context),
+        values: context.values,
+      }
     }
-  }
-
-  if (operation.kind === 'upsert') {
-    return compileUpsertOperation(operation, context)
+    case 'upsert': {
+      let context: CompileContext = { values: [] }
+      return compileUpsertOperation(operation, context)
+    }
   }
 
   throw new Error('Unsupported operation kind')
+}
+
+function compileSelectOperation(
+  operation: Extract<DataManipulationOperation, { kind: 'select' }>,
+  context: CompileContext,
+): string {
+  return (
+    'select ' +
+    (operation.distinct ? 'distinct ' : '') +
+    compileSelection(operation.select) +
+    compileFromClause(operation.table, operation.joins, context) +
+    compileWhereClause(operation.where, context) +
+    compileGroupByClause(operation.groupBy) +
+    compileHavingClause(operation.having, context) +
+    compileOrderByClause(operation.orderBy) +
+    compileLimitClause(operation.limit) +
+    compileOffsetClause(operation.offset)
+  )
+}
+
+function compileCountOperation(
+  operation: Extract<DataManipulationOperation, { kind: 'count' | 'exists' }>,
+  context: CompileContext,
+): string {
+  let inner =
+    'select 1' +
+    compileFromClause(operation.table, operation.joins, context) +
+    compileWhereClause(operation.where, context) +
+    compileGroupByClause(operation.groupBy) +
+    compileHavingClause(operation.having, context)
+
+  return (
+    'select count(*) as ' +
+    quoteIdentifier('count') +
+    ' from (' +
+    inner +
+    ') as ' +
+    quoteIdentifier('__dt_count')
+  )
+}
+
+function compileSelection(
+  selection: Extract<DataManipulationOperation, { kind: 'select' }>['select'],
+): string {
+  if (selection === '*') {
+    return '*'
+  }
+
+  return selection
+    .map((field) => quotePath(field.column) + ' as ' + quoteIdentifier(field.alias))
+    .join(', ')
+}
+
+function compileAssignments(
+  changes: Record<string, unknown>,
+  context: CompileContext,
+): string {
+  return Object.keys(changes)
+    .map((column) => quotePath(column) + ' = ' + pushValue(context, changes[column]))
+    .join(', ')
 }
 
 function compileInsertOperation(
