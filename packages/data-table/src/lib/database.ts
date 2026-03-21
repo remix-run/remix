@@ -380,7 +380,7 @@ export class Database implements QueryExecutionContext {
     {},
     BoundQueryPhase<'all'>
   > {
-    return createQuery(table)[bindQueryRuntime](this) as QueryObject<
+    return createQuery(table)[bindQueryRuntime](this) as unknown as QueryObject<
       QueryTableInput<tableName, row, primaryKey>,
       Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
       row,
