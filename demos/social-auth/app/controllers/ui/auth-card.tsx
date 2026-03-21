@@ -2,7 +2,7 @@ import type { RemixNode } from 'remix/component'
 
 import * as styles from './styles.ts'
 
-export interface AuthCardProps {
+interface AuthCardProps {
   title: string
   subtitle?: string
   children: RemixNode

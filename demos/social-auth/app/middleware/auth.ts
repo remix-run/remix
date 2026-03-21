@@ -93,7 +93,7 @@ export function getReturnToQuery(url: URL): { returnTo?: string } {
   return returnTo ? { returnTo } : {}
 }
 
-export function getSafeReturnTo(returnTo: string | null): string | undefined {
+function getSafeReturnTo(returnTo: string | null): string | undefined {
   if (returnTo == null || returnTo === '') {
     return undefined
   }

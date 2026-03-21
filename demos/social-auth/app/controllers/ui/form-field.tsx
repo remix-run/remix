@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import * as styles from './styles.ts'
 
-export interface TextFieldProps {
+interface TextFieldProps {
   id: string
   name: string
   type: 'email' | 'password' | 'text'

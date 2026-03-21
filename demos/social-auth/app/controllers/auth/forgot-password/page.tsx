@@ -11,7 +11,7 @@ import * as styles from '../../ui/styles.ts'
 
 let { tokens } = designSystem
 
-export interface ForgotPasswordPageProps {
+interface ForgotPasswordPageProps {
   formAction: string
   loginHref: string
   error?: string
@@ -50,7 +50,7 @@ export function ForgotPasswordPage() {
   )
 }
 
-export interface ForgotPasswordSentPageProps {
+interface ForgotPasswordSentPageProps {
   email: string
   loginHref: string
   resetHref?: string

@@ -12,7 +12,7 @@ import type { AuthIdentity } from '../../utils/auth-session.ts'
 
 let { tokens } = designSystem
 
-export interface AccountPageProps {
+interface AccountPageProps {
   identity: AuthIdentity
   logoutAction: string
 }

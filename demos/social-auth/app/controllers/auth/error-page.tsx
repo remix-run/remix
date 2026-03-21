@@ -5,7 +5,7 @@ import { Document } from '../ui/document.tsx'
 import { Notice } from '../ui/notice.tsx'
 import * as styles from '../ui/styles.ts'
 
-export interface ErrorPageProps {
+interface ErrorPageProps {
   title: string
   message: RemixNode
   loginHref: string

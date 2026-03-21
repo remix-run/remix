@@ -2,7 +2,7 @@ import type { RemixNode } from 'remix/component'
 
 import * as styles from '../ui/styles.ts'
 
-export interface SocialProviderButtonProps {
+interface SocialProviderButtonProps {
   label: string
   icon: RemixNode
   href?: string
