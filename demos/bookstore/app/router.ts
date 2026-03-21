@@ -9,26 +9,26 @@ import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
 import { logger } from 'remix/logger-middleware'
-import type { SessionStorage } from 'remix/session'
 import { methodOverride } from 'remix/method-override-middleware'
+import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import adminController from './admin/controller.tsx'
-import accountController from './account/controller.tsx'
-import authController from './auth/controller.tsx'
-import booksController from './books.tsx'
-import cartController, { toggleCart } from './cart/controller.tsx'
-import checkoutController from './checkout.tsx'
+import accountController from './controllers/account/controller.tsx'
+import adminController from './controllers/admin/controller.tsx'
+import authController from './controllers/auth/controller.tsx'
+import booksController from './controllers/books/controller.tsx'
+import cartController, { toggleCart } from './controllers/cart/controller.tsx'
+import fragmentsController from './controllers/cart/fragments/controller.tsx'
+import checkoutController from './controllers/checkout/controller.tsx'
+import * as storefrontController from './controllers/storefront/controller.tsx'
+import { uploadsAction } from './controllers/uploads/controller.tsx'
 import { initializeBookstoreDatabase } from './data/setup.ts'
-import fragmentsController from './fragments.tsx'
-import * as marketingController from './marketing.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { sessionCookie, sessionStorage } from './middleware/session.ts'
+import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-import { uploadsAction } from './uploads.tsx'
-import { sessionCookie, sessionStorage } from './utils/session.ts'
-import { uploadHandler } from './utils/uploads.ts'
 
 await initializeBookstoreDatabase()
 
@@ -79,10 +79,10 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   router.map(routes.fragments, fragmentsController)
   router.post(routes.api.cartToggle, toggleCart)
 
-  router.map(routes.home, marketingController.home)
-  router.map(routes.about, marketingController.about)
-  router.map(routes.contact, marketingController.contact)
-  router.map(routes.search, marketingController.search)
+  router.map(routes.home, storefrontController.home)
+  router.map(routes.about, storefrontController.about)
+  router.map(routes.contact, storefrontController.contact)
+  router.map(routes.search, storefrontController.search)
 
   router.map(routes.books, booksController)
   router.map(routes.auth, authController)
