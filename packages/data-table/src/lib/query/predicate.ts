@@ -104,9 +104,9 @@ export function createPredicateColumnResolver(
 }
 
 export function normalizePredicateValues(
-  predicate: Predicate,
+  predicate: Predicate<string>,
   resolveColumn: (column: string) => ResolvedPredicateColumn,
-): Predicate {
+): Predicate<string> {
   if (predicate.type === 'comparison') {
     let column = resolveColumn(predicate.column)
 
@@ -151,15 +151,13 @@ export function normalizePredicateValues(
 
   return {
     ...predicate,
-    predicates: predicate.predicates.map((child: Predicate) =>
-      normalizePredicateValues(child, resolveColumn),
-    ),
+    predicates: predicate.predicates.map((child) => normalizePredicateValues(child, resolveColumn)),
   }
 }
 
 export function normalizeQueryWhereInput<column extends string>(
   input: WhereInput<column>,
   tables: AnyTable[],
-): Predicate {
+): Predicate<string> {
   return normalizePredicateValues(normalizeWhereInput(input), createPredicateColumnResolver(tables))
 }

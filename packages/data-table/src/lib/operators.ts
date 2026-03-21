@@ -293,7 +293,8 @@ export function normalizeWhereInput<column extends string>(
     return input
   }
 
-  let predicates = objectKeys(input).map((column) => eq(column, input[column])) as Predicate<column>[]
+  let predicates = Object.keys(input).map((key) => eq(key as column, input[key as column])) as
+    Predicate<column>[]
 
   return and(...predicates)
 }
@@ -423,8 +424,4 @@ function createComparisonPredicate<column extends string | ColumnReferenceLike>(
     value: normalizedValue,
     valueType: 'value',
   }
-}
-
-function objectKeys<value extends Record<string, unknown>>(input: value): Array<keyof value & string> {
-  return Object.keys(input) as Array<keyof value & string>
 }

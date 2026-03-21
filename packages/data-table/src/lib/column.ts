@@ -326,58 +326,6 @@ function retypeColumnBuilder<output>(builder: ColumnBuilder<unknown>): ColumnBui
   return builder as ColumnBuilder<output>
 }
 
-function createColumnNamespace(): ColumnNamespace {
-  return {
-    varchar(length: number) {
-      return createColumnBuilder<string>({ type: 'varchar', length })
-    },
-    text() {
-      return createColumnBuilder<string>({ type: 'text' })
-    },
-    integer() {
-      return createColumnBuilder<number>({ type: 'integer' })
-    },
-    bigint() {
-      return createColumnBuilder({ type: 'bigint' })
-    },
-    decimal(precision: number, scale: number) {
-      return createColumnBuilder<number>({ type: 'decimal', precision, scale })
-    },
-    boolean() {
-      return createColumnBuilder<boolean>({ type: 'boolean' })
-    },
-    uuid() {
-      return createColumnBuilder<string>({ type: 'uuid' })
-    },
-    date() {
-      return createColumnBuilder({ type: 'date' })
-    },
-    time(options?: { precision?: number; withTimezone?: boolean }) {
-      return createColumnBuilder({
-        type: 'time',
-        precision: options?.precision,
-        withTimezone: options?.withTimezone,
-      })
-    },
-    timestamp(options?: { precision?: number; withTimezone?: boolean }) {
-      return createColumnBuilder({
-        type: 'timestamp',
-        precision: options?.precision,
-        withTimezone: options?.withTimezone,
-      })
-    },
-    json() {
-      return createColumnBuilder({ type: 'json' })
-    },
-    binary(length?: number) {
-      return createColumnBuilder({ type: 'binary', length })
-    },
-    enum<values extends readonly string[]>(values: values) {
-      return createColumnBuilder<values[number]>({ type: 'enum', enumValues: [...values] })
-    },
-  }
-}
-
 /**
  * Chainable column builder namespace.
  * @example
@@ -387,4 +335,52 @@ function createColumnNamespace(): ColumnNamespace {
  * let email = c.varchar(255).notNull().unique('users_email_uq')
  * ```
  */
-export const column = createColumnNamespace()
+export const column: ColumnNamespace = {
+  varchar(length: number) {
+    return createColumnBuilder<string>({ type: 'varchar', length })
+  },
+  text() {
+    return createColumnBuilder<string>({ type: 'text' })
+  },
+  integer() {
+    return createColumnBuilder<number>({ type: 'integer' })
+  },
+  bigint() {
+    return createColumnBuilder({ type: 'bigint' })
+  },
+  decimal(precision: number, scale: number) {
+    return createColumnBuilder<number>({ type: 'decimal', precision, scale })
+  },
+  boolean() {
+    return createColumnBuilder<boolean>({ type: 'boolean' })
+  },
+  uuid() {
+    return createColumnBuilder<string>({ type: 'uuid' })
+  },
+  date() {
+    return createColumnBuilder({ type: 'date' })
+  },
+  time(options?: { precision?: number; withTimezone?: boolean }) {
+    return createColumnBuilder({
+      type: 'time',
+      precision: options?.precision,
+      withTimezone: options?.withTimezone,
+    })
+  },
+  timestamp(options?: { precision?: number; withTimezone?: boolean }) {
+    return createColumnBuilder({
+      type: 'timestamp',
+      precision: options?.precision,
+      withTimezone: options?.withTimezone,
+    })
+  },
+  json() {
+    return createColumnBuilder({ type: 'json' })
+  },
+  binary(length?: number) {
+    return createColumnBuilder({ type: 'binary', length })
+  },
+  enum<values extends readonly string[]>(values: values) {
+    return createColumnBuilder<values[number]>({ type: 'enum', enumValues: [...values] })
+  },
+}

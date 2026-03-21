@@ -19,10 +19,7 @@ export function createMigrationSchema(
   options?: { transaction?: TransactionToken },
 ): MigrationSchema {
   return {
-    async createTable<table extends AnyTable>(
-      table: table,
-      createOptions?: { ifNotExists?: boolean },
-    ) {
+    async createTable(table: AnyTable, createOptions?: { ifNotExists?: boolean }) {
       let operation = lowerTableForCreate(table)
       operation.ifNotExists = createOptions?.ifNotExists
       await emit(operation)

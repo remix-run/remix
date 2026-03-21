@@ -389,14 +389,6 @@ export class Database implements QueryExecutionContext {
     >
   }
 
-  #createTransactionDatabase(token: TransactionToken): Database {
-    return new Database(this.#adapter, {
-      now: this.#now,
-      token,
-      savepointCounter: this.#savepointCounter,
-    })
-  }
-
   create<table extends AnyTable>(
     table: table,
     values: Partial<TableRow<table>>,
@@ -667,7 +659,11 @@ export class Database implements QueryExecutionContext {
   ): Promise<result> {
     if (!this.#token) {
       let token = await this.#adapter.beginTransaction(options)
-      let tx = this.#createTransactionDatabase(token)
+      let tx = new Database(this.#adapter, {
+        now: this.#now,
+        token,
+        savepointCounter: this.#savepointCounter,
+      })
 
       try {
         let result = await callback(tx)

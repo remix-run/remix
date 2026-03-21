@@ -174,7 +174,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       return false
     }
 
-    return toBooleanExists(getFirstRecord(result)?.exists)
+    return toBooleanExists(normalizeRows(result)[0]?.exists)
   }
 
   /**
@@ -201,7 +201,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       return false
     }
 
-    return toBooleanExists(getFirstRecord(result)?.exists)
+    return toBooleanExists(normalizeRows(result)[0]?.exists)
   }
 
   /**
@@ -419,7 +419,7 @@ function normalizeRows(rows: MysqlQueryRows): Record<string, unknown>[] {
 }
 
 function normalizeHeader(result: unknown): MysqlQueryResultHeader {
-  if (!isRecord(result)) {
+  if (typeof result !== 'object' || result === null || !('affectedRows' in result)) {
     return {
       affectedRows: 0,
       insertId: undefined,
@@ -428,7 +428,7 @@ function normalizeHeader(result: unknown): MysqlQueryResultHeader {
 
   return {
     affectedRows: typeof result.affectedRows === 'number' ? result.affectedRows : 0,
-    insertId: result.insertId,
+    insertId: 'insertId' in result ? result.insertId : undefined,
   }
 }
 
@@ -456,16 +456,6 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 
     return row
   })
-}
-
-function getFirstRecord(rows: MysqlQueryRows): Record<string, unknown> | undefined {
-  let row = rows[0]
-
-  if (!isRecord(row)) {
-    return undefined
-  }
-
-  return copyRecord(row)
 }
 
 function normalizeInsertId(
@@ -501,8 +491,4 @@ function copyRecord(value: unknown): Record<string, unknown> {
   }
 
   return record
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

@@ -351,7 +351,7 @@ function normalizeWriteObject<table extends AnyTable>(
   let tableName = getTableName(table)
   let columns = getTableColumns(table)
 
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRowRecord(value)) {
     throw new DataTableValidationError(
       'Invalid value for table "' + tableName + '"',
       [{ message: 'Expected object' }],
@@ -387,7 +387,7 @@ function normalizeWriteObject<table extends AnyTable>(
       )
     }
 
-    output[key] = (value as Record<string, unknown>)[key]
+    output[key] = value[key]
   }
 
   return output
@@ -452,16 +452,15 @@ function assertSynchronousCallbackResult(
 }
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'then' in value &&
-    typeof (value as { then?: unknown }).then === 'function'
-  )
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) {
+    return false
+  }
+
+  return typeof Reflect.get(value, 'then') === 'function'
 }
 
 function normalizeReadObject(tableName: string, value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRowRecord(value)) {
     throw new DataTableValidationError(
       'Invalid afterRead callback result for table "' + tableName + '"',
       [{ message: 'Expected afterRead to return an object value' }],
@@ -475,7 +474,5 @@ function normalizeReadObject(tableName: string, value: unknown): Record<string, 
     )
   }
 
-  return {
-    ...(value as Record<string, unknown>),
-  }
+  return { ...value }
 }

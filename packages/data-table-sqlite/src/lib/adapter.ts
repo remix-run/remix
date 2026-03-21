@@ -322,7 +322,13 @@ function normalizeAffectedRowsForReader(
   kind: DataManipulationRequest['operation']['kind'],
   rows: Record<string, unknown>[],
 ): number | undefined {
-  if (isWriteOperationKind(kind)) {
+  if (
+    kind === 'insert' ||
+    kind === 'insertMany' ||
+    kind === 'update' ||
+    kind === 'delete' ||
+    kind === 'upsert'
+  ) {
     return rows.length
   }
 
@@ -385,16 +391,6 @@ function normalizeInsertIdForRun(
   }
 
   return result.lastInsertRowid
-}
-
-function isWriteOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return (
-    kind === 'insert' ||
-    kind === 'insertMany' ||
-    kind === 'update' ||
-    kind === 'delete' ||
-    kind === 'upsert'
-  )
 }
 
 function copyRecord(value: unknown): Record<string, unknown> {

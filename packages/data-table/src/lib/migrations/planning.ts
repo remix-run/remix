@@ -4,7 +4,6 @@ import type {
   MigrationDirection,
   MigrationJournalRow,
   MigrationRegistry,
-  MigrationStatus,
   MigrationStatusEntry,
 } from '../migrations.ts'
 
@@ -42,9 +41,7 @@ export function assertTargetOption(
     return
   }
 
-  let target = migrations.find((migration) => migration.id === to)
-
-  if (!target) {
+  if (!migrations.some((migration) => migration.id === to)) {
     throw new Error('Unknown migration target: ' + to)
   }
 }
@@ -125,22 +122,19 @@ export function createMigrationStatusEntries(
     let journalRow = journalMap.get(migration.id)
 
     if (!journalRow) {
-      let status: MigrationStatus = 'pending'
-
       return {
         id: migration.id,
         name: migration.name,
-        status,
+        status: 'pending',
       }
     }
 
     let checksum = normalizeChecksum(migration)
-    let status: MigrationStatus = checksum === journalRow.checksum ? 'applied' : 'drifted'
 
     return {
       id: migration.id,
       name: migration.name,
-      status,
+      status: checksum === journalRow.checksum ? 'applied' : 'drifted',
       appliedAt: journalRow.appliedAt,
       batch: journalRow.batch,
       checksum: journalRow.checksum,

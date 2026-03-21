@@ -254,7 +254,7 @@ export interface AlterTableBuilder {
  */
 export interface MigrationSchema {
   /** Creates a table in the migration schema. */
-  createTable<table extends AnyTable>(table: table, options?: CreateTableOptions): Promise<void>
+  createTable(table: AnyTable, options?: CreateTableOptions): Promise<void>
   /** Alters an existing table in the migration schema. */
   alterTable(
     table: TableInput,

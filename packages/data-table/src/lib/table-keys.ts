@@ -31,8 +31,7 @@ export function getPrimaryKeyObject<table extends AnyTable>(
 
   if (keys.length === 1) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      let key = keys[0]
-      return createPrimaryKeyObject(key, value)
+      return createPrimaryKeyObject(keys[0], value)
     }
   }
 
@@ -56,13 +55,11 @@ export function getPrimaryKeyObject<table extends AnyTable>(
   return output
 }
 
-function createPrimaryKeyObject<table extends AnyTable>(
-  key: keyof TableRow<table> & string,
-  value: unknown,
-): Partial<TableRow<table>> {
-  return {
-    [key]: value,
-  } as Partial<TableRow<table>>
+function createPrimaryKeyObject<
+  table extends AnyTable,
+  column extends keyof TableRow<table> & string,
+>(key: column, value: unknown): Partial<TableRow<table>> {
+  return { [key]: value } as unknown as Partial<TableRow<table>>
 }
 
 /**

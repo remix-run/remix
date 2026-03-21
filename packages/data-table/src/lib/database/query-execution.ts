@@ -18,8 +18,7 @@ import { normalizeWhereInput } from '../operators.ts'
 import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
-import { getTableName } from '../table.ts'
-import { getPrimaryKeyObject } from '../table-keys.ts'
+import { getTableName, getTablePrimaryKey } from '../table.ts'
 
 import { executeOperation, type QueryExecutionContext } from './execution-context.ts'
 import {
@@ -45,78 +44,91 @@ export async function executeQuery<input extends AnyQuery>(
   input: input,
 ): Promise<QueryExecutionResult<input>> {
   let snapshot = input[querySnapshot]()
+  let result: unknown
 
   switch (snapshot.plan.kind) {
     case 'all':
-      return (await executeAll(
+      result = await executeAll(
         database,
         snapshot.table,
         snapshot.state,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'first':
-      return (await executeFirst(
+      result = await executeFirst(
         database,
         snapshot.table,
         snapshot.state,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'find':
-      return (await executeFind(
+      result = await executeFind(
         database,
         snapshot.table,
         snapshot.state,
         snapshot.plan.value,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'count':
-      return (await executeCount(
+      result = await executeCount(
         database,
         snapshot.table,
         snapshot.state,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'exists':
-      return (await executeExists(
+      result = await executeExists(
         database,
         snapshot.table,
         snapshot.state,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'insert':
-      return (await executeInsert(
+      result = await executeInsert(
         database,
         snapshot.table,
         expectRecord(snapshot.plan.values, 'Invalid insert() values'),
         snapshot.plan.options,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'insertMany':
-      return (await executeInsertMany(
+      result = await executeInsertMany(
         database,
         snapshot.table,
         expectRecordArray(snapshot.plan.values, 'Invalid insertMany() values'),
         snapshot.plan.options,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'update':
-      return (await executeUpdate(
+      result = await executeUpdate(
         database,
         snapshot.table,
         snapshot.state,
         expectRecord(snapshot.plan.changes, 'Invalid update() changes'),
         snapshot.plan.options,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'delete':
-      return (await executeDelete(
+      result = await executeDelete(
         database,
         snapshot.table,
         snapshot.state,
         snapshot.plan.options,
-      )) as QueryExecutionResult<input>
+      )
+      break
     case 'upsert':
-      return (await executeUpsert(
+      result = await executeUpsert(
         database,
         snapshot.table,
         expectRecord(snapshot.plan.values, 'Invalid upsert() values'),
         snapshot.plan.options,
-      )) as QueryExecutionResult<input>
+      )
+      break
     default:
       throw new DataTableQueryError('Unknown query execution mode')
   }
+
+  return result as QueryExecutionResult<input>
 }
 
 export async function loadRowsWithRelationsForQuery(
@@ -172,9 +184,7 @@ async function executeFind(
   value: unknown,
 ): Promise<Record<string, unknown> | null> {
   let scopedState = cloneQueryState(state)
-  scopedState.where.push(
-    normalizeWhereInput(getPrimaryKeyObject(table, value as never) as Record<string, unknown>),
-  )
+  scopedState.where.push(normalizeWhereInput(getFindWhereObject(table, value)))
 
   return executeFirst(database, table, scopedState)
 }
@@ -621,21 +631,15 @@ async function executeScopedWriteOperation(
     let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
     if (!primaryKeyPredicate) {
-      return createEmptyWriteResult(returning)
+      return {
+        affectedRows: 0,
+        insertId: undefined,
+        rows: returning ? [] : undefined,
+      }
     }
 
     return tx[executeOperation](createOperation([primaryKeyPredicate]))
   })
-}
-
-function createEmptyWriteResult(
-  returning: ReturningInput<Record<string, unknown>> | undefined,
-): DataManipulationResult {
-  return {
-    affectedRows: 0,
-    insertId: undefined,
-    rows: returning ? [] : undefined,
-  }
 }
 
 function expectRecord(value: unknown, errorMessage: string): Record<string, unknown> {
@@ -678,4 +682,31 @@ function getNumberField(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function getFindWhereObject(table: AnyTable, value: unknown): Record<string, unknown> {
+  let primaryKey = getTablePrimaryKey(table)
+
+  if (primaryKey.length === 1 && !isRecord(value)) {
+    return { [primaryKey[0]]: value }
+  }
+
+  if (!isRecord(value)) {
+    throw new DataTableQueryError('Composite primary keys require an object value')
+  }
+
+  let tableName = getTableName(table)
+  let output: Record<string, unknown> = {}
+
+  for (let column of primaryKey) {
+    if (!(column in value)) {
+      throw new DataTableQueryError(
+        'Missing key "' + column + '" for primary key lookup on "' + tableName + '"',
+      )
+    }
+
+    output[column] = value[column]
+  }
+
+  return output
 }

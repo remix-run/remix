@@ -3,11 +3,7 @@ import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
 export function normalizeChecksum(migration: MigrationDescriptor): string {
-  if (migration.checksum) {
-    return migration.checksum
-  }
-
-  return migration.id + ':' + migration.name
+  return migration.checksum ?? migration.id + ':' + migration.name
 }
 
 export async function ensureMigrationJournal(
@@ -117,6 +113,5 @@ export function getBatch(rows: MigrationJournalRow[]): number {
     return 1
   }
 
-  let max = Math.max(...rows.map((row) => row.batch))
-  return max + 1
+  return Math.max(...rows.map((row) => row.batch)) + 1
 }

@@ -16,18 +16,7 @@ export type QueryState = {
   with: Record<string, AnyRelation>
 }
 
-export type QueryStatePatch = Partial<{
-  select: '*' | SelectColumn[]
-  distinct: boolean
-  joins: JoinClause[]
-  where: Predicate<string>[]
-  groupBy: string[]
-  having: Predicate<string>[]
-  orderBy: OrderByClause[]
-  limit: number
-  offset: number
-  with: Record<string, AnyRelation>
-}>
+export type QueryStatePatch = Partial<QueryState>
 
 export function createInitialQueryState(): QueryState {
   return {

@@ -146,7 +146,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     let relation = quoteTableRef(table)
     let client = this.#resolveClient(transaction)
     let result = await client.query('select to_regclass($1) is not null as "exists"', [relation])
-    return toBooleanExists(getFirstRecord(result.rows)?.exists)
+    return toBooleanExists(normalizeRows(result.rows)[0]?.exists)
   }
 
   /**
@@ -167,7 +167,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       'select exists (select 1 from pg_attribute where attrelid = to_regclass($1) and attname = $2 and attnum > 0 and not attisdropped) as "exists"',
       [relation, column],
     )
-    return toBooleanExists(getFirstRecord(result.rows)?.exists)
+    return toBooleanExists(normalizeRows(result.rows)[0]?.exists)
   }
 
   /**
@@ -456,16 +456,6 @@ function toBooleanExists(value: unknown): boolean {
   return false
 }
 
-function getFirstRecord(rows: unknown[]): Record<string, unknown> | undefined {
-  let row = rows[0]
-
-  if (!isRecord(row)) {
-    return undefined
-  }
-
-  return copyRecord(row)
-}
-
 function copyRecord(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null) {
     return {}
@@ -478,10 +468,6 @@ function copyRecord(value: unknown): Record<string, unknown> {
   }
 
   return record
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function hasReleaseMethod(

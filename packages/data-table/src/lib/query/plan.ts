@@ -1,10 +1,4 @@
-import type {
-  PrimaryKeyInputForRow,
-  ReturningInput,
-  WriteResult,
-  WriteRowResult,
-  WriteRowsResult,
-} from '../database.ts'
+import type { PrimaryKeyInputForRow, ReturningInput } from '../database.ts'
 
 export type InsertQueryOptions<row extends Record<string, unknown>> = {
   returning?: ReturningInput<row>
@@ -64,6 +58,13 @@ export type QueryPlan<
   primaryKey extends readonly string[],
   mode extends QueryExecutionMode = QueryExecutionMode,
 > = QueryPlanMap<row, primaryKey>[mode]
+
+export function createInitialQueryPlan<
+  row extends Record<string, unknown>,
+  primaryKey extends readonly string[],
+>(): QueryPlan<row, primaryKey, 'all'> {
+  return { kind: 'all' }
+}
 
 function clonePrimaryKeyValue(value: unknown): unknown {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {

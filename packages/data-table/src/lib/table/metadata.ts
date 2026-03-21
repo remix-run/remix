@@ -194,14 +194,14 @@ export type TableReference<table extends AnyTable = AnyTable> = {
  * @returns Table metadata snapshot.
  */
 export function getTableReference<table extends AnyTable>(table: table): TableReference<table> {
-  let metadata = table[tableMetadataKey]
+  let metadata = getTableMetadata(table)
 
   return {
     kind: 'table',
-    name: metadata.name as TableName<table>,
-    columns: metadata.columns as TableColumns<table>,
-    primaryKey: metadata.primaryKey as TablePrimaryKey<table>,
-    timestamps: metadata.timestamps as TableTimestamps<table>,
+    name: metadata.name,
+    columns: metadata.columns,
+    primaryKey: metadata.primaryKey,
+    timestamps: metadata.timestamps,
   }
 }
 
@@ -211,7 +211,7 @@ export function getTableReference<table extends AnyTable>(table: table): TableRe
  * @returns Table SQL name.
  */
 export function getTableName<table extends AnyTable>(table: table): TableName<table> {
-  return table[tableMetadataKey].name as TableName<table>
+  return getTableMetadata(table).name
 }
 
 /**
@@ -220,7 +220,7 @@ export function getTableName<table extends AnyTable>(table: table): TableName<ta
  * @returns Table column builder map.
  */
 export function getTableColumns<table extends AnyTable>(table: table): TableColumns<table> {
-  return table[tableMetadataKey].columns as TableColumns<table>
+  return getTableMetadata(table).columns
 }
 
 /**
@@ -230,12 +230,8 @@ export function getTableColumns<table extends AnyTable>(table: table): TableColu
  */
 export function getTableColumnDefinitions<table extends AnyTable>(
   table: table,
-): {
-  [column in keyof TableColumns<table> & string]: ColumnDefinition
-} {
-  return table[tableMetadataKey].columnDefinitions as {
-    [column in keyof TableColumns<table> & string]: ColumnDefinition
-  }
+): { [column in keyof TableColumns<table> & string]: ColumnDefinition } {
+  return getTableMetadata(table).columnDefinitions
 }
 
 /**
@@ -246,7 +242,7 @@ export function getTableColumnDefinitions<table extends AnyTable>(
 export function getTableValidator<table extends AnyTable>(
   table: table,
 ): TableValidate<TableRow<table>> | undefined {
-  return table[tableMetadataKey].validate as TableValidate<TableRow<table>> | undefined
+  return getTableMetadata(table).validate
 }
 
 /**
@@ -257,7 +253,7 @@ export function getTableValidator<table extends AnyTable>(
 export function getTableBeforeWrite<table extends AnyTable>(
   table: table,
 ): TableBeforeWrite<TableRow<table>> | undefined {
-  return table[tableMetadataKey].beforeWrite as TableBeforeWrite<TableRow<table>> | undefined
+  return getTableMetadata(table).beforeWrite
 }
 
 /**
@@ -268,7 +264,7 @@ export function getTableBeforeWrite<table extends AnyTable>(
 export function getTableAfterWrite<table extends AnyTable>(
   table: table,
 ): TableAfterWrite<TableRow<table>> | undefined {
-  return table[tableMetadataKey].afterWrite as TableAfterWrite<TableRow<table>> | undefined
+  return getTableMetadata(table).afterWrite
 }
 
 /**
@@ -279,7 +275,7 @@ export function getTableAfterWrite<table extends AnyTable>(
 export function getTableBeforeDelete<table extends AnyTable>(
   table: table,
 ): TableBeforeDelete | undefined {
-  return table[tableMetadataKey].beforeDelete as TableBeforeDelete | undefined
+  return getTableMetadata(table).beforeDelete
 }
 
 /**
@@ -290,7 +286,7 @@ export function getTableBeforeDelete<table extends AnyTable>(
 export function getTableAfterDelete<table extends AnyTable>(
   table: table,
 ): TableAfterDelete | undefined {
-  return table[tableMetadataKey].afterDelete as TableAfterDelete | undefined
+  return getTableMetadata(table).afterDelete
 }
 
 /**
@@ -302,7 +298,7 @@ export function getTableAfterDelete<table extends AnyTable>(
 export function getTableAfterRead<table extends AnyTable>(
   table: table,
 ): TableAfterRead<TableRow<table>> | undefined {
-  return table[tableMetadataKey].afterRead as TableAfterRead<TableRow<table>> | undefined
+  return getTableMetadata(table).afterRead
 }
 
 /**
@@ -311,7 +307,7 @@ export function getTableAfterRead<table extends AnyTable>(
  * @returns Primary key columns.
  */
 export function getTablePrimaryKey<table extends AnyTable>(table: table): TablePrimaryKey<table> {
-  return table[tableMetadataKey].primaryKey as TablePrimaryKey<table>
+  return getTableMetadata(table).primaryKey
 }
 
 /**
@@ -320,5 +316,9 @@ export function getTablePrimaryKey<table extends AnyTable>(table: table): TableP
  * @returns Timestamp configuration or `null`.
  */
 export function getTableTimestamps<table extends AnyTable>(table: table): TableTimestamps<table> {
-  return table[tableMetadataKey].timestamps as TableTimestamps<table>
+  return getTableMetadata(table).timestamps
+}
+
+function getTableMetadata<table extends AnyTable>(table: table): any {
+  return table[tableMetadataKey] as any
 }

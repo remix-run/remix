@@ -1,5 +1,5 @@
 import type { QueryExecutionMode, QueryPlan } from './plan.ts'
-import type { AnyQuerySource, QuerySourcePrimaryKey, QueryTableInput } from './types.ts'
+import type { AnyQuerySource, QuerySourcePrimaryKey } from './types.ts'
 import { cloneQueryState, type QueryState } from './state.ts'
 import { cloneQueryPlan } from './plan.ts'
 
@@ -25,6 +25,6 @@ export function createQuerySnapshot<
   return {
     table,
     state: cloneQueryState(state),
-    plan: cloneQueryPlan(plan) as QueryPlan<row, QuerySourcePrimaryKey<source>, mode>,
+    plan: cloneQueryPlan(plan),
   }
 }

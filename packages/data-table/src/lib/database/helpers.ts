@@ -2,11 +2,7 @@ import { DataTableQueryError } from '../errors.ts'
 import type {
   OrderByInput,
   OrderByTuple,
-  QueryColumnName,
-  QueryColumns,
-  QueryColumnTypeMap,
   QueryForTable,
-  QueryTableInput,
   SingleTableWhere,
   TableColumnName,
   WriteResult,
@@ -16,30 +12,13 @@ import type {
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import { query as createQuery } from '../query.ts'
-import type { AnyTable, TableName, TablePrimaryKey, TableRow, TableRowWith } from '../table.ts'
+import type { AnyTable, TableRow, TableRowWith } from '../table.ts'
 import type { PrimaryKeyInput } from '../table-keys.ts'
 import { getTableName, getTablePrimaryKey } from '../table.ts'
 import { getPrimaryKeyObject } from '../table-keys.ts'
 
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
-
-function getPrimaryKeyColumns<table extends AnyTable>(table: table): TableColumnName<table>[] {
-  return [...getTablePrimaryKey(table)] as TableColumnName<table>[]
-}
-
-function getRowValue<table extends AnyTable>(
-  row: Record<string, unknown>,
-  key: TableColumnName<table>,
-): TableRow<table>[TableColumnName<table>] | undefined {
-  return row[key] as TableRow<table>[TableColumnName<table>] | undefined
-}
-
-function isOrderByTupleArray<table extends AnyTable>(
-  orderBy: OrderByInput<table>,
-): orderBy is OrderByTuple<table>[] {
-  return Array.isArray(orderBy[0])
-}
 
 export function getPrimaryKeyWhere<table extends AnyTable>(
   table: table,
@@ -52,10 +31,10 @@ export function getPrimaryKeyWhereFromRow<table extends AnyTable>(
   table: table,
   row: Record<string, unknown>,
 ): SingleTableWhere<table> {
-  let where: Partial<TableRow<table>> = {}
+  let where: Partial<Record<TableColumnName<table>, unknown>> = {}
 
-  for (let key of getPrimaryKeyColumns(table)) {
-    where[key] = getRowValue<table>(row, key)
+  for (let key of getTablePrimaryKey(table) as TableColumnName<table>[]) {
+    where[key] = row[key]
   }
 
   return where
@@ -66,25 +45,25 @@ export function resolveCreateRowWhere<table extends AnyTable>(
   values: Partial<TableRow<table>>,
   insertId: unknown,
 ): SingleTableWhere<table> {
-  let primaryKey = getPrimaryKeyColumns(table)
+  let primaryKey = getTablePrimaryKey(table) as TableColumnName<table>[]
 
   if (primaryKey.length === 1) {
     let key = primaryKey[0]
 
     if (Object.prototype.hasOwnProperty.call(values, key)) {
-      let where: Partial<TableRow<table>> = {}
+      let where: Partial<Record<TableColumnName<table>, unknown>> = {}
       where[key] = values[key]
       return where
     }
 
     if (insertId !== undefined) {
-      let where: Partial<TableRow<table>> = {}
-      where[key] = insertId as TableRow<table>[typeof key]
+      let where: Partial<Record<TableColumnName<table>, unknown>> = {}
+      where[key] = insertId
       return where
     }
   }
 
-  let where: Partial<TableRow<table>> = {}
+  let where: Partial<Record<TableColumnName<table>, unknown>> = {}
 
   for (let key of primaryKey) {
     if (!Object.prototype.hasOwnProperty.call(values, key)) {
@@ -124,12 +103,13 @@ export function createScopedQuery<table extends AnyTable>(
     scopedQuery = scopedQuery.where(options.where)
   }
 
-  let orderBy = options?.orderBy
-
-  if (orderBy) {
-    let clauses = isOrderByTupleArray(orderBy) ? orderBy : [orderBy]
-
-    for (let [column, direction] of clauses) {
+  if (options?.orderBy) {
+    if (Array.isArray(options.orderBy[0])) {
+      for (let [column, direction] of options.orderBy as OrderByTuple<table>[]) {
+        scopedQuery = scopedQuery.orderBy(column, direction)
+      }
+    } else {
+      let [column, direction] = options.orderBy as OrderByTuple<table>
       scopedQuery = scopedQuery.orderBy(column, direction)
     }
   }
@@ -197,19 +177,14 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     offset?: number
   },
 ): Promise<Record<string, unknown>[]> {
-  let query = createQuery(
-    table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>,
-  )
+  let query = createQuery(table)
 
   for (let predicate of state.where) {
-    query = query.where(predicate as Predicate<QueryColumnName<table>>)
+    query = query.where(predicate)
   }
 
   for (let clause of state.orderBy) {
-    query = query.orderBy(
-      clause.column as QueryColumns<QueryColumnTypeMap<table>>,
-      clause.direction,
-    )
+    query = query.orderBy(clause.column, clause.direction)
   }
 
   if (state.limit !== undefined) {
@@ -220,10 +195,7 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     query = query.offset(state.offset)
   }
 
-  let rows = await loadRowsWithRelationsForQuery(
-    database,
-    query.select(...getPrimaryKeyColumns(table)),
-  )
+  let rows = await loadRowsWithRelationsForQuery(database, query.select(...getTablePrimaryKey(table)))
 
   return rows
 }
@@ -232,7 +204,7 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   table: table,
   keyObjects: Record<string, unknown>[],
 ): Predicate<TableColumnName<table>> | undefined {
-  let primaryKey = getPrimaryKeyColumns(table)
+  let primaryKey = getTablePrimaryKey(table) as TableColumnName<table>[]
 
   if (keyObjects.length === 0) {
     return undefined
