@@ -1,8 +1,11 @@
+import { html } from 'remix/html-template'
 import { detectMimeType } from 'remix/mime'
 
-import { renderBreadcrumb } from './breadcrumb.ts'
 import type { PackageFile } from '../../utils/npm.ts'
-import { html, render, formatBytes, icons } from '../ui/render.ts'
+import { render } from '../render.ts'
+import { icons } from '../ui/icons.ts'
+import { renderBreadcrumb } from './breadcrumb.ts'
+import { formatBytes } from './format-bytes.ts'
 
 export function renderDirectoryListing(
   packageName: string,

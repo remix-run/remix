@@ -1,4 +1,6 @@
-import { html, render } from '../ui/render.ts'
+import { html } from 'remix/html-template'
+
+import { render } from '../render.ts'
 
 export function renderError(title: string, message: string): Response {
   return render(

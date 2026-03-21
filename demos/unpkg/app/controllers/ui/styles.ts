@@ -1,9 +1,4 @@
-import { html, type SafeHtml } from 'remix/html-template'
-import { createHtmlResponse } from 'remix/response/html'
-
-export { html }
-
-const styles = /* css */ `
+export let styles = /* css */ `
   * {
     box-sizing: border-box;
   }
@@ -13,7 +8,6 @@ const styles = /* css */ `
     line-height: 1.5;
     color: #24292f;
     background: #fff;
-    margin: 0;
     padding: 20px;
     max-width: 1000px;
     margin: 0 auto;
@@ -178,7 +172,7 @@ const styles = /* css */ `
     margin: 0;
     padding: 16px;
     overflow-x: auto;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     font-size: 0.8125rem;
     line-height: 1.45;
     background: #f6f8fa;
@@ -215,7 +209,7 @@ const styles = /* css */ `
   }
 
   .home-content code {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     background: #f6f8fa;
     padding: 0.2em 0.4em;
     border-radius: 3px;
@@ -227,7 +221,7 @@ const styles = /* css */ `
   }
 
   .examples h2 {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 0.5rem;
@@ -244,62 +238,9 @@ const styles = /* css */ `
   }
 
   .package-info {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.875rem;
     color: #57606a;
     margin-bottom: 1rem;
   }
 `
-
-export function layout(title: string, content: SafeHtml): SafeHtml {
-  return html`
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${title}</title>
-        <style>
-          ${styles}
-        </style>
-      </head>
-      <body>
-        ${content}
-      </body>
-    </html>
-  `
-}
-
-export function render(title: string, content: SafeHtml, init?: ResponseInit): Response {
-  return createHtmlResponse(layout(title, content), init)
-}
-
-export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '-'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' kB'
-  return (bytes / 1024 / 1024).toFixed(1) + ' MB'
-}
-
-// Minimal SVG icons
-export let icons = {
-  file: html`<svg
-    class="icon-file"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="#57606a"
-    stroke-width="1.5"
-  >
-    <path d="M3 1.5h6.5L13 5v9.5H3z" />
-    <path d="M9.5 1.5V5H13" />
-  </svg>`,
-
-  directory: html`<svg
-    class="icon-dir"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="#57606a"
-    stroke-width="1.5"
-  >
-    <path d="M1.5 3.5h4l1.5 2h7.5v8h-13z" />
-  </svg>`,
-}

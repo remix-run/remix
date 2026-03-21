@@ -1,6 +1,6 @@
 # UNPKG Demo
 
-A lo-fi clone of [unpkg.com](https://unpkg.com) that lets you browse the contents of any npm package. This demo showcases tarball parsing, filesystem caching, HTML templating, and clean URL routing with catch-all patterns.
+A lo-fi clone of [unpkg.com](https://unpkg.com) that lets you browse the contents of any npm package. This demo showcases tarball parsing, filesystem caching, HTML templating, and clean URL routing with catch-all patterns while following the same controller-first app layout used by the other Remix demos.
 
 ## Running the Demo
 
@@ -16,8 +16,9 @@ Semver ranges are supported (via the [semver](https://www.npmjs.com/package/semv
 
 ## Code Highlights
 
-- [`app/routes.ts`](app/routes.ts) uses a single `/*path` route to handle all package URLs. This one pattern handles package names, versions, scoped packages, and file paths.
-- [`app/utils/npm.ts`](app/utils/npm.ts) fetches package tarballs from npm, decompresses them with `node:zlib`, and parses them using `@remix-run/tar-parser`. The `parsePackagePath()` function handles the tricky parsing of URLs like `/@remix-run/cookie@1.0.0/src/index.ts`.
-- Also in [`app/utils/npm.ts`](app/utils/npm.ts), `resolveVersion()` handles dist-tags like `latest`, exact versions, partial versions (e.g., `18` resolves to `18.3.1`), and semver ranges (e.g., `^18.2` or `~1.0.0`).
-- [`app/utils/cache.ts`](app/utils/cache.ts) caches decompressed tarballs to the temp directory using `@remix-run/file-storage`. This avoids re-downloading packages on repeated requests.
-- [`app/controllers/ui/render.ts`](app/controllers/ui/render.ts) uses the `html` template tag from `@remix-run/html-template` for safe HTML generation with automatic XSS escaping.
+- [`app/router.ts`](app/router.ts) maps the home page and package browser as separate controller features, matching the layout conventions used by the other Remix demos.
+- [`app/controllers/home/controller.ts`](app/controllers/home/controller.ts) keeps the root route thin and delegates the page markup to its own feature folder.
+- [`app/controllers/package-browser/controller.ts`](app/controllers/package-browser/controller.ts) handles package resolution, redirects for semver ranges and tags, and the directory-versus-file response branching.
+- [`app/utils/npm.ts`](app/utils/npm.ts) fetches package tarballs from npm, decompresses them with `node:zlib`, and parses them using `@remix-run/tar-parser`. The `parsePackagePath()` function handles tricky URLs like `/@remix-run/cookie@1.0.0/src/index.ts`.
+- [`app/utils/tarball-cache.ts`](app/utils/tarball-cache.ts) stores decompressed tarballs under the demo’s root `tmp/` directory using `remix/file-storage/fs`, which keeps runtime scratch data inside the demo itself.
+- [`app/controllers/render.ts`](app/controllers/render.ts) and [`app/controllers/ui/document.ts`](app/controllers/ui/document.ts) keep the shared document shell separate from feature controllers.
