@@ -1,6 +1,3 @@
 /public/assets/
 /tmp/
 /db/*.sqlite
-/db/*.sqlite-journal
-/db/*.sqlite-shm
-/db/*.sqlite-wal
