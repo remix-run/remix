@@ -192,7 +192,10 @@ function getDatabaseDirectoryUrl(): URL {
   return new URL(directory, import.meta.url)
 }
 
-function registerTestDatabaseCleanup(databaseFilePath: string, sqlite: BetterSqlite3.Database): void {
+function registerTestDatabaseCleanup(
+  databaseFilePath: string,
+  sqlite: BetterSqlite3.Database,
+): void {
   if (process.env.NODE_ENV !== 'test') {
     return
   }
