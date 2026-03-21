@@ -6,7 +6,7 @@ import { Document } from '../../ui/document.tsx'
 import { Notice } from '../../ui/notice.tsx'
 import * as styles from '../../ui/styles.ts'
 
-export interface ResetPasswordPageProps {
+interface ResetPasswordPageProps {
   formAction: string
   loginHref: string
   error?: string
@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
   )
 }
 
-export interface ResetPasswordCompletePageProps {
+interface ResetPasswordCompletePageProps {
   loginHref: string
 }
 

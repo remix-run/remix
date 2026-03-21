@@ -2,7 +2,7 @@ import type { RemixNode } from 'remix/component'
 
 import * as styles from './styles.ts'
 
-export interface DocumentProps {
+interface DocumentProps {
   title: string
   children: RemixNode
 }

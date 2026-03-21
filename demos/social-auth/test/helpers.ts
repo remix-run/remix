@@ -26,7 +26,7 @@ export async function createTestRouter(
   })
 }
 
-export function getCookie(response: Response, name: string): string | null {
+function getCookie(response: Response, name: string): string | null {
   for (let header of response.headers.getSetCookie()) {
     let setCookie = new SetCookie(header)
     if (setCookie.name === name) {

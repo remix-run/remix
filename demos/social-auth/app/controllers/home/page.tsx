@@ -8,7 +8,7 @@ import * as styles from '../ui/styles.ts'
 import { ExternalAuthSection } from './external-auth-section.tsx'
 import { LoginFooter } from './footer.tsx'
 
-export interface LoginPageProps {
+interface LoginPageProps {
   formAction: string
   signupHref: string
   forgotPasswordHref: string

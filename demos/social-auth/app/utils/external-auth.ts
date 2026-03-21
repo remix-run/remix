@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
 
-export type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
+type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
   ? OAuthProvider<GoogleAuthProfile, 'google'>
   : name extends 'github'
     ? OAuthProvider<GitHubAuthProfile, 'github'>
@@ -31,7 +31,7 @@ export interface ExternalProviderLink {
   disabledReason?: string
 }
 
-export interface ProviderStatus {
+interface ProviderStatus {
   enabled: boolean
   missingEnvVars: string[]
 }

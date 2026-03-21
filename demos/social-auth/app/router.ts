@@ -19,7 +19,7 @@ import { externalProviderRegistry, type ExternalProviderRegistry } from './utils
 
 await initializeSocialAuthDatabase()
 
-export type RootMiddleware = [
+type RootMiddleware = [
   ReturnType<typeof staticFiles>,
   ReturnType<typeof formData>,
   ReturnType<typeof session>,

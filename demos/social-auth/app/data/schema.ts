@@ -107,7 +107,6 @@ export let passwordResetTokens = table({
 
 export type User = TableRow<typeof users>
 export type AuthAccount = TableRow<typeof authAccounts>
-export type PasswordResetToken = TableRow<typeof passwordResetTokens>
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()

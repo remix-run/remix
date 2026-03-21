@@ -6,7 +6,7 @@ import { Document } from '../../ui/document.tsx'
 import { Notice } from '../../ui/notice.tsx'
 import * as styles from '../../ui/styles.ts'
 
-export interface SignupPageProps {
+interface SignupPageProps {
   formAction: string
   loginHref: string
   error?: string
