@@ -313,31 +313,6 @@ export function or<column extends string>(...predicates: Predicate<column>[]): P
 }
 
 /**
- * Returns `true` when a value is a normalized predicate object.
- * @param value Value to inspect.
- * @returns Whether the value is a predicate.
- */
-export function isPredicate<column extends string = string>(
-  value: unknown,
-): value is Predicate<column> {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  if (!('type' in value)) {
-    return false
-  }
-
-  let input = value as { type?: unknown }
-  return (
-    input.type === 'comparison' ||
-    input.type === 'between' ||
-    input.type === 'null' ||
-    input.type === 'logical'
-  )
-}
-
-/**
  * Normalizes object shorthand into a predicate tree.
  * @param input Predicate object or shorthand where map.
  * @returns A normalized predicate.
@@ -345,7 +320,15 @@ export function isPredicate<column extends string = string>(
 export function normalizeWhereInput<column extends string>(
   input: WhereInput<column>,
 ): Predicate<column> {
-  if (isPredicate(input)) {
+  if (
+    typeof input === 'object' &&
+    input !== null &&
+    'type' in input &&
+    (input.type === 'comparison' ||
+      input.type === 'between' ||
+      input.type === 'null' ||
+      input.type === 'logical')
+  ) {
     return input
   }
 
@@ -353,37 +336,6 @@ export function normalizeWhereInput<column extends string>(
   let predicates = keys.map((column) => eq(column, input[column]) as Predicate<column>)
 
   return and(...predicates)
-}
-
-/**
- * Collects referenced columns from a predicate tree.
- * @param predicate Predicate to inspect.
- * @returns Referenced column names.
- */
-export function getPredicateColumns(predicate: Predicate): string[] {
-  if (predicate.type === 'comparison') {
-    if (predicate.valueType === 'column') {
-      return [predicate.column, predicate.value]
-    }
-
-    return [predicate.column]
-  }
-
-  if (predicate.type === 'between') {
-    return [predicate.column]
-  }
-
-  if (predicate.type === 'null') {
-    return [predicate.column]
-  }
-
-  let columns: string[] = []
-
-  for (let child of predicate.predicates) {
-    columns.push(...getPredicateColumns(child))
-  }
-
-  return columns
 }
 
 function isQualifiedColumnReference(value: unknown): value is QualifiedColumnReference {

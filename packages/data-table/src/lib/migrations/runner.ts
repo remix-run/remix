@@ -1,5 +1,4 @@
-import { createDatabase, createDatabaseWithTransaction } from '../database.ts'
-import type { Database } from '../database.ts'
+import { createDatabase, Database } from '../database.ts'
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import type { SqlStatement } from '../sql.ts'
 import type {
@@ -25,7 +24,6 @@ import {
   loadJournalRows,
   normalizeChecksum,
 } from './journal-store.ts'
-import { resolveMigrations } from './registry.ts'
 import { createMigrationSchema } from './schema-api.ts'
 
 type RunMigrationsInput = {
@@ -34,6 +32,14 @@ type RunMigrationsInput = {
   journalTable: string
   direction: MigrationDirection
   options: MigrateOptions
+}
+
+function listMigrations(
+  migrations: MigrationDescriptor[] | MigrationRegistry,
+): MigrationDescriptor[] {
+  return Array.isArray(migrations)
+    ? [...migrations].sort((left, right) => left.id.localeCompare(right.id))
+    : migrations.list()
 }
 
 function assertStepOption(step: number | undefined): void {
@@ -216,7 +222,10 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
       let db = dryRun
         ? createDryRunDatabase(adapter)
         : token
-          ? createDatabaseWithTransaction(adapter, token)
+          ? new Database(adapter, {
+              token,
+              savepointCounter: { value: 0 },
+            })
           : createDatabase(adapter)
 
       let schema = createMigrationSchema(
@@ -322,7 +331,7 @@ export function createMigrationRunner(
     async up(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
       return runMigrations({
         adapter,
-        migrations: resolveMigrations(migrations),
+        migrations: listMigrations(migrations),
         journalTable,
         direction: 'up',
         options: runOptions,
@@ -331,7 +340,7 @@ export function createMigrationRunner(
     async down(runOptions: MigrateOptions = {}): Promise<MigrateResult> {
       return runMigrations({
         adapter,
-        migrations: resolveMigrations(migrations),
+        migrations: listMigrations(migrations),
         journalTable,
         direction: 'down',
         options: runOptions,
@@ -342,7 +351,7 @@ export function createMigrationRunner(
 
       let journal = await loadJournalRows(adapter, journalTable)
       let journalMap = new Map(journal.map((row) => [row.id, row]))
-      let sortedMigrations = resolveMigrations(migrations)
+      let sortedMigrations = listMigrations(migrations)
 
       return sortedMigrations.map((migration) => {
         let journalRow = journalMap.get(migration.id)

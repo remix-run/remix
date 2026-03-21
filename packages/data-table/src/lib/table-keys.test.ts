@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { column } from './column.ts'
 import { table } from './table.ts'
-import { getCompositeKey, getPrimaryKeyObject, stableSerialize } from './table-keys.ts'
+import { getCompositeKey, getPrimaryKeyObject } from './table-keys.ts'
 
 describe('table keys', () => {
   it('normalizes scalar primary key inputs', () => {
@@ -51,20 +51,7 @@ describe('table keys', () => {
     )
   })
 
-  it('stably serializes supported value kinds', () => {
-    let happenedAt = new Date('2026-01-01T00:00:00.000Z')
-
-    assert.equal(stableSerialize(null), 'null')
-    assert.equal(stableSerialize(undefined), 'undefined')
-    assert.equal(stableSerialize(42), '42')
-    assert.equal(stableSerialize(true), 'true')
-    assert.equal(stableSerialize(7n), '7')
-    assert.equal(stableSerialize('alpha'), '"alpha"')
-    assert.equal(stableSerialize(happenedAt), 'date:2026-01-01T00:00:00.000Z')
-    assert.equal(stableSerialize({ active: true }), '{"active":true}')
-  })
-
-  it('builds composite tuple keys from stable serialized values', () => {
+  it('builds composite tuple keys from serialized values', () => {
     let row = {
       account_id: 3,
       slug: 'alpha',

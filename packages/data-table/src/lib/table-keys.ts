@@ -1,6 +1,6 @@
 import type { ColumnInput as ColumnBuilderInput } from './column.ts'
-import type { AnyTable, TableColumns, TablePrimaryKey, TableRow } from './table.ts'
-import { getTableName, getTablePrimaryKey } from './table.ts'
+import type { AnyTable, TableColumns, TablePrimaryKey, TableRow } from './table/metadata.ts'
+import { getTableName, getTablePrimaryKey } from './table/metadata.ts'
 import type { Pretty } from './types.ts'
 
 /**
@@ -29,9 +29,11 @@ export function getPrimaryKeyObject<table extends AnyTable>(
 ): Partial<TableRow<table>> {
   let keys = getTablePrimaryKey(table)
 
-  if (keys.length === 1 && (typeof value !== 'object' || value === null || Array.isArray(value))) {
-    let key = keys[0] as keyof TableRow<table>
-    return { [key]: value } as Partial<TableRow<table>>
+  if (keys.length === 1) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      let key = keys[0] as keyof TableRow<table>
+      return { [key]: value } as Partial<TableRow<table>>
+    }
   }
 
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -61,36 +63,31 @@ export function getPrimaryKeyObject<table extends AnyTable>(
  * @returns Stable tuple key.
  */
 export function getCompositeKey(row: Record<string, unknown>, columns: readonly string[]): string {
-  let values = columns.map((column) => stableSerialize(row[column]))
+  let values = columns.map((column) => {
+    let value = row[column]
+
+    if (value === null) {
+      return 'null'
+    }
+
+    if (value === undefined) {
+      return 'undefined'
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+      return String(value)
+    }
+
+    if (typeof value === 'string') {
+      return JSON.stringify(value)
+    }
+
+    if (value instanceof Date) {
+      return 'date:' + value.toISOString()
+    }
+
+    return JSON.stringify(value)
+  })
 
   return values.join('::')
-}
-
-/**
- * Serializes values into stable string representations for key generation.
- * @param value Value to serialize.
- * @returns Stable serialized value.
- */
-export function stableSerialize(value: unknown): string {
-  if (value === null) {
-    return 'null'
-  }
-
-  if (value === undefined) {
-    return 'undefined'
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value)
-  }
-
-  if (typeof value === 'string') {
-    return JSON.stringify(value)
-  }
-
-  if (value instanceof Date) {
-    return 'date:' + value.toISOString()
-  }
-
-  return JSON.stringify(value)
 }

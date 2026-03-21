@@ -707,6 +707,42 @@ describe('migration runner', () => {
     )
   })
 
+  it('reads the latest registry contents and preserves id ordering', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let registry = createMigrationRegistry()
+
+    registry.register({
+      id: '20260102000000',
+      name: 'posts',
+      migration: createMigration({
+        async up({ db, schema }) {
+          await schema.createTable(createIdTable('posts'))
+        },
+        async down() {},
+      }),
+    })
+
+    let runner = createMigrationRunner(adapter, registry)
+
+    registry.register({
+      id: '20260101000000',
+      name: 'users',
+      migration: createMigration({
+        async up({ db, schema }) {
+          await schema.createTable(createIdTable('users'))
+        },
+        async down() {},
+      }),
+    })
+
+    await runner.up()
+
+    assert.deepEqual(
+      adapter.journalRows.map((row) => row.id),
+      ['20260101000000', '20260102000000'],
+    )
+  })
+
   it('supports dryRun planning without executing migration DDL', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({

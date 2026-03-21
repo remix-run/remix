@@ -1,15 +1,11 @@
 import { DataTableQueryError } from '../errors.ts'
 import type {
-  OrderByInput,
-  OrderByTuple,
   QueryColumnName,
   QueryColumns,
   QueryColumnTypeMap,
   QueryTableInput,
   SingleTableWhere,
   TableColumnName,
-  WriteResult,
-  WriteRowsResult,
 } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
@@ -21,16 +17,6 @@ import { getPrimaryKeyObject } from '../table-keys.ts'
 
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
-
-export function asQueryTableInput<table extends AnyTable>(
-  table: table,
-): QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>> {
-  return table as unknown as QueryTableInput<
-    TableName<table>,
-    TableRow<table>,
-    TablePrimaryKey<table>
-  >
-}
 
 export function getPrimaryKeyWhere<table extends AnyTable>(
   table: table,
@@ -92,31 +78,6 @@ export function resolveCreateRowWhere<table extends AnyTable>(
   return where as SingleTableWhere<table>
 }
 
-export function normalizeOrderByInput<table extends AnyTable>(
-  input: OrderByInput<table> | undefined,
-): OrderByTuple<table>[] {
-  if (!input) {
-    return []
-  }
-
-  if (input.length === 0) {
-    return []
-  }
-
-  if (Array.isArray(input[0])) {
-    return input as OrderByTuple<table>[]
-  }
-
-  return [input as OrderByTuple<table>]
-}
-
-export function toWriteResult(result: WriteResult | WriteRowsResult<unknown>): WriteResult {
-  return {
-    affectedRows: result.affectedRows,
-    insertId: result.insertId,
-  }
-}
-
 export function hasScopedWriteModifiers(state: {
   orderBy: unknown[]
   limit?: number
@@ -162,17 +123,8 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     database,
     query.select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[])),
   )
-  let primaryKeys = getTablePrimaryKey(table) as string[]
 
-  return rows.map((row) => {
-    let keyObject: Record<string, unknown> = {}
-
-    for (let key of primaryKeys) {
-      keyObject[key] = (row as Record<string, unknown>)[key]
-    }
-
-    return keyObject
-  })
+  return rows
 }
 
 export function buildPrimaryKeyPredicate<table extends AnyTable>(

@@ -737,6 +737,33 @@ describe('queries', () => {
     )
   })
 
+  it('supports scoped deleteMany with composite primary keys', async () => {
+    let adapter = createAdapter({
+      accounts: [],
+      projects: [],
+      tasks: [],
+      memberships: [
+        { organization_id: 9, account_id: 1, role: 'owner' },
+        { organization_id: 9, account_id: 2, role: 'member' },
+        { organization_id: 10, account_id: 1, role: 'viewer' },
+      ],
+    })
+
+    let db = createTestDatabase(adapter)
+    let result = await db.deleteMany(memberships, {
+      where: { organization_id: 9 },
+      orderBy: ['account_id', 'asc'],
+      limit: 1,
+    })
+    let rows = await db.query(memberships).orderBy('organization_id', 'asc').all()
+
+    assert.equal(result.affectedRows, 1)
+    assert.deepEqual(rows, [
+      { organization_id: 9, account_id: 2, role: 'member' },
+      { organization_id: 10, account_id: 1, role: 'viewer' },
+    ])
+  })
+
   it('supports database-level create helper returning result metadata by default', async () => {
     let adapter = createAdapter({
       accounts: [{ id: 1, email: 'existing@studio.test', status: 'active' }],

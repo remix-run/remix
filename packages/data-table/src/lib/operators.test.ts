@@ -6,13 +6,11 @@ import {
   and,
   between,
   eq,
-  getPredicateColumns,
   gt,
   gte,
   ilike,
   inList,
   isNull,
-  isPredicate,
   like,
   lt,
   lte,
@@ -236,35 +234,5 @@ describe('logical predicates', () => {
       operator: 'or',
       predicates: [eq('status', 'active')],
     })
-  })
-
-  it('collects columns across nested predicates', () => {
-    let predicate = and(
-      eq('accounts.id', 'projects.account_id'),
-      or(
-        between('accounts.id', 1, 5),
-        and(isNull('projects.deleted_at'), notNull('accounts.email')),
-      ),
-    )
-
-    assert.deepEqual(getPredicateColumns(predicate), [
-      'accounts.id',
-      'projects.account_id',
-      'accounts.id',
-      'projects.deleted_at',
-      'accounts.email',
-    ])
-  })
-
-  it('collects columns for scalar comparison predicates', () => {
-    assert.deepEqual(getPredicateColumns(eq('accounts.id', 1)), ['accounts.id'])
-  })
-
-  it('identifies predicate-like inputs', () => {
-    assert.equal(isPredicate(eq('id', 1)), true)
-    assert.equal(isPredicate({ type: 'logical', operator: 'and', predicates: [] }), true)
-    assert.equal(isPredicate({}), false)
-    assert.equal(isPredicate(null), false)
-    assert.equal(isPredicate({ type: 'unknown' }), false)
   })
 })

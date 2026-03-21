@@ -10,12 +10,9 @@ import type { ColumnBuilder } from './column.ts'
 import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
 import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
 import {
-  asQueryTableInput,
   getPrimaryKeyWhere,
   getPrimaryKeyWhereFromRow,
-  normalizeOrderByInput,
   resolveCreateRowWhere,
-  toWriteResult,
 } from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
@@ -200,6 +197,12 @@ export type QueryForTable<
   BoundQueryPhase<'all'>
 >
 
+type ScopedQueryOptions<table extends AnyTable> = {
+  orderBy?: OrderByInput<table>
+  limit?: number
+  offset?: number
+}
+
 /**
  * Column names accepted in single-table queries.
  */
@@ -328,14 +331,9 @@ type SavepointCounter = {
 
 type DatabaseOptions = {
   now?: () => unknown
-}
-
-type DatabaseInternalState = {
   token?: TransactionToken
-  savepointCounter: SavepointCounter
+  savepointCounter?: SavepointCounter
 }
-
-const createInternalDatabase = Symbol('createInternalDatabase')
 
 /**
  * High-level database runtime used to build and execute data manipulation operations.
@@ -352,18 +350,8 @@ export class Database implements QueryExecutionContext {
   constructor(adapter: DatabaseAdapter, options?: DatabaseOptions) {
     this.#adapter = adapter
     this.#now = options?.now ?? defaultNow
-    this.#savepointCounter = { value: 0 }
-  }
-
-  static [createInternalDatabase](
-    adapter: DatabaseAdapter,
-    options: DatabaseOptions | undefined,
-    internal: DatabaseInternalState,
-  ): Database {
-    let database = new Database(adapter, options)
-    database.#token = internal.token
-    database.#savepointCounter = internal.savepointCounter
-    return database
+    this.#token = options?.token
+    this.#savepointCounter = options?.savepointCounter ?? { value: 0 }
   }
 
   get adapter(): DatabaseAdapter {
@@ -396,6 +384,24 @@ export class Database implements QueryExecutionContext {
     >
   }
 
+  #queryTable<table extends AnyTable>(table: table): QueryForTable<table> {
+    return this.query(
+      table as unknown as QueryTableInput<
+        TableName<table>,
+        TableRow<table>,
+        TablePrimaryKey<table>
+      >,
+    )
+  }
+
+  #createTransactionDatabase(token: TransactionToken): Database {
+    return new Database(this.#adapter, {
+      now: this.#now,
+      token,
+      savepointCounter: this.#savepointCounter,
+    })
+  }
+
   create<table extends AnyTable>(
     table: table,
     values: Partial<TableRow<table>>,
@@ -415,11 +421,14 @@ export class Database implements QueryExecutionContext {
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
   ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
     let touch = options?.touch
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+    let query = this.#queryTable(table)
 
     if (options?.returnRow !== true) {
       let result = await query.insert(values, { touch })
-      return toWriteResult(result)
+      return {
+        affectedRows: result.affectedRows,
+        insertId: result.insertId,
+      }
     }
 
     if (this.#adapter.capabilities.returning) {
@@ -453,7 +462,7 @@ export class Database implements QueryExecutionContext {
     }
 
     let insertResult = await query.insert(values, { touch })
-    let where = resolveCreateRowWhere(table, values, toWriteResult(insertResult).insertId)
+    let where = resolveCreateRowWhere(table, values, insertResult.insertId)
     let loaded = await this.findOne(table, {
       where,
       with: options.with,
@@ -481,7 +490,7 @@ export class Database implements QueryExecutionContext {
     values: Array<Partial<TableRow<table>>>,
     options?: CreateManyResultOptions | CreateManyRowsOptions,
   ): Promise<WriteResult | TableRow<table>[]> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+    let query = this.#queryTable(table)
 
     if (options?.returnRows === true) {
       if (!this.#adapter.capabilities.returning) {
@@ -502,7 +511,10 @@ export class Database implements QueryExecutionContext {
       touch: options?.touch,
     })
 
-    return toWriteResult(result)
+    return {
+      affectedRows: result.affectedRows,
+      insertId: result.insertId,
+    }
   }
 
   async find<
@@ -517,7 +529,7 @@ export class Database implements QueryExecutionContext {
       return null
     }
 
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+    let query = this.#queryTable(table)
 
     if (options?.with) {
       return query.with(options.with).find(value as any) as Promise<TableRowWith<
@@ -539,12 +551,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
-    let orderBy = normalizeOrderByInput(options.orderBy)
-
-    for (let [column, direction] of orderBy) {
-      query = query.orderBy(column, direction)
-    }
+    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
 
     if (options.with) {
       return query.with(options.with).first() as Promise<TableRowWith<
@@ -563,24 +570,13 @@ export class Database implements QueryExecutionContext {
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+    let query = this.#queryTable(table)
 
     if (options?.where) {
       query = query.where(options.where)
     }
 
-    let orderBy = normalizeOrderByInput(options?.orderBy)
-    for (let [column, direction] of orderBy) {
-      query = query.orderBy(column, direction)
-    }
-
-    if (options?.limit !== undefined) {
-      query = query.limit(options.limit)
-    }
-
-    if (options?.offset !== undefined) {
-      query = query.offset(options.offset)
-    }
+    query = applyScopedQueryOptions(query, options)
 
     if (options?.with) {
       return query.with(options.with).all() as Promise<
@@ -595,7 +591,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options?: CountOptions<table>,
   ): Promise<number> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+    let query = this.#queryTable(table)
 
     if (options?.where) {
       query = query.where(options.where)
@@ -616,10 +612,12 @@ export class Database implements QueryExecutionContext {
     let where = getPrimaryKeyWhere(table, value)
 
     if (this.#adapter.capabilities.returning) {
-      let updateResult = (await this.query(asQueryTableInput(table)).where(where).update(changes, {
-        touch: options?.touch,
-        returning: '*',
-      })) as { rows: TableRow<table>[] }
+      let updateResult = (await this.#queryTable(table)
+        .where(where)
+        .update(changes, {
+          touch: options?.touch,
+          returning: '*',
+        })) as { rows: TableRow<table>[] }
       let updatedRow = updateResult.rows[0]
 
       if (!updatedRow) {
@@ -646,9 +644,11 @@ export class Database implements QueryExecutionContext {
       return loaded
     }
 
-    await this.query(asQueryTableInput(table)).where(where).update(changes, {
-      touch: options?.touch,
-    })
+    await this.#queryTable(table)
+      .where(where)
+      .update(changes, {
+        touch: options?.touch,
+      })
 
     let loaded = await this.find(table, value, { with: options?.with })
 
@@ -666,23 +666,13 @@ export class Database implements QueryExecutionContext {
     changes: Partial<TableRow<table>>,
     options: UpdateManyOptions<table>,
   ): Promise<WriteResult> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
-    let orderBy = normalizeOrderByInput(options.orderBy)
-
-    for (let [column, direction] of orderBy) {
-      query = query.orderBy(column, direction)
-    }
-
-    if (options.limit !== undefined) {
-      query = query.limit(options.limit)
-    }
-
-    if (options.offset !== undefined) {
-      query = query.offset(options.offset)
-    }
+    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
 
     let result = await query.update(changes, { touch: options.touch })
-    return toWriteResult(result)
+    return {
+      affectedRows: result.affectedRows,
+      insertId: result.insertId,
+    }
   }
 
   async delete<table extends AnyTable>(
@@ -690,31 +680,24 @@ export class Database implements QueryExecutionContext {
     value: PrimaryKeyInput<table>,
   ): Promise<boolean> {
     let where = getPrimaryKeyWhere(table, value)
-    let result = await this.query(asQueryTableInput(table)).where(where).delete()
-    return toWriteResult(result).affectedRows > 0
+    let result = await this.#queryTable(table)
+      .where(where)
+      .delete()
+
+    return result.affectedRows > 0
   }
 
   async deleteMany<table extends AnyTable>(
     table: table,
     options: DeleteManyOptions<table>,
   ): Promise<WriteResult> {
-    let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
-    let orderBy = normalizeOrderByInput(options.orderBy)
-
-    for (let [column, direction] of orderBy) {
-      query = query.orderBy(column, direction)
-    }
-
-    if (options.limit !== undefined) {
-      query = query.limit(options.limit)
-    }
-
-    if (options.offset !== undefined) {
-      query = query.offset(options.offset)
-    }
+    let query = applyScopedQueryOptions(this.#queryTable(table).where(options.where), options)
 
     let result = await query.delete()
-    return toWriteResult(result)
+    return {
+      affectedRows: result.affectedRows,
+      insertId: result.insertId,
+    }
   }
 
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
@@ -743,14 +726,7 @@ export class Database implements QueryExecutionContext {
   ): Promise<result> {
     if (!this.#token) {
       let token = await this.#adapter.beginTransaction(options)
-      let tx = Database[createInternalDatabase](
-        this.#adapter,
-        { now: this.#now },
-        {
-          token,
-          savepointCounter: this.#savepointCounter,
-        },
-      )
+      let tx = this.#createTransactionDatabase(token)
 
       try {
         let result = await callback(tx)
@@ -830,26 +806,35 @@ export function createDatabase(
   return new Database(adapter, options)
 }
 
-/**
- * Creates a database runtime bound to an existing adapter transaction token.
- * This is an internal helper used by the migration runner.
- * @param adapter Adapter implementation responsible for SQL execution.
- * @param token Active adapter transaction token.
- * @param options Optional runtime options.
- * @param options.now Clock function used for auto-managed timestamps.
- * @returns A {@link Database} API instance bound to the provided transaction.
- */
-export function createDatabaseWithTransaction(
-  adapter: DatabaseAdapter,
-  token: TransactionToken,
-  options?: { now?: () => unknown },
-): Database {
-  return Database[createInternalDatabase](adapter, options, {
-    token,
-    savepointCounter: { value: 0 },
-  })
-}
-
 function defaultNow(): Date {
   return new Date()
+}
+
+function applyScopedQueryOptions<table extends AnyTable>(
+  query: QueryForTable<table>,
+  options?: ScopedQueryOptions<table>,
+): QueryForTable<table> {
+  if (!options) {
+    return query
+  }
+
+  let orderBy = options.orderBy
+
+  if (orderBy) {
+    let clauses = (Array.isArray(orderBy[0]) ? orderBy : [orderBy]) as OrderByTuple<table>[]
+
+    for (let [column, direction] of clauses) {
+      query = query.orderBy(column, direction)
+    }
+  }
+
+  if (options.limit !== undefined) {
+    query = query.limit(options.limit)
+  }
+
+  if (options.offset !== undefined) {
+    query = query.offset(options.offset)
+  }
+
+  return query
 }

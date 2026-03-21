@@ -4,15 +4,14 @@ import { normalizeWhereInput } from './operators.ts'
 import { normalizeColumnInput } from './references.ts'
 import type {
   AnyTable,
-  OrderByClause,
-  OrderDirection,
   QualifiedTableColumnName,
   TableColumnInput,
   TableColumnName,
   TableRow,
   TableRowWith,
-} from './table.ts'
-import { getTableColumns, getTableName, getTablePrimaryKey } from './table.ts'
+} from './table/metadata.ts'
+import type { OrderByClause, OrderDirection } from './table/ordering.ts'
+import { getTableColumns, getTableName, getTablePrimaryKey } from './table/metadata.ts'
 import type { Pretty } from './types.ts'
 
 /**
@@ -147,17 +146,14 @@ export function hasMany<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasManyOptions<source, target>,
 ): Relation<source, target, 'many'> {
-  let sourceKey = normalizeKeysForTable(
-    source,
-    relationOptions?.targetKey,
-    'targetKey',
-    getTablePrimaryKey(source) as string[],
-  )
-  let targetKey = normalizeKeysForTable(target, relationOptions?.foreignKey, 'foreignKey', [
-    inferForeignKey(getTableName(source)),
-  ])
-
-  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
+    sourceSelector: relationOptions?.targetKey,
+    sourceOptionName: 'targetKey',
+    sourceDefault: getTablePrimaryKey(source) as string[],
+    targetSelector: relationOptions?.foreignKey,
+    targetOptionName: 'foreignKey',
+    targetDefault: [inferForeignKey(getTableName(source))],
+  })
 
   return createRelation({
     relationKind: 'hasMany',
@@ -181,17 +177,14 @@ export function hasOne<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasOneOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  let sourceKey = normalizeKeysForTable(
-    source,
-    relationOptions?.targetKey,
-    'targetKey',
-    getTablePrimaryKey(source) as string[],
-  )
-  let targetKey = normalizeKeysForTable(target, relationOptions?.foreignKey, 'foreignKey', [
-    inferForeignKey(getTableName(source)),
-  ])
-
-  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
+    sourceSelector: relationOptions?.targetKey,
+    sourceOptionName: 'targetKey',
+    sourceDefault: getTablePrimaryKey(source) as string[],
+    targetSelector: relationOptions?.foreignKey,
+    targetOptionName: 'foreignKey',
+    targetDefault: [inferForeignKey(getTableName(source))],
+  })
 
   return createRelation({
     relationKind: 'hasOne',
@@ -215,17 +208,14 @@ export function belongsTo<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: BelongsToOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  let sourceKey = normalizeKeysForTable(source, relationOptions?.foreignKey, 'foreignKey', [
-    inferForeignKey(getTableName(target)),
-  ])
-  let targetKey = normalizeKeysForTable(
-    target,
-    relationOptions?.targetKey,
-    'targetKey',
-    getTablePrimaryKey(target) as string[],
-  )
-
-  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
+    sourceSelector: relationOptions?.foreignKey,
+    sourceOptionName: 'foreignKey',
+    sourceDefault: [inferForeignKey(getTableName(target))],
+    targetSelector: relationOptions?.targetKey,
+    targetOptionName: 'targetKey',
+    targetDefault: getTablePrimaryKey(target) as string[],
+  })
 
   return createRelation({
     relationKind: 'belongsTo',
@@ -258,24 +248,17 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
     )
   }
 
-  let throughTargetKey = normalizeKeysForTable(
+  let { sourceKey: throughTargetKey, targetKey: throughForeignKey } = resolveRelationKeys(
     throughRelation.targetTable,
-    relationOptions.throughTargetKey,
-    'throughTargetKey',
-    getTablePrimaryKey(throughRelation.targetTable),
-  )
-  let throughForeignKey = normalizeKeysForTable(
     target,
-    relationOptions.throughForeignKey,
-    'throughForeignKey',
-    [inferForeignKey(getTableName(throughRelation.targetTable))],
-  )
-
-  assertKeyLengths(
-    getTableName(throughRelation.targetTable),
-    getTableName(target),
-    throughTargetKey,
-    throughForeignKey,
+    {
+      sourceSelector: relationOptions.throughTargetKey,
+      sourceOptionName: 'throughTargetKey',
+      sourceDefault: getTablePrimaryKey(throughRelation.targetTable),
+      targetSelector: relationOptions.throughForeignKey,
+      targetOptionName: 'throughForeignKey',
+      targetDefault: [inferForeignKey(getTableName(throughRelation.targetTable))],
+    },
   )
 
   return createRelation({
@@ -283,8 +266,8 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
     cardinality: 'many',
     sourceTable: source,
     targetTable: target,
-    sourceKey: [...throughRelation.sourceKey],
-    targetKey: [...throughRelation.targetKey],
+    sourceKey: throughRelation.sourceKey,
+    targetKey: throughRelation.targetKey,
     through: {
       relation: throughRelation as AnyRelation,
       throughSourceKey: throughTargetKey,
@@ -328,6 +311,39 @@ function normalizeKeysForTable(
   }
 
   return keys
+}
+
+function resolveRelationKeys(
+  sourceTable: AnyTable,
+  targetTable: AnyTable,
+  options: {
+    sourceSelector: string | readonly string[] | undefined
+    sourceOptionName: string
+    sourceDefault: readonly string[]
+    targetSelector: string | readonly string[] | undefined
+    targetOptionName: string
+    targetDefault: readonly string[]
+  },
+): {
+  sourceKey: string[]
+  targetKey: string[]
+} {
+  let sourceKey = normalizeKeysForTable(
+    sourceTable,
+    options.sourceSelector,
+    options.sourceOptionName,
+    options.sourceDefault,
+  )
+  let targetKey = normalizeKeysForTable(
+    targetTable,
+    options.targetSelector,
+    options.targetOptionName,
+    options.targetDefault,
+  )
+
+  assertKeyLengths(getTableName(sourceTable), getTableName(targetTable), sourceKey, targetKey)
+
+  return { sourceKey, targetKey }
 }
 
 function assertKeyLengths(
