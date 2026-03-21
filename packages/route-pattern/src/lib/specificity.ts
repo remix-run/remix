@@ -168,11 +168,8 @@ function compareSearch(
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)
 
-  if (aSpecificity.keyAndExactValue > bSpecificity.keyAndExactValue) return 1
-  if (aSpecificity.keyAndExactValue < bSpecificity.keyAndExactValue) return -1
-
-  if (aSpecificity.keyAndAnyValue > bSpecificity.keyAndAnyValue) return 1
-  if (aSpecificity.keyAndAnyValue < bSpecificity.keyAndAnyValue) return -1
+  if (aSpecificity.keyValue > bSpecificity.keyValue) return 1
+  if (aSpecificity.keyValue < bSpecificity.keyValue) return -1
 
   if (aSpecificity.key > bSpecificity.key) return 1
   if (aSpecificity.key < bSpecificity.key) return -1
@@ -181,25 +178,18 @@ function compareSearch(
 }
 
 function searchSpecificity(constraints: RoutePattern['ast']['search']): {
-  keyAndExactValue: number
-  keyAndAnyValue: number
   key: number
+  keyValue: number
 } {
-  let exactValue = 0
-  let anyValue = 0
-  let key = 0
+  let specificity = { key: 0, keyValue: 0 }
 
   for (let constraint of constraints.values()) {
-    if (constraint === null) {
-      key += 1
-      continue
-    }
     if (constraint.size === 0) {
-      anyValue += 1
+      specificity.key += 1
       continue
     }
-    exactValue += constraint.size
+    specificity.keyValue += constraint.size
   }
 
-  return { keyAndExactValue: exactValue, keyAndAnyValue: anyValue, key }
+  return specificity
 }

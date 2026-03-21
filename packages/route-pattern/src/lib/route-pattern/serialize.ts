@@ -7,24 +7,17 @@ import type { RoutePattern } from '../route-pattern.ts'
  * @returns the query string (without leading `?`), or undefined if empty
  */
 export function serializeSearch(constraints: RoutePattern['ast']['search']): string | undefined {
-  if (constraints.size === 0) {
-    return undefined
-  }
+  if (constraints.size === 0) return undefined
 
-  let parts: Array<string> = []
-
+  let searchParams = new URLSearchParams()
   for (let [key, constraint] of constraints) {
-    if (constraint === null) {
-      parts.push(encodeURIComponent(key))
-    } else if (constraint.size === 0) {
-      parts.push(`${encodeURIComponent(key)}=`)
+    if (constraint.size === 0) {
+      searchParams.append(key, '')
     } else {
       for (let value of constraint) {
-        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+        searchParams.append(key, value)
       }
     }
   }
-
-  let result = parts.join('&')
-  return result || undefined
+  return searchParams.toString()
 }

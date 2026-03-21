@@ -68,29 +68,16 @@ export function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): s
     }
   }
 
-  let missingParams: Array<string> = []
-  for (let [key, constraint] of constraints) {
-    if (constraint === null) {
+  for (let [key, requiredValues] of constraints) {
+    if (requiredValues.size === 0) {
       if (key in searchParams) continue
       urlSearchParams.append(key, '')
-    } else if (constraint.size === 0) {
-      if (key in searchParams) continue
-      missingParams.push(key)
     } else {
-      for (let value of constraint) {
+      for (let value of requiredValues) {
         if (urlSearchParams.getAll(key).includes(value)) continue
         urlSearchParams.append(key, value)
       }
     }
-  }
-
-  if (missingParams.length > 0) {
-    throw new HrefError({
-      type: 'missing-search-params',
-      pattern,
-      missingParams,
-      searchParams: searchParams,
-    })
   }
 
   let result = urlSearchParams.toString()
@@ -108,12 +95,6 @@ type HrefErrorDetails =
       partPattern: PartPattern
       missingParams: Array<string>
       params: Record<string, unknown>
-    }
-  | {
-      type: 'missing-search-params'
-      pattern: RoutePattern
-      missingParams: Array<string>
-      searchParams: SearchParams
     }
   | {
       type: 'nameless-wildcard'
@@ -152,12 +133,6 @@ export class HrefError extends Error {
 
     if (details.type === 'nameless-wildcard') {
       return `pattern contains nameless wildcard\n\nPattern: ${pattern}`
-    }
-
-    if (details.type === 'missing-search-params') {
-      let params = details.missingParams.map((p) => `'${p}'`).join(', ')
-      let searchParamsStr = JSON.stringify(details.searchParams)
-      return `missing required search param(s): ${params}\n\nPattern: ${pattern}\nSearch params: ${searchParamsStr}`
     }
 
     if (details.type === 'missing-params') {
