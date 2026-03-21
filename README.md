@@ -34,9 +34,11 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 ## Packages
 
-We currently publish the following packages:
+Remix 3 includes the following packages:
 
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
+- [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
+- [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
 - [component](packages/component): UI components for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
