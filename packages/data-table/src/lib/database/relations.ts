@@ -1,5 +1,4 @@
 import { DataTableQueryError } from '../errors.ts'
-import type { QueryColumnName, QueryColumns, QueryColumnTypeMap } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import type { Query } from '../query.ts'
@@ -82,18 +81,13 @@ async function loadDirectRelationValues(
     return sourceRows.map(() => (relation.cardinality === 'many' ? [] : null))
   }
 
-  let query = createQuery(relation.targetTable)
-  let linkPredicate = buildLinkPredicate(relation.targetKey, sourceTuples)
-
-  if (linkPredicate) {
-    query = query.where(linkPredicate as Predicate<QueryColumnName<typeof relation.targetTable>>)
-  }
-
-  query = applyRelationModifiers(query, relation, {
-    includePagination: false,
-  })
-
-  let relatedRows = await loadRowsWithRelationsForQuery(database, query)
+  let relatedRows = await loadLinkedRows(
+    database,
+    createQuery(relation.targetTable),
+    relation,
+    relation.targetKey,
+    sourceTuples,
+  )
   let grouped = groupRowsByTuple(relatedRows, relation.targetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -129,20 +123,13 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let throughQuery = createQuery(throughRelation.targetTable)
-  let throughPredicate = buildLinkPredicate(throughRelation.targetKey, sourceTuples)
-
-  if (throughPredicate) {
-    throughQuery = throughQuery.where(
-      throughPredicate as Predicate<QueryColumnName<typeof throughRelation.targetTable>>,
-    )
-  }
-
-  throughQuery = applyRelationModifiers(throughQuery, throughRelation, {
-    includePagination: false,
-  })
-
-  let throughRows = await loadRowsWithRelationsForQuery(database, throughQuery)
+  let throughRows = await loadLinkedRows(
+    database,
+    createQuery(throughRelation.targetTable),
+    throughRelation,
+    throughRelation.targetKey,
+    sourceTuples,
+  )
 
   if (throughRows.length === 0) {
     return sourceRows.map(() => [])
@@ -171,20 +158,13 @@ async function loadHasManyThroughValues(
     return sourceRows.map(() => [])
   }
 
-  let targetQuery = createQuery(relation.targetTable)
-  let targetPredicate = buildLinkPredicate(relation.through.throughTargetKey, throughTuples)
-
-  if (targetPredicate) {
-    targetQuery = targetQuery.where(
-      targetPredicate as Predicate<QueryColumnName<typeof relation.targetTable>>,
-    )
-  }
-
-  targetQuery = applyRelationModifiers(targetQuery, relation, {
-    includePagination: false,
-  })
-
-  let relatedRows = await loadRowsWithRelationsForQuery(database, targetQuery)
+  let relatedRows = await loadLinkedRows(
+    database,
+    createQuery(relation.targetTable),
+    relation,
+    relation.through.throughTargetKey,
+    throughTuples,
+  )
   let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
 
   return sourceRows.map((sourceRow) => {
@@ -223,7 +203,7 @@ function applyRelationModifiers<table extends AnyTable>(
   }
 
   for (let clause of relation.modifiers.orderBy) {
-    next = next.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
+    next = next.orderBy(clause.column, clause.direction)
   }
 
   if (options.includePagination && relation.modifiers.limit !== undefined) {
@@ -248,6 +228,28 @@ function applyPagination<row>(
 ): row[] {
   let offsetRows = offset === undefined ? rows : rows.slice(offset)
   return limit === undefined ? offsetRows : offsetRows.slice(0, limit)
+}
+
+async function loadLinkedRows<table extends AnyTable>(
+  database: QueryExecutionContext,
+  query: RelationQuery,
+  relation: Relation<any, table, any, any>,
+  targetColumns: string[],
+  tuples: unknown[][],
+): Promise<Record<string, unknown>[]> {
+  let next = query
+  let predicate = buildLinkPredicate(targetColumns, tuples)
+
+  if (predicate) {
+    next = next.where(predicate)
+  }
+
+  return loadRowsWithRelationsForQuery(
+    database,
+    applyRelationModifiers(next, relation, {
+      includePagination: false,
+    }),
+  )
 }
 
 function uniqueTuples(rows: Record<string, unknown>[], columns: string[]): unknown[][] {

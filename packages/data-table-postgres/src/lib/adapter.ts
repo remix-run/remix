@@ -146,8 +146,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     let relation = quoteTableRef(table)
     let client = this.#resolveClient(transaction)
     let result = await client.query('select to_regclass($1) is not null as "exists"', [relation])
-    let row = result.rows[0] as Record<string, unknown> | undefined
-    return toBooleanExists(row?.exists)
+    return toBooleanExists(getFirstRecord(result.rows)?.exists)
   }
 
   /**
@@ -168,8 +167,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       'select exists (select 1 from pg_attribute where attrelid = to_regclass($1) and attname = $2 and attnum > 0 and not attisdropped) as "exists"',
       [relation, column],
     )
-    let row = result.rows[0] as Record<string, unknown> | undefined
-    return toBooleanExists(row?.exists)
+    return toBooleanExists(getFirstRecord(result.rows)?.exists)
   }
 
   /**
@@ -347,8 +345,11 @@ function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
 }
 
 function releasePostgresClient(client: PostgresPoolClient): void {
-  let release = (client as { release?: () => void }).release
-  release?.()
+  if (!hasReleaseMethod(client)) {
+    return
+  }
+
+  client.release()
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {
@@ -366,13 +367,7 @@ function buildSetTransactionStatement(options: TransactionOptions): string {
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    if (typeof row !== 'object' || row === null) {
-      return {}
-    }
-
-    return { ...(row as Record<string, unknown>) }
-  })
+  return rows.map(copyRecord)
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
@@ -459,4 +454,38 @@ function toBooleanExists(value: unknown): boolean {
   }
 
   return false
+}
+
+function getFirstRecord(rows: unknown[]): Record<string, unknown> | undefined {
+  let row = rows[0]
+
+  if (!isRecord(row)) {
+    return undefined
+  }
+
+  return copyRecord(row)
+}
+
+function copyRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return {}
+  }
+
+  let record: Record<string, unknown> = {}
+
+  for (let [key, entry] of Object.entries(value)) {
+    record[key] = entry
+  }
+
+  return record
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function hasReleaseMethod(
+  client: PostgresPoolClient,
+): client is PostgresPoolClient & { release: () => void } {
+  return 'release' in client && typeof client.release === 'function'
 }

@@ -125,6 +125,14 @@ export function createIndexOperation(
   table: TableInput,
   columns: string | string[],
   options?: CreateIndexOptions,
+): ReturnType<typeof createIndexOperationForTableRef> {
+  return createIndexOperationForTableRef(toMigrationTableRef(table), columns, options)
+}
+
+export function createIndexOperationForTableRef(
+  table: TableRef,
+  columns: string | string[],
+  options?: CreateIndexOptions,
 ): {
   kind: 'createIndex'
   index: {
@@ -137,27 +145,25 @@ export function createIndexOperation(
   }
   ifNotExists?: boolean
 } {
-  let tableRef = toMigrationTableRef(table)
-  let normalizedColumns = normalizeKeyColumns(columns)
-  let { name, ifNotExists, ...indexOptions } = options ?? {}
-
-  return {
-    kind: 'createIndex',
-    index: {
-      table: tableRef,
-      name: name ?? createIndexName(tableRef, normalizedColumns),
-      columns: normalizedColumns,
-      ...indexOptions,
-    },
-    ifNotExists,
-  }
+  return buildCreateIndexOperation(table, columns, options)
 }
 
-export function createIndexOperationForTableRef(
+function buildCreateIndexOperation(
   table: TableRef,
   columns: string | string[],
   options?: CreateIndexOptions,
-): ReturnType<typeof createIndexOperation> {
+): {
+  kind: 'createIndex'
+  index: {
+    table: TableRef
+    name: string
+    columns: string[]
+    unique?: boolean
+    using?: CreateIndexOptions['using']
+    where?: string
+  }
+  ifNotExists?: boolean
+} {
   let normalizedColumns = normalizeKeyColumns(columns)
   let { name, ifNotExists, ...indexOptions } = options ?? {}
 

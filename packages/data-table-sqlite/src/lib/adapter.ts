@@ -179,7 +179,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     let statement = this.#database.prepare(
       'pragma ' + schemaPrefix + 'table_info(' + quoteIdentifier(table.name) + ')',
     )
-    let rows = statement.all() as Array<Record<string, unknown>>
+    let rows = normalizeRows(statement.all())
 
     return rows.some((row) => row.name === column)
   }
@@ -289,13 +289,7 @@ export function createSqliteDatabaseAdapter(
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    if (typeof row !== 'object' || row === null) {
-      return {}
-    }
-
-    return { ...(row as Record<string, unknown>) }
-  })
+  return rows.map(copyRecord)
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
@@ -401,4 +395,18 @@ function isWriteOperationKind(kind: DataManipulationRequest['operation']['kind']
     kind === 'delete' ||
     kind === 'upsert'
   )
+}
+
+function copyRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return {}
+  }
+
+  let record: Record<string, unknown> = {}
+
+  for (let [key, entry] of Object.entries(value)) {
+    record[key] = entry
+  }
+
+  return record
 }

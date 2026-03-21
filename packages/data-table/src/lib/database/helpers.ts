@@ -10,11 +10,13 @@ import type {
   SingleTableWhere,
   TableColumnName,
   WriteResult,
+  WriteRowResult,
+  WriteRowsResult,
 } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import { query as createQuery } from '../query.ts'
-import type { AnyTable, TableName, TablePrimaryKey, TableRow } from '../table.ts'
+import type { AnyTable, TableName, TablePrimaryKey, TableRow, TableRowWith } from '../table.ts'
 import type { PrimaryKeyInput } from '../table-keys.ts'
 import { getTableName, getTablePrimaryKey } from '../table.ts'
 import { getPrimaryKeyObject } from '../table-keys.ts'
@@ -22,24 +24,41 @@ import { getPrimaryKeyObject } from '../table-keys.ts'
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 
+function getPrimaryKeyColumns<table extends AnyTable>(table: table): TableColumnName<table>[] {
+  return [...getTablePrimaryKey(table)] as TableColumnName<table>[]
+}
+
+function getRowValue<table extends AnyTable>(
+  row: Record<string, unknown>,
+  key: TableColumnName<table>,
+): TableRow<table>[TableColumnName<table>] | undefined {
+  return row[key] as TableRow<table>[TableColumnName<table>] | undefined
+}
+
+function isOrderByTupleArray<table extends AnyTable>(
+  orderBy: OrderByInput<table>,
+): orderBy is OrderByTuple<table>[] {
+  return Array.isArray(orderBy[0])
+}
+
 export function getPrimaryKeyWhere<table extends AnyTable>(
   table: table,
   value: PrimaryKeyInput<table>,
 ): SingleTableWhere<table> {
-  return getPrimaryKeyObject(table, value as any) as SingleTableWhere<table>
+  return getPrimaryKeyObject(table, value)
 }
 
 export function getPrimaryKeyWhereFromRow<table extends AnyTable>(
   table: table,
   row: Record<string, unknown>,
 ): SingleTableWhere<table> {
-  let where: Record<string, unknown> = {}
+  let where: Partial<TableRow<table>> = {}
 
-  for (let key of getTablePrimaryKey(table) as string[]) {
-    where[key] = row[key]
+  for (let key of getPrimaryKeyColumns(table)) {
+    where[key] = getRowValue<table>(row, key)
   }
 
-  return where as SingleTableWhere<table>
+  return where
 }
 
 export function resolveCreateRowWhere<table extends AnyTable>(
@@ -47,25 +66,25 @@ export function resolveCreateRowWhere<table extends AnyTable>(
   values: Partial<TableRow<table>>,
   insertId: unknown,
 ): SingleTableWhere<table> {
-  let primaryKey = getTablePrimaryKey(table) as string[]
+  let primaryKey = getPrimaryKeyColumns(table)
 
   if (primaryKey.length === 1) {
     let key = primaryKey[0]
 
     if (Object.prototype.hasOwnProperty.call(values, key)) {
-      return {
-        [key]: (values as Record<string, unknown>)[key],
-      } as SingleTableWhere<table>
+      let where: Partial<TableRow<table>> = {}
+      where[key] = values[key]
+      return where
     }
 
     if (insertId !== undefined) {
-      return {
-        [key]: insertId,
-      } as SingleTableWhere<table>
+      let where: Partial<TableRow<table>> = {}
+      where[key] = insertId as TableRow<table>[typeof key]
+      return where
     }
   }
 
-  let where: Record<string, unknown> = {}
+  let where: Partial<TableRow<table>> = {}
 
   for (let key of primaryKey) {
     if (!Object.prototype.hasOwnProperty.call(values, key)) {
@@ -76,10 +95,10 @@ export function resolveCreateRowWhere<table extends AnyTable>(
       )
     }
 
-    where[key] = (values as Record<string, unknown>)[key]
+    where[key] = values[key]
   }
 
-  return where as SingleTableWhere<table>
+  return where
 }
 
 export function hasScopedWriteModifiers(state: {
@@ -108,7 +127,7 @@ export function createScopedQuery<table extends AnyTable>(
   let orderBy = options?.orderBy
 
   if (orderBy) {
-    let clauses = (Array.isArray(orderBy[0]) ? orderBy : [orderBy]) as OrderByTuple<table>[]
+    let clauses = isOrderByTupleArray(orderBy) ? orderBy : [orderBy]
 
     for (let [column, direction] of clauses) {
       scopedQuery = scopedQuery.orderBy(column, direction)
@@ -139,6 +158,33 @@ export function toWriteResult(result: Pick<WriteResult, 'affectedRows' | 'insert
     affectedRows: result.affectedRows,
     insertId: result.insertId,
   }
+}
+
+export function toWriteRow<row>(result: WriteResult | WriteRowResult<row>): row | null {
+  return 'row' in result ? result.row : null
+}
+
+export function toWriteRows<row>(result: WriteResult | WriteRowsResult<row>): row[] {
+  return 'rows' in result ? result.rows : []
+}
+
+export function toLoadedRow<table extends AnyTable, loaded extends Record<string, unknown> = {}>(
+  row: TableRow<table>,
+): TableRowWith<table, loaded> {
+  return row as TableRowWith<table, loaded>
+}
+
+export function toLoadedRowOrNull<
+  table extends AnyTable,
+  loaded extends Record<string, unknown> = {},
+>(row: TableRow<table> | null): TableRowWith<table, loaded> | null {
+  return row as TableRowWith<table, loaded> | null
+}
+
+export function toLoadedRows<table extends AnyTable, loaded extends Record<string, unknown> = {}>(
+  rows: TableRow<table>[],
+): Array<TableRowWith<table, loaded>> {
+  return rows as Array<TableRowWith<table, loaded>>
 }
 
 export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
@@ -176,7 +222,7 @@ export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
 
   let rows = await loadRowsWithRelationsForQuery(
     database,
-    query.select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[])),
+    query.select(...getPrimaryKeyColumns(table)),
   )
 
   return rows
@@ -186,14 +232,14 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   table: table,
   keyObjects: Record<string, unknown>[],
 ): Predicate<TableColumnName<table>> | undefined {
-  let primaryKey = getTablePrimaryKey(table)
+  let primaryKey = getPrimaryKeyColumns(table)
 
   if (keyObjects.length === 0) {
     return undefined
   }
 
   if (primaryKey.length === 1) {
-    let key = primaryKey[0] as TableColumnName<table>
+    let key = primaryKey[0]
     return inList(
       key,
       keyObjects.map((objectValue) => objectValue[key]),
@@ -201,10 +247,7 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   }
 
   let predicates = keyObjects.map((objectValue) => {
-    let comparisons = primaryKey.map((key) => {
-      let typedKey = key as TableColumnName<table>
-      return eq(typedKey, objectValue[typedKey])
-    })
+    let comparisons = primaryKey.map((key) => eq(key, objectValue[key]))
 
     return and(...comparisons)
   })

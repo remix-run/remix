@@ -174,7 +174,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       return false
     }
 
-    return toBooleanExists(result[0]?.exists)
+    return toBooleanExists(getFirstRecord(result)?.exists)
   }
 
   /**
@@ -201,7 +201,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
       return false
     }
 
-    return toBooleanExists(result[0]?.exists)
+    return toBooleanExists(getFirstRecord(result)?.exists)
   }
 
   /**
@@ -415,22 +415,20 @@ function toBooleanExists(value: unknown): boolean {
 }
 
 function normalizeRows(rows: MysqlQueryRows): Record<string, unknown>[] {
-  return rows.map((row) => ({ ...row }))
+  return rows.map(copyRecord)
 }
 
 function normalizeHeader(result: unknown): MysqlQueryResultHeader {
-  if (typeof result === 'object' && result !== null) {
-    let header = result as Partial<ResultSetHeader>
-
+  if (!isRecord(result)) {
     return {
-      affectedRows: typeof header.affectedRows === 'number' ? header.affectedRows : 0,
-      insertId: header.insertId,
+      affectedRows: 0,
+      insertId: undefined,
     }
   }
 
   return {
-    affectedRows: 0,
-    insertId: undefined,
+    affectedRows: typeof result.affectedRows === 'number' ? result.affectedRows : 0,
+    insertId: result.insertId,
   }
 }
 
@@ -460,6 +458,16 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
   })
 }
 
+function getFirstRecord(rows: MysqlQueryRows): Record<string, unknown> | undefined {
+  let row = rows[0]
+
+  if (!isRecord(row)) {
+    return undefined
+  }
+
+  return copyRecord(row)
+}
+
 function normalizeInsertId(
   operation: DataManipulationRequest['operation'],
   header: MysqlQueryResultHeader,
@@ -479,4 +487,22 @@ function normalizeInsertId(
   }
 
   return header.insertId
+}
+
+function copyRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return {}
+  }
+
+  let record: Record<string, unknown> = {}
+
+  for (let [key, entry] of Object.entries(value)) {
+    record[key] = entry
+  }
+
+  return record
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }

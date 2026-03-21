@@ -2,9 +2,9 @@ import type { SelectColumn } from '../adapter.ts'
 import type { QueryColumnInput } from './types.ts'
 import { normalizeColumnInput } from '../references.ts'
 
-export function isSelectionMap(
+export function isSelectionMap<columnTypes extends Record<string, unknown>>(
   input: readonly unknown[],
-): input is [Record<string, unknown>] {
+): input is [Record<string, QueryColumnInput<columnTypes>>] {
   return (
     input.length === 1 &&
     typeof input[0] === 'object' &&
@@ -13,20 +13,24 @@ export function isSelectionMap(
   )
 }
 
-export function normalizeSelectionMap<columnTypes extends Record<string, unknown>>(
-  selection: Record<string, QueryColumnInput<columnTypes>>,
+export function normalizeSelection<
+  row extends Record<string, unknown>,
+  columnTypes extends Record<string, unknown>,
+>(
+  input: readonly [Record<string, QueryColumnInput<columnTypes>>] | readonly (keyof row & string)[],
 ): SelectColumn[] {
-  let aliases = Object.keys(selection)
+  if (isSelectionMap<columnTypes>(input)) {
+    let selection = input[0]
+    let aliases = Object.keys(selection)
 
-  return aliases.map((alias) => ({
-    column: normalizeColumnInput(selection[alias]),
-    alias,
-  }))
-}
+    return aliases.map((alias) => ({
+      column: normalizeColumnInput(selection[alias]),
+      alias,
+    }))
+  }
 
-export function normalizeSelectionColumns<row extends Record<string, unknown>>(
-  columns: readonly (keyof row & string)[],
-): SelectColumn[] {
+  let columns = input as readonly (keyof row & string)[]
+
   return columns.map((column) => ({
     column,
     alias: column,

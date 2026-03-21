@@ -43,22 +43,8 @@ export function prepareInsertValues<table extends AnyTable>(
   let columns = getTableColumns(table)
 
   if (touch && timestamps) {
-    let createdAt = timestamps.createdAt
-    let updatedAt = timestamps.updatedAt
-
-    if (
-      Object.prototype.hasOwnProperty.call(columns, createdAt) &&
-      output[createdAt] === undefined
-    ) {
-      output[createdAt] = now
-    }
-
-    if (
-      Object.prototype.hasOwnProperty.call(columns, updatedAt) &&
-      output[updatedAt] === undefined
-    ) {
-      output[updatedAt] = now
-    }
+    touchTimestampColumn(output, columns, timestamps.createdAt, now)
+    touchTimestampColumn(output, columns, timestamps.updatedAt, now)
   }
 
   return output
@@ -76,14 +62,7 @@ export function prepareUpdateValues<table extends AnyTable>(
   let columns = getTableColumns(table)
 
   if (touch && timestamps) {
-    let updatedAt = timestamps.updatedAt
-
-    if (
-      Object.prototype.hasOwnProperty.call(columns, updatedAt) &&
-      output[updatedAt] === undefined
-    ) {
-      output[updatedAt] = now
-    }
+    touchTimestampColumn(output, columns, timestamps.updatedAt, now)
   }
 
   return output
@@ -148,29 +127,25 @@ export function applyAfterReadHooksToLoadedRows(
         let relationValue = row[relationName]
 
         if (relation.cardinality === 'many') {
-          if (!Array.isArray(relationValue)) {
+          if (!isRowArray(relationValue)) {
             continue
           }
 
           row[relationName] = applyAfterReadHooksToLoadedRows(
             relation.targetTable,
-            relationValue as Record<string, unknown>[],
+            relationValue,
             relation.modifiers.with,
           )
           continue
         }
 
-        if (relationValue === null || relationValue === undefined) {
-          continue
-        }
-
-        if (typeof relationValue !== 'object' || Array.isArray(relationValue)) {
+        if (!isRowRecord(relationValue)) {
           continue
         }
 
         let transformed = applyAfterReadHooksToLoadedRows(
           relation.targetTable,
-          [relationValue as Record<string, unknown>],
+          [relationValue],
           relation.modifiers.with,
         )
         row[relationName] = transformed[0] ?? null
@@ -256,6 +231,25 @@ export function assertReturningCapability<row extends Record<string, unknown>>(
   if (returning && !adapter.capabilities.returning) {
     throw new DataTableQueryError(operation + '() returning is not supported by this adapter')
   }
+}
+
+function touchTimestampColumn(
+  output: Record<string, unknown>,
+  columns: Record<string, unknown>,
+  column: string,
+  value: unknown,
+): void {
+  if (Object.prototype.hasOwnProperty.call(columns, column) && output[column] === undefined) {
+    output[column] = value
+  }
+}
+
+function isRowArray(value: unknown): value is Record<string, unknown>[] {
+  return Array.isArray(value) && value.every(isRowRecord)
+}
+
+function isRowRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export function normalizeReturningSelection<row extends Record<string, unknown>>(

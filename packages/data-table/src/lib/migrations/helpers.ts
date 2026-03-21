@@ -1,5 +1,5 @@
 import type { TableRef } from '../adapter.ts'
-import type { IndexColumns, KeyColumns } from '../migrations.ts'
+import type { KeyColumns } from '../migrations.ts'
 
 export function toTableRef(name: string): TableRef {
   let segments = name.split('.')

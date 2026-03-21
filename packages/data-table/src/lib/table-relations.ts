@@ -153,7 +153,7 @@ export function hasMany<source extends AnyTable, target extends AnyTable>(
     targetTable: target,
     sourceSelector: relationOptions?.targetKey,
     sourceOptionName: 'targetKey',
-    sourceDefault: getTablePrimaryKey(source) as string[],
+    sourceDefault: getTablePrimaryKeyNames(source),
     targetSelector: relationOptions?.foreignKey,
     targetOptionName: 'foreignKey',
     targetDefault: [inferForeignKey(getTableName(source))],
@@ -179,7 +179,7 @@ export function hasOne<source extends AnyTable, target extends AnyTable>(
     targetTable: target,
     sourceSelector: relationOptions?.targetKey,
     sourceOptionName: 'targetKey',
-    sourceDefault: getTablePrimaryKey(source) as string[],
+    sourceDefault: getTablePrimaryKeyNames(source),
     targetSelector: relationOptions?.foreignKey,
     targetOptionName: 'foreignKey',
     targetDefault: [inferForeignKey(getTableName(source))],
@@ -208,7 +208,7 @@ export function belongsTo<source extends AnyTable, target extends AnyTable>(
     sourceDefault: [inferForeignKey(getTableName(target))],
     targetSelector: relationOptions?.targetKey,
     targetOptionName: 'targetKey',
-    targetDefault: getTablePrimaryKey(target) as string[],
+    targetDefault: getTablePrimaryKeyNames(target),
   })
 }
 
@@ -224,7 +224,7 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
   target: target,
   relationOptions: HasManyThroughOptions<source, target>,
 ): Relation<source, target, 'many'> {
-  let throughRelation = relationOptions.through
+  let throughRelation: AnyRelation = relationOptions.through
 
   if (throughRelation.sourceTable !== source) {
     throw new Error(
@@ -239,7 +239,7 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
     {
       sourceSelector: relationOptions.throughTargetKey,
       sourceOptionName: 'throughTargetKey',
-      sourceDefault: getTablePrimaryKey(throughRelation.targetTable),
+      sourceDefault: getTablePrimaryKeyNames(throughRelation.targetTable),
       targetSelector: relationOptions.throughForeignKey,
       targetOptionName: 'throughForeignKey',
       targetDefault: [inferForeignKey(getTableName(throughRelation.targetTable))],
@@ -254,7 +254,7 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
     sourceKey: throughRelation.sourceKey,
     targetKey: throughRelation.targetKey,
     through: {
-      relation: throughRelation as AnyRelation,
+      relation: throughRelation,
       throughSourceKey: throughTargetKey,
       throughTargetKey: throughForeignKey,
     },
@@ -449,6 +449,10 @@ function cloneRelation<
     through: relation.through,
     modifiers: mergeRelationModifiers(relation, patch),
   })
+}
+
+function getTablePrimaryKeyNames(table: AnyTable): string[] {
+  return getTablePrimaryKey(table).map((key) => key)
 }
 
 type RelationKeyOptions<

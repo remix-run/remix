@@ -1,5 +1,6 @@
 import type {
   CountOperation,
+  DataManipulationOperation,
   DataManipulationResult,
   DeleteOperation,
   ExistsOperation,
@@ -12,6 +13,7 @@ import type {
 } from '../adapter.ts'
 import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
+import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
 import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
@@ -80,14 +82,14 @@ export async function executeQuery<input extends AnyQuery>(
       return (await executeInsert(
         database,
         snapshot.table,
-        snapshot.plan.values as Record<string, unknown>,
+        expectRecord(snapshot.plan.values, 'Invalid insert() values'),
         snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'insertMany':
       return (await executeInsertMany(
         database,
         snapshot.table,
-        snapshot.plan.values as Record<string, unknown>[],
+        expectRecordArray(snapshot.plan.values, 'Invalid insertMany() values'),
         snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'update':
@@ -95,7 +97,7 @@ export async function executeQuery<input extends AnyQuery>(
         database,
         snapshot.table,
         snapshot.state,
-        snapshot.plan.changes as Record<string, unknown>,
+        expectRecord(snapshot.plan.changes, 'Invalid update() changes'),
         snapshot.plan.options,
       )) as QueryExecutionResult<input>
     case 'delete':
@@ -109,7 +111,7 @@ export async function executeQuery<input extends AnyQuery>(
       return (await executeUpsert(
         database,
         snapshot.table,
-        snapshot.plan.values as Record<string, unknown>,
+        expectRecord(snapshot.plan.values, 'Invalid upsert() values'),
         snapshot.plan.options,
       )) as QueryExecutionResult<input>
     default:
@@ -193,8 +195,10 @@ async function executeCount(
 
   let result = await database[executeOperation](operation)
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return result.rows[0].count as number
+  let count = getNumberField(result.rows, 'count')
+
+  if (count !== undefined) {
+    return count
   }
 
   if (result.rows) {
@@ -220,12 +224,16 @@ async function executeExists(
 
   let result = await database[executeOperation](operation)
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].exists === 'boolean') {
-    return result.rows[0].exists as boolean
+  let exists = getBooleanField(result.rows, 'exists')
+
+  if (exists !== undefined) {
+    return exists
   }
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return Number(result.rows[0].count) > 0
+  let count = getNumberField(result.rows, 'count')
+
+  if (count !== undefined) {
+    return count > 0
   }
 
   return Boolean(result.rows && result.rows.length > 0)
@@ -239,7 +247,7 @@ async function executeInsert(
 ): Promise<WriteResult | WriteRowResult<Record<string, unknown>>> {
   let preparedValues = prepareInsertValues(
     table,
-    values as never,
+    values,
     database.now(),
     options?.touch ?? true,
   )
@@ -302,7 +310,7 @@ async function executeInsertMany(
   options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let preparedValues = values.map((value) =>
-    prepareInsertValues(table, value as never, database.now(), options?.touch ?? true),
+    prepareInsertValues(table, value, database.now(), options?.touch ?? true),
   )
 
   if (
@@ -375,7 +383,7 @@ async function executeUpdate(
   assertReturningCapability(database.adapter, 'update', returning)
   let preparedChanges = prepareUpdateValues(
     table,
-    changes as never,
+    changes,
     database.now(),
     options?.touch ?? true,
   )
@@ -384,40 +392,19 @@ async function executeUpdate(
     throw new DataTableQueryError('update() requires at least one change')
   }
 
-  let result: DataManipulationResult
-
-  if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
-      let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
-      let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
-
-      if (!primaryKeyPredicate) {
-        return {
-          affectedRows: 0,
-          insertId: undefined,
-          rows: returning ? [] : undefined,
-        }
-      }
-
-      return tx[executeOperation]({
-        kind: 'update',
-        table,
-        changes: preparedChanges,
-        where: [primaryKeyPredicate],
-        returning: returning ? normalizeReturningSelection(returning) : undefined,
-      })
-    })
-  } else {
-    let operation: UpdateOperation<AnyTable> = {
+  let result = await executeScopedWriteOperation(
+    database,
+    table,
+    state,
+    returning,
+    (where) => ({
       kind: 'update',
       table,
       changes: preparedChanges,
-      where: [...state.where],
+      where,
       returning: returning ? normalizeReturningSelection(returning) : undefined,
-    }
-
-    result = await database[executeOperation](operation)
-  }
+    }),
+  )
 
   let affectedRows = result.affectedRows ?? 0
   runAfterWriteHook(table, {
@@ -460,38 +447,18 @@ async function executeDelete(
   }
 
   runBeforeDeleteHook(table, deleteContext)
-  let result: DataManipulationResult
-
-  if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
-      let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
-      let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
-
-      if (!primaryKeyPredicate) {
-        return {
-          affectedRows: 0,
-          insertId: undefined,
-          rows: returning ? [] : undefined,
-        }
-      }
-
-      return tx[executeOperation]({
-        kind: 'delete',
-        table,
-        where: [primaryKeyPredicate],
-        returning: returning ? normalizeReturningSelection(returning) : undefined,
-      })
-    })
-  } else {
-    let operation: DeleteOperation<AnyTable> = {
+  let result = await executeScopedWriteOperation(
+    database,
+    table,
+    state,
+    returning,
+    (where) => ({
       kind: 'delete',
       table,
-      where: [...state.where],
+      where,
       returning: returning ? normalizeReturningSelection(returning) : undefined,
-    }
-
-    result = await database[executeOperation](operation)
-  }
+    }),
+  )
 
   let affectedRows = result.affectedRows ?? 0
   runAfterDeleteHook(table, {
@@ -534,14 +501,14 @@ async function executeUpsert(
 
   let preparedValues = prepareInsertValues(
     table,
-    values as never,
+    values,
     database.now(),
     options?.touch ?? true,
   )
   let updateChanges = options?.update
     ? prepareUpdateValues(
         table,
-        options.update as never,
+        options.update,
         database.now(),
         options?.touch ?? true,
         'create',
@@ -636,4 +603,79 @@ function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unk
   }
 
   return rows.map((row) => ({ ...row }))
+}
+
+async function executeScopedWriteOperation(
+  database: QueryExecutionContext,
+  table: AnyTable,
+  state: QueryState,
+  returning: ReturningInput<Record<string, unknown>> | undefined,
+  createOperation: (where: Predicate<string>[]) => DataManipulationOperation,
+): Promise<DataManipulationResult> {
+  if (!hasScopedWriteModifiers(state)) {
+    return database[executeOperation](createOperation([...state.where]))
+  }
+
+  return database.transaction(async (tx) => {
+    let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
+    let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
+
+    if (!primaryKeyPredicate) {
+      return createEmptyWriteResult(returning)
+    }
+
+    return tx[executeOperation](createOperation([primaryKeyPredicate]))
+  })
+}
+
+function createEmptyWriteResult(
+  returning: ReturningInput<Record<string, unknown>> | undefined,
+): DataManipulationResult {
+  return {
+    affectedRows: 0,
+    insertId: undefined,
+    rows: returning ? [] : undefined,
+  }
+}
+
+function expectRecord(value: unknown, errorMessage: string): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value
+  }
+
+  throw new DataTableQueryError(errorMessage)
+}
+
+function expectRecordArray(value: unknown, errorMessage: string): Record<string, unknown>[] {
+  if (Array.isArray(value) && value.every(isRecord)) {
+    return value
+  }
+
+  throw new DataTableQueryError(errorMessage)
+}
+
+function getBooleanField(
+  rows: DataManipulationResult['rows'],
+  key: string,
+): boolean | undefined {
+  if (!rows || !rows[0] || typeof rows[0][key] !== 'boolean') {
+    return undefined
+  }
+
+  return rows[0][key]
+}
+
+function getNumberField(
+  rows: DataManipulationResult['rows'],
+  key: string,
+): number | undefined {
+  if (!rows || !rows[0] || typeof rows[0][key] !== 'number') {
+    return undefined
+  }
+
+  return rows[0][key]
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

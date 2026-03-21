@@ -17,7 +17,7 @@ export class ColumnBuilder<output = unknown> {
    */
   nullable(): ColumnBuilder<output | null> {
     this.#definition.nullable = true
-    return this as unknown as ColumnBuilder<output | null>
+    return retypeColumnBuilder<output | null>(this)
   }
 
   /**
@@ -26,7 +26,7 @@ export class ColumnBuilder<output = unknown> {
    */
   notNull(): ColumnBuilder<Exclude<output, null>> {
     this.#definition.nullable = false
-    return this as unknown as ColumnBuilder<Exclude<output, null>>
+    return retypeColumnBuilder<Exclude<output, null>>(this)
   }
 
   /**
@@ -317,13 +317,13 @@ export type ColumnNamespace = {
 }
 
 function createColumnBuilder<output = unknown>(
-  definition: ColumnDefinition | ColumnDefinition['type'],
+  definition: ColumnDefinition,
 ): ColumnBuilder<output> {
-  if (typeof definition === 'string') {
-    return new ColumnBuilder({ type: definition })
-  }
-
   return new ColumnBuilder(definition)
+}
+
+function retypeColumnBuilder<output>(builder: ColumnBuilder<unknown>): ColumnBuilder<output> {
+  return builder as ColumnBuilder<output>
 }
 
 function createColumnNamespace(): ColumnNamespace {
@@ -332,25 +332,25 @@ function createColumnNamespace(): ColumnNamespace {
       return createColumnBuilder<string>({ type: 'varchar', length })
     },
     text() {
-      return createColumnBuilder<string>('text')
+      return createColumnBuilder<string>({ type: 'text' })
     },
     integer() {
-      return createColumnBuilder<number>('integer')
+      return createColumnBuilder<number>({ type: 'integer' })
     },
     bigint() {
-      return createColumnBuilder('bigint')
+      return createColumnBuilder({ type: 'bigint' })
     },
     decimal(precision: number, scale: number) {
       return createColumnBuilder<number>({ type: 'decimal', precision, scale })
     },
     boolean() {
-      return createColumnBuilder<boolean>('boolean')
+      return createColumnBuilder<boolean>({ type: 'boolean' })
     },
     uuid() {
-      return createColumnBuilder<string>('uuid')
+      return createColumnBuilder<string>({ type: 'uuid' })
     },
     date() {
-      return createColumnBuilder('date')
+      return createColumnBuilder({ type: 'date' })
     },
     time(options?: { precision?: number; withTimezone?: boolean }) {
       return createColumnBuilder({
@@ -367,15 +367,13 @@ function createColumnNamespace(): ColumnNamespace {
       })
     },
     json() {
-      return createColumnBuilder('json')
+      return createColumnBuilder({ type: 'json' })
     },
     binary(length?: number) {
       return createColumnBuilder({ type: 'binary', length })
     },
     enum<values extends readonly string[]>(values: values) {
-      return createColumnBuilder({ type: 'enum', enumValues: [...values] }) as ColumnBuilder<
-        values[number]
-      >
+      return createColumnBuilder<values[number]>({ type: 'enum', enumValues: [...values] })
     },
   }
 }

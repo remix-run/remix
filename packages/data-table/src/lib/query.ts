@@ -38,11 +38,7 @@ import type { QueryState } from './query/state.ts'
 import { cloneQueryState, createInitialQueryState, mergeQueryState } from './query/state.ts'
 import type { QuerySnapshot } from './query/snapshot.ts'
 import { createQuerySnapshot } from './query/snapshot.ts'
-import {
-  isSelectionMap,
-  normalizeSelectionColumns,
-  normalizeSelectionMap,
-} from './query/selection.ts'
+import { normalizeSelection } from './query/selection.ts'
 
 export type AnyQuery = Query<any, any, any, any, any>
 
@@ -171,21 +167,13 @@ export class Query<
     this: Query<source, columnTypes, row, loaded, QueryAllPhase<phase>>,
     ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
   ): Query<source, columnTypes, any, loaded, QueryAllPhase<phase>> {
-    if (isSelectionMap(input)) {
-      let selection = input[0] as Record<string, QueryColumnInput<columnTypes>>
-
-      return this.#clone({ select: normalizeSelectionMap(selection) }) as Query<
-        source,
-        columnTypes,
-        any,
-        loaded,
-        QueryAllPhase<phase>
-      >
-    }
-
-    return this.#clone({
-      select: normalizeSelectionColumns(input as (keyof row & string)[]),
-    }) as Query<source, columnTypes, any, loaded, QueryAllPhase<phase>>
+    return this.#clone({ select: normalizeSelection<row, columnTypes>(input) }) as Query<
+      source,
+      columnTypes,
+      any,
+      loaded,
+      QueryAllPhase<phase>
+    >
   }
 
   distinct(

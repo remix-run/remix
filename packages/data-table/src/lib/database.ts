@@ -15,7 +15,12 @@ import {
   getPrimaryKeyWhereFromRow,
   requireLoadedRow,
   resolveCreateRowWhere,
+  toLoadedRow,
+  toLoadedRowOrNull,
+  toLoadedRows,
   toWriteResult,
+  toWriteRow,
+  toWriteRows,
 } from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
@@ -360,6 +365,9 @@ export class Database implements QueryExecutionContext {
   }
 
   query<
+    table extends AnyTable,
+  >(table: table): QueryForTable<table>
+  query<
     tableName extends string,
     row extends Record<string, unknown>,
     primaryKey extends readonly (keyof row & string)[],
@@ -379,16 +387,6 @@ export class Database implements QueryExecutionContext {
       {},
       BoundQueryPhase<'all'>
     >
-  }
-
-  #queryTable<table extends AnyTable>(table: table): QueryForTable<table> {
-    return this.query(
-      table as unknown as QueryTableInput<
-        TableName<table>,
-        TableRow<table>,
-        TablePrimaryKey<table>
-      >,
-    )
   }
 
   #createTransactionDatabase(token: TransactionToken): Database {
@@ -418,7 +416,7 @@ export class Database implements QueryExecutionContext {
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
   ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
     let touch = options?.touch
-    let query = this.#queryTable(table)
+    let query = this.query(table)
 
     if (options?.returnRow !== true) {
       let result = await query.insert(values, { touch })
@@ -426,17 +424,17 @@ export class Database implements QueryExecutionContext {
     }
 
     if (this.#adapter.capabilities.returning) {
-      let result = (await query.insert(values, {
+      let result = await query.insert(values, {
         returning: '*',
         touch,
-      })) as { row: TableRow<table> | null }
+      })
       let row = requireLoadedRow(
-        result.row,
+        toWriteRow(result),
         'create({ returnRow: true }) failed to return an inserted row',
       )
 
       if (!options.with) {
-        return row as TableRowWith<table, LoadedRelationMap<relations>>
+        return toLoadedRow<table, LoadedRelationMap<relations>>(row)
       }
 
       return requireLoadedRow(
@@ -473,7 +471,7 @@ export class Database implements QueryExecutionContext {
     values: Array<Partial<TableRow<table>>>,
     options?: CreateManyResultOptions | CreateManyRowsOptions,
   ): Promise<WriteResult | TableRow<table>[]> {
-    let query = this.#queryTable(table)
+    let query = this.query(table)
 
     if (options?.returnRows === true) {
       if (!this.#adapter.capabilities.returning) {
@@ -482,12 +480,12 @@ export class Database implements QueryExecutionContext {
         )
       }
 
-      let result = (await query.insertMany(values, {
+      let result = await query.insertMany(values, {
         returning: '*',
         touch: options.touch,
-      })) as { rows: TableRow<table>[] }
+      })
 
-      return result.rows
+      return toWriteRows(result)
     }
 
     let result = await query.insertMany(values, {
@@ -509,19 +507,15 @@ export class Database implements QueryExecutionContext {
       return null
     }
 
-    let query = this.#queryTable(table)
+    let query = this.query(table)
 
     if (options?.with) {
-      return query.with(options.with).find(value as any) as Promise<TableRowWith<
-        table,
-        LoadedRelationMap<relations>
-      > | null>
+      return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(
+        await query.with(options.with).find(value),
+      )
     }
 
-    return query.find(value as any) as Promise<TableRowWith<
-      table,
-      LoadedRelationMap<relations>
-    > | null>
+    return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(await query.find(value))
   }
 
   async findOne<
@@ -531,16 +525,15 @@ export class Database implements QueryExecutionContext {
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let query = createScopedQuery(this.#queryTable(table), options)
+    let query = createScopedQuery(this.query(table), options)
 
     if (options.with) {
-      return query.with(options.with).first() as Promise<TableRowWith<
-        table,
-        LoadedRelationMap<relations>
-      > | null>
+      return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(
+        await query.with(options.with).first(),
+      )
     }
 
-    return query.first() as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+    return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(await query.first())
   }
 
   async findMany<
@@ -550,22 +543,20 @@ export class Database implements QueryExecutionContext {
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
-    let query = createScopedQuery(this.#queryTable(table), options)
+    let query = createScopedQuery(this.query(table), options)
 
     if (options?.with) {
-      return query.with(options.with).all() as Promise<
-        Array<TableRowWith<table, LoadedRelationMap<relations>>>
-      >
+      return toLoadedRows<table, LoadedRelationMap<relations>>(await query.with(options.with).all())
     }
 
-    return query.all() as Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
+    return toLoadedRows<table, LoadedRelationMap<relations>>(await query.all())
   }
 
   async count<table extends AnyTable>(
     table: table,
     options?: CountOptions<table>,
   ): Promise<number> {
-    let query = createScopedQuery(this.#queryTable(table), options)
+    let query = createScopedQuery(this.query(table), options)
     return query.count()
   }
 
@@ -581,19 +572,19 @@ export class Database implements QueryExecutionContext {
     let where = getPrimaryKeyWhere(table, value)
 
     if (this.#adapter.capabilities.returning) {
-      let updateResult = (await this.#queryTable(table)
+      let updateResult = await this.query(table)
         .where(where)
         .update(changes, {
           touch: options?.touch,
           returning: '*',
-        })) as { rows: TableRow<table>[] }
+        })
       let updatedRow = requireLoadedRow(
-        updateResult.rows[0] ?? null,
+        toWriteRows(updateResult)[0] ?? null,
         'update() failed to find row for table "' + getTableName(table) + '"',
       )
 
       if (!options?.with) {
-        return updatedRow as TableRowWith<table, LoadedRelationMap<relations>>
+        return toLoadedRow<table, LoadedRelationMap<relations>>(updatedRow)
       }
 
       return requireLoadedRow(
@@ -605,7 +596,7 @@ export class Database implements QueryExecutionContext {
       )
     }
 
-    await this.#queryTable(table)
+    await this.query(table)
       .where(where)
       .update(changes, {
         touch: options?.touch,
@@ -622,7 +613,7 @@ export class Database implements QueryExecutionContext {
     changes: Partial<TableRow<table>>,
     options: UpdateManyOptions<table>,
   ): Promise<WriteResult> {
-    let query = createScopedQuery(this.#queryTable(table), options)
+    let query = createScopedQuery(this.query(table), options)
 
     let result = await query.update(changes, { touch: options.touch })
     return toWriteResult(result)
@@ -633,7 +624,7 @@ export class Database implements QueryExecutionContext {
     value: PrimaryKeyInput<table>,
   ): Promise<boolean> {
     let where = getPrimaryKeyWhere(table, value)
-    let result = await this.#queryTable(table)
+    let result = await this.query(table)
       .where(where)
       .delete()
 
@@ -644,7 +635,7 @@ export class Database implements QueryExecutionContext {
     table: table,
     options: DeleteManyOptions<table>,
   ): Promise<WriteResult> {
-    let query = createScopedQuery(this.#queryTable(table), options)
+    let query = createScopedQuery(this.query(table), options)
 
     let result = await query.delete()
     return toWriteResult(result)

@@ -17,6 +17,7 @@ import {
 } from './helpers.ts'
 import {
   createForeignKeyConstraint,
+  createCheckConstraint,
   createIndexOperationForTableRef,
   toMigrationColumnDefinition,
 } from './schema-operations.ts'
@@ -30,7 +31,6 @@ export class AlterTableBuilderRuntime implements AlterTableBuilder {
     this.table = table
   }
 
-  addColumn(name: string, definition: ColumnDefinition): void
   addColumn(name: string, definition: ColumnDefinition | ColumnBuilder): void {
     this.alterChanges.push({
       kind: 'addColumn',
@@ -39,7 +39,6 @@ export class AlterTableBuilderRuntime implements AlterTableBuilder {
     })
   }
 
-  changeColumn(name: string, definition: ColumnDefinition): void
   changeColumn(name: string, definition: ColumnDefinition | ColumnBuilder): void {
     this.alterChanges.push({
       kind: 'changeColumn',
@@ -105,10 +104,7 @@ export class AlterTableBuilderRuntime implements AlterTableBuilder {
   addCheck(expression: string, options?: NamedConstraintOptions): void {
     this.alterChanges.push({
       kind: 'addCheck',
-      constraint: {
-        expression,
-        name: options?.name ?? createCheckName(this.table, expression),
-      },
+      constraint: createCheckConstraint(this.table, expression, options),
     })
   }
 

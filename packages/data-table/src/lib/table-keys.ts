@@ -27,12 +27,12 @@ export function getPrimaryKeyObject<table extends AnyTable>(
   table: table,
   value: PrimaryKeyInput<table>,
 ): Partial<TableRow<table>> {
-  let keys = getTablePrimaryKey(table)
+  let keys = getTablePrimaryKey(table) as Array<keyof TableRow<table> & string>
 
   if (keys.length === 1) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      let key = keys[0] as keyof TableRow<table>
-      return { [key]: value } as Partial<TableRow<table>>
+      let key = keys[0]
+      return createPrimaryKeyObject(key, value)
     }
   }
 
@@ -40,7 +40,7 @@ export function getPrimaryKeyObject<table extends AnyTable>(
     throw new Error('Composite primary keys require an object value')
   }
 
-  let objectValue = value as Record<string, unknown>
+  let objectValue = value as Partial<TableRow<table>>
   let output: Partial<TableRow<table>> = {}
 
   for (let key of keys) {
@@ -50,10 +50,19 @@ export function getPrimaryKeyObject<table extends AnyTable>(
       )
     }
 
-    ;(output as Record<string, unknown>)[key] = objectValue[key]
+    output[key] = objectValue[key]
   }
 
   return output
+}
+
+function createPrimaryKeyObject<table extends AnyTable>(
+  key: keyof TableRow<table> & string,
+  value: unknown,
+): Partial<TableRow<table>> {
+  return {
+    [key]: value,
+  } as Partial<TableRow<table>>
 }
 
 /**

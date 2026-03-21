@@ -293,8 +293,7 @@ export function normalizeWhereInput<column extends string>(
     return input
   }
 
-  let keys = Object.keys(input) as column[]
-  let predicates = keys.map((column) => eq(column, input[column]) as Predicate<column>)
+  let predicates = objectKeys(input).map((column) => eq(column, input[column])) as Predicate<column>[]
 
   return and(...predicates)
 }
@@ -401,16 +400,18 @@ function createComparisonPredicate<column extends string | ColumnReferenceLike>(
   operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
   column: column,
   value: unknown,
-): Predicate<string> {
+): Predicate<PredicateColumn<column>> {
   let normalizedColumn = resolvePredicateColumn(column)
   let normalizedValue = resolveComparisonValue(value)
 
   if (isQualifiedColumnReference(normalizedColumn) && isQualifiedColumnReference(normalizedValue)) {
+    let comparisonValue = normalizedValue as PredicateColumn<column>
+
     return {
       type: 'comparison',
       operator,
-      column: normalizedColumn,
-      value: normalizedValue,
+      column: normalizedColumn as PredicateColumn<column>,
+      value: comparisonValue,
       valueType: 'column',
     }
   }
@@ -418,8 +419,12 @@ function createComparisonPredicate<column extends string | ColumnReferenceLike>(
   return {
     type: 'comparison',
     operator,
-    column: normalizedColumn,
+    column: normalizedColumn as PredicateColumn<column>,
     value: normalizedValue,
     valueType: 'value',
   }
+}
+
+function objectKeys<value extends Record<string, unknown>>(input: value): Array<keyof value & string> {
+  return Object.keys(input) as Array<keyof value & string>
 }

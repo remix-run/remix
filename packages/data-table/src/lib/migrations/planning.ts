@@ -125,22 +125,22 @@ export function createMigrationStatusEntries(
     let journalRow = journalMap.get(migration.id)
 
     if (!journalRow) {
+      let status: MigrationStatus = 'pending'
+
       return {
         id: migration.id,
         name: migration.name,
-        status: 'pending' as MigrationStatus,
+        status,
       }
     }
 
     let checksum = normalizeChecksum(migration)
+    let status: MigrationStatus = checksum === journalRow.checksum ? 'applied' : 'drifted'
 
     return {
       id: migration.id,
       name: migration.name,
-      status:
-        checksum === journalRow.checksum
-          ? ('applied' as MigrationStatus)
-          : ('drifted' as MigrationStatus),
+      status,
       appliedAt: journalRow.appliedAt,
       batch: journalRow.batch,
       checksum: journalRow.checksum,
