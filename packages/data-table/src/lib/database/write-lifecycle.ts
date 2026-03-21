@@ -1,8 +1,8 @@
 import type { DatabaseAdapter, ReturningSelection } from '../adapter.ts'
 import { DataTableQueryError, DataTableValidationError } from '../errors.ts'
 import type { ReturningInput } from '../database.ts'
+import type { AnyRelation } from '../table-relations.ts'
 import type {
-  AnyRelation,
   AnyTable,
   TableAfterDeleteContext,
   TableAfterWriteContext,

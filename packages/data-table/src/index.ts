@@ -72,23 +72,12 @@ export {
 } from './lib/errors.ts'
 
 export type {
-  AnyRelation,
   AnyColumn,
   AnyTable,
-  BelongsToOptions,
   ColumnReference,
   ColumnReferenceForQualifiedName,
-  HasManyOptions,
-  HasManyThroughOptions,
-  HasOneOptions,
-  KeySelector,
   OrderByClause,
   OrderDirection,
-  PrimaryKeyInput,
-  Relation,
-  RelationCardinality,
-  RelationKind,
-  RelationMapForTable,
   Table,
   TableAfterDelete,
   TableAfterDeleteContext,
@@ -123,8 +112,20 @@ export type {
   ValidationFailure,
   ValidationIssue,
 } from './lib/table.ts'
+export type {
+  AnyRelation,
+  BelongsToOptions,
+  HasManyOptions,
+  HasManyThroughOptions,
+  HasOneOptions,
+  KeySelector,
+  Relation,
+  RelationCardinality,
+  RelationKind,
+  RelationMapForTable,
+} from './lib/table-relations.ts'
+export type { PrimaryKeyInput } from './lib/table-keys.ts'
 export {
-  belongsTo,
   columnMetadataKey,
   fail,
   getTableColumns,
@@ -139,13 +140,11 @@ export {
   getTableReference,
   getTableTimestamps,
   getTableValidator,
-  hasMany,
-  hasManyThrough,
-  hasOne,
   table,
   tableMetadataKey,
   timestamps,
 } from './lib/table.ts'
+export { belongsTo, hasMany, hasManyThrough, hasOne } from './lib/table-relations.ts'
 export type { ColumnNamespace } from './lib/column.ts'
 export { ColumnBuilder, column } from './lib/column.ts'
 

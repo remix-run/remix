@@ -29,11 +29,8 @@ import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './ref
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
 import type {
-  AnyRelation,
   AnyTable,
-  LoadedRelationMap,
   OrderDirection,
-  PrimaryKeyInput,
   TableName,
   TablePrimaryKey,
   TableRow,
@@ -42,6 +39,8 @@ import type {
   tableMetadataKey,
   TimestampConfig,
 } from './table.ts'
+import type { AnyRelation, LoadedRelationMap } from './table-relations.ts'
+import type { PrimaryKeyInput } from './table-keys.ts'
 import { getTableName } from './table.ts'
 import type { Pretty } from './types.ts'
 import type { WhereInput } from './operators.ts'

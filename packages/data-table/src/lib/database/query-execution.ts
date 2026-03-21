@@ -16,7 +16,8 @@ import { normalizeWhereInput } from '../operators.ts'
 import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
-import { getPrimaryKeyObject, getTableName } from '../table.ts'
+import { getTableName } from '../table.ts'
+import { getPrimaryKeyObject } from '../table-keys.ts'
 
 import { executeOperation, type QueryExecutionContext } from './execution-context.ts'
 import {

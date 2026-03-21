@@ -14,7 +14,7 @@ import {
   getTableName,
   getTablePrimaryKey,
   getTableReference,
-  hasMany,
+  getTableTimestamps,
   table,
   tableMetadataKey,
 } from './table.ts'
@@ -131,25 +131,36 @@ describe('table metadata', () => {
     assert.equal(getTableAfterRead(users), afterRead)
   })
 
-  it('builds relations with functional helpers', () => {
+  it('stores resolved timestamp configuration', () => {
     let users = table({
       name: 'users',
       columns: {
         id: column.integer(),
+        created_at: column.timestamp(),
+        updated_at: column.timestamp(),
       },
+      timestamps: true,
     })
-    let orders = table({
-      name: 'orders',
+    let audits = table({
+      name: 'audits',
       columns: {
         id: column.integer(),
-        user_id: column.integer(),
+        created_on: column.timestamp(),
+        updated_on: column.timestamp(),
+      },
+      timestamps: {
+        createdAt: 'created_on',
+        updatedAt: 'updated_on',
       },
     })
 
-    let userOrders = hasMany(users, orders).orderBy(orders.id)
-
-    assert.deepEqual(userOrders.sourceKey, ['id'])
-    assert.deepEqual(userOrders.targetKey, ['user_id'])
-    assert.equal(userOrders.modifiers.orderBy[0].column, 'orders.id')
+    assert.deepEqual(getTableTimestamps(users), {
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    })
+    assert.deepEqual(getTableTimestamps(audits), {
+      createdAt: 'created_on',
+      updatedAt: 'updated_on',
+    })
   })
 })

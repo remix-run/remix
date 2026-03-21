@@ -5,7 +5,8 @@ import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
 import { createMigration } from '../src/lib/migrations.ts'
 import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
-import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
+import { table } from '../src/lib/table.ts'
+import { hasMany, hasManyThrough } from '../src/lib/table-relations.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
 let accounts = table({

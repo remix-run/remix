@@ -19,7 +19,8 @@ import type {
 import type { Predicate, WhereInput } from './operators.ts'
 import { normalizeWhereInput } from './operators.ts'
 import { normalizeColumnInput } from './references.ts'
-import type { AnyRelation, AnyTable, LoadedRelationMap, OrderByClause } from './table.ts'
+import type { AnyRelation, LoadedRelationMap } from './table-relations.ts'
+import type { AnyTable, OrderByClause } from './table.ts'
 import { getTableColumns, getTableName } from './table.ts'
 
 type QueryBindingState = 'bound' | 'unbound'

@@ -14,8 +14,10 @@ import type {
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import { query as createQuery } from '../query.ts'
-import type { AnyTable, PrimaryKeyInput, TableName, TablePrimaryKey, TableRow } from '../table.ts'
-import { getPrimaryKeyObject, getTableName, getTablePrimaryKey } from '../table.ts'
+import type { AnyTable, TableName, TablePrimaryKey, TableRow } from '../table.ts'
+import type { PrimaryKeyInput } from '../table-keys.ts'
+import { getTableName, getTablePrimaryKey } from '../table.ts'
+import { getPrimaryKeyObject } from '../table-keys.ts'
 
 import type { QueryExecutionContext } from './execution-context.ts'
 import { loadRowsWithRelationsForQuery } from './query-execution.ts'
