@@ -1,5 +1,5 @@
-import { column as c, createMigration } from 'remix/data-table/migrations'
-import { table } from 'remix/data-table'
+import { column as c, table } from 'remix/data-table'
+import { createMigration } from 'remix/data-table/migrations'
 
 export default createMigration({
   async up({ schema }) {

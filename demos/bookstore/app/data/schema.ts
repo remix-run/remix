@@ -1,5 +1,5 @@
-import { belongsTo, column as c, table, hasMany } from 'remix/data-table'
-import type { TableRow, TableRowWith } from 'remix/data-table'
+import { belongsTo, column as c, hasMany, table } from 'remix/data-table'
+import type { TableRow } from 'remix/data-table'
 
 export const books = table({
   name: 'books',
@@ -296,11 +296,10 @@ export const passwordResetTokens = table({
 
 export type Book = TableRow<typeof books>
 export type User = TableRow<typeof users>
-export type Order = TableRowWith<typeof orders, { items: OrderItem[] }>
-export type OrderItem = TableRowWith<
-  typeof itemsByOrder.targetTable,
-  { book: TableRow<typeof bookForOrderItem.targetTable> | null }
->
+export type Order = TableRow<typeof orders> & { items: OrderItem[] }
+export type OrderItem = TableRow<typeof itemsByOrder.targetTable> & {
+  book: TableRow<typeof bookForOrderItem.targetTable> | null
+}
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
