@@ -116,7 +116,9 @@ describe('social-auth router', () => {
     }
 
     try {
-      let loginResponse = await router.fetch('https://social-auth.test/auth/google/login?returnTo=/account')
+      let loginResponse = await router.fetch(
+        'https://social-auth.test/auth/google/login?returnTo=/account',
+      )
 
       assert.equal(loginResponse.status, 302)
 

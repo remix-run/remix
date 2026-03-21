@@ -39,7 +39,7 @@ describe('okta provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/okta', context => startExternalAuth(provider, context))
+      router.get('/login/okta', (context) => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/okta')
 

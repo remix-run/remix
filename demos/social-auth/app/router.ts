@@ -15,10 +15,7 @@ import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 import type { AuthIdentity } from './utils/auth-session.ts'
-import {
-  externalProviderRegistry,
-  type ExternalProviderRegistry,
-} from './utils/external-auth.ts'
+import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
 await initializeSocialAuthDatabase()
 

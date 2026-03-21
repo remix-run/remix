@@ -52,10 +52,12 @@ export let externalProviderNames = ['google', 'github', 'x'] as const
 
 export let externalProviderRegistry = createExternalProviderRegistry()
 
-export function createExternalProviderRegistry(options: {
-  env?: ExternalProviderEnvironment
-  origin?: string | URL
-} = {}): ExternalProviderRegistry {
+export function createExternalProviderRegistry(
+  options: {
+    env?: ExternalProviderEnvironment
+    origin?: string | URL
+  } = {},
+): ExternalProviderRegistry {
   let env = options.env ?? process.env
   let origin = options.origin ?? getDemoOrigin()
 
@@ -86,7 +88,7 @@ export function readExternalProviderLinks(
   registry: ExternalProviderRegistry = externalProviderRegistry,
   env: ExternalProviderEnvironment = process.env,
 ): ExternalProviderLink[] {
-  return externalProviderNames.map(name => {
+  return externalProviderNames.map((name) => {
     let status = getExternalProviderStatus(name, registry, env)
 
     return {

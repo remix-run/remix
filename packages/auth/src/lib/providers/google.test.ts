@@ -22,7 +22,7 @@ describe('google provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/google', context => startExternalAuth(provider, context))
+    router.get('/login/google', (context) => startExternalAuth(provider, context))
 
     let response = await router.fetch('https://app.example.com/login/google')
     let location = new URL(response.headers.get('Location')!)

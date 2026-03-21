@@ -13,10 +13,7 @@ export async function verifyCredentials<
   context extends RequestContext<any, any> = RequestContext,
   input = never,
   result = never,
->(
-  provider: CredentialsAuthProvider<input, result>,
-  context: context,
-): Promise<result | null> {
+>(provider: CredentialsAuthProvider<input, result>, context: context): Promise<result | null> {
   let input = await provider.parse(context)
   return provider.verify(input, context)
 }

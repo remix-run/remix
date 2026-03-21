@@ -39,7 +39,7 @@ describe('auth0 provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/auth0', context => startExternalAuth(provider, context))
+      router.get('/login/auth0', (context) => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/auth0')
 

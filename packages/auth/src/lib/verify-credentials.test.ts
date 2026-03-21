@@ -104,9 +104,6 @@ describe('verifyCredentials()', () => {
       },
     })
 
-    await assert.rejects(
-      verifyCredentials(provider, {} as never),
-      new Error('verify failed'),
-    )
+    await assert.rejects(verifyCredentials(provider, {} as never), new Error('verify failed'))
   })
 })

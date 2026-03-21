@@ -1,14 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
 
 import { forgotPasswordController } from './forgot-password/controller.tsx'
-import {
-  createGitHubAuthController,
-  githubAuthController,
-} from './github/controller.ts'
-import {
-  createGoogleAuthController,
-  googleAuthController,
-} from './google/controller.ts'
+import { createGitHubAuthController, githubAuthController } from './github/controller.ts'
+import { createGoogleAuthController, googleAuthController } from './google/controller.ts'
 import { login } from './login-action.ts'
 import { logout } from './logout-action.ts'
 import { resetPasswordController } from './reset-password/controller.tsx'

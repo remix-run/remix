@@ -43,7 +43,7 @@ describe('microsoft provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/microsoft', context => startExternalAuth(provider, context))
+      router.get('/login/microsoft', (context) => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/microsoft')
 
