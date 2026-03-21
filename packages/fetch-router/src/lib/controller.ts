@@ -6,7 +6,6 @@ import type { WithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
-
 export type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,
   context extends RequestContext<any, any>,
@@ -91,11 +90,7 @@ export type Action<
   method extends RequestMethod | 'ANY',
   pattern extends string,
   context extends RequestContext<any, any> = RequestContext,
-> = ActionInput<
-  Params<pattern>,
-  WithParams<context, Params<pattern>>,
-  readonly AnyMiddleware[]
->
+> = ActionInput<Params<pattern>, WithParams<context, Params<pattern>>, readonly AnyMiddleware[]>
 
 /**
  * Builds an {@link Action} type from a string pattern, {@link RoutePattern}, or {@link Route}.

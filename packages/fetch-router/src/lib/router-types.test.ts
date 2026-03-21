@@ -26,7 +26,9 @@ function requireUser(): Middleware<any, any, RequireUserTransform> {
   }
 }
 
-function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<any, any, SetRoleTransform<role>> {
+function setRole<role extends 'viewer' | 'admin'>(
+  role: role,
+): Middleware<any, any, SetRoleTransform<role>> {
   return async (context, next) => {
     context.set(CurrentRole, role)
     return next()
@@ -43,7 +45,7 @@ const routes = route({
 })
 
 const plainRouter = createRouter()
-plainRouter.get('/public', context => {
+plainRouter.get('/public', (context) => {
   // @ts-expect-error - CurrentUser is nullable without middleware refinement
   context.get(CurrentUser).id
 
@@ -53,7 +55,7 @@ plainRouter.get('/public', context => {
 const appMiddleware = [requireUser(), setRole('viewer')] as const
 const router = createRouter({ middleware: appMiddleware })
 
-router.get(routes.account, context => {
+router.get(routes.account, (context) => {
   let user = context.get(CurrentUser)
   let role = context.get(CurrentRole)
   let accountId: string = context.params.accountId
@@ -64,9 +66,8 @@ router.get(routes.account, context => {
   return new Response(accountId + ':' + user.id + ':' + role)
 })
 
-type AppContext = typeof router extends Router<infer context extends RequestContext<any, any>>
-  ? context
-  : never
+type AppContext =
+  typeof router extends Router<infer context extends RequestContext<any, any>> ? context : never
 
 type AdminAppContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
@@ -140,7 +141,7 @@ const elevatedReportAction = {
 router.get(routes.account, accountAction)
 router.map(routes.admin, adminController)
 if (false as boolean) {
-  router.get(routes.reports, context => {
+  router.get(routes.reports, (context) => {
     // @ts-expect-error - the base app context still only guarantees the inherited viewer role
     let adminRole: 'admin' = context.get(CurrentRole)
     return new Response(adminRole)

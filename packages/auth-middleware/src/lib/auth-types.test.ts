@@ -72,7 +72,7 @@ expectTypeEquality<
   IsEqual<GetContextValue<ProtectedAppContext, typeof Auth>, GoodAuth<APIIdentity>>
 >()
 
-router.get(routes.public, context => {
+router.get(routes.public, (context) => {
   let currentAuth = context.get(Auth)
   let id: string = context.params.id
 
@@ -133,9 +133,7 @@ fallbackRouter.get('/session/:id', {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
 
-    expectTypeEquality<
-      IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }>>
-    >()
+    expectTypeEquality<IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }>>>()
     expectTypeEquality<IsEqual<typeof currentAuth.method, string>>()
 
     void id
@@ -155,7 +153,7 @@ router.map(routes.admin, {
 })
 
 if (false as boolean) {
-  router.get(routes.private, context => {
+  router.get(routes.private, (context) => {
     // @ts-expect-error - router-global auth() alone does not guarantee a good auth state
     let authState: GoodAuth<APIIdentity> = context.get(Auth)
     return new Response(authState.method)

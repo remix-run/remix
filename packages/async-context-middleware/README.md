@@ -50,18 +50,17 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 import type { AnyParams, MiddlewareContext, WithParams } from 'remix/fetch-router'
 import type { WithRequiredAuth } from 'remix/auth-middleware'
 
-export type RootMiddleware = [
-  ReturnType<typeof loadSession>,
-  ReturnType<typeof loadAuth>,
-]
+export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
 
 export type AppContext<params extends AnyParams = AnyParams> = WithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedAppContext<params extends AnyParams = AnyParams> =
-  WithRequiredAuth<AppContext<params>, { id: string }>
+export type AuthenticatedAppContext<params extends AnyParams = AnyParams> = WithRequiredAuth<
+  AppContext<params>,
+  { id: string }
+>
 
 declare module 'remix/async-context-middleware' {
   interface AsyncContextTypes {

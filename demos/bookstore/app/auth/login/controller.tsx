@@ -5,7 +5,11 @@ import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../layout.tsx'
-import { getLoginRedirectURL, getPostAuthRedirect, passwordProvider } from '../../middleware/auth.ts'
+import {
+  getLoginRedirectURL,
+  getPostAuthRedirect,
+  passwordProvider,
+} from '../../middleware/auth.ts'
 import { render } from '../../utils/render.ts'
 import { Session } from '../../utils/session.ts'
 import { authCardStyle } from '../shared.ts'

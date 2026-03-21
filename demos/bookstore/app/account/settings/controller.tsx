@@ -42,12 +42,7 @@ let settingsController = {
 
               <div class="form-group">
                 <label for="password">New Password (leave blank to keep current)</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  autoComplete="new-password"
-                />
+                <input type="password" id="password" name="password" autoComplete="new-password" />
               </div>
 
               <button type="submit" class="btn">

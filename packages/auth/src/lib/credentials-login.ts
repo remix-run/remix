@@ -13,11 +13,7 @@ export interface CredentialsAuthLoginOptions<
   context extends RequestContext<any, any> = RequestContext,
 > {
   /** Writes application-defined auth state into the session after successful login. */
-  writeSession(
-    session: Session,
-    result: result,
-    context: context,
-  ): void | Promise<void>
+  writeSession(session: Session, result: result, context: context): void | Promise<void>
   /** Redirect target used when login succeeds and `onSuccess` is not provided. */
   successRedirectTo?: string | URL
   /** Redirect target used when login fails and `onFailure` is not provided. */
@@ -45,7 +41,7 @@ export function createCredentialsAuthLoginRequestHandler<
   provider: CredentialsAuthProvider<input, result>,
   options: CredentialsAuthLoginOptions<result, context>,
 ): RequestHandler<{}, context> {
-  return async context => {
+  return async (context) => {
     try {
       let session = getSession(context, 'createCredentialsAuthLoginRequestHandler()')
       let input = await provider.parse(context)

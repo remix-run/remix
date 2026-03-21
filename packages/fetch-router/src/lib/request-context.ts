@@ -31,10 +31,7 @@ export type AnyParams = Record<string, string>
 /**
  * A single request-context entry that associates a context key with its stored value type.
  */
-export type ContextEntry<key extends object = object, value = unknown> = readonly [
-  key,
-  value,
-]
+export type ContextEntry<key extends object = object, value = unknown> = readonly [key, value]
 
 /**
  * An ordered list of request-context entries. Later entries override earlier ones for the same key.
@@ -54,12 +51,8 @@ export type ContextValue<key> =
 /**
  * Extracts the route params type from a {@link RequestContext}.
  */
-export type ContextParams<context> = context extends RequestContext<
-  infer params extends Record<string, any>,
-  any
->
-  ? params
-  : {}
+export type ContextParams<context> =
+  context extends RequestContext<infer params extends Record<string, any>, any> ? params : {}
 
 type DuplicateParamNames<
   left extends Record<string, any>,
@@ -90,10 +83,7 @@ type ResolveContextEntryValue<
   entries extends ContextEntries,
   key extends object,
   fallback,
-> = entries extends readonly [
-  ...infer rest extends ContextEntries,
-  infer last extends ContextEntry,
-]
+> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
   ? [key] extends [last[0]]
     ? [last[0]] extends [key]
       ? last[1]

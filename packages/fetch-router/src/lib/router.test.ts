@@ -993,4 +993,3 @@ describe('custom matcher', () => {
     assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
-

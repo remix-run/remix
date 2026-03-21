@@ -1,26 +1,16 @@
-import {
-  createGitHubAuthProvider,
-  createGoogleAuthProvider,
-  createXAuthProvider,
-} from 'remix/auth'
-import type {
-  GitHubAuthProfile,
-  GoogleAuthProfile,
-  OAuthProvider,
-  XAuthProfile,
-} from 'remix/auth'
+import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
+import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
 import type { RequestContext, ContextEntries } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
 
-export type ExternalProviderFor<name extends ExternalProviderName> =
-  name extends 'google'
-    ? OAuthProvider<GoogleAuthProfile, 'google'>
-    : name extends 'github'
-      ? OAuthProvider<GitHubAuthProfile, 'github'>
-      : OAuthProvider<XAuthProfile, 'x'>
+export type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
+  ? OAuthProvider<GoogleAuthProfile, 'google'>
+  : name extends 'github'
+    ? OAuthProvider<GitHubAuthProfile, 'github'>
+    : OAuthProvider<XAuthProfile, 'x'>
 
 type ProviderEnvPrefix = 'GOOGLE' | 'GITHUB' | 'X'
 
@@ -82,10 +72,10 @@ export function getExternalProviderStatus(name: ExternalProviderName): ProviderS
   }
 }
 
-export function readExternalProviderLinks(
-  returnToQuery: { returnTo?: string },
-): ExternalProviderLink[] {
-  return externalProviderNames.map(name => {
+export function readExternalProviderLinks(returnToQuery: {
+  returnTo?: string
+}): ExternalProviderLink[] {
+  return externalProviderNames.map((name) => {
     let status = getExternalProviderStatus(name)
 
     return {
@@ -133,10 +123,9 @@ function createGitHubProvider<
   })
 }
 
-function createXProvider<
-  params extends Record<string, string>,
-  entries extends ContextEntries,
->(context: RequestContext<params, entries>): OAuthProvider<XAuthProfile, 'x'> | null {
+function createXProvider<params extends Record<string, string>, entries extends ContextEntries>(
+  context: RequestContext<params, entries>,
+): OAuthProvider<XAuthProfile, 'x'> | null {
   let credentials = readProviderCredentials('X')
   if (credentials == null) {
     return null

@@ -74,7 +74,10 @@ let forgotPasswordController = {
                   <strong>Demo Mode:</strong> Click the link below to reset your password
                 </p>
                 <p mix={[css({ marginTop: '0.5rem' })]}>
-                  <a href={routes.auth.resetPassword.index.href({ token })} class="btn btn-secondary">
+                  <a
+                    href={routes.auth.resetPassword.index.href({ token })}
+                    class="btn btn-secondary"
+                  >
                     Reset Password
                   </a>
                 </p>

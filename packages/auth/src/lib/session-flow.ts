@@ -10,11 +10,7 @@ export interface CompleteAuthSessionOptions<
   session: Session
   result: result
   context: context
-  writeSession(
-    session: Session,
-    result: result,
-    context: context,
-  ): void | Promise<void>
+  writeSession(session: Session, result: result, context: context): void | Promise<void>
   onSuccess?(result: result, context: context): Response | Promise<Response>
   successRedirectTo: string | URL
 }

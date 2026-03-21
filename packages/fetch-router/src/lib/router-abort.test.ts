@@ -208,4 +208,3 @@ describe('abort signal support', () => {
     assert.equal(handlerCalled, false)
   })
 })
-

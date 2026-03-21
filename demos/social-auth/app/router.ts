@@ -31,8 +31,10 @@ export type AppContext<params extends Record<string, string> = {}> = WithParams<
   params
 >
 
-export type AuthenticatedAppContext<params extends Record<string, string> = {}> =
-  WithRequiredAuth<AppContext<params>, AuthIdentity>
+export type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
+  AppContext<params>,
+  AuthIdentity
+>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie

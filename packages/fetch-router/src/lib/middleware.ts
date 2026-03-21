@@ -17,46 +17,51 @@ export type MiddlewareContextTransform =
 
 type IdentityContextTransform = readonly []
 
-type MiddlewareTransform<middleware> = middleware extends Middleware<any, any, infer transform>
-  ? transform
-  : IdentityContextTransform
+type MiddlewareTransform<middleware> =
+  middleware extends Middleware<any, any, infer transform> ? transform : IdentityContextTransform
 
 /**
  * Applies a middleware context transform to a request-context type.
  */
-export type ApplyContextTransform<currentContext extends RequestContext<any, any>, transform> =
-  transform extends ContextEntries
-    ? currentContext extends RequestContext<
-        infer params extends Record<string, any>,
-        infer entries extends ContextEntries
-      >
-      ? RequestContext<params, [...entries, ...transform]>
+export type ApplyContextTransform<
+  currentContext extends RequestContext<any, any>,
+  transform,
+> = transform extends ContextEntries
+  ? currentContext extends RequestContext<
+      infer params extends Record<string, any>,
+      infer entries extends ContextEntries
+    >
+    ? RequestContext<params, [...entries, ...transform]>
+    : currentContext
+  : transform extends {
+        <inputContext extends currentContext>(context: inputContext): infer output
+      }
+    ? output extends RequestContext<any, any>
+      ? output
       : currentContext
-    : transform extends {
-          <inputContext extends currentContext>(context: inputContext): infer output
-        }
-      ? output extends RequestContext<any, any>
-        ? output
-        : currentContext
-      : currentContext
+    : currentContext
 
 /**
  * Applies the declared context effect of a single middleware to a request-context type.
  */
-export type ApplyMiddleware<context extends RequestContext<any, any>, middleware> =
-  ApplyContextTransform<context, MiddlewareTransform<middleware>>
+export type ApplyMiddleware<
+  context extends RequestContext<any, any>,
+  middleware,
+> = ApplyContextTransform<context, MiddlewareTransform<middleware>>
 
 /**
  * Applies an ordered middleware array to a request-context type from left to right.
  */
-export type ApplyMiddlewareTuple<context extends RequestContext<any, any>, middleware> =
-  middleware extends readonly AnyMiddleware[]
-    ? number extends middleware['length']
-      ? context
-      : middleware extends readonly [infer first, ...infer rest]
-        ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
-        : context
-    : context
+export type ApplyMiddlewareTuple<
+  context extends RequestContext<any, any>,
+  middleware,
+> = middleware extends readonly AnyMiddleware[]
+  ? number extends middleware['length']
+    ? context
+    : middleware extends readonly [infer first, ...infer rest]
+      ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
+      : context
+  : context
 
 /**
  * Resolves the request-context type produced by a router middleware array.

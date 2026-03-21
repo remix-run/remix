@@ -4,10 +4,11 @@ import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
 export interface AsyncContextTypes {}
 
-export type AsyncRequestContext =
-  AsyncContextTypes extends { requestContext: infer context extends RequestContext<any, any> }
-    ? context
-    : RequestContext
+export type AsyncRequestContext = AsyncContextTypes extends {
+  requestContext: infer context extends RequestContext<any, any>
+}
+  ? context
+  : RequestContext
 
 const storage = new AsyncLocalStorage<RequestContext<any, any>>()
 

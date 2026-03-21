@@ -2,12 +2,11 @@ import type { RequestContext } from '@remix-run/fetch-router'
 
 import type { AuthScheme } from '../auth.ts'
 
-type ResolvedMethod<name, fallback extends string> = Extract<name, string> extends never
-  ? fallback
-  : Extract<name, string>
+type ResolvedMethod<name, fallback extends string> =
+  Extract<name, string> extends never ? fallback : Extract<name, string>
 
 type InferIdentity<verify extends (token: string, context: RequestContext) => unknown> = Exclude<
-  Awaited<ReturnType<verify>> ,
+  Awaited<ReturnType<verify>>,
   null
 >
 
@@ -24,10 +23,7 @@ export interface BearerTokenAuthSchemeOptions<identity, method extends string = 
   /** Authorization scheme prefix expected in the header value. */
   scheme?: string
   /** Verifies a parsed bearer token and returns the resolved identity on success. */
-  verify(
-    token: string,
-    context: RequestContext,
-  ): identity | null | Promise<identity | null>
+  verify(token: string, context: RequestContext): identity | null | Promise<identity | null>
   /** Challenge value returned when the scheme rejects credentials. */
   challenge?: string
 }

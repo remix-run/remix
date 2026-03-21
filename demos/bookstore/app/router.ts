@@ -1,4 +1,9 @@
-import { createRouter, type AnyParams, type MiddlewareContext, type WithParams } from 'remix/fetch-router'
+import {
+  createRouter,
+  type AnyParams,
+  type MiddlewareContext,
+  type WithParams,
+} from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'

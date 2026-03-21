@@ -2,12 +2,11 @@ import type { RequestContext } from '@remix-run/fetch-router'
 
 import type { AuthScheme } from '../auth.ts'
 
-type ResolvedMethod<name, fallback extends string> = Extract<name, string> extends never
-  ? fallback
-  : Extract<name, string>
+type ResolvedMethod<name, fallback extends string> =
+  Extract<name, string> extends never ? fallback : Extract<name, string>
 
 type InferIdentity<verify extends (key: string, context: RequestContext) => unknown> = Exclude<
-  Awaited<ReturnType<verify>> ,
+  Awaited<ReturnType<verify>>,
   null
 >
 

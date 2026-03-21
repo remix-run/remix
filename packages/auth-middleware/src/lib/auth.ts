@@ -51,11 +51,15 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  */
 export const Auth = createContextKey<AuthState>()
 
-export type WithAuth<context extends RequestContext<any, any>, identity = unknown> =
-  MergeContext<context, [readonly [typeof Auth, AuthState<identity>]]>
+export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
+  context,
+  [readonly [typeof Auth, AuthState<identity>]]
+>
 
-export type WithRequiredAuth<context extends RequestContext<any, any>, identity = unknown> =
-  MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
+export type WithRequiredAuth<
+  context extends RequestContext<any, any>,
+  identity = unknown,
+> = MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
 
 /**
  * Successful result returned by an auth scheme.
@@ -84,9 +88,7 @@ export interface AuthSchemeFailure {
 /**
  * Non-skipped results an auth scheme can return.
  */
-export type AuthSchemeResult<identity = unknown> =
-  | AuthSchemeSuccess<identity>
-  | AuthSchemeFailure
+export type AuthSchemeResult<identity = unknown> = AuthSchemeSuccess<identity> | AuthSchemeFailure
 
 /**
  * Full return type for an auth scheme, including skipped requests.
@@ -120,7 +122,9 @@ type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
 /**
  * Options for loading auth state for each request.
  */
-export interface AuthOptions<schemes extends readonly AuthScheme<any, any>[] = AuthScheme<any, any>[]> {
+export interface AuthOptions<
+  schemes extends readonly AuthScheme<any, any>[] = AuthScheme<any, any>[],
+> {
   /** Auth schemes to run in order for each request. */
   schemes: readonly [...schemes]
 }
@@ -178,10 +182,7 @@ export function auth<schemes extends readonly AuthScheme<any, any>[]>(
   }
 }
 
-function createFailure(
-  scheme: AuthScheme<any, any>,
-  result: AuthSchemeFailure,
-): AuthFailure {
+function createFailure(scheme: AuthScheme<any, any>, result: AuthSchemeFailure): AuthFailure {
   return {
     method: scheme.name,
     code: result.code ?? 'invalid_credentials',

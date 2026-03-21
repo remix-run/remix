@@ -18,7 +18,14 @@ export interface LoginPageProps {
 }
 
 export function LoginPage() {
-  return ({ formAction, signupHref, forgotPasswordHref, providers, error, success }: LoginPageProps) => (
+  return ({
+    formAction,
+    signupHref,
+    forgotPasswordHref,
+    providers,
+    error,
+    success,
+  }: LoginPageProps) => (
     <Document title="Social Auth Demo">
       <AuthCard
         title="Welcome Back"

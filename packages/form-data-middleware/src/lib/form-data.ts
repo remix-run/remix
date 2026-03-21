@@ -47,7 +47,9 @@ export interface FormDataOptions extends ParseFormDataOptions {
  * @param options Options for parsing form data
  * @returns A middleware function that parses form data
  */
-export function formData(options?: FormDataOptions): Middleware<any, any, SetFormDataContextTransform> {
+export function formData(
+  options?: FormDataOptions,
+): Middleware<any, any, SetFormDataContextTransform> {
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 

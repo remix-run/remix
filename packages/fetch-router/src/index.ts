@@ -11,12 +11,7 @@ export type {
   WithParams,
 } from './lib/request-context.ts'
 
-export type {
-  Controller,
-  Action,
-  BuildAction,
-  RequestHandler,
-} from './lib/controller.ts'
+export type { Controller, Action, BuildAction, RequestHandler } from './lib/controller.ts'
 
 export type {
   ApplyContextTransform,

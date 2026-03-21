@@ -32,10 +32,7 @@ export interface ExternalAuthCallbackOptions<
   /** Redirect target used when callback fails and `onFailure` is not provided. */
   failureRedirectTo?: string | URL
   /** Custom success response builder for a completed OAuth callback. */
-  onSuccess?(
-    result: OAuthResult<profile, provider>,
-    context: context,
-  ): Response | Promise<Response>
+  onSuccess?(result: OAuthResult<profile, provider>, context: context): Response | Promise<Response>
   /** Custom failure response builder for callback validation or provider errors. */
   onFailure?(error: unknown, context: context): Response | Promise<Response>
 }
@@ -55,7 +52,7 @@ export function createExternalAuthCallbackRequestHandler<
   provider: OAuthProvider<profile, provider>,
   options: ExternalAuthCallbackOptions<profile, provider, context>,
 ): RequestHandler<{}, context> {
-  return async context => {
+  return async (context) => {
     let session: Session | undefined
     let transactionKey = options.transactionKey ?? '__auth'
     let transaction: OAuthTransaction | undefined
