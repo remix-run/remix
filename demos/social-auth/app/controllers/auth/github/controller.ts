@@ -71,4 +71,3 @@ export function createGitHubAuthController(
   } satisfies Controller<typeof routes.auth.github, AppContext>
 }
 
-export let githubAuthController = createGitHubAuthController()
