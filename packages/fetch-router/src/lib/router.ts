@@ -1,6 +1,6 @@
 import { type Matcher, type Params, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { type ApplyMiddlewareTuple, type Middleware, runMiddleware } from './middleware.ts'
+import { type AnyMiddleware, type ApplyMiddlewareTuple, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { type ContextParams, RequestContext, type WithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -10,7 +10,6 @@ import {
   type ActionObjectWithMiddleware,
   type ActionObjectWithoutMiddleware,
   type Controller,
-  type ControllerInput,
   type ControllerShape,
   type ControllerWithMiddleware,
   type ControllerWithoutMiddleware,
@@ -20,7 +19,6 @@ import {
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
-type AnyMiddleware = Middleware<any, any, any>
 type AnyContext = RequestContext<any, any>
 
 type RouteContext<context extends AnyContext, pattern extends string> = WithParams<
@@ -38,7 +36,7 @@ type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string
   | RoutePattern<pattern>
   | Route<method, pattern>
 
-type RouteRegistrar<context extends AnyContext> = {
+type RouteMethod<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<method, pattern>,
@@ -47,57 +45,60 @@ type RouteRegistrar<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
+    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  <method extends RequestMethod | 'ANY', pattern extends string, middleware extends readonly AnyMiddleware[]>(
+  <
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends readonly AnyMiddleware[],
+  >(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    handler: ActionObjectWithMiddleware<
-      Params<pattern>,
-      RouteContext<context, pattern>,
-      middleware
-    >,
+    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    handler: Action<method, pattern, context>,
+    action: Action<method, pattern, context>,
   ): void
 }
 
-type SingleRouteMapper<context extends AnyContext> = {
+type ActionMapping<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     target: MapRouteTarget<method, pattern>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     target: MapRouteTarget<method, pattern>,
-    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
+    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  <method extends RequestMethod | 'ANY', pattern extends string, middleware extends readonly AnyMiddleware[]>(
+  <
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    middleware extends readonly AnyMiddleware[],
+  >(
     target: MapRouteTarget<method, pattern>,
-    handler: ActionObjectWithMiddleware<
-      Params<pattern>,
-      RouteContext<context, pattern>,
-      middleware
-    >,
+    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
   ): void
   <method extends RequestMethod | 'ANY', pattern extends string>(
     target: MapRouteTarget<method, pattern>,
-    handler: Action<method, pattern, context>,
+    action: Action<method, pattern, context>,
   ): void
 }
 
-type RouteMapMapper<context extends AnyContext> = {
-  <target extends RouteMap>(target: target, handler: ControllerWithoutMiddleware<target, context>): void
+type ControllerMapping<context extends AnyContext> = {
+  <target extends RouteMap>(
+    target: target,
+    controller: ControllerWithoutMiddleware<target, context>,
+  ): void
   <target extends RouteMap, middleware extends readonly AnyMiddleware[]>(
     target: target,
-    handler: ControllerWithMiddleware<target, context, middleware>,
+    controller: ControllerWithMiddleware<target, context, middleware>,
   ): void
-  <target extends RouteMap>(target: target, handler: Controller<target, context>): void
+  <target extends RouteMap>(target: target, controller: Controller<target, context>): void
 }
 
-type MapMethod<context extends AnyContext> = SingleRouteMapper<context> & RouteMapMapper<context>
+type MapMethod<context extends AnyContext> = ActionMapping<context> & ControllerMapping<context>
 
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string>(
@@ -106,19 +107,15 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   ): void
   <pattern extends string>(
     route: RouteTarget<method, pattern>,
-    handler: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
+    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <pattern extends string, middleware extends readonly AnyMiddleware[]>(
     route: RouteTarget<method, pattern>,
-    handler: ActionObjectWithMiddleware<
-      Params<pattern>,
-      RouteContext<context, pattern>,
-      middleware
-    >,
+    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
   ): void
   <pattern extends string>(
     route: RouteTarget<method, pattern>,
-    handler: Action<method, pattern, context>,
+    action: Action<method, pattern, context>,
   ): void
 }
 
@@ -126,7 +123,7 @@ type RouteMatchData = {
   pattern: RoutePattern<string>
   handler: RequestHandler<any, any>
   method: RequestMethod | 'ANY'
-  middleware: Middleware<any, any, any>[] | undefined
+  middleware: AnyMiddleware[] | undefined
 }
 
 /**
@@ -137,15 +134,13 @@ export type MatchData = RouteMatchData
 type RouterRuntime = {
   defaultHandler: RequestHandler<any, any>
   matcher: Matcher<MatchData>
-  middleware: Middleware<any, any, any>[] | undefined
+  middleware: AnyMiddleware[] | undefined
 }
 
 type NormalizedAction = {
   handler: RequestHandler<any, any>
-  middleware: Middleware<any, any, any>[] | undefined
+  middleware: AnyMiddleware[] | undefined
 }
-
-
 
 /**
  * The valid types for the first argument to `router.map()`.
@@ -218,7 +213,7 @@ export interface Router<context extends AnyContext = RequestContext> {
    *
    * Accepts either a plain request handler or an action object with optional inline middleware.
    */
-  route: RouteRegistrar<context>
+  route: RouteMethod<context>
   /**
    * Maps either a single route target to an action or a route map to a controller.
    */
@@ -273,9 +268,9 @@ function normalizeAction(action: unknown): NormalizedAction {
 }
 
 function mergeMiddleware(
-  upstream: Middleware<any, any, any>[] | undefined,
-  downstream: Middleware<any, any, any>[] | undefined,
-): Middleware<any, any, any>[] | undefined {
+  upstream: AnyMiddleware[] | undefined,
+  downstream: AnyMiddleware[] | undefined,
+): AnyMiddleware[] | undefined {
   if (!upstream || upstream.length === 0) {
     return downstream
   }
@@ -297,7 +292,9 @@ function createRequestContext(input: string | URL | Request, init?: RequestInit)
   return new RequestContext(request)
 }
 
-function getRoutePattern(target: string | RoutePattern<string> | Route<any, string>): RoutePattern<string> {
+function getRoutePattern(
+  target: string | RoutePattern<string> | Route<any, string>,
+): RoutePattern<string> {
   if (target instanceof Route) {
     return target.pattern
   }
@@ -319,20 +316,19 @@ export function createRouter<context extends AnyContext = RequestContext>(): Rou
 export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(
-  options: RouterOptions<context, middleware>,
-): Router<ApplyMiddlewareTuple<context, middleware>>
+>(options: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>>
 export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(
-  options?: RouterOptions<context, middleware>,
-): Router<ApplyMiddlewareTuple<context, middleware>> {
+>(options?: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>> {
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let routerMiddleware = options?.middleware ? [...options.middleware] : undefined
 
-  async function dispatchRouter(runtime: RouterRuntime, context: RequestContext): Promise<Response> {
+  async function dispatchRouter(
+    runtime: RouterRuntime,
+    context: RequestContext,
+  ): Promise<Response> {
     let dispatch = () => dispatchMatches(runtime, context)
 
     if (runtime.middleware && runtime.middleware.length > 0) {
@@ -342,7 +338,10 @@ export function createRouter<
     return dispatch()
   }
 
-  async function dispatchMatches(runtime: RouterRuntime, context: RequestContext): Promise<Response> {
+  async function dispatchMatches(
+    runtime: RouterRuntime,
+    context: RequestContext,
+  ): Promise<Response> {
     for (let match of runtime.matcher.matchAll(context.url)) {
       if (match.data.method !== context.method && match.data.method !== 'ANY') {
         continue
@@ -404,7 +403,7 @@ export function createRouter<
   function mapController(
     routes: RouteMap,
     controller: ControllerShape,
-    parentMiddleware: Middleware<any, any, any>[] = [],
+    parentMiddleware: AnyMiddleware[] = [],
   ): void {
     let controllerMiddleware = controller.middleware
       ? mergeMiddleware(parentMiddleware, controller.middleware)
@@ -438,14 +437,15 @@ export function createRouter<
 
   type RouterContext = ApplyMiddlewareTuple<context, middleware>
 
-  function createVerbMethod<method extends RequestMethod>(method: method): VerbMethod<method, RouterContext> {
-    return (<pattern extends string, actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[]>(
+  function createVerbMethod<method extends RequestMethod>(
+    method: method,
+  ): VerbMethod<method, RouterContext> {
+    return (<
+      pattern extends string,
+      actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    >(
       route: RouteTarget<method, pattern>,
-      handler: ActionInput<
-        Params<pattern>,
-        RouteContext<RouterContext, pattern>,
-        actionMiddleware
-      >,
+      handler: ActionInput<Params<pattern>, RouteContext<RouterContext, pattern>, actionMiddleware>,
     ): void => {
       addRoute(method, route, handler as Action<method, pattern, RouterContext>)
     }) as VerbMethod<method, RouterContext>
@@ -470,11 +470,7 @@ export function createRouter<
     >(
       method: method,
       route: RouteTarget<method, pattern>,
-      handler: ActionInput<
-        Params<pattern>,
-        RouteContext<RouterContext, pattern>,
-        actionMiddleware
-      >,
+      handler: ActionInput<Params<pattern>, RouteContext<RouterContext, pattern>, actionMiddleware>,
     ): void {
       addRoute(method, route, handler as Action<method, pattern, RouterContext>)
     },
@@ -487,7 +483,6 @@ export function createRouter<
     delete: createVerbMethod('DELETE'),
     options: createVerbMethod('OPTIONS'),
   }
-
 
   return router
 }

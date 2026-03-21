@@ -1,12 +1,11 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
-import type { ApplyMiddlewareTuple, Middleware } from './middleware.ts'
+import type { AnyMiddleware, ApplyMiddlewareTuple } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import type { WithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
-type AnyMiddleware = Middleware<any, any, any>
 
 export type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,
@@ -133,7 +132,7 @@ export interface RequestHandler<
  */
 export interface ControllerShape {
   actions: Record<string, unknown>
-  middleware?: Middleware<any, any, any>[]
+  middleware?: AnyMiddleware[]
 }
 
 /**
@@ -150,7 +149,7 @@ export function isController(obj: unknown): obj is ControllerShape {
  * Runtime shape for an action object.
  */
 export interface ActionObjectShape {
-  middleware?: Middleware<any, any, any>[]
+  middleware?: AnyMiddleware[]
   handler: RequestHandler<any, any>
 }
 

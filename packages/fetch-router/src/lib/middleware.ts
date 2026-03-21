@@ -3,7 +3,10 @@ import { raceRequestAbort } from './request-abort.ts'
 import type { ContextEntries, RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 
-type AnyMiddleware = Middleware<any, any, any>
+/**
+ * A middleware of any method, params, or context transform.
+ */
+export type AnyMiddleware = Middleware<any, any, any>
 
 /**
  * The type-level effect a middleware can apply to request context.
@@ -101,7 +104,7 @@ export function runMiddleware<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 >(
-  middleware: Middleware<method, params, any>[],
+  middleware: AnyMiddleware[],
   context: RequestContext<params>,
   handler: RequestHandler<params, any>,
 ): Promise<Response> {
