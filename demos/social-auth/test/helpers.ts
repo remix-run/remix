@@ -2,10 +2,12 @@ import { createCookie } from 'remix/cookie'
 import { Cookie, SetCookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
-import { createSocialAuthRouter } from '../app/router.ts'
+import { createSocialAuthRouter, type SocialAuthRouterOptions } from '../app/router.ts'
 import { resetSocialAuthDatabase } from '../app/data/setup.ts'
 
-export async function createTestRouter() {
+export async function createTestRouter(
+  options: Omit<SocialAuthRouterOptions, 'sessionCookie' | 'sessionStorage'> = {},
+) {
   await resetSocialAuthDatabase()
 
   let sessionCookie = createCookie('social-auth-session', {
@@ -18,6 +20,7 @@ export async function createTestRouter() {
   let sessionStorage = createMemorySessionStorage()
 
   return createSocialAuthRouter({
+    ...options,
     sessionCookie,
     sessionStorage,
   })

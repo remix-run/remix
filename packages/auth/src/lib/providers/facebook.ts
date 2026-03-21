@@ -56,7 +56,7 @@ export interface FacebookAuthProfile {
  * Creates a Facebook Login provider.
  *
  * @param options Facebook OAuth client settings for your application.
- * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `startExternalAuth()` and `finishExternalAuth()`.
  */
 export function createFacebookAuthProvider(
   options: FacebookAuthProviderOptions,

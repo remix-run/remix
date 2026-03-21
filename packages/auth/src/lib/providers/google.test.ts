@@ -6,7 +6,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
+import { startExternalAuth } from '../start-external-auth.ts'
 import { createGoogleAuthProvider } from './google.ts'
 
 describe('google provider', () => {
@@ -22,7 +22,7 @@ describe('google provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/google', createExternalAuthLoginRequestHandler(provider))
+    router.get('/login/google', context => startExternalAuth(provider, context))
 
     let response = await router.fetch('https://app.example.com/login/google')
     let location = new URL(response.headers.get('Location')!)

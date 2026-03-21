@@ -6,8 +6,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthCallbackRequestHandler } from '../external-callback.ts'
-import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
+import { finishExternalAuth } from '../finish-external-auth.ts'
+import { startExternalAuth } from '../start-external-auth.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 import { createOIDCAuthProvider } from './oidc.ts'
 
@@ -48,7 +48,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
 
       let response1 = await router.fetch('https://app.example.com/login/oidc')
       let response2 = await router.fetch('https://app.example.com/login/oidc')
@@ -104,11 +104,11 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
 
       await assert.rejects(
         () => router.fetch('https://app.example.com/login/oidc'),
-        /Failed to load OIDC metadata for "oidc"\./,
+        /Failed to load OIDC metadata for "oidc"./,
       )
 
       let response = await router.fetch('https://app.example.com/login/oidc')
@@ -157,7 +157,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/oidc')
       let location = new URL(response.headers.get('Location')!)
@@ -198,7 +198,7 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/oidc')
 
@@ -267,18 +267,11 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/oidc/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.account.providerAccountId })
-          },
-          onSuccess(result) {
-            return Response.json(result)
-          },
-        }),
-      )
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
+      router.get('/auth/oidc/callback', async (context) => {
+        let { result } = await finishExternalAuth(provider, context)
+        return Response.json(result)
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/oidc')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -346,23 +339,20 @@ describe('oidc provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/oidc', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/oidc/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.account.providerAccountId })
-          },
-          onFailure(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 400 },
-            )
-          },
-        }),
-      )
+      router.get('/login/oidc', (context) => startExternalAuth(provider, context))
+      router.get('/auth/oidc/callback', async (context) => {
+        try {
+          let { result } = await finishExternalAuth(provider, context)
+          return Response.json(result)
+        } catch (error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 400 },
+          )
+        }
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/oidc')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')

@@ -1,8 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
 
 import { routes } from '../routes.ts'
-import { Session } from '../utils/session.ts'
 import forgotPasswordController from './forgot-password/controller.tsx'
 import loginController from './login/controller.tsx'
 import registerController from './register/controller.tsx'

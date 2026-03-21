@@ -1,11 +1,11 @@
 import { getContext } from 'remix/async-context-middleware'
 import { Auth } from 'remix/auth-middleware'
 import type { AuthState } from 'remix/auth-middleware'
+import { Session } from 'remix/session'
 
 import { getCart } from '../data/cart.ts'
 import type { Cart } from '../data/cart.ts'
 import type { User } from '../data/schema.ts'
-import { Session } from './session.ts'
 
 /**
  * Get the current authenticated user from request context.

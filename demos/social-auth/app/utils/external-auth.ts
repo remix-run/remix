@@ -1,6 +1,5 @@
 import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
 import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
-import type { RequestContext, ContextEntries } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
 
@@ -12,7 +11,14 @@ export type ExternalProviderFor<name extends ExternalProviderName> = name extend
     ? OAuthProvider<GitHubAuthProfile, 'github'>
     : OAuthProvider<XAuthProfile, 'x'>
 
+export interface ExternalProviderRegistry {
+  google: ExternalProviderFor<'google'> | null
+  github: ExternalProviderFor<'github'> | null
+  x: ExternalProviderFor<'x'> | null
+}
+
 type ProviderEnvPrefix = 'GOOGLE' | 'GITHUB' | 'X'
+type ExternalProviderEnvironment = Record<string, string | undefined>
 
 interface ProviderCredentials {
   clientId: string
@@ -30,32 +36,33 @@ export interface ProviderStatus {
   missingEnvVars: string[]
 }
 
-const providerLabels = {
+let providerLabels = {
   google: 'Google',
   github: 'GitHub',
   x: 'X',
 } satisfies Record<ExternalProviderName, string>
 
-const providerEnvPrefixes = {
+let providerEnvPrefixes = {
   google: 'GOOGLE',
   github: 'GITHUB',
   x: 'X',
 } satisfies Record<ExternalProviderName, ProviderEnvPrefix>
 
-export const externalProviderNames = ['google', 'github', 'x'] as const
+export let externalProviderNames = ['google', 'github', 'x'] as const
 
-export function createExternalProvider<
-  params extends Record<string, string>,
-  entries extends ContextEntries,
-  name extends ExternalProviderName,
->(name: name, context: RequestContext<params, entries>): ExternalProviderFor<name> | null {
-  switch (name) {
-    case 'google':
-      return createGoogleProvider(context) as ExternalProviderFor<name> | null
-    case 'github':
-      return createGitHubProvider(context) as ExternalProviderFor<name> | null
-    case 'x':
-      return createXProvider(context) as ExternalProviderFor<name> | null
+export let externalProviderRegistry = createExternalProviderRegistry()
+
+export function createExternalProviderRegistry(options: {
+  env?: ExternalProviderEnvironment
+  origin?: string | URL
+} = {}): ExternalProviderRegistry {
+  let env = options.env ?? process.env
+  let origin = options.origin ?? getDemoOrigin()
+
+  return {
+    google: createGoogleProvider(origin, env),
+    github: createGitHubProvider(origin, env),
+    x: createXProvider(origin, env),
   }
 }
 
@@ -63,20 +70,24 @@ export function getExternalProviderLabel(name: ExternalProviderName): string {
   return providerLabels[name]
 }
 
-export function getExternalProviderStatus(name: ExternalProviderName): ProviderStatus {
-  let missingEnvVars = readMissingProviderEnvVars(providerEnvPrefixes[name])
-
+export function getExternalProviderStatus(
+  name: ExternalProviderName,
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+  env: ExternalProviderEnvironment = process.env,
+): ProviderStatus {
   return {
-    enabled: missingEnvVars.length === 0,
-    missingEnvVars,
+    enabled: registry[name] != null,
+    missingEnvVars: readMissingProviderEnvVars(providerEnvPrefixes[name], env),
   }
 }
 
-export function readExternalProviderLinks(returnToQuery: {
-  returnTo?: string
-}): ExternalProviderLink[] {
-  return externalProviderNames.map((name) => {
-    let status = getExternalProviderStatus(name)
+export function readExternalProviderLinks(
+  returnToQuery: { returnTo?: string },
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+  env: ExternalProviderEnvironment = process.env,
+): ExternalProviderLink[] {
+  return externalProviderNames.map(name => {
+    let status = getExternalProviderStatus(name, registry, env)
 
     return {
       name,
@@ -86,16 +97,15 @@ export function readExternalProviderLinks(returnToQuery: {
   })
 }
 
-export function getDemoOrigin(url?: URL): string {
-  let port = url?.port || process.env.PORT || '44100'
+export function getDemoOrigin(port = process.env.PORT ?? '44100'): string {
   return `http://127.0.0.1:${port}`
 }
 
-function createGoogleProvider<
-  params extends Record<string, string>,
-  entries extends ContextEntries,
->(context: RequestContext<params, entries>): OAuthProvider<GoogleAuthProfile, 'google'> | null {
-  let credentials = readProviderCredentials('GOOGLE')
+function createGoogleProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'google'> | null {
+  let credentials = readProviderCredentials('GOOGLE', env)
   if (credentials == null) {
     return null
   }
@@ -103,15 +113,15 @@ function createGoogleProvider<
   return createGoogleAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.google.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.google.callback.href(), toOriginString(origin)),
   })
 }
 
-function createGitHubProvider<
-  params extends Record<string, string>,
-  entries extends ContextEntries,
->(context: RequestContext<params, entries>): OAuthProvider<GitHubAuthProfile, 'github'> | null {
-  let credentials = readProviderCredentials('GITHUB')
+function createGitHubProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'github'> | null {
+  let credentials = readProviderCredentials('GITHUB', env)
   if (credentials == null) {
     return null
   }
@@ -119,14 +129,15 @@ function createGitHubProvider<
   return createGitHubAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.github.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.github.callback.href(), toOriginString(origin)),
   })
 }
 
-function createXProvider<params extends Record<string, string>, entries extends ContextEntries>(
-  context: RequestContext<params, entries>,
-): OAuthProvider<XAuthProfile, 'x'> | null {
-  let credentials = readProviderCredentials('X')
+function createXProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'x'> | null {
+  let credentials = readProviderCredentials('X', env)
   if (credentials == null) {
     return null
   }
@@ -134,35 +145,49 @@ function createXProvider<params extends Record<string, string>, entries extends 
   return createXAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.x.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.x.callback.href(), toOriginString(origin)),
   })
 }
 
 function createDisabledReason(name: ExternalProviderName, status: ProviderStatus): string {
+  if (status.missingEnvVars.length === 0) {
+    return `${getExternalProviderLabel(name)} login is not configured.`
+  }
+
   return `Set ${status.missingEnvVars.join(' and ')} to enable ${getExternalProviderLabel(name)} login.`
 }
 
-function readMissingProviderEnvVars(prefix: ProviderEnvPrefix): string[] {
+function readMissingProviderEnvVars(
+  prefix: ProviderEnvPrefix,
+  env: ExternalProviderEnvironment,
+): string[] {
   let missingEnvVars = []
 
-  if (!process.env[`${prefix}_CLIENT_ID`]) {
+  if (!env[`${prefix}_CLIENT_ID`]) {
     missingEnvVars.push(`${prefix}_CLIENT_ID`)
   }
 
-  if (!process.env[`${prefix}_CLIENT_SECRET`]) {
+  if (!env[`${prefix}_CLIENT_SECRET`]) {
     missingEnvVars.push(`${prefix}_CLIENT_SECRET`)
   }
 
   return missingEnvVars
 }
 
-function readProviderCredentials(prefix: ProviderEnvPrefix): ProviderCredentials | null {
-  let clientId = process.env[`${prefix}_CLIENT_ID`]
-  let clientSecret = process.env[`${prefix}_CLIENT_SECRET`]
+function readProviderCredentials(
+  prefix: ProviderEnvPrefix,
+  env: ExternalProviderEnvironment,
+): ProviderCredentials | null {
+  let clientId = env[`${prefix}_CLIENT_ID`]
+  let clientSecret = env[`${prefix}_CLIENT_SECRET`]
 
   if (!clientId || !clientSecret) {
     return null
   }
 
   return { clientId, clientSecret }
+}
+
+function toOriginString(origin: string | URL): string {
+  return typeof origin === 'string' ? origin : origin.toString()
 }

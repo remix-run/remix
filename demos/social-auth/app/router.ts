@@ -7,14 +7,18 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { accountAction } from './controllers/account/controller.tsx'
-import { authController } from './controllers/auth/controller.tsx'
-import { home } from './controllers/home/controller.tsx'
+import { createAuthController } from './controllers/auth/controller.tsx'
+import { createHomeController } from './controllers/home/controller.tsx'
 import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { loadAuth, requireAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 import type { AuthIdentity } from './utils/auth-session.ts'
+import {
+  externalProviderRegistry,
+  type ExternalProviderRegistry,
+} from './utils/external-auth.ts'
 
 await initializeSocialAuthDatabase()
 
@@ -39,11 +43,13 @@ export type AuthenticatedAppContext<params extends Record<string, string> = {}> 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
   sessionStorage?: SessionStorage
+  externalProviderRegistry?: ExternalProviderRegistry
 }
 
 export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
+  let providers = options?.externalProviderRegistry ?? externalProviderRegistry
   let router = createRouter({
     middleware: [
       staticFiles('./public', {
@@ -58,12 +64,12 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
     ] satisfies RootMiddleware,
   })
 
-  router.map(routes.home, home)
+  router.map(routes.home, createHomeController(providers))
   router.get(routes.account, {
     middleware: [requireAuth],
     handler: accountAction.handler,
   })
-  router.map(routes.auth, authController)
+  router.map(routes.auth, createAuthController(providers))
 
   return router
 }
