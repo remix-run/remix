@@ -1,1 +1,0 @@
-BREAKING CHANGE: Shrink `@remix-run/data-table-postgres` to a minimal package root. It now exports only `createPostgresDatabaseAdapter(...)` and `PostgresDatabaseAdapterOptions`; the adapter class is no longer exported.

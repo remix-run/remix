@@ -7,7 +7,7 @@ Use this package when you want `data-table` APIs backed by `pg`.
 
 - **Native `pg` Integration**: Works with `pg` `Pool` and `PoolClient` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
-- **Minimal Public API**: The package root exports `createPostgresDatabaseAdapter(...)` and `PostgresDatabaseAdapterOptions`
+- **Focused Public API**: The package root exports `PostgresDatabaseAdapter`, `createPostgresDatabaseAdapter(...)`, and `PostgresDatabaseAdapterOptions`
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter package
 - **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
 - **Postgres Capabilities Enabled By Default**:
