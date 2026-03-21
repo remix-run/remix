@@ -1,4 +1,4 @@
-import { html } from '../ui/render.ts'
+import { html } from 'remix/html-template'
 
 export function renderBreadcrumb(packageName: string, version: string, dirPath: string) {
   let parts: Array<{ name: string; href: string }> = [

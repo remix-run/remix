@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { formatBytes } from './render.ts'
+import { formatBytes } from './format-bytes.ts'
 
 describe('formatBytes', () => {
   it('returns dash for zero bytes', () => {

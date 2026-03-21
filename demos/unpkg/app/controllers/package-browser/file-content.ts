@@ -1,6 +1,8 @@
-import { renderBreadcrumb } from './breadcrumb.ts'
 import type { PackageFile } from '../../utils/npm.ts'
-import { html, render, formatBytes } from '../ui/render.ts'
+import { html } from 'remix/html-template'
+import { render } from '../render.ts'
+import { renderBreadcrumb } from './breadcrumb.ts'
+import { formatBytes } from './format-bytes.ts'
 
 const TEXT_EXTENSIONS = new Set([
   '.js',
