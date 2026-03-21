@@ -1,7 +1,6 @@
 # Social Auth Demo
 
-This demo shows how to combine `remix/auth`, `remix/auth-middleware`, `remix/data-schema`,
-and `remix/data-table` to build a small auth application with:
+This demo shows how to combine `remix/auth`, `remix/auth-middleware`, `remix/data-schema`, and `remix/data-table` to build a small auth application with:
 
 - credentials login with email and password
 - external login with Google, GitHub, and X
@@ -39,9 +38,7 @@ The demo supports these environment variables:
 - `X_CLIENT_ID`
 - `X_CLIENT_SECRET`
 
-Only `SESSION_SECRET` is needed for the local credentials flow. The demo will still start if any
-social-provider variables are missing. In that case, the corresponding provider button stays
-visible but disabled on the login page.
+Only `SESSION_SECRET` is needed for the local credentials flow. The demo still starts if any social-provider variables are missing. In that case, the corresponding provider button stays visible but disabled on the login page.
 
 ## Provider Callback URLs
 
@@ -54,18 +51,16 @@ If you configure the external providers locally, use these callback URLs:
 ## What This Demo Shows
 
 - request-time auth resolution with `remix/auth-middleware`
-- credentials login with `createCredentialsAuthLoginRequestHandler()`
-- external auth with:
-  - `createExternalAuthLoginRequestHandler()`
-  - `createExternalAuthCallbackRequestHandler()`
+- credentials login with `verifyCredentials()` and `completeAuth()`
+- external auth with `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
+- module-scope provider configuration with a boot-time provider registry
 - form parsing with `remix/data-schema/form-data`
 - local persistence with `remix/data-table` and SQLite
 - rendering pages with `remix/component`
 
 ## Data Storage
 
-The demo keeps its runtime schema and setup code in `demos/social-auth/app/data/`, its SQLite
-files and migrations in `demos/social-auth/db/`, and its session files in `demos/social-auth/tmp/`.
+The demo keeps its runtime schema and setup code in `demos/social-auth/app/data/`, its SQLite files and migrations in `demos/social-auth/db/`, and its session files in `demos/social-auth/tmp/`.
 
 On successful external login, the demo:
 

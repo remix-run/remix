@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { db, passwordResetTokens } from './data/setup.ts'
+import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
+import { createExternalProviderRegistry } from './utils/external-auth.ts'
 import {
   assertContains,
   createTestRouter,
@@ -74,6 +75,98 @@ describe('social-auth router', () => {
     let html = await homeResponse.text()
 
     assertContains(html, 'Invalid email or password. Please try again.')
+  })
+
+  it('completes external Google login and persists the linked account', async () => {
+    let originalFetch = globalThis.fetch
+    let router = await createTestRouter({
+      externalProviderRegistry: createExternalProviderRegistry({
+        origin: 'https://social-auth.test',
+        env: {
+          GOOGLE_CLIENT_ID: 'test-google-client-id',
+          GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
+        },
+      }),
+    })
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      let request = input instanceof Request ? input : new Request(input, init)
+      let url = new URL(request.url)
+
+      if (url.href === 'https://oauth2.googleapis.com/token') {
+        return Response.json({
+          access_token: 'test-google-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+          id_token: 'test-google-id-token',
+        })
+      }
+
+      if (url.href === 'https://openidconnect.googleapis.com/v1/userinfo') {
+        return Response.json({
+          sub: 'google-user-1',
+          email: 'google-user@example.com',
+          email_verified: true,
+          name: 'Google Test User',
+          picture: 'https://example.com/google-user.png',
+        })
+      }
+
+      return originalFetch(input, init)
+    }
+
+    try {
+      let loginResponse = await router.fetch('https://social-auth.test/auth/google/login?returnTo=/account')
+
+      assert.equal(loginResponse.status, 302)
+
+      let authorizeUrl = new URL(loginResponse.headers.get('Location') ?? '')
+      assert.equal(authorizeUrl.origin, 'https://accounts.google.com')
+      assert.equal(authorizeUrl.pathname, '/o/oauth2/v2/auth')
+
+      let state = authorizeUrl.searchParams.get('state')
+      assert.ok(state)
+
+      let loginSessionCookie = getSessionCookie(loginResponse)
+      assert.ok(loginSessionCookie)
+
+      let callbackResponse = await router.fetch(
+        requestWithSession(
+          `https://social-auth.test/auth/google/callback?code=test-google-code&state=${encodeURIComponent(state)}`,
+          loginSessionCookie,
+        ),
+      )
+
+      assert.equal(callbackResponse.status, 302)
+      assert.equal(callbackResponse.headers.get('Location'), '/account')
+
+      let callbackSessionCookie = getSessionCookie(callbackResponse)
+      assert.ok(callbackSessionCookie)
+
+      let accountResponse = await router.fetch(
+        requestWithSession('https://social-auth.test/account', callbackSessionCookie),
+      )
+      let html = await accountResponse.text()
+
+      assert.equal(accountResponse.status, 200)
+      assertContains(html, 'Signed In')
+      assertContains(html, 'Google Test User')
+      assertContains(html, 'google-user@example.com')
+      assertContains(html, 'Provider: Google')
+
+      let authAccount = await db.findOne(authAccounts, {
+        where: {
+          provider: 'google',
+          provider_account_id: 'google-user-1',
+        },
+      })
+
+      assert.ok(authAccount)
+      assert.equal(authAccount.email, 'google-user@example.com')
+      assert.equal(authAccount.display_name, 'Google Test User')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 
   it('creates a new user during signup and signs them in', async () => {

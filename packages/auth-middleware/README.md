@@ -1,15 +1,15 @@
 # auth-middleware
 
-Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.get(Auth)` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes and provider callbacks that write the session auth record in the first place.
+Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.get(Auth)` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
 
 ## Features
 
-- **Request auth resolution** - Load the current auth state into `context.get(Auth)` without mutating request objects
-- **Route protection** - Enforce authenticated routes with `requireAuth()` and configurable failure behavior
-- **Built-in auth schemes** - Start with session, bearer token, or API key auth, or provide your own `AuthScheme`
-- **Ordered fallback** - Try multiple schemes in a defined order and stop on the first success or failure
-- **Public and private route support** - Use the same resolved auth state for optional auth, APIs, and browser routes
-- **Designed to pair with browser login** - Read the auth record that `remix/auth` or another login flow persisted earlier
+- Request auth resolution without mutating request objects
+- Route protection with `requireAuth()` and configurable failure behavior
+- Built-in auth schemes for sessions, bearer tokens, and API keys
+- Ordered fallback across multiple auth schemes
+- Public and private route support with the same resolved auth state
+- Designed to pair with browser login flows that persist session auth records earlier in the request lifecycle
 
 ## Installation
 
@@ -21,13 +21,13 @@ npm i remix
 
 The following example shows the request-time half of a session-backed browser login flow:
 
-- another part of the app has already written `{ userId }` into the session
+- another part of the app has already called `completeAuth()` and written `{ userId }` into the returned session
 - `remix/auth-middleware` reads that value, resolves the current user, and protects the dashboard route
 
 ```ts
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
 import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/fetch-router/routes'
-import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
 import type { GoodAuth } from 'remix/auth-middleware'
 import { session } from 'remix/session-middleware'
 
@@ -74,7 +74,11 @@ router.get(routes.app.dashboard, {
 
 In this example, `createSessionAuthScheme()` turns a persisted session auth record back into request auth state, `auth()` stores that state at `context.get(Auth)`, and `requireAuth()` rejects anonymous requests.
 
-If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth).
+If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth):
+
+- `verifyCredentials()` for direct credentials flows
+- `startExternalAuth()` and `finishExternalAuth()` for OAuth and OIDC flows
+- `completeAuth()` to rotate the session id before writing the auth record that this package reads later
 
 ## Route Protection
 
@@ -87,7 +91,7 @@ That separation is intentional so the same auth resolution can support public ro
 
 `auth()` resolves auth state and stores either `{ ok: true, identity, method }` or `{ ok: false, error? }` in `context.get(Auth)`.
 
-Use `requireAuth()` **after** `auth()` when a route must be authenticated. If `auth()` did not run first, `requireAuth()` throws. Otherwise it returns `401 Unauthorized` by default, or you can replace that with `onFailure(context, auth)` to return JSON, redirects, or any other custom response.
+Use `requireAuth()` after `auth()` when a route must be authenticated. If `auth()` did not run first, `requireAuth()` throws. Otherwise it returns `401 Unauthorized` by default, or you can replace that with `onFailure(context, auth)` to return JSON, redirects, or any other custom response.
 
 Auth challenges are forwarded to `WWW-Authenticate` automatically when the auth failure included a `challenge`, so clients that honor those challenges can react without custom header handling.
 
@@ -103,7 +107,7 @@ This package ships with three built-in auth schemes:
 
 ## Custom Auth Schemes
 
-If none of the built-in [auth schemes](#auth-schemes) match your environment, you can create your own auth scheme easily. A custom scheme usually wraps one auth mechanism behind a small `create*` factory function and returns an `AuthScheme`. For example, apps behind a trusted access proxy can authenticate requests from forwarded identity headers instead of sessions or bearer tokens.
+If none of the built-in auth schemes match your environment, you can create your own auth scheme easily. A custom scheme usually wraps one auth mechanism behind a small `create*` factory function and returns an `AuthScheme`. For example, apps behind a trusted access proxy can authenticate requests from forwarded identity headers instead of sessions or bearer tokens.
 
 ```ts
 import type { RequestContext } from 'remix/fetch-router'
@@ -143,7 +147,7 @@ function createTrustedProxyAuthScheme(): AuthScheme<User> {
 }
 ```
 
-Note: Only use a scheme like this when the app is reachable exclusively through infrastructure you trust to set the headers you rely on. In this case, the `X-Forwarded-Email` header.
+Only use a scheme like this when the app is reachable exclusively through infrastructure you trust to set the headers you rely on. In this case, the `X-Forwarded-Email` header.
 
 `authenticate(context)` can return:
 
@@ -155,7 +159,7 @@ The scheme `name` becomes `auth.method` when authentication succeeds.
 
 ## Related Packages
 
-- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser login helpers for OIDC, custom OAuth providers, and credentials flows
+- [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser auth primitives for credentials, OAuth, and OIDC flows
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and middleware runtime
 - [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers like redirects
 

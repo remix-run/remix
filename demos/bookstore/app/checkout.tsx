@@ -4,6 +4,7 @@ import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
@@ -13,7 +14,6 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 import { parseId } from './utils/ids.ts'
-import { Session } from './utils/session.ts'
 
 const textField = f.field(s.defaulted(s.string(), ''))
 const shippingAddressSchema = f.object({

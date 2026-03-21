@@ -6,7 +6,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
+import { startExternalAuth } from '../start-external-auth.ts'
 import { mockFetch } from '../test-utils.ts'
 import { createOktaAuthProvider } from './okta.ts'
 
@@ -39,7 +39,7 @@ describe('okta provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/okta', createExternalAuthLoginRequestHandler(provider))
+      router.get('/login/okta', context => startExternalAuth(provider, context))
 
       let response = await router.fetch('https://app.example.com/login/okta')
 

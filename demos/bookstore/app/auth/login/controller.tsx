@@ -1,7 +1,8 @@
 import type { Controller } from 'remix/fetch-router'
-import { createCredentialsAuthLoginRequestHandler as authenticateWithCredentials } from 'remix/auth'
+import { completeAuth, verifyCredentials } from 'remix/auth'
 import { css } from 'remix/component'
 import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../layout.tsx'
@@ -11,7 +12,6 @@ import {
   passwordProvider,
 } from '../../middleware/auth.ts'
 import { render } from '../../utils/render.ts'
-import { Session } from '../../utils/session.ts'
 import { authCardStyle } from '../shared.ts'
 
 let loginController = {
@@ -84,20 +84,20 @@ let loginController = {
       )
     },
 
-    action: authenticateWithCredentials(passwordProvider, {
-      writeSession(session, user) {
-        session.set('auth', { userId: user.id })
-      },
-      onFailure(context) {
+    async action(context) {
+      let user = await verifyCredentials(passwordProvider, context)
+
+      if (user == null) {
         let session = context.get(Session)
         session.flash('error', 'Invalid email or password. Please try again.')
-
         return redirect(getLoginRedirectURL(context.url))
-      },
-      onSuccess(_user, context) {
-        return redirect(getPostAuthRedirect(context.url))
-      },
-    }),
+      }
+
+      let session = completeAuth(context)
+      session.set('auth', { userId: user.id })
+
+      return redirect(getPostAuthRedirect(context.url))
+    },
   },
 } satisfies Controller<typeof routes.auth.login>
 

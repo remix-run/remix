@@ -3,13 +3,13 @@ import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
 
 import { routes } from '../../routes.ts'
 import { books } from '../../data/schema.ts'
 import { addToCart, removeFromCart, updateCartItem } from '../../data/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
-import { Session } from '../../utils/session.ts'
 
 let bookIdField = f.field(s.optional(s.string()))
 let quantityField = f.field(s.defaulted(s.string(), '1'))

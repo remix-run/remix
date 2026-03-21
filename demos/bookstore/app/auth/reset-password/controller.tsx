@@ -3,12 +3,12 @@ import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
+import { Session } from 'remix/session'
 
 import { routes } from '../../routes.ts'
 import { passwordResetTokens, users } from '../../data/schema.ts'
 import { Document } from '../../layout.tsx'
 import { render } from '../../utils/render.ts'
-import { Session } from '../../utils/session.ts'
 import { authCardStyle, resetPasswordSchema } from '../shared.ts'
 
 let resetPasswordController = {

@@ -29,7 +29,7 @@ export interface Auth0AuthProviderOptions
  * Creates an Auth0 provider backed by the shared OIDC runtime.
  *
  * @param options Auth0 domain and client settings for your application.
- * @returns An OAuth provider that can be passed to `createExternalAuthLoginRequestHandler()` and `createExternalAuthCallbackRequestHandler()`.
+ * @returns An OAuth provider that can be passed to `startExternalAuth()` and `finishExternalAuth()`.
  */
 export function createAuth0AuthProvider(
   options: Auth0AuthProviderOptions,
