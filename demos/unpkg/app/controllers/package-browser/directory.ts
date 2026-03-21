@@ -1,7 +1,7 @@
+import { html } from 'remix/html-template'
 import { detectMimeType } from 'remix/mime'
 
 import type { PackageFile } from '../../utils/npm.ts'
-import { html } from 'remix/html-template'
 import { render } from '../render.ts'
 import { icons } from '../ui/icons.ts'
 import { renderBreadcrumb } from './breadcrumb.ts'
