@@ -3,6 +3,7 @@ export type {
   MigrationContext,
   MigrationSchema,
   MigrationRunner,
+  MigrationRunnerOptions,
   MigrateOptions,
   MigrateResult,
 } from './lib/migrations.ts'
