@@ -5,7 +5,11 @@ import { redirect } from 'remix/response/redirect'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { render } from '../../render.tsx'
-import { getLoginRedirectURL, getPostAuthRedirect, passwordProvider } from '../../../middleware/auth.ts'
+import {
+  getLoginRedirectURL,
+  getPostAuthRedirect,
+  passwordProvider,
+} from '../../../middleware/auth.ts'
 import { LoginPage } from './page.tsx'
 
 let loginController = {
@@ -15,7 +19,9 @@ let loginController = {
       let error = session.get('error')
       let formAction = getLoginRedirectURL(url, routes.auth.login.action)
 
-      return render(<LoginPage error={typeof error === 'string' ? error : undefined} formAction={formAction} />)
+      return render(
+        <LoginPage error={typeof error === 'string' ? error : undefined} formAction={formAction} />,
+      )
     },
 
     async action(context) {

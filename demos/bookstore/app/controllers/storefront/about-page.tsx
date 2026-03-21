@@ -9,9 +9,9 @@ export function AboutPage() {
       <div class="card">
         <h1>About Our Bookstore</h1>
         <p mix={[css({ margin: '1rem 0' })]}>
-          Welcome to our online bookstore, a demo application built to showcase the
-          capabilities of<strong>fetch-router</strong> - a powerful, type-safe routing library
-          for web applications.
+          Welcome to our online bookstore, a demo application built to showcase the capabilities of
+          <strong>fetch-router</strong> - a powerful, type-safe routing library for web
+          applications.
         </p>
 
         <h2 mix={[css({ margin: '1.5rem 0 0.5rem' })]}>What This Demo Shows</h2>

@@ -37,9 +37,7 @@ export function BrowsePage() {
 
       <div class="card" mix={[css({ marginBottom: '2rem' })]}>
         <h3>Browse by Genre</h3>
-        <div
-          mix={[css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })]}
-        >
+        <div mix={[css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })]}>
           {genres.map((genre) => (
             <a href={routes.books.genre.href({ genre })} class="btn btn-secondary">
               {genre}

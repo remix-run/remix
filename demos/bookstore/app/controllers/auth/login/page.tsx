@@ -64,9 +64,7 @@ export function LoginPage() {
             <strong>Demo Accounts:</strong>
           </p>
           <p mix={[css({ fontSize: '0.9rem' })]}>Admin: admin@bookstore.com / admin123</p>
-          <p mix={[css({ fontSize: '0.9rem' })]}>
-            Customer: customer@example.com / password123
-          </p>
+          <p mix={[css({ fontSize: '0.9rem' })]}>Customer: customer@example.com / password123</p>
         </div>
       </div>
     </Document>

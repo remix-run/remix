@@ -17,8 +17,8 @@ export function HomePage() {
       <div class="card">
         <h1>Welcome to the Bookstore</h1>
         <p mix={[css({ margin: '1rem 0' })]}>
-          Discover your next favorite book from our curated collection of fiction, non-fiction,
-          and more.
+          Discover your next favorite book from our curated collection of fiction, non-fiction, and
+          more.
         </p>
         <p>
           <a href={routes.books.index.href()} class="btn">

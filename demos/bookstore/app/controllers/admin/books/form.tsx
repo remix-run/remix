@@ -14,7 +14,14 @@ export interface AdminBookFormPageProps {
 }
 
 export function AdminBookFormPage() {
-  return ({ action, book, cancelHref, method = 'POST', submitLabel, title }: AdminBookFormPageProps) => (
+  return ({
+    action,
+    book,
+    cancelHref,
+    method = 'POST',
+    submitLabel,
+    title,
+  }: AdminBookFormPageProps) => (
     <Layout>
       <h1>{title}</h1>
 
