@@ -1,6 +1,5 @@
 import type { Database } from '../database.ts'
 import type { DataMigrationOperation, TransactionToken } from '../adapter.ts'
-import { rawSql } from '../sql.ts'
 import type { AnyTable } from '../table.ts'
 import type { MigrationSchema } from '../migrations.ts'
 
@@ -117,7 +116,7 @@ export function createMigrationSchema(
     async plan(statement) {
       await emit({
         kind: 'raw',
-        sql: typeof statement === 'string' ? rawSql(statement) : statement,
+        sql: typeof statement === 'string' ? { text: statement, values: [] } : statement,
       })
     },
     async hasTable(table) {

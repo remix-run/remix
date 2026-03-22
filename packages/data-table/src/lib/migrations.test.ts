@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { rawSql, sql } from './sql.ts'
+import { sql } from './sql.ts'
 import type {
   DataManipulationRequest,
   DataMigrationRequest,
@@ -477,7 +477,7 @@ describe('migration runner', () => {
 
     let rawStringOperation = adapter.migratedOperations[5]
     assert.equal(rawStringOperation.kind, 'raw')
-    assert.deepEqual(rawStringOperation.sql, rawSql('vacuum'))
+    assert.deepEqual(rawStringOperation.sql, { text: 'vacuum', values: [] })
 
     let rawStatementOperation = adapter.migratedOperations[6]
     assert.equal(rawStatementOperation.kind, 'raw')
@@ -1068,7 +1068,7 @@ describe('migration runner', () => {
       transaction: 'required',
       async up({ db, schema }) {
         await schema.createTable(createIdTable('users'))
-        await db.exec(rawSql('select 1'))
+        await db.exec(sql`select 1`)
         await schema.hasTable('users')
         await schema.hasColumn('users', 'id')
       },
@@ -1132,7 +1132,7 @@ describe('migration runner', () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
       async up({ db, schema }) {
-        await db.exec(rawSql('select 1'))
+        await db.exec(sql`select 1`)
       },
       async down() {},
     })
@@ -1158,7 +1158,7 @@ describe('migration runner', () => {
       async up({ db, schema }) {
         let compiled = db.adapter.compileSql({
           kind: 'raw',
-          sql: rawSql('select 1'),
+          sql: sql`select 1`,
         })
 
         if (compiled.length !== 1 || compiled[0]?.text !== 'raw') {

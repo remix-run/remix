@@ -16,7 +16,7 @@ type RelationQuery = Query<
   Record<string, unknown>,
   Record<string, unknown>,
   any,
-  { binding: 'unbound'; mode: 'all' }
+  'all'
 >
 
 export async function loadRelationsForRows(

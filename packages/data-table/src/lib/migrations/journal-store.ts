@@ -1,5 +1,4 @@
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
-import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
 export function normalizeChecksum(migration: MigrationDescriptor): string {
@@ -34,7 +33,7 @@ export async function hasMigrationJournal(
     await adapter.execute({
       operation: {
         kind: 'raw',
-        sql: rawSql('select 1 from ' + tableName + ' limit 1'),
+        sql: { text: 'select 1 from ' + tableName + ' limit 1', values: [] },
       },
     })
 
@@ -51,9 +50,10 @@ export async function loadJournalRows(
   let result = await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql(
-        'select id, name, checksum, batch, applied_at from ' + tableName + ' order by id asc',
-      ),
+      sql: {
+        text: 'select id, name, checksum, batch, applied_at from ' + tableName + ' order by id asc',
+        values: [],
+      },
     },
   })
 
@@ -82,12 +82,10 @@ export async function insertJournalRow(
   await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql('insert into ' + tableName + ' (id, name, checksum, batch) values (?, ?, ?, ?)', [
-        row.id,
-        row.name,
-        row.checksum,
-        row.batch,
-      ]),
+      sql: {
+        text: 'insert into ' + tableName + ' (id, name, checksum, batch) values (?, ?, ?, ?)',
+        values: [row.id, row.name, row.checksum, row.batch],
+      },
     },
     transaction,
   })
@@ -102,7 +100,7 @@ export async function deleteJournalRow(
   await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql('delete from ' + tableName + ' where id = ?', [id]),
+      sql: { text: 'delete from ' + tableName + ' where id = ?', values: [id] },
     },
     transaction,
   })

@@ -1,7 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import Database from 'better-sqlite3'
-import { column, createDatabase, table, eq } from '@remix-run/data-table'
+import { column, createDatabase, table, eq ,
+  query
+} from '@remix-run/data-table'
 import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
@@ -395,7 +397,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     }
 
     let db = createDatabase(createSqliteAdapter(sqlite))
-    let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
+    let result = await db.exec(query(accounts).where({ id: 1 }).update({ status: 'inactive' }))
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
@@ -673,26 +675,24 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.exec(query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' }))
 
     await db.transaction(async (outerTransaction) => {
-      await outerTransaction
-        .query(accounts)
-        .insert({ id: 2, email: 'b@example.com', status: 'active' })
+      await outerTransaction.exec(query(accounts)
+        .insert({ id: 2, email: 'b@example.com', status: 'active' }))
 
       await outerTransaction
         .transaction(async (innerTransactionDatabase) => {
-          await innerTransactionDatabase
-            .query(accounts)
-            .insert({ id: 3, email: 'c@example.com', status: 'active' })
+          await innerTransactionDatabase.exec(query(accounts)
+            .insert({ id: 3, email: 'c@example.com', status: 'active' }))
 
           throw new Error('rollback inner')
         })
         .catch(() => undefined)
     })
 
-    let rows = await db.query(accounts).orderBy('id', 'asc').all()
-    let count = await db.query(accounts).count()
+    let rows = await db.exec(query(accounts).orderBy('id', 'asc').all())
+    let count = await db.exec(query(accounts).count())
 
     assert.equal(count, 2)
     assert.deepEqual(
@@ -711,14 +711,13 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.exec(query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' }))
 
-    let result = await db
-      .query(accounts)
+    let result = await db.exec(query(accounts)
       .upsert(
         { id: 1, email: 'a@example.com', status: 'inactive' },
         { conflictTarget: ['id'], returning: ['id', 'status'] },
-      )
+      ))
 
     assert.ok('row' in result)
     if ('row' in result) {
@@ -738,9 +737,8 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     await db.transaction(
       async (transactionDatabase) => {
-        await transactionDatabase
-          .query(accounts)
-          .insert({ id: 1, email: 'a@example.com', status: 'active' })
+        await transactionDatabase.exec(query(accounts)
+          .insert({ id: 1, email: 'a@example.com', status: 'active' }))
       },
       {
         isolationLevel: 'serializable',
@@ -748,7 +746,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       },
     )
 
-    let rows = await db.query(accounts).all()
+    let rows = await db.exec(query(accounts).all())
 
     assert.equal(rows.length, 1)
     assert.equal(rows[0].id, 1)
@@ -766,15 +764,14 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
-    await db.query(projects).insert({ id: 10, account_id: 1, name: 'Alpha' })
-    await db.query(projects).insert({ id: 11, account_id: 99, name: 'Beta' })
+    await db.exec(query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' }))
+    await db.exec(query(projects).insert({ id: 10, account_id: 1, name: 'Alpha' }))
+    await db.exec(query(projects).insert({ id: 11, account_id: 99, name: 'Beta' }))
 
-    let count = await db
-      .query(accounts)
+    let count = await db.exec(query(accounts)
       .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'a@example.com'))
-      .count()
+      .count())
 
     assert.equal(count, 1)
     sqlite.close()
@@ -879,9 +876,9 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.exec(query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' }))
 
-    let rows = await db.query(accounts).select({ 'account.email': accounts.email }).all()
+    let rows = await db.exec(query(accounts).select({ 'account.email': accounts.email }).all())
 
     assert.equal(rows.length, 1)
     assert.equal(rows[0]['account.email'], 'a@example.com')

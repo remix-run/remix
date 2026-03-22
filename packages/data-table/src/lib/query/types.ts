@@ -22,26 +22,6 @@ type QualifiedRowColumnName<
   row extends Record<string, unknown>,
 > = `${tableName}.${RowColumnName<row>}`
 
-type QueryBindingState = 'bound' | 'unbound'
-
-export type QueryPhase<
-  binding extends QueryBindingState = QueryBindingState,
-  mode extends QueryExecutionMode = QueryExecutionMode,
-> = {
-  binding: binding
-  mode: mode
-}
-
-export type BoundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
-  'bound',
-  mode
->
-
-export type UnboundQueryPhase<mode extends QueryExecutionMode = QueryExecutionMode> = QueryPhase<
-  'unbound',
-  mode
->
-
 export type AnyQuerySource = QueryTableInput<string, Record<string, unknown>, readonly string[]>
 
 export type QuerySourceTableName<source extends AnyQuerySource> =

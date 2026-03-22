@@ -1,6 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { column, createDatabase, table, eq, ilike, inList } from '@remix-run/data-table'
+import { column, createDatabase, table, eq, ilike, inList ,
+  query
+} from '@remix-run/data-table'
 import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
@@ -225,7 +227,7 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlAdapter(connection))
 
-    let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
+    let count = await db.exec(query(accounts).where(ilike('email', '%EXAMPLE%')).count())
 
     assert.equal(count, 3)
     assert.match(statements[0].text, /lower\(`email`\) like lower\(\?\)/)
@@ -266,7 +268,7 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlAdapter(pool))
 
     await db.transaction(async (transactionDatabase) => {
-      await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
+      await transactionDatabase.exec(query(accounts).insert({ id: 1, email: 'a@example.com' }))
     })
 
     assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit', 'release'])
@@ -303,7 +305,7 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlAdapter(pool))
 
     await db.transaction(async (transactionDatabase) => {
-      await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
+      await transactionDatabase.exec(query(accounts).insert({ id: 1, email: 'a@example.com' }))
     })
 
     assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit'])
@@ -523,11 +525,10 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlAdapter(connection))
 
-    await db
-      .query(accounts)
+    await db.exec(query(accounts)
       .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'ops@example.com'))
-      .count()
+      .count())
 
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
     assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
@@ -549,7 +550,7 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlAdapter(connection))
 
-    await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
+    await db.exec(query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count())
 
     assert.match(statements[0].text, /from `billing`\.`invoices`/)
     assert.match(statements[0].text, /join `accounts`/)
@@ -571,7 +572,7 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlAdapter(connection))
 
-    await db.query(accounts).select({ 'account.email': accounts.email }).all()
+    await db.exec(query(accounts).select({ 'account.email': accounts.email }).all())
 
     assert.match(statements[0].text, /as `account\.email`/)
   })
@@ -591,56 +592,12 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlAdapter(connection))
 
-    await db
-      .query(accounts)
+    await db.exec(query(accounts)
       .where(inList('id', [1, 3]))
-      .count()
+      .count())
 
     assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
     assert.deepEqual(statements[0].values, [1, 3])
-  })
-
-  it('loads the inserted row for create({ returnRow: true }) without RETURNING support', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
-    let calls = 0
-
-    let connection = {
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
-        calls += 1
-
-        if (calls === 1) {
-          return [{ affectedRows: 1, insertId: 2 }, []]
-        }
-
-        if (calls === 2) {
-          return [[{ id: 2, email: 'fallback@example.com' }], []]
-        }
-
-        throw new Error('unexpected query call')
-      },
-      async beginTransaction() {},
-      async commit() {},
-      async rollback() {},
-    }
-
-    let db = createDatabase(createMysqlAdapter(connection))
-
-    let created = await db.create(
-      accounts,
-      {
-        email: 'fallback@example.com',
-      },
-      { returnRow: true },
-    )
-
-    assert.equal(created.id, 2)
-    assert.equal(created.email, 'fallback@example.com')
-    assert.equal(statements.length, 2)
-    assert.match(statements[0].text, /^insert into `accounts`/)
-    assert.match(statements[1].text, /^select \* from `accounts`/)
-    assert.match(statements[1].text, /where \(\(`id` = \?\)\)/)
-    assert.deepEqual(statements[1].values, [2])
   })
 
   it('normalizes bigint count rows', async () => {
@@ -654,7 +611,7 @@ describe('mysql adapter', () => {
     }
 
     let db = createDatabase(createMysqlAdapter(connection))
-    let count = await db.query(accounts).count()
+    let count = await db.exec(query(accounts).count())
 
     assert.equal(count, 5)
   })
@@ -670,7 +627,7 @@ describe('mysql adapter', () => {
     }
 
     let db = createDatabase(createMysqlAdapter(connection))
-    let result = await db.query(accounts).insert({ id: 1, email: 'a@example.com' })
+    let result = await db.exec(query(accounts).insert({ id: 1, email: 'a@example.com' }))
 
     assert.equal(result.affectedRows, 0)
     assert.equal(result.insertId, undefined)
@@ -687,11 +644,11 @@ describe('mysql adapter', () => {
     }
 
     let db = createDatabase(createMysqlAdapter(connection))
-    let result = await db.query(accountProjects).insert({
+    let result = await db.exec(query(accountProjects).insert({
       account_id: 1,
       project_id: 2,
       email: 'team@example.com',
-    })
+    }))
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
@@ -708,7 +665,7 @@ describe('mysql adapter', () => {
     }
 
     let db = createDatabase(createMysqlAdapter(connection))
-    let count = await db.query(accounts).count()
+    let count = await db.exec(query(accounts).count())
 
     assert.equal(count, 7)
   })
@@ -724,11 +681,7 @@ describe('mysql adapter', () => {
     }
 
     let db = createDatabase(createMysqlAdapter(connection))
-    let result = await db.updateMany(
-      accounts,
-      { email: 'updated@example.com' },
-      { where: { id: 1 } },
-    )
+    let result = await db.exec(query(accounts).where({ id: 1 }).update({ email: 'updated@example.com' }))
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)

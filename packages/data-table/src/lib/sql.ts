@@ -69,22 +69,6 @@ export function isSqlStatement(value: unknown): value is SqlStatement {
   return typeof value.text === 'string' && Array.isArray(value.values)
 }
 
-/**
- * Creates a SQL statement from raw text and values.
- * @param text SQL text containing placeholders expected by the target adapter.
- * @param values Placeholder values.
- * @returns A normalized SQL statement.
- * @example
- * ```ts
- * import { rawSql } from 'remix/data-table'
- *
- * let statement = rawSql('select * from users where id = ?', [1])
- * ```
- */
-export function rawSql(text: string, values: unknown[] = []): SqlStatement {
-  return { text, values }
-}
-
 function hasTextAndValues(value: object): value is { text: unknown; values: unknown } {
   return 'text' in value && 'values' in value
 }

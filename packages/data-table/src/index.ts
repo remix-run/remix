@@ -37,20 +37,7 @@ export {
 } from './lib/operators.ts'
 
 export type { SqlStatement } from './lib/sql.ts'
-export { rawSql, sql } from './lib/sql.ts'
-
-export type {
-  CountOptions,
-  CreateManyResultOptions,
-  CreateManyRowsOptions,
-  CreateResultOptions,
-  CreateRowOptions,
-  DeleteManyOptions,
-  FindManyOptions,
-  FindOneOptions,
-  UpdateManyOptions,
-  UpdateOptions,
-} from './lib/database.ts'
+export { sql } from './lib/sql.ts'
 export { createDatabase, Database } from './lib/database.ts'
 export type { TransactionOptions } from './lib/adapter.ts'
 export { Query, query } from './lib/query.ts'

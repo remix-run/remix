@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { isSqlStatement, rawSql, sql } from './sql.ts'
+import { isSqlStatement, sql } from './sql.ts'
 
 describe('sql statements', () => {
   it('builds placeholder statements from scalar values', () => {
@@ -30,12 +30,12 @@ describe('sql statements', () => {
     assert.equal(isSqlStatement(null), false)
   })
 
-  it('creates raw sql statements', () => {
-    assert.deepEqual(rawSql('select 1'), {
+  it('supports empty tagged sql statements', () => {
+    assert.deepEqual(sql`select 1`, {
       text: 'select 1',
       values: [],
     })
-    assert.deepEqual(rawSql('select * from accounts where id = ?', [5]), {
+    assert.deepEqual(sql`select * from accounts where id = ${5}`, {
       text: 'select * from accounts where id = ?',
       values: [5],
     })

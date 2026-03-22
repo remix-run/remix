@@ -9,44 +9,22 @@ import type {
 import type { ColumnBuilder } from './column.ts'
 import { DataTableAdapterError, DataTableQueryError } from './errors.ts'
 import { executeOperation, type QueryExecutionContext } from './database/execution-context.ts'
-import {
-  createScopedQuery,
-  getPrimaryKeyWhere,
-  getPrimaryKeyWhereFromRow,
-  requireLoadedRow,
-  resolveCreateRowWhere,
-  toLoadedRow,
-  toLoadedRowOrNull,
-  toLoadedRows,
-  toWriteResult,
-  toWriteRow,
-  toWriteRows,
-} from './database/helpers.ts'
 import { executeQuery } from './database/query-execution.ts'
-import type {
-  AnyQuery,
-  BoundQueryPhase,
-  Query as QueryObject,
-  QueryExecutionResult,
-} from './query.ts'
-import { query as createQuery } from './query.ts'
+import type { AnyQuery, Query as QueryObject, QueryExecutionResult } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
-import { isSqlStatement, rawSql } from './sql.ts'
+import { isSqlStatement } from './sql.ts'
 import type {
   AnyTable,
   OrderDirection,
   TableName,
   TablePrimaryKey,
   TableRow,
-  TableRowWith,
   TableValidate,
   tableMetadataKey,
   TimestampConfig,
 } from './table.ts'
-import type { AnyRelation, LoadedRelationMap } from './table-relations.ts'
-import type { PrimaryKeyInput } from './table-keys.ts'
-import { getTableName } from './table.ts'
+import type { AnyRelation } from './table-relations.ts'
 import type { Pretty } from './types.ts'
 import type { WhereInput } from './operators.ts'
 
@@ -134,7 +112,7 @@ export type PrimaryKeyInputForRow<
 export type ReturningInput<row extends Record<string, unknown>> = '*' | (keyof row & string)[]
 
 /**
- * Table-like metadata accepted by `database.query()`.
+ * Table-like metadata accepted by `query(table)`.
  */
 export type QueryTableInput<
   tableName extends string,
@@ -202,7 +180,7 @@ export type QueryForTable<
   QueryColumnTypesForTable<table>,
   TableRow<table>,
   loaded,
-  BoundQueryPhase<'all'>
+  'all'
 >
 
 /**
@@ -227,105 +205,6 @@ export type OrderByTuple<table extends AnyTable> = [
  * `orderBy` input accepted in single-table queries.
  */
 export type OrderByInput<table extends AnyTable> = OrderByTuple<table> | OrderByTuple<table>[]
-
-/**
- * Options for loading many rows from a table.
- */
-export type FindManyOptions<
-  table extends AnyTable,
-  relations extends RelationMapForSourceName<TableName<table>> = {},
-> = {
-  where?: SingleTableWhere<table>
-  orderBy?: OrderByInput<table>
-  limit?: number
-  offset?: number
-  with?: relations
-}
-
-/**
- * Options for loading a single row from a table.
- */
-export type FindOneOptions<
-  table extends AnyTable,
-  relations extends RelationMapForSourceName<TableName<table>> = {},
-> = Omit<FindManyOptions<table, relations>, 'limit' | 'offset'> & {
-  where: SingleTableWhere<table>
-}
-
-/**
- * Options for updating a single row.
- */
-export type UpdateOptions<
-  table extends AnyTable,
-  relations extends RelationMapForSourceName<TableName<table>> = {},
-> = {
-  touch?: boolean
-  with?: relations
-}
-
-/**
- * Options for updating many rows.
- */
-export type UpdateManyOptions<table extends AnyTable> = {
-  where: SingleTableWhere<table>
-  orderBy?: OrderByInput<table>
-  limit?: number
-  offset?: number
-  touch?: boolean
-}
-
-/**
- * Options for deleting many rows.
- */
-export type DeleteManyOptions<table extends AnyTable> = {
-  where: SingleTableWhere<table>
-  orderBy?: OrderByInput<table>
-  limit?: number
-  offset?: number
-}
-
-/**
- * Options for counting rows.
- */
-export type CountOptions<table extends AnyTable> = {
-  where?: SingleTableWhere<table>
-}
-
-/**
- * Options for create operations that return only write metadata.
- */
-export type CreateResultOptions = {
-  touch?: boolean
-  returnRow?: false
-}
-
-/**
- * Options for create operations that return the inserted row.
- */
-export type CreateRowOptions<
-  table extends AnyTable,
-  relations extends RelationMapForSourceName<TableName<table>> = {},
-> = {
-  touch?: boolean
-  with?: relations
-  returnRow: true
-}
-
-/**
- * Options for bulk-create operations that return only write metadata.
- */
-export type CreateManyResultOptions = {
-  touch?: boolean
-  returnRows?: false
-}
-
-/**
- * Options for bulk-create operations that return inserted rows.
- */
-export type CreateManyRowsOptions = {
-  touch?: boolean
-  returnRows: true
-}
 
 type SavepointCounter = {
   value: number
@@ -364,275 +243,6 @@ export class Database implements QueryExecutionContext {
     return this.#now()
   }
 
-  query<
-    table extends AnyTable,
-  >(table: table): QueryForTable<table>
-  query<
-    tableName extends string,
-    row extends Record<string, unknown>,
-    primaryKey extends readonly (keyof row & string)[],
-  >(
-    table: QueryTableInput<tableName, row, primaryKey>,
-  ): QueryObject<
-    QueryTableInput<tableName, row, primaryKey>,
-    Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
-    row,
-    {},
-    BoundQueryPhase<'all'>
-  > {
-    return createQuery(table, this) as unknown as QueryObject<
-      QueryTableInput<tableName, row, primaryKey>,
-      Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
-      row,
-      {},
-      BoundQueryPhase<'all'>
-    >
-  }
-
-  create<table extends AnyTable>(
-    table: table,
-    values: Partial<TableRow<table>>,
-    options?: CreateResultOptions,
-  ): Promise<WriteResult>
-  create<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
-    table: table,
-    values: Partial<TableRow<table>>,
-    options: CreateRowOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
-  async create<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    values: Partial<TableRow<table>>,
-    options?: CreateResultOptions | CreateRowOptions<table, relations>,
-  ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
-    let touch = options?.touch
-    let query = this.query(table)
-
-    if (options?.returnRow !== true) {
-      let result = await query.insert(values, { touch })
-      return toWriteResult(result)
-    }
-
-    if (this.#adapter.capabilities.returning) {
-      let result = await query.insert(values, {
-        returning: '*',
-        touch,
-      })
-      let row = requireLoadedRow(
-        toWriteRow(result),
-        'create({ returnRow: true }) failed to return an inserted row',
-      )
-
-      if (!options.with) {
-        return toLoadedRow<table, LoadedRelationMap<relations>>(row)
-      }
-
-      return requireLoadedRow(
-        await this.findOne(table, {
-          where: getPrimaryKeyWhereFromRow(table, row),
-          with: options.with,
-        }),
-        'create({ returnRow: true }) failed to load inserted row',
-      )
-    }
-
-    let insertResult = await query.insert(values, { touch })
-    return requireLoadedRow(
-      await this.findOne(table, {
-        where: resolveCreateRowWhere(table, values, insertResult.insertId),
-        with: options.with,
-      }),
-      'create({ returnRow: true }) failed to load inserted row',
-    )
-  }
-
-  createMany<table extends AnyTable>(
-    table: table,
-    values: Array<Partial<TableRow<table>>>,
-    options?: CreateManyResultOptions,
-  ): Promise<WriteResult>
-  createMany<table extends AnyTable>(
-    table: table,
-    values: Array<Partial<TableRow<table>>>,
-    options: CreateManyRowsOptions,
-  ): Promise<TableRow<table>[]>
-  async createMany<table extends AnyTable>(
-    table: table,
-    values: Array<Partial<TableRow<table>>>,
-    options?: CreateManyResultOptions | CreateManyRowsOptions,
-  ): Promise<WriteResult | TableRow<table>[]> {
-    let query = this.query(table)
-
-    if (options?.returnRows === true) {
-      if (!this.#adapter.capabilities.returning) {
-        throw new DataTableQueryError(
-          'createMany({ returnRows: true }) is not supported by this adapter',
-        )
-      }
-
-      let result = await query.insertMany(values, {
-        returning: '*',
-        touch: options.touch,
-      })
-
-      return toWriteRows(result)
-    }
-
-    let result = await query.insertMany(values, {
-      touch: options?.touch,
-    })
-
-    return toWriteResult(result)
-  }
-
-  async find<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    value: PrimaryKeyInput<table>,
-    options?: { with?: relations },
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    if (value == null) {
-      return null
-    }
-
-    let query = this.query(table)
-
-    if (options?.with) {
-      return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(
-        await query.with(options.with).find(value),
-      )
-    }
-
-    return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(await query.find(value))
-  }
-
-  async findOne<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    options: FindOneOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
-    let query = createScopedQuery(this.query(table), options)
-
-    if (options.with) {
-      return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(
-        await query.with(options.with).first(),
-      )
-    }
-
-    return toLoadedRowOrNull<table, LoadedRelationMap<relations>>(await query.first())
-  }
-
-  async findMany<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    options?: FindManyOptions<table, relations>,
-  ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
-    let query = createScopedQuery(this.query(table), options)
-
-    if (options?.with) {
-      return toLoadedRows<table, LoadedRelationMap<relations>>(await query.with(options.with).all())
-    }
-
-    return toLoadedRows<table, LoadedRelationMap<relations>>(await query.all())
-  }
-
-  async count<table extends AnyTable>(
-    table: table,
-    options?: CountOptions<table>,
-  ): Promise<number> {
-    let query = createScopedQuery(this.query(table), options)
-    return query.count()
-  }
-
-  async update<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
-    table: table,
-    value: PrimaryKeyInput<table>,
-    changes: Partial<TableRow<table>>,
-    options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>> {
-    let where = getPrimaryKeyWhere(table, value)
-
-    if (this.#adapter.capabilities.returning) {
-      let updateResult = await this.query(table)
-        .where(where)
-        .update(changes, {
-          touch: options?.touch,
-          returning: '*',
-        })
-      let updatedRow = requireLoadedRow(
-        toWriteRows(updateResult)[0] ?? null,
-        'update() failed to find row for table "' + getTableName(table) + '"',
-      )
-
-      if (!options?.with) {
-        return toLoadedRow<table, LoadedRelationMap<relations>>(updatedRow)
-      }
-
-      return requireLoadedRow(
-        await this.findOne(table, {
-          where: getPrimaryKeyWhereFromRow(table, updatedRow),
-          with: options.with,
-        }),
-        'update() failed to find row for table "' + getTableName(table) + '"',
-      )
-    }
-
-    await this.query(table)
-      .where(where)
-      .update(changes, {
-        touch: options?.touch,
-      })
-
-    return requireLoadedRow(
-      await this.find(table, value, { with: options?.with }),
-      'update() failed to find row for table "' + getTableName(table) + '"',
-    )
-  }
-
-  async updateMany<table extends AnyTable>(
-    table: table,
-    changes: Partial<TableRow<table>>,
-    options: UpdateManyOptions<table>,
-  ): Promise<WriteResult> {
-    let query = createScopedQuery(this.query(table), options)
-
-    let result = await query.update(changes, { touch: options.touch })
-    return toWriteResult(result)
-  }
-
-  async delete<table extends AnyTable>(
-    table: table,
-    value: PrimaryKeyInput<table>,
-  ): Promise<boolean> {
-    let where = getPrimaryKeyWhere(table, value)
-    let result = await this.query(table)
-      .where(where)
-      .delete()
-
-    return result.affectedRows > 0
-  }
-
-  async deleteMany<table extends AnyTable>(
-    table: table,
-    options: DeleteManyOptions<table>,
-  ): Promise<WriteResult> {
-    let query = createScopedQuery(this.query(table), options)
-
-    let result = await query.delete()
-    return toWriteResult(result)
-  }
-
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
   async exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
   async exec<input extends AnyQuery>(
@@ -640,9 +250,10 @@ export class Database implements QueryExecutionContext {
     values: unknown[] = [],
   ): Promise<DataManipulationResult | QueryExecutionResult<input>> {
     if (typeof statementOrInput === 'string' || isSqlStatement(statementOrInput)) {
-      let sqlStatement = isSqlStatement(statementOrInput)
-        ? statementOrInput
-        : rawSql(statementOrInput, values)
+      let sqlStatement =
+        typeof statementOrInput === 'string'
+          ? { text: statementOrInput, values }
+          : statementOrInput
 
       return this[executeOperation]({
         kind: 'raw',
@@ -733,7 +344,7 @@ export class Database implements QueryExecutionContext {
  * })
  *
  * let db = createDatabase(adapter)
- * let rows = await db.query(users).where({ id: 1 }).all()
+ * let rows = await db.exec(query(users).where({ id: 1 }).all())
  * ```
  */
 export function createDatabase(

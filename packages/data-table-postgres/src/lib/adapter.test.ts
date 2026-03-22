@@ -1,6 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-table'
+import { column, createDatabase, table, eq, inList, sql ,
+  query
+} from '@remix-run/data-table'
 import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
@@ -249,7 +251,7 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresAdapter(client))
 
-    let count = await db.query(accounts).count()
+    let count = await db.exec(query(accounts).count())
     await db.exec(sql`select * from accounts where id = ${42}`)
 
     assert.equal(count, 2)
@@ -578,11 +580,10 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresAdapter(client))
 
-    await db
-      .query(accounts)
+    await db.exec(query(accounts)
       .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'ops@example.com'))
-      .count()
+      .count())
 
     assert.match(statements[0].text, /"accounts"\."id"\s*=\s*"projects"\."account_id"/)
     assert.match(statements[0].text, /"accounts"\."email"\s*=\s*\$1/)
@@ -608,7 +609,7 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresAdapter(client))
 
-    await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
+    await db.exec(query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count())
 
     assert.match(statements[0].text, /from "billing"\."invoices"/)
     assert.match(statements[0].text, /join "accounts"/)
@@ -634,7 +635,7 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresAdapter(client))
 
-    await db.query(accounts).select({ 'account.email': accounts.email }).all()
+    await db.exec(query(accounts).select({ 'account.email': accounts.email }).all())
 
     assert.match(statements[0].text, /as "account\.email"/)
   })
@@ -658,10 +659,9 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresAdapter(client))
 
-    await db
-      .query(accounts)
+    await db.exec(query(accounts)
       .where(inList('id', [1, 3]))
-      .count()
+      .count())
 
     assert.match(statements[0].text, /"id"\s+in\s+\(\$1,\s*\$2\)/)
     assert.deepEqual(statements[0].values, [1, 3])
@@ -681,7 +681,7 @@ describe('postgres adapter', () => {
     }
 
     let db = createDatabase(createPostgresAdapter(client))
-    let count = await db.query(accounts).count()
+    let count = await db.exec(query(accounts).count())
 
     assert.equal(count, 5)
   })
@@ -700,7 +700,7 @@ describe('postgres adapter', () => {
     }
 
     let db = createDatabase(createPostgresAdapter(client))
-    let count = await db.query(accounts).count()
+    let count = await db.exec(query(accounts).count())
 
     assert.equal(count, 3)
   })
@@ -719,9 +719,8 @@ describe('postgres adapter', () => {
     }
 
     let db = createDatabase(createPostgresAdapter(client))
-    let result = await db
-      .query(accounts)
-      .insert({ id: 1, email: 'a@example.com' }, { returning: '*' })
+    let result = await db.exec(query(accounts)
+      .insert({ id: 1, email: 'a@example.com' }, { returning: '*' }))
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, 1)
@@ -741,14 +740,14 @@ describe('postgres adapter', () => {
     }
 
     let db = createDatabase(createPostgresAdapter(client))
-    let result = await db.query(accountProjects).insert(
+    let result = await db.exec(query(accountProjects).insert(
       {
         account_id: 1,
         project_id: 2,
         email: 'team@example.com',
       },
       { returning: '*' },
-    )
+    ))
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
