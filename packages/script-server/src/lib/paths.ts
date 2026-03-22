@@ -1,7 +1,6 @@
 import * as path from 'node:path'
 
 let windowsDriveLetterRE = /^[A-Za-z]:\//
-let legacyWindowsDriveLetterRE = /^\/([A-Za-z]:\/)/
 let uncPrefixRE = /^\/\/[^/]+\/[^/]+/
 
 export function normalizeWindowsPath(filePath: string): string {
@@ -26,7 +25,7 @@ export function isAbsoluteFilePath(filePath: string): boolean {
 }
 
 export function normalizeFilePath(filePath: string): string {
-  let normalized = normalizeWindowsPath(filePath).replace(legacyWindowsDriveLetterRE, '$1')
+  let normalized = normalizeWindowsPath(filePath)
   let uncRoot = getUncRoot(normalized)
 
   if (uncRoot) {
@@ -36,6 +35,10 @@ export function normalizeFilePath(filePath: string): string {
   }
 
   if (windowsDriveLetterRE.test(normalized)) {
+    return path.posix.normalize(normalized)
+  }
+
+  if (normalized.startsWith('/')) {
     return path.posix.normalize(normalized)
   }
 

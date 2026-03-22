@@ -35,7 +35,7 @@ describe('paths', () => {
 
   it('normalizes absolute file paths to a standard internal form', () => {
     assert.equal(normalizeFilePath(String.raw`C:\Users\runner\project`), 'C:/Users/runner/project')
-    assert.equal(normalizeFilePath('/C:/Users/runner/project'), 'C:/Users/runner/project')
+    assert.equal(normalizeFilePath('/Users/runner/project'), '/Users/runner/project')
     assert.equal(
       normalizeFilePath(String.raw`c:\Users\runner\..\runner\project`),
       'C:/Users/runner/project',
