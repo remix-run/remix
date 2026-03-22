@@ -10,6 +10,7 @@ reference/
 *.sqlite-*
 *.sqlite3
 *.sqlite3-*
+*.cpuprofile
 
 .env
 
