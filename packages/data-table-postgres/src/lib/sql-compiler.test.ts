@@ -45,19 +45,44 @@ let tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-let fakeAdapter = {
-  capabilities: {
-    upsert: true,
-    returning: true,
-  },
+function createRecordingAdapter(): DatabaseAdapter {
+  return {
+    dialect: 'postgres',
+    capabilities: {
+      returning: true,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: true,
+      migrationLock: true,
+    },
+    compileSql() {
+      return []
+    },
+    async execute(request) {
+      statements.push(request.operation)
+      return {}
+    },
+    async migrate() {
+      return { affectedOperations: 0 }
+    },
+    async hasTable() {
+      return false
+    },
+    async hasColumn() {
+      return false
+    },
+    async beginTransaction() {
+      return { id: 'tx_1' }
+    },
+    async commitTransaction() {},
+    async rollbackTransaction() {},
+    async createSavepoint() {},
+    async rollbackToSavepoint() {},
+    async releaseSavepoint() {},
+  }
+}
 
-  execute: async (request) => {
-    statements.push(request.operation)
-    return {}
-  },
-} as DatabaseAdapter
-
-let db = createDatabase(fakeAdapter)
+let db = createDatabase(createRecordingAdapter())
 
 describe('postgres sql-compiler', () => {
   beforeEach(() => {
@@ -571,7 +596,10 @@ describe('postgres sql-compiler', () => {
   describe('error handling', () => {
     it('throws for unsupported statements', () => {
       assert.throws(
-        () => compilePostgresOperation({ kind: 'unknown' } as never),
+        () => {
+          // @ts-expect-error deliberate unsupported operation kind for fallback coverage
+          compilePostgresOperation({ kind: 'unknown' })
+        },
         /Unsupported operation kind/,
       )
     })
@@ -584,7 +612,10 @@ describe('postgres sql-compiler', () => {
             table: accounts,
             select: '*',
             joins: [],
-            where: [{ type: 'unknown' } as never],
+            where: [
+              // @ts-expect-error deliberate unsupported predicate kind for fallback coverage
+              { type: 'unknown' },
+            ],
             groupBy: [],
             having: [],
             orderBy: [],

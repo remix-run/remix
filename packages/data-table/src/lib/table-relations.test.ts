@@ -131,10 +131,8 @@ describe('table relations', () => {
     let organizationProjects = hasMany(organizations, projects)
 
     assert.throws(
-      () =>
-        hasManyThrough(accounts, tasks, {
-          through: organizationProjects as never,
-        }),
+      // @ts-expect-error intentionally passing a through relation with the wrong source table
+      () => hasManyThrough(accounts, tasks, { through: organizationProjects }),
       /hasManyThrough expects a through relation whose source table matches accounts/,
     )
   })

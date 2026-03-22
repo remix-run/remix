@@ -53,9 +53,8 @@ export type QuerySourceRow<source extends AnyQuerySource> =
 export type QuerySourcePrimaryKey<source extends AnyQuerySource> =
   source extends QueryTableInput<any, any, infer primaryKey> ? primaryKey : never
 
-export type QuerySourceColumnTypes<source extends AnyQuerySource> = QueryColumnTypeMapFromRow<
-  QuerySourceTableName<source>,
-  QuerySourceRow<source>
+export type QuerySourceColumnTypes<source extends AnyQuerySource> = Pretty<
+  QueryColumnTypeMapFromRow<QuerySourceTableName<source>, QuerySourceRow<source>>
 >
 
 export type QueryTableInput<

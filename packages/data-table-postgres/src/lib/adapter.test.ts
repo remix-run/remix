@@ -4,6 +4,7 @@ import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-
 import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
+import type { PostgresDatabaseAdapterOptions } from './adapter.ts'
 
 let accounts = table({
   name: 'accounts',
@@ -40,9 +41,32 @@ let accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
+type PostgresClientLike = {
+  query(text: string, values?: unknown[]): Promise<unknown>
+}
+
+type PostgresPoolClientLike = PostgresClientLike & {
+  release?(): void
+}
+
+type PostgresPoolLike = {
+  query(text: string, values?: unknown[]): Promise<unknown>
+  connect(): Promise<PostgresPoolClientLike>
+}
+
+type PostgresQueryableLike = PostgresClientLike | PostgresPoolClientLike | PostgresPoolLike
+
+function createPostgresAdapter(
+  client: PostgresQueryableLike,
+  options?: PostgresDatabaseAdapterOptions,
+) {
+  // @ts-expect-error test fakes only implement the methods these cases need
+  return createPostgresDatabaseAdapter(client, options)
+}
+
 describe('postgres adapter', () => {
   it('applies explicit capability overrides', () => {
-    let adapter = createPostgresDatabaseAdapter(
+    let adapter = createPostgresAdapter(
       {
         async query() {
           return {
@@ -53,7 +77,7 @@ describe('postgres adapter', () => {
             fields: [],
           }
         },
-      } as never,
+      },
       {
         capabilities: {
           returning: false,
@@ -95,7 +119,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = createPostgresAdapter(client)
     let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
     let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
@@ -145,7 +169,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(pool as never)
+    let adapter = createPostgresAdapter(pool)
     let token = await adapter.beginTransaction()
 
     await adapter.hasTable({ name: 'users' }, token)
@@ -177,7 +201,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = createPostgresAdapter(client)
     let result = await adapter.execute({
       operation: {
         kind: 'insertMany',
@@ -223,7 +247,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     let count = await db.query(accounts).count()
     await db.exec(sql`select * from accounts where id = ${42}`)
@@ -250,7 +274,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db.transaction(async (outerTransaction) => {
       await outerTransaction
@@ -286,7 +310,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db.transaction(async () => undefined, {
       isolationLevel: 'serializable',
@@ -316,7 +340,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db.transaction(async () => undefined, { readOnly: false })
 
@@ -352,7 +376,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(createPostgresAdapter(pool))
 
     await db.transaction(async () => undefined)
 
@@ -385,7 +409,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(createPostgresAdapter(pool))
 
     await db.transaction(async () => undefined)
 
@@ -421,7 +445,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(createPostgresAdapter(pool))
 
     await assert.rejects(
       () =>
@@ -460,7 +484,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(createPostgresAdapter(pool))
 
     await assert.rejects(
       () =>
@@ -489,7 +513,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = createPostgresAdapter(client)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp"name')
@@ -519,7 +543,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = createPostgresAdapter(client)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -552,7 +576,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db
       .query(accounts)
@@ -582,7 +606,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
 
@@ -608,7 +632,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
@@ -632,7 +656,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
 
     await db
       .query(accounts)
@@ -656,7 +680,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 5)
@@ -675,7 +699,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 3)
@@ -694,7 +718,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
     let result = await db
       .query(accounts)
       .insert({ id: 1, email: 'a@example.com' }, { returning: '*' })
@@ -716,7 +740,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(createPostgresAdapter(client))
     let result = await db.query(accountProjects).insert(
       {
         account_id: 1,
@@ -743,7 +767,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let result = await createPostgresDatabaseAdapter(client as never).execute({
+    let result = await createPostgresAdapter(client).execute({
       operation: {
         kind: 'raw',
         sql: {
@@ -774,7 +798,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = createPostgresAdapter(client)
     let token = await adapter.beginTransaction()
 
     await adapter.acquireMigrationLock()
@@ -809,7 +833,7 @@ describe('postgres adapter', () => {
   })
 
   it('compiles rich table migrations including literals, references, and comments', () => {
-    let adapter = createPostgresDatabaseAdapter({
+    let adapter = createPostgresAdapter({
       async query() {
         return {
           rows: [],
@@ -819,7 +843,7 @@ describe('postgres adapter', () => {
           fields: [],
         }
       },
-    } as never)
+    })
 
     let compiled = adapter.compileSql({
       kind: 'createTable',
@@ -916,7 +940,7 @@ describe('postgres adapter', () => {
   })
 
   it('compiles alterTable changes and standalone DDL operations', () => {
-    let adapter = createPostgresDatabaseAdapter({
+    let adapter = createPostgresAdapter({
       async query() {
         return {
           rows: [],
@@ -926,7 +950,7 @@ describe('postgres adapter', () => {
           fields: [],
         }
       },
-    } as never)
+    })
 
     let alterStatements = adapter.compileSql({
       kind: 'alterTable',
@@ -1062,7 +1086,7 @@ describe('postgres adapter', () => {
   })
 
   it('throws for unsupported DDL kinds and non-stored computed columns', () => {
-    let adapter = createPostgresDatabaseAdapter({
+    let adapter = createPostgresAdapter({
       async query() {
         return {
           rows: [],
@@ -1072,10 +1096,13 @@ describe('postgres adapter', () => {
           fields: [],
         }
       },
-    } as never)
+    })
 
     assert.throws(
-      () => adapter.compileSql({ kind: 'unknown' } as never),
+      () => {
+        // @ts-expect-error deliberate unsupported DDL kind for fallback coverage
+        adapter.compileSql({ kind: 'unknown' })
+      },
       /Unsupported data migration operation kind/,
     )
     assert.throws(
@@ -1098,7 +1125,7 @@ describe('postgres adapter', () => {
   })
 
   it('compiles every DDL operation kind through compileSql()', () => {
-    let adapter = createPostgresDatabaseAdapter({
+    let adapter = createPostgresAdapter({
       async query() {
         return {
           rows: [],
@@ -1108,7 +1135,7 @@ describe('postgres adapter', () => {
           fields: [],
         }
       },
-    } as never)
+    })
 
     let operations: DataMigrationOperation[] = [
       {

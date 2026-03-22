@@ -62,9 +62,11 @@ export function isSqlStatement(value: unknown): value is SqlStatement {
     return false
   }
 
-  let statement = value as { text?: unknown; values?: unknown }
+  if (!hasTextAndValues(value)) {
+    return false
+  }
 
-  return typeof statement.text === 'string' && Array.isArray(statement.values)
+  return typeof value.text === 'string' && Array.isArray(value.values)
 }
 
 /**
@@ -81,4 +83,8 @@ export function isSqlStatement(value: unknown): value is SqlStatement {
  */
 export function rawSql(text: string, values: unknown[] = []): SqlStatement {
   return { text, values }
+}
+
+function hasTextAndValues(value: object): value is { text: unknown; values: unknown } {
+  return 'text' in value && 'values' in value
 }

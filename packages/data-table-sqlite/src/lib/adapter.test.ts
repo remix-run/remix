@@ -5,6 +5,7 @@ import { column, createDatabase, table, eq } from '@remix-run/data-table'
 import type { DataMigrationOperation } from '@remix-run/data-table/adapter'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
+import type { SqliteDatabaseAdapterOptions } from './adapter.ts'
 
 let accounts = table({
   name: 'accounts',
@@ -36,6 +37,25 @@ let accountProjects = table({
 
 let sqliteAvailable = canOpenSqliteDatabase()
 
+type SqliteDatabaseLike = {
+  prepare(statement: string): {
+    reader?: boolean
+    get?: (...values: unknown[]) => unknown
+    all(...values: unknown[]): unknown[]
+    run(...values: unknown[]): { changes: number; lastInsertRowid: unknown }
+  }
+  exec(statement: string): void
+  pragma(statement: string): void
+}
+
+function createSqliteAdapter(
+  database: SqliteDatabaseLike,
+  options?: SqliteDatabaseAdapterOptions,
+) {
+  // @ts-expect-error test fakes only implement the methods these cases need
+  return createSqliteDatabaseAdapter(database, options)
+}
+
 describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
     let prepareCalls = 0
@@ -56,7 +76,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.execute({
       operation: {
         kind: 'insertMany',
@@ -112,7 +132,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let hasTable = await adapter.hasTable({ name: 'users' })
     let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
@@ -141,7 +161,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       },
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let token = await adapter.beginTransaction({ isolationLevel: 'read uncommitted' })
     await adapter.commitTransaction(token)
 
@@ -162,7 +182,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       },
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp"name')
@@ -188,7 +208,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       exec() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -229,7 +249,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.execute({
       operation: {
         kind: 'count',
@@ -264,7 +284,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.execute({
       operation: {
         kind: 'select',
@@ -303,7 +323,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -338,7 +358,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.execute({
       operation: {
         kind: 'insert',
@@ -374,7 +394,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let db = createDatabase(createSqliteDatabaseAdapter(sqlite as never))
+    let db = createDatabase(createSqliteAdapter(sqlite))
     let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
 
     assert.equal(result.affectedRows, 1)
@@ -401,7 +421,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let result = await adapter.migrate({
       operation: {
         kind: 'dropCheck',
@@ -434,7 +454,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
 
     let createTableStatements = adapter.compileSql({
       kind: 'createTable',
@@ -479,7 +499,8 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
           checks: [{ expression: 'guarded_value > 0', name: 'users_guarded_value_check' }],
         },
         unknown_type: {
-          type: 'mystery' as any,
+          // @ts-expect-error deliberate unsupported type for fallback coverage
+          type: 'mystery',
         },
       },
       primaryKey: { name: 'users_pk', columns: ['id'] },
@@ -576,8 +597,9 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
         },
         { kind: 'dropCheck', name: 'users_email_check' },
         { kind: 'setTableComment', comment: "owner's users" },
-        { kind: 'somethingElse' as any },
-      ] as any,
+        // @ts-expect-error deliberate unsupported change kind for fallback coverage
+        { kind: 'somethingElse' },
+      ],
     })
 
     assert.equal(alterTableStatements.length, 12)
@@ -632,10 +654,13 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
 
     assert.throws(
-      () => adapter.compileSql({ kind: 'unsupported_migration_operation' } as any),
+      () => {
+        // @ts-expect-error deliberate unsupported migration kind for fallback coverage
+        adapter.compileSql({ kind: 'unsupported_migration_operation' })
+      },
       /Unsupported data migration operation kind/,
     )
   })
@@ -772,7 +797,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       pragma() {},
     }
 
-    let adapter = createSqliteDatabaseAdapter(sqlite as never)
+    let adapter = createSqliteAdapter(sqlite)
     let operations: DataMigrationOperation[] = [
       {
         kind: 'createTable',

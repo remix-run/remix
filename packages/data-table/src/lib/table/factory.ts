@@ -95,12 +95,11 @@ export function table<
 ): Table<name, columns, NormalizePrimaryKey<columns, primaryKey>> {
   let tableName = options.name
   let columns = options.columns
+  let table: Table<name, columns, NormalizePrimaryKey<columns, primaryKey>> = Object.create(null)
 
   let resolvedPrimaryKey = normalizePrimaryKey(tableName, columns, options.primaryKey)
   let timestampConfig = normalizeTimestampConfig(options.timestamps)
   let columnDefinitions = resolveTableColumns(tableName, columns)
-  let table = Object.create(null) as Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>
-
   Object.defineProperty(table, tableMetadataKey, {
     value: Object.freeze({
       name: tableName,
@@ -108,14 +107,12 @@ export function table<
       primaryKey: resolvedPrimaryKey,
       timestamps: timestampConfig,
       columnDefinitions,
-      beforeWrite: options.beforeWrite as
-        | TableBeforeWrite<TableRowFromColumns<columns>>
-        | undefined,
-      afterWrite: options.afterWrite as TableAfterWrite<TableRowFromColumns<columns>> | undefined,
-      beforeDelete: options.beforeDelete as TableBeforeDelete | undefined,
-      afterDelete: options.afterDelete as TableAfterDelete | undefined,
-      afterRead: options.afterRead as TableAfterRead<TableRowFromColumns<columns>> | undefined,
-      validate: options.validate as TableValidate<TableRowFromColumns<columns>> | undefined,
+      beforeWrite: options.beforeWrite,
+      afterWrite: options.afterWrite,
+      beforeDelete: options.beforeDelete,
+      afterDelete: options.afterDelete,
+      afterRead: options.afterRead,
+      validate: options.validate,
     }),
     enumerable: false,
     writable: false,
@@ -137,28 +134,34 @@ export function table<
     })
   }
 
-  return Object.freeze(table) as Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>
+  Object.freeze(table)
+  return table
 }
 
 function createColumnReference<tableName extends string, columnName extends string>(
   tableName: tableName,
   columnName: columnName,
 ): ColumnReference<tableName, columnName> {
-  return Object.freeze({
+  let column = {
     kind: 'column',
-    [columnMetadataKey]: Object.freeze({
+    [columnMetadataKey]: {
       tableName,
       columnName,
-      qualifiedName: tableName + '.' + columnName,
-    }),
-  }) as ColumnReference<tableName, columnName>
+      qualifiedName: `${tableName}.${columnName}`,
+    },
+  } satisfies ColumnReference<tableName, columnName>
+
+  Object.freeze(column)
+  return column
 }
 
 function resolveTableColumns<columns extends TableColumnsDefinition>(
   tableName: string,
   columns: columns,
 ): { [column in keyof columns & string]: ColumnDefinition } {
-  let columnDefinitions: Record<string, ColumnDefinition> = {}
+  let columnDefinitions: { [column in keyof columns & string]: ColumnDefinition } = Object.create(
+    null,
+  )
 
   for (let columnName in columns) {
     if (!Object.prototype.hasOwnProperty.call(columns, columnName)) {
@@ -180,9 +183,8 @@ function resolveTableColumns<columns extends TableColumnsDefinition>(
     columnDefinitions[columnName] = column.build()
   }
 
-  return Object.freeze(columnDefinitions) as {
-    [column in keyof columns & string]: ColumnDefinition
-  }
+  Object.freeze(columnDefinitions)
+  return columnDefinitions
 }
 
 function normalizePrimaryKey(

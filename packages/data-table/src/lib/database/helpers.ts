@@ -9,7 +9,7 @@ import type {
   WriteRowResult,
   WriteRowsResult,
 } from '../database.ts'
-import type { Predicate } from '../operators.ts'
+import type { Predicate, WhereObject } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import { query as createQuery } from '../query.ts'
 import type { AnyTable, TableRow, TableRowWith } from '../table.ts'
@@ -23,47 +23,35 @@ import { loadRowsWithRelationsForQuery } from './query-execution.ts'
 export function getPrimaryKeyWhere<table extends AnyTable>(
   table: table,
   value: PrimaryKeyInput<table>,
-): SingleTableWhere<table> {
+): WhereObject<TableColumnName<table>> {
   return getPrimaryKeyObject(table, value)
 }
 
 export function getPrimaryKeyWhereFromRow<table extends AnyTable>(
   table: table,
   row: Record<string, unknown>,
-): SingleTableWhere<table> {
-  let where: Partial<Record<TableColumnName<table>, unknown>> = {}
-
-  for (let key of getTablePrimaryKey(table) as TableColumnName<table>[]) {
-    where[key] = row[key]
-  }
-
-  return where
+): WhereObject<TableColumnName<table>> {
+  return createWhereObject(getTablePrimaryKey(table).map((key) => [key, row[key]]))
 }
 
 export function resolveCreateRowWhere<table extends AnyTable>(
   table: table,
   values: Partial<TableRow<table>>,
   insertId: unknown,
-): SingleTableWhere<table> {
-  let primaryKey = getTablePrimaryKey(table) as TableColumnName<table>[]
+): WhereObject<TableColumnName<table>> {
+  let primaryKey = getTablePrimaryKey(table)
 
   if (primaryKey.length === 1) {
     let key = primaryKey[0]
 
     if (Object.prototype.hasOwnProperty.call(values, key)) {
-      let where: Partial<Record<TableColumnName<table>, unknown>> = {}
-      where[key] = values[key]
-      return where
+      return createWhereObject([[key, values[key]]])
     }
 
     if (insertId !== undefined) {
-      let where: Partial<Record<TableColumnName<table>, unknown>> = {}
-      where[key] = insertId
-      return where
+      return createWhereObject([[key, insertId]])
     }
   }
-
-  let where: Partial<Record<TableColumnName<table>, unknown>> = {}
 
   for (let key of primaryKey) {
     if (!Object.prototype.hasOwnProperty.call(values, key)) {
@@ -73,11 +61,9 @@ export function resolveCreateRowWhere<table extends AnyTable>(
           '" when adapter does not support RETURNING',
       )
     }
-
-    where[key] = values[key]
   }
 
-  return where
+  return createWhereObject(primaryKey.map((key) => [key, values[key]]))
 }
 
 export function hasScopedWriteModifiers(state: {
@@ -104,12 +90,12 @@ export function createScopedQuery<table extends AnyTable>(
   }
 
   if (options?.orderBy) {
-    if (Array.isArray(options.orderBy[0])) {
-      for (let [column, direction] of options.orderBy as OrderByTuple<table>[]) {
+    if (isOrderByTupleList(options.orderBy)) {
+      for (let [column, direction] of options.orderBy) {
         scopedQuery = scopedQuery.orderBy(column, direction)
       }
     } else {
-      let [column, direction] = options.orderBy as OrderByTuple<table>
+      let [column, direction] = options.orderBy
       scopedQuery = scopedQuery.orderBy(column, direction)
     }
   }
@@ -204,7 +190,7 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   table: table,
   keyObjects: Record<string, unknown>[],
 ): Predicate<TableColumnName<table>> | undefined {
-  let primaryKey = getTablePrimaryKey(table) as TableColumnName<table>[]
+  let primaryKey = getTablePrimaryKey(table)
 
   if (keyObjects.length === 0) {
     return undefined
@@ -225,4 +211,22 @@ export function buildPrimaryKeyPredicate<table extends AnyTable>(
   })
 
   return or(...predicates)
+}
+
+function isOrderByTupleList<table extends AnyTable>(
+  orderBy: OrderByInput<table>,
+): orderBy is OrderByTuple<table>[] {
+  return Array.isArray(orderBy[0])
+}
+
+function createWhereObject<column extends string>(
+  entries: Array<readonly [column, unknown]>,
+): WhereObject<column> {
+  let where: WhereObject<column> = {}
+
+  for (let [column, value] of entries) {
+    where[column] = value
+  }
+
+  return where
 }

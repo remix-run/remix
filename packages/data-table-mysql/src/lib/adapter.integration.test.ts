@@ -22,7 +22,13 @@ describe('mysql adapter integration', () => {
       return
     }
 
-    pool = createPool(process.env.DATA_TABLE_MYSQL_URL as string)
+    let connectionUrl = process.env.DATA_TABLE_MYSQL_URL
+
+    if (!connectionUrl) {
+      throw new Error('DATA_TABLE_MYSQL_URL must be set when integration tests are enabled')
+    }
+
+    pool = createPool(connectionUrl)
     await setupAdapterIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'mysql')

@@ -44,31 +44,56 @@ let tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-let fakeAdapter = {
-  capabilities: {
-    upsert: true,
-    returning: true,
-  },
+function createRecordingAdapter(): DatabaseAdapter {
+  return {
+    dialect: 'sqlite',
+    capabilities: {
+      returning: true,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: true,
+      migrationLock: false,
+    },
+    compileSql() {
+      return []
+    },
+    async execute(request) {
+      statements.push(request.operation)
 
-  execute: async (request) => {
-    statements.push(request.operation)
-    // usefull for update
-    if (request.operation.kind === 'select') {
-      return {
-        rows: [{ id: 1 }],
+      if (request.operation.kind === 'select') {
+        return {
+          rows: [{ id: 1 }],
+        }
       }
-    }
 
-    // for insert with returning
-    if (request.operation.kind === 'insert' && request.operation.returning) {
-      return {
-        rows: [{ id: 10 }],
+      if (request.operation.kind === 'insert' && request.operation.returning) {
+        return {
+          rows: [{ id: 10 }],
+        }
       }
-    }
-    return {}
-  },
-} as DatabaseAdapter
-let db = createDatabase(fakeAdapter)
+
+      return {}
+    },
+    async migrate() {
+      return { affectedOperations: 0 }
+    },
+    async hasTable() {
+      return false
+    },
+    async hasColumn() {
+      return false
+    },
+    async beginTransaction() {
+      return { id: 'tx_1' }
+    },
+    async commitTransaction() {},
+    async rollbackTransaction() {},
+    async createSavepoint() {},
+    async rollbackToSavepoint() {},
+    async releaseSavepoint() {},
+  }
+}
+let db = createDatabase(createRecordingAdapter())
 
 describe('sqlite sql-compiler', () => {
   beforeEach(() => {

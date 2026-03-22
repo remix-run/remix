@@ -75,7 +75,8 @@ describe('table metadata', () => {
     let createResult = validator({
       operation: 'create',
       tableName: 'users',
-      value: { id: '1' as never },
+      // @ts-expect-error intentionally passing the wrong runtime type
+      value: { id: '1' },
     })
     assert.deepEqual(createResult, { value: { id: 1 } })
 

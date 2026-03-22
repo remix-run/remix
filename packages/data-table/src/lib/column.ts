@@ -17,7 +17,7 @@ export class ColumnBuilder<output = unknown> {
    */
   nullable(): ColumnBuilder<output | null> {
     this.#definition.nullable = true
-    return retypeColumnBuilder<output | null>(this)
+    return new ColumnBuilder<output | null>(this.#definition)
   }
 
   /**
@@ -26,7 +26,7 @@ export class ColumnBuilder<output = unknown> {
    */
   notNull(): ColumnBuilder<Exclude<output, null>> {
     this.#definition.nullable = false
-    return retypeColumnBuilder<Exclude<output, null>>(this)
+    return new ColumnBuilder<Exclude<output, null>>(this.#definition)
   }
 
   /**
@@ -320,10 +320,6 @@ function createColumnBuilder<output = unknown>(
   definition: ColumnDefinition,
 ): ColumnBuilder<output> {
   return new ColumnBuilder(definition)
-}
-
-function retypeColumnBuilder<output>(builder: ColumnBuilder<unknown>): ColumnBuilder<output> {
-  return builder as ColumnBuilder<output>
 }
 
 /**

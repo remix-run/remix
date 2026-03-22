@@ -219,7 +219,8 @@ describe('logical predicates', () => {
   })
 
   it('filters falsy values when combining logical predicates', () => {
-    let predicate = and(eq('id', 10), null as never, undefined as never)
+    // @ts-expect-error intentional nullish predicate fixtures
+    let predicate = and(eq('id', 10), null, undefined)
 
     assert.deepEqual(predicate, {
       type: 'logical',
@@ -227,7 +228,8 @@ describe('logical predicates', () => {
       predicates: [eq('id', 10)],
     })
 
-    let disjunction = or(eq('status', 'active'), false as never)
+    // @ts-expect-error intentional falsy predicate fixture
+    let disjunction = or(eq('status', 'active'), false)
 
     assert.deepEqual(disjunction, {
       type: 'logical',

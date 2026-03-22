@@ -86,7 +86,11 @@ describe('query helpers', () => {
       },
     }
 
-    let cloned = cloneQueryPlan(plan) as typeof plan
+    let cloned = cloneQueryPlan(plan)
+
+    if (cloned.kind !== 'upsert') {
+      throw new Error('Expected upsert query plan')
+    }
 
     cloned.values.status = 'archived'
     cloned.options!.conflictTarget!.push('email')

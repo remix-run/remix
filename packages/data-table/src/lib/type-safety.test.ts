@@ -122,6 +122,8 @@ let projects = table({
   },
 })
 
+const statuses: readonly ['draft', 'published'] = ['draft', 'published']
+
 let accountProjects = hasMany(accounts, projects)
 
 let inferredColumns = table({
@@ -131,7 +133,7 @@ let inferredColumns = table({
     title: column.text(),
     is_active: column.boolean(),
     amount: column.decimal(10, 2),
-    status: column.enum(['draft', 'published'] as const),
+    status: column.enum(statuses),
     metadata: column.json(),
     happened_at: column.timestamp(),
     big_counter: column.bigint(),

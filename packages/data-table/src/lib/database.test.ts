@@ -467,8 +467,10 @@ describe('queries', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let nullResult = await db.find(accounts, null as never)
-    let undefinedResult = await db.find(accounts, undefined as never)
+    // @ts-expect-error intentional nullish primary key fixture
+    let nullResult = await db.find(accounts, null)
+    // @ts-expect-error intentional undefined primary key fixture
+    let undefinedResult = await db.find(accounts, undefined)
 
     assert.equal(nullResult, null)
     assert.equal(undefinedResult, null)
@@ -1126,7 +1128,12 @@ describe('writes and validation', () => {
       async function () {
         await db
           .query(accounts)
-          .insert({ id: 11, email: 'billing@studio.test', status: 300 as never })
+          .insert({
+            id: 11,
+            email: 'billing@studio.test',
+            // @ts-expect-error intentional invalid validation fixture
+            status: 300,
+          })
       },
       function (error: unknown) {
         return (
@@ -1282,8 +1289,9 @@ describe('writes and validation', () => {
           id: 1,
           email: 'a@studio.test',
           status: 'active',
+          // @ts-expect-error intentional unknown column fixture
           unknown: true,
-        } as never)
+        })
       },
       (error: unknown) =>
         error instanceof DataTableValidationError &&
@@ -1320,7 +1328,7 @@ describe('writes and validation', () => {
       },
       afterWrite({ values }) {
         callbackOrder.push('afterWrite')
-        let payload = values[0] as Record<string, unknown>
+        let payload = values[0]
         assert.equal(payload.status, 'ACTIVE')
         assert.equal(payload.created_at, '2026-01-01T00:00:00.000Z')
       },
@@ -1583,8 +1591,9 @@ describe('writes and validation', () => {
         email: column.text(),
         status: column.text(),
       },
+      // @ts-expect-error intentional async lifecycle callback fixture
       beforeWrite({ value }) {
-        return Promise.resolve({ value }) as never
+        return Promise.resolve({ value })
       },
     })
     let asyncAfterReadAccounts = table({
@@ -1594,8 +1603,9 @@ describe('writes and validation', () => {
         email: column.text(),
         status: column.text(),
       },
+      // @ts-expect-error intentional async lifecycle callback fixture
       afterRead({ value }) {
-        return Promise.resolve({ value }) as never
+        return Promise.resolve({ value })
       },
     })
 
@@ -1637,8 +1647,9 @@ describe('writes and validation', () => {
         email: column.text(),
         status: column.text(),
       },
+      // @ts-expect-error intentional invalid lifecycle return fixture
       beforeDelete() {
-        return { value: { allowed: false } } as never
+        return { value: { allowed: false } }
       },
     })
     let adapter = createAdapter({
@@ -1984,21 +1995,24 @@ describe('writes and validation', () => {
       memberships: [],
     })
     let db = createTestDatabase(adapter)
+    let invalidWhere = JSON.parse('{ "id": "not-a-number" }')
+    let invalidArchived = JSON.parse('"nope"')
+    let invalidStatus = JSON.parse('123')
 
     await db
       .query(accounts)
-      .where({ id: 'not-a-number' as never })
+      .where(invalidWhere)
       .all()
 
     await db
       .query(accounts)
-      .join(projects, eq('projects.archived', 'nope' as never))
+      .join(projects, eq('projects.archived', invalidArchived))
       .all()
 
     await db
       .query(accounts)
       .groupBy('status')
-      .having(eq('status', 123 as never))
+      .having(eq('status', invalidStatus))
       .count()
   })
 })

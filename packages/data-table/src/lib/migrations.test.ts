@@ -849,8 +849,9 @@ describe('migration runner', () => {
 
     await assert.rejects(() => runner.up({ to: '99999999999999' }), /Unknown migration target/)
     await assert.rejects(() => runner.up({ step: 0 }), /positive integer/)
+    let invalidOptions = JSON.parse('{ "to": "20260101000000", "step": 1 }')
     await assert.rejects(
-      () => runner.up({ to: '20260101000000', step: 1 } as never),
+      () => runner.up(invalidOptions),
       /Cannot combine "to" and "step"/,
     )
   })

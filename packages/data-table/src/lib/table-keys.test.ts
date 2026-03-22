@@ -46,7 +46,8 @@ describe('table keys', () => {
     })
 
     assert.throws(
-      () => getPrimaryKeyObject(memberships, { organization_id: 1 } as never),
+      // @ts-expect-error missing composite primary key field on purpose
+      () => getPrimaryKeyObject(memberships, { organization_id: 1 }),
       /Missing key "account_id" for primary key lookup on "memberships"/,
     )
   })

@@ -49,7 +49,7 @@ export async function loadMigrations(directory: string): Promise<MigrationDescri
     let fullPath = path.join(directory, entry.file)
     let source = await fs.readFile(fullPath, 'utf8')
     let checksum = createHash('sha256').update(source).digest('hex')
-    let module = (await import(pathToFileURL(fullPath).href)) as { default?: Migration }
+    let module: { default?: Migration } = await import(pathToFileURL(fullPath).href)
     let migration = module.default
 
     if (!migration || typeof migration.up !== 'function' || typeof migration.down !== 'function') {

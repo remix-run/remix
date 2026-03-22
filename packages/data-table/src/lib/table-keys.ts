@@ -1,6 +1,7 @@
 import type { ColumnInput as ColumnBuilderInput } from './column.ts'
 import type { AnyTable, TableColumns, TablePrimaryKey, TableRow } from './table/metadata.ts'
 import { getTableName, getTablePrimaryKey } from './table/metadata.ts'
+import type { WhereObject } from './operators.ts'
 import type { Pretty } from './types.ts'
 
 /**
@@ -26,20 +27,20 @@ export type PrimaryKeyInput<table extends AnyTable> =
 export function getPrimaryKeyObject<table extends AnyTable>(
   table: table,
   value: PrimaryKeyInput<table>,
-): Partial<TableRow<table>> {
-  let keys = getTablePrimaryKey(table) as Array<keyof TableRow<table> & string>
+): WhereObject<keyof TableRow<table> & string> {
+  let keys = getTablePrimaryKey(table)
 
   if (keys.length === 1) {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    if (!isPlainObject(value)) {
       return createPrimaryKeyObject(keys[0], value)
     }
   }
 
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isPlainObject(value)) {
     throw new Error('Composite primary keys require an object value')
   }
 
-  let objectValue = value as Partial<TableRow<table>>
+  let objectValue = value
   let output: Partial<TableRow<table>> = {}
 
   for (let key of keys) {
@@ -49,7 +50,7 @@ export function getPrimaryKeyObject<table extends AnyTable>(
       )
     }
 
-    output[key] = objectValue[key]
+    Object.assign(output, { [key]: objectValue[key] })
   }
 
   return output
@@ -58,8 +59,14 @@ export function getPrimaryKeyObject<table extends AnyTable>(
 function createPrimaryKeyObject<
   table extends AnyTable,
   column extends keyof TableRow<table> & string,
->(key: column, value: unknown): Partial<TableRow<table>> {
-  return { [key]: value } as unknown as Partial<TableRow<table>>
+>(key: column, value: unknown): WhereObject<keyof TableRow<table> & string> {
+  let output: WhereObject<keyof TableRow<table> & string> = {}
+  output[key] = value
+  return output
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**

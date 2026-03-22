@@ -307,7 +307,7 @@ export class Query<
   all(
     this: Query<source, columnTypes, row, loaded, BoundQueryPhase<'all'>>,
   ): Promise<Array<row & loaded>> {
-    return this.#boundRuntime().exec(this) as Promise<Array<row & loaded>>
+    return this.#boundRuntime().exec(this)
   }
 
   first(
@@ -449,7 +449,7 @@ export class Query<
     return createQuerySnapshot(
       this.#table,
       this.#state,
-      this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
+      this.#plan,
     )
   }
 
@@ -480,7 +480,7 @@ export class Query<
     >(
       this.#table,
       this.#state,
-      this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
+      this.#plan,
       runtime,
     )
   }
@@ -489,7 +489,7 @@ export class Query<
     return Query.#createInternal<source, columnTypes, row, loaded, phase>(
       this.#table,
       mergeQueryState(this.#state, patch),
-      this.#plan as QueryPlan<row, QuerySourcePrimaryKey<source>, QueryPhaseMode<phase>>,
+      this.#plan,
       this.#runtime,
     )
   }

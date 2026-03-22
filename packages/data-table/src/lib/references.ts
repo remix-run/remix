@@ -45,6 +45,10 @@ export type ColumnInput<qualifiedName extends string = string> =
 export type NormalizeColumnInput<input> =
   input extends ColumnReferenceLike<infer qualifiedName> ? qualifiedName : input
 
+type ColumnKind = {
+  kind: 'column'
+}
+
 /**
  * Returns `true` when a value is a `data-table` column reference.
  * @param value Value to inspect.
@@ -55,11 +59,11 @@ export function isColumnReference(value: unknown): value is ColumnReferenceLike 
     return false
   }
 
-  if (!('kind' in value) || (value as { kind?: unknown }).kind !== 'column') {
+  if (!hasColumnKind(value)) {
     return false
   }
 
-  return columnMetadataKey in (value as object)
+  return columnMetadataKey in value
 }
 
 /**
@@ -75,4 +79,8 @@ export function normalizeColumnInput<input extends string | ColumnReferenceLike>
   }
 
   return input[columnMetadataKey].qualifiedName as NormalizeColumnInput<input>
+}
+
+function hasColumnKind(value: object): value is ColumnKind {
+  return 'kind' in value && value.kind === 'column'
 }

@@ -44,19 +44,44 @@ let tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-let fakeAdapter = {
-  capabilities: {
-    upsert: true,
-    returning: false,
-  },
+function createRecordingAdapter(): DatabaseAdapter {
+  return {
+    dialect: 'mysql',
+    capabilities: {
+      returning: false,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: false,
+      migrationLock: true,
+    },
+    compileSql() {
+      return []
+    },
+    async execute(request) {
+      statements.push(request.operation)
+      return {}
+    },
+    async migrate() {
+      return { affectedOperations: 0 }
+    },
+    async hasTable() {
+      return false
+    },
+    async hasColumn() {
+      return false
+    },
+    async beginTransaction() {
+      return { id: 'tx_1' }
+    },
+    async commitTransaction() {},
+    async rollbackTransaction() {},
+    async createSavepoint() {},
+    async rollbackToSavepoint() {},
+    async releaseSavepoint() {},
+  }
+}
 
-  execute: async (request) => {
-    statements.push(request.operation)
-    return {}
-  },
-} as DatabaseAdapter
-
-let db = createDatabase(fakeAdapter)
+let db = createDatabase(createRecordingAdapter())
 
 describe('mysql sql-compiler', () => {
   beforeEach(() => {
@@ -520,7 +545,10 @@ describe('mysql sql-compiler', () => {
   describe('error handling', () => {
     it('throws for unsupported statements', () => {
       assert.throws(
-        () => compileMysqlOperation({ kind: 'unknown' } as never),
+        () => {
+          // @ts-expect-error deliberate unsupported operation kind for fallback coverage
+          compileMysqlOperation({ kind: 'unknown' })
+        },
         /Unsupported operation kind/,
       )
     })
@@ -533,7 +561,10 @@ describe('mysql sql-compiler', () => {
             table: accounts,
             select: '*',
             joins: [],
-            where: [{ type: 'unknown' } as never],
+            where: [
+              // @ts-expect-error deliberate unsupported predicate kind for fallback coverage
+              { type: 'unknown' },
+            ],
             groupBy: [],
             having: [],
             orderBy: [],

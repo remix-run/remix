@@ -310,7 +310,7 @@ function isQualifiedColumnReference(value: unknown): value is QualifiedColumnRef
 function resolvePredicateColumn<input extends string | ColumnReferenceLike>(
   column: input,
 ): PredicateColumn<input> {
-  return normalizeColumnInput(column) as PredicateColumn<input>
+  return normalizeColumnInput(column)
 }
 
 function resolveComparisonValue(value: unknown): unknown {
@@ -401,18 +401,16 @@ function createComparisonPredicate<column extends string | ColumnReferenceLike>(
   operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
   column: column,
   value: unknown,
-): Predicate<PredicateColumn<column>> {
+): Predicate<string> {
   let normalizedColumn = resolvePredicateColumn(column)
   let normalizedValue = resolveComparisonValue(value)
 
   if (isQualifiedColumnReference(normalizedColumn) && isQualifiedColumnReference(normalizedValue)) {
-    let comparisonValue = normalizedValue as PredicateColumn<column>
-
     return {
       type: 'comparison',
       operator,
-      column: normalizedColumn as PredicateColumn<column>,
-      value: comparisonValue,
+      column: normalizedColumn,
+      value: normalizedValue,
       valueType: 'column',
     }
   }
@@ -420,7 +418,7 @@ function createComparisonPredicate<column extends string | ColumnReferenceLike>(
   return {
     type: 'comparison',
     operator,
-    column: normalizedColumn as PredicateColumn<column>,
+    column: normalizedColumn,
     value: normalizedValue,
     valueType: 'value',
   }
