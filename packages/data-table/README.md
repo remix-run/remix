@@ -5,7 +5,7 @@ Typed relational query toolkit for JavaScript runtimes.
 ## Features
 
 - **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
-- **One Query API**: Build reusable `Query` objects with `query(table)` and execute them with `db.exec(...)`, or use `db.query(table)` as shorthand
+- **One Execution Model**: Build `Query` objects with `query(table)` and execute them with `db.exec(...)`
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
@@ -13,12 +13,13 @@ Typed relational query toolkit for JavaScript runtimes.
 - **First-Class Migrations**: Up/down migrations with schema builders, runner controls, and dry-run planning
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
-`data-table` gives you two complementary APIs:
+`data-table` has one mental model:
 
-- [**Query Objects**](#query-objects) for expressive joins, aggregates, eager loading, and scoped writes
-- [**CRUD Helpers**](#crud-helpers) for common create/read/update/delete flows (`find`, `create`, `update`, `delete`)
+- build query objects with `query(table)`
+- execute them with `db.exec(...)`
+- use `sql` when you need a raw SQL escape hatch
 
-Both APIs are type-safe. Runtime validation is opt-in with table-level `validate(context)`.
+Runtime validation is opt-in with table-level `validate(context)`.
 
 ## Installation
 
@@ -69,11 +70,7 @@ let db = createDatabase(createPostgresDatabaseAdapter(pool))
 
 ## Query Objects
 
-Use `query(table)` when you want to build a standalone reusable query object. Execute it later with `db.exec(query)`. Use `db.query(table)` when you want the same chainable `Query` already bound to a database instance.
-
-### Standalone Query Builder
-
-`query(table)` is the primary query-builder API. It gives you an unbound `Query` value that can be composed, stored, reused, and executed against any compatible database instance.
+`query(table)` is the primary API. It gives you a composable `Query` value that stays lazy until you pass it to `db.exec(...)`.
 
 ```ts
 import { eq, ilike, query } from 'remix/data-table'
@@ -94,7 +91,7 @@ let pendingOrdersForExampleUsers = query(orders)
 let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
 ```
 
-Unbound queries stay lazy until you pass them to `db.exec(...)`:
+Relation loading stays on the query object:
 
 ```ts
 let shippedCustomerQuery = query(users)
@@ -108,12 +105,50 @@ let customers = await db.exec(shippedCustomerQuery)
 // customers[0].recentOrders is fully typed
 ```
 
-The same standalone query builder also handles terminal read and write operations:
+Common single-row and list reads use the same model:
 
 ```ts
-let nextPendingOrder = await db.exec(
+let user = await db.exec(query(users).find('u_001'))
+
+let firstPending = await db.exec(
   query(orders).where({ status: 'pending' }).orderBy('created_at', 'asc').first(),
 )
+
+let page = await db.exec(
+  query(orders)
+    .where({ status: 'pending' })
+    .orderBy('created_at', 'desc')
+    .limit(50)
+    .offset(0)
+    .all(),
+)
+```
+
+Writes also go through `query(table)` plus `db.exec(...)`:
+
+```ts
+let createResult = await db.exec(
+  query(users).insert({
+    id: 'u_002',
+    email: 'sam@example.com',
+    role: 'customer',
+    created_at: Date.now(),
+  }),
+)
+
+let createdUserResult = await db.exec(
+  query(users).insert(
+    {
+      id: 'u_003',
+      email: 'pat@example.com',
+      role: 'customer',
+      created_at: Date.now(),
+    },
+    { returning: '*' },
+  ),
+)
+
+let createdUser = 'row' in createdUserResult ? createdUserResult.row : null
 
 await db.exec(
   query(orders)
@@ -124,128 +159,7 @@ await db.exec(
 )
 ```
 
-### Bound Query Shorthand
-
-If you already have a `db` instance in hand and do not need a standalone query value, `db.query(table)` returns the same query builder already bound to that database:
-
-```ts
-let recentPendingOrders = await db
-  .query(orders)
-  .where({ status: 'pending' })
-  .orderBy('created_at', 'desc')
-  .limit(20)
-  .all()
-```
-
-## CRUD Helpers
-
-`data-table` provides helpers for common create/read/update/delete operations. Use these helpers for common operations without building a full query chain.
-
-### Read operations
-
-```ts
-import { or } from 'remix/data-table'
-
-let user = await db.find(users, 'u_001')
-
-let firstPending = await db.findOne(orders, {
-  where: { status: 'pending' },
-  orderBy: ['created_at', 'asc'],
-})
-
-let page = await db.findMany(orders, {
-  where: or({ status: 'pending' }, { status: 'processing' }),
-  orderBy: [
-    ['status', 'asc'],
-    ['created_at', 'desc'],
-  ],
-  limit: 50,
-  offset: 0,
-})
-```
-
-`where` accepts the same single-table object/predicate inputs as `query().where(...)`, and `orderBy` uses tuple form:
-
-- `['column', 'asc' | 'desc']`
-- `[['columnA', 'asc'], ['columnB', 'desc']]`
-
-### Create helpers
-
-```ts
-// Default: metadata (affectedRows/insertId)
-let createResult = await db.create(users, {
-  id: 'u_002',
-  email: 'sam@example.com',
-  role: 'customer',
-  created_at: Date.now(),
-})
-
-// Return a typed row (with optional relations)
-let createdUser = await db.create(
-  users,
-  {
-    id: 'u_003',
-    email: 'pat@example.com',
-    role: 'customer',
-    created_at: Date.now(),
-  },
-  {
-    returnRow: true,
-    with: { recentOrders: userOrders.orderBy('created_at', 'desc').limit(1) },
-  },
-)
-
-// Bulk insert metadata
-let createManyResult = await db.createMany(orders, [
-  { id: 'o_101', user_id: 'u_002', status: 'pending', total: 24.99, created_at: Date.now() },
-  { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
-])
-
-// Return inserted rows (requires adapter RETURNING support)
-let insertedRows = await db.createMany(
-  orders,
-  [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
-  { returnRows: true },
-)
-```
-
-`createMany`/`insertMany` throw when every row in the batch is empty (no explicit values).
-
-### Update and delete helpers
-
-```ts
-let updatedUser = await db.update(users, 'u_003', { role: 'admin' })
-
-let updateManyResult = await db.updateMany(
-  orders,
-  { status: 'processing' },
-  {
-    where: { status: 'pending' },
-    orderBy: ['created_at', 'asc'],
-    limit: 25,
-  },
-)
-
-let deletedUser = await db.delete(users, 'u_002')
-
-let deleteManyResult = await db.deleteMany(orders, {
-  where: { status: 'delivered' },
-  orderBy: [['created_at', 'asc']],
-  limit: 200,
-})
-```
-
-`db.update(...)` throws when the target row cannot be found.
-
-Return behavior:
-
-- `find`/`findOne` -> row or `null`
-- `findMany` -> rows
-- `create` -> write metadata (`affectedRows`, `insertId`) by default, row when `returnRow: true`
-- `createMany` -> write metadata by default, rows when `returnRows: true` (not supported in MySQL because it doesn't support `RETURNING`)
-- `update` -> updated row (throws when target row is missing)
-- `updateMany`/`deleteMany` -> write metadata
-- `delete` -> `boolean`
+Use `returning: '*'` or a column list when you want rows back from a write and your adapter supports `RETURNING`.
 
 ### Validation and Lifecycle
 
@@ -516,10 +430,10 @@ await runner.up()
 ## Raw SQL Escape Hatch
 
 ```ts
-import { rawSql, sql } from 'remix/data-table'
+import { sql } from 'remix/data-table'
 
 await db.exec(sql`select * from users where id = ${'u_001'}`)
-await db.exec(rawSql('update users set role = ? where id = ?', ['admin', 'u_001']))
+await db.exec('update users set role = ? where id = ?', ['admin', 'u_001'])
 ```
 
 Use `sql` when you need raw SQL plus safe value interpolation:
