@@ -12,7 +12,7 @@ import type {
 import type { Predicate, WhereObject } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
 import { query as createQuery } from '../query.ts'
-import type { AnyTable, TableRow, TableRowWith } from '../table.ts'
+import type { AnyTable, TableRow } from '../table.ts'
 import type { PrimaryKeyInput } from '../table-keys.ts'
 import { getTableName, getTablePrimaryKey } from '../table.ts'
 import { getPrimaryKeyObject } from '../table-keys.ts'
@@ -31,7 +31,13 @@ export function getPrimaryKeyWhereFromRow<table extends AnyTable>(
   table: table,
   row: Record<string, unknown>,
 ): WhereObject<TableColumnName<table>> {
-  return createWhereObject(getTablePrimaryKey(table).map((key) => [key, row[key]]))
+  let where: WhereObject<TableColumnName<table>> = Object.create(null)
+
+  for (let key of getTablePrimaryKey(table)) {
+    Object.assign(where, { [key]: row[key] })
+  }
+
+  return where
 }
 
 export function resolveCreateRowWhere<table extends AnyTable>(
@@ -45,11 +51,15 @@ export function resolveCreateRowWhere<table extends AnyTable>(
     let key = primaryKey[0]
 
     if (Object.prototype.hasOwnProperty.call(values, key)) {
-      return createWhereObject([[key, values[key]]])
+      let where: WhereObject<TableColumnName<table>> = Object.create(null)
+      Object.assign(where, { [key]: values[key] })
+      return where
     }
 
     if (insertId !== undefined) {
-      return createWhereObject([[key, insertId]])
+      let where: WhereObject<TableColumnName<table>> = Object.create(null)
+      Object.assign(where, { [key]: insertId })
+      return where
     }
   }
 
@@ -63,7 +73,13 @@ export function resolveCreateRowWhere<table extends AnyTable>(
     }
   }
 
-  return createWhereObject(primaryKey.map((key) => [key, values[key]]))
+  let where: WhereObject<TableColumnName<table>> = Object.create(null)
+
+  for (let key of primaryKey) {
+    Object.assign(where, { [key]: values[key] })
+  }
+
+  return where
 }
 
 export function hasScopedWriteModifiers(state: {
@@ -136,21 +152,27 @@ export function toWriteRows<row>(result: WriteResult | WriteRowsResult<row>): ro
 
 export function toLoadedRow<table extends AnyTable, loaded extends Record<string, unknown> = {}>(
   row: TableRow<table>,
-): TableRowWith<table, loaded> {
-  return row as TableRowWith<table, loaded>
+): TableRow<table> & loaded
+export function toLoadedRow(row: TableRow<AnyTable>): TableRow<AnyTable>
+export function toLoadedRow(row: TableRow<AnyTable>) {
+  return row
 }
 
 export function toLoadedRowOrNull<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
->(row: TableRow<table> | null): TableRowWith<table, loaded> | null {
-  return row as TableRowWith<table, loaded> | null
+>(row: TableRow<table> | null): (TableRow<table> & loaded) | null
+export function toLoadedRowOrNull(row: TableRow<AnyTable> | null): TableRow<AnyTable> | null
+export function toLoadedRowOrNull(row: TableRow<AnyTable> | null) {
+  return row
 }
 
 export function toLoadedRows<table extends AnyTable, loaded extends Record<string, unknown> = {}>(
   rows: TableRow<table>[],
-): Array<TableRowWith<table, loaded>> {
-  return rows as Array<TableRowWith<table, loaded>>
+): Array<TableRow<table> & loaded>
+export function toLoadedRows(rows: TableRow<AnyTable>[]): TableRow<AnyTable>[]
+export function toLoadedRows(rows: TableRow<AnyTable>[]) {
+  return rows
 }
 
 export async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
@@ -217,16 +239,4 @@ function isOrderByTupleList<table extends AnyTable>(
   orderBy: OrderByInput<table>,
 ): orderBy is OrderByTuple<table>[] {
   return Array.isArray(orderBy[0])
-}
-
-function createWhereObject<column extends string>(
-  entries: Array<readonly [column, unknown]>,
-): WhereObject<column> {
-  let where: WhereObject<column> = {}
-
-  for (let [column, value] of entries) {
-    where[column] = value
-  }
-
-  return where
 }

@@ -15,8 +15,8 @@ import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
-import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
-import { cloneQueryState, querySnapshot } from '../query.ts'
+import type { AnyQuery, QueryConfig, QueryExecutionResult } from '../query.ts'
+import { cloneQueryConfig, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getTableName, getTablePrimaryKey } from '../table.ts'
 
@@ -39,89 +39,66 @@ import {
   runBeforeDeleteHook,
 } from './write-lifecycle.ts'
 
+type ConcreteQueryConfig = QueryConfig<Record<string, unknown>, readonly string[]>
+
 export async function executeQuery<input extends AnyQuery>(
   database: QueryExecutionContext,
   input: input,
 ): Promise<QueryExecutionResult<input>> {
   let snapshot = input[querySnapshot]()
+  let { table, config } = snapshot
   let result: unknown
 
-  switch (snapshot.plan.kind) {
+  switch (config.kind) {
     case 'all':
-      result = await executeAll(
-        database,
-        snapshot.table,
-        snapshot.state,
-      )
+      result = await executeAll(database, table, config)
       break
     case 'first':
-      result = await executeFirst(
-        database,
-        snapshot.table,
-        snapshot.state,
-      )
+      result = await executeFirst(database, table, config)
       break
     case 'find':
-      result = await executeFind(
-        database,
-        snapshot.table,
-        snapshot.state,
-        snapshot.plan.value,
-      )
+      result = await executeFind(database, table, config, config.value)
       break
     case 'count':
-      result = await executeCount(
-        database,
-        snapshot.table,
-        snapshot.state,
-      )
+      result = await executeCount(database, table, config)
       break
     case 'exists':
-      result = await executeExists(
-        database,
-        snapshot.table,
-        snapshot.state,
-      )
+      result = await executeExists(database, table, config)
       break
     case 'insert':
       result = await executeInsert(
         database,
-        snapshot.table,
-        expectRecord(snapshot.plan.values, 'Invalid insert() values'),
-        snapshot.plan.options,
+        table,
+        expectRecord(config.values, 'Invalid insert() values'),
+        config.options,
       )
       break
     case 'insertMany':
       result = await executeInsertMany(
         database,
-        snapshot.table,
-        expectRecordArray(snapshot.plan.values, 'Invalid insertMany() values'),
-        snapshot.plan.options,
+        table,
+        expectRecordArray(config.values, 'Invalid insertMany() values'),
+        config.options,
       )
       break
     case 'update':
       result = await executeUpdate(
         database,
-        snapshot.table,
-        snapshot.state,
-        expectRecord(snapshot.plan.changes, 'Invalid update() changes'),
-        snapshot.plan.options,
+        table,
+        config,
+        expectRecord(config.changes, 'Invalid update() changes'),
+        config.options,
       )
       break
     case 'delete':
-      result = await executeDelete(
-        database,
-        snapshot.table,
-        snapshot.state,
-        snapshot.plan.options,
-      )
+      result = await executeDelete(database, table, config, config.options)
       break
     case 'upsert':
       result = await executeUpsert(
         database,
-        snapshot.table,
-        expectRecord(snapshot.plan.values, 'Invalid upsert() values'),
-        snapshot.plan.options,
+        table,
+        expectRecord(config.values, 'Invalid upsert() values'),
+        config.options,
       )
       break
     default:
@@ -135,42 +112,42 @@ export async function loadRowsWithRelationsForQuery(
   database: QueryExecutionContext,
   input: AnyQuery,
 ): Promise<Record<string, unknown>[]> {
-  let snapshot = input[querySnapshot]()
-  return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)
+  let { table, config } = input[querySnapshot]()
+  return loadRowsWithRelationsForConfig(database, table, config)
 }
 
-export async function loadRowsWithRelationsForState(
+export async function loadRowsWithRelationsForConfig(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
 ): Promise<Record<string, unknown>[]> {
-  let operation = createSelectOperation(table, state)
+  let operation = createSelectOperation(table, config)
   let result = await database[executeOperation](operation)
   let rows = normalizeRows(result.rows)
 
-  if (Object.keys(state.with).length === 0) {
+  if (Object.keys(config.with).length === 0) {
     return rows
   }
 
-  return loadRelationsForRows(database, table, rows, state.with)
+  return loadRelationsForRows(database, table, rows, config.with)
 }
 
 async function executeAll(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
 ): Promise<Record<string, unknown>[]> {
-  let rows = await loadRowsWithRelationsForState(database, table, state)
-  return applyAfterReadHooksToLoadedRows(table, rows, state.with)
+  let rows = await loadRowsWithRelationsForConfig(database, table, config)
+  return applyAfterReadHooksToLoadedRows(table, rows, config.with)
 }
 
 async function executeFirst(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
 ): Promise<Record<string, unknown> | null> {
   let rows = await executeAll(database, table, {
-    ...cloneQueryState(state),
+    ...cloneQueryConfig(config),
     limit: 1,
   })
 
@@ -180,27 +157,27 @@ async function executeFirst(
 async function executeFind(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
   value: unknown,
 ): Promise<Record<string, unknown> | null> {
-  let scopedState = cloneQueryState(state)
-  scopedState.where.push(normalizeWhereInput(getFindWhereObject(table, value)))
+  let scopedConfig = cloneQueryConfig(config)
+  scopedConfig.where.push(normalizeWhereInput(getFindWhereObject(table, value)))
 
-  return executeFirst(database, table, scopedState)
+  return executeFirst(database, table, scopedConfig)
 }
 
 async function executeCount(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
 ): Promise<number> {
   let operation: CountOperation<AnyTable> = {
     kind: 'count',
     table,
-    joins: [...state.joins],
-    where: [...state.where],
-    groupBy: [...state.groupBy],
-    having: [...state.having],
+    joins: [...config.joins],
+    where: [...config.where],
+    groupBy: [...config.groupBy],
+    having: [...config.having],
   }
 
   let result = await database[executeOperation](operation)
@@ -221,15 +198,15 @@ async function executeCount(
 async function executeExists(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
 ): Promise<boolean> {
   let operation: ExistsOperation<AnyTable> = {
     kind: 'exists',
     table,
-    joins: [...state.joins],
-    where: [...state.where],
-    groupBy: [...state.groupBy],
-    having: [...state.having],
+    joins: [...config.joins],
+    where: [...config.where],
+    groupBy: [...config.groupBy],
+    having: [...config.having],
   }
 
   let result = await database[executeOperation](operation)
@@ -385,7 +362,7 @@ async function executeInsertMany(
 async function executeUpdate(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
   changes: Record<string, unknown>,
   options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
@@ -405,7 +382,7 @@ async function executeUpdate(
   let result = await executeScopedWriteOperation(
     database,
     table,
-    state,
+    config,
     returning,
     (where) => ({
       kind: 'update',
@@ -442,7 +419,7 @@ async function executeUpdate(
 async function executeDelete(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
   options?: { returning?: ReturningInput<Record<string, unknown>> },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
@@ -450,17 +427,17 @@ async function executeDelete(
   let tableName = getTableName(table)
   let deleteContext = {
     tableName,
-    where: [...state.where],
-    orderBy: [...state.orderBy],
-    limit: state.limit,
-    offset: state.offset,
+    where: [...config.where],
+    orderBy: [...config.orderBy],
+    limit: config.limit,
+    offset: config.offset,
   }
 
   runBeforeDeleteHook(table, deleteContext)
   let result = await executeScopedWriteOperation(
     database,
     table,
-    state,
+    config,
     returning,
     (where) => ({
       kind: 'delete',
@@ -581,30 +558,33 @@ async function executeUpsert(
   }
 }
 
-function createSelectOperation(table: AnyTable, state: QueryState): SelectOperation<AnyTable> {
-  let clonedState = cloneQueryState(state)
-
-  return {
-    kind: 'select',
-    table,
-    select: cloneSelection(clonedState.select),
-    distinct: clonedState.distinct,
-    joins: clonedState.joins,
-    where: clonedState.where,
-    groupBy: clonedState.groupBy,
-    having: clonedState.having,
-    orderBy: clonedState.orderBy,
-    limit: clonedState.limit,
-    offset: clonedState.offset,
-  }
-}
-
 function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {
   if (selection === '*') {
     return '*'
   }
 
   return selection.map((column) => ({ ...column }))
+}
+
+function createSelectOperation(
+  table: AnyTable,
+  config: ConcreteQueryConfig,
+): SelectOperation<AnyTable> {
+  let clonedConfig = cloneQueryConfig(config)
+
+  return {
+    kind: 'select',
+    table,
+    select: cloneSelection(clonedConfig.select),
+    distinct: clonedConfig.distinct,
+    joins: clonedConfig.joins,
+    where: clonedConfig.where,
+    groupBy: clonedConfig.groupBy,
+    having: clonedConfig.having,
+    orderBy: clonedConfig.orderBy,
+    limit: clonedConfig.limit,
+    offset: clonedConfig.offset,
+  }
 }
 
 function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unknown>[] {
@@ -618,16 +598,16 @@ function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unk
 async function executeScopedWriteOperation(
   database: QueryExecutionContext,
   table: AnyTable,
-  state: QueryState,
+  config: ConcreteQueryConfig,
   returning: ReturningInput<Record<string, unknown>> | undefined,
   createOperation: (where: Predicate<string>[]) => DataManipulationOperation,
 ): Promise<DataManipulationResult> {
-  if (!hasScopedWriteModifiers(state)) {
-    return database[executeOperation](createOperation([...state.where]))
+  if (!hasScopedWriteModifiers(config)) {
+    return database[executeOperation](createOperation([...config.where]))
   }
 
   return database.transaction(async (tx) => {
-    let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
+    let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, config)
     let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
     if (!primaryKeyPredicate) {

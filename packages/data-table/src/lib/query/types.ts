@@ -14,7 +14,7 @@ import type { WriteResult, WriteRowResult, WriteRowsResult } from '../database.t
 import type { OrderDirection } from '../table.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from '../references.ts'
 import type { WhereInput } from '../operators.ts'
-import type { QueryExecutionMode } from './plan.ts'
+import type { QueryExecutionMode } from './config.ts'
 
 type RowColumnName<row extends Record<string, unknown>> = keyof row & string
 type QualifiedRowColumnName<

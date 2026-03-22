@@ -3,12 +3,11 @@ import { describe, it } from 'node:test'
 
 import { column } from './column.ts'
 import { eq } from './operators.ts'
+import { cloneQueryConfig, createInitialQueryConfig, mergeQueryConfig } from './query/config.ts'
+import type { QueryConfig } from './query/config.ts'
 import { query, querySnapshot } from './query.ts'
 import { createPredicateColumnResolver } from './query/predicate.ts'
-import { cloneQueryPlan } from './query/plan.ts'
 import { isSelectionMap, normalizeSelection } from './query/selection.ts'
-import type { QueryPlan } from './query/plan.ts'
-import { createInitialQueryState, mergeQueryState } from './query/state.ts'
 import { table } from './table.ts'
 
 let accounts = table({
@@ -42,28 +41,28 @@ describe('query helpers', () => {
     ])
   })
 
-  it('merges query state without sharing nested state', () => {
-    let state = createInitialQueryState()
+  it('merges query config without sharing nested state', () => {
+    let config = createInitialQueryConfig()
     let where = [eq('status', 'active')]
-    let merged = mergeQueryState(state, {
+    let merged = mergeQueryConfig(config, {
       where,
       with: {},
       limit: 10,
     })
 
-    assert.notStrictEqual(merged.where, state.where)
-    assert.notStrictEqual(merged.with, state.with)
+    assert.notStrictEqual(merged.where, config.where)
+    assert.notStrictEqual(merged.with, config.with)
     assert.equal(merged.where.length, 1)
     assert.equal(merged.limit, 10)
 
     where.push(eq('status', 'inactive'))
 
-    assert.equal(state.where.length, 0)
+    assert.equal(config.where.length, 0)
     assert.equal(merged.where.length, 1)
   })
 
-  it('clones write plans deeply', () => {
-    let plan: QueryPlan<
+  it('clones query configs deeply', () => {
+    let config: QueryConfig<
       {
         id: number
         email: string
@@ -73,6 +72,14 @@ describe('query helpers', () => {
       'upsert'
     > = {
       kind: 'upsert',
+      select: '*',
+      distinct: false,
+      joins: [],
+      where: [],
+      groupBy: [],
+      having: [],
+      orderBy: [],
+      with: {},
       values: {
         id: 1,
         email: 'amy@studio.test',
@@ -86,19 +93,15 @@ describe('query helpers', () => {
       },
     }
 
-    let cloned = cloneQueryPlan(plan)
-
-    if (cloned.kind !== 'upsert') {
-      throw new Error('Expected upsert query plan')
-    }
+    let cloned = cloneQueryConfig(config)
 
     cloned.values.status = 'archived'
     cloned.options!.conflictTarget!.push('email')
     cloned.options!.update!.status = 'archived'
 
-    assert.equal(plan.values.status, 'active')
-    assert.deepEqual(plan.options!.conflictTarget, ['id'])
-    assert.equal(plan.options!.update!.status, 'inactive')
+    assert.equal(config.values.status, 'active')
+    assert.deepEqual(config.options!.conflictTarget, ['id'])
+    assert.equal(config.options!.update!.status, 'inactive')
   })
 
   it('resolves predicate columns and detects ambiguity', () => {
@@ -133,15 +136,15 @@ describe('query helpers', () => {
     )
 
     let snapshot = snapshotSource[querySnapshot]()
-    snapshot.state.where.push(eq('status', 'inactive'))
-    snapshot.plan.options!.conflictTarget!.push('email')
-    snapshot.plan.options!.update!.status = 'archived'
+    snapshot.config.where.push(eq('status', 'inactive'))
+    snapshot.config.options!.conflictTarget!.push('email')
+    snapshot.config.options!.update!.status = 'archived'
 
     let nextSnapshot = snapshotSource[querySnapshot]()
 
-    assert.equal(nextSnapshot.state.where.length, 0)
-    assert.deepEqual(nextSnapshot.plan.options?.conflictTarget, ['id'])
-    assert.equal(nextSnapshot.plan.options?.update?.status, 'inactive')
+    assert.equal(nextSnapshot.config.where.length, 0)
+    assert.deepEqual(nextSnapshot.config.options?.conflictTarget, ['id'])
+    assert.equal(nextSnapshot.config.options?.update?.status, 'inactive')
 
     let invalidWriteQuery = query(accounts).distinct().where({ status: 'active' }).orderBy('id')
 

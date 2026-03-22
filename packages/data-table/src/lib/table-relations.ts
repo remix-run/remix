@@ -146,17 +146,22 @@ export function hasMany<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasManyOptions<source, target>,
 ): Relation<source, target, 'many'> {
-  return createDirectRelation({
-    relationKind: 'hasMany',
-    cardinality: 'many',
-    sourceTable: source,
-    targetTable: target,
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
     sourceSelector: relationOptions?.targetKey,
     sourceOptionName: 'targetKey',
     sourceDefault: getTablePrimaryKey(source),
     targetSelector: relationOptions?.foreignKey,
     targetOptionName: 'foreignKey',
     targetDefault: [inferForeignKey(getTableName(source))],
+  })
+
+  return createRelation({
+    relationKind: 'hasMany',
+    cardinality: 'many',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
   })
 }
 
@@ -172,17 +177,22 @@ export function hasOne<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasOneOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  return createDirectRelation({
-    relationKind: 'hasOne',
-    cardinality: 'one',
-    sourceTable: source,
-    targetTable: target,
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
     sourceSelector: relationOptions?.targetKey,
     sourceOptionName: 'targetKey',
     sourceDefault: getTablePrimaryKey(source),
     targetSelector: relationOptions?.foreignKey,
     targetOptionName: 'foreignKey',
     targetDefault: [inferForeignKey(getTableName(source))],
+  })
+
+  return createRelation({
+    relationKind: 'hasOne',
+    cardinality: 'one',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
   })
 }
 
@@ -198,17 +208,22 @@ export function belongsTo<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: BelongsToOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  return createDirectRelation({
-    relationKind: 'belongsTo',
-    cardinality: 'one',
-    sourceTable: source,
-    targetTable: target,
+  let { sourceKey, targetKey } = resolveRelationKeys(source, target, {
     sourceSelector: relationOptions?.foreignKey,
     sourceOptionName: 'foreignKey',
     sourceDefault: [inferForeignKey(getTableName(target))],
     targetSelector: relationOptions?.targetKey,
     targetOptionName: 'targetKey',
     targetDefault: getTablePrimaryKey(target),
+  })
+
+  return createRelation({
+    relationKind: 'belongsTo',
+    cardinality: 'one',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
   })
 }
 
@@ -457,50 +472,7 @@ function cloneRelation<
     sourceKey: relation.sourceKey,
     targetKey: relation.targetKey,
     through: relation.through,
-    modifiers: mergeRelationModifiers(relation, patch),
-  })
-}
-
-type RelationKeyOptions<
-  source extends AnyTable,
-  target extends AnyTable,
-  cardinality extends RelationCardinality,
-> = {
-  relationKind: RelationKind
-  cardinality: cardinality
-  sourceTable: source
-  targetTable: target
-  sourceSelector: string | readonly string[] | undefined
-  sourceOptionName: string
-  sourceDefault: readonly string[]
-  targetSelector: string | readonly string[] | undefined
-  targetOptionName: string
-  targetDefault: readonly string[]
-}
-
-function createDirectRelation<
-  source extends AnyTable,
-  target extends AnyTable,
-  cardinality extends RelationCardinality,
->(
-  options: RelationKeyOptions<source, target, cardinality>,
-): Relation<source, target, cardinality> {
-  let { sourceKey, targetKey } = resolveRelationKeys(options.sourceTable, options.targetTable, {
-    sourceSelector: options.sourceSelector,
-    sourceOptionName: options.sourceOptionName,
-    sourceDefault: options.sourceDefault,
-    targetSelector: options.targetSelector,
-    targetOptionName: options.targetOptionName,
-    targetDefault: options.targetDefault,
-  })
-
-  return createRelation({
-    relationKind: options.relationKind,
-    cardinality: options.cardinality,
-    sourceTable: options.sourceTable,
-    targetTable: options.targetTable,
-    sourceKey,
-    targetKey,
+    modifiers: cloneRelationModifiers(relation.modifiers, patch),
   })
 }
 
@@ -516,20 +488,15 @@ function createRelationModifiers<target extends AnyTable>(
   }
 }
 
-function mergeRelationModifiers<
-  source extends AnyTable,
-  target extends AnyTable,
-  cardinality extends RelationCardinality,
-  loaded extends Record<string, unknown>,
->(
-  relation: Relation<source, target, cardinality, loaded>,
+function cloneRelationModifiers<target extends AnyTable>(
+  modifiers: RelationModifiers<target>,
   patch: Partial<RelationModifiers<target>>,
 ): RelationModifiers<target> {
   return createRelationModifiers({
-    where: patch.where ?? relation.modifiers.where,
-    orderBy: patch.orderBy ?? relation.modifiers.orderBy,
-    limit: patch.limit ?? relation.modifiers.limit,
-    offset: patch.offset ?? relation.modifiers.offset,
-    with: patch.with ?? relation.modifiers.with,
+    where: patch.where ?? modifiers.where,
+    orderBy: patch.orderBy ?? modifiers.orderBy,
+    limit: patch.limit ?? modifiers.limit,
+    offset: patch.offset ?? modifiers.offset,
+    with: patch.with ?? modifiers.with,
   })
 }

@@ -3,7 +3,7 @@ import type { Predicate, WhereInput } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
 import { getTableColumns, getTableName } from '../table.ts'
 import type { AnyTable } from '../table.ts'
-import type { QueryState } from './state.ts'
+import type { QueryConfigState } from './config.ts'
 
 type ResolvedPredicateColumn = {
   tableName: string
@@ -18,7 +18,7 @@ type WriteStatePolicy = {
 }
 
 export function assertWriteState(
-  state: QueryState,
+  state: QueryConfigState,
   operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
   policy: WriteStatePolicy,
 ): void {

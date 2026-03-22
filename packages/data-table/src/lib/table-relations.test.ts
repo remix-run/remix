@@ -100,6 +100,30 @@ describe('table relations', () => {
     assert.equal(filtered.modifiers.offset, 1)
   })
 
+  it('clones relation loading state when with() is chained', () => {
+    let accounts = table({
+      name: 'accounts',
+      columns: {
+        id: column.integer(),
+      },
+    })
+    let projects = table({
+      name: 'projects',
+      columns: {
+        id: column.integer(),
+        account_id: column.integer(),
+      },
+    })
+
+    let accountProjects = hasMany(accounts, projects)
+    let projectAccount = belongsTo(projects, accounts)
+    let loaded = accountProjects.with({ account: projectAccount })
+
+    assert.notEqual(loaded, accountProjects)
+    assert.deepEqual(accountProjects.modifiers.with, {})
+    assert.deepEqual(loaded.modifiers.with, { account: projectAccount })
+  })
+
   it('validates hasManyThrough source tables', () => {
     let accounts = table({
       name: 'accounts',

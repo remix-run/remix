@@ -8,25 +8,18 @@ export const tableMetadataKey = Symbol('data-table.tableMetadata')
  */
 export const columnMetadataKey = Symbol('data-table.columnMetadata')
 
-type UnknownTableMetadata<
-  name extends string = string,
-  columns extends Record<string, unknown> = Record<string, unknown>,
-  primaryKey extends readonly string[] = readonly string[],
-  timestamps = unknown,
-> = {
-  name: name
-  columns: columns
-  primaryKey: primaryKey
-  timestamps: timestamps
-}
-
 export type TableMetadataLike<
   name extends string = string,
   columns extends Record<string, unknown> = Record<string, unknown>,
   primaryKey extends readonly string[] = readonly string[],
   timestamps = unknown,
 > = {
-  [tableMetadataKey]: UnknownTableMetadata<name, columns, primaryKey, timestamps>
+  [tableMetadataKey]: {
+    name: name
+    columns: columns
+    primaryKey: primaryKey
+    timestamps: timestamps
+  }
 }
 
 export type ColumnReferenceLike<qualifiedName extends string = string> = {
@@ -45,25 +38,19 @@ export type ColumnInput<qualifiedName extends string = string> =
 export type NormalizeColumnInput<input> =
   input extends ColumnReferenceLike<infer qualifiedName> ? qualifiedName : input
 
-type ColumnKind = {
-  kind: 'column'
-}
-
 /**
  * Returns `true` when a value is a `data-table` column reference.
  * @param value Value to inspect.
  * @returns Whether the value is a column reference object.
  */
 export function isColumnReference(value: unknown): value is ColumnReferenceLike {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  if (!hasColumnKind(value)) {
-    return false
-  }
-
-  return columnMetadataKey in value
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'kind' in value &&
+    value.kind === 'column' &&
+    columnMetadataKey in value
+  )
 }
 
 /**
@@ -71,16 +58,19 @@ export function isColumnReference(value: unknown): value is ColumnReferenceLike 
  * @param input Column name or column reference.
  * @returns The normalized qualified column name.
  */
+export function normalizeColumnInput<input extends string>(
+  input: input,
+): NormalizeColumnInput<input>
+export function normalizeColumnInput<input extends ColumnReferenceLike>(
+  input: input,
+): NormalizeColumnInput<input>
 export function normalizeColumnInput<input extends string | ColumnReferenceLike>(
   input: input,
-): NormalizeColumnInput<input> {
+): NormalizeColumnInput<input>
+export function normalizeColumnInput(input: string | ColumnReferenceLike) {
   if (typeof input === 'string') {
-    return input as NormalizeColumnInput<input>
+    return input
   }
 
-  return input[columnMetadataKey].qualifiedName as NormalizeColumnInput<input>
-}
-
-function hasColumnKind(value: object): value is ColumnKind {
-  return 'kind' in value && value.kind === 'column'
+  return input[columnMetadataKey].qualifiedName
 }

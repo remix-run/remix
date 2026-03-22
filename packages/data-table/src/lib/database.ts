@@ -29,7 +29,7 @@ import type {
   Query as QueryObject,
   QueryExecutionResult,
 } from './query.ts'
-import { bindQueryRuntime, query as createQuery } from './query.ts'
+import { query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
@@ -380,7 +380,7 @@ export class Database implements QueryExecutionContext {
     {},
     BoundQueryPhase<'all'>
   > {
-    return createQuery(table)[bindQueryRuntime](this) as unknown as QueryObject<
+    return createQuery(table, this) as unknown as QueryObject<
       QueryTableInput<tableName, row, primaryKey>,
       Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
       row,
