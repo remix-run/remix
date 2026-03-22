@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { query } from 'remix/data-table'
 
 import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
 import { createExternalProviderRegistry } from './utils/external-auth.ts'
@@ -156,12 +157,14 @@ describe('social-auth router', () => {
       assertContains(html, 'google-user@example.com')
       assertContains(html, 'Provider: Google')
 
-      let authAccount = await db.findOne(authAccounts, {
-        where: {
-          provider: 'google',
-          provider_account_id: 'google-user-1',
-        },
-      })
+      let authAccount = await db.exec(
+        query(authAccounts)
+          .where({
+            provider: 'google',
+            provider_account_id: 'google-user-1',
+          })
+          .first(),
+      )
 
       assert.ok(authAccount)
       assert.equal(authAccount.email, 'google-user@example.com')
@@ -208,7 +211,7 @@ describe('social-auth router', () => {
     assert.equal(forgotResponse.status, 200)
     assertContains(forgotHtml, 'Password reset instructions are ready.')
 
-    let token = await db.findOne(passwordResetTokens, { where: { user_id: 2 } })
+    let token = await db.exec(query(passwordResetTokens).where({ user_id: 2 }).first())
     assert.ok(token)
 
     let resetResponse = await router.fetch(

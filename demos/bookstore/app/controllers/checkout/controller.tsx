@@ -1,7 +1,7 @@
 import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
@@ -52,30 +52,35 @@ export default {
       let total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
       let order = await db.transaction(async (tx) => {
-        let createdOrder = await tx.create(
-          orders,
-          {
+        let createdOrderResult = await tx.exec(
+          query(orders).insert(
+            {
             user_id: user.id,
             total,
             shipping_address_json: JSON.stringify(shippingAddress),
-          },
-          { returnRow: true },
+            },
+            { returning: '*' },
+          ),
+        )
+        let createdOrder = 'row' in createdOrderResult ? createdOrderResult.row : null
+
+        if (!createdOrder) {
+          throw new Error('Failed to create order')
+        }
+
+        await tx.exec(
+          query(itemsByOrder.targetTable).insertMany(
+            cart.items.map((item) => ({
+              order_id: createdOrder.id,
+              book_id: item.bookId,
+              title: item.title,
+              unit_price: item.price,
+              quantity: item.quantity,
+            })),
+          ),
         )
 
-        await tx.createMany(
-          itemsByOrder.targetTable,
-          cart.items.map((item) => ({
-            order_id: createdOrder.id,
-            book_id: item.bookId,
-            title: item.title,
-            unit_price: item.price,
-            quantity: item.quantity,
-          })),
-        )
-
-        let created = await tx.find(orders, createdOrder.id, {
-          with: { items: orderItemsWithBook },
-        })
+        let created = await tx.exec(query(orders).with({ items: orderItemsWithBook }).find(createdOrder.id))
 
         if (!created) {
           throw new Error('Failed to load created order')
@@ -96,9 +101,7 @@ export default {
       let order =
         orderId === undefined
           ? undefined
-          : await db.find(orders, orderId, {
-              with: { items: orderItemsWithBook },
-            })
+          : await db.exec(query(orders).with({ items: orderItemsWithBook }).find(orderId))
 
       if (!order || order.user_id !== user.id) {
         return render(<CheckoutOrderNotFoundPage />, { status: 404 })

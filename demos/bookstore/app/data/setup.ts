@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import BetterSqlite3 from 'better-sqlite3'
-import { createDatabase } from 'remix/data-table'
+import { createDatabase, query } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
@@ -40,9 +40,9 @@ async function initialize(): Promise<void> {
   let migrationRunner = createMigrationRunner(adapter, migrations)
   await migrationRunner.up()
 
-  let booksCount = await db.count(books)
+  let booksCount = await db.exec(query(books).count())
   if (booksCount === 0) {
-    await db.createMany(books, [
+    await db.exec(query(books).insertMany([
       {
         id: 1,
         slug: 'bbq',
@@ -93,12 +93,12 @@ async function initialize(): Promise<void> {
         published_year: 2021,
         in_stock: false,
       },
-    ])
+    ]))
   }
 
-  let usersCount = await db.count(users)
+  let usersCount = await db.exec(query(users).count())
   if (usersCount === 0) {
-    await db.createMany(users, [
+    await db.exec(query(users).insertMany([
       {
         id: 1,
         email: 'admin@bookstore.com',
@@ -115,12 +115,12 @@ async function initialize(): Promise<void> {
         role: 'customer',
         created_at: new Date('2024-03-01').getTime(),
       },
-    ])
+    ]))
   }
 
-  let ordersCount = await db.count(orders)
+  let ordersCount = await db.exec(query(orders).count())
   if (ordersCount === 0) {
-    await db.createMany(orders, [
+    await db.exec(query(orders).insertMany([
       {
         id: 1001,
         user_id: 2,
@@ -147,12 +147,12 @@ async function initialize(): Promise<void> {
         }),
         created_at: new Date('2024-10-01').getTime(),
       },
-    ])
+    ]))
   }
 
-  let orderItemsCount = await db.count(orderItems)
+  let orderItemsCount = await db.exec(query(orderItems).count())
   if (orderItemsCount === 0) {
-    await db.createMany(orderItems, [
+    await db.exec(query(orderItems).insertMany([
       {
         order_id: 1001,
         book_id: 1,
@@ -174,7 +174,7 @@ async function initialize(): Promise<void> {
         unit_price: 27.0,
         quantity: 2,
       },
-    ])
+    ]))
   }
 }
 

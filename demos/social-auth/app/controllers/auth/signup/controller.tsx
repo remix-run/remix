@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 
@@ -43,7 +43,7 @@ export let signupController = {
       let signup = result.value
       let name = normalizeText(signup.name)
       let emailAddress = normalizeEmail(signup.email)
-      let existingUser = await db.findOne(users, { where: { email: emailAddress } })
+      let existingUser = await db.exec(query(users).where({ email: emailAddress }).first())
 
       if (existingUser != null) {
         return render(
@@ -57,15 +57,21 @@ export let signupController = {
         )
       }
 
-      let user = await db.create(
-        users,
-        {
+      let createResult = await db.exec(
+        query(users).insert(
+          {
           email: emailAddress,
           password_hash: await hashPassword(signup.password),
           name,
-        },
-        { returnRow: true },
+          },
+          { returning: '*' },
+        ),
       )
+      let user = 'row' in createResult ? createResult.row : null
+
+      if (user == null) {
+        throw new Error('Failed to create user')
+      }
 
       let session = context.get(Session)
       session.regenerateId(true)

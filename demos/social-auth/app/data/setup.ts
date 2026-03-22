@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import BetterSqlite3 from 'better-sqlite3'
-import { createDatabase } from 'remix/data-table'
+import { createDatabase, query } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
@@ -43,7 +43,7 @@ async function initialize(): Promise<void> {
   let migrationRunner = createMigrationRunner(adapter, migrations)
   await migrationRunner.up()
 
-  if ((await db.count(users)) === 0) {
+  if ((await db.exec(query(users).count())) === 0) {
     await seedBaseData()
   }
 }
@@ -67,7 +67,7 @@ export async function resetSocialAuthDatabase(): Promise<void> {
 }
 
 async function seedBaseData(): Promise<void> {
-  await db.createMany(users, [
+  await db.exec(query(users).insertMany([
     {
       id: 1,
       email: 'admin@example.com',
@@ -82,7 +82,7 @@ async function seedBaseData(): Promise<void> {
       name: 'Demo User',
       avatar_url: DEMO_USER_AVATAR_URL,
     },
-  ])
+  ]))
 }
 
 export { sqlite, authAccounts, passwordResetTokens, users }

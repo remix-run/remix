@@ -1,6 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
@@ -39,21 +39,21 @@ let resetPasswordController = {
         return redirect(routes.auth.resetPassword.index.href({ token }))
       }
 
-      let tokenData = await db.find(passwordResetTokens, { token })
+      let tokenData = await db.exec(query(passwordResetTokens).find({ token }))
 
       if (!tokenData || tokenData.expires_at < Date.now()) {
         session.flash('error', 'Invalid or expired reset token.')
         return redirect(routes.auth.resetPassword.index.href({ token }))
       }
 
-      let user = await db.find(users, tokenData.user_id)
+      let user = await db.exec(query(users).find(tokenData.user_id))
       if (!user) {
         session.flash('error', 'Invalid or expired reset token.')
         return redirect(routes.auth.resetPassword.index.href({ token }))
       }
 
-      await db.update(users, user.id, { password })
-      await db.delete(passwordResetTokens, { token })
+      await db.exec(query(users).where({ id: user.id }).update({ password }))
+      await db.exec(query(passwordResetTokens).where({ token }).delete())
 
       return render(<ResetPasswordSuccessPage />)
     },

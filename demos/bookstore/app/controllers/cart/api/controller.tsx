@@ -1,7 +1,7 @@
 import type { Controller, RequestContext } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
@@ -39,7 +39,7 @@ let cartApiController = {
       }
 
       let parsedBookId = parseId(bookId)
-      let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
+      let book = parsedBookId === undefined ? undefined : await db.exec(query(books).find(parsedBookId))
       if (!book) {
         return new Response('Book not found', { status: 404 })
       }
@@ -64,7 +64,7 @@ let cartApiController = {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       let parsedBookId = parseId(bookId)
-      let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
+      let book = parsedBookId === undefined ? undefined : await db.exec(query(books).find(parsedBookId))
       if (!book) {
         return new Response('Book not found', { status: 404 })
       }
@@ -89,7 +89,7 @@ let cartApiController = {
       }
 
       let parsedBookId = parseId(bookId)
-      let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
+      let book = parsedBookId === undefined ? undefined : await db.exec(query(books).find(parsedBookId))
       if (!book) {
         return new Response('Book not found', { status: 404 })
       }
@@ -113,7 +113,7 @@ export async function toggleCart({ get }: RequestContext) {
   let formData = get(FormData)
   let { bookId } = s.parse(bookIdSchema, formData)
   let parsedBookId = parseId(bookId)
-  let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
+  let book = parsedBookId === undefined ? undefined : await db.exec(query(books).find(parsedBookId))
   if (!book) {
     return new Response('Book not found', { status: 404 })
   }

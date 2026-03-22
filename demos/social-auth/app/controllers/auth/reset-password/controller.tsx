@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
 import { ErrorPage } from '../error-page.tsx'
@@ -17,13 +17,13 @@ import { render } from '../../render.tsx'
 async function loadResetToken(context: AppContext<{ token: string }>) {
   let db = context.get(Database)
   let token = context.params.token
-  let resetToken = await db.find(passwordResetTokens, { token })
+  let resetToken = await db.exec(query(passwordResetTokens).find({ token }))
   if (resetToken == null) {
     return null
   }
 
   if (resetToken.expires_at <= Date.now()) {
-    await db.delete(passwordResetTokens, { token })
+    await db.exec(query(passwordResetTokens).where({ token }).delete())
     return null
   }
 
@@ -100,9 +100,9 @@ export let resetPasswordController = {
         )
       }
 
-      let user = await db.find(users, resetToken.user_id)
+      let user = await db.exec(query(users).find(resetToken.user_id))
       if (user == null) {
-        await db.delete(passwordResetTokens, { token: resetToken.token })
+        await db.exec(query(passwordResetTokens).where({ token: resetToken.token }).delete())
         return render(
           <ErrorPage
             title="Account Not Found"
@@ -113,10 +113,12 @@ export let resetPasswordController = {
         )
       }
 
-      await db.update(users, user.id, {
-        password_hash: await hashPassword(resetPassword.password),
-      })
-      await db.delete(passwordResetTokens, { token: resetToken.token })
+      await db.exec(
+        query(users).where({ id: user.id }).update({
+          password_hash: await hashPassword(resetPassword.password),
+        }),
+      )
+      await db.exec(query(passwordResetTokens).where({ token: resetToken.token }).delete())
 
       let session = context.get(Session)
       session.flash('success', 'Password updated. You can sign in now.')

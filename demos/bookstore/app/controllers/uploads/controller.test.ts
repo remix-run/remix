@@ -5,6 +5,7 @@ import { createTestRouter, loginAsAdmin, requestWithSession } from '../../../tes
 import { books } from '../../data/schema.ts'
 import { db } from '../../data/setup.ts'
 import { uploadsStorage as uploads } from '../../utils/uploads.ts'
+import { query } from 'remix/data-table'
 
 let router = createTestRouter()
 
@@ -13,7 +14,7 @@ describe('uploads handler', () => {
     let sessionId = await loginAsAdmin(router)
 
     // Get initial book count
-    let initialBookCount = await db.count(books)
+    let initialBookCount = await db.exec(query(books).count())
 
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
@@ -77,10 +78,10 @@ describe('uploads handler', () => {
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
     // Get the newly created book from the database
-    let currentBookCount = await db.count(books)
+    let currentBookCount = await db.exec(query(books).count())
     assert.equal(currentBookCount, initialBookCount + 1)
 
-    let newBook = await db.findOne(books, { where: { slug: 'book-with-cover' } })
+    let newBook = await db.exec(query(books).where({ slug: 'book-with-cover' }).first())
     assert.ok(newBook)
     assert.equal(newBook.slug, 'book-with-cover')
     assert.ok(newBook.cover_url.startsWith('/uploads/'))

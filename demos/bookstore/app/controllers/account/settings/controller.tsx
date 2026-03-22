@@ -1,7 +1,7 @@
 import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
@@ -32,7 +32,7 @@ let settingsController = {
       let { email, name, password } = s.parse(accountSettingsSchema, formData)
 
       let updateData = password ? { name, email, password } : { name, email }
-      await db.update(users, user.id, updateData)
+      await db.exec(query(users).where({ id: user.id }).update(updateData))
 
       return redirect(routes.account.index.href())
     },

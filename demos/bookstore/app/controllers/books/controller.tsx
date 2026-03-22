@@ -1,6 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { Database, ilike } from 'remix/data-table'
-
+import { Database, ilike, query } from 'remix/data-table'
 import { books } from '../../data/schema.ts'
 import type { routes } from '../../routes.ts'
 import { getCurrentCart } from '../../utils/context.ts'
@@ -13,35 +12,39 @@ export default {
   actions: {
     async index({ get }) {
       let db = get(Database)
-      let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
-      let genreRows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
+      let allBooks = await db.exec(query(books).orderBy('id', 'asc').all())
+      let genreRows = await db.exec(
+        query(books).select('genre').distinct().orderBy('genre', 'asc').all(),
+      )
       let cart = getCurrentCart()
 
       return render(
-        <BrowsePage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
+        <BrowsePage
+          allBooks={allBooks}
+          genres={genreRows.map((row) => row.genre)}
+          cart={cart}
+        />,
       )
     },
 
     async genre({ get, params }) {
       let db = get(Database)
       let genre = params.genre
-      let matchingBooks = await db.findMany(books, {
-        where: ilike('genre', genre),
-        orderBy: ['id', 'asc'],
-      })
+      let matchingBooks = await db.exec(
+        query(books).where(ilike('genre', genre)).orderBy('id', 'asc').all(),
+      )
 
       if (matchingBooks.length === 0) {
         return render(<GenreNotFoundPage genre={genre} />, { status: 404 })
       }
 
       let cart = getCurrentCart()
-
       return render(<GenrePage genre={genre} matchingBooks={matchingBooks} cart={cart} />)
     },
 
     async show({ get, params }) {
       let db = get(Database)
-      let book = await db.findOne(books, { where: { slug: params.slug } })
+      let book = await db.exec(query(books).where({ slug: params.slug }).first())
 
       if (!book) {
         return render(<BookNotFoundPage />, { status: 404 })

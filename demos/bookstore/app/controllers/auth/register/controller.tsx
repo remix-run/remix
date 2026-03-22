@@ -1,6 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
@@ -23,19 +23,25 @@ let registerController = {
       let { email, name, password } = s.parse(registrationSchema, formData)
       let normalizedEmail = normalizeEmail(email)
 
-      if (await db.findOne(users, { where: { email: normalizedEmail } })) {
+      if (await db.exec(query(users).where({ email: normalizedEmail }).first())) {
         return render(<ExistingAccountPage />, { status: 400 })
       }
 
-      let user = await db.create(
-        users,
-        {
+      let createResult = await db.exec(
+        query(users).insert(
+          {
           email: normalizedEmail,
           password,
           name,
-        },
-        { returnRow: true },
+          },
+          { returning: '*' },
+        ),
       )
+      let user = 'row' in createResult ? createResult.row : null
+
+      if (!user) {
+        throw new Error('Failed to create user')
+      }
 
       session.regenerateId(true)
       session.set('auth', { userId: user.id })

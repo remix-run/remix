@@ -2,7 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import * as coerce from 'remix/data-schema/coerce'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
@@ -39,7 +39,7 @@ export default {
   actions: {
     async index({ get }) {
       let db = get(Database)
-      let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
+      let allBooks = await db.exec(query(books).orderBy('id', 'asc').all())
 
       return render(<AdminBooksIndexPage books={allBooks} />)
     },
@@ -47,7 +47,7 @@ export default {
     async show({ get, params }) {
       let db = get(Database)
       let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let book = bookId === undefined ? undefined : await db.exec(query(books).find(bookId))
 
       if (!book) {
         return render(<AdminBookNotFoundPage />, { status: 404 })
@@ -73,19 +73,21 @@ export default {
       let { author, cover, description, genre, inStock, isbn, price, publishedYear, slug, title } =
         s.parse(bookSchema, formData)
 
-      await db.create(books, {
-        slug,
-        title,
-        author,
-        description,
-        price: parseFloat(price),
-        genre,
-        cover_url: cover ?? '/images/placeholder.jpg',
-        image_urls: JSON.stringify([]),
-        isbn,
-        published_year: parseInt(publishedYear, 10),
-        in_stock: inStock,
-      })
+      await db.exec(
+        query(books).insert({
+          slug,
+          title,
+          author,
+          description,
+          price: parseFloat(price),
+          genre,
+          cover_url: cover ?? '/images/placeholder.jpg',
+          image_urls: JSON.stringify([]),
+          isbn,
+          published_year: parseInt(publishedYear, 10),
+          in_stock: inStock,
+        }),
+      )
 
       return redirect(routes.admin.books.index.href())
     },
@@ -93,7 +95,7 @@ export default {
     async edit({ get, params }) {
       let db = get(Database)
       let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let book = bookId === undefined ? undefined : await db.exec(query(books).find(bookId))
 
       if (!book) {
         return render(<AdminBookNotFoundPage />, { status: 404 })
@@ -115,7 +117,7 @@ export default {
       let db = get(Database)
       let formData = get(FormData)
       let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let book = bookId === undefined ? undefined : await db.exec(query(books).find(bookId))
       if (!book) {
         return new Response('Book not found', { status: 404 })
       }
@@ -124,18 +126,20 @@ export default {
         s.parse(bookSchema, formData)
       let cover_url = cover || book.cover_url
 
-      await db.update(books, book.id, {
-        slug,
-        title,
-        author,
-        description,
-        price: parseFloat(price),
-        genre,
-        cover_url,
-        isbn,
-        published_year: parseInt(publishedYear, 10),
-        in_stock: inStock,
-      })
+      await db.exec(
+        query(books).where({ id: book.id }).update({
+          slug,
+          title,
+          author,
+          description,
+          price: parseFloat(price),
+          genre,
+          cover_url,
+          isbn,
+          published_year: parseInt(publishedYear, 10),
+          in_stock: inStock,
+        }),
+      )
 
       return redirect(routes.admin.books.index.href())
     },
@@ -143,9 +147,9 @@ export default {
     async destroy({ get, params }) {
       let db = get(Database)
       let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let book = bookId === undefined ? undefined : await db.exec(query(books).find(bookId))
       if (book) {
-        await db.delete(books, book.id)
+        await db.exec(query(books).where({ id: book.id }).delete())
       }
 
       return redirect(routes.admin.books.index.href())

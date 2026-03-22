@@ -1,5 +1,5 @@
 import type { BuildAction, Controller } from 'remix/fetch-router'
-import { Database, ilike, inList, or } from 'remix/data-table'
+import { Database, ilike, inList, or, query } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
 import { getCurrentCart } from '../../utils/context.ts'
@@ -15,9 +15,7 @@ export let home: BuildAction<'GET', typeof routes.home> = {
     let db = get(Database)
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-    let featuredBookRows = await db.findMany(books, {
-      where: inList('slug', featuredSlugs),
-    })
+    let featuredBookRows = await db.exec(query(books).where(inList('slug', featuredSlugs)).all())
     let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
     let featuredBooks = featuredSlugs.flatMap((slug) => {
       let book = featuredBooksBySlug.get(slug)
@@ -51,19 +49,23 @@ export let contact: Controller<typeof routes.contact> = {
 export let search: BuildAction<'GET', typeof routes.search> = {
   async handler({ get, url }) {
     let db = get(Database)
-    let query = url.searchParams.get('q') ?? ''
-    let matchingBooks = query
-      ? await db.findMany(books, {
-          where: or(
-            ilike('title', `%${query.toLowerCase()}%`),
-            ilike('author', `%${query.toLowerCase()}%`),
-            ilike('description', `%${query.toLowerCase()}%`),
-          ),
-          orderBy: ['id', 'asc'],
-        })
+    let searchQuery = url.searchParams.get('q') ?? ''
+    let matchingBooks = searchQuery
+      ? await db.exec(
+          query(books)
+            .where(
+              or(
+                ilike('title', `%${searchQuery.toLowerCase()}%`),
+                ilike('author', `%${searchQuery.toLowerCase()}%`),
+                ilike('description', `%${searchQuery.toLowerCase()}%`),
+              ),
+            )
+            .orderBy('id', 'asc')
+            .all(),
+        )
       : []
     let cart = getCurrentCart()
 
-    return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
+    return render(<SearchPage query={searchQuery} matchingBooks={matchingBooks} cart={cart} />)
   },
 }

@@ -5,7 +5,7 @@ import {
   requireAuth as requireAuthenticatedUser,
   createSessionAuthScheme,
 } from 'remix/auth-middleware'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -26,7 +26,7 @@ export function loadAuth() {
         },
         async verify(value, context) {
           let db = context.get(Database)
-          return (await db.find(users, value.userId)) ?? null
+          return (await db.exec(query(users).find(value.userId))) ?? null
         },
         invalidate(session) {
           session.unset('auth')
@@ -47,7 +47,7 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
   async verify({ email, password }, context) {
     let db = context.get(Database)
-    let user = await db.findOne(users, { where: { email } })
+    let user = await db.exec(query(users).where({ email }).first())
 
     if (!user || user.password !== password) {
       return null

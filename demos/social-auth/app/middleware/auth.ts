@@ -6,7 +6,7 @@ import {
 } from 'remix/auth-middleware'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
@@ -29,13 +29,15 @@ export function loadAuth() {
         },
         async verify(value, context) {
           let db = context.get(Database)
-          let user = await db.find(users, value.userId)
+          let user = await db.exec(query(users).find(value.userId))
           if (user == null) {
             return null
           }
 
           let authAccount =
-            value.authAccountId == null ? null : await db.find(authAccounts, value.authAccountId)
+            value.authAccountId == null
+              ? null
+              : await db.exec(query(authAccounts).find(value.authAccountId))
 
           return {
             user,
@@ -63,7 +65,7 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
   async verify({ email, password }, context) {
     let db = context.get(Database)
-    let user = await db.findOne(users, { where: { email } })
+    let user = await db.exec(query(users).where({ email }).first())
 
     if (user == null) {
       return null

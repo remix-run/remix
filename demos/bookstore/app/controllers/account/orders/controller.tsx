@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import type { routes } from '../../../routes.ts'
@@ -14,11 +14,13 @@ let ordersController = {
     async index({ get }) {
       let db = get(Database)
       let user = getCurrentUser()
-      let userOrders = await db.findMany(orders, {
-        where: { user_id: user.id },
-        orderBy: ['created_at', 'asc'],
-        with: { items: orderItemsWithBook },
-      })
+      let userOrders = await db.exec(
+        query(orders)
+          .where({ user_id: user.id })
+          .orderBy('created_at', 'asc')
+          .with({ items: orderItemsWithBook })
+          .all(),
+      )
 
       return render(<AccountOrdersIndexPage orders={userOrders} />)
     },
@@ -30,9 +32,7 @@ let ordersController = {
       let order =
         orderId === undefined
           ? undefined
-          : await db.find(orders, orderId, {
-              with: { items: orderItemsWithBook },
-            })
+          : await db.exec(query(orders).with({ items: orderItemsWithBook }).find(orderId))
 
       if (!order || order.user_id !== user.id) {
         return render(<AccountOrderNotFoundPage />, { status: 404 })

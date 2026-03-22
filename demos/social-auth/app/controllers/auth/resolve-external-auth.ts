@@ -1,5 +1,6 @@
 import type { GitHubAuthProfile, GoogleAuthProfile, OAuthResult, XAuthProfile } from 'remix/auth'
 import type { Database } from 'remix/data-table'
+import { query } from 'remix/data-table'
 
 import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
 import type { AuthAccount, User } from '../../data/schema.ts'
@@ -22,21 +23,23 @@ export async function resolveExternalAuth(
   db: Database,
   result: ExternalAuthResult,
 ): Promise<{ user: User; authAccount: AuthAccount }> {
-  let existingAccount = await db.findOne(authAccounts, {
-    where: {
-      provider: result.provider,
-      provider_account_id: result.account.providerAccountId,
-    },
-  })
+  let existingAccount = await db.exec(
+    query(authAccounts)
+      .where({
+        provider: result.provider,
+        provider_account_id: result.account.providerAccountId,
+      })
+      .first(),
+  )
   let profile = extractProfile(result)
 
   if (existingAccount != null) {
-    let user = await db.find(users, existingAccount.user_id)
+    let user = await db.exec(query(users).find(existingAccount.user_id))
 
     if (user == null) {
       user = await createUserFromProfile(db, profile)
-      await db.update(authAccounts, existingAccount.id, { user_id: user.id })
-      existingAccount = (await db.find(authAccounts, existingAccount.id)) ?? existingAccount
+      await db.exec(query(authAccounts).where({ id: existingAccount.id }).update({ user_id: user.id }))
+      existingAccount = (await db.exec(query(authAccounts).find(existingAccount.id))) ?? existingAccount
     } else {
       user = await updateUserFromProfile(db, user, profile)
     }
@@ -47,7 +50,7 @@ export async function resolveExternalAuth(
 
   let linkedUser =
     profile.linkableEmail != null
-      ? await db.findOne(users, { where: { email: profile.linkableEmail } })
+      ? await db.exec(query(users).where({ email: profile.linkableEmail }).first())
       : null
 
   let user =
@@ -55,9 +58,9 @@ export async function resolveExternalAuth(
       ? await createUserFromProfile(db, profile)
       : await updateUserFromProfile(db, linkedUser, profile)
 
-  let authAccount = await db.create(
-    authAccounts,
-    {
+  let createResult = await db.exec(
+    query(authAccounts).insert(
+      {
       user_id: user.id,
       provider: result.provider,
       provider_account_id: result.account.providerAccountId,
@@ -66,9 +69,15 @@ export async function resolveExternalAuth(
       display_name: profile.displayName,
       avatar_url: profile.avatarUrl,
       profile_json: profile.profileJson,
-    },
-    { returnRow: true },
+      },
+      { returning: '*' },
+    ),
   )
+  let authAccount = 'row' in createResult ? createResult.row : null
+
+  if (authAccount == null) {
+    throw new Error('Failed to create auth account')
+  }
 
   return { user, authAccount }
 }
@@ -121,15 +130,23 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
 }
 
 async function createUserFromProfile(db: Database, profile: ExternalProfileDetails): Promise<User> {
-  return db.create(
-    users,
-    {
+  let createResult = await db.exec(
+    query(users).insert(
+      {
       email: profile.linkableEmail,
       name: profile.displayName,
       avatar_url: profile.avatarUrl,
-    },
-    { returnRow: true },
+      },
+      { returning: '*' },
+    ),
   )
+  let user = 'row' in createResult ? createResult.row : null
+
+  if (user == null) {
+    throw new Error('Failed to create user')
+  }
+
+  return user
 }
 
 async function updateUserFromProfile(
@@ -155,8 +172,8 @@ async function updateUserFromProfile(
     return user
   }
 
-  await db.update(users, user.id, changes)
-  return (await db.find(users, user.id)) ?? user
+  await db.exec(query(users).where({ id: user.id }).update(changes))
+  return (await db.exec(query(users).find(user.id))) ?? user
 }
 
 async function updateAuthAccount(
@@ -164,13 +181,15 @@ async function updateAuthAccount(
   authAccount: AuthAccount,
   profile: ExternalProfileDetails,
 ): Promise<AuthAccount> {
-  await db.update(authAccounts, authAccount.id, {
-    email: profile.email,
-    username: profile.username,
-    display_name: profile.displayName,
-    avatar_url: profile.avatarUrl,
-    profile_json: profile.profileJson,
-  })
+  await db.exec(
+    query(authAccounts).where({ id: authAccount.id }).update({
+      email: profile.email,
+      username: profile.username,
+      display_name: profile.displayName,
+      avatar_url: profile.avatarUrl,
+      profile_json: profile.profileJson,
+    }),
+  )
 
-  return (await db.find(authAccounts, authAccount.id)) ?? authAccount
+  return (await db.exec(query(authAccounts).find(authAccount.id))) ?? authAccount
 }

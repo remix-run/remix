@@ -1,6 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 
 import { CartButton } from '../../../assets/cart-button.tsx'
 import { CartItems } from '../../../assets/cart-items.tsx'
@@ -16,7 +16,7 @@ export default {
     async cartButton({ get, params }) {
       let db = get(Database)
       let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      let book = bookId === undefined ? undefined : await db.exec(query(books).find(bookId))
 
       if (!book) {
         return renderFragment(<p>Book not found</p>, { status: 404 })

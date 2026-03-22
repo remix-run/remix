@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
+import { Database, query } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'
@@ -45,16 +45,18 @@ export let forgotPasswordController = {
 
       let forgotPassword = result.value
       let emailAddress = normalizeEmail(forgotPassword.email)
-      let user = await db.findOne(users, { where: { email: emailAddress } })
+      let user = await db.exec(query(users).where({ email: emailAddress }).first())
       let resetHref: string | undefined
 
       if (user != null) {
         let token = crypto.randomUUID().replaceAll('-', '')
-        await db.create(passwordResetTokens, {
-          token,
-          user_id: user.id,
-          expires_at: Date.now() + 1000 * 60 * 60,
-        })
+        await db.exec(
+          query(passwordResetTokens).insert({
+            token,
+            user_id: user.id,
+            expires_at: Date.now() + 1000 * 60 * 60,
+          }),
+        )
         resetHref = new URL(
           routes.auth.resetPassword.index.href({ token }),
           context.url.origin,

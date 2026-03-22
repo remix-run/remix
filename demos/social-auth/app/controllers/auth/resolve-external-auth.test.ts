@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
+import { query } from 'remix/data-table'
 
 import { authAccounts } from '../../data/schema.ts'
 import { db, resetSocialAuthDatabase } from '../../data/setup.ts'
@@ -57,7 +58,7 @@ describe('resolve external auth helper', () => {
       tokens: { accessToken: 'token', tokenType: 'bearer' },
     })
 
-    let account = await db.find(authAccounts, first.authAccount.id)
+    let account = await db.exec(query(authAccounts).find(first.authAccount.id))
 
     assert.equal(second.user.id, first.user.id)
     assert.ok(account)
