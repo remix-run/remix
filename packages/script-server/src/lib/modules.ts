@@ -13,7 +13,7 @@ import MagicString from 'magic-string'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
-import { normalizeFilePath } from './routes.ts'
+import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 
 let lexerReady = lexerInit
@@ -576,7 +576,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let json = JSON.parse(sourcemap) as { sources?: string[] }
     json.sources = [
       options.sourceMapSourcePaths === 'absolute'
-        ? stripWindowsDriveSlash(resolvedPath)
+        ? normalizeFilePath(resolvedPath)
         : stableUrlPathname,
     ]
     return JSON.stringify(json)
@@ -605,7 +605,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function writeServedModule(key: string, servedModule: ServedModule): Promise<void> {
     await fileStorage.set(
       key,
-      new File([JSON.stringify(servedModule)], 'compiled-asset.json', {
+      new File([JSON.stringify(servedModule)], 'served-module.json', {
         type: 'application/json',
       }),
     )
@@ -626,7 +626,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     await fileStorage.set(
       key,
-      new File([JSON.stringify(cachedRecord)], 'dependency-record.json', {
+      new File([JSON.stringify(cachedRecord)], 'analyzed-module.json', {
         type: 'application/json',
       }),
     )
@@ -663,7 +663,7 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   let resolvedPath: string
 
   try {
-    resolvedPath = fs.realpathSync(resolveFileSystemPath(absolutePath))
+    resolvedPath = fs.realpathSync(normalizeFilePath(absolutePath))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -680,9 +680,8 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
 }
 
 function resolveActualPath(identityPath: string): string | null {
-  let actualPath = resolveFileSystemPath(identityPath)
   try {
-    return fs.realpathSync(actualPath)
+    return fs.realpathSync(identityPath)
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -701,10 +700,6 @@ function isSupportedScriptPath(filePath: string): boolean {
     default:
       return false
   }
-}
-
-function stripWindowsDriveSlash(filePath: string): string {
-  return /^\/[A-Za-z]:\//.test(filePath) ? filePath.slice(1) : filePath
 }
 
 function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
@@ -750,14 +745,6 @@ function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string)
   }
 
   return JSON.stringify(generator.toJSON())
-}
-
-function resolveFileSystemPath(filePath: string): string {
-  let normalizedInput = stripWindowsDriveSlash(filePath).replace(/\\/g, '/')
-  if (/^[A-Za-z]:\//.test(normalizedInput)) {
-    return normalizedInput
-  }
-  return path.resolve(normalizedInput)
 }
 
 function sourceStampFromStat(stat: { mtimeMs: number; size: number }): string {

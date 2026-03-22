@@ -2,7 +2,8 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import type { FileStorage } from '@remix-run/file-storage'
 import { createModuleCompiler, createResponseForModule } from './modules.ts'
-import { compileRoutes, normalizeFilePath } from './routes.ts'
+import { normalizeFilePath, resolveFilePath } from './paths.ts'
+import { compileRoutes } from './routes.ts'
 import type { ScriptRouteDefinition } from './routes.ts'
 
 let fingerprintedCacheControl = 'public, max-age=31536000, immutable'
@@ -137,7 +138,7 @@ export interface ScriptServer {
  * ```
  */
 export function createScriptServer(options: ScriptServerOptions): ScriptServer {
-  let root = fs.realpathSync(path.resolve(options.root ?? process.cwd()))
+  let root = normalizeFilePath(fs.realpathSync(path.resolve(options.root ?? process.cwd())))
   let sourceMaps = options.sourceMaps
   let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
   let cacheStrategy = normalizeCacheStrategyOptions(options.cacheStrategy)
@@ -197,14 +198,12 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   }
 
   function isEntryPoint(filePath: string): boolean {
-    let normalized = normalizeFilePath(filePath)
-    return entryPointMatchers.some((matcher) => matcher(normalized))
+    return entryPointMatchers.some((matcher) => matcher(filePath))
   }
 
   function isAllowed(filePath: string): boolean {
-    let normalized = normalizeFilePath(filePath)
-    if (!allowMatchers.some((matcher) => matcher(normalized))) return false
-    if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(normalized))) return false
+    if (!allowMatchers.some((matcher) => matcher(filePath))) return false
+    if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
     return true
   }
 
@@ -283,30 +282,28 @@ function createFileMatcher(
   root: string,
   options: { allowDirectories?: boolean } = {},
 ): FileMatcher {
-  let resolved = path.isAbsolute(pattern) ? pattern : path.join(root, pattern)
+  let resolved = resolveFilePath(root, pattern)
   let allowDirectories = options.allowDirectories ?? true
 
   if (!containsGlobSyntax(pattern)) {
     try {
-      resolved = fs.realpathSync(resolved)
+      resolved = normalizeFilePath(fs.realpathSync(resolved))
     } catch {
       // Keep unresolved exact paths so matcher behavior stays deterministic.
     }
 
-    let normalized = normalizeFilePath(resolved)
     if (allowDirectories && isDirectoryPattern(pattern, root)) {
-      return (filePath) => isSameOrDescendantPath(filePath, normalized)
+      return (filePath) => isSameOrDescendantPath(filePath, resolved)
     }
 
-    return (filePath) => normalizeFilePath(filePath) === normalized
+    return (filePath) => filePath === resolved
   }
 
-  let normalizedPattern = normalizeFilePath(resolved)
-  return (filePath) => path.posix.matchesGlob(normalizeFilePath(filePath), normalizedPattern)
+  return (filePath) => path.posix.matchesGlob(filePath, resolved)
 }
 
 function isDirectoryPattern(pattern: string, root: string): boolean {
-  let resolved = path.isAbsolute(pattern) ? pattern : path.join(root, pattern)
+  let resolved = resolveFilePath(root, pattern)
   try {
     return fs.statSync(resolved).isDirectory()
   } catch {
@@ -315,13 +312,9 @@ function isDirectoryPattern(pattern: string, root: string): boolean {
 }
 
 function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
-  let normalizedFilePath = normalizeFilePath(filePath)
   let normalizedDirectoryPath = directoryPath.replace(/\/+$/, '')
 
-  return (
-    normalizedFilePath === normalizedDirectoryPath ||
-    normalizedFilePath.startsWith(`${normalizedDirectoryPath}/`)
-  )
+  return filePath === normalizedDirectoryPath || filePath.startsWith(`${normalizedDirectoryPath}/`)
 }
 
 function containsGlobSyntax(pattern: string): boolean {

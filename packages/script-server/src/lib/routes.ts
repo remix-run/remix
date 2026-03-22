@@ -1,5 +1,11 @@
-import * as path from 'node:path'
 import { RoutePattern } from '@remix-run/route-pattern'
+
+import {
+  isAbsoluteFilePath,
+  normalizeFilePath,
+  normalizePathname,
+  resolveFilePath,
+} from './paths.ts'
 
 export interface ScriptRouteDefinition {
   urlPattern: string
@@ -17,32 +23,8 @@ export interface CompiledRoutes {
   toUrlPathname(filePath: string): string | null
 }
 
-function normalizePathname(pathname: string): string {
-  let normalized = pathname.replace(/\\/g, '/')
-  if (!normalized.startsWith('/')) {
-    normalized = `/${normalized}`
-  }
-  return normalized
-}
-
-export function normalizeFilePath(filePath: string): string {
-  let normalizedInput = filePath.replace(/\\/g, '/')
-  if (/^\/[A-Za-z]:\//.test(normalizedInput)) {
-    return normalizedInput
-  }
-  if (/^[A-Za-z]:\//.test(normalizedInput)) {
-    return `/${normalizedInput}`
-  }
-
-  let normalized = path.resolve(filePath).replace(/\\/g, '/')
-  if (/^[A-Za-z]:\//.test(normalized)) {
-    return `/${normalized}`
-  }
-  return normalized
-}
-
 function normalizeFilePattern(pattern: string): string {
-  if (path.isAbsolute(pattern) || /^[A-Za-z]:[\\/]/.test(pattern)) {
+  if (isAbsoluteFilePath(pattern)) {
     throw new Error(
       `File route patterns must be relative to script-server root.\nPattern: ${pattern}`,
     )
@@ -69,7 +51,7 @@ export function compileRoutes(options: {
         let match = route.urlPattern.match(`http://remix.run${normalizedPathname}`)
         if (!match) continue
         let relativeFilePath = route.filePattern.href(match.params).replace(/^\/+/, '')
-        return normalizeFilePath(`${route.root}/${relativeFilePath}`)
+        return resolveFilePath(route.root, relativeFilePath)
       }
 
       return null

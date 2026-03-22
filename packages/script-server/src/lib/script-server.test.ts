@@ -1,5 +1,6 @@
 import { after, before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -399,7 +400,8 @@ describe('script-server', () => {
     let sourceMap = JSON.parse(Buffer.from(sourceMapMatch[1], 'base64').toString('utf-8')) as {
       sources: string[]
     }
-    let expectedSource = (await fs.realpath(entryPath))
+    let expectedSource = nodeFs
+      .realpathSync(entryPath)
       .replace(/\\/g, '/')
       .replace(/^\/([A-Za-z]:\/)/, '$1')
     assert.deepEqual(sourceMap.sources, [expectedSource])
