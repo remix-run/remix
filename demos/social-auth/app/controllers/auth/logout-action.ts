@@ -1,15 +1,12 @@
-import type { BuildAction } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
-import { clearAuthenticatedSession } from '../../utils/auth-session.ts'
-import { routes } from '../../routes.ts'
 import { Session } from '../../middleware/session.ts'
+import type { AppContext } from '../../router.ts'
+import { routes } from '../../routes.ts'
 
-export let logoutAction = {
-  action(context) {
-    let session = context.get(Session)
-    clearAuthenticatedSession(session)
-    session.regenerateId(true)
-    return redirect(routes.home.href())
-  },
-} satisfies BuildAction<'POST', typeof routes.auth.logout>
+export function logout(context: AppContext) {
+  let session = context.get(Session)
+  session.unset('auth')
+  session.regenerateId(true)
+  return redirect(routes.home.href())
+}

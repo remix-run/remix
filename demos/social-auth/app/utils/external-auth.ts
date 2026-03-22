@@ -1,62 +1,113 @@
-import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
-import type { RequestContext } from 'remix/fetch-router'
 import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
+import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
 
 import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x'
 
+type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
+  ? OAuthProvider<GoogleAuthProfile, 'google'>
+  : name extends 'github'
+    ? OAuthProvider<GitHubAuthProfile, 'github'>
+    : OAuthProvider<XAuthProfile, 'x'>
+
+export interface ExternalProviderRegistry {
+  google: ExternalProviderFor<'google'> | null
+  github: ExternalProviderFor<'github'> | null
+  x: ExternalProviderFor<'x'> | null
+}
+
 type ProviderEnvPrefix = 'GOOGLE' | 'GITHUB' | 'X'
+type ExternalProviderEnvironment = Record<string, string | undefined>
 
 interface ProviderCredentials {
   clientId: string
   clientSecret: string
 }
 
-export interface ProviderAvailability {
-  google: boolean
-  github: boolean
-  x: boolean
+export interface ExternalProviderLink {
+  name: ExternalProviderName
+  href?: string
+  disabledReason?: string
 }
 
-export interface ProviderStatus {
+interface ProviderStatus {
   enabled: boolean
   missingEnvVars: string[]
 }
 
-export interface ProviderStatuses {
-  google: ProviderStatus
-  github: ProviderStatus
-  x: ProviderStatus
-}
+let providerLabels = {
+  google: 'Google',
+  github: 'GitHub',
+  x: 'X',
+} satisfies Record<ExternalProviderName, string>
 
-export function getProviderAvailability(): ProviderAvailability {
-  let statuses = getProviderStatuses()
+let providerEnvPrefixes = {
+  google: 'GOOGLE',
+  github: 'GITHUB',
+  x: 'X',
+} satisfies Record<ExternalProviderName, ProviderEnvPrefix>
+
+export let externalProviderNames = ['google', 'github', 'x'] as const
+
+export let externalProviderRegistry = createExternalProviderRegistry()
+
+export function createExternalProviderRegistry(
+  options: {
+    env?: ExternalProviderEnvironment
+    origin?: string | URL
+  } = {},
+): ExternalProviderRegistry {
+  let env = options.env ?? process.env
+  let origin = options.origin ?? getDemoOrigin()
 
   return {
-    google: statuses.google.enabled,
-    github: statuses.github.enabled,
-    x: statuses.x.enabled,
+    google: createGoogleProvider(origin, env),
+    github: createGitHubProvider(origin, env),
+    x: createXProvider(origin, env),
   }
 }
 
-export function getProviderStatuses(): ProviderStatuses {
+export function getExternalProviderLabel(name: ExternalProviderName): string {
+  return providerLabels[name]
+}
+
+export function getExternalProviderStatus(
+  name: ExternalProviderName,
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+  env: ExternalProviderEnvironment = process.env,
+): ProviderStatus {
   return {
-    google: getProviderStatus('GOOGLE'),
-    github: getProviderStatus('GITHUB'),
-    x: getProviderStatus('X'),
+    enabled: registry[name] != null,
+    missingEnvVars: readMissingProviderEnvVars(providerEnvPrefixes[name], env),
   }
 }
 
-export function getDemoOrigin(url?: URL): string {
-  let port = url?.port || process.env.PORT || '44100'
+export function readExternalProviderLinks(
+  returnToQuery: { returnTo?: string },
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+  env: ExternalProviderEnvironment = process.env,
+): ExternalProviderLink[] {
+  return externalProviderNames.map((name) => {
+    let status = getExternalProviderStatus(name, registry, env)
+
+    return {
+      name,
+      href: status.enabled ? routes.auth[name].login.href(undefined, returnToQuery) : undefined,
+      disabledReason: status.enabled ? undefined : createDisabledReason(name, status),
+    }
+  })
+}
+
+export function getDemoOrigin(port = process.env.PORT ?? '44100'): string {
   return `http://127.0.0.1:${port}`
 }
 
-export function createGoogleProvider(
-  context: RequestContext,
-): OAuthProvider<GoogleAuthProfile, 'google'> | null {
-  let credentials = readProviderCredentials('GOOGLE')
+function createGoogleProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'google'> | null {
+  let credentials = readProviderCredentials('GOOGLE', env)
   if (credentials == null) {
     return null
   }
@@ -64,14 +115,15 @@ export function createGoogleProvider(
   return createGoogleAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.google.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.google.callback.href(), toOriginString(origin)),
   })
 }
 
-export function createGitHubProvider(
-  context: RequestContext,
-): OAuthProvider<GitHubAuthProfile, 'github'> | null {
-  let credentials = readProviderCredentials('GITHUB')
+function createGitHubProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'github'> | null {
+  let credentials = readProviderCredentials('GITHUB', env)
   if (credentials == null) {
     return null
   }
@@ -79,12 +131,15 @@ export function createGitHubProvider(
   return createGitHubAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.github.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.github.callback.href(), toOriginString(origin)),
   })
 }
 
-export function createXProvider(context: RequestContext): OAuthProvider<XAuthProfile, 'x'> | null {
-  let credentials = readProviderCredentials('X')
+function createXProvider(
+  origin: string | URL,
+  env: ExternalProviderEnvironment,
+): ExternalProviderFor<'x'> | null {
+  let credentials = readProviderCredentials('X', env)
   if (credentials == null) {
     return null
   }
@@ -92,40 +147,49 @@ export function createXProvider(context: RequestContext): OAuthProvider<XAuthPro
   return createXAuthProvider({
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
-    redirectUri: new URL(routes.auth.x.callback.href(), getDemoOrigin(context.url)),
+    redirectUri: new URL(routes.auth.x.callback.href(), toOriginString(origin)),
   })
 }
 
-function getProviderStatus(prefix: ProviderEnvPrefix): ProviderStatus {
-  let missingEnvVars = getMissingProviderEnvVars(prefix)
-
-  return {
-    enabled: missingEnvVars.length === 0,
-    missingEnvVars,
+function createDisabledReason(name: ExternalProviderName, status: ProviderStatus): string {
+  if (status.missingEnvVars.length === 0) {
+    return `${getExternalProviderLabel(name)} login is not configured.`
   }
+
+  return `Set ${status.missingEnvVars.join(' and ')} to enable ${getExternalProviderLabel(name)} login.`
 }
 
-function getMissingProviderEnvVars(prefix: ProviderEnvPrefix): string[] {
+function readMissingProviderEnvVars(
+  prefix: ProviderEnvPrefix,
+  env: ExternalProviderEnvironment,
+): string[] {
   let missingEnvVars = []
 
-  if (!process.env[`${prefix}_CLIENT_ID`]) {
+  if (!env[`${prefix}_CLIENT_ID`]) {
     missingEnvVars.push(`${prefix}_CLIENT_ID`)
   }
 
-  if (!process.env[`${prefix}_CLIENT_SECRET`]) {
+  if (!env[`${prefix}_CLIENT_SECRET`]) {
     missingEnvVars.push(`${prefix}_CLIENT_SECRET`)
   }
 
   return missingEnvVars
 }
 
-function readProviderCredentials(prefix: ProviderEnvPrefix): ProviderCredentials | null {
-  let clientId = process.env[`${prefix}_CLIENT_ID`]
-  let clientSecret = process.env[`${prefix}_CLIENT_SECRET`]
+function readProviderCredentials(
+  prefix: ProviderEnvPrefix,
+  env: ExternalProviderEnvironment,
+): ProviderCredentials | null {
+  let clientId = env[`${prefix}_CLIENT_ID`]
+  let clientSecret = env[`${prefix}_CLIENT_SECRET`]
 
   if (!clientId || !clientSecret) {
     return null
   }
 
   return { clientId, clientSecret }
+}
+
+function toOriginString(origin: string | URL): string {
+  return typeof origin === 'string' ? origin : origin.toString()
 }

@@ -148,7 +148,7 @@ router.map(routes.posts, {
   actions: {
     new: {
       middleware: [requireAuth()],
-      action() {
+      handler() {
         return createHtmlResponse(`
           <html>
             <head>

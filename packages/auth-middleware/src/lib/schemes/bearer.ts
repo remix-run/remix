@@ -1,20 +1,29 @@
 import type { RequestContext } from '@remix-run/fetch-router'
+
 import type { AuthScheme } from '../auth.ts'
+
+type ResolvedMethod<name, fallback extends string> =
+  Extract<name, string> extends never ? fallback : Extract<name, string>
+
+type InferIdentity<verify extends (token: string, context: RequestContext) => unknown> = Exclude<
+  Awaited<ReturnType<verify>>,
+  null
+>
 
 const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
 
 /**
  * Options for creating a bearer-token auth scheme.
  */
-export interface BearerTokenAuthSchemeOptions<identity> {
+export interface BearerTokenAuthSchemeOptions<identity, method extends string = 'bearer'> {
   /** Method name exposed on the resolved auth state. */
-  name?: string
+  name?: method
   /** Request header that carries the bearer token. */
   headerName?: string
   /** Authorization scheme prefix expected in the header value. */
   scheme?: string
   /** Verifies a parsed bearer token and returns the resolved identity on success. */
-  verify: (token: string, context: RequestContext) => identity | null | Promise<identity | null>
+  verify(token: string, context: RequestContext): identity | null | Promise<identity | null>
   /** Challenge value returned when the scheme rejects credentials. */
   challenge?: string
 }
@@ -25,10 +34,18 @@ export interface BearerTokenAuthSchemeOptions<identity> {
  * @param options Header parsing and token verification options.
  * @returns An auth scheme for use with `auth()`.
  */
-export function createBearerTokenAuthScheme<identity>(
-  options: BearerTokenAuthSchemeOptions<identity>,
-): AuthScheme<identity> {
-  let name = options.name ?? 'bearer'
+export function createBearerTokenAuthScheme<
+  options extends {
+    name?: string
+    headerName?: string
+    scheme?: string
+    challenge?: string
+    verify: (token: string, context: RequestContext) => unknown
+  },
+>(
+  options: options,
+): AuthScheme<InferIdentity<options['verify']>, ResolvedMethod<options['name'], 'bearer'>> {
+  let name = (options.name ?? 'bearer') as ResolvedMethod<options['name'], 'bearer'>
   let headerName = options.headerName ?? 'Authorization'
   let scheme = options.scheme ?? 'Bearer'
   let challenge = options.challenge ?? scheme
@@ -79,7 +96,7 @@ export function createBearerTokenAuthScheme<identity>(
 
       return {
         status: 'success',
-        identity,
+        identity: identity as InferIdentity<options['verify']>,
       }
     },
   }

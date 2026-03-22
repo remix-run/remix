@@ -1,13 +1,13 @@
 # fetch-router
 
-A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Ideal for building APIs, web services, and server-rendered applications.
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Use it to define typed route maps, run middleware, and share request-scoped context across APIs, web services, and server-rendered applications.
 
 ## Features
 
 - **Fetch API**: Built on standard web APIs that work everywhere - Node.js, Bun, Deno, Cloudflare Workers, and browsers
 - **Type-Safe Routing**: Leverage TypeScript for compile-time route validation and parameter inference
-- **Composable Architecture**: Nest routers, combine middleware, and organize routes hierarchically
-- **Declarative Route Maps**: Define your entire route structure upfront with type-safe route names and request methods
+- **Typed Request Context**: Carry request-scoped context through routers, controllers, and actions
+- **Declarative Route Maps**: Define your route structure upfront with type-safe route names and request methods
 - **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
@@ -103,7 +103,7 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`createHtmlResponse` helper from `@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#html-responses) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
+Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
@@ -243,7 +243,7 @@ router.map(routes, {
 
 ### Declaring Routes
 
-In additon to the `{ method, pattern }` syntax shown above, the router provides a few shorthand methods that help to eliminate some of the boilerplate when building complex route maps:
+In addition to the `{ method, pattern }` syntax shown above, the router provides a few shorthand methods that help eliminate some of the boilerplate when building complex route maps:
 
 - [`form`](#declaring-form-routes) - creates a route map with an `index` (`GET`) and `action` (`POST`) route. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
 - [`resources` (and `resource`)](#resource-based-routes) - creates a route map with a set of resource-based routes, useful when defining RESTful API routes or [Rails-style resource-based routes](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default).
@@ -557,7 +557,7 @@ Middleware may be used in two different contexts: globally (at the router level)
 
 Global middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Global middleware runs on every request, so it's important to keep them lightweight and fast.
 
-Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation. The object form for route actions is `{ action, middleware? }`, so you can omit `middleware` entirely when you do not need it.
+Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation. The object form for route actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
 ```tsx
 let routes = route({
@@ -577,7 +577,7 @@ router.map(routes.home, () => new Response('Home'))
 router.map(routes.admin.dashboard, {
   // This middleware runs only on the `/admin/dashboard` route.
   middleware: [auth({ token: 'secret' })],
-  action() {
+  handler() {
     return new Response('Dashboard')
   },
 })
@@ -588,28 +588,86 @@ router.map(routes.admin.dashboard, {
 Every action and middleware receives a `context` object with useful properties:
 
 ```ts
-let userKey = createContextKey<{ id: string }>()
+const UserKey = createContextKey<{ id: string }>()
 
-router.get('/posts/:id', ({ request, url, params, set, get }) => {
+router.get('/posts/:id', (context) => {
   // request: The original Request object
-  console.log(request.method) // "GET"
-  console.log(request.headers.get('Accept'))
+  console.log(context.request.method) // "GET"
+  console.log(context.request.headers.get('Accept'))
 
   // url: Parsed URL object
-  console.log(url.pathname) // "/posts/123"
-  console.log(url.searchParams.get('sort'))
+  console.log(context.url.pathname) // "/posts/123"
+  console.log(context.url.searchParams.get('sort'))
 
   // params: Route parameters (fully typed!)
-  console.log(params.id) // "123"
+  console.log(context.params.id) // "123"
 
   // set/get: type-safe request-scoped context data on the context object
-  set(userKey, currentUser)
-  let user = get(userKey)
+  context.set(UserKey, currentUser)
+  let user = context.get(UserKey)
   console.log(user.id)
 
-  return new Response(`Post ${params.id}`)
+  return new Response(`Post ${context.params.id}`)
 })
 ```
+
+### Typed Context Contracts
+
+Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
+
+`fetch-router` now lets you carry that context contract through the router, controller, and action types directly. A common pattern is to derive one app-local context type from your router middleware, then reuse it across stored controllers and actions.
+
+```ts
+import { Auth, requireAuth, type WithRequiredAuth } from 'remix/auth-middleware'
+import { type BuildAction, type RequestContext, type WithParams } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
+
+let routes = route({
+  account: '/account',
+})
+
+type AppContext<params extends Record<string, string> = {}> = WithParams<RequestContext, params>
+
+type AuthIdentity = { id: string }
+
+type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
+  AppContext<params>,
+  AuthIdentity
+>
+
+let accountAction = {
+  middleware: [requireAuth<AuthIdentity>()],
+  handler(context) {
+    let auth = context.get(Auth)
+    return Response.json({ id: auth.identity.id })
+  },
+} satisfies BuildAction<'GET', typeof routes.account, AuthenticatedAppContext>
+```
+
+In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
+
+#### Middleware Provider Guidance
+
+If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
+
+- the context key consumers read with `context.get(...)`
+- the middleware that populates that key at runtime
+- one or more `With...` helper types (optional) that let applications describe the resulting request context without touching raw context entries directly
+
+```ts
+import { createContextKey, type MergeContext, type RequestContext } from 'remix/fetch-router'
+
+// The context key that consumers will need to read from `context.get(...)`
+export const CurrentUser = createContextKey<User | null>()
+
+// One or more With* helper types that apps can use to describe the request context
+export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
+  context,
+  [readonly [typeof CurrentUser, User | null]]
+>
+```
+
+Built-in middleware packages may also export `With...` helpers when that makes controller and action contracts clearer, for example `auth-middleware` provides `WithAuth` and `WithRequiredAuth`.
 
 ### Additional Topics
 
@@ -625,7 +683,7 @@ router.get('/posts/:id', ({ request, url, params, set, get }) => {
 
 #### Content Negotiation
 
-- use `Accept.from()` from `@remix-run/headers` to serve different responses based on the client's `Accept` header
+- use `Accept.from()` from `remix/headers` to serve different responses based on the client's `Accept` header
   - maybe put this on `context.accepts()` for convenience?
 
 #### Sessions
@@ -649,7 +707,7 @@ router.get('/posts/:id', ({ request, url, params, set, get }) => {
 
 ### Response Helpers
 
-Response helpers for creating common HTTP responses are available in the [`@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
+Response helpers for creating common HTTP responses are available in the [`response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
 
 ```tsx
 import { createFileResponse } from 'remix/response/file'
@@ -663,11 +721,11 @@ let response = createRedirectResponse('/')
 let response = compressResponse(uncompressedResponse, request)
 ```
 
-See the [`@remix-run/response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
+See the [`response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
 
 ### Working with HTML
 
-For working with HTML strings and safe HTML interpolation, see the [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
+For working with HTML strings and safe HTML interpolation, see the [`html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
 
 ```ts
 import { html } from 'remix/html-template'
@@ -708,7 +766,7 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
-See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+See the [`html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
 
 ### Testing
 
@@ -740,12 +798,18 @@ describe('blog routes', () => {
 
 No special test harness or mocking required! Just use `fetch()` like you would in production.
 
+## Related Packages
+
+- [auth-middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
+- [session-middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Load and persist sessions in request context
+- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.get(FormData)`
+- [response](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers for HTML, JSON, files, and redirects
+
 ## Related Work
 
-- [@remix-run/response](../response) - Response helpers for HTML, JSON, files, and redirects
-- [@remix-run/headers](../headers) - A library for working with HTTP headers
-- [@remix-run/form-data-parser](../form-data-parser) - A library for parsing multipart/form-data requests
-- [@remix-run/route-pattern](../route-pattern) - The pattern matching library that powers `fetch-router`
+- [headers](https://github.com/remix-run/remix/tree/main/packages/headers) - A library for working with HTTP headers
+- [form-data-parser](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - A library for parsing multipart/form-data requests
+- [route-pattern](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - The pattern matching library that powers `fetch-router`
 - [Express](https://expressjs.com/) - The classic Node.js web framework
 
 ## License

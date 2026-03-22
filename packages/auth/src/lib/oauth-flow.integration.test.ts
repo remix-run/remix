@@ -7,9 +7,10 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthCallbackRequestHandler } from './external-callback.ts'
-import { createExternalAuthLoginRequestHandler } from './external-login.ts'
+import { completeAuth } from './complete-auth.ts'
+import { finishExternalAuth } from './finish-external-auth.ts'
 import { createOIDCAuthProvider } from './providers/oidc.ts'
+import { startExternalAuth } from './start-external-auth.ts'
 import { createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
 
 describe('OAuth flow integration', () => {
@@ -59,18 +60,27 @@ describe('OAuth flow integration', () => {
       ],
     })
 
-    router.get('/login/fake', createExternalAuthLoginRequestHandler(provider))
-    router.get(
-      '/auth/fake/callback',
-      createExternalAuthCallbackRequestHandler(provider, {
-        writeSession(session, result) {
-          session.set('auth', { userId: result.profile.sub })
-        },
+    router.get('/login/fake', (context) =>
+      startExternalAuth(provider, context, {
+        returnTo: context.url.searchParams.get('returnTo'),
       }),
     )
+    router.get('/auth/fake/callback', async (context) => {
+      let { result, returnTo } = await finishExternalAuth(provider, context)
+
+      let session = completeAuth(context)
+      session.set('auth', { userId: result.profile.sub })
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: returnTo ?? '/',
+        },
+      })
+    })
     router.get('/dashboard', {
       middleware: [requireAuth()],
-      action({ get }) {
+      handler({ get }) {
         return Response.json(get(Auth))
       },
     })

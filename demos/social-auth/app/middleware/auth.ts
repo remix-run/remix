@@ -1,12 +1,9 @@
-import type { Middleware } from 'remix/fetch-router'
 import { createCredentialsAuthProvider } from 'remix/auth'
 import {
-  Auth,
   auth,
   createSessionAuthScheme,
   requireAuth as requireAuthenticated,
 } from 'remix/auth-middleware'
-import type { GoodAuth } from 'remix/auth-middleware'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
@@ -14,21 +11,16 @@ import { redirect } from 'remix/response/redirect'
 
 import { authAccounts, normalizeEmail, users } from '../data/schema.ts'
 import type { AuthIdentity, AuthSession } from '../utils/auth-session.ts'
-import {
-  clearAuthenticatedSession,
-  parseAuthSession,
-  parseProviderProfile,
-} from '../utils/auth-session.ts'
+import { parseAuthSession, parseProviderProfile } from '../utils/auth-session.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
-import type { Session } from './session.ts'
 
 let loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),
   password: f.field(s.defaulted(s.string(), '')),
 })
 
-export function loadAuth(): Middleware {
+export function loadAuth() {
   return auth({
     schemes: [
       createSessionAuthScheme<AuthIdentity, AuthSession>({
@@ -53,7 +45,7 @@ export function loadAuth(): Middleware {
           }
         },
         invalidate(session) {
-          clearAuthenticatedSession(session)
+          session.unset('auth')
         },
       }),
     ],
@@ -86,17 +78,11 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export function requireAuth(): Middleware {
-  return requireAuthenticated({
-    onFailure() {
-      return redirect(routes.home.href())
-    },
-  })
-}
-
-export function getGoodAuth(context: { get(key: typeof Auth): unknown }): GoodAuth<AuthIdentity> {
-  return context.get(Auth) as GoodAuth<AuthIdentity>
-}
+export let requireAuth = requireAuthenticated<AuthIdentity>({
+  onFailure() {
+    return redirect(routes.home.href())
+  },
+})
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
@@ -107,25 +93,7 @@ export function getReturnToQuery(url: URL): { returnTo?: string } {
   return returnTo ? { returnTo } : {}
 }
 
-export function flashError(session: Session, message: string): void {
-  session.flash('error', message)
-}
-
-export function flashSuccess(session: Session, message: string): void {
-  session.flash('success', message)
-}
-
-export function readFlash(session: Session): { error?: string; success?: string } {
-  let error = session.get('error')
-  let success = session.get('success')
-
-  return {
-    error: typeof error === 'string' ? error : undefined,
-    success: typeof success === 'string' ? success : undefined,
-  }
-}
-
-export function getSafeReturnTo(returnTo: string | null): string | undefined {
+function getSafeReturnTo(returnTo: string | null): string | undefined {
   if (returnTo == null || returnTo === '') {
     return undefined
   }

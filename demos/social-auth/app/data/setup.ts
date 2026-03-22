@@ -48,7 +48,7 @@ async function initialize(): Promise<void> {
   }
 }
 
-export function getDatabaseFilePath(): string {
+function getDatabaseFilePath(): string {
   let fileName =
     process.env.NODE_ENV === 'test'
       ? 'social-auth.test.' + process.pid + '.' + Date.now() + '.sqlite'

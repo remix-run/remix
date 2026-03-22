@@ -1,0 +1,1 @@
+`fetch-router` now threads request context types through `Router`, `Controller`, and `BuildAction`, and exports helpers like `MiddlewareContext`, `WithParams`, `MergeContext`, and `AnyParams` so apps can derive context contracts from installed middleware.

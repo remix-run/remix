@@ -6,10 +6,10 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthCallbackRequestHandler } from '../external-callback.ts'
-import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
-import { createGitHubAuthProvider } from './github.ts'
+import { finishExternalAuth } from '../finish-external-auth.ts'
+import { startExternalAuth } from '../start-external-auth.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
+import { createGitHubAuthProvider } from './github.ts'
 
 describe('github provider', () => {
   it('redirects to the GitHub authorization endpoint with configured scopes', async () => {
@@ -25,7 +25,7 @@ describe('github provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/github', createExternalAuthLoginRequestHandler(provider))
+    router.get('/login/github', (context) => startExternalAuth(provider, context))
 
     let response = await router.fetch('https://app.example.com/login/github')
     let location = new URL(response.headers.get('Location')!)
@@ -91,18 +91,11 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/github/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: String(result.profile.id) })
-          },
-          onSuccess(result) {
-            return Response.json(result)
-          },
-        }),
-      )
+      router.get('/login/github', (context) => startExternalAuth(provider, context))
+      router.get('/auth/github/callback', async (context) => {
+        let { result } = await finishExternalAuth(provider, context)
+        return Response.json(result)
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/github')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -179,18 +172,11 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/github/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: String(result.profile.id) })
-          },
-          onSuccess(result) {
-            return Response.json(result)
-          },
-        }),
-      )
+      router.get('/login/github', (context) => startExternalAuth(provider, context))
+      router.get('/auth/github/callback', async (context) => {
+        let { result } = await finishExternalAuth(provider, context)
+        return Response.json(result)
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/github')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -200,7 +186,6 @@ describe('github provider', () => {
           loginResponse,
         ),
       )
-
       let body = await response.json()
 
       assert.equal(body.profile.email, 'mj@example.com')
@@ -251,18 +236,11 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/github/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: String(result.profile.id) })
-          },
-          onSuccess(result) {
-            return Response.json(result)
-          },
-        }),
-      )
+      router.get('/login/github', (context) => startExternalAuth(provider, context))
+      router.get('/auth/github/callback', async (context) => {
+        let { result } = await finishExternalAuth(provider, context)
+        return Response.json(result)
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/github')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -272,7 +250,6 @@ describe('github provider', () => {
           loginResponse,
         ),
       )
-
       let body = await response.json()
 
       assert.equal(body.profile.email, null)
@@ -318,23 +295,20 @@ describe('github provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/github', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/github/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: String(result.profile.id) })
-          },
-          onFailure(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 400 },
-            )
-          },
-        }),
-      )
+      router.get('/login/github', (context) => startExternalAuth(provider, context))
+      router.get('/auth/github/callback', async (context) => {
+        try {
+          let { result } = await finishExternalAuth(provider, context)
+          return Response.json(result)
+        } catch (error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 400 },
+          )
+        }
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/github')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')

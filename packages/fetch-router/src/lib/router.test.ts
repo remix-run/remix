@@ -33,7 +33,7 @@ describe('router.fetch()', () => {
           requestLog.push('middleware')
         },
       ],
-      action() {
+      handler() {
         return new Response('Home')
       },
     })
@@ -67,7 +67,7 @@ describe('router.fetch()', () => {
           requestLog.push('route middleware')
         },
       ],
-      action() {
+      handler() {
         return new Response('Home')
       },
     })
@@ -110,7 +110,7 @@ describe('router.fetch()', () => {
           requestLog.push(headers.get('From'))
         },
       ],
-      action() {
+      handler() {
         return new Response('Home')
       },
     })
@@ -189,7 +189,7 @@ describe('router.map() with single routes', () => {
 
     router.map(routes.profile, {
       middleware: [middleware],
-      action() {
+      handler() {
         requestLog.push('action')
         return new Response('OK')
       },
@@ -475,7 +475,7 @@ describe('router.get()', () => {
           requestLog.push('middleware')
         },
       ],
-      action() {
+      handler() {
         return new Response('Home')
       },
     })
@@ -506,7 +506,7 @@ describe('inline middleware', () => {
           requestLog.push('inline-2')
         },
       ],
-      action() {
+      handler() {
         requestLog.push('action')
         return new Response('OK')
       },
@@ -527,7 +527,7 @@ describe('inline middleware', () => {
           requestLog.push('inline-a')
         },
       ],
-      action() {
+      handler() {
         requestLog.push('action-a')
         return new Response('A')
       },
@@ -556,7 +556,7 @@ describe('inline middleware', () => {
 
     router.get('/', {
       middleware: [],
-      action() {
+      handler() {
         requestLog.push('action')
         return new Response('OK')
       },
@@ -572,7 +572,7 @@ describe('inline middleware', () => {
     let router = createRouter()
 
     router.get('/', {
-      action() {
+      handler() {
         requestLog.push('action')
         return new Response('OK')
       },
@@ -600,7 +600,7 @@ describe('inline middleware', () => {
           requestLog.push('m3')
         },
       ],
-      action() {
+      handler() {
         requestLog.push('action')
         return new Response('OK')
       },
@@ -643,7 +643,7 @@ describe('inline middleware', () => {
               requestLog.push('users-middleware')
             },
           ],
-          action() {
+          handler() {
             requestLog.push('users-action')
             return new Response('Users')
           },
@@ -672,7 +672,7 @@ describe('inline middleware', () => {
     let router = createRouter()
 
     router.map(routes.home, {
-      action() {
+      handler() {
         return new Response('Home')
       },
     })
@@ -689,7 +689,7 @@ describe('inline middleware', () => {
 
     if (false as boolean) {
       let action: BuildAction<'GET', typeof routes.home> = {
-        action() {
+        handler() {
           return new Response('Home')
         },
       }
@@ -801,7 +801,7 @@ describe('error handling', () => {
           throw new Error('Route middleware error')
         },
       ],
-      action() {
+      handler() {
         return new Response('OK')
       },
     })

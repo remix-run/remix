@@ -2,7 +2,15 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
-const storage = new AsyncLocalStorage<RequestContext>()
+export interface AsyncContextTypes {}
+
+export type AsyncRequestContext = AsyncContextTypes extends {
+  requestContext: infer context extends RequestContext<any, any>
+}
+  ? context
+  : RequestContext
+
+const storage = new AsyncLocalStorage<RequestContext<any, any>>()
 
 /**
  * Middleware that stores the request context in `AsyncLocalStorage` so it is available
@@ -19,12 +27,12 @@ export function asyncContext(): Middleware {
  *
  * @returns The request context
  */
-export function getContext(): RequestContext {
+export function getContext(): AsyncRequestContext {
   let context = storage.getStore()
 
   if (context == null) {
     throw new Error('No request context found. Make sure the asyncContext middleware is installed.')
   }
 
-  return context
+  return context as AsyncRequestContext
 }

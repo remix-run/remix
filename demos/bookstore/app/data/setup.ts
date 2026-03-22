@@ -8,11 +8,11 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 import { books, orderItems, orders, users } from './schema.ts'
 
-let dataDirectoryUrl = new URL('../../data/', import.meta.url)
-let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dataDirectoryUrl))
+let databaseDirectoryUrl = getDatabaseDirectoryUrl()
+let migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 let databaseFilePath = getDatabaseFilePath()
 
-fs.mkdirSync(fileURLToPath(dataDirectoryUrl), { recursive: true })
+fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
 
 if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
   fs.unlinkSync(databaseFilePath)
@@ -20,6 +20,7 @@ if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
 
 let sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
+registerTestDatabaseCleanup(databaseFilePath, sqlite)
 let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
@@ -183,5 +184,24 @@ function getDatabaseFilePath(): string {
       ? `bookstore.test.${process.pid}.${Date.now()}.sqlite`
       : 'bookstore.sqlite'
 
-  return fileURLToPath(new URL(fileName, dataDirectoryUrl))
+  return fileURLToPath(new URL(fileName, databaseDirectoryUrl))
+}
+
+function getDatabaseDirectoryUrl(): URL {
+  let directory = process.env.NODE_ENV === 'test' ? '../../tmp/' : '../../db/'
+  return new URL(directory, import.meta.url)
+}
+
+function registerTestDatabaseCleanup(
+  databaseFilePath: string,
+  sqlite: BetterSqlite3.Database,
+): void {
+  if (process.env.NODE_ENV !== 'test') {
+    return
+  }
+
+  process.on('exit', () => {
+    sqlite.close()
+    fs.rmSync(databaseFilePath, { force: true })
+  })
 }

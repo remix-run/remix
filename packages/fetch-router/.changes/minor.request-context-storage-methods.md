@@ -4,4 +4,4 @@ BREAKING CHANGE: Remove `context.storage`, `context.session`, `context.sessionSt
 
 Session middleware now stores the request session with `context.set(Session, session)`, and form-data middleware now stores parsed form data with `context.set(FormData, formData)`. Uploaded files are read from `context.get(FormData)` using `get(...)`/`getAll(...)`.
 
-`RequestContext` is now generic only over route params (`RequestContext<{ id: string }>`), and no longer accepts a request-method generic (`RequestContext<'GET', ...>`).
+`RequestContext` is now generic over route params and typed context entries (`RequestContext<{ id: string }, entries>`), and no longer accepts a request-method generic (`RequestContext<'GET', ...>`).

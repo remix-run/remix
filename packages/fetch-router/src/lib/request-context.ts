@@ -1,6 +1,7 @@
 import type { Router } from './router.ts'
 
 import type { RequestMethod } from './request-methods.ts'
+import type { Simplify } from './type-utils.ts'
 
 /**
  * Create a request context key with an optional default value.
@@ -22,6 +23,24 @@ export interface ContextKey<value> {
   defaultValue?: value
 }
 
+/**
+ * A broad params shape for APIs that cannot know an exact route pattern ahead of time.
+ */
+export type AnyParams = Record<string, string>
+
+/**
+ * A single request-context entry that associates a context key with its stored value type.
+ */
+export type ContextEntry<key extends object = object, value = unknown> = readonly [key, value]
+
+/**
+ * An ordered list of request-context entries. Later entries override earlier ones for the same key.
+ */
+export type ContextEntries = readonly ContextEntry[]
+
+/**
+ * Resolves the value type associated with a request-context key.
+ */
 export type ContextValue<key> =
   key extends ContextKey<infer value>
     ? value
@@ -30,10 +49,83 @@ export type ContextValue<key> =
       : never
 
 /**
+ * Extracts the route params type from a {@link RequestContext}.
+ */
+export type ContextParams<context> =
+  context extends RequestContext<infer params extends Record<string, any>, any> ? params : {}
+
+type DuplicateParamNames<
+  left extends Record<string, any>,
+  right extends Record<string, any>,
+> = Extract<keyof left, keyof right>
+
+/**
+ * Merges two params objects and fails with `never` when they define the same param name.
+ */
+export type MergeContextParams<
+  left extends Record<string, any>,
+  right extends Record<string, any>,
+> = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
+
+/**
+ * Replaces the params type of a {@link RequestContext} while preserving its existing context entries.
+ */
+export type WithParams<context, params extends Record<string, any>> =
+  context extends RequestContext<any, infer entries extends ContextEntries>
+    ? MergeContextParams<ContextParams<context>, params> extends infer merged
+      ? [merged] extends [never]
+        ? never
+        : RequestContext<Extract<merged, Record<string, any>>, entries>
+      : never
+    : RequestContext<params>
+
+type ResolveContextEntryValue<
+  entries extends ContextEntries,
+  key extends object,
+  fallback,
+> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
+  ? [key] extends [last[0]]
+    ? [last[0]] extends [key]
+      ? last[1]
+      : ResolveContextEntryValue<rest, key, fallback>
+    : ResolveContextEntryValue<rest, key, fallback>
+  : fallback
+
+/**
+ * Resolves the value type returned by `context.get(key)` for the given context and key.
+ */
+export type GetContextValue<context, key extends object> =
+  context extends RequestContext<any, infer entries extends ContextEntries>
+    ? ResolveContextEntryValue<entries, key, ContextValue<key>>
+    : ContextValue<key>
+
+/**
+ * Appends context entries to an existing {@link RequestContext}.
+ */
+export type MergeContext<context, additions extends ContextEntries> =
+  context extends RequestContext<
+    infer params extends Record<string, any>,
+    infer entries extends ContextEntries
+  >
+    ? RequestContext<params, [...entries, ...additions]>
+    : never
+
+/**
+ * Replaces or adds the value type for a single context key in a {@link RequestContext}.
+ */
+export type SetContextValue<context, key extends object, value> = MergeContext<
+  context,
+  [readonly [key, value]]
+>
+
+/**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
-export class RequestContext<params extends Record<string, any> = {}> {
+export class RequestContext<
+  params extends Record<string, any> = {},
+  entries extends ContextEntries = [],
+> {
   /**
    * @param request The incoming request
    */
@@ -82,17 +174,17 @@ export class RequestContext<params extends Record<string, any> = {}> {
    * @param key The key to read
    * @returns The value for the given key
    */
-  get = <key extends object>(key: key): ContextValue<key> => {
+  get = <key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> => {
     if (!this.#contextMap.has(key)) {
-      let contextKey = key as ContextKey<ContextValue<key>>
+      let contextKey = key as ContextKey<GetContextValue<RequestContext<params, entries>, key>>
       if (contextKey.defaultValue === undefined) {
         throw new Error(`Missing default value in context for key ${key}`)
       }
 
-      return contextKey.defaultValue
+      return contextKey.defaultValue as GetContextValue<RequestContext<params, entries>, key>
     }
 
-    return this.#contextMap.get(key) as ContextValue<key>
+    return this.#contextMap.get(key) as GetContextValue<RequestContext<params, entries>, key>
   }
 
   /**
@@ -113,25 +205,25 @@ export class RequestContext<params extends Record<string, any> = {}> {
     this.#contextMap.set(key, value)
   }
 
-  #router?: Router
+  #router?: Router<any>
 
   /**
    * The router handling this request.
    */
-  get router(): Router {
+  get router(): Router<RequestContext<any, entries>> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router
+    return this.#router as Router<RequestContext<any, entries>>
   }
 
-  set router(router: Router) {
+  set router(router: Router<any>) {
     this.#router = router
   }
 
   /**
-   * The URL that was matched by the route.
+   * The URL of the current request.
    */
   url: URL
 }

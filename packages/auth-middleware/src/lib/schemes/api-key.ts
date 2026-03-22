@@ -1,16 +1,25 @@
 import type { RequestContext } from '@remix-run/fetch-router'
+
 import type { AuthScheme } from '../auth.ts'
+
+type ResolvedMethod<name, fallback extends string> =
+  Extract<name, string> extends never ? fallback : Extract<name, string>
+
+type InferIdentity<verify extends (key: string, context: RequestContext) => unknown> = Exclude<
+  Awaited<ReturnType<verify>>,
+  null
+>
 
 /**
  * Options for creating an API-key auth scheme.
  */
-export interface APIAuthSchemeOptions<identity> {
+export interface APIAuthSchemeOptions<identity, method extends string = 'api-key'> {
   /** Method name exposed on the resolved auth state. */
-  name?: string
+  name?: method
   /** Request header that carries the API key. */
   headerName?: string
   /** Verifies a parsed API key and returns the resolved identity on success. */
-  verify: (key: string, context: RequestContext) => identity | null | Promise<identity | null>
+  verify(key: string, context: RequestContext): identity | null | Promise<identity | null>
 }
 
 /**
@@ -19,10 +28,16 @@ export interface APIAuthSchemeOptions<identity> {
  * @param options Header parsing and key verification options.
  * @returns An auth scheme for use with `auth()`.
  */
-export function createAPIAuthScheme<identity>(
-  options: APIAuthSchemeOptions<identity>,
-): AuthScheme<identity> {
-  let name = options.name ?? 'api-key'
+export function createAPIAuthScheme<
+  options extends {
+    name?: string
+    headerName?: string
+    verify: (key: string, context: RequestContext) => unknown
+  },
+>(
+  options: options,
+): AuthScheme<InferIdentity<options['verify']>, ResolvedMethod<options['name'], 'api-key'>> {
+  let name = (options.name ?? 'api-key') as ResolvedMethod<options['name'], 'api-key'>
   let headerName = options.headerName ?? 'X-API-Key'
 
   return {
@@ -53,7 +68,7 @@ export function createAPIAuthScheme<identity>(
 
       return {
         status: 'success',
-        identity,
+        identity: identity as InferIdentity<options['verify']>,
       }
     },
   }

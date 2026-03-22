@@ -6,8 +6,8 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
-import { createExternalAuthCallbackRequestHandler } from '../external-callback.ts'
-import { createExternalAuthLoginRequestHandler } from '../external-login.ts'
+import { finishExternalAuth } from '../finish-external-auth.ts'
+import { startExternalAuth } from '../start-external-auth.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
 import { createXAuthProvider } from './x.ts'
 
@@ -24,7 +24,7 @@ describe('x provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
+    router.get('/login/x', (context) => startExternalAuth(provider, context))
 
     let response = await router.fetch('https://app.example.com/login/x')
     let location = new URL(response.headers.get('Location')!)
@@ -57,7 +57,7 @@ describe('x provider', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
+    router.get('/login/x', (context) => startExternalAuth(provider, context))
 
     let response = await router.fetch('https://app.example.com/login/x')
     let location = new URL(response.headers.get('Location')!)
@@ -78,7 +78,7 @@ describe('x provider', () => {
         assert.equal(headers.get('Authorization'), `Basic ${btoa('x-client-id:x-client-secret')}`)
         assert.match(body, /grant_type=authorization_code/)
         assert.match(body, /code_verifier=/)
-        assert.match(body, /redirect_uri=https%3A%2F%2Fapp\.example\.com%2Fauth%2Fx%2Fcallback/)
+        assert.match(body, /redirect_uri=https%3A%2F%2Fapp.example.com%2Fauth%2Fx%2Fcallback/)
         assert.doesNotMatch(body, /client_id=/)
         assert.doesNotMatch(body, /client_secret=/)
 
@@ -119,18 +119,11 @@ describe('x provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/x/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.profile.id })
-          },
-          onSuccess(result) {
-            return Response.json(result)
-          },
-        }),
-      )
+      router.get('/login/x', (context) => startExternalAuth(provider, context))
+      router.get('/auth/x/callback', async (context) => {
+        let { result } = await finishExternalAuth(provider, context)
+        return Response.json(result)
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -203,23 +196,20 @@ describe('x provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/x/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.profile.id })
-          },
-          onFailure(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 400 },
-            )
-          },
-        }),
-      )
+      router.get('/login/x', (context) => startExternalAuth(provider, context))
+      router.get('/auth/x/callback', async (context) => {
+        try {
+          let { result } = await finishExternalAuth(provider, context)
+          return Response.json(result)
+        } catch (error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 400 },
+          )
+        }
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -279,23 +269,20 @@ describe('x provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/x/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.profile.id })
-          },
-          onFailure(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 400 },
-            )
-          },
-        }),
-      )
+      router.get('/login/x', (context) => startExternalAuth(provider, context))
+      router.get('/auth/x/callback', async (context) => {
+        try {
+          let { result } = await finishExternalAuth(provider, context)
+          return Response.json(result)
+        } catch (error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 400 },
+          )
+        }
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')
@@ -355,23 +342,20 @@ describe('x provider', () => {
         middleware: [sessionMiddleware(cookie, storage)],
       })
 
-      router.get('/login/x', createExternalAuthLoginRequestHandler(provider))
-      router.get(
-        '/auth/x/callback',
-        createExternalAuthCallbackRequestHandler(provider, {
-          writeSession(session, result) {
-            session.set('auth', { userId: result.profile.id })
-          },
-          onFailure(error) {
-            return Response.json(
-              {
-                error: error instanceof Error ? error.message : 'unknown',
-              },
-              { status: 400 },
-            )
-          },
-        }),
-      )
+      router.get('/login/x', (context) => startExternalAuth(provider, context))
+      router.get('/auth/x/callback', async (context) => {
+        try {
+          let { result } = await finishExternalAuth(provider, context)
+          return Response.json(result)
+        } catch (error) {
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : 'unknown',
+            },
+            { status: 400 },
+          )
+        }
+      })
 
       let loginResponse = await router.fetch('https://app.example.com/login/x')
       let state = new URL(loginResponse.headers.get('Location')!).searchParams.get('state')

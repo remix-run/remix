@@ -1,4 +1,9 @@
-import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
+import {
+  createContextKey,
+  type MergeContext,
+  type Middleware,
+  type RequestContext,
+} from '@remix-run/fetch-router'
 
 /**
  * Failure details for an unauthenticated request.
@@ -17,13 +22,13 @@ export interface AuthFailure {
 /**
  * Auth state for a successfully authenticated request.
  */
-export interface GoodAuth<identity = unknown, method extends string = string> {
+export interface GoodAuth<identity = unknown> {
   /** Indicates that the current request is authenticated. */
   ok: true
   /** Application-defined identity resolved for the current request. */
   identity: identity
   /** Auth method that successfully authenticated the request. */
-  method: method
+  method: string
 }
 
 /**
@@ -39,14 +44,22 @@ export interface BadAuth {
 /**
  * Request auth state stored in the router context.
  */
-export type Auth<identity = unknown, method extends string = string> =
-  | GoodAuth<identity, method>
-  | BadAuth
+export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
 
 /**
  * Context key used to read auth state with `context.get(Auth)`.
  */
-export const Auth = createContextKey<Auth>()
+export const Auth = createContextKey<AuthState>()
+
+export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
+  context,
+  [readonly [typeof Auth, AuthState<identity>]]
+>
+
+export type WithRequiredAuth<
+  context extends RequestContext<any, any>,
+  identity = unknown,
+> = MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
 
 /**
  * Successful result returned by an auth scheme.
@@ -89,21 +102,31 @@ export type AuthSchemeAuthenticateResult<identity = unknown> =
 /**
  * Authentication scheme contract consumed by `auth()`.
  */
-export interface AuthScheme<identity = unknown> {
+export interface AuthScheme<identity = unknown, method extends string = string> {
   /** Stable method name exposed on the resolved auth state. */
-  name: string
+  name: method
   /** Authenticates the current request or returns `null`/`undefined` to skip the scheme. */
   authenticate(
     context: RequestContext,
   ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
 }
 
+type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity, any> ? identity : never
+
+type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = AuthState<
+  AuthSchemeIdentity<schemes[number]>
+>
+
+type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
+
 /**
  * Options for loading auth state for each request.
  */
-export interface AuthOptions {
+export interface AuthOptions<
+  schemes extends readonly AuthScheme<any, any>[] = AuthScheme<any, any>[],
+> {
   /** Auth schemes to run in order for each request. */
-  schemes: AuthScheme[]
+  schemes: readonly [...schemes]
 }
 
 /**
@@ -112,7 +135,9 @@ export interface AuthOptions {
  * @param options Auth scheme configuration for the middleware.
  * @returns Middleware that resolves auth state into `context.get(Auth)`.
  */
-export function auth(options: AuthOptions): Middleware {
+export function auth<schemes extends readonly AuthScheme<any, any>[]>(
+  options: AuthOptions<schemes>,
+): Middleware<any, any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }
@@ -130,7 +155,7 @@ export function auth(options: AuthOptions): Middleware {
           ok: true,
           identity: result.identity,
           method: scheme.name,
-        } satisfies Auth)
+        } satisfies AuthState)
 
         return next()
       }
@@ -144,20 +169,20 @@ export function auth(options: AuthOptions): Middleware {
       context.set(Auth, {
         ok: false,
         error: createFailure(scheme, result),
-      } satisfies Auth)
+      } satisfies AuthState)
 
       return next()
     }
 
     context.set(Auth, {
       ok: false,
-    } satisfies Auth)
+    } satisfies AuthState)
 
     return next()
   }
 }
 
-function createFailure(scheme: AuthScheme, result: AuthSchemeFailure): AuthFailure {
+function createFailure(scheme: AuthScheme<any, any>, result: AuthSchemeFailure): AuthFailure {
   return {
     method: scheme.name,
     code: result.code ?? 'invalid_credentials',

@@ -1,4 +1,3 @@
-import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
 import {
@@ -13,13 +12,12 @@ import { users } from '../data/schema.ts'
 import type { User } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { parseId } from '../utils/ids.ts'
-import type { Session } from '../utils/session.ts'
 
 interface BookstoreAuthSession {
   userId: number
 }
 
-export function loadAuth(): Middleware {
+export function loadAuth() {
   return auth({
     schemes: [
       createSessionAuthScheme<User, BookstoreAuthSession>({
@@ -63,7 +61,7 @@ export interface RequireAuthOptions {
   redirectTo?: Route
 }
 
-export function requireAuth(options?: RequireAuthOptions): Middleware {
+export function requireAuth(options?: RequireAuthOptions) {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
   return requireAuthenticatedUser({
@@ -77,14 +75,6 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
       )
     },
   })
-}
-
-export function writeAuthenticatedSession(session: Session, user: Pick<User, 'id'>): void {
-  session.set('auth', { userId: user.id })
-}
-
-export function clearAuthenticatedSession(session: Session): void {
-  session.unset('auth')
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {

@@ -1,24 +1,46 @@
 import type { Controller } from 'remix/fetch-router'
 
-import { createExternalProviderActions } from './external-auth-actions.ts'
-import { forgotPasswordActions } from './forgot-password-actions.tsx'
-import { loginAction } from './login-action.ts'
-import { logoutAction } from './logout-action.ts'
-import { resetPasswordActions } from './reset-password-actions.tsx'
-import { signupActions } from './signup-actions.tsx'
+import { forgotPasswordController } from './forgot-password/controller.tsx'
+import { createGitHubAuthController, githubAuthController } from './github/controller.ts'
+import { createGoogleAuthController, googleAuthController } from './google/controller.ts'
+import { login } from './login-action.ts'
+import { logout } from './logout-action.ts'
+import { resetPasswordController } from './reset-password/controller.tsx'
+import { signupController } from './signup/controller.tsx'
+import { createXAuthController, xAuthController } from './x/controller.ts'
+import type { AppContext } from '../../router.ts'
 import type { routes } from '../../routes.ts'
+import {
+  externalProviderRegistry,
+  type ExternalProviderRegistry,
+} from '../../utils/external-auth.ts'
 
-let authController = {
+export function createAuthController(
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+) {
+  return {
+    actions: {
+      login,
+      logout,
+      signup: signupController,
+      forgotPassword: forgotPasswordController,
+      resetPassword: resetPasswordController,
+      google: createGoogleAuthController(registry),
+      github: createGitHubAuthController(registry),
+      x: createXAuthController(registry),
+    },
+  } satisfies Controller<typeof routes.auth, AppContext>
+}
+
+export let authController = {
   actions: {
-    login: loginAction,
-    logout: logoutAction,
-    signup: signupActions,
-    forgotPassword: forgotPasswordActions,
-    resetPassword: resetPasswordActions,
-    google: createExternalProviderActions('google'),
-    github: createExternalProviderActions('github'),
-    x: createExternalProviderActions('x'),
+    login,
+    logout,
+    signup: signupController,
+    forgotPassword: forgotPasswordController,
+    resetPassword: resetPasswordController,
+    google: googleAuthController,
+    github: githubAuthController,
+    x: xAuthController,
   },
-} satisfies Controller<typeof routes.auth>
-
-export default authController
+} satisfies Controller<typeof routes.auth, AppContext>

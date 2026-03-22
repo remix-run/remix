@@ -9,7 +9,8 @@ if (fs.existsSync(envFilePath)) {
 }
 
 let { router } = await import('./app/router.ts')
-let { getDemoOrigin, getProviderStatuses } = await import('./app/utils/external-auth.ts')
+let { externalProviderNames, getDemoOrigin, getExternalProviderLabel, getExternalProviderStatus } =
+  await import('./app/utils/external-auth.ts')
 
 let server = http.createServer(
   createRequestListener(async (request) => {
@@ -26,7 +27,6 @@ let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   let demoUrl = getDemoOrigin()
-  let providerStatuses = getProviderStatuses()
 
   console.log(`social-auth demo is running on ${demoUrl}`)
   console.log('')
@@ -35,9 +35,12 @@ server.listen(port, () => {
   console.log('  user@example.com / password123')
   console.log('')
   console.log('Social auth providers:')
-  console.log(`  ${formatProviderStatus('Google', providerStatuses.google)}`)
-  console.log(`  ${formatProviderStatus('GitHub', providerStatuses.github)}`)
-  console.log(`  ${formatProviderStatus('X', providerStatuses.x)}`)
+
+  for (let providerName of externalProviderNames) {
+    console.log(
+      `  ${formatProviderStatus(getExternalProviderLabel(providerName), getExternalProviderStatus(providerName))}`,
+    )
+  }
 })
 
 let shuttingDown = false

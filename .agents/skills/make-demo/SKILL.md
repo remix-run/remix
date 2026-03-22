@@ -33,6 +33,7 @@ A good demo should:
 - When demos use `remix/component`, prefer idiomatic Remix component patterns. Use normal JSX composition and built-in styling/mixin props such as `css={...}` or `mix={css(...)}` and `mix={[...]}` instead of dropping down to manual DOM mutation or ad hoc class management.
 - When a demo uses `remix/component` JSX, configure that demo's `tsconfig.json` with `jsx: "react-jsx"`, `jsxImportSource: "remix/component"`, and `preserveSymlinks: true`. Do not add `paths` entries that point back into `packages/remix/src`. The goal is for TypeScript to resolve `remix` through the demo's own `node_modules` view, not through repo-relative source paths.
 - For HTML responses rendered with `remix/component`, prefer a tiny local `render()` helper that calls `renderToStream(...)` and wraps it with `createHtmlResponse(...)` from `remix/response/html` instead of manually building HTML `Response` headers or wrapping the stream yourself.
+- Prefer direct use of Remix and package APIs in demo code. Do not add custom wrappers around simple calls like `session.get()`, `session.set()`, `session.flash()`, `session.unset()`, `redirect()`, or `context.get(...)` unless the wrapper adds real domain logic, reusable policy, or a genuinely clearer abstraction.
 - Demo code must have good hygiene. Use clear names, small focused modules, explicit control flow, and accessible markup. Avoid hacks, dead code, unexplained shortcuts, or patterns that would be poor examples for users to copy.
 - Make the demo teach good patterns. Assume readers and future agents will study it as an example of how Remix code should be written in this repository.
 - All demo servers should use port `44100`.
@@ -77,6 +78,7 @@ Inside `app/`, organize code by responsibility:
 
 - Keep controllers thin. They should read request context, talk to the database or other runtime services, and return a response.
 - Put each controller in its controller feature folder as `controller.tsx`. Do not split controller files across the app root and feature folders.
+- When one controller owns nested child controllers, model that hierarchy with nested feature directories on disk. Avoid flattened files such as `signup-controller.tsx` when the parent already lives at `auth/controller.tsx`; prefer `auth/signup/controller.tsx`.
 - If a component or helper is only used by one controller feature, keep it in that controller feature folder instead of `controllers/ui/`.
 - Use `controllers/ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping ground.
 - Do not create a generic `app/lib/` dumping ground.
@@ -107,7 +109,8 @@ demos/<name>/
 
       auth/
         controller.tsx
-        signup-actions.tsx
+        signup/
+          controller.tsx
         resolve-external-auth.ts
 
       account/

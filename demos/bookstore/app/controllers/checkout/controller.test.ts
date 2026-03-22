@@ -1,0 +1,69 @@
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+
+import {
+  assertContains,
+  createTestRouter,
+  getSessionCookie,
+  loginAsCustomer,
+  requestWithSession,
+} from '../../../test/helpers.ts'
+
+let router = createTestRouter()
+
+describe('checkout handlers', () => {
+  it('GET /checkout redirects when not authenticated', async () => {
+    let response = await router.fetch('https://remix.run/checkout')
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/login?returnTo=%2Fcheckout')
+  })
+
+  it('POST /checkout creates order when authenticated with items in cart', async () => {
+    let sessionCookie = await loginAsCustomer(router)
+
+    // Add item to cart
+    let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
+      method: 'POST',
+      body: new URLSearchParams({
+        bookId: '1',
+        slug: 'bbq',
+      }),
+    })
+    let addResponse = await router.fetch(addRequest)
+
+    // Get updated session cookie after cart modification
+    sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
+
+    // Submit checkout
+    let checkoutRequest = requestWithSession('https://remix.run/checkout', sessionCookie, {
+      method: 'POST',
+      body: new URLSearchParams({
+        street: '123 Test St',
+        city: 'Test City',
+        state: 'TS',
+        zip: '12345',
+      }),
+    })
+    let checkoutResponse = await router.fetch(checkoutRequest)
+    let confirmationUrl = checkoutResponse.headers.get('Location')
+    sessionCookie = getSessionCookie(checkoutResponse) ?? sessionCookie
+
+    assert.equal(checkoutResponse.status, 302)
+    assert.ok(confirmationUrl?.includes('/checkout/'))
+    assert.ok(confirmationUrl?.includes('/confirmation'))
+
+    let orderId = confirmationUrl?.match(/\/checkout\/([^/]+)\/confirmation/)?.[1]
+    assert.ok(orderId)
+
+    let orderDetailsRequest = requestWithSession(
+      `https://remix.run/account/orders/${orderId}`,
+      sessionCookie,
+    )
+    let orderDetailsResponse = await router.fetch(orderDetailsRequest)
+
+    assert.equal(orderDetailsResponse.status, 200)
+    let orderDetailsHtml = await orderDetailsResponse.text()
+    assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
+  })
+})

@@ -1,10 +1,27 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRouter } from '@remix-run/fetch-router'
+import {
+  createContextKey,
+  createRouter,
+  type AnyParams,
+  type MergeContext,
+  type RequestContext,
+} from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
+
+let CurrentUser = createContextKey<unknown>()
+
+declare module './async-context.ts' {
+  interface AsyncContextTypes {
+    requestContext: MergeContext<
+      RequestContext<AnyParams>,
+      [readonly [typeof CurrentUser, { id: string }]]
+    >
+  }
+}
 
 describe('asyncContext', () => {
   it('stores the request context in AsyncLocalStorage', async () => {
@@ -24,3 +41,11 @@ describe('asyncContext', () => {
     await router.fetch('https://remix.run')
   })
 })
+
+if (false as boolean) {
+  let user = getContext().get(CurrentUser)
+  user.id
+
+  // @ts-expect-error Property 'missing' does not exist on type '{ id: string }'
+  user.missing
+}

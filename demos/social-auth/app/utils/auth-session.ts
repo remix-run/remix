@@ -2,7 +2,6 @@ import * as s from 'remix/data-schema'
 
 import type { AuthAccount, User } from '../data/schema.ts'
 import type { ExternalProviderName } from './external-auth.ts'
-import type { Session } from '../middleware/session.ts'
 
 export type AuthMethod = 'credentials' | ExternalProviderName
 
@@ -48,14 +47,6 @@ export function parseAuthSession(value: unknown): AuthSession | null {
   }
 
   return authSession
-}
-
-export function writeAuthenticatedSession(session: Session, value: AuthSession): void {
-  session.set('auth', value)
-}
-
-export function clearAuthenticatedSession(session: Session): void {
-  session.unset('auth')
 }
 
 export function parseProviderProfile(authAccount: AuthAccount | null): unknown | null {
