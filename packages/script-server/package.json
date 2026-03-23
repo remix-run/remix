@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/script-server",
   "version": "0.0.0",
-  "description": "Script server for compiling client-side JavaScript/TypeScript modules on demand",
+  "description": "Fetch-based server for compiling browser JavaScript and TypeScript modules on demand.",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -52,7 +52,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "typecheck": "tsgo --noEmit && pnpm --dir ./bench run typecheck"
+    "typecheck": "tsgo --noEmit"
   },
   "keywords": [
     "remix",

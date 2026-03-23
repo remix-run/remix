@@ -13,11 +13,28 @@ import MagicString from 'magic-string'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
+import {
+  createScriptServerCompilationError,
+  isScriptServerCompilationError,
+} from './compilation-error.ts'
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 
 let lexerReady = lexerInit
 let preloadTraversalConcurrency = getPreloadTraversalConcurrency()
+let scriptModuleTypes = [
+  { extension: '.js', loader: 'js' },
+  { extension: '.jsx', loader: 'jsx' },
+  { extension: '.mjs', loader: 'js' },
+  { extension: '.mts', loader: 'ts' },
+  { extension: '.ts', loader: 'ts' },
+  { extension: '.tsx', loader: 'tsx' },
+] as const satisfies ReadonlyArray<{ extension: string; loader: esbuild.Loader }>
+let supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
+let supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
+let transformLoaderByExtension = new Map<string, esbuild.Loader>(
+  scriptModuleTypes.map(({ extension, loader }) => [extension, loader] as const),
+)
 
 export type ModuleCompileResult = {
   compiledCode: string
@@ -27,19 +44,7 @@ export type ModuleCompileResult = {
   sourcemapHash: string | null
 }
 
-type AnalyzedModule = {
-  deps: string[]
-  fingerprint: string
-  identityPath: string
-  imports: ResolvedImport[]
-  rawCode: string
-  resolvedPath: string
-  sourceStamp: string
-  sourcemap: string | null
-  stableUrlPathname: string
-}
-
-type PendingAnalyzedModule = {
+type TransformedModule = {
   fingerprint: string
   identityPath: string
   importerDir: string
@@ -51,16 +56,28 @@ type PendingAnalyzedModule = {
   unresolvedImports: UnresolvedImport[]
 }
 
-type ServedModule = {
+type ResolvedModule = {
+  deps: string[]
+  fingerprint: string
+  identityPath: string
+  imports: ResolvedImport[]
+  rawCode: string
+  resolvedPath: string
+  sourceStamp: string
+  sourcemap: string | null
+  stableUrlPathname: string
+}
+
+type EmittedModule = {
   compiledCode: string
   compiledHash: string
-  directImportHash: string
+  importUrls: string[]
   sourceStamp: string
   sourcemap: string | null
   sourcemapHash: string | null
 }
 
-type CachedAnalyzedModule = {
+type CachedResolvedModule = {
   deps: string[]
   fingerprint: string
   imports: ResolvedImport[]
@@ -110,9 +127,10 @@ export type ModuleCompiler = {
 }
 
 export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
-  let analyzedModules = new Map<string, AnalyzedModule>()
-  let analyzedModulesInFlight = new Map<string, Promise<AnalyzedModule>>()
-  let servedModules = new Map<string, ServedModule>()
+  let resolvedModules = new Map<string, ResolvedModule>()
+  let resolvedModulesInFlight = new Map<string, Promise<ResolvedModule>>()
+  let transformedModules = new Map<string, TransformedModule>()
+  let emittedModules = new Map<string, EmittedModule>()
   let compileInFlight = new Map<string, Promise<ModuleCompileResult>>()
   let resolvedPathsByIdentity = new Map<string, string>()
   let cacheNamespace = options.buildId === undefined ? 'live' : encodeURIComponent(options.buildId)
@@ -122,53 +140,63 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
   return {
     async compileModule(absolutePath) {
-      let resolved = resolveModulePath(absolutePath)
-      if (!resolved) {
-        throw Object.assign(new Error(`Module not found: ${absolutePath}`), { code: 'ENOENT' })
-      }
-
-      if (!options.isAllowed(resolved.identityPath)) {
-        throw Object.assign(new Error(`Module is not allowed: ${resolved.identityPath}`), {
-          code: 'ENOENT',
+      let resolvedModule = resolveModulePath(absolutePath)
+      if (!resolvedModule) {
+        throw createScriptServerCompilationError(`Module not found: ${absolutePath}`, {
+          code: 'MODULE_NOT_FOUND',
         })
       }
 
-      let existing = compileInFlight.get(resolved.identityPath)
+      if (!options.isAllowed(resolvedModule.identityPath)) {
+        throw createScriptServerCompilationError(
+          `Module is not allowed: ${resolvedModule.identityPath}`,
+          {
+            code: 'MODULE_NOT_ALLOWED',
+          },
+        )
+      }
+
+      let existing = compileInFlight.get(resolvedModule.identityPath)
       if (existing) return existing
 
-      let promise = compileModuleResolved(resolved)
-      compileInFlight.set(resolved.identityPath, promise)
+      let compilePromise = compileResolvedModule(resolvedModule)
+      compileInFlight.set(resolvedModule.identityPath, compilePromise)
 
       try {
-        return await promise
+        return await compilePromise
       } finally {
-        compileInFlight.delete(resolved.identityPath)
+        compileInFlight.delete(resolvedModule.identityPath)
       }
     },
     async getPreloadUrls(moduleUrl) {
-      let resolved = resolveEntryFromUrl(moduleUrl)
-      if (!resolved) {
-        throw new Error(`Module "${moduleUrl}" is outside all configured routes.`)
+      let resolvedEntry = resolveEntryFromUrl(moduleUrl)
+      if (!resolvedEntry) {
+        throw createScriptServerCompilationError(
+          `Module "${moduleUrl}" is outside all configured routes.`,
+          {
+            code: 'MODULE_OUTSIDE_ROUTES',
+          },
+        )
       }
 
-      let visited = new Set([resolved.identityPath])
-      let queue = [resolved.identityPath]
+      let visited = new Set([resolvedEntry.identityPath])
+      let queue = [resolvedEntry.identityPath]
       let urls: string[] = []
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let preparedRecords = await mapWithConcurrency(
+        let transformedModules = await mapWithConcurrency(
           frontier,
           preloadTraversalConcurrency,
-          (identityPath) => prepareAnalyzedModule(identityPath),
+          (identityPath) => getTransformedModule(identityPath),
         )
-        let records = await finalizePreparedAnalyzedModules(preparedRecords)
+        let resolvedModules = await resolveTransformedModules(transformedModules)
 
-        for (let analyzedModule of records) {
-          urls.push(getServedUrlFromAnalyzedModule(analyzedModule))
+        for (let resolvedModule of resolvedModules) {
+          urls.push(getServedUrlForResolvedModule(resolvedModule))
 
-          for (let dep of analyzedModule.deps) {
+          for (let dep of resolvedModule.deps) {
             if (visited.has(dep)) continue
             visited.add(dep)
             queue.push(dep)
@@ -183,184 +211,204 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     },
   }
 
-  async function compileModuleResolved(
-    resolved: ResolveModuleResult,
+  async function compileResolvedModule(
+    resolvedModule: ResolveModuleResult,
   ): Promise<ModuleCompileResult> {
-    let analyzedModule = await getAnalyzedModuleByIdentity(
-      resolved.identityPath,
-      resolved.resolvedPath,
+    let resolvedSourceModule = await getResolvedModuleByIdentity(
+      resolvedModule.identityPath,
+      resolvedModule.resolvedPath,
     )
-    let cacheKey = await getServedModuleKey(analyzedModule.identityPath)
-    let existing = servedModules.get(analyzedModule.identityPath)
+    let existing = emittedModules.get(resolvedSourceModule.identityPath)
     if (buildIsImmutable) {
+      let cacheKey = await getEmittedModuleKey(resolvedSourceModule.identityPath)
       if (existing) {
-        return toModuleCompileResult(analyzedModule, existing)
+        return toModuleCompileResult(resolvedSourceModule, existing)
       }
 
-      let stored = await readServedModule(cacheKey)
+      let stored = await readEmittedModule(cacheKey)
       if (stored) {
         return toModuleCompileResult(
-          analyzedModule,
-          cacheServedModule(analyzedModule.identityPath, stored),
+          resolvedSourceModule,
+          cacheEmittedModule(resolvedSourceModule.identityPath, stored),
         )
       }
     }
 
-    let directImportUrls = await Promise.all(
-      analyzedModule.deps.map((depPath) => getServedUrl(depPath)),
+    let importUrls = await Promise.all(
+      resolvedSourceModule.deps.map((depPath) => getServedUrl(depPath)),
     )
-    let directImportHash = await hashContent(JSON.stringify(directImportUrls))
-    if (existing && canReuseServedModule(existing, analyzedModule, directImportHash)) {
-      return toModuleCompileResult(analyzedModule, existing)
+    if (
+      existing &&
+      canReuseEmittedModule(existing, resolvedSourceModule.sourceStamp, importUrls)
+    ) {
+      return toModuleCompileResult(resolvedSourceModule, existing)
     }
 
-    let stored = await readServedModule(cacheKey)
-    if (stored && canReuseServedModule(stored, analyzedModule, directImportHash)) {
-      return toModuleCompileResult(
-        analyzedModule,
-        cacheServedModule(analyzedModule.identityPath, stored),
-      )
-    }
-
-    let rewriteResult = await rewriteImports(analyzedModule)
+    let rewriteResult = await rewriteImports(resolvedSourceModule)
     let finalCode = rewriteResult.code
     if (rewriteResult.sourcemap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourcemap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        let mapPath = options.isEntryPoint(analyzedModule.identityPath)
-          ? `${analyzedModule.stableUrlPathname}.map`
+        let mapPath = options.isEntryPoint(resolvedSourceModule.identityPath)
+          ? `${resolvedSourceModule.stableUrlPathname}.map`
           : options.fingerprintInternalModules
-            ? `${analyzedModule.stableUrlPathname}.@${analyzedModule.fingerprint}.map`
-            : `${analyzedModule.stableUrlPathname}.map`
+            ? `${resolvedSourceModule.stableUrlPathname}.@${resolvedSourceModule.fingerprint}.map`
+            : `${resolvedSourceModule.stableUrlPathname}.map`
         finalCode += `\n//# sourceMappingURL=${mapPath}`
       }
     }
 
-    let servedModule: ServedModule = {
+    let emittedModule: EmittedModule = {
       compiledCode: finalCode,
       compiledHash: await hashContent(finalCode),
-      directImportHash,
-      sourceStamp: analyzedModule.sourceStamp,
+      importUrls,
+      sourceStamp: resolvedSourceModule.sourceStamp,
       sourcemap: rewriteResult.sourcemap,
       sourcemapHash: rewriteResult.sourcemap ? await hashContent(rewriteResult.sourcemap) : null,
     }
 
-    cacheServedModule(analyzedModule.identityPath, servedModule)
-    await writeServedModule(cacheKey, servedModule)
-    return toModuleCompileResult(analyzedModule, servedModule)
+    cacheEmittedModule(resolvedSourceModule.identityPath, emittedModule)
+    if (buildIsImmutable) {
+      await writeEmittedModule(
+        await getEmittedModuleKey(resolvedSourceModule.identityPath),
+        emittedModule,
+      )
+    }
+    return toModuleCompileResult(resolvedSourceModule, emittedModule)
   }
 
   async function rewriteImports(
-    analyzedModule: AnalyzedModule,
+    resolvedModule: ResolvedModule,
   ): Promise<{ code: string; sourcemap: string | null }> {
-    let output = new MagicString(analyzedModule.rawCode)
+    let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
-    for (let imported of analyzedModule.imports) {
+    for (let imported of resolvedModule.imports) {
       let url = await getServedUrl(imported.depPath)
-      output.overwrite(
+      rewrittenSource.overwrite(
         imported.start,
         imported.end,
         imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
       )
     }
 
-    let code = output.toString()
+    let code = rewrittenSource.toString()
     let sourcemap =
-      analyzedModule.sourcemap && analyzedModule.imports.length > 0
+      resolvedModule.sourcemap && resolvedModule.imports.length > 0
         ? composeSourceMaps(
-            output.generateMap({ hires: true }).toString(),
-            analyzedModule.sourcemap,
+            rewrittenSource.generateMap({ hires: true }).toString(),
+            resolvedModule.sourcemap,
           )
-        : analyzedModule.sourcemap
+        : resolvedModule.sourcemap
 
     return { code, sourcemap }
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {
-    let analyzedModule = await getAnalyzedModuleByIdentity(identityPath)
-    return getServedUrlFromAnalyzedModule(analyzedModule)
+    let resolvedModule = await getResolvedModuleByIdentity(identityPath)
+    return getServedUrlForResolvedModule(resolvedModule)
   }
 
-  function getServedUrlFromAnalyzedModule(analyzedModule: AnalyzedModule): string {
-    if (options.isEntryPoint(analyzedModule.identityPath) || !options.fingerprintInternalModules) {
-      return analyzedModule.stableUrlPathname
+  function getServedUrlForResolvedModule(resolvedModule: ResolvedModule): string {
+    if (options.isEntryPoint(resolvedModule.identityPath) || !options.fingerprintInternalModules) {
+      return resolvedModule.stableUrlPathname
     }
-    return `${analyzedModule.stableUrlPathname}.@${analyzedModule.fingerprint}`
+    return `${resolvedModule.stableUrlPathname}.@${resolvedModule.fingerprint}`
   }
 
-  async function getAnalyzedModuleFromPath(absolutePath: string): Promise<AnalyzedModule> {
-    let resolved = resolveModulePath(absolutePath)
-    if (!resolved) {
-      throw Object.assign(new Error(`Module not found: ${absolutePath}`), { code: 'ENOENT' })
-    }
-    return getAnalyzedModuleByIdentity(resolved.identityPath, resolved.resolvedPath)
-  }
-
-  async function getAnalyzedModuleByIdentity(
+  async function getResolvedModuleByIdentity(
     identityPath: string,
     resolvedPath?: string,
-  ): Promise<AnalyzedModule> {
-    let existing = analyzedModulesInFlight.get(identityPath)
+  ): Promise<ResolvedModule> {
+    let existing = resolvedModulesInFlight.get(identityPath)
     if (existing) return existing
 
-    let promise = loadAnalyzedModule(identityPath, resolvedPath)
-    analyzedModulesInFlight.set(identityPath, promise)
+    let promise = (async () => {
+      let transformedModule = await getTransformedModule(identityPath, resolvedPath)
+      return resolveTransformedModule(transformedModule)
+    })()
+    resolvedModulesInFlight.set(identityPath, promise)
 
     try {
       return await promise
     } finally {
-      analyzedModulesInFlight.delete(identityPath)
+      resolvedModulesInFlight.delete(identityPath)
     }
   }
 
-  async function loadAnalyzedModule(
+  async function getTransformedModule(
     identityPath: string,
     resolvedPath?: string,
-  ): Promise<AnalyzedModule> {
-    let prepared = await prepareAnalyzedModule(identityPath, resolvedPath)
-    return finalizePreparedAnalyzedModule(prepared)
-  }
-
-  async function prepareAnalyzedModule(
-    identityPath: string,
-    resolvedPath?: string,
-  ): Promise<AnalyzedModule | PendingAnalyzedModule> {
-    let cached = analyzedModules.get(identityPath)
-    let cacheKey = await getAnalyzedModuleKey(identityPath)
+  ): Promise<ResolvedModule | TransformedModule> {
+    let cachedModule = transformedModules.get(identityPath)
     if (buildIsImmutable) {
+      let cached = resolvedModules.get(identityPath)
       if (cached) {
         return cached
       }
 
-      let stored = await readAnalyzedModule(cacheKey)
+      let cacheKey = await getResolvedModuleKey(identityPath)
+      let stored = await readResolvedModule(cacheKey)
       if (stored) {
-        return cacheAnalyzedModule(toAnalyzedModule(identityPath, stored))
+        return cacheResolvedModule({
+          deps: stored.deps,
+          fingerprint: stored.fingerprint,
+          identityPath,
+          imports: stored.imports,
+          rawCode: stored.rawCode,
+          resolvedPath: stored.resolvedPath,
+          sourceStamp: stored.sourceStamp,
+          sourcemap: stored.sourcemap,
+          stableUrlPathname: stored.stableUrlPathname,
+        })
       }
     }
 
     let nextResolvedPath =
       resolvedPath ?? resolvedPathsByIdentity.get(identityPath) ?? resolveActualPath(identityPath)
     if (!nextResolvedPath) {
-      throw Object.assign(new Error(`Module not found: ${identityPath}`), { code: 'ENOENT' })
+      throw createScriptServerCompilationError(`Module not found: ${identityPath}`, {
+        code: 'MODULE_NOT_FOUND',
+      })
     }
 
-    let sourceStamp = sourceStampFromStat(await fsp.stat(nextResolvedPath))
-    if (cached && canReuseAnalyzedModule(cached, sourceStamp, nextResolvedPath)) {
-      return cached
-    }
-
-    let stored = await readAnalyzedModule(cacheKey)
-    if (stored) {
-      let analyzedModule = toAnalyzedModule(identityPath, stored)
-      if (canReuseAnalyzedModule(analyzedModule, sourceStamp, nextResolvedPath)) {
-        return cacheAnalyzedModule(analyzedModule)
+    let stat
+    try {
+      stat = await fsp.stat(nextResolvedPath)
+    } catch (error) {
+      if (isNoEntityError(error)) {
+        throw createScriptServerCompilationError(`Module not found: ${nextResolvedPath}`, {
+          cause: error,
+          code: 'MODULE_NOT_FOUND',
+        })
       }
+      throw error
+    }
+
+    let sourceStamp = `${stat.size}:${stat.mtimeMs}`
+    if (
+      cachedModule &&
+      cachedModule.sourceStamp === sourceStamp &&
+      cachedModule.resolvedPath === nextResolvedPath
+    ) {
+      return cachedModule
     }
 
     let transformOptions = getTsconfigTransformOptions(nextResolvedPath)
-    let sourceText = await fsp.readFile(nextResolvedPath, 'utf-8')
+    let sourceText: string
+    try {
+      sourceText = await fsp.readFile(nextResolvedPath, 'utf-8')
+    } catch (error) {
+      if (isNoEntityError(error)) {
+        throw createScriptServerCompilationError(`Module not found: ${nextResolvedPath}`, {
+          cause: error,
+          code: 'MODULE_NOT_FOUND',
+        })
+      }
+      throw error
+    }
+
     let mayContainCommonJS = mayContainCommonJSModuleGlobals(sourceText)
     let analysis = await analyzeModuleSource(sourceText, nextResolvedPath, transformOptions, {
       minify: options.minify,
@@ -371,22 +419,30 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     )
 
     if (mayContainCommonJS && isCommonJS(analysis.rawCode)) {
-      throw new Error(
+      throw createScriptServerCompilationError(
         `CommonJS module detected: ${nextResolvedPath}\n\n` +
           `This module uses CommonJS (require/module.exports) which is not supported.\n` +
           `Please use an ESM-compatible module.`,
+        {
+          code: 'MODULE_COMMONJS_NOT_SUPPORTED',
+        },
       )
     }
 
     let stableUrlPathname = options.routes.toUrlPathname(identityPath)
     if (!stableUrlPathname) {
-      throw new Error(`Module ${identityPath} is outside all configured routes.`)
+      throw createScriptServerCompilationError(
+        `Module ${identityPath} is outside all configured routes.`,
+        {
+          code: 'MODULE_OUTSIDE_ROUTES',
+        },
+      )
     }
     let sourcemap = analysis.sourcemap
       ? rewriteSourceMap(analysis.sourcemap, nextResolvedPath, stableUrlPathname)
       : null
 
-    return {
+    return cacheTransformedModule({
       fingerprint: await hashContent(sourceText + '\0' + (options.buildId ?? '')),
       identityPath,
       importerDir: path.dirname(nextResolvedPath),
@@ -396,37 +452,39 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       sourcemap,
       stableUrlPathname,
       unresolvedImports: analysis.unresolvedImports,
-    }
+    })
   }
 
-  async function finalizePreparedAnalyzedModule(
-    prepared: AnalyzedModule | PendingAnalyzedModule,
-  ): Promise<AnalyzedModule> {
-    if (isAnalyzedModule(prepared)) return prepared
+  async function resolveTransformedModule(
+    transformedModule: ResolvedModule | TransformedModule,
+  ): Promise<ResolvedModule> {
+    if (isResolvedModule(transformedModule)) return transformedModule
 
     let resolvedImports =
-      prepared.unresolvedImports.length > 0
+      transformedModule.unresolvedImports.length > 0
         ? await batchResolveSpecifiers(
-            getUniqueSpecifiers(prepared.unresolvedImports),
-            prepared.importerDir,
+            getUniqueSpecifiers(transformedModule.unresolvedImports),
+            transformedModule.importerDir,
           )
         : new Map<string, string>()
-    return finalizeAnalyzedModule(prepared, resolvedImports)
+    return buildResolvedModule(transformedModule, resolvedImports)
   }
 
-  async function finalizePreparedAnalyzedModules(
-    preparedAnalyses: Array<AnalyzedModule | PendingAnalyzedModule>,
-  ): Promise<AnalyzedModule[]> {
+  async function resolveTransformedModules(
+    transformedModules: Array<ResolvedModule | TransformedModule>,
+  ): Promise<ResolvedModule[]> {
     let groupedSpecifiers = new Map<string, Set<string>>()
 
-    for (let prepared of preparedAnalyses) {
-      if (isAnalyzedModule(prepared) || prepared.unresolvedImports.length === 0) continue
+    for (let transformedModule of transformedModules) {
+      if (isResolvedModule(transformedModule) || transformedModule.unresolvedImports.length === 0) {
+        continue
+      }
 
-      let existing = groupedSpecifiers.get(prepared.importerDir) ?? new Set<string>()
-      for (let specifier of getUniqueSpecifiers(prepared.unresolvedImports)) {
+      let existing = groupedSpecifiers.get(transformedModule.importerDir) ?? new Set<string>()
+      for (let specifier of getUniqueSpecifiers(transformedModule.unresolvedImports)) {
         existing.add(specifier)
       }
-      groupedSpecifiers.set(prepared.importerDir, existing)
+      groupedSpecifiers.set(transformedModule.importerDir, existing)
     }
 
     let resolvedByDirectory = new Map<string, Map<string, string>>()
@@ -442,51 +500,63 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     )
 
     return Promise.all(
-      preparedAnalyses.map((prepared) => {
-        if (isAnalyzedModule(prepared)) return prepared
-        return finalizeAnalyzedModule(
-          prepared,
-          resolvedByDirectory.get(prepared.importerDir) ?? new Map<string, string>(),
+      transformedModules.map((transformedModule) => {
+        if (isResolvedModule(transformedModule)) return transformedModule
+        return buildResolvedModule(
+          transformedModule,
+          resolvedByDirectory.get(transformedModule.importerDir) ?? new Map<string, string>(),
         )
       }),
     )
   }
 
-  async function finalizeAnalyzedModule(
-    prepared: PendingAnalyzedModule,
+  async function buildResolvedModule(
+    transformedModule: TransformedModule,
     resolvedImports: Map<string, string>,
-  ): Promise<AnalyzedModule> {
+  ): Promise<ResolvedModule> {
     let importsWithPaths: ResolvedImport[] = []
     let deps = new Set<string>()
 
-    for (let unresolved of prepared.unresolvedImports) {
+    for (let unresolved of transformedModule.unresolvedImports) {
       let resolvedImportPath = resolvedImports.get(unresolved.specifier)
       if (!resolvedImportPath) {
-        throw new Error(
-          `Failed to resolve import "${unresolved.specifier}" in ${prepared.resolvedPath}.\n\n` +
+        throw createScriptServerCompilationError(
+          `Failed to resolve import "${unresolved.specifier}" in ${transformedModule.resolvedPath}.\n\n` +
             `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
         )
       }
 
       let resolvedImport = resolveModulePath(resolvedImportPath)
       if (!resolvedImport) {
-        throw new Error(
-          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} is not a supported script module.\n\n` +
-            `Supported extensions are .js, .jsx, .mjs, .mts, .ts, and .tsx.`,
+        throw createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} is not a supported script module.\n\n` +
+            `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
+          {
+            code: 'IMPORT_NOT_SUPPORTED',
+          },
         )
       }
       if (!options.isAllowed(resolvedImport.identityPath)) {
-        throw new Error(
-          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+        throw createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
             `Add a matching route and allow rule, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
+          },
         )
       }
 
       let stableUrlPathname = options.routes.toUrlPathname(resolvedImport.identityPath)
       if (!stableUrlPathname) {
-        throw new Error(
-          `Resolved import "${unresolved.specifier}" in ${prepared.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+        throw createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
             `Add a matching route and allow rule, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
+          },
         )
       }
 
@@ -499,72 +569,54 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       })
     }
 
-    let analyzedModule: AnalyzedModule = {
+    let resolvedModule: ResolvedModule = {
       deps: [...deps],
-      fingerprint: prepared.fingerprint,
-      identityPath: prepared.identityPath,
+      fingerprint: transformedModule.fingerprint,
+      identityPath: transformedModule.identityPath,
       imports: importsWithPaths,
-      rawCode: prepared.rawCode,
-      resolvedPath: prepared.resolvedPath,
-      sourceStamp: prepared.sourceStamp,
-      sourcemap: prepared.sourcemap,
-      stableUrlPathname: prepared.stableUrlPathname,
+      rawCode: transformedModule.rawCode,
+      resolvedPath: transformedModule.resolvedPath,
+      sourceStamp: transformedModule.sourceStamp,
+      sourcemap: transformedModule.sourcemap,
+      stableUrlPathname: transformedModule.stableUrlPathname,
     }
 
-    cacheAnalyzedModule(analyzedModule)
-    await writeAnalyzedModule(analyzedModule)
-    return analyzedModule
-  }
-
-  function canReuseServedModule(
-    servedModule: ServedModule,
-    analyzedModule: AnalyzedModule,
-    directImportHash: string,
-  ): boolean {
-    return (
-      servedModule.sourceStamp === analyzedModule.sourceStamp &&
-      servedModule.directImportHash === directImportHash
-    )
-  }
-
-  function cacheServedModule(identityPath: string, servedModule: ServedModule): ServedModule {
-    servedModules.set(identityPath, servedModule)
-    return servedModule
-  }
-
-  function toAnalyzedModule(identityPath: string, stored: CachedAnalyzedModule): AnalyzedModule {
-    return {
-      deps: stored.deps,
-      fingerprint: stored.fingerprint,
-      identityPath,
-      imports: stored.imports,
-      rawCode: stored.rawCode,
-      resolvedPath: stored.resolvedPath,
-      sourceStamp: stored.sourceStamp,
-      sourcemap: stored.sourcemap,
-      stableUrlPathname: stored.stableUrlPathname,
+    if (buildIsImmutable) {
+      cacheResolvedModule(resolvedModule)
+      await writeResolvedModule(resolvedModule)
     }
+    return resolvedModule
   }
 
-  function cacheAnalyzedModule(analyzedModule: AnalyzedModule): AnalyzedModule {
-    resolvedPathsByIdentity.set(analyzedModule.identityPath, analyzedModule.resolvedPath)
-    analyzedModules.set(analyzedModule.identityPath, analyzedModule)
-    return analyzedModule
+  function cacheEmittedModule(identityPath: string, emittedModule: EmittedModule): EmittedModule {
+    emittedModules.set(identityPath, emittedModule)
+    return emittedModule
   }
 
-  function canReuseAnalyzedModule(
-    analyzedModule: AnalyzedModule,
+  function canReuseEmittedModule(
+    emittedModule: EmittedModule,
     sourceStamp: string,
-    resolvedPath: string,
+    importUrls: string[],
   ): boolean {
     return (
-      analyzedModule.sourceStamp === sourceStamp && analyzedModule.resolvedPath === resolvedPath
+      emittedModule.sourceStamp === sourceStamp &&
+      arraysEqual(emittedModule.importUrls, importUrls)
     )
   }
 
-  function isAnalyzedModule(
-    value: AnalyzedModule | PendingAnalyzedModule,
-  ): value is AnalyzedModule {
+  function cacheTransformedModule(transformedModule: TransformedModule): TransformedModule {
+    resolvedPathsByIdentity.set(transformedModule.identityPath, transformedModule.resolvedPath)
+    transformedModules.set(transformedModule.identityPath, transformedModule)
+    return transformedModule
+  }
+
+  function cacheResolvedModule(resolvedModule: ResolvedModule): ResolvedModule {
+    resolvedPathsByIdentity.set(resolvedModule.identityPath, resolvedModule.resolvedPath)
+    resolvedModules.set(resolvedModule.identityPath, resolvedModule)
+    return resolvedModule
+  }
+
+  function isResolvedModule(value: ResolvedModule | TransformedModule): value is ResolvedModule {
     return 'deps' in value
   }
 
@@ -582,66 +634,66 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     return JSON.stringify(json)
   }
 
-  async function getServedModuleKey(identityPath: string): Promise<string> {
-    return `served-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
+  async function getEmittedModuleKey(identityPath: string): Promise<string> {
+    return `emitted-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
-  async function getAnalyzedModuleKey(identityPath: string): Promise<string> {
-    return `analyzed-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
+  async function getResolvedModuleKey(identityPath: string): Promise<string> {
+    return `resolved-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
   }
 
-  async function readServedModule(key: string): Promise<ServedModule | null> {
+  async function readEmittedModule(key: string): Promise<EmittedModule | null> {
     let file = await fileStorage.get(key)
     if (!file) return null
-    return JSON.parse(await file.text()) as ServedModule
+    return JSON.parse(await file.text()) as EmittedModule
   }
 
-  async function readAnalyzedModule(key: string): Promise<CachedAnalyzedModule | null> {
+  async function readResolvedModule(key: string): Promise<CachedResolvedModule | null> {
     let file = await fileStorage.get(key)
     if (!file) return null
-    return JSON.parse(await file.text()) as CachedAnalyzedModule
+    return JSON.parse(await file.text()) as CachedResolvedModule
   }
 
-  async function writeServedModule(key: string, servedModule: ServedModule): Promise<void> {
+  async function writeEmittedModule(key: string, emittedModule: EmittedModule): Promise<void> {
     await fileStorage.set(
       key,
-      new File([JSON.stringify(servedModule)], 'served-module.json', {
+      new File([JSON.stringify(emittedModule)], 'served-module.json', {
         type: 'application/json',
       }),
     )
   }
 
-  async function writeAnalyzedModule(analyzedModule: AnalyzedModule): Promise<void> {
-    let key = await getAnalyzedModuleKey(analyzedModule.identityPath)
-    let cachedRecord: CachedAnalyzedModule = {
-      deps: analyzedModule.deps,
-      fingerprint: analyzedModule.fingerprint,
-      imports: analyzedModule.imports,
-      rawCode: analyzedModule.rawCode,
-      resolvedPath: analyzedModule.resolvedPath,
-      sourceStamp: analyzedModule.sourceStamp,
-      sourcemap: analyzedModule.sourcemap,
-      stableUrlPathname: analyzedModule.stableUrlPathname,
+  async function writeResolvedModule(resolvedModule: ResolvedModule): Promise<void> {
+    let key = await getResolvedModuleKey(resolvedModule.identityPath)
+    let cachedResolvedModule: CachedResolvedModule = {
+      deps: resolvedModule.deps,
+      fingerprint: resolvedModule.fingerprint,
+      imports: resolvedModule.imports,
+      rawCode: resolvedModule.rawCode,
+      resolvedPath: resolvedModule.resolvedPath,
+      sourceStamp: resolvedModule.sourceStamp,
+      sourcemap: resolvedModule.sourcemap,
+      stableUrlPathname: resolvedModule.stableUrlPathname,
     }
 
     await fileStorage.set(
       key,
-      new File([JSON.stringify(cachedRecord)], 'analyzed-module.json', {
+      new File([JSON.stringify(cachedResolvedModule)], 'resolved-module.json', {
         type: 'application/json',
       }),
     )
   }
 
   function toModuleCompileResult(
-    analyzedModule: AnalyzedModule,
-    servedModule: ServedModule,
+    resolvedModule: ResolvedModule,
+    emittedModule: EmittedModule,
   ): ModuleCompileResult {
     return {
-      compiledCode: servedModule.compiledCode,
-      compiledHash: servedModule.compiledHash,
-      fingerprint: analyzedModule.fingerprint,
-      sourcemap: servedModule.sourcemap,
-      sourcemapHash: servedModule.sourcemapHash,
+      compiledCode: emittedModule.compiledCode,
+      compiledHash: emittedModule.compiledHash,
+      fingerprint: resolvedModule.fingerprint,
+      sourcemap: emittedModule.sourcemap,
+      sourcemapHash: emittedModule.sourcemapHash,
     }
   }
 
@@ -689,17 +741,7 @@ function resolveActualPath(identityPath: string): string | null {
 }
 
 function isSupportedScriptPath(filePath: string): boolean {
-  switch (path.extname(filePath).toLowerCase()) {
-    case '.js':
-    case '.jsx':
-    case '.mjs':
-    case '.mts':
-    case '.ts':
-    case '.tsx':
-      return true
-    default:
-      return false
-  }
+  return supportedScriptExtensionSet.has(path.extname(filePath).toLowerCase())
 }
 
 function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
@@ -747,10 +789,6 @@ function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string)
   return JSON.stringify(generator.toJSON())
 }
 
-function sourceStampFromStat(stat: { mtimeMs: number; size: number }): string {
-  return `${stat.size}:${stat.mtimeMs}`
-}
-
 type ModuleAnalysisResult = {
   rawCode: string
   sourcemap: string | null
@@ -779,18 +817,28 @@ function createTsconfigTransformOptionsResolver() {
 
     let tsconfig = getTsconfig(directory, 'tsconfig.json', fileSystemCache)
     if (!tsconfig) {
-      let result = {}
-      transformOptionsByDirectory.set(directory, result)
-      return result
+      let transformOptions = {}
+      transformOptionsByDirectory.set(directory, transformOptions)
+      return transformOptions
     }
 
-    let result: TsconfigTransformOptions = {
+    let transformOptions: TsconfigTransformOptions = {
       tsconfigRaw: tsconfig.config,
     }
 
-    transformOptionsByDirectory.set(directory, result)
-    return result
+    transformOptionsByDirectory.set(directory, transformOptions)
+    return transformOptions
   }
+}
+
+function arraysEqual<item>(first: item[] | undefined, second: item[]): boolean {
+  if (first === undefined || first.length !== second.length) return false
+
+  for (let index = 0; index < first.length; ++index) {
+    if (first[index] !== second[index]) return false
+  }
+
+  return true
 }
 
 async function analyzeModuleSource(
@@ -799,20 +847,31 @@ async function analyzeModuleSource(
   transformOptions: TsconfigTransformOptions,
   options: { minify: boolean; sourceMaps?: 'external' | 'inline' },
 ): Promise<ModuleAnalysisResult> {
-  let transformResult = await esbuild.transform(sourceText, {
-    format: 'esm',
-    loader: getTransformLoader(resolvedPath),
-    logLevel: 'silent',
-    minify: options.minify,
-    sourcefile: resolvedPath,
-    sourcemap: options.sourceMaps ? 'external' : false,
-    tsconfigRaw: transformOptions.tsconfigRaw,
-  })
+  let transformResult: esbuild.TransformResult
+  try {
+    transformResult = await esbuild.transform(sourceText, {
+      format: 'esm',
+      loader: transformLoaderByExtension.get(path.extname(resolvedPath).toLowerCase()) ?? 'js',
+      logLevel: 'silent',
+      minify: options.minify,
+      sourcefile: resolvedPath,
+      sourcemap: options.sourceMaps ? 'external' : false,
+      tsconfigRaw: transformOptions.tsconfigRaw,
+    })
+  } catch (error) {
+    throw createScriptServerCompilationError(
+      `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'MODULE_TRANSFORM_FAILED',
+      },
+    )
+  }
 
   let rawCode = transformResult.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
   let sourcemap = transformResult.map ?? null
   await lexerReady
-  let unresolvedImports = getUnresolvedImportsFromCode(rawCode, resolvedPath)
+  let unresolvedImports = getUnresolvedImportsFromCode(rawCode)
 
   return {
     rawCode,
@@ -821,38 +880,24 @@ async function analyzeModuleSource(
   }
 }
 
-function getTransformLoader(resolvedPath: string): esbuild.Loader {
-  switch (path.extname(resolvedPath).toLowerCase()) {
-    case '.jsx':
-      return 'jsx'
-    case '.mjs':
-      return 'js'
-    case '.mts':
-      return 'ts'
-    case '.tsx':
-      return 'tsx'
-    case '.ts':
-      return 'ts'
-    default:
-      return 'js'
-  }
-}
-
 async function batchResolveSpecifiers(
   specifiers: string[],
   importerDir: string,
 ): Promise<Map<string, string>> {
-  let results = new Map<string, string>()
-  if (specifiers.length === 0) return results
+  let resolvedPathsBySpecifier = new Map<string, string>()
+  if (specifiers.length === 0) return resolvedPathsBySpecifier
 
-  let resolved = await resolveWithEsbuild(specifiers, importerDir)
-  for (let match of resolved) {
-    if (match.absolutePath) {
-      results.set(match.specifier, normalizeFilePath(match.absolutePath))
+  let resolvedSpecs = await resolveWithEsbuild(specifiers, importerDir)
+  for (let resolvedSpec of resolvedSpecs) {
+    if (resolvedSpec.absolutePath) {
+      resolvedPathsBySpecifier.set(
+        resolvedSpec.specifier,
+        normalizeFilePath(resolvedSpec.absolutePath),
+      )
     }
   }
 
-  return results
+  return resolvedPathsBySpecifier
 }
 
 type ResolvedSpec = {
@@ -878,7 +923,7 @@ function getUniqueSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
 
 type ParsedImportRecord = ReturnType<typeof parseImports>[0][number]
 
-function getUnresolvedImportsFromCode(rawCode: string, resolvedPath: string): UnresolvedImport[] {
+function getUnresolvedImportsFromCode(rawCode: string): UnresolvedImport[] {
   let [imports] = parseImports(rawCode)
   let unresolvedImports: UnresolvedImport[] = []
 
@@ -957,57 +1002,81 @@ async function resolveWithEsbuild(
   specifiers: string[],
   importerDir: string,
 ): Promise<ResolvedSpec[]> {
-  let resolved: ResolvedSpec[] = []
+  let resolvedSpecs: ResolvedSpec[] = []
 
-  await esbuild.build({
-    stdin: { contents: '', loader: 'js', resolveDir: importerDir },
-    write: false,
-    bundle: true,
-    platform: 'browser',
-    format: 'esm',
-    logLevel: 'silent',
-    plugins: [
-      {
-        name: 'batch-resolver',
-        setup(build) {
-          build.onStart(async () => {
-            let results = await Promise.all(
-              specifiers.map((specifier) =>
-                build.resolve(specifier, {
-                  kind: 'import-statement',
-                  resolveDir: importerDir,
-                }),
-              ),
-            )
+  try {
+    await esbuild.build({
+      stdin: { contents: '', loader: 'js', resolveDir: importerDir },
+      write: false,
+      bundle: true,
+      platform: 'browser',
+      format: 'esm',
+      logLevel: 'silent',
+      plugins: [
+        {
+          name: 'batch-resolver',
+          setup(build) {
+            build.onStart(async () => {
+              let resolutionResults = await Promise.all(
+                specifiers.map((specifier) =>
+                  build.resolve(specifier, {
+                    kind: 'import-statement',
+                    resolveDir: importerDir,
+                  }),
+                ),
+              )
 
-            for (let index = 0; index < specifiers.length; index++) {
-              let result = results[index]
-              if (result?.errors.length) {
-                throw new Error(
-                  `Failed to resolve import "${specifiers[index]}" in ${importerDir}.\n\n` +
-                    `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
-                )
+              for (let index = 0; index < specifiers.length; index++) {
+                let resolutionResult = resolutionResults[index]
+                if (resolutionResult?.errors.length) {
+                  throw createScriptServerCompilationError(
+                    `Failed to resolve import "${specifiers[index]}" in ${importerDir}.\n\n` +
+                      `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+                    {
+                      code: 'IMPORT_RESOLUTION_FAILED',
+                    },
+                  )
+                }
+
+                let absolutePath =
+                  resolutionResult &&
+                  !resolutionResult.external &&
+                  resolutionResult.path &&
+                  path.isAbsolute(resolutionResult.path)
+                    ? resolutionResult.path
+                    : null
+
+                resolvedSpecs.push({ absolutePath, specifier: specifiers[index] })
               }
+            })
 
-              let absolutePath =
-                result && !result.external && result.path && path.isAbsolute(result.path)
-                  ? result.path
-                  : null
-
-              resolved.push({ absolutePath, specifier: specifiers[index] })
-            }
-          })
-
-          build.onResolve({ filter: /.*/ }, (args) => {
-            if (args.importer) return { external: true }
-            return undefined
-          })
+            build.onResolve({ filter: /.*/ }, (args) => {
+              if (args.importer) return { external: true }
+              return undefined
+            })
+          },
         },
-      },
-    ],
-  })
+      ],
+    })
+  } catch (error) {
+    if (isScriptServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
+      throw error
+    }
 
-  return resolved
+    throw createScriptServerCompilationError(
+      `Failed to resolve imports in ${importerDir}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'IMPORT_RESOLUTION_FAILED',
+      },
+    )
+  }
+
+  return resolvedSpecs
+}
+
+function formatUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {

@@ -1,6 +1,6 @@
 # script-server
 
-Compile browser JavaScript and TypeScript modules on demand.
+Fetch-based server for compiling browser JavaScript and TypeScript modules on demand.
 
 ## Features
 
@@ -53,6 +53,8 @@ This example gives you a `/scripts/*` endpoint that serves compiled browser JS m
 Use `routes` to map public URLs to file-space paths.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [
@@ -70,6 +72,8 @@ Route patterns use [`route-pattern`](https://github.com/remix-run/remix/tree/mai
 You must provide an `allow` list to specify which files are allowed to be served. `deny` is optional and takes precedence over `allow`.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -93,6 +97,8 @@ The cache strategies described below depend on a `buildId`. This should be uniqu
 The presence of a `buildId` also implies that the files on disk won't change while the server is running, allowing `script-server` to avoid unnecessary file system checks.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -109,6 +115,8 @@ let scriptServer = createScriptServer({
 If you also want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -132,6 +140,8 @@ Source fingerprints are based on `sourceText + buildId`. The build ID must chang
 The `cacheStrategy` option is designed to make it easy to skip caching in development while providing full type safety for the production cache strategy, ensuring all required options are present.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -152,6 +162,7 @@ let scriptServer = createScriptServer({
 To reuse compiled artifacts on the server across server restarts or across multiple server instances, provide a `buildId` and a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend:
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let scriptServer = createScriptServer({
@@ -184,6 +195,8 @@ let urls = await scriptServer.preloads('/scripts/app/client/entries/entry.tsx')
 Minification happens during the transform step:
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -197,6 +210,8 @@ let scriptServer = createScriptServer({
 Enable sourcemaps with either `'external'` or `'inline'`:
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -208,6 +223,8 @@ let scriptServer = createScriptServer({
 By default, sourcemap `sources` use URLs so they're presented alongside the compiled output in your browser's developer tools. You can also use file system paths instead:
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -222,23 +239,28 @@ let scriptServer = createScriptServer({
 Use `onError` to report unexpected compilation failures or return a custom response.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/client/**', 'app/shared/**'],
   onError(error) {
-    console.error(error)
+    console.error('Failed to build client module', error)
+    return new Response('Client module build failed', { status: 500 })
   },
 })
 ```
 
-If `onError` returns nothing, `script-server` responds with `500 Internal Server Error`.
+Error messages include the module path and import context when available. If `onError` returns nothing, `script-server` responds with `500 Internal Server Error`.
 
 ## External Imports
 
 Use `external` to leave specific import specifiers unchanged by providing an array of specifiers.
 
 ```ts
+import { createScriptServer } from 'remix/script-server'
+
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -252,6 +274,11 @@ let scriptServer = createScriptServer({
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `script-server`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage backends for compiled asset persistence
+
+## Related Work
+
+- [esbuild](https://esbuild.github.io/) - Fast ESM transform and resolution engine used internally by `script-server`
+- [Import Maps](https://wicg.github.io/import-maps/) - A complementary browser-native way to control module specifier resolution
 
 ## License
 

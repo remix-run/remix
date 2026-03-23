@@ -1,6 +1,7 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import type { FileStorage } from '@remix-run/file-storage'
+import { isScriptServerCompilationError } from './compilation-error.ts'
 import { createModuleCompiler, createResponseForModule } from './modules.ts'
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
@@ -100,8 +101,8 @@ export interface ScriptServerOptions {
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
-   * Handles unexpected compilation errors. Return a `Response` to override the default
-   * `500 Internal Server Error` response, or return nothing to use the default.
+   * Handles unexpected request-time compilation errors. Return a `Response` to override the
+   * default `500 Internal Server Error` response, or return nothing to use the default.
    */
   onError?: (error: unknown) => void | Response | Promise<void | Response>
 }
@@ -154,12 +155,14 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     root,
     routes: options.routes,
   })
-  let entryPointMatchers = createEntryPointMatchers(
-    cacheStrategy.fingerprint === 'source' ? cacheStrategy.entryPoints : [],
-    root,
-  )
-  let allowMatchers = createFileMatchers(options.allow, root)
-  let denyMatchers = createFileMatchers(options.deny ?? [], root)
+  let entryPointMatchers =
+    cacheStrategy.fingerprint === 'source'
+      ? cacheStrategy.entryPoints.map((entryPoint) =>
+          createFileMatcher(entryPoint, root, { allowDirectories: false, allowMissing: false }),
+        )
+      : []
+  let allowMatchers = options.allow.map((pattern) => createFileMatcher(pattern, root))
+  let denyMatchers = (options.deny ?? []).map((pattern) => createFileMatcher(pattern, root))
   let moduleCompiler = createModuleCompiler({
     buildId,
     external,
@@ -193,10 +196,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     }
   }
 
-  function isNotFoundError(error: unknown): boolean {
-    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'
-  }
-
   function isEntryPoint(filePath: string): boolean {
     return entryPointMatchers.some((matcher) => matcher(filePath))
   }
@@ -220,35 +219,40 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       let resolvedPath = routes.resolveUrlPathname(normalizedPath)
       if (!resolvedPath) return null
 
-      let resolved = moduleCompiler.resolveRequestPath(resolvedPath)
-      if (!resolved || !isAllowed(resolved.identityPath)) return null
+      let resolvedModule = moduleCompiler.resolveRequestPath(resolvedPath)
+      if (!resolvedModule || !isAllowed(resolvedModule.identityPath)) return null
       let ifNoneMatch = request.headers.get('If-None-Match')
-      let isEntry = isEntryPoint(resolved.identityPath)
+      let isEntry = isEntryPoint(resolvedModule.identityPath)
 
       if (!requestedToken && !isEntry && fingerprintInternalModules) {
         return null
       }
 
       try {
-        let result = await moduleCompiler.compileModule(resolved.resolvedPath)
+        let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
 
         if (requestedToken !== null) {
-          if (isEntry) {
-            return new Response('Not found', { status: 404 })
-          }
-          if (result.fingerprint !== requestedToken) {
-            return new Response('Not found', { status: 404 })
-          }
+          if (isEntry) return null
+          if (compiledModule.fingerprint !== requestedToken) return null
         }
 
-        return createResponseForModule(result, {
+        return createResponseForModule(compiledModule, {
           cacheControl: isEntry ? 'no-cache' : internalModuleCacheControl,
           ifNoneMatch,
           isSourceMapRequest,
           method: request.method,
         })
       } catch (error) {
-        if (isNotFoundError(error)) return null
+        // A direct request can race with the filesystem or fail a deeper allow check while
+        // compiling imports. In this fetch context, both cases should fall through as "not
+        // handled here" so the outer router can continue to its own 404 behavior.
+        if (
+          isScriptServerCompilationError(error) &&
+          (error.code === 'MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_ALLOWED')
+        ) {
+          return null
+        }
+
         return responseForError(error)
       }
     },
@@ -267,48 +271,40 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
 
 type FileMatcher = (filePath: string) => boolean
 
-function createEntryPointMatchers(entryPoints: readonly string[], root: string) {
-  return entryPoints.map((entryPoint) =>
-    createFileMatcher(entryPoint, root, { allowDirectories: false }),
-  )
-}
-
-function createFileMatchers(patterns: readonly string[], root: string): FileMatcher[] {
-  return patterns.map((pattern) => createFileMatcher(pattern, root))
-}
-
 function createFileMatcher(
   pattern: string,
   root: string,
-  options: { allowDirectories?: boolean } = {},
+  options: {
+    allowDirectories?: boolean
+    allowMissing?: boolean
+  } = {},
 ): FileMatcher {
-  let resolved = resolveFilePath(root, pattern)
+  let resolvedPatternPath = resolveFilePath(root, pattern)
   let allowDirectories = options.allowDirectories ?? true
+  let allowMissing = options.allowMissing ?? true
 
   if (!containsGlobSyntax(pattern)) {
     try {
-      resolved = normalizeFilePath(fs.realpathSync(resolved))
-    } catch {
-      // Keep unresolved exact paths so matcher behavior stays deterministic.
+      resolvedPatternPath = normalizeFilePath(fs.realpathSync(resolvedPatternPath))
+    } catch (error) {
+      if (!allowMissing || !isPathNotFoundError(error)) throw error
+      // Keep unresolved exact paths when the target is not on disk yet.
     }
 
-    if (allowDirectories && isDirectoryPattern(pattern, root)) {
-      return (filePath) => isSameOrDescendantPath(filePath, resolved)
+    if (allowDirectories) {
+      try {
+        if (fs.statSync(resolveFilePath(root, pattern)).isDirectory()) {
+          return (filePath) => isSameOrDescendantPath(filePath, resolvedPatternPath)
+        }
+      } catch {
+        // Missing exact paths fall back to exact-file matching until they exist on disk.
+      }
     }
 
-    return (filePath) => filePath === resolved
+    return (filePath) => filePath === resolvedPatternPath
   }
 
-  return (filePath) => path.posix.matchesGlob(filePath, resolved)
-}
-
-function isDirectoryPattern(pattern: string, root: string): boolean {
-  let resolved = resolveFilePath(root, pattern)
-  try {
-    return fs.statSync(resolved).isDirectory()
-  } catch {
-    return false
-  }
+  return (filePath) => path.posix.matchesGlob(filePath, resolvedPatternPath)
 }
 
 function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
@@ -319,6 +315,17 @@ function isSameOrDescendantPath(filePath: string, directoryPath: string): boolea
 
 function containsGlobSyntax(pattern: string): boolean {
   return /[*?[\]{}()!+@]/.test(pattern)
+}
+
+function isPathNotFoundError(
+  error: unknown,
+): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
+  )
 }
 
 function normalizeCacheStrategyOptions(options: CacheStrategyOptions | undefined):

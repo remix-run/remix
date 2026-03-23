@@ -8,6 +8,7 @@ import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { FileStorage } from '@remix-run/file-storage'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
+import { isScriptServerCompilationError } from './compilation-error.ts'
 import type { CacheStrategyOptions } from './script-server.ts'
 
 import { createScriptServer } from './script-server.ts'
@@ -103,7 +104,7 @@ function createRecordingFileStorage() {
 
 function sourceCacheStrategy(
   buildId = 'build',
-  entryPoints: readonly string[] | undefined = ['app/entry.ts', 'app/entry.tsx'],
+  entryPoints: readonly string[] | undefined = ['app/entry.ts'],
   fileStorage?: FileStorage,
 ): CacheStrategyOptions {
   return {
@@ -238,7 +239,7 @@ describe('script-server', () => {
     assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
   })
 
-  it('fingerprints internal modules with .@fingerprint URLs and returns 404 on mismatch', async () => {
+  it('fingerprints internal modules with .@fingerprint URLs and returns null on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let scriptServer = createTestServer(dir, {
@@ -260,8 +261,7 @@ describe('script-server', () => {
     assert.equal(nonFingerprinted, null)
 
     let mismatch = await get(scriptServer, '/scripts/app/dep.ts.@wronghash')
-    assert.ok(mismatch)
-    assert.equal(mismatch.status, 404)
+    assert.equal(mismatch, null)
   })
 
   it('keeps fingerprinted module graphs stable within a build', async () => {
@@ -320,6 +320,28 @@ describe('script-server', () => {
     let secondResponse = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(secondResponse)
     assert.match(await secondResponse.text(), /value = 2/)
+  })
+
+  it('keeps live importer output stable when dependency contents change without changing resolution', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let scriptServer = createTestServer(dir)
+
+    let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(firstResponse)
+    let firstBody = await firstResponse.text()
+    let firstEtag = firstResponse.headers.get('ETag')
+    assert.ok(firstEtag)
+
+    await write(dir, 'app/dep.ts', 'export const dep = 2')
+
+    let secondResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(secondResponse)
+    let secondBody = await secondResponse.text()
+    let secondEtag = secondResponse.headers.get('ETag')
+
+    assert.equal(secondBody, firstBody)
+    assert.equal(secondEtag, firstEtag)
   })
 
   it('keeps serving cached modules within a build when source files change on disk', async () => {
@@ -668,7 +690,12 @@ describe('script-server', () => {
 
     await assert.rejects(
       () => scriptServer.preloads('/scripts/other/entry.ts'),
-      /outside all configured routes/,
+      (error: unknown) => {
+        assert.ok(isScriptServerCompilationError(error))
+        assert.equal(error.code, 'MODULE_OUTSIDE_ROUTES')
+        assert.match(error.message, /outside all configured routes/)
+        return true
+      },
     )
   })
 
@@ -692,11 +719,161 @@ describe('script-server', () => {
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
 
       let scriptServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy(),
+        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx']),
       })
 
       let urls = await scriptServer.preloads('/scripts/app/entry.tsx')
       assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.ts.@')))
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps cached tsconfig-driven transforms until the live server restarts', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-a',
+        },
+      })
+      await writeJson(caseDir, 'tsconfig.json', {
+        extends: './tsconfig.base.json',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
+      )
+      await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
+
+      let firstServer = createTestServer(caseDir)
+
+      let before = await firstServer.preloads('/scripts/app/entry.tsx')
+      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-b',
+        },
+      })
+
+      let sameServer = await firstServer.preloads('/scripts/app/entry.tsx')
+      assert.ok(sameServer.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+      assert.ok(!sameServer.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+
+      let secondServer = createTestServer(caseDir)
+      let afterRestart = await secondServer.preloads('/scripts/app/entry.tsx')
+      assert.ok(afterRestart.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+      assert.ok(!afterRestart.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps tsconfig-driven imports stable within an immutable build', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-a',
+        },
+      })
+      await writeJson(caseDir, 'tsconfig.json', {
+        extends: './tsconfig.base.json',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
+      )
+      await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
+
+      let scriptServer = createTestServer(caseDir, {
+        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx']),
+      })
+
+      let before = await scriptServer.preloads('/scripts/app/entry.tsx')
+      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
+      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
+
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-b',
+        },
+      })
+
+      let after = await scriptServer.preloads('/scripts/app/entry.tsx')
+      assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
+      assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('re-resolves extensionless imports between requests in live mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
+      await write(caseDir, 'app/dep/index.js', 'export const dep = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir)
+
+      let before = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\/index\.js/)
+
+      await fs.rm(path.join(caseDir, 'app/dep/index.js'))
+      await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
+
+      let after = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/dep\/index\.ts/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps extensionless import resolution stable within an immutable build', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
+      await write(caseDir, 'app/dep/index.js', 'export const dep = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir, {
+        cacheStrategy: sourceCacheStrategy('build', ['app/entry.ts']),
+      })
+
+      let before = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\/index\.js\.@/)
+
+      await fs.rm(path.join(caseDir, 'app/dep/index.js'))
+      await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
+
+      let after = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/dep\/index\.js\.@/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.ts\.@/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -728,26 +905,26 @@ describe('script-server', () => {
 
       let recordingStorage = createRecordingFileStorage()
       let firstServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', undefined, recordingStorage.fileStorage),
+        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx'], recordingStorage.fileStorage),
       })
       let firstUrls = await firstServer.preloads('/scripts/app/entry.tsx')
       assert.ok(firstUrls.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
       assert.ok(
-        recordingStorage.sets.some((key) => key.startsWith('analyzed-modules/')),
-        'expected persisted analyzed-module records',
+        recordingStorage.sets.some((key) => key.startsWith('resolved-modules/')),
+        'expected persisted resolved-module records',
       )
 
       let getsBeforeSecondServer = recordingStorage.gets.length
       let secondServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', undefined, recordingStorage.fileStorage),
+        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx'], recordingStorage.fileStorage),
       })
       let secondUrls = await secondServer.preloads('/scripts/app/entry.tsx')
       assert.ok(secondUrls.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
       assert.ok(
         recordingStorage.gets
           .slice(getsBeforeSecondServer)
-          .some((key) => key.startsWith('analyzed-modules/')),
-        'expected persisted analyzed-module reads on a fresh server',
+          .some((key) => key.startsWith('resolved-modules/')),
+        'expected persisted resolved-module reads on a fresh server',
       )
 
       await writeJson(caseDir, 'tsconfig.base.json', {
@@ -758,7 +935,7 @@ describe('script-server', () => {
       })
 
       let thirdServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build-2', undefined, recordingStorage.fileStorage),
+        cacheStrategy: sourceCacheStrategy('build-2', ['app/entry.tsx'], recordingStorage.fileStorage),
       })
       let thirdUrls = await thirdServer.preloads('/scripts/app/entry.tsx')
       assert.ok(thirdUrls.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
@@ -777,6 +954,28 @@ describe('script-server', () => {
     let response = await get(scriptServer, '/scripts/app/entry-abs.ts')
     assert.ok(response)
     assert.equal(response.status, 200)
+  })
+
+  it('rejects missing exact entry-point patterns', async () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          cacheStrategy: sourceCacheStrategy('build', ['app/missing-entry.ts']),
+        }),
+      { code: 'ENOENT' },
+    )
+  })
+
+  it('rethrows unexpected realpath errors for exact file matchers', async () => {
+    assert.throws(
+      () =>
+        createScriptServer({
+          allow: ['app/\0allowed-realpath.ts'],
+          root: dir,
+          routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+        }),
+      { code: 'ERR_INVALID_ARG_VALUE' },
+    )
   })
 
   it('rejects absolute file patterns', async () => {
@@ -846,6 +1045,24 @@ describe('script-server', () => {
     assert.ok(allowedResponse)
     assert.equal(allowedResponse.status, 200)
     assert.equal(blockedResponse, null)
+  })
+
+  it('does not call onError for denied direct requests', async () => {
+    await write(dir, 'app/blocked.ts', 'export const blocked = true')
+    let receivedError: unknown
+    let scriptServer = createScriptServer({
+      allow: ['app/**'],
+      deny: ['app/blocked.ts'],
+      root: dir,
+      routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(scriptServer, '/scripts/app/blocked.ts')
+    assert.equal(response, null)
+    assert.equal(receivedError, undefined)
   })
 
   it('minifies output when requested', async () => {
@@ -966,7 +1183,9 @@ describe('script-server', () => {
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
-    assert.ok(receivedError instanceof Error)
+    assert.ok(isScriptServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+    assert.match(receivedError.message, /Failed to transform module .*app\/broken\.ts/)
   })
 
   it('calls onError for unsupported imported file types', async () => {
@@ -982,8 +1201,69 @@ describe('script-server', () => {
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
-    assert.ok(receivedError instanceof Error)
+    assert.ok(isScriptServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_NOT_SUPPORTED')
     assert.match(receivedError.message, /not a supported script module/)
+    assert.match(receivedError.message, /"\.\/data\.json"/)
+    assert.match(receivedError.message, /app\/entry\.ts/)
+  })
+
+  it('calls onError for import resolution failures', async () => {
+    await write(dir, 'app/entry.ts', 'import "./missing.ts"\nexport const entry = true')
+    let receivedError: unknown
+    let scriptServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isScriptServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /Failed to resolve import/)
+    assert.match(receivedError.message, /"\.\/missing\.ts"/)
+  })
+
+  it('calls onError for CommonJS modules', async () => {
+    await write(dir, 'app/entry.ts', 'import "./legacy.js"\nexport const entry = true')
+    await write(dir, 'app/dep.js', 'export const dep = true')
+    await write(dir, 'app/legacy.js', 'let x = require("./dep.js")\nexport { x }')
+    let receivedError: unknown
+    let scriptServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isScriptServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'MODULE_COMMONJS_NOT_SUPPORTED')
+    assert.match(receivedError.message, /CommonJS module detected/)
+    assert.match(receivedError.message, /app\/legacy\.js/)
+  })
+
+  it('calls onError for disallowed imported modules', async () => {
+    await write(dir, 'app/entry.ts', 'import "../secret.ts"\nexport const entry = true')
+    await write(dir, 'secret.ts', 'export const secret = true')
+    let receivedError: unknown
+    let scriptServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isScriptServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
+    assert.match(receivedError.message, /outside the script-server routing\/allow configuration/)
+    assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
+    assert.match(receivedError.message, /app\/entry\.ts/)
   })
 
   it('uses a custom response returned from onError', async () => {
