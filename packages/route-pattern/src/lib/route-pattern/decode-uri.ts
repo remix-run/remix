@@ -1,14 +1,17 @@
 /**
- * Runs `decodeURI` on `encoded` and returns the result, or returns `encoded` unchanged when
- * `decodeURI` throws (invalid percent-escapes) so callers never get a `URIError`.
+ * Runs `decodeURI` returns the result, or returns the input unchanged when
+ * it containts invalid percent-escape sequences.
  *
- * @param encoded String to decode (for example `url.pathname.slice(1)`)
- * @returns Decoded string, or `encoded` when decoding is not possible
+ * @param source String to decode
+ * @returns Decoded string, or `source` when decoding is not possible
  */
-export function tryDecodeURI(encoded: string): string {
+export function tryDecodeURI(source: string): string {
+  // `decodeURI` is slow; skip if no possible percent-encoded sequences.
+  if (!source.includes('%')) return source
+
   try {
-    return decodeURI(encoded)
+    return decodeURI(source)
   } catch {
-    return encoded
+    return source
   }
 }
