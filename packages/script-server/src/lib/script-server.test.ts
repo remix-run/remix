@@ -7,6 +7,7 @@ import * as path from 'node:path'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isScriptServerCompilationError } from './compilation-error.ts'
+import { normalizeWindowsPath } from './paths.ts'
 import type { CacheStrategyOptions } from './script-server.ts'
 
 import { createScriptServer } from './script-server.ts'
@@ -1077,7 +1078,10 @@ describe('script-server', () => {
     await assertInternalServerError(response)
     assert.ok(isScriptServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
-    assert.match(receivedError.message, /Failed to transform module .*app\/broken\.ts/)
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Failed to transform module .*app\/broken\.ts/,
+    )
   })
 
   it('calls onError for unsupported imported file types', async () => {
@@ -1097,7 +1101,7 @@ describe('script-server', () => {
     assert.equal(receivedError.code, 'IMPORT_NOT_SUPPORTED')
     assert.match(receivedError.message, /not a supported script module/)
     assert.match(receivedError.message, /"\.\/data\.json"/)
-    assert.match(receivedError.message, /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
   })
 
   it('calls onError for import resolution failures', async () => {
@@ -1135,7 +1139,7 @@ describe('script-server', () => {
     assert.ok(isScriptServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'MODULE_COMMONJS_NOT_SUPPORTED')
     assert.match(receivedError.message, /CommonJS module detected/)
-    assert.match(receivedError.message, /app\/legacy\.js/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/legacy\.js/)
   })
 
   it('calls onError for disallowed imported modules', async () => {
@@ -1155,7 +1159,7 @@ describe('script-server', () => {
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
     assert.match(receivedError.message, /outside the script-server routing\/allow configuration/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
-    assert.match(receivedError.message, /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
   })
 
   it('uses a custom response returned from onError', async () => {
