@@ -5,6 +5,7 @@ import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse
 import { serializeSearch } from './route-pattern/serialize.ts'
 import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
+import { tryDecodeURI } from './route-pattern/decode-uri.ts'
 import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
 
@@ -245,7 +246,7 @@ export class RoutePattern<source extends string = string> {
     }
 
     // url.pathname: remove leading slash
-    let pathname = this.ast.pathname.match(url.pathname.slice(1), options)
+    let pathname = this.ast.pathname.match(tryDecodeURI(url.pathname.slice(1)), options)
     if (pathname === null) return null
 
     if (!matchSearch(url.searchParams, this.ast.search)) return null

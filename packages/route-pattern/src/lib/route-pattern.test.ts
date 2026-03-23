@@ -888,6 +888,25 @@ describe('RoutePattern', () => {
       it('excludes nameless wildcard from params', () => {
         assertMatch('/posts/*/comments', 'https://example.com/posts/123/comments', {})
       })
+
+      it('matches non-ASCII param values', () => {
+        let params = {
+          accented: 'café',
+          cjk: '北京-とうきょう-서울',
+          rtl: 'مرحبا-עולם',
+          combining: 'Hà-Nội',
+          emoji: '💿',
+          zwj: '🧑‍🚀', // 🚀 + zero-width joiner + 👨
+          nbsp: 'acme\u00A0corp',
+          fullwidth: 'ｗｉｄｅ',
+        }
+        let url = new URL(
+          `https://example.com/${params.accented}/${params.cjk}/${params.rtl}/${params.combining}/${params.emoji}/${params.zwj}/${params.nbsp}/${params.fullwidth}`,
+        )
+        assertMatch('/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth', url.href, {
+          params,
+        })
+      })
     })
 
     describe('search', () => {
