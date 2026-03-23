@@ -4,8 +4,6 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
-import type { FileStorage } from '@remix-run/file-storage'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isScriptServerCompilationError } from './compilation-error.ts'
@@ -70,58 +68,14 @@ function post(scriptServer: ReturnType<typeof createScriptServer>, pathname: str
   return scriptServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
 
-function createRecordingFileStorage() {
-  let fileStorage = createMemoryFileStorage()
-  let gets: string[] = []
-  let sets: string[] = []
-
-  let recordingFileStorage: FileStorage = {
-    async get(key) {
-      gets.push(key)
-      return fileStorage.get(key)
-    },
-    async has(key) {
-      return fileStorage.has(key)
-    },
-    async list(options) {
-      return fileStorage.list(options)
-    },
-    async put(key, value) {
-      sets.push(key)
-      return fileStorage.put(key, value)
-    },
-    async remove(key) {
-      return fileStorage.remove(key)
-    },
-    async set(key, value) {
-      sets.push(key)
-      return fileStorage.set(key, value)
-    },
-  }
-
-  return { fileStorage: recordingFileStorage, gets, sets }
-}
-
 function sourceCacheStrategy(
   buildId = 'build',
   entryPoints: readonly string[] | undefined = ['app/entry.ts'],
-  fileStorage?: FileStorage,
 ): CacheStrategyOptions {
   return {
     fingerprint: 'source',
     buildId,
     entryPoints,
-    fileStorage,
-  }
-}
-
-function stableSharedCacheStrategy(
-  buildId = 'build',
-  fileStorage = createMemoryFileStorage(),
-): CacheStrategyOptions {
-  return {
-    buildId,
-    fileStorage,
   }
 }
 
@@ -342,24 +296,6 @@ describe('script-server', () => {
 
     assert.equal(secondBody, firstBody)
     assert.equal(secondEtag, firstEtag)
-  })
-
-  it('keeps serving cached modules within a build when source files change on disk', async () => {
-    await write(dir, 'app/entry.ts', 'export const value = 1')
-    let fileStorage = createMemoryFileStorage()
-    let cacheStrategy = stableSharedCacheStrategy('build', fileStorage)
-
-    let firstServer = createTestServer(dir, { cacheStrategy })
-    let firstResponse = await get(firstServer, '/scripts/app/entry.ts')
-    assert.ok(firstResponse)
-    assert.match(await firstResponse.text(), /value = 1/)
-
-    await write(dir, 'app/entry.ts', 'export const value = 2')
-
-    let secondServer = createTestServer(dir, { cacheStrategy })
-    let secondResponse = await get(secondServer, '/scripts/app/entry.ts')
-    assert.ok(secondResponse)
-    assert.match(await secondResponse.text(), /value = 1/)
   })
 
   it('keeps entry-point imports stable even when entry points are also dependencies', async () => {
@@ -699,6 +635,26 @@ describe('script-server', () => {
     )
   })
 
+  it('preloads rejects denied modules', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry = true')
+    let scriptServer = createScriptServer({
+      allow: ['app/**'],
+      deny: ['app/entry.ts'],
+      root: dir,
+      routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+    })
+
+    await assert.rejects(
+      () => scriptServer.preloads('/scripts/app/entry.ts'),
+      (error: unknown) => {
+        assert.ok(isScriptServerCompilationError(error))
+        assert.equal(error.code, 'MODULE_NOT_ALLOWED')
+        assert.match(error.message, /Module is not allowed/)
+        return true
+      },
+    )
+  })
+
   it('preloads uses jsxImportSource inherited through tsconfig extends', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -826,7 +782,34 @@ describe('script-server', () => {
     }
   })
 
-  it('re-resolves extensionless imports between requests in live mode', async () => {
+  it('picks up extensionless import resolution changes after restart in live mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
+      await write(caseDir, 'app/dep/index.js', 'export const dep = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
+
+      let firstServer = createTestServer(caseDir)
+
+      let before = await get(firstServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\/index\.js/)
+
+      await fs.rm(path.join(caseDir, 'app/dep/index.js'))
+      await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
+
+      let secondServer = createTestServer(caseDir)
+      let afterRestart = await get(secondServer, '/scripts/app/entry.ts')
+      assert.ok(afterRestart)
+      let afterRestartBody = await afterRestart.text()
+      assert.doesNotMatch(afterRestartBody, /\/scripts\/app\/dep\/index\.js/)
+      assert.match(afterRestartBody, /\/scripts\/app\/dep\/index\.ts/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up extensionless import resolution changes after importer edits in live mode', async () => {
     let caseDir = await makeTmpDir()
     try {
       await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
@@ -841,6 +824,7 @@ describe('script-server', () => {
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = "changed"')
 
       let after = await get(scriptServer, '/scripts/app/entry.ts')
       assert.ok(after)
@@ -874,72 +858,6 @@ describe('script-server', () => {
       let afterBody = await after.text()
       assert.match(afterBody, /\/scripts\/app\/dep\/index\.js\.@/)
       assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.ts\.@/)
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('reuses persisted analyzed modules within a build and reloads them for a new build', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'tsconfig.base.json', {
-        compilerOptions: {
-          jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-a',
-        },
-      })
-      await writeJson(caseDir, 'tsconfig.json', {
-        extends: './tsconfig.base.json',
-      })
-      await write(
-        caseDir,
-        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
-        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
-      )
-      await write(
-        caseDir,
-        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
-        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
-      )
-      await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
-
-      let recordingStorage = createRecordingFileStorage()
-      let firstServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx'], recordingStorage.fileStorage),
-      })
-      let firstUrls = await firstServer.preloads('/scripts/app/entry.tsx')
-      assert.ok(firstUrls.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
-      assert.ok(
-        recordingStorage.sets.some((key) => key.startsWith('resolved-modules/')),
-        'expected persisted resolved-module records',
-      )
-
-      let getsBeforeSecondServer = recordingStorage.gets.length
-      let secondServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx'], recordingStorage.fileStorage),
-      })
-      let secondUrls = await secondServer.preloads('/scripts/app/entry.tsx')
-      assert.ok(secondUrls.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
-      assert.ok(
-        recordingStorage.gets
-          .slice(getsBeforeSecondServer)
-          .some((key) => key.startsWith('resolved-modules/')),
-        'expected persisted resolved-module reads on a fresh server',
-      )
-
-      await writeJson(caseDir, 'tsconfig.base.json', {
-        compilerOptions: {
-          jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-b',
-        },
-      })
-
-      let thirdServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build-2', ['app/entry.tsx'], recordingStorage.fileStorage),
-      })
-      let thirdUrls = await thirdServer.preloads('/scripts/app/entry.tsx')
-      assert.ok(thirdUrls.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
-      assert.ok(!thirdUrls.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1079,42 +997,16 @@ describe('script-server', () => {
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
   })
 
-  it('reuses persisted served modules through a shared fileStorage backend in stable mode', async () => {
-    await write(dir, 'app/entry.ts', 'export const cached = true')
-    let fileStorage = createMemoryFileStorage()
-    let cacheStrategy = stableSharedCacheStrategy('build', fileStorage)
-    let firstServer = createTestServer(dir, { cacheStrategy })
-    let secondServer = createTestServer(dir, { cacheStrategy })
-
-    let firstResponse = await get(firstServer, '/scripts/app/entry.ts')
-    let secondResponse = await get(secondServer, '/scripts/app/entry.ts')
-    assert.ok(firstResponse && secondResponse)
-    assert.equal(await firstResponse.text(), await secondResponse.text())
-  })
-
-  it('rejects stable shared storage without a buildId', async () => {
-    await write(dir, 'app/entry.ts', 'export const value = 1')
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          cacheStrategy: {
-            fileStorage: createMemoryFileStorage(),
-          } as CacheStrategyOptions,
-        }),
-      /cacheStrategy\.buildId is required when cacheStrategy\.fileStorage is set/,
-    )
-  })
-
-  it('rejects stable buildId without shared storage', async () => {
+  it('rejects cacheStrategy without source fingerprinting', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
         createTestServer(dir, {
           cacheStrategy: {
             buildId: 'build',
-          } as CacheStrategyOptions,
+          } as unknown as CacheStrategyOptions,
         }),
-      /cacheStrategy\.fileStorage is required when cacheStrategy\.buildId is set/,
+      /Expected "source", or omit cacheStrategy/,
     )
   })
 
@@ -1151,7 +1043,7 @@ describe('script-server', () => {
         createTestServer(dir, {
           cacheStrategy: {
             fingerprint: 'content',
-          } as CacheStrategyOptions,
+          } as unknown as CacheStrategyOptions,
         }),
       /Invalid cacheStrategy\.fingerprint/,
     )
@@ -1166,7 +1058,7 @@ describe('script-server', () => {
             entryPoints: ['app/entry.ts'],
           } as unknown as CacheStrategyOptions,
         }),
-      /cacheStrategy\.entryPoints is only supported when cacheStrategy\.fingerprint is "source"/,
+      /Expected "source", or omit cacheStrategy/,
     )
   })
 

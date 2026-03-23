@@ -32,7 +32,6 @@
     }
   },
   "dependencies": {
-    "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
     "@swc/core": "^1.15.18",

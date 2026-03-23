@@ -9,7 +9,6 @@ Fetch-based server for compiling browser JavaScript and TypeScript modules on de
 - **Preloads** - Generate modulepreload URLs for `<link>` tags or `Link` headers
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
-- **File Storage Cache** - Reuse compiled modules across server restarts in production
 - **Source Maps** - Server either inline or external sourcemaps
 
 ## Installation
@@ -88,31 +87,11 @@ Rules for `allow` and `deny` are file paths or globs. Relative values are resolv
 
 By default, modules are served at stable URLs with ETags and `Cache-Control: no-cache`. The browser revalidates instead of caching forever and receives a 304 Not Modified response if the content has not changed. To enable this, the server checks for file changes on every request.
 
-You can customize this behavior by setting the `cacheStrategy` option.
-
-### Build ID
-
-The cache strategies described below depend on a `buildId`. This should be unique per deployment, typically a commit hash or build timestamp. `createScriptServer` will throw an error if a `buildId` is not provided when using a cache strategy that requires it.
-
-The presence of a `buildId` also implies that the files on disk won't change while the server is running, allowing `script-server` to avoid unnecessary file system checks.
-
-```ts
-import { createScriptServer } from 'remix/script-server'
-
-let scriptServer = createScriptServer({
-  root,
-  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
-  cacheStrategy: {
-    buildId: process.env.GITHUB_SHA,
-    // ...other options
-  },
-})
-```
+You can customize this behavior by setting the `cacheStrategy` option when you want source fingerprinting.
 
 ### Fingerprinting
 
-If you also want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
+If you want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
 
 ```ts
 import { createScriptServer } from 'remix/script-server'
@@ -154,25 +133,6 @@ let scriptServer = createScriptServer({
           entryPoints: ['app/client/entries/*'],
           buildId: process.env.GITHUB_SHA,
         },
-})
-```
-
-### File Storage Cache
-
-To reuse compiled artifacts on the server across server restarts or across multiple server instances, provide a `buildId` and a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend:
-
-```ts
-import { createScriptServer } from 'remix/script-server'
-import { createFsFileStorage } from 'remix/file-storage/fs'
-
-let scriptServer = createScriptServer({
-  root,
-  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
-  cacheStrategy: {
-    buildId: process.env.GITHUB_SHA ?? String(Date.now()),
-    fileStorage: createFsFileStorage('.cache/script-server'),
-  },
 })
 ```
 
@@ -273,7 +233,6 @@ let scriptServer = createScriptServer({
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `script-server`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage backends for compiled asset persistence
 
 ## Related Work
 

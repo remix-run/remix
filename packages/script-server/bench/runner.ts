@@ -89,6 +89,20 @@ let benchmarks: Benchmark[] = [
     },
   },
   {
+    id: 'deep-graph-live-warm-preloads',
+    name: 'deep-graph fixture / live warm preloads',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      let scriptServer = createLiveBenchScriptServer(fixture)
+      let initialUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      assertPreloadUrls(initialUrls, fixture)
+      return async function run() {
+        let urls = await scriptServer.preloads(fixture.entryPointUrl)
+        assertPreloadUrls(urls, fixture)
+      }
+    },
+  },
+  {
     id: 'deep-graph-module-burst',
     name: 'deep-graph fixture / warm internal module burst',
     async prepare() {
@@ -98,6 +112,26 @@ let benchmarks: Benchmark[] = [
       assertPreloadUrls(preloadUrls, fixture)
       let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
       assert.ok(internalUrls.length > 0, 'expected fingerprinted internal module URLs')
+      assertContainsSubstrings(
+        internalUrls.join('\n'),
+        fixture.expectedPreloadUrlSubstrings,
+        fixture.label,
+      )
+      return async function run() {
+        await Promise.all(internalUrls.map((url) => readHandledResponse(scriptServer, url)))
+      }
+    },
+  },
+  {
+    id: 'deep-graph-live-module-burst',
+    name: 'deep-graph fixture / live warm module burst',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      let scriptServer = createLiveBenchScriptServer(fixture)
+      let preloadUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      assertPreloadUrls(preloadUrls, fixture)
+      let internalUrls = preloadUrls.slice(1)
+      assert.ok(internalUrls.length > 0, 'expected internal module URLs')
       assertContainsSubstrings(
         internalUrls.join('\n'),
         fixture.expectedPreloadUrlSubstrings,
@@ -127,6 +161,16 @@ function createBenchScriptServer(
   }
 
   return createScriptServer(options)
+}
+
+function createLiveBenchScriptServer(
+  fixture: BenchFixture,
+  overrides: Partial<ScriptServerOptions> = {},
+): ScriptServer {
+  return createBenchScriptServer(fixture, {
+    cacheStrategy: undefined,
+    ...overrides,
+  })
 }
 
 function createRequest(pathname: string): Request {

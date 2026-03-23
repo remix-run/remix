@@ -4,10 +4,8 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
 import { getTsconfig } from 'get-tsconfig'
-import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import { IfNoneMatch } from '@remix-run/headers'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
-import type { FileStorage } from '@remix-run/file-storage'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import MagicString from 'magic-string'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
@@ -77,21 +75,9 @@ type EmittedModule = {
   sourcemapHash: string | null
 }
 
-type CachedResolvedModule = {
-  deps: string[]
-  fingerprint: string
-  imports: ResolvedImport[]
-  rawCode: string
-  resolvedPath: string
-  sourceStamp: string
-  sourcemap: string | null
-  stableUrlPathname: string
-}
-
 type ModuleCompilerOptions = {
   buildId?: string
   external: string[]
-  fileStorage?: FileStorage
   fingerprintInternalModules: boolean
   isAllowed(absolutePath: string): boolean
   isEntryPoint(absolutePath: string): boolean
@@ -99,6 +85,21 @@ type ModuleCompilerOptions = {
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
+}
+
+type ResolvedOptions = ModuleCompilerOptions & {
+  cacheMode: 'immutable' | 'live'
+  externalSet: Set<string>
+}
+
+type ModuleCacheEntry = {
+  compileInFlight?: Promise<ModuleCompileResult>
+  emitted?: EmittedModule
+  resolved?: ResolvedModule
+  resolvedPath?: string
+  resolveInFlight?: Promise<ResolvedModule>
+  sourceStamp?: string
+  transformed?: TransformedModule
 }
 
 type ResolveModuleResult = {
@@ -122,62 +123,40 @@ type UnresolvedImport = {
 
 export type ModuleCompiler = {
   compileModule(absolutePath: string): Promise<ModuleCompileResult>
-  getPreloadUrls(moduleUrl: string): Promise<string[]>
+  getPreloadUrls(absolutePath: string): Promise<string[]>
   resolveRequestPath(absolutePath: string): ResolveModuleResult | null
+  resolveServedPath(absolutePath: string): ResolveModuleResult
 }
 
 export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
-  let resolvedModules = new Map<string, ResolvedModule>()
-  let resolvedModulesInFlight = new Map<string, Promise<ResolvedModule>>()
-  let transformedModules = new Map<string, TransformedModule>()
-  let emittedModules = new Map<string, EmittedModule>()
-  let compileInFlight = new Map<string, Promise<ModuleCompileResult>>()
-  let resolvedPathsByIdentity = new Map<string, string>()
-  let cacheNamespace = options.buildId === undefined ? 'live' : encodeURIComponent(options.buildId)
-  let fileStorage = options.fileStorage ?? createMemoryFileStorage()
-  let buildIsImmutable = options.buildId !== undefined
+  let resolvedOptions = resolveOptions(options)
+  let moduleCache = new Map<string, ModuleCacheEntry>()
   let getTsconfigTransformOptions = createTsconfigTransformOptionsResolver()
 
   return {
+    resolveServedPath(absolutePath) {
+      return resolveServedPathOrThrow(absolutePath)
+    },
     async compileModule(absolutePath) {
-      let resolvedModule = resolveModulePath(absolutePath)
-      if (!resolvedModule) {
-        throw createScriptServerCompilationError(`Module not found: ${absolutePath}`, {
-          code: 'MODULE_NOT_FOUND',
-        })
-      }
+      let resolvedModule = resolveServedPathOrThrow(absolutePath)
+      let entry = getModuleCacheEntry(resolvedModule.identityPath)
 
-      if (!options.isAllowed(resolvedModule.identityPath)) {
-        throw createScriptServerCompilationError(
-          `Module is not allowed: ${resolvedModule.identityPath}`,
-          {
-            code: 'MODULE_NOT_ALLOWED',
-          },
-        )
-      }
-
-      let existing = compileInFlight.get(resolvedModule.identityPath)
+      let existing = entry.compileInFlight
       if (existing) return existing
 
       let compilePromise = compileResolvedModule(resolvedModule)
-      compileInFlight.set(resolvedModule.identityPath, compilePromise)
+      entry.compileInFlight = compilePromise
 
       try {
         return await compilePromise
       } finally {
-        compileInFlight.delete(resolvedModule.identityPath)
+        if (entry.compileInFlight === compilePromise) {
+          entry.compileInFlight = undefined
+        }
       }
     },
-    async getPreloadUrls(moduleUrl) {
-      let resolvedEntry = resolveEntryFromUrl(moduleUrl)
-      if (!resolvedEntry) {
-        throw createScriptServerCompilationError(
-          `Module "${moduleUrl}" is outside all configured routes.`,
-          {
-            code: 'MODULE_OUTSIDE_ROUTES',
-          },
-        )
-      }
+    async getPreloadUrls(absolutePath) {
+      let resolvedEntry = resolveServedPathOrThrow(absolutePath)
 
       let visited = new Set([resolvedEntry.identityPath])
       let queue = [resolvedEntry.identityPath]
@@ -211,6 +190,26 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     },
   }
 
+  function resolveServedPathOrThrow(absolutePath: string): ResolveModuleResult {
+    let resolvedModule = resolveModulePath(absolutePath)
+    if (!resolvedModule) {
+      throw createScriptServerCompilationError(`Module not found: ${absolutePath}`, {
+        code: 'MODULE_NOT_FOUND',
+      })
+    }
+
+    if (!resolvedOptions.isAllowed(resolvedModule.identityPath)) {
+      throw createScriptServerCompilationError(
+        `Module is not allowed: ${resolvedModule.identityPath}`,
+        {
+          code: 'MODULE_NOT_ALLOWED',
+        },
+      )
+    }
+
+    return resolvedModule
+  }
+
   async function compileResolvedModule(
     resolvedModule: ResolveModuleResult,
   ): Promise<ModuleCompileResult> {
@@ -218,42 +217,28 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       resolvedModule.identityPath,
       resolvedModule.resolvedPath,
     )
-    let existing = emittedModules.get(resolvedSourceModule.identityPath)
-    if (buildIsImmutable) {
-      let cacheKey = await getEmittedModuleKey(resolvedSourceModule.identityPath)
-      if (existing) {
-        return toModuleCompileResult(resolvedSourceModule, existing)
-      }
-
-      let stored = await readEmittedModule(cacheKey)
-      if (stored) {
-        return toModuleCompileResult(
-          resolvedSourceModule,
-          cacheEmittedModule(resolvedSourceModule.identityPath, stored),
-        )
-      }
+    let existing = getCachedEmittedModule(resolvedSourceModule.identityPath)
+    if (existing && resolvedOptions.cacheMode === 'immutable') {
+      return toModuleCompileResult(resolvedSourceModule, existing)
     }
 
     let importUrls = await Promise.all(
       resolvedSourceModule.deps.map((depPath) => getServedUrl(depPath)),
     )
-    if (
-      existing &&
-      canReuseEmittedModule(existing, resolvedSourceModule.sourceStamp, importUrls)
-    ) {
+    if (existing && canReuseEmittedModule(existing, resolvedSourceModule.sourceStamp, importUrls)) {
       return toModuleCompileResult(resolvedSourceModule, existing)
     }
 
     let rewriteResult = await rewriteImports(resolvedSourceModule)
     let finalCode = rewriteResult.code
     if (rewriteResult.sourcemap) {
-      if (options.sourceMaps === 'inline') {
+      if (resolvedOptions.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourcemap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
-      } else if (options.sourceMaps === 'external') {
-        let mapPath = options.isEntryPoint(resolvedSourceModule.identityPath)
+      } else if (resolvedOptions.sourceMaps === 'external') {
+        let mapPath = resolvedOptions.isEntryPoint(resolvedSourceModule.identityPath)
           ? `${resolvedSourceModule.stableUrlPathname}.map`
-          : options.fingerprintInternalModules
+          : resolvedOptions.fingerprintInternalModules
             ? `${resolvedSourceModule.stableUrlPathname}.@${resolvedSourceModule.fingerprint}.map`
             : `${resolvedSourceModule.stableUrlPathname}.map`
         finalCode += `\n//# sourceMappingURL=${mapPath}`
@@ -270,12 +255,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     }
 
     cacheEmittedModule(resolvedSourceModule.identityPath, emittedModule)
-    if (buildIsImmutable) {
-      await writeEmittedModule(
-        await getEmittedModuleKey(resolvedSourceModule.identityPath),
-        emittedModule,
-      )
-    }
     return toModuleCompileResult(resolvedSourceModule, emittedModule)
   }
 
@@ -311,7 +290,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   function getServedUrlForResolvedModule(resolvedModule: ResolvedModule): string {
-    if (options.isEntryPoint(resolvedModule.identityPath) || !options.fingerprintInternalModules) {
+    if (
+      resolvedOptions.isEntryPoint(resolvedModule.identityPath) ||
+      !resolvedOptions.fingerprintInternalModules
+    ) {
       return resolvedModule.stableUrlPathname
     }
     return `${resolvedModule.stableUrlPathname}.@${resolvedModule.fingerprint}`
@@ -321,19 +303,22 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     identityPath: string,
     resolvedPath?: string,
   ): Promise<ResolvedModule> {
-    let existing = resolvedModulesInFlight.get(identityPath)
+    let entry = getModuleCacheEntry(identityPath)
+    let existing = entry.resolveInFlight
     if (existing) return existing
 
     let promise = (async () => {
       let transformedModule = await getTransformedModule(identityPath, resolvedPath)
       return resolveTransformedModule(transformedModule)
     })()
-    resolvedModulesInFlight.set(identityPath, promise)
+    entry.resolveInFlight = promise
 
     try {
       return await promise
     } finally {
-      resolvedModulesInFlight.delete(identityPath)
+      if (entry.resolveInFlight === promise) {
+        entry.resolveInFlight = undefined
+      }
     }
   }
 
@@ -341,32 +326,13 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     identityPath: string,
     resolvedPath?: string,
   ): Promise<ResolvedModule | TransformedModule> {
-    let cachedModule = transformedModules.get(identityPath)
-    if (buildIsImmutable) {
-      let cached = resolvedModules.get(identityPath)
-      if (cached) {
-        return cached
-      }
-
-      let cacheKey = await getResolvedModuleKey(identityPath)
-      let stored = await readResolvedModule(cacheKey)
-      if (stored) {
-        return cacheResolvedModule({
-          deps: stored.deps,
-          fingerprint: stored.fingerprint,
-          identityPath,
-          imports: stored.imports,
-          rawCode: stored.rawCode,
-          resolvedPath: stored.resolvedPath,
-          sourceStamp: stored.sourceStamp,
-          sourcemap: stored.sourcemap,
-          stableUrlPathname: stored.stableUrlPathname,
-        })
-      }
+    let entry = getModuleCacheEntry(identityPath)
+    let cachedResolvedModule = getCachedResolvedModule(identityPath)
+    if (cachedResolvedModule) {
+      return cachedResolvedModule
     }
 
-    let nextResolvedPath =
-      resolvedPath ?? resolvedPathsByIdentity.get(identityPath) ?? resolveActualPath(identityPath)
+    let nextResolvedPath = resolvedPath ?? entry.resolvedPath ?? resolveActualPath(identityPath)
     if (!nextResolvedPath) {
       throw createScriptServerCompilationError(`Module not found: ${identityPath}`, {
         code: 'MODULE_NOT_FOUND',
@@ -387,13 +353,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     }
 
     let sourceStamp = `${stat.size}:${stat.mtimeMs}`
-    if (
-      cachedModule &&
-      cachedModule.sourceStamp === sourceStamp &&
-      cachedModule.resolvedPath === nextResolvedPath
-    ) {
-      return cachedModule
-    }
+    syncModuleCacheEntry(identityPath, nextResolvedPath, sourceStamp)
+
+    if (entry.resolved) return entry.resolved
+    if (entry.transformed) return entry.transformed
 
     let transformOptions = getTsconfigTransformOptions(nextResolvedPath)
     let sourceText: string
@@ -411,11 +374,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let mayContainCommonJS = mayContainCommonJSModuleGlobals(sourceText)
     let analysis = await analyzeModuleSource(sourceText, nextResolvedPath, transformOptions, {
-      minify: options.minify,
-      sourceMaps: options.sourceMaps,
+      minify: resolvedOptions.minify,
+      sourceMaps: resolvedOptions.sourceMaps,
     })
     analysis.unresolvedImports = analysis.unresolvedImports.filter(
-      (unresolved) => !options.external.includes(unresolved.specifier),
+      (unresolved) => !resolvedOptions.externalSet.has(unresolved.specifier),
     )
 
     if (mayContainCommonJS && isCommonJS(analysis.rawCode)) {
@@ -429,7 +392,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       )
     }
 
-    let stableUrlPathname = options.routes.toUrlPathname(identityPath)
+    let stableUrlPathname = resolvedOptions.routes.toUrlPathname(identityPath)
     if (!stableUrlPathname) {
       throw createScriptServerCompilationError(
         `Module ${identityPath} is outside all configured routes.`,
@@ -443,7 +406,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       : null
 
     return cacheTransformedModule({
-      fingerprint: await hashContent(sourceText + '\0' + (options.buildId ?? '')),
+      fingerprint: await hashContent(sourceText + '\0' + (resolvedOptions.buildId ?? '')),
       identityPath,
       importerDir: path.dirname(nextResolvedPath),
       rawCode: analysis.rawCode,
@@ -539,7 +502,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
           },
         )
       }
-      if (!options.isAllowed(resolvedImport.identityPath)) {
+      if (!resolvedOptions.isAllowed(resolvedImport.identityPath)) {
         throw createScriptServerCompilationError(
           `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
             `Add a matching route and allow rule, or mark this import as external.`,
@@ -549,7 +512,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         )
       }
 
-      let stableUrlPathname = options.routes.toUrlPathname(resolvedImport.identityPath)
+      let stableUrlPathname = resolvedOptions.routes.toUrlPathname(resolvedImport.identityPath)
       if (!stableUrlPathname) {
         throw createScriptServerCompilationError(
           `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
@@ -581,15 +544,54 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       stableUrlPathname: transformedModule.stableUrlPathname,
     }
 
-    if (buildIsImmutable) {
-      cacheResolvedModule(resolvedModule)
-      await writeResolvedModule(resolvedModule)
-    }
+    cacheResolvedModule(resolvedModule)
     return resolvedModule
   }
 
+  function getModuleCacheEntry(identityPath: string): ModuleCacheEntry {
+    let entry = moduleCache.get(identityPath)
+    if (entry) return entry
+
+    entry = {}
+    moduleCache.set(identityPath, entry)
+    return entry
+  }
+
+  function syncModuleCacheEntry(
+    identityPath: string,
+    resolvedPath: string,
+    sourceStamp: string,
+  ): ModuleCacheEntry {
+    let entry = getModuleCacheEntry(identityPath)
+    if (entry.resolvedPath === resolvedPath && entry.sourceStamp === sourceStamp) {
+      return entry
+    }
+
+    entry.emitted = undefined
+    entry.resolved = undefined
+    entry.resolvedPath = resolvedPath
+    entry.sourceStamp = sourceStamp
+    entry.transformed = undefined
+    return entry
+  }
+
+  function getCachedEmittedModule(identityPath: string): EmittedModule | null {
+    let entry = getModuleCacheEntry(identityPath)
+    if (entry.emitted) return entry.emitted
+    return null
+  }
+
+  function getCachedResolvedModule(identityPath: string): ResolvedModule | null {
+    let entry = getModuleCacheEntry(identityPath)
+    if (resolvedOptions.cacheMode === 'immutable' && entry.resolved) {
+      return entry.resolved
+    }
+    return null
+  }
+
   function cacheEmittedModule(identityPath: string, emittedModule: EmittedModule): EmittedModule {
-    emittedModules.set(identityPath, emittedModule)
+    let entry = getModuleCacheEntry(identityPath)
+    entry.emitted = emittedModule
     return emittedModule
   }
 
@@ -599,20 +601,23 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     importUrls: string[],
   ): boolean {
     return (
-      emittedModule.sourceStamp === sourceStamp &&
-      arraysEqual(emittedModule.importUrls, importUrls)
+      emittedModule.sourceStamp === sourceStamp && arraysEqual(emittedModule.importUrls, importUrls)
     )
   }
 
   function cacheTransformedModule(transformedModule: TransformedModule): TransformedModule {
-    resolvedPathsByIdentity.set(transformedModule.identityPath, transformedModule.resolvedPath)
-    transformedModules.set(transformedModule.identityPath, transformedModule)
+    let entry = getModuleCacheEntry(transformedModule.identityPath)
+    entry.resolvedPath = transformedModule.resolvedPath
+    entry.sourceStamp = transformedModule.sourceStamp
+    entry.transformed = transformedModule
     return transformedModule
   }
 
   function cacheResolvedModule(resolvedModule: ResolvedModule): ResolvedModule {
-    resolvedPathsByIdentity.set(resolvedModule.identityPath, resolvedModule.resolvedPath)
-    resolvedModules.set(resolvedModule.identityPath, resolvedModule)
+    let entry = getModuleCacheEntry(resolvedModule.identityPath)
+    entry.resolved = resolvedModule
+    entry.resolvedPath = resolvedModule.resolvedPath
+    entry.sourceStamp = resolvedModule.sourceStamp
     return resolvedModule
   }
 
@@ -627,61 +632,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   ): string {
     let json = JSON.parse(sourcemap) as { sources?: string[] }
     json.sources = [
-      options.sourceMapSourcePaths === 'absolute'
+      resolvedOptions.sourceMapSourcePaths === 'absolute'
         ? normalizeFilePath(resolvedPath)
         : stableUrlPathname,
     ]
     return JSON.stringify(json)
-  }
-
-  async function getEmittedModuleKey(identityPath: string): Promise<string> {
-    return `emitted-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
-  }
-
-  async function getResolvedModuleKey(identityPath: string): Promise<string> {
-    return `resolved-modules/${cacheNamespace}/${await hashContent(identityPath)}.json`
-  }
-
-  async function readEmittedModule(key: string): Promise<EmittedModule | null> {
-    let file = await fileStorage.get(key)
-    if (!file) return null
-    return JSON.parse(await file.text()) as EmittedModule
-  }
-
-  async function readResolvedModule(key: string): Promise<CachedResolvedModule | null> {
-    let file = await fileStorage.get(key)
-    if (!file) return null
-    return JSON.parse(await file.text()) as CachedResolvedModule
-  }
-
-  async function writeEmittedModule(key: string, emittedModule: EmittedModule): Promise<void> {
-    await fileStorage.set(
-      key,
-      new File([JSON.stringify(emittedModule)], 'served-module.json', {
-        type: 'application/json',
-      }),
-    )
-  }
-
-  async function writeResolvedModule(resolvedModule: ResolvedModule): Promise<void> {
-    let key = await getResolvedModuleKey(resolvedModule.identityPath)
-    let cachedResolvedModule: CachedResolvedModule = {
-      deps: resolvedModule.deps,
-      fingerprint: resolvedModule.fingerprint,
-      imports: resolvedModule.imports,
-      rawCode: resolvedModule.rawCode,
-      resolvedPath: resolvedModule.resolvedPath,
-      sourceStamp: resolvedModule.sourceStamp,
-      sourcemap: resolvedModule.sourcemap,
-      stableUrlPathname: resolvedModule.stableUrlPathname,
-    }
-
-    await fileStorage.set(
-      key,
-      new File([JSON.stringify(cachedResolvedModule)], 'resolved-module.json', {
-        type: 'application/json',
-      }),
-    )
   }
 
   function toModuleCompileResult(
@@ -696,18 +651,13 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       sourcemapHash: emittedModule.sourcemapHash,
     }
   }
+}
 
-  function resolveEntryFromUrl(entryUrl: string): ResolveModuleResult | null {
-    let pathname = entryUrl
-    try {
-      pathname = new URL(entryUrl).pathname
-    } catch {
-      pathname = entryUrl
-    }
-
-    let resolvedPath = options.routes.resolveUrlPathname(pathname)
-    if (!resolvedPath) return null
-    return resolveModulePath(resolvedPath)
+function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {
+  return {
+    ...options,
+    cacheMode: options.buildId === undefined ? 'live' : 'immutable',
+    externalSet: new Set(options.external),
   }
 }
 

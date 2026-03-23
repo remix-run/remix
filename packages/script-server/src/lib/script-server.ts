@@ -1,7 +1,9 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import type { FileStorage } from '@remix-run/file-storage'
-import { isScriptServerCompilationError } from './compilation-error.ts'
+import {
+  createScriptServerCompilationError,
+  isScriptServerCompilationError,
+} from './compilation-error.ts'
 import { createModuleCompiler, createResponseForModule } from './modules.ts'
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
@@ -10,55 +12,23 @@ import type { ScriptRouteDefinition } from './routes.ts'
 let fingerprintedCacheControl = 'public, max-age=31536000, immutable'
 
 export type CacheStrategyOptions =
-  | ({
-      /**
-       * Serve all modules at stable non-fingerprinted URLs with `Cache-Control: no-cache`.
-       */
-      fingerprint?: false
-      entryPoints?: never
-    } & (
-      | {
-          buildId?: never
-          fileStorage?: never
-        }
-      | {
-          /**
-           * Per-build cache namespace used for shared transform artifacts.
-           *
-           * When present, cached modules are treated as immutable for that build.
-           */
-          buildId: string
-          /**
-           * Optional shared storage backend for compiled artifact persistence.
-           *
-           * Requires `buildId` so stored artifacts are isolated per build.
-           */
-          fileStorage: FileStorage
-        }
-    ))
-  | {
-      /**
-       * Rewrite non-entry modules to `.@fingerprint` URLs based on source text and `buildId`.
-       * Modules matching `entryPoints` keep their stable non-fingerprinted URLs.
-       */
-      fingerprint: 'source'
-      /**
-       * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs.
-       * Relative values are resolved from `root`.
-       */
-      entryPoints: readonly string[]
-      /**
-       * Per-build invalidation token that must change whenever fingerprinted module URLs
-       * and cached transform artifacts should be invalidated together.
-       */
-      buildId: string
-      /**
-       * Optional shared storage backend for compiled artifact persistence.
-       *
-       * When provided, cached modules are treated as immutable for this build.
-       */
-      fileStorage?: FileStorage
-    }
+  /**
+   * Rewrite non-entry modules to `.@fingerprint` URLs based on source text and `buildId`.
+   * Modules matching `entryPoints` keep their stable non-fingerprinted URLs.
+   */
+  {
+    fingerprint: 'source'
+    /**
+     * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs.
+     * Relative values are resolved from `root`.
+     */
+    entryPoints: readonly string[]
+    /**
+     * Per-build invalidation token that must change whenever fingerprinted module URLs
+     * should be invalidated together.
+     */
+    buildId: string
+  }
 
 export interface ScriptServerOptions {
   /** Routes that map public URL patterns to file-space patterns. */
@@ -88,8 +58,7 @@ export interface ScriptServerOptions {
    */
   sourceMapSourcePaths?: 'url' | 'absolute'
   /**
-   * Controls how served modules are cached and whether compiled artifacts are reused across
-   * server restarts for a specific build.
+   * Controls optional source-based URL fingerprinting for non-entry modules.
    *
    * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
    */
@@ -116,7 +85,7 @@ export interface ScriptServer {
   /**
    * Returns preload URLs for the given module request path, ordered shallowest-first.
    */
-  preloads(moduleUrl: string): Promise<string[]>
+  preloads(modulePathname: string): Promise<string[]>
 }
 
 /**
@@ -166,7 +135,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let moduleCompiler = createModuleCompiler({
     buildId,
     external,
-    fileStorage: cacheStrategy.fileStorage,
     fingerprintInternalModules,
     isAllowed,
     isEntryPoint,
@@ -206,6 +174,15 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     return true
   }
 
+  function createOutsideRoutesError(modulePathname: string) {
+    return createScriptServerCompilationError(
+      `Module "${modulePathname}" is outside all configured routes.`,
+      {
+        code: 'MODULE_OUTSIDE_ROUTES',
+      },
+    )
+  }
+
   return {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
@@ -219,16 +196,15 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       let resolvedPath = routes.resolveUrlPathname(normalizedPath)
       if (!resolvedPath) return null
 
-      let resolvedModule = moduleCompiler.resolveRequestPath(resolvedPath)
-      if (!resolvedModule || !isAllowed(resolvedModule.identityPath)) return null
-      let ifNoneMatch = request.headers.get('If-None-Match')
-      let isEntry = isEntryPoint(resolvedModule.identityPath)
-
-      if (!requestedToken && !isEntry && fingerprintInternalModules) {
-        return null
-      }
-
       try {
+        let resolvedModule = moduleCompiler.resolveServedPath(resolvedPath)
+        let ifNoneMatch = request.headers.get('If-None-Match')
+        let isEntry = isEntryPoint(resolvedModule.identityPath)
+
+        if (!requestedToken && !isEntry && fingerprintInternalModules) {
+          return null
+        }
+
         let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
 
         if (requestedToken !== null) {
@@ -257,14 +233,17 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       }
     },
 
-    async preloads(moduleUrl) {
-      if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(moduleUrl)) {
+    async preloads(modulePathname) {
+      if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(modulePathname)) {
         throw new Error(
-          `Preload URLs must use stable non-fingerprinted module paths, received "${moduleUrl}"`,
+          `Preload URLs must use stable non-fingerprinted module paths, received "${modulePathname}"`,
         )
       }
 
-      return moduleCompiler.getPreloadUrls(moduleUrl)
+      let resolvedPath = routes.resolveUrlPathname(modulePathname)
+      if (!resolvedPath) throw createOutsideRoutesError(modulePathname)
+
+      return moduleCompiler.getPreloadUrls(resolvedPath)
     },
   }
 }
@@ -329,70 +308,33 @@ function isPathNotFoundError(
 }
 
 function normalizeCacheStrategyOptions(options: CacheStrategyOptions | undefined):
-  | { fingerprint: false; buildId?: undefined; fileStorage?: undefined }
-  | { fingerprint: false; buildId: string; fileStorage: FileStorage }
+  | { fingerprint: false; buildId?: string }
   | {
       buildId: string
       entryPoints: readonly string[]
-      fileStorage?: FileStorage
       fingerprint: 'source'
     } {
   if (!options) {
     return { fingerprint: false }
   }
 
-  if (
-    options.fingerprint !== undefined &&
-    options.fingerprint !== false &&
-    options.fingerprint !== 'source'
-  ) {
+  if (options.fingerprint !== 'source') {
     throw new TypeError(
-      `Invalid cacheStrategy.fingerprint "${String(options.fingerprint)}". Expected false or "source".`,
+      `Invalid cacheStrategy.fingerprint "${String(options.fingerprint)}". Expected "source", or omit cacheStrategy.`,
     )
-  }
-
-  if (options.fingerprint === 'source') {
-    if (typeof options.buildId !== 'string' || options.buildId.length === 0) {
-      throw new TypeError('cacheStrategy.buildId must be a non-empty string')
-    }
-
-    if (!Array.isArray(options.entryPoints) || options.entryPoints.length === 0) {
-      throw new TypeError('cacheStrategy.entryPoints must be a non-empty array')
-    }
-
-    return {
-      buildId: options.buildId,
-      entryPoints: options.entryPoints,
-      fileStorage: options.fileStorage,
-      fingerprint: 'source',
-    }
-  }
-
-  if (options.entryPoints !== undefined) {
-    throw new TypeError(
-      'cacheStrategy.entryPoints is only supported when cacheStrategy.fingerprint is "source"',
-    )
-  }
-
-  if (options.fileStorage === undefined && options.buildId === undefined) {
-    return { fingerprint: false }
-  }
-
-  if (options.fileStorage === undefined) {
-    throw new TypeError('cacheStrategy.fileStorage is required when cacheStrategy.buildId is set')
-  }
-
-  if (options.buildId === undefined) {
-    throw new TypeError('cacheStrategy.buildId is required when cacheStrategy.fileStorage is set')
   }
 
   if (typeof options.buildId !== 'string' || options.buildId.length === 0) {
     throw new TypeError('cacheStrategy.buildId must be a non-empty string')
   }
 
+  if (!Array.isArray(options.entryPoints) || options.entryPoints.length === 0) {
+    throw new TypeError('cacheStrategy.entryPoints must be a non-empty array')
+  }
+
   return {
     buildId: options.buildId,
-    fileStorage: options.fileStorage,
-    fingerprint: false,
+    entryPoints: options.entryPoints,
+    fingerprint: 'source',
   }
 }
