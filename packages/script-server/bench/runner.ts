@@ -89,11 +89,11 @@ let benchmarks: Benchmark[] = [
     },
   },
   {
-    id: 'deep-graph-live-warm-preloads',
-    name: 'deep-graph fixture / live warm preloads',
+    id: 'deep-graph-stable-warm-preloads',
+    name: 'deep-graph fixture / stable warm preloads',
     async prepare() {
       let fixture = await getDeepGraphFixture()
-      let scriptServer = createLiveBenchScriptServer(fixture)
+      let scriptServer = createStableBenchScriptServer(fixture)
       let initialUrls = await scriptServer.preloads(fixture.entryPointUrl)
       assertPreloadUrls(initialUrls, fixture)
       return async function run() {
@@ -123,11 +123,11 @@ let benchmarks: Benchmark[] = [
     },
   },
   {
-    id: 'deep-graph-live-module-burst',
-    name: 'deep-graph fixture / live warm module burst',
+    id: 'deep-graph-stable-module-burst',
+    name: 'deep-graph fixture / stable warm module burst',
     async prepare() {
       let fixture = await getDeepGraphFixture()
-      let scriptServer = createLiveBenchScriptServer(fixture)
+      let scriptServer = createStableBenchScriptServer(fixture)
       let preloadUrls = await scriptServer.preloads(fixture.entryPointUrl)
       assertPreloadUrls(preloadUrls, fixture)
       let internalUrls = preloadUrls.slice(1)
@@ -150,9 +150,8 @@ function createBenchScriptServer(
 ): ScriptServer {
   let root = path.resolve(import.meta.dirname, '../../..')
   let options: ScriptServerOptions = {
-    cacheStrategy: {
-      fingerprint: 'source',
-      entryPoints: [fixture.entryPointPattern],
+    entryPoints: [fixture.entryPointPattern],
+    fingerprintInternalModules: {
       buildId: String(Date.now()),
     },
     root,
@@ -163,12 +162,12 @@ function createBenchScriptServer(
   return createScriptServer(options)
 }
 
-function createLiveBenchScriptServer(
+function createStableBenchScriptServer(
   fixture: BenchFixture,
   overrides: Partial<ScriptServerOptions> = {},
 ): ScriptServer {
   return createBenchScriptServer(fixture, {
-    cacheStrategy: undefined,
+    fingerprintInternalModules: undefined,
     ...overrides,
   })
 }

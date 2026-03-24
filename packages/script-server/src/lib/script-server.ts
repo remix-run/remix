@@ -1,5 +1,6 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
+import chokidar from 'chokidar'
 import {
   createScriptServerCompilationError,
   isScriptServerCompilationError,
@@ -10,25 +11,36 @@ import { compileRoutes } from './routes.ts'
 import type { ScriptRouteDefinition } from './routes.ts'
 
 let fingerprintedCacheControl = 'public, max-age=31536000, immutable'
+let defaultWatchPoll = false
+let defaultWatchPollInterval = 100
 
-export type CacheStrategyOptions =
+export interface ScriptServerWatchOptions {
   /**
-   * Rewrite non-entry modules to `.@fingerprint` URLs based on source text and `buildId`.
-   * Modules matching `entryPoints` keep their stable non-fingerprinted URLs.
+   * Ignore matching file paths.
    */
-  {
-    fingerprint: 'source'
-    /**
-     * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs.
-     * Relative values are resolved from `root`.
-     */
-    entryPoints: readonly string[]
-    /**
-     * Per-build invalidation token that must change whenever fingerprinted module URLs
-     * should be invalidated together.
-     */
-    buildId: string
-  }
+  ignore?: readonly string[]
+  /**
+   * Use polling instead of native filesystem events. Defaults to `false`.
+   */
+  poll?: boolean
+  /**
+   * Polling interval in milliseconds when `poll` is enabled. Defaults to `100`.
+   */
+  pollInterval?: number
+}
+
+export interface ScriptServerFingerprintInternalModulesOptions {
+  /**
+   * Per-build invalidation token that must change whenever fingerprinted module URLs
+   * should be invalidated together.
+   */
+  buildId: string
+  /**
+   * Cache-Control header used for fingerprinted internal modules.
+   * Defaults to `public, max-age=31536000, immutable`.
+   */
+  cacheControl?: string
+}
 
 export interface ScriptServerOptions {
   /** Routes that map public URL patterns to file-space patterns. */
@@ -58,17 +70,29 @@ export interface ScriptServerOptions {
    */
   sourceMapSourcePaths?: 'url' | 'absolute'
   /**
+   * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs
+   * when internal module fingerprinting is enabled. Relative values are resolved from `root`.
+   */
+  entryPoints?: readonly string[]
+  /**
    * Controls optional source-based URL fingerprinting for non-entry modules.
    *
    * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
+   * Requires at least one `entryPoints` pattern and cannot be used together with `watch`.
    */
-  cacheStrategy?: CacheStrategyOptions
+  fingerprintInternalModules?: ScriptServerFingerprintInternalModulesOptions
   /**
    * Minify emitted modules.
    */
   minify?: boolean
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
+  /**
+   * Enable filesystem-backed cache invalidation for long-lived server instances.
+   * Pass `true` to use the default watcher options, or an options object to
+   * customize the watcher behavior.
+   */
+  watch?: boolean | ScriptServerWatchOptions
   /**
    * Handles unexpected request-time compilation errors. Return a `Response` to override the
    * default `500 Internal Server Error` response, or return nothing to use the default.
@@ -86,13 +110,17 @@ export interface ScriptServer {
    * Returns preload URLs for one or more module request paths, ordered shallowest-first.
    */
   preloads(modulePathname: string | readonly string[]): Promise<string[]>
+  /**
+   * Closes any watcher resources owned by this server instance.
+   */
+  close(): Promise<void>
 }
 
 /**
  * Create the server-side scripts server.
  *
  * Compiles TypeScript/JavaScript modules on demand with optional source-based URL
- * fingerprinting, ETag revalidation, and configurable route/file-space mapping.
+ * fingerprinting, caching, and configurable route mapping.
  *
  * @param options Server configuration
  * @returns A {@link ScriptServer} with `fetch()` and `preloads()` methods
@@ -111,12 +139,17 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let root = normalizeFilePath(fs.realpathSync(path.resolve(options.root ?? process.cwd())))
   let sourceMaps = options.sourceMaps
   let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
-  let cacheStrategy = normalizeCacheStrategyOptions(options.cacheStrategy)
+  let watchOptions = normalizeWatchOptions(options.watch)
+  let fingerprintOptions = normalizeFingerprintInternalModulesOptions({
+    entryPoints: options.entryPoints,
+    fingerprintInternalModules: options.fingerprintInternalModules,
+    watch: options.watch,
+  })
   let external = options.external ?? []
-  let fingerprintInternalModules = cacheStrategy.fingerprint === 'source'
-  let buildId = cacheStrategy.buildId
+  let fingerprintInternalModules = fingerprintOptions.enabled
+  let buildId = fingerprintOptions.buildId
   let internalModuleCacheControl = fingerprintInternalModules
-    ? fingerprintedCacheControl
+    ? fingerprintOptions.cacheControl
     : 'no-cache'
   let minify = options.minify ?? false
   let onError = options.onError ?? defaultErrorHandler
@@ -124,12 +157,9 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     root,
     routes: options.routes,
   })
-  let entryPointMatchers =
-    cacheStrategy.fingerprint === 'source'
-      ? cacheStrategy.entryPoints.map((entryPoint) =>
-          createFileMatcher(entryPoint, root, { allowDirectories: false, allowMissing: false }),
-        )
-      : []
+  let entryPointMatchers = fingerprintOptions.entryPoints.map((entryPoint) =>
+    createFileMatcher(entryPoint, root, { allowDirectories: false, allowMissing: false }),
+  )
   let allowMatchers = options.allow.map((pattern) => createFileMatcher(pattern, root))
   let denyMatchers = (options.deny ?? []).map((pattern) => createFileMatcher(pattern, root))
   let moduleCompiler = createModuleCompiler({
@@ -143,6 +173,27 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     sourceMapSourcePaths,
     sourceMaps,
   })
+  let watchTargets = watchOptions ? getWatchTargets(root, options.routes) : []
+  let watcher =
+    watchOptions !== null
+      ? chokidar.watch(watchTargets, {
+          ignoreInitial: true,
+          ignorePermissionErrors: true,
+          ...watchOptions,
+        })
+      : null
+
+  if (watcher) {
+    watcher.on('add', (filePath) => {
+      void handleWatchEvent(filePath, 'add')
+    })
+    watcher.on('change', (filePath) => {
+      void handleWatchEvent(filePath, 'change')
+    })
+    watcher.on('unlink', (filePath) => {
+      void handleWatchEvent(filePath, 'unlink')
+    })
+  }
 
   function internalServerError(): Response {
     return new Response('Internal Server Error', {
@@ -161,6 +212,14 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     } catch (error) {
       console.error(`There was an error in the script server error handler: ${error}`)
       return internalServerError()
+    }
+  }
+
+  async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
+    try {
+      await moduleCompiler.handleFileEvent(filePath, event)
+    } catch (error) {
+      console.error(`There was an error invalidating the script server cache: ${error}`)
     }
   }
 
@@ -251,6 +310,9 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
 
       return moduleCompiler.getPreloadUrls(resolvedPaths)
     },
+    async close() {
+      await watcher?.close()
+    },
   }
 }
 
@@ -313,34 +375,146 @@ function isPathNotFoundError(
   )
 }
 
-function normalizeCacheStrategyOptions(options: CacheStrategyOptions | undefined):
-  | { fingerprint: false; buildId?: string }
+function normalizeFingerprintInternalModulesOptions(options: {
+  entryPoints: ScriptServerOptions['entryPoints']
+  fingerprintInternalModules: ScriptServerOptions['fingerprintInternalModules']
+  watch: ScriptServerOptions['watch']
+}):
   | {
-      buildId: string
+      enabled: false
+      buildId?: string
+      cacheControl: string
       entryPoints: readonly string[]
-      fingerprint: 'source'
+    }
+  | {
+      enabled: true
+      buildId: string
+      cacheControl: string
+      entryPoints: readonly string[]
     } {
-  if (!options) {
-    return { fingerprint: false }
+  if (!options.fingerprintInternalModules) {
+    return {
+      enabled: false,
+      cacheControl: 'no-cache',
+      entryPoints: [],
+    }
   }
 
-  if (options.fingerprint !== 'source') {
-    throw new TypeError(
-      `Invalid cacheStrategy.fingerprint "${String(options.fingerprint)}". Expected "source", or omit cacheStrategy.`,
-    )
+  if (typeof options.fingerprintInternalModules.buildId !== 'string') {
+    throw new TypeError('fingerprintInternalModules.buildId must be a string')
   }
 
-  if (typeof options.buildId !== 'string' || options.buildId.length === 0) {
-    throw new TypeError('cacheStrategy.buildId must be a non-empty string')
+  if (options.fingerprintInternalModules.buildId.length === 0) {
+    throw new TypeError('fingerprintInternalModules.buildId must be a non-empty string')
   }
 
   if (!Array.isArray(options.entryPoints) || options.entryPoints.length === 0) {
-    throw new TypeError('cacheStrategy.entryPoints must be a non-empty array')
+    throw new TypeError(
+      'entryPoints must be a non-empty array when fingerprintInternalModules is enabled',
+    )
+  }
+
+  if (options.watch) {
+    throw new TypeError('fingerprintInternalModules cannot be used with watch mode')
   }
 
   return {
-    buildId: options.buildId,
+    enabled: true,
+    buildId: options.fingerprintInternalModules.buildId,
+    cacheControl: options.fingerprintInternalModules.cacheControl ?? fingerprintedCacheControl,
     entryPoints: options.entryPoints,
-    fingerprint: 'source',
   }
+}
+
+function normalizeWatchOptions(
+  options: boolean | ScriptServerWatchOptions | undefined,
+): Exclude<Parameters<typeof chokidar.watch>[1], undefined> | null {
+  if (!options) return null
+  if (options === true) return {}
+  return {
+    ignored: options.ignore ? [...options.ignore] : undefined,
+    interval: options.pollInterval ?? defaultWatchPollInterval,
+    usePolling: options.poll ?? defaultWatchPoll,
+  }
+}
+
+function getWatchTargets(root: string, routes: readonly ScriptRouteDefinition[]): string[] {
+  let targets = new Set<string>()
+  let configRoots = new Set<string>()
+
+  for (let route of routes) {
+    let resolvedPatternPath = resolveFilePath(root, route.filePattern)
+    let watchTarget = containsGlobSyntax(route.filePattern)
+      ? getGlobParentPath(resolvedPatternPath)
+      : resolvedPatternPath
+    targets.add(watchTarget)
+
+    let configRoot = getWatchConfigRoot(watchTarget)
+    if (configRoot) {
+      configRoots.add(configRoot)
+    }
+  }
+
+  for (let configRoot of configRoots) {
+    for (let ancestor of getAncestorPaths(configRoot, root)) {
+      for (let configPath of getExistingConfigFileTargets(ancestor)) {
+        targets.add(configPath)
+      }
+    }
+  }
+
+  return [...targets]
+}
+
+function getAncestorPaths(directoryPath: string, root: string): string[] {
+  let ancestors: string[] = []
+  let currentDirectory = directoryPath
+
+  while (isSameOrDescendantPath(currentDirectory, root)) {
+    ancestors.push(currentDirectory)
+    if (currentDirectory === root) break
+    let parentDirectory = path.posix.dirname(currentDirectory)
+    if (parentDirectory === currentDirectory) break
+    currentDirectory = parentDirectory
+  }
+
+  return ancestors
+}
+
+function getGlobParentPath(pattern: string): string {
+  let firstGlobIndex = pattern.search(/[*?[\]{}()!+@]/)
+  if (firstGlobIndex === -1) return pattern
+
+  let prefix = pattern.slice(0, firstGlobIndex)
+  return prefix.replace(/\/+$/, '') || '/'
+}
+
+function getWatchConfigRoot(filePath: string): string | null {
+  try {
+    if (fs.statSync(filePath).isDirectory()) {
+      return filePath
+    }
+  } catch {
+    // Missing exact paths fall back to parent directory watch roots.
+  }
+
+  return path.posix.dirname(filePath)
+}
+
+function getExistingConfigFileTargets(directoryPath: string): string[] {
+  let targets: string[] = []
+
+  try {
+    let entries = fs.readdirSync(directoryPath, { withFileTypes: true })
+    for (let entry of entries) {
+      if (!entry.isFile()) continue
+      if (entry.name === 'package.json' || /^tsconfig(?:\..+)?\.json$/.test(entry.name)) {
+        targets.push(`${directoryPath}/${entry.name}`)
+      }
+    }
+  } catch {
+    // Ignore missing or unreadable directories when building watch targets.
+  }
+
+  return targets
 }

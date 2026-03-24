@@ -8,7 +8,7 @@ import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isScriptServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
-import type { CacheStrategyOptions } from './script-server.ts'
+import type { ScriptServerFingerprintInternalModulesOptions } from './script-server.ts'
 
 import { createScriptServer } from './script-server.ts'
 
@@ -53,6 +53,16 @@ function createTestServer(
   })
 }
 
+function createWatchedTestServer(
+  root: string,
+  overrides: Partial<Parameters<typeof createScriptServer>[0]> = {},
+) {
+  return createTestServer(root, {
+    watch: true,
+    ...overrides,
+  })
+}
+
 function get(
   scriptServer: ReturnType<typeof createScriptServer>,
   pathname: string,
@@ -69,14 +79,38 @@ function post(scriptServer: ReturnType<typeof createScriptServer>, pathname: str
   return scriptServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
 
-function sourceCacheStrategy(
+function fingerprintingOptions(
   buildId = 'build',
-  entryPoints: readonly string[] | undefined = ['app/entry.ts'],
-): CacheStrategyOptions {
+  entryPoints: readonly string[] = ['app/entry.ts'],
+  overrides: Omit<ScriptServerFingerprintInternalModulesOptions, 'buildId'> = {},
+): Pick<Parameters<typeof createScriptServer>[0], 'entryPoints' | 'fingerprintInternalModules'> {
   return {
-    fingerprint: 'source',
-    buildId,
     entryPoints,
+    fingerprintInternalModules: {
+      buildId,
+      ...overrides,
+    },
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function waitFor<T>(
+  callback: () => Promise<T>,
+  predicate: (value: T) => boolean,
+  timeoutMs = 2000,
+): Promise<T> {
+  let start = Date.now()
+
+  while (true) {
+    let value = await callback()
+    if (predicate(value)) return value
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`)
+    }
+    await sleep(25)
   }
 }
 
@@ -158,9 +192,7 @@ describe('script-server', () => {
 
   it('supports .mts modules', async () => {
     await write(dir, 'app/entry.mts', 'export const value = 1')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', ['app/entry.mts']),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions('build', ['app/entry.mts']))
 
     let response = await get(scriptServer, '/scripts/app/entry.mts')
     assert.ok(response)
@@ -178,9 +210,7 @@ describe('script-server', () => {
   it('uses immutable caching for fingerprinted modules only', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let entryResponse = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(entryResponse)
@@ -194,12 +224,31 @@ describe('script-server', () => {
     assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
   })
 
+  it('uses a custom cache-control header for fingerprinted modules when configured', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    let scriptServer = createTestServer(
+      dir,
+      fingerprintingOptions('build', ['app/entry.ts'], {
+        cacheControl: 'public, max-age=600',
+      }),
+    )
+
+    let entryResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(entryResponse)
+    let entryBody = await entryResponse.text()
+    let depMatch = entryBody.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
+    assert.ok(depMatch)
+
+    let depResponse = await get(scriptServer, `/scripts/app/dep.ts.@${depMatch[1]}`)
+    assert.ok(depResponse)
+    assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=600')
+  })
+
   it('fingerprints internal modules with .@fingerprint URLs and returns null on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let entryResponse = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(entryResponse)
@@ -224,9 +273,7 @@ describe('script-server', () => {
     await write(dir, 'app/mid.ts', 'import "./leaf.ts"\nexport const mid = true')
     await write(dir, 'app/leaf.ts', 'export const leaf = 1')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let before = await scriptServer.preloads('/scripts/app/entry.ts')
     let beforeMid = before.find((url) => url.includes('/scripts/app/mid.ts.@'))
@@ -246,12 +293,8 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let serverA = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build-a'),
-    })
-    let serverB = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build-b'),
-    })
+    let serverA = createTestServer(dir, fingerprintingOptions('build-a'))
+    let serverB = createTestServer(dir, fingerprintingOptions('build-b'))
 
     let bodyA = await (await get(serverA, '/scripts/app/entry.ts'))!.text()
     let bodyB = await (await get(serverB, '/scripts/app/entry.ts'))!.text()
@@ -262,22 +305,27 @@ describe('script-server', () => {
     assert.notEqual(matchA[1], matchB[1])
   })
 
-  it('picks up source changes from disk when buildId is omitted', async () => {
+  it('keeps cached source output stable until the server restarts', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
-    let scriptServer = createTestServer(dir)
+    let firstServer = createTestServer(dir)
 
-    let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+    let firstResponse = await get(firstServer, '/scripts/app/entry.ts')
     assert.ok(firstResponse)
     assert.match(await firstResponse.text(), /value = 1/)
 
     await write(dir, 'app/entry.ts', 'export const value = 2')
 
-    let secondResponse = await get(scriptServer, '/scripts/app/entry.ts')
-    assert.ok(secondResponse)
-    assert.match(await secondResponse.text(), /value = 2/)
+    let sameServer = await get(firstServer, '/scripts/app/entry.ts')
+    assert.ok(sameServer)
+    assert.match(await sameServer.text(), /value = 1/)
+
+    let secondServer = createTestServer(dir)
+    let afterRestart = await get(secondServer, '/scripts/app/entry.ts')
+    assert.ok(afterRestart)
+    assert.match(await afterRestart.text(), /value = 2/)
   })
 
-  it('keeps live importer output stable when dependency contents change without changing resolution', async () => {
+  it('keeps cached importer output stable when dependency contents change', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let scriptServer = createTestServer(dir)
@@ -302,9 +350,10 @@ describe('script-server', () => {
   it('keeps entry-point imports stable even when entry points are also dependencies', async () => {
     await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
     await write(dir, 'app/b.ts', 'export const b = true')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts']),
-    })
+    let scriptServer = createTestServer(
+      dir,
+      fingerprintingOptions('build', ['app/a.ts', 'app/b.ts']),
+    )
 
     let response = await get(scriptServer, '/scripts/app/a.ts')
     assert.ok(response)
@@ -317,7 +366,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry: number = 1')
     await write(dir, 'app/dep.ts', 'export const dep: number = 2')
     let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
+      ...fingerprintingOptions(),
       sourceMaps: 'external',
     })
 
@@ -370,7 +419,7 @@ describe('script-server', () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(dir, 'app/entry.ts', 'import "./dep.ts"; console.log(1)')
     let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
+      ...fingerprintingOptions(),
       sourceMaps: 'external',
       minify: true,
     })
@@ -397,9 +446,7 @@ describe('script-server', () => {
       'app/entry.ts',
       'export let load = () => import("./dep.ts").then((mod) => mod.dep)',
     )
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -415,9 +462,7 @@ describe('script-server', () => {
       'app/entry.ts',
       'export let load = () => import(`./dep.ts`).then((mod) => mod.dep)',
     )
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -428,9 +473,7 @@ describe('script-server', () => {
 
   it('leaves variable dynamic imports unchanged', async () => {
     await write(dir, 'app/entry.ts', 'export let load = (specifier) => import(specifier)')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -445,9 +488,7 @@ describe('script-server', () => {
       'app/entry.ts',
       'export let load = (name) => import(`./${name}.ts`).then((mod) => mod.value)',
     )
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -462,9 +503,7 @@ describe('script-server', () => {
       'app/entry.ts',
       'export let load = (fileName) => import("./" + fileName).then((mod) => mod.value)',
     )
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -481,7 +520,7 @@ describe('script-server', () => {
       'export let load = () => import("./dep.ts").then((mod) => mod.dep)',
     )
     let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
+      ...fingerprintingOptions(),
       sourceMaps: 'external',
     })
 
@@ -545,9 +584,7 @@ describe('script-server', () => {
         'export const entry = true',
       ].join('\n'),
     )
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -565,9 +602,7 @@ describe('script-server', () => {
     await fs.symlink(path.join(dir, 'app/shared/value.ts'), path.join(dir, 'app/alias/value.ts'))
     await write(dir, 'app/entry.ts', 'import { value } from "./alias/value.ts"\nexport { value }')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
     assert.ok(response)
@@ -582,9 +617,7 @@ describe('script-server', () => {
     await write(dir, 'app/b.ts', 'export const b = true')
     await write(dir, 'app/c.ts', 'export const c = true')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let urls = await scriptServer.preloads('/scripts/app/entry.ts')
     assert.equal(urls[0], '/scripts/app/entry.ts')
@@ -598,9 +631,7 @@ describe('script-server', () => {
     await write(dir, 'app/a.ts', 'import "./b.ts"\nexport const a = true')
     await write(dir, 'app/b.ts', 'export const b = true')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', ['app/entry.ts']),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions('build', ['app/entry.ts']))
 
     let urls = await scriptServer.preloads('/scripts/app/a.ts')
     assert.match(urls[0], /\/scripts\/app\/a\.ts\.@/)
@@ -612,9 +643,10 @@ describe('script-server', () => {
     await write(dir, 'app/b.ts', 'import "./shared.ts"\nexport const b = true')
     await write(dir, 'app/shared.ts', 'export const shared = true')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts']),
-    })
+    let scriptServer = createTestServer(
+      dir,
+      fingerprintingOptions('build', ['app/a.ts', 'app/b.ts']),
+    )
 
     let urls = await scriptServer.preloads(['/scripts/app/a.ts', '/scripts/app/b.ts'])
     assert.equal(urls[0], '/scripts/app/a.ts')
@@ -634,9 +666,10 @@ describe('script-server', () => {
     await write(dir, 'app/b-2.ts', 'export const b2 = true')
     await write(dir, 'app/c-2.ts', 'export const c2 = true')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts', 'app/c.ts']),
-    })
+    let scriptServer = createTestServer(
+      dir,
+      fingerprintingOptions('build', ['app/a.ts', 'app/b.ts', 'app/c.ts']),
+    )
 
     let urls = await scriptServer.preloads([
       '/scripts/app/a.ts',
@@ -664,9 +697,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     await assert.rejects(
       () => scriptServer.preloads('/scripts/app/dep.ts.@abc123'),
@@ -678,9 +709,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy(),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     await assert.rejects(
       () => scriptServer.preloads(['/scripts/app/entry.ts', '/scripts/app/dep.ts.@abc123']),
@@ -742,9 +771,10 @@ describe('script-server', () => {
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
 
-      let scriptServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx']),
-      })
+      let scriptServer = createTestServer(
+        caseDir,
+        fingerprintingOptions('build', ['app/entry.tsx']),
+      )
 
       let urls = await scriptServer.preloads('/scripts/app/entry.tsx')
       assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.ts.@')))
@@ -753,7 +783,7 @@ describe('script-server', () => {
     }
   })
 
-  it('keeps cached tsconfig-driven transforms until the live server restarts', async () => {
+  it('keeps cached tsconfig-driven transforms until the server restarts', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writeJson(caseDir, 'tsconfig.base.json', {
@@ -803,7 +833,7 @@ describe('script-server', () => {
     }
   })
 
-  it('keeps tsconfig-driven imports stable within an immutable build', async () => {
+  it('keeps tsconfig-driven imports stable within a fingerprinted build', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writeJson(caseDir, 'tsconfig.base.json', {
@@ -827,9 +857,10 @@ describe('script-server', () => {
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
 
-      let scriptServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', ['app/entry.tsx']),
-      })
+      let scriptServer = createTestServer(
+        caseDir,
+        fingerprintingOptions('build', ['app/entry.tsx']),
+      )
 
       let before = await scriptServer.preloads('/scripts/app/entry.tsx')
       assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
@@ -850,7 +881,7 @@ describe('script-server', () => {
     }
   })
 
-  it('picks up extensionless import resolution changes after restart in live mode', async () => {
+  it('picks up extensionless import resolution changes after restart', async () => {
     let caseDir = await makeTmpDir()
     try {
       await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
@@ -877,7 +908,7 @@ describe('script-server', () => {
     }
   })
 
-  it('picks up extensionless import resolution changes after importer edits in live mode', async () => {
+  it('keeps cached extensionless import resolution stable until restart', async () => {
     let caseDir = await makeTmpDir()
     try {
       await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
@@ -892,27 +923,273 @@ describe('script-server', () => {
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
-      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = "changed"')
-
       let after = await get(scriptServer, '/scripts/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/scripts\/app\/dep\/index\.ts/)
+      assert.match(afterBody, /\/scripts\/app\/dep\/index\.js/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
   })
 
-  it('keeps extensionless import resolution stable within an immutable build', async () => {
+  it('picks up source changes in watch mode without restarting', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let scriptServer = createWatchedTestServer(dir)
+
+    try {
+      let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(firstResponse)
+      assert.match(await firstResponse.text(), /value = 1/)
+
+      await write(dir, 'app/entry.ts', 'export const value = 2')
+
+      let secondBody = await waitFor(
+        async () => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          return response.text()
+        },
+        (body) => /value = 2/.test(body),
+      )
+
+      assert.match(secondBody, /value = 2/)
+    } finally {
+      await scriptServer.close()
+    }
+  })
+
+  it('recovers in watch mode when a previously missing import is created', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'import "./missing.ts"\nexport const entry = true')
+      let scriptServer = createWatchedTestServer(caseDir, {
+        onError() {
+          return
+        },
+      })
+
+      try {
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        await assertInternalServerError(before)
+
+        await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            if (response.status !== 200) return await response.text()
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/missing\.ts/.test(body),
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/missing\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up tsconfig-driven transform changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-a',
+        },
+      })
+      await writeJson(caseDir, 'tsconfig.json', {
+        extends: './tsconfig.base.json',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
+      )
+      await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        let before = await scriptServer.preloads('/scripts/app/entry.tsx')
+        assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+
+        await writeJson(caseDir, 'tsconfig.base.json', {
+          compilerOptions: {
+            jsx: 'react-jsx',
+            jsxImportSource: '@remix-run/component-b',
+          },
+        })
+
+        let after = await waitFor(
+          async () => scriptServer.preloads('/scripts/app/entry.tsx'),
+          (urls) => urls.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')),
+        )
+
+        assert.ok(after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up package resolution changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+        exports: {
+          '.': './a.ts',
+        },
+        name: 'example',
+      })
+      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /example\/a\.ts/)
+
+        await writeJson(caseDir, 'app/node_modules/example/package.json', {
+          exports: {
+            '.': './b.ts',
+          },
+          name: 'example',
+        })
+
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /example\/b\.ts/.test(body),
+        )
+
+        assert.match(secondBody, /example\/b\.ts/)
+        assert.doesNotMatch(secondBody, /example\/a\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('switches extensionless imports to a higher-priority file in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep\.js/)
+
+        await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep\.ts/.test(body),
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to the next valid extensionless candidate in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+        await fs.rm(path.join(caseDir, 'app/dep.ts'))
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep\.js/.test(body),
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep\.js/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('stops invalidating caches after close is called in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(firstResponse)
+      assert.match(await firstResponse.text(), /value = 1/)
+
+      await scriptServer.close()
+      await write(caseDir, 'app/entry.ts', 'export const value = 2')
+      await sleep(100)
+
+      let secondResponse = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(secondResponse)
+      assert.match(await secondResponse.text(), /value = 1/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps extensionless import resolution stable within a fingerprinted build', async () => {
     let caseDir = await makeTmpDir()
     try {
       await fs.mkdir(path.join(caseDir, 'app/dep'), { recursive: true })
       await write(caseDir, 'app/dep/index.js', 'export const dep = "js"')
       await write(caseDir, 'app/entry.ts', 'import "./dep"\nexport const entry = true')
 
-      let scriptServer = createTestServer(caseDir, {
-        cacheStrategy: sourceCacheStrategy('build', ['app/entry.ts']),
-      })
+      let scriptServer = createTestServer(caseDir, fingerprintingOptions('build', ['app/entry.ts']))
 
       let before = await get(scriptServer, '/scripts/app/entry.ts')
       assert.ok(before)
@@ -933,9 +1210,7 @@ describe('script-server', () => {
 
   it('supports absolute entry-point patterns', async () => {
     let entryPath = await write(dir, 'app/entry-abs.ts', 'export const abs = true')
-    let scriptServer = createTestServer(dir, {
-      cacheStrategy: sourceCacheStrategy('build', [entryPath]),
-    })
+    let scriptServer = createTestServer(dir, fingerprintingOptions('build', [entryPath]))
 
     let response = await get(scriptServer, '/scripts/app/entry-abs.ts')
     assert.ok(response)
@@ -944,10 +1219,7 @@ describe('script-server', () => {
 
   it('rejects missing exact entry-point patterns', async () => {
     assert.throws(
-      () =>
-        createTestServer(dir, {
-          cacheStrategy: sourceCacheStrategy('build', ['app/missing-entry.ts']),
-        }),
+      () => createTestServer(dir, fingerprintingOptions('build', ['app/missing-entry.ts'])),
       { code: 'ENOENT' },
     )
   })
@@ -977,7 +1249,7 @@ describe('script-server', () => {
               filePattern: `${path.join(dir, 'app')}/*path`,
             },
           ],
-          cacheStrategy: sourceCacheStrategy('build', [path.join(dir, 'app/entry.ts')]),
+          ...fingerprintingOptions('build', [path.join(dir, 'app/entry.ts')]),
         }),
       /must be relative to script-server root/,
     )
@@ -1065,68 +1337,61 @@ describe('script-server', () => {
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
   })
 
-  it('rejects cacheStrategy without source fingerprinting', async () => {
+  it('rejects fingerprinting without a buildId string', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
         createTestServer(dir, {
-          cacheStrategy: {
-            buildId: 'build',
-          } as unknown as CacheStrategyOptions,
+          entryPoints: ['app/entry.ts'],
+          fingerprintInternalModules: {
+            buildId: 123,
+          } as unknown as ScriptServerFingerprintInternalModulesOptions,
         }),
-      /Expected "source", or omit cacheStrategy/,
+      /fingerprintInternalModules\.buildId must be a string/,
     )
   })
 
-  it('rejects source fingerprinting without a non-empty buildId', async () => {
+  it('rejects fingerprinting without a non-empty buildId', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
         createTestServer(dir, {
-          cacheStrategy: {
-            fingerprint: 'source',
-            buildId: '',
-            entryPoints: ['app/entry.ts'],
-          },
+          ...fingerprintingOptions('', ['app/entry.ts']),
         }),
-      /cacheStrategy\.buildId must be a non-empty string/,
+      /fingerprintInternalModules\.buildId must be a non-empty string/,
     )
   })
 
-  it('rejects source fingerprinting without entry points', async () => {
+  it('rejects fingerprinting without entry points', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
         createTestServer(dir, {
-          cacheStrategy: { fingerprint: 'source', buildId: 'build' } as CacheStrategyOptions,
+          fingerprintInternalModules: { buildId: 'build' },
         }),
-      /cacheStrategy\.entryPoints must be a non-empty array/,
+      /entryPoints must be a non-empty array when fingerprintInternalModules is enabled/,
     )
   })
 
-  it('rejects invalid cacheStrategy fingerprint values', async () => {
+  it('accepts entryPoints without fingerprinting', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
-    assert.throws(
-      () =>
-        createTestServer(dir, {
-          cacheStrategy: {
-            fingerprint: 'content',
-          } as unknown as CacheStrategyOptions,
-        }),
-      /Invalid cacheStrategy\.fingerprint/,
-    )
+    let scriptServer = createTestServer(dir, {
+      entryPoints: ['app/entry.ts'],
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
   })
 
-  it('rejects entryPoints without source fingerprinting', async () => {
+  it('rejects fingerprinting in watch mode', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(
       () =>
-        createTestServer(dir, {
-          cacheStrategy: {
-            entryPoints: ['app/entry.ts'],
-          } as unknown as CacheStrategyOptions,
+        createWatchedTestServer(dir, {
+          ...fingerprintingOptions('build', ['app/entry.ts']),
         }),
-      /Expected "source", or omit cacheStrategy/,
+      /fingerprintInternalModules cannot be used with watch mode/,
     )
   })
 

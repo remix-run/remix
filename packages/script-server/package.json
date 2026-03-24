@@ -35,6 +35,7 @@
     "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
     "@swc/core": "^1.15.18",
+    "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.25.0",
     "get-tsconfig": "^4.13.6",

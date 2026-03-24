@@ -43,14 +43,16 @@ export type ModuleCompileResult = {
 }
 
 type TransformedModule = {
+  extensionlessImports: ExtensionlessImport[]
   fingerprint: string
   identityPath: string
   importerDir: string
+  packageSpecifiers: string[]
   rawCode: string
   resolvedPath: string
-  sourceStamp: string
   sourcemap: string | null
   stableUrlPathname: string
+  trackedFiles: string[]
   unresolvedImports: UnresolvedImport[]
 }
 
@@ -59,9 +61,10 @@ type ResolvedModule = {
   fingerprint: string
   identityPath: string
   imports: ResolvedImport[]
+  trackedFiles: string[]
+  trackedResolutions: TrackedResolution[]
   rawCode: string
   resolvedPath: string
-  sourceStamp: string
   sourcemap: string | null
   stableUrlPathname: string
 }
@@ -70,7 +73,6 @@ type EmittedModule = {
   compiledCode: string
   compiledHash: string
   importUrls: string[]
-  sourceStamp: string
   sourcemap: string | null
   sourcemapHash: string | null
 }
@@ -88,17 +90,18 @@ type ModuleCompilerOptions = {
 }
 
 type ResolvedOptions = ModuleCompilerOptions & {
-  cacheMode: 'immutable' | 'live'
   externalSet: Set<string>
 }
 
 type ModuleCacheEntry = {
   compileInFlight?: Promise<ModuleCompileResult>
   emitted?: EmittedModule
+  generation: number
   resolved?: ResolvedModule
   resolvedPath?: string
   resolveInFlight?: Promise<ResolvedModule>
-  sourceStamp?: string
+  trackedFiles?: string[]
+  trackedResolutions?: TrackedResolution[]
   transformed?: TransformedModule
 }
 
@@ -121,9 +124,21 @@ type UnresolvedImport = {
   start: number
 }
 
+type ExtensionlessImport = {
+  candidateBasePath: string
+  specifier: string
+}
+
+type TrackedResolution = ExtensionlessImport & {
+  resolvedIdentityPath: string
+}
+
+export type ModuleWatchEvent = 'add' | 'change' | 'unlink'
+
 export type ModuleCompiler = {
   compileModule(absolutePath: string): Promise<ModuleCompileResult>
   getPreloadUrls(absolutePath: string | readonly string[]): Promise<string[]>
+  handleFileEvent(filePath: string, event: ModuleWatchEvent): Promise<void>
   resolveRequestPath(absolutePath: string): ResolveModuleResult | null
   resolveServedPath(absolutePath: string): ResolveModuleResult
 }
@@ -131,7 +146,9 @@ export type ModuleCompiler = {
 export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
   let resolvedOptions = resolveOptions(options)
   let moduleCache = new Map<string, ModuleCacheEntry>()
-  let getTsconfigTransformOptions = createTsconfigTransformOptionsResolver()
+  let importersByDependency = new Map<string, Set<string>>()
+  let modulesByTrackedFile = new Map<string, Set<string>>()
+  let tsconfigTransformOptions = createTsconfigTransformOptionsResolver()
 
   return {
     resolveServedPath(absolutePath) {
@@ -140,11 +157,12 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     async compileModule(absolutePath) {
       let resolvedModule = resolveServedPathOrThrow(absolutePath)
       let entry = getModuleCacheEntry(resolvedModule.identityPath)
+      let generation = entry.generation
 
       let existing = entry.compileInFlight
       if (existing) return existing
 
-      let compilePromise = compileResolvedModule(resolvedModule)
+      let compilePromise = compileResolvedModule(resolvedModule, generation)
       entry.compileInFlight = compilePromise
 
       try {
@@ -189,6 +207,28 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       return urls
     },
+    async handleFileEvent(filePath, event) {
+      let normalizedFilePath = normalizeFilePath(filePath)
+
+      if (isTsconfigPath(normalizedFilePath)) {
+        tsconfigTransformOptions.clear()
+        invalidateAllModules()
+        return
+      }
+
+      if (isPackageJsonPath(normalizedFilePath)) {
+        invalidateAllModules()
+        return
+      }
+
+      if (event === 'add' || event === 'unlink') {
+        await invalidateModulesForResolutionChange(normalizedFilePath)
+      }
+
+      for (let identityPath of modulesByTrackedFile.get(normalizedFilePath) ?? []) {
+        invalidateModuleAndImporters(identityPath)
+      }
+    },
     resolveRequestPath(absolutePath) {
       return resolveModulePath(absolutePath)
     },
@@ -216,22 +256,19 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
   async function compileResolvedModule(
     resolvedModule: ResolveModuleResult,
+    generation: number,
   ): Promise<ModuleCompileResult> {
     let resolvedSourceModule = await getResolvedModuleByIdentity(
       resolvedModule.identityPath,
       resolvedModule.resolvedPath,
+      generation,
     )
     let existing = getCachedEmittedModule(resolvedSourceModule.identityPath)
-    if (existing && resolvedOptions.cacheMode === 'immutable') {
-      return toModuleCompileResult(resolvedSourceModule, existing)
-    }
+    if (existing) return toModuleCompileResult(resolvedSourceModule, existing)
 
     let importUrls = await Promise.all(
       resolvedSourceModule.deps.map((depPath) => getServedUrl(depPath)),
     )
-    if (existing && canReuseEmittedModule(existing, resolvedSourceModule.sourceStamp, importUrls)) {
-      return toModuleCompileResult(resolvedSourceModule, existing)
-    }
 
     let rewriteResult = await rewriteImports(resolvedSourceModule)
     let finalCode = rewriteResult.code
@@ -253,12 +290,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       compiledCode: finalCode,
       compiledHash: await hashContent(finalCode),
       importUrls,
-      sourceStamp: resolvedSourceModule.sourceStamp,
       sourcemap: rewriteResult.sourcemap,
       sourcemapHash: rewriteResult.sourcemap ? await hashContent(rewriteResult.sourcemap) : null,
     }
 
-    cacheEmittedModule(resolvedSourceModule.identityPath, emittedModule)
+    cacheEmittedModule(resolvedSourceModule.identityPath, emittedModule, generation)
     return toModuleCompileResult(resolvedSourceModule, emittedModule)
   }
 
@@ -306,14 +342,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function getResolvedModuleByIdentity(
     identityPath: string,
     resolvedPath?: string,
+    generation = getModuleCacheEntry(identityPath).generation,
   ): Promise<ResolvedModule> {
     let entry = getModuleCacheEntry(identityPath)
     let existing = entry.resolveInFlight
     if (existing) return existing
 
     let promise = (async () => {
-      let transformedModule = await getTransformedModule(identityPath, resolvedPath)
-      return resolveTransformedModule(transformedModule)
+      let transformedModule = await getTransformedModule(identityPath, resolvedPath, generation)
+      return resolveTransformedModule(transformedModule, generation)
     })()
     entry.resolveInFlight = promise
 
@@ -329,12 +366,14 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function getTransformedModule(
     identityPath: string,
     resolvedPath?: string,
+    generation = getModuleCacheEntry(identityPath).generation,
   ): Promise<ResolvedModule | TransformedModule> {
     let entry = getModuleCacheEntry(identityPath)
     let cachedResolvedModule = getCachedResolvedModule(identityPath)
     if (cachedResolvedModule) {
       return cachedResolvedModule
     }
+    if (entry.transformed) return entry.transformed
 
     let nextResolvedPath = resolvedPath ?? entry.resolvedPath ?? resolveActualPath(identityPath)
     if (!nextResolvedPath) {
@@ -343,26 +382,9 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       })
     }
 
-    let stat
-    try {
-      stat = await fsp.stat(nextResolvedPath)
-    } catch (error) {
-      if (isNoEntityError(error)) {
-        throw createScriptServerCompilationError(`Module not found: ${nextResolvedPath}`, {
-          cause: error,
-          code: 'MODULE_NOT_FOUND',
-        })
-      }
-      throw error
-    }
+    entry.resolvedPath = nextResolvedPath
 
-    let sourceStamp = `${stat.size}:${stat.mtimeMs}`
-    syncModuleCacheEntry(identityPath, nextResolvedPath, sourceStamp)
-
-    if (entry.resolved) return entry.resolved
-    if (entry.transformed) return entry.transformed
-
-    let transformOptions = getTsconfigTransformOptions(nextResolvedPath)
+    let transformOptions = tsconfigTransformOptions.getTransformOptions(nextResolvedPath)
     let sourceText: string
     try {
       sourceText = await fsp.readFile(nextResolvedPath, 'utf-8')
@@ -409,21 +431,30 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       ? rewriteSourceMap(analysis.sourcemap, nextResolvedPath, stableUrlPathname)
       : null
 
-    return cacheTransformedModule({
-      fingerprint: await hashContent(sourceText + '\0' + (resolvedOptions.buildId ?? '')),
-      identityPath,
-      importerDir: path.dirname(nextResolvedPath),
-      rawCode: analysis.rawCode,
-      resolvedPath: nextResolvedPath,
-      sourceStamp,
-      sourcemap,
-      stableUrlPathname,
-      unresolvedImports: analysis.unresolvedImports,
-    })
+    return cacheTransformedModule(
+      {
+        extensionlessImports: getExtensionlessImports(
+          analysis.unresolvedImports,
+          path.dirname(nextResolvedPath),
+        ),
+        fingerprint: await hashContent(sourceText + '\0' + (resolvedOptions.buildId ?? '')),
+        identityPath,
+        importerDir: path.dirname(nextResolvedPath),
+        packageSpecifiers: getPackageSpecifiers(analysis.unresolvedImports),
+        rawCode: analysis.rawCode,
+        resolvedPath: nextResolvedPath,
+        sourcemap,
+        stableUrlPathname,
+        trackedFiles: [nextResolvedPath, ...transformOptions.trackedFiles],
+        unresolvedImports: analysis.unresolvedImports,
+      },
+      generation,
+    )
   }
 
   async function resolveTransformedModule(
     transformedModule: ResolvedModule | TransformedModule,
+    generation: number,
   ): Promise<ResolvedModule> {
     if (isResolvedModule(transformedModule)) return transformedModule
 
@@ -434,7 +465,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
             transformedModule.importerDir,
           )
         : new Map<string, string>()
-    return buildResolvedModule(transformedModule, resolvedImports)
+    return buildResolvedModule(transformedModule, resolvedImports, generation)
   }
 
   async function resolveTransformedModules(
@@ -472,6 +503,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         return buildResolvedModule(
           transformedModule,
           resolvedByDirectory.get(transformedModule.importerDir) ?? new Map<string, string>(),
+          getModuleCacheEntry(transformedModule.identityPath).generation,
         )
       }),
     )
@@ -480,9 +512,12 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function buildResolvedModule(
     transformedModule: TransformedModule,
     resolvedImports: Map<string, string>,
+    generation: number,
   ): Promise<ResolvedModule> {
     let importsWithPaths: ResolvedImport[] = []
     let deps = new Set<string>()
+    let trackedFiles = new Set(transformedModule.trackedFiles)
+    let trackedResolutions: TrackedResolution[] = []
 
     for (let unresolved of transformedModule.unresolvedImports) {
       let resolvedImportPath = resolvedImports.get(unresolved.specifier)
@@ -528,6 +563,20 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       }
 
       deps.add(resolvedImport.identityPath)
+      if (transformedModule.packageSpecifiers.includes(unresolved.specifier)) {
+        let packageJsonPath = findNearestPackageJsonPath(resolvedImport.resolvedPath)
+        if (packageJsonPath) trackedFiles.add(packageJsonPath)
+      }
+      if (!path.extname(unresolved.specifier) && isRelativeImportSpecifier(unresolved.specifier)) {
+        trackedResolutions.push({
+          candidateBasePath: resolveCandidateBasePath(
+            transformedModule.importerDir,
+            unresolved.specifier,
+          ),
+          resolvedIdentityPath: resolvedImport.identityPath,
+          specifier: unresolved.specifier,
+        })
+      }
       importsWithPaths.push({
         depPath: resolvedImport.identityPath,
         end: unresolved.end,
@@ -541,14 +590,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       fingerprint: transformedModule.fingerprint,
       identityPath: transformedModule.identityPath,
       imports: importsWithPaths,
+      trackedFiles: [...trackedFiles],
+      trackedResolutions,
       rawCode: transformedModule.rawCode,
       resolvedPath: transformedModule.resolvedPath,
-      sourceStamp: transformedModule.sourceStamp,
       sourcemap: transformedModule.sourcemap,
       stableUrlPathname: transformedModule.stableUrlPathname,
     }
 
-    cacheResolvedModule(resolvedModule)
+    cacheResolvedModule(resolvedModule, generation)
     return resolvedModule
   }
 
@@ -556,26 +606,8 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let entry = moduleCache.get(identityPath)
     if (entry) return entry
 
-    entry = {}
+    entry = { generation: 0 }
     moduleCache.set(identityPath, entry)
-    return entry
-  }
-
-  function syncModuleCacheEntry(
-    identityPath: string,
-    resolvedPath: string,
-    sourceStamp: string,
-  ): ModuleCacheEntry {
-    let entry = getModuleCacheEntry(identityPath)
-    if (entry.resolvedPath === resolvedPath && entry.sourceStamp === sourceStamp) {
-      return entry
-    }
-
-    entry.emitted = undefined
-    entry.resolved = undefined
-    entry.resolvedPath = resolvedPath
-    entry.sourceStamp = sourceStamp
-    entry.transformed = undefined
     return entry
   }
 
@@ -587,42 +619,148 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
   function getCachedResolvedModule(identityPath: string): ResolvedModule | null {
     let entry = getModuleCacheEntry(identityPath)
-    if (resolvedOptions.cacheMode === 'immutable' && entry.resolved) {
-      return entry.resolved
-    }
+    if (entry.resolved) return entry.resolved
     return null
   }
 
-  function cacheEmittedModule(identityPath: string, emittedModule: EmittedModule): EmittedModule {
+  function cacheEmittedModule(
+    identityPath: string,
+    emittedModule: EmittedModule,
+    generation: number,
+  ): EmittedModule {
     let entry = getModuleCacheEntry(identityPath)
+    if (entry.generation !== generation) return emittedModule
     entry.emitted = emittedModule
     return emittedModule
   }
 
-  function canReuseEmittedModule(
-    emittedModule: EmittedModule,
-    sourceStamp: string,
-    importUrls: string[],
-  ): boolean {
-    return (
-      emittedModule.sourceStamp === sourceStamp && arraysEqual(emittedModule.importUrls, importUrls)
-    )
-  }
-
-  function cacheTransformedModule(transformedModule: TransformedModule): TransformedModule {
+  function cacheTransformedModule(
+    transformedModule: TransformedModule,
+    generation: number,
+  ): TransformedModule {
     let entry = getModuleCacheEntry(transformedModule.identityPath)
+    if (entry.generation !== generation) return transformedModule
     entry.resolvedPath = transformedModule.resolvedPath
-    entry.sourceStamp = transformedModule.sourceStamp
     entry.transformed = transformedModule
+    updateTrackedState(transformedModule.identityPath, {
+      depIdentityPaths: [],
+      trackedFiles: transformedModule.trackedFiles,
+      trackedResolutions: [],
+    })
     return transformedModule
   }
 
-  function cacheResolvedModule(resolvedModule: ResolvedModule): ResolvedModule {
+  function cacheResolvedModule(resolvedModule: ResolvedModule, generation: number): ResolvedModule {
     let entry = getModuleCacheEntry(resolvedModule.identityPath)
+    if (entry.generation !== generation) return resolvedModule
     entry.resolved = resolvedModule
     entry.resolvedPath = resolvedModule.resolvedPath
-    entry.sourceStamp = resolvedModule.sourceStamp
+    updateTrackedState(resolvedModule.identityPath, {
+      depIdentityPaths: resolvedModule.deps,
+      trackedFiles: resolvedModule.trackedFiles,
+      trackedResolutions: resolvedModule.trackedResolutions,
+    })
     return resolvedModule
+  }
+
+  function updateTrackedState(
+    identityPath: string,
+    nextState: {
+      depIdentityPaths: readonly string[]
+      trackedFiles: readonly string[]
+      trackedResolutions: readonly TrackedResolution[]
+    },
+  ) {
+    let entry = getModuleCacheEntry(identityPath)
+
+    for (let trackedFile of entry.trackedFiles ?? []) {
+      removeFromIndexedSet(modulesByTrackedFile, trackedFile, identityPath)
+    }
+    for (let depIdentityPath of entry.resolved?.deps ?? []) {
+      removeFromIndexedSet(importersByDependency, depIdentityPath, identityPath)
+    }
+
+    entry.trackedFiles = [...new Set(nextState.trackedFiles)]
+    entry.trackedResolutions = [...nextState.trackedResolutions]
+
+    for (let trackedFile of entry.trackedFiles) {
+      addToIndexedSet(modulesByTrackedFile, trackedFile, identityPath)
+    }
+    for (let depIdentityPath of nextState.depIdentityPaths) {
+      addToIndexedSet(importersByDependency, depIdentityPath, identityPath)
+    }
+  }
+
+  function invalidateModuleAndImporters(identityPath: string, seen = new Set<string>()) {
+    if (seen.has(identityPath)) return
+    seen.add(identityPath)
+
+    let importers = [...(importersByDependency.get(identityPath) ?? [])]
+    clearModuleEntry(identityPath)
+
+    for (let importerIdentityPath of importers) {
+      invalidateModuleAndImporters(importerIdentityPath, seen)
+    }
+  }
+
+  function clearModuleEntry(identityPath: string) {
+    let entry = getModuleCacheEntry(identityPath)
+
+    for (let trackedFile of entry.trackedFiles ?? []) {
+      removeFromIndexedSet(modulesByTrackedFile, trackedFile, identityPath)
+    }
+    for (let depIdentityPath of entry.resolved?.deps ?? []) {
+      removeFromIndexedSet(importersByDependency, depIdentityPath, identityPath)
+    }
+
+    entry.compileInFlight = undefined
+    entry.emitted = undefined
+    entry.generation += 1
+    entry.resolved = undefined
+    entry.resolveInFlight = undefined
+    entry.trackedFiles = undefined
+    entry.trackedResolutions = undefined
+    entry.transformed = undefined
+  }
+
+  function invalidateAllModules() {
+    for (let identityPath of moduleCache.keys()) {
+      clearModuleEntry(identityPath)
+    }
+  }
+
+  async function invalidateModulesForResolutionChange(filePath: string) {
+    let affectedIdentityPaths = new Set<string>()
+
+    for (let [identityPath, entry] of moduleCache) {
+      for (let trackedResolution of entry.trackedResolutions ?? []) {
+        if (!mayAffectTrackedResolution(trackedResolution, filePath)) continue
+
+        let nextResolved = await resolveTrackedResolution(trackedResolution, identityPath)
+        if (nextResolved !== trackedResolution.resolvedIdentityPath) {
+          affectedIdentityPaths.add(identityPath)
+          break
+        }
+      }
+    }
+
+    for (let identityPath of affectedIdentityPaths) {
+      invalidateModuleAndImporters(identityPath)
+    }
+  }
+
+  async function resolveTrackedResolution(
+    trackedResolution: TrackedResolution,
+    identityPath: string,
+  ): Promise<string | null> {
+    let entry = getModuleCacheEntry(identityPath)
+    let importerDir =
+      entry.transformed?.importerDir ?? path.dirname(entry.resolvedPath ?? identityPath)
+    let resolved = await batchResolveSpecifiers([trackedResolution.specifier], importerDir)
+    let resolvedPath = resolved.get(trackedResolution.specifier)
+    if (!resolvedPath) return null
+    let resolvedModule = resolveModulePath(resolvedPath)
+    return resolvedModule?.identityPath ?? null
   }
 
   function isResolvedModule(value: ResolvedModule | TransformedModule): value is ResolvedModule {
@@ -673,7 +811,6 @@ function dedupeIdentityPaths(resolvedModules: readonly ResolveModuleResult[]): s
 function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {
   return {
     ...options,
-    cacheMode: options.buildId === undefined ? 'live' : 'immutable',
     externalSet: new Set(options.external),
   }
 }
@@ -763,6 +900,7 @@ type ModuleAnalysisResult = {
 }
 
 type TsconfigTransformOptions = {
+  trackedFiles: string[]
   tsconfigRaw?: TsConfigJsonResolved
 }
 
@@ -777,35 +915,136 @@ function createTsconfigTransformOptionsResolver() {
   let fileSystemCache: Cache = new Map()
   let transformOptionsByDirectory = new Map<string, TsconfigTransformOptions>()
 
-  return function getTsconfigTransformOptions(filePath: string): TsconfigTransformOptions {
-    let directory = path.dirname(filePath)
-    let cached = transformOptionsByDirectory.get(directory)
-    if (cached) return cached
+  return {
+    clear() {
+      fileSystemCache = new Map()
+      transformOptionsByDirectory.clear()
+    },
+    getTransformOptions(filePath: string): TsconfigTransformOptions {
+      let directory = path.dirname(filePath)
+      let cached = transformOptionsByDirectory.get(directory)
+      if (cached) return cached
 
-    let tsconfig = getTsconfig(directory, 'tsconfig.json', fileSystemCache)
-    if (!tsconfig) {
-      let transformOptions = {}
+      let tsconfig = getTsconfig(directory, 'tsconfig.json', fileSystemCache)
+      if (!tsconfig) {
+        let transformOptions = { trackedFiles: [] }
+        transformOptionsByDirectory.set(directory, transformOptions)
+        return transformOptions
+      }
+
+      let transformOptions: TsconfigTransformOptions = {
+        trackedFiles: getTrackedTsconfigFiles(directory),
+        tsconfigRaw: tsconfig.config,
+      }
+
       transformOptionsByDirectory.set(directory, transformOptions)
       return transformOptions
-    }
-
-    let transformOptions: TsconfigTransformOptions = {
-      tsconfigRaw: tsconfig.config,
-    }
-
-    transformOptionsByDirectory.set(directory, transformOptions)
-    return transformOptions
+    },
   }
 }
 
-function arraysEqual<item>(first: item[] | undefined, second: item[]): boolean {
-  if (first === undefined || first.length !== second.length) return false
+function addToIndexedSet(map: Map<string, Set<string>>, key: string, value: string) {
+  let existing = map.get(key) ?? new Set<string>()
+  existing.add(value)
+  map.set(key, existing)
+}
 
-  for (let index = 0; index < first.length; ++index) {
-    if (first[index] !== second[index]) return false
+function removeFromIndexedSet(map: Map<string, Set<string>>, key: string, value: string) {
+  let existing = map.get(key)
+  if (!existing) return
+  existing.delete(value)
+  if (existing.size === 0) {
+    map.delete(key)
   }
+}
 
-  return true
+function findNearestPackageJsonPath(filePath: string): string | null {
+  let directory = path.dirname(filePath)
+
+  while (true) {
+    let packageJsonPath = path.join(directory, 'package.json')
+    if (fs.existsSync(packageJsonPath)) {
+      return normalizeFilePath(packageJsonPath)
+    }
+
+    let parentDirectory = path.dirname(directory)
+    if (parentDirectory === directory) return null
+    directory = parentDirectory
+  }
+}
+
+function findNearestTsconfigPath(directory: string): string | null {
+  let currentDirectory = directory
+
+  while (true) {
+    let tsconfigPath = path.join(currentDirectory, 'tsconfig.json')
+    if (fs.existsSync(tsconfigPath)) {
+      return normalizeFilePath(tsconfigPath)
+    }
+
+    let parentDirectory = path.dirname(currentDirectory)
+    if (parentDirectory === currentDirectory) return null
+    currentDirectory = parentDirectory
+  }
+}
+
+function getTrackedTsconfigFiles(directory: string): string[] {
+  let tsconfigPath = findNearestTsconfigPath(directory)
+  return tsconfigPath ? [tsconfigPath] : []
+}
+
+function getExtensionlessImports(
+  unresolvedImports: UnresolvedImport[],
+  importerDir: string,
+): ExtensionlessImport[] {
+  return unresolvedImports
+    .filter((unresolved) => isTrackedExtensionlessImport(unresolved.specifier))
+    .map((unresolved) => ({
+      candidateBasePath: resolveCandidateBasePath(importerDir, unresolved.specifier),
+      specifier: unresolved.specifier,
+    }))
+}
+
+function getPackageSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
+  return unresolvedImports
+    .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
+    .map((unresolved) => unresolved.specifier)
+}
+
+function isPackageImportSpecifier(specifier: string): boolean {
+  return !isRelativeImportSpecifier(specifier) && !specifier.startsWith('/')
+}
+
+function isRelativeImportSpecifier(specifier: string): boolean {
+  return specifier.startsWith('./') || specifier.startsWith('../')
+}
+
+function isTrackedExtensionlessImport(specifier: string): boolean {
+  if (!isRelativeImportSpecifier(specifier)) return false
+  return path.extname(specifier) === ''
+}
+
+function resolveCandidateBasePath(importerDir: string, specifier: string): string {
+  return normalizeFilePath(path.resolve(importerDir, specifier))
+}
+
+function mayAffectTrackedResolution(
+  trackedResolution: TrackedResolution,
+  filePath: string,
+): boolean {
+  return (
+    filePath === trackedResolution.candidateBasePath ||
+    filePath.startsWith(`${trackedResolution.candidateBasePath}/`) ||
+    filePath.startsWith(`${trackedResolution.candidateBasePath}.`)
+  )
+}
+
+function isPackageJsonPath(filePath: string): boolean {
+  return path.posix.basename(filePath) === 'package.json'
+}
+
+function isTsconfigPath(filePath: string): boolean {
+  return /^tsconfig(?:\..+)?\.json$/.test(path.posix.basename(filePath))
 }
 
 async function analyzeModuleSource(

@@ -83,15 +83,9 @@ let scriptServer = createScriptServer({
 
 Rules for `allow` and `deny` are file paths or globs. Relative values are resolved from `root`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-## Caching
+### Watch Mode
 
-By default, modules are served at stable URLs with ETags and `Cache-Control: no-cache`. The browser revalidates instead of caching forever and receives a 304 Not Modified response if the content has not changed. To enable this, the server checks for file changes on every request.
-
-You can customize this behavior by setting the `cacheStrategy` option when you want source fingerprinting.
-
-### Fingerprinting
-
-If you want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
+To pick up changes to source files without requiring a server restart, enable `watch` mode.
 
 ```ts
 import { createScriptServer } from 'remix/script-server'
@@ -99,24 +93,12 @@ import { createScriptServer } from 'remix/script-server'
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
-  cacheStrategy: {
-    fingerprint: 'source',
-    entryPoints: ['app/client/entries/*'],
-    buildId: process.env.GITHUB_SHA,
-  },
+  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
+  watch: true,
 })
 ```
 
-Modules matching `cacheStrategy.entryPoints` keep stable non-fingerprinted URLs.
-
-Any module you need to reference directly from app code (e.g. in a `<script type="module" src="...">` tag) must be included in `cacheStrategy.entryPoints`. All other served modules are rewritten to URLs suffixed with `.@<fingerprint>` and served with `Cache-Control: public, max-age=31536000, immutable` by default.
-
-Source fingerprints are based on `sourceText + buildId`. The build ID must change for each deployment so that fingerprinted modules are invalidated together.
-
-### Development Mode
-
-The `cacheStrategy` option is designed to make it easy to skip caching in development while providing full type safety for the production cache strategy, ensuring all required options are present.
+You can optionally provide an array of glob patterns to the `ignore` option:
 
 ```ts
 import { createScriptServer } from 'remix/script-server'
@@ -124,15 +106,10 @@ import { createScriptServer } from 'remix/script-server'
 let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
-  cacheStrategy:
-    process.env.NODE_ENV === 'development'
-      ? undefined
-      : {
-          fingerprint: 'source',
-          entryPoints: ['app/client/entries/*'],
-          buildId: process.env.GITHUB_SHA,
-        },
+  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
+  watch: {
+    ignore: ['**/node_modules/**'],
+  },
 })
 ```
 
@@ -154,6 +131,49 @@ let combinedUrls = await scriptServer.preloads([
   '/scripts/app/client/entries/search.tsx',
 ])
 ```
+
+## Caching and Fingerprinting
+
+By default, modules are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the `script-server` instance, so source changes are picked up when your app recreates the server (for example, after a dev-server restart).
+
+If you want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
+
+```ts
+import { createScriptServer } from 'remix/script-server'
+
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/client/**', 'app/shared/**'],
+  entryPoints: ['app/client/entries/*'],
+  fingerprintInternalModules: {
+    buildId: process.env.GITHUB_SHA,
+  },
+})
+```
+
+Modules matching `entryPoints` keep stable non-fingerprinted URLs.
+
+Any module you need to reference directly from app code (e.g. in a `<script type="module" src="...">` tag) must be included in `entryPoints`. All other served modules are rewritten to URLs suffixed with `.@<fingerprint>` and served with `Cache-Control: public, max-age=31536000, immutable` by default.
+
+Source fingerprints are based on `sourceText + buildId`. The build ID must change for each deployment so that fingerprinted modules are invalidated together.
+
+You can also override the default cache header for fingerprinted internal modules:
+
+```ts
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/client/**', 'app/shared/**'],
+  entryPoints: ['app/client/entries/*'],
+  fingerprintInternalModules: {
+    buildId: process.env.GITHUB_SHA,
+    cacheControl: 'public, max-age=600',
+  },
+})
+```
+
+The caching strategy set by `fingerprintInternalModules` assumes that files on disk won't change, so it cannot be used together with `watch`.
 
 ## Minification
 
@@ -217,7 +237,7 @@ let scriptServer = createScriptServer({
 })
 ```
 
-Error messages include the module path and import context when available. If `onError` returns nothing, `script-server` responds with `500 Internal Server Error`.
+If `onError` returns nothing, `script-server` responds with the default `500 Internal Server Error` response.
 
 ## External Imports
 
