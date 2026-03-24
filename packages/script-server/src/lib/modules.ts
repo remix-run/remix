@@ -123,7 +123,7 @@ type UnresolvedImport = {
 
 export type ModuleCompiler = {
   compileModule(absolutePath: string): Promise<ModuleCompileResult>
-  getPreloadUrls(absolutePath: string): Promise<string[]>
+  getPreloadUrls(absolutePath: string | readonly string[]): Promise<string[]>
   resolveRequestPath(absolutePath: string): ResolveModuleResult | null
   resolveServedPath(absolutePath: string): ResolveModuleResult
 }
@@ -156,10 +156,14 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       }
     },
     async getPreloadUrls(absolutePath) {
-      let resolvedEntry = resolveServedPathOrThrow(absolutePath)
+      let resolvedEntries = dedupeIdentityPaths(
+        (Array.isArray(absolutePath) ? absolutePath : [absolutePath]).map((path) =>
+          resolveServedPathOrThrow(path),
+        ),
+      )
 
-      let visited = new Set([resolvedEntry.identityPath])
-      let queue = [resolvedEntry.identityPath]
+      let visited = new Set(resolvedEntries)
+      let queue = [...resolvedEntries]
       let urls: string[] = []
 
       while (queue.length > 0) {
@@ -651,6 +655,19 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       sourcemapHash: emittedModule.sourcemapHash,
     }
   }
+}
+
+function dedupeIdentityPaths(resolvedModules: readonly ResolveModuleResult[]): string[] {
+  let deduped: string[] = []
+  let seen = new Set<string>()
+
+  for (let resolvedModule of resolvedModules) {
+    if (seen.has(resolvedModule.identityPath)) continue
+    seen.add(resolvedModule.identityPath)
+    deduped.push(resolvedModule.identityPath)
+  }
+
+  return deduped
 }
 
 function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {

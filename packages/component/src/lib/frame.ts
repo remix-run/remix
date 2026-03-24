@@ -270,6 +270,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
+    moveServerPreloadsToHead(container.doc, fragment)
     moveServerStylesToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
@@ -335,6 +336,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
+        moveServerPreloadsToHead(container.doc, early)
         moveServerStylesToHead(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
@@ -342,6 +344,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
+          moveServerPreloadsToHead(container.doc, fragment)
           moveServerStylesToHead(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
@@ -351,6 +354,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
+          moveServerPreloadsToHead(container.doc, buffered)
           moveServerStylesToHead(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
@@ -511,6 +515,31 @@ function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void
     if (!head.childNodes.length) {
       head.remove()
     }
+  }
+}
+
+function moveServerPreloadsToHead(doc: Document, fragment: DocumentFragment): void {
+  let target = doc.head
+  if (!target) return
+
+  let links = Array.from(fragment.querySelectorAll('link[rel="modulepreload"][data-rmx-preload]'))
+  for (let link of links) {
+    if (!(link instanceof HTMLLinkElement)) continue
+    let href = link.href
+    if (!href) {
+      link.remove()
+      continue
+    }
+
+    let alreadyHoisted = Array.from(target.querySelectorAll('link[rel="modulepreload"]')).some(
+      (existing) => existing instanceof HTMLLinkElement && existing.href === href,
+    )
+    if (alreadyHoisted) {
+      link.remove()
+      continue
+    }
+
+    target.appendChild(link)
   }
 }
 

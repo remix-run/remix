@@ -83,9 +83,9 @@ export interface ScriptServer {
    */
   fetch(request: Request): Promise<Response | null>
   /**
-   * Returns preload URLs for the given module request path, ordered shallowest-first.
+   * Returns preload URLs for one or more module request paths, ordered shallowest-first.
    */
-  preloads(modulePathname: string): Promise<string[]>
+  preloads(modulePathname: string | readonly string[]): Promise<string[]>
 }
 
 /**
@@ -234,16 +234,22 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     },
 
     async preloads(modulePathname) {
-      if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(modulePathname)) {
-        throw new Error(
-          `Preload URLs must use stable non-fingerprinted module paths, received "${modulePathname}"`,
-        )
-      }
+      let modulePathnames = Array.isArray(modulePathname) ? modulePathname : [modulePathname]
+      if (modulePathnames.length === 0) return []
 
-      let resolvedPath = routes.resolveUrlPathname(modulePathname)
-      if (!resolvedPath) throw createOutsideRoutesError(modulePathname)
+      let resolvedPaths = modulePathnames.map((pathname) => {
+        if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(pathname)) {
+          throw new Error(
+            `Preload URLs must use stable non-fingerprinted module paths, received "${pathname}"`,
+          )
+        }
 
-      return moduleCompiler.getPreloadUrls(resolvedPath)
+        let resolvedPath = routes.resolveUrlPathname(pathname)
+        if (!resolvedPath) throw createOutsideRoutesError(pathname)
+        return resolvedPath
+      })
+
+      return moduleCompiler.getPreloadUrls(resolvedPaths)
     },
   }
 }

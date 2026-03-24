@@ -32,6 +32,12 @@ export interface RenderToStreamOptions {
     target?: string,
     context?: ResolveFrameContext,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  /**
+   * Callback used to resolve modulepreload hrefs for client entry modules during SSR.
+   */
+  resolveClientEntryPreloads?: (
+    hrefs: string[],
+  ) => Promise<readonly string[]> | readonly string[] | Promise<string[]> | string[]
 }
 
 /**
@@ -68,6 +74,8 @@ interface RenderContext {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
+  hydratedModuleUrls: Set<string>
+  hydrationPreloadUrls: string[]
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -77,6 +85,11 @@ interface RenderContext {
 interface ResolvedFrameHtml {
   html: string
   tail?: ReadableStream<Uint8Array>
+}
+
+interface RmxDataPayload {
+  h?: Record<string, HydrationData>
+  f?: Record<string, FrameData>
 }
 
 interface SsrFrameState {
@@ -177,6 +190,8 @@ export function renderToStream(
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
+    hydratedModuleUrls: new Set(),
+    hydrationPreloadUrls: [],
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -188,6 +203,12 @@ export function renderToStream(
       try {
         let root = buildSegment(node, context, rootFrameState)
         await resolveBlocking(root)
+        if (options?.resolveClientEntryPreloads && context.hydratedModuleUrls.size > 0) {
+          let preloadUrls = await Promise.resolve(
+            options.resolveClientEntryPreloads([...context.hydratedModuleUrls]),
+          )
+          context.hydrationPreloadUrls = dedupeUrls(preloadUrls)
+        }
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
         let bytes = encoder.encode(finalHtml)
@@ -403,7 +424,7 @@ function buildFrameSegment(props: any, context: RenderContext, frameState: SsrFr
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
-      seg.content = staticSeg(html)
+      seg.content = staticSeg(mergeResolvedFrameRmxData(html, context))
       if (tail) {
         context.blockingFrameTails.push(tail)
       }
@@ -788,6 +809,7 @@ function buildEntrySegment(
     exportName: type.$exportName,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
+  context.hydratedModuleUrls.add(type.$moduleUrl)
 
   let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
   let end = staticSeg('<!-- /rmx:h -->')
@@ -859,9 +881,17 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
 
+  let headContent = ''
+  if (context.hydrationPreloadUrls.length > 0) {
+    headContent += renderHydrationPreloadLinks(context.hydrationPreloadUrls)
+  }
+
   let css = collectAllStyles(context)
   if (css) {
-    let headContent = `<style data-rmx-styles>${css}</style>`
+    headContent += `<style data-rmx-styles>${css}</style>`
+  }
+
+  if (headContent.length > 0) {
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -957,9 +987,69 @@ function buildRmxDataScript(context: RenderContext): string {
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
+function mergeResolvedFrameRmxData(html: string, context: RenderContext): string {
+  return stripBlockingFramePreloadLinks(
+    html.replace(
+      /<script(?=[^>]*\bid=(["'])rmx-data\1)(?=[^>]*\btype=(["'])application\/json\2)[^>]*>([\s\S]*?)<\/script>/gi,
+      (_match, _idQuote, _typeQuote, jsonText: string) => {
+        mergeRmxDataPayload(context, parseRmxDataPayload(jsonText))
+        return ''
+      },
+    ),
+  )
+}
+
 function escapeScriptJson(json: string): string {
   // Avoid prematurely closing the script tag when serialized data contains "</script>".
   return json.replace(/</g, '\\u003c')
+}
+
+function parseRmxDataPayload(jsonText: string): RmxDataPayload {
+  try {
+    return JSON.parse(jsonText || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function mergeRmxDataPayload(context: RenderContext, payload: RmxDataPayload): void {
+  if (payload.h) {
+    for (let [id, hydrationData] of Object.entries(payload.h)) {
+      context.hydrationData.set(id, hydrationData)
+      context.hydratedModuleUrls.add(hydrationData.moduleUrl)
+    }
+  }
+
+  if (payload.f) {
+    for (let [id, frameData] of Object.entries(payload.f)) {
+      context.frameData.set(id, frameData)
+    }
+  }
+}
+
+function dedupeUrls(urls: readonly string[]): string[] {
+  let deduped: string[] = []
+  let seen = new Set<string>()
+
+  for (let url of urls) {
+    if (typeof url !== 'string' || url.length === 0 || seen.has(url)) continue
+    seen.add(url)
+    deduped.push(url)
+  }
+
+  return deduped
+}
+
+function renderHydrationPreloadLinks(urls: readonly string[]): string {
+  return urls
+    .map((href) => `<link rel="modulepreload" href="${escapeHtml(href)}" data-rmx-preload />`)
+    .join('')
+}
+
+function stripBlockingFramePreloadLinks(html: string): string {
+  return html
+    .replace(/<link rel="modulepreload" href="[^"]*" data-rmx-preload \/>/g, '')
+    .replace(/<head>\s*<\/head>/g, '')
 }
 
 function serializeStyleObject(style: Record<string, any>): string {

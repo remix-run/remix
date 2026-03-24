@@ -607,6 +607,59 @@ describe('script-server', () => {
     assert.match(urls[1], /\/scripts\/app\/b\.ts\.@/)
   })
 
+  it('preloads accepts multiple module URLs and dedupes shared dependencies', async () => {
+    await write(dir, 'app/a.ts', 'import "./shared.ts"\nexport const a = true')
+    await write(dir, 'app/b.ts', 'import "./shared.ts"\nexport const b = true')
+    await write(dir, 'app/shared.ts', 'export const shared = true')
+
+    let scriptServer = createTestServer(dir, {
+      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts']),
+    })
+
+    let urls = await scriptServer.preloads(['/scripts/app/a.ts', '/scripts/app/b.ts'])
+    assert.equal(urls[0], '/scripts/app/a.ts')
+    assert.equal(urls[1], '/scripts/app/b.ts')
+    assert.equal(urls.filter((url) => /\/scripts\/app\/shared\.ts\.@/.test(url)).length, 1)
+    assert.match(urls[2] ?? '', /\/scripts\/app\/shared\.ts\.@/)
+  })
+
+  it('preloads stays shallowest-first across multiple entry points', async () => {
+    await write(dir, 'app/a.ts', 'import "./a-1.ts"\nexport const a = true')
+    await write(dir, 'app/b.ts', 'import "./b-1.ts"\nexport const b = true')
+    await write(dir, 'app/c.ts', 'import "./c-1.ts"\nexport const c = true')
+    await write(dir, 'app/a-1.ts', 'import "./a-2.ts"\nexport const a1 = true')
+    await write(dir, 'app/b-1.ts', 'import "./b-2.ts"\nexport const b1 = true')
+    await write(dir, 'app/c-1.ts', 'import "./c-2.ts"\nexport const c1 = true')
+    await write(dir, 'app/a-2.ts', 'export const a2 = true')
+    await write(dir, 'app/b-2.ts', 'export const b2 = true')
+    await write(dir, 'app/c-2.ts', 'export const c2 = true')
+
+    let scriptServer = createTestServer(dir, {
+      cacheStrategy: sourceCacheStrategy('build', ['app/a.ts', 'app/b.ts', 'app/c.ts']),
+    })
+
+    let urls = await scriptServer.preloads([
+      '/scripts/app/a.ts',
+      '/scripts/app/b.ts',
+      '/scripts/app/c.ts',
+    ])
+
+    assert.deepEqual(
+      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+$/, '')),
+      [
+        '/scripts/app/a.ts',
+        '/scripts/app/b.ts',
+        '/scripts/app/c.ts',
+        '/scripts/app/a-1.ts',
+        '/scripts/app/b-1.ts',
+        '/scripts/app/c-1.ts',
+        '/scripts/app/a-2.ts',
+        '/scripts/app/b-2.ts',
+        '/scripts/app/c-2.ts',
+      ],
+    )
+  })
+
   it('preloads rejects fingerprinted module URLs', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
@@ -617,6 +670,20 @@ describe('script-server', () => {
 
     await assert.rejects(
       () => scriptServer.preloads('/scripts/app/dep.ts.@abc123'),
+      /Preload URLs must use stable non-fingerprinted module paths/,
+    )
+  })
+
+  it('preloads rejects fingerprinted module URLs in arrays', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+
+    let scriptServer = createTestServer(dir, {
+      cacheStrategy: sourceCacheStrategy(),
+    })
+
+    await assert.rejects(
+      () => scriptServer.preloads(['/scripts/app/entry.ts', '/scripts/app/dep.ts.@abc123']),
       /Preload URLs must use stable non-fingerprinted module paths/,
     )
   })

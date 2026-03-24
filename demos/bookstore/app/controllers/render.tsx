@@ -3,6 +3,8 @@ import { renderToStream } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
 import type { RequestContext, Router } from 'remix/fetch-router'
 
+import { scriptServer } from '../utils/scripts.ts'
+
 export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
   let request = context.request
@@ -10,6 +12,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
 
   let stream = renderToStream(node, {
     resolveFrame: (src) => resolveFrame(router, request, src),
+    resolveClientEntryPreloads: async (hrefs) => await scriptServer.preloads(hrefs).catch(() => []),
     onError(error) {
       console.error(error)
     },

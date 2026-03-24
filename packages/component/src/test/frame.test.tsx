@@ -1575,6 +1575,65 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('hoists hydration modulepreloads from streamed frame content into head', async () => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+      return () => <button id="counter">Counter</button>
+    })
+
+    let innerContent = await drain(
+      renderToStream(<Counter />, {
+        async resolveClientEntryPreloads() {
+          return ['/scripts/counter.js', '/scripts/shared.js']
+        },
+      }),
+    )
+
+    let neverResolve = () => new Promise<string>(() => {})
+    let pageStream = renderToStream(
+      <div>
+        <Frame src="/child" fallback={<span id="frame">Loading…</span>} />
+      </div>,
+      { resolveFrame: neverResolve },
+    )
+    let chunks = readChunks(pageStream)
+    let first = await chunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    let frameId = getCommentMarkerId(first.value, 'rmx:f:')
+    let [modulePromise, resolveModule] = withResolvers<Function>()
+    let loadModule = vi.fn().mockImplementation(async () => modulePromise)
+    let clientFrame = run({ loadModule })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/counter.js"]'),
+    ).toBe(null)
+
+    let template = document.createElement('template')
+    template.id = frameId
+    template.innerHTML = innerContent
+    document.body.appendChild(template)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/counter.js"]'),
+    ).not.toBe(null)
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared.js"]'),
+    ).not.toBe(null)
+
+    resolveModule(Counter)
+    await clientFrame.ready()
+
+    let button = document.getElementById('counter')
+    invariant(button instanceof HTMLButtonElement)
+    expect(button.textContent).toBe('Counter')
+
+    clientFrame.dispose()
+  })
+
   it('hydrates a component inside a nested frame', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',

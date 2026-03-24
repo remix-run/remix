@@ -138,7 +138,7 @@ let scriptServer = createScriptServer({
 
 ## Preloads
 
-Use `preloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for a stable module URL and its transitive dependencies. Pass the same stable non-fingerprinted request path you would use in your `<script type="module" src="...">` tag.
+Use `preloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for one or more stable module URLs and their transitive dependencies. Pass the same stable non-fingerprinted request paths you would use in your `<script type="module" src="...">` tags.
 
 ```ts
 let urls = await scriptServer.preloads('/scripts/app/client/entries/entry.tsx')
@@ -148,11 +148,16 @@ let urls = await scriptServer.preloads('/scripts/app/client/entries/entry.tsx')
 //   '/scripts/npm/@remix-run/component/index.js.@def456',
 //   ...etc
 // ]
+
+let combinedUrls = await scriptServer.preloads([
+  '/scripts/app/client/entries/entry.tsx',
+  '/scripts/app/client/entries/search.tsx',
+])
 ```
 
 ## Minification
 
-Minification happens during the transform step:
+Enable minification with the `minify` option:
 
 ```ts
 import { createScriptServer } from 'remix/script-server'
