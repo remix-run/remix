@@ -33,7 +33,6 @@ let pattern = new RoutePattern('?q=')
 pattern.match(url) // ❌ no match (`null`)
 ```
 
-
 **Parsing and serialization**
 
 For consistency with `URLSearchParams`, search param patterns should be parsed according to the [WHATWG `application/x-www-form-urlencoded` parsing spec](https://url.spec.whatwg.org/#application/x-www-form-urlencoded-parsing) and should also [encode spaces as `+`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#percent_encoding).
