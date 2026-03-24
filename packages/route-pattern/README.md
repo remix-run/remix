@@ -61,11 +61,10 @@ new RoutePattern('docs(/guides/:category)') // multiple segments optional: /docs
 new RoutePattern('api(/v:major(.:minor))') // nested optionals: /api, /api/v2, /api/v2.1
 ```
 
-**Search params** narrow matches using `?key` or `?key=value`:
+**Search params** narrow matches using `?key`, `?key=`, or `?key=value`. Parsing and serialization follow `URLSearchParams` (`application/x-www-form-urlencoded`): `?key` and `?key=` are the same constraint (stored as an empty `Set` in `ast.search`: key must be present; empty value is OK), and spaces use `+` / `%20` like in real query strings.
 
 ```ts
-new RoutePattern('search?q') // requires ?q in URL
-new RoutePattern('search?q=') // requires ?q with any value
+new RoutePattern('search?q') // same constraint as ?q= — key must be present
 new RoutePattern('search?q=routing') // requires ?q=routing exactly
 ```
 
@@ -138,12 +137,11 @@ matcher.match('https://example.com/blog/hello')
 let router = new ArrayMatcher<string>()
 router.add('search', 'no-params')
 router.add('search?q', 'has-q')
-router.add('search?q=', 'has-q-with-value')
 router.add('search?q=hello', 'exact-match')
 
 router.match('https://example.com/search?q=hello')
 // { pattern: 'search?q=hello', params: {}, data: 'exact-match' }
-// More constrained search params = more specific
+// More constrained search params = more specific (`?q` and `?q=` tie)
 ```
 
 ## Benchmark

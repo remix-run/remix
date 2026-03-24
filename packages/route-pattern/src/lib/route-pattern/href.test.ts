@@ -47,46 +47,6 @@ describe('HrefError', () => {
     })
   })
 
-  describe('missing-search-params', () => {
-    it('shows single missing search param', () => {
-      let pattern = new RoutePattern('https://example.com/search?q=')
-      let error = new HrefError({
-        type: 'missing-search-params',
-        pattern,
-        missingParams: ['q'],
-        searchParams: {},
-      })
-      assert.equal(
-        error.toString(),
-        dedent`
-          HrefError: missing required search param(s): 'q'
-
-          Pattern: https://example.com/search?q=
-          Search params: {}
-        `,
-      )
-    })
-
-    it('shows multiple missing search params', () => {
-      let pattern = new RoutePattern('https://example.com/search?q=&sort=')
-      let error = new HrefError({
-        type: 'missing-search-params',
-        pattern,
-        missingParams: ['q', 'sort'],
-        searchParams: { page: 1 },
-      })
-      assert.equal(
-        error.toString(),
-        dedent`
-          HrefError: missing required search param(s): 'q', 'sort'
-
-          Pattern: https://example.com/search?q=&sort=
-          Search params: {"page":1}
-        `,
-      )
-    })
-  })
-
   describe('nameless-wildcard', () => {
     it('shows error message with pattern', () => {
       let pattern = new RoutePattern('https://example.com/api/*/users')

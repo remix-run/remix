@@ -9,7 +9,7 @@ describe('RoutePattern', () => {
     function assertParse(
       source: string,
       expected: { [K in Exclude<keyof RoutePattern['ast'], 'search'>]?: string } & {
-        search?: Record<string, Array<string> | null>
+        search?: Record<string, Array<string>>
       },
     ) {
       let pattern = new RoutePattern(source)
@@ -17,7 +17,7 @@ describe('RoutePattern', () => {
       if (expected.search) {
         for (let name in expected.search) {
           let value = expected.search[name]
-          expectedSearch.set(name, value ? new Set(expected.search[name]) : null)
+          expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
         }
       }
       assert.deepEqual(
@@ -52,9 +52,16 @@ describe('RoutePattern', () => {
     })
 
     it('parses search', () => {
-      assertParse('?q', { search: { q: null } })
+      assertParse('?q', { search: { q: [] } })
       assertParse('?q=', { search: { q: [] } })
       assertParse('?q=1', { search: { q: ['1'] } })
+    })
+
+    it('decodes search params like URLSearchParams (spaces, +, reserved chars, UTF-8)', () => {
+      assertParse('?q=a+b', { search: { q: ['a b'] } })
+      assertParse('?q=a%20b', { search: { q: ['a b'] } })
+      assertParse('?q=a%2Bb', { search: { q: ['a+b'] } })
+      assertParse('?q=caf%C3%A9', { search: { q: ['café'] } })
     })
 
     it('parses protocol + hostname', () => {
@@ -120,7 +127,7 @@ describe('RoutePattern', () => {
     })
 
     it('parses search params into constraints grouped by param name', () => {
-      assertParse('?q&q', { search: { q: null } })
+      assertParse('?q&q', { search: { q: [] } })
       assertParse('?q&q=', { search: { q: [] } })
       assertParse('?q&q=1', { search: { q: ['1'] } })
       assertParse('?q=&q=1', { search: { q: ['1'] } })
@@ -182,11 +189,11 @@ describe('RoutePattern', () => {
     })
 
     it('returns search', () => {
-      assert.equal(new RoutePattern('?q').search, 'q')
+      assert.equal(new RoutePattern('?q').search, 'q=')
       assert.equal(new RoutePattern('?q=').search, 'q=')
       assert.equal(new RoutePattern('?q=1').search, 'q=1')
       assert.equal(new RoutePattern('?q=1&q=2').search, 'q=1&q=2')
-      assert.equal(new RoutePattern('/posts?filter').search, 'filter')
+      assert.equal(new RoutePattern('/posts?filter').search, 'filter=')
       assert.equal(new RoutePattern('/posts?sort=asc').search, 'sort=asc')
       assert.equal(new RoutePattern('/posts').search, '')
       assert.equal(new RoutePattern('').search, '')
@@ -251,11 +258,11 @@ describe('RoutePattern', () => {
     })
 
     it('reconstructs search params', () => {
-      assertSource('?q', '/?q')
+      assertSource('?q', '/?q=')
       assertSource('?q=', '/?q=')
       assertSource('?q=1', '/?q=1')
       assertSource('?q=1&q=2', '/?q=1&q=2')
-      assertSource('/posts?filter')
+      assertSource('/posts?filter', '/posts?filter=')
       assertSource('/posts?sort=asc')
       assertSource('/posts?tag=foo&tag=bar')
       assertSource('https://example.com/posts?q=1')
@@ -280,7 +287,7 @@ describe('RoutePattern', () => {
       assertSource('http(s)://example.com/base')
       assertSource('http://old.com:3000/keep/this')
       assertSource('users/:id?tab=profile', '/users/:id?tab=profile')
-      assertSource('://example.com/path?q=1&q=2&filter')
+      assertSource('://example.com/path?q=1&q=2&filter', '://example.com/path?q=1&q=2&filter=')
     })
   })
 
@@ -360,7 +367,7 @@ describe('RoutePattern', () => {
       assertJoin(
         'https://api.example.com:8000/v1/:resource',
         '/users/(admin/)posts?filter&sort=asc',
-        'https://api.example.com:8000/v1/:resource/users/(admin/)posts?filter&sort=asc',
+        'https://api.example.com:8000/v1/:resource/users/(admin/)posts?filter=&sort=asc',
       )
 
       assertJoin(
@@ -696,7 +703,7 @@ describe('RoutePattern', () => {
         assert.equal(result, '/posts?category=books&category=electronics')
       })
 
-      describe('with bare constraint (?q)', () => {
+      describe('with key-only constraint (?q)', () => {
         it('includes empty value without user param', () => {
           let pattern = new RoutePattern('/posts?filter')
           let result = pattern.href()
@@ -705,19 +712,6 @@ describe('RoutePattern', () => {
 
         it('uses user param value', () => {
           let pattern = new RoutePattern('/posts?filter')
-          let result = pattern.href(undefined, { filter: 'active' })
-          assert.equal(result, '/posts?filter=active')
-        })
-      })
-
-      describe('with empty-value constraint (?q=)', () => {
-        it('throws without user param', () => {
-          let pattern = new RoutePattern('/posts?filter=')
-          assert.throws(() => pattern.href(), hrefError('missing-search-params'))
-        })
-
-        it('uses user param value', () => {
-          let pattern = new RoutePattern('/posts?filter=')
           let result = pattern.href(undefined, { filter: 'active' })
           assert.equal(result, '/posts?filter=active')
         })
@@ -891,25 +885,30 @@ describe('RoutePattern', () => {
     })
 
     describe('search', () => {
-      it('matches bare parameter for presence only', () => {
+      it('matches key-only constraint when no value is present', () => {
         assertMatch('?q', 'https://example.com?q', {})
+        assertMatch('?q', 'https://example.com?q=', {})
+        assertMatch('?q=', 'https://example.com?q', {})
+        assertMatch('?q=', 'https://example.com?q=', {})
       })
 
-      it('matches bare parameter when URL has value', () => {
+      it('matches key-only constraint when a value is present', () => {
         assertMatch('?q', 'https://example.com?q=search', {})
-      })
-
-      it('requires non-empty value when pattern has empty value', () => {
         assertMatch('?q=', 'https://example.com?q=search', {})
-        assertMatch('?q=', 'https://example.com?q=', null)
-        assertMatch('?q=', 'https://example.com?q', null)
       })
 
-      it('matches parameter with specific value', () => {
+      it('matches parameter with required value', () => {
         assertMatch('?sort=asc', 'https://example.com?sort=asc', {})
       })
 
-      it('matches parameter with multiple values', () => {
+      it('matches when URL searchParams decode like URLSearchParams (spaces, +, UTF-8, reserved)', () => {
+        assertMatch('?q=a+b', 'https://example.com?q=a+b', {})
+        assertMatch('?q=a+b', 'https://example.com?q=a%20b', {})
+        assertMatch('?q=café', 'https://example.com?q=café', {})
+        assertMatch('?q=café', 'https://example.com?q=caf%C3%A9', {})
+      })
+
+      it('matches parameter with multiple required values', () => {
         assertMatch('?tag=foo&tag=bar', 'https://example.com?tag=foo&tag=bar', {})
       })
 
@@ -917,19 +916,16 @@ describe('RoutePattern', () => {
         assertMatch('?filter&sort=asc', 'https://example.com?filter=active&sort=asc', {})
       })
 
-      it('allows extra parameters with bare constraint', () => {
+      it('allows extra parameters with key-only constraint', () => {
         assertMatch('?q', 'https://example.com?q=search&page=2&limit=10', {})
+        assertMatch('?q=', 'https://example.com?q=search&page=2&limit=10', {})
       })
 
-      it('allows extra parameters with empty value constraint', () => {
-        assertMatch('?filter=', 'https://example.com?filter=active&sort=asc&page=1', {})
-      })
-
-      it('allows extra parameters with specific value', () => {
+      it('allows extra parameters with required value constraint', () => {
         assertMatch('?sort=asc', 'https://example.com?sort=asc&filter=active&page=2', {})
       })
 
-      it('allows extra parameters with multiple constraints', () => {
+      it('allows extra parameters with multiple required value constraints', () => {
         assertMatch(
           '?filter&sort=asc',
           'https://example.com?filter=active&sort=asc&page=1&limit=20',
