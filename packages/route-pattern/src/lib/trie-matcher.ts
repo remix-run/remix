@@ -8,6 +8,7 @@ import * as Variant from './trie-matcher/variant.ts'
 import { unreachable } from './unreachable.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
+import { tryDecodeURI } from './route-pattern/decode-uri.ts'
 import { matchSearch } from './route-pattern/match.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
@@ -265,7 +266,7 @@ export class Trie<data = unknown> {
     let results: SearchResult<data> = []
 
     // pathname
-    let urlSegments = url.pathname.slice(1).split('/')
+    let urlSegments = tryDecodeURI(url.pathname.slice(1)).split('/')
     for (let origin of origins) {
       let stack: Array<{
         segmentIndex: number

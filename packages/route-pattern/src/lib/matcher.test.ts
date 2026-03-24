@@ -327,13 +327,30 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
-      it('preserves URL encoding in variable values', () => {
+      it('matches non-ASCII param values', () => {
         let matcher = new MatcherClass()
-        matcher.add('://example.com/search/:query', null)
+        matcher.add(
+          '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
+          null,
+        )
 
-        let match = matcher.match('http://example.com/search/hello%20world')
+        let params = {
+          accented: 'café',
+          cjk: '北京-とうきょう-서울',
+          rtl: 'مرحبا-עולם',
+          combining: 'Hà-Nội',
+          emoji: '💿',
+          zwj: '🧑‍🚀', // 🚀 + zero-width joiner + 👨
+          nbsp: 'acme\u00A0corp',
+          fullwidth: 'ｗｉｄｅ',
+        }
+        let url = new URL(
+          `https://example.com/${params.accented}/${params.cjk}/${params.rtl}/${params.combining}/${params.emoji}/${params.zwj}/${params.nbsp}/${params.fullwidth}`,
+        )
+
+        let match = matcher.match(url.href)
         assert.ok(match)
-        assert.deepEqual(match.params, { query: 'hello%20world' })
+        assert.deepEqual(match.params, params)
       })
 
       it('matches wildcard segments', () => {
