@@ -6,7 +6,7 @@ import { redirect } from 'remix/response/redirect'
 import { users } from '../../../data/schema.ts'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 

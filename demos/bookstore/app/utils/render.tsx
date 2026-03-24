@@ -9,7 +9,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
   let router = context.router
 
   let stream = renderToStream(node, {
-    resolveFrame: (src) => resolveFrame(router, request, src),
+    resolveFrame: src => resolveFrame(router, request, src),
     onError(error) {
       console.error(error)
     },

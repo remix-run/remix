@@ -9,7 +9,7 @@ import { routes } from '../../../routes.ts'
 import { getCartTotal } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { renderFragment } from '../../render.tsx'
+import { renderFragment } from '../../../utils/render.tsx'
 
 export default {
   actions: {
