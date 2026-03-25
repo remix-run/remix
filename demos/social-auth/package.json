@@ -13,9 +13,9 @@
     "tsx": "catalog:"
   },
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "tsx server.ts",
-    "test": "NODE_ENV=test tsx --test",
+    "dev": "node --env-file-if-exists=.env --import tsx --watch server.ts",
+    "start": "node --env-file-if-exists=.env --import tsx server.ts",
+    "test": "NODE_ENV=test node --import tsx --import ./test/setup.ts --test \"app/**/*.test.ts\" \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   }
 }

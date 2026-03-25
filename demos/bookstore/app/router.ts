@@ -27,14 +27,11 @@ import fragmentsController from './controllers/fragments/controller.tsx'
 import { home } from './controllers/home.tsx'
 import { search } from './controllers/search.tsx'
 import { uploads } from './controllers/uploads.tsx'
-import { initializeBookstoreDatabase } from './data/setup.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-
-await initializeBookstoreDatabase()
 
 export type RootMiddleware = [
   ReturnType<typeof formData>,

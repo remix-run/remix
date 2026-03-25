@@ -1,16 +1,16 @@
-import * as fs from 'node:fs'
 import * as http from 'node:http'
-import { fileURLToPath } from 'node:url'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-let envFilePath = fileURLToPath(new URL('.env', import.meta.url))
-if (fs.existsSync(envFilePath)) {
-  process.loadEnvFile?.(envFilePath)
-}
+import { initializeSocialAuthDatabase } from './app/data/setup.ts'
+import { router } from './app/router.ts'
+import {
+  externalProviderNames,
+  getDemoOrigin,
+  getExternalProviderLabel,
+  getExternalProviderStatus,
+} from './app/utils/external-auth.ts'
 
-let { router } = await import('./app/router.ts')
-let { externalProviderNames, getDemoOrigin, getExternalProviderLabel, getExternalProviderStatus } =
-  await import('./app/utils/external-auth.ts')
+await initializeSocialAuthDatabase()
 
 let server = http.createServer(
   createRequestListener(async (request) => {
