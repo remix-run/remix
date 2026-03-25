@@ -1,5 +1,5 @@
 ---
-name: ui
+name: remix-ui
 description: Build the UI of a Remix app. Use when creating pages, layouts, client entries, interactions, stateful UI, navigation, hydration, styling, animations, reusable mixins, or UI tests.
 ---
 
