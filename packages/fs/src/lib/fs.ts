@@ -95,9 +95,7 @@ export function writeFile(
   file: { stream(): ReadableStream<Uint8Array> },
 ): Promise<void> {
   let writeStream =
-    typeof to === 'string'
-      ? fs.createWriteStream(to)
-      : fs.createWriteStream('ignored', { fd: to })
+    typeof to === 'string' ? fs.createWriteStream(to) : fs.createWriteStream('ignored', { fd: to })
 
   return writeToStream(writeStream, file.stream())
 }
