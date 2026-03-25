@@ -119,5 +119,3 @@ async function updatePackageDependencies() {
 
   console.log('Done')
 }
-
-function commitChanges() {}

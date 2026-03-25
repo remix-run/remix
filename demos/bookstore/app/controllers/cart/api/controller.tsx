@@ -14,9 +14,6 @@ import { parseId } from '../../../utils/ids.ts'
 let bookIdField = f.field(s.optional(s.string()))
 let quantityField = f.field(s.defaulted(s.string(), '1'))
 let redirectField = f.field(s.optional(s.string()))
-let bookIdSchema = f.object({
-  bookId: bookIdField,
-})
 let cartActionSchema = f.object({
   bookId: bookIdField,
   redirect: redirectField,

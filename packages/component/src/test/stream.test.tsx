@@ -131,7 +131,7 @@ describe('stream', () => {
 
   describe('component nodes', () => {
     it('renders component nodes', async () => {
-      function Greeting(handle: Handle) {
+      function Greeting() {
         return ({ name }: { name: string }) => <div>Hello, {name}!</div>
       }
       let stream = renderToStream(<Greeting name="World" />)
@@ -140,7 +140,7 @@ describe('stream', () => {
     })
 
     it('renders 0', async () => {
-      function Test(handle: Handle) {
+      function Test() {
         let n = 0
         return () => <span>{n}</span>
       }
@@ -150,7 +150,7 @@ describe('stream', () => {
     })
 
     it('renders stateful component nodes', async () => {
-      function Stateful(handle: Handle) {
+      function Stateful() {
         return () => <div>Stateful</div>
       }
       let stream = renderToStream(<Stateful />)
@@ -171,7 +171,7 @@ describe('stream', () => {
         return () => <p style={`color: ${theme.color}; font-size: ${theme.size}px`}>Themed!</p>
       }
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <ThemeProvider>
             <div>
@@ -206,7 +206,7 @@ describe('stream', () => {
         return () => <p style={`color: ${theme.color}`}>Hello, {user.name}!</p>
       }
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <ThemeProvider>
             <UserProvider>
@@ -241,7 +241,7 @@ describe('stream', () => {
         return () => <span>Double: {count * 2}</span>
       }
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <CountProvider>
             <div>
@@ -659,7 +659,7 @@ describe('stream', () => {
     })
 
     it('handles css mixin in components', async () => {
-      function StyledButton(handle: Handle) {
+      function StyledButton() {
         return ({ label }: { label: string }) => (
           <button mix={[css({ background: 'blue', color: 'white', padding: '10px' })]}>
             {label}
@@ -879,7 +879,7 @@ describe('stream', () => {
     })
 
     it('renders head-like elements from components in place', async () => {
-      function SEO(handle: Handle) {
+      function SEO() {
         return () => (
           <>
             <title>Component Title</title>
@@ -974,7 +974,7 @@ describe('stream', () => {
   describe('hydration', () => {
     it('renders hydrated component with hydration script', async () => {
       // Create a simple hydrated component
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
         return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
       })
 
@@ -1011,7 +1011,7 @@ describe('stream', () => {
     })
 
     it('escapes rmx-data payloads that contain script end tags', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
         return ({ label }: { label: string }) => <div>{label}</div>
       })
 
@@ -1034,7 +1034,7 @@ describe('stream', () => {
 
     it('renders multiple hydrated components with unique instance IDs', async () => {
       // Create hydrated components
-      let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle) {
+      let Button = clientEntry('/js/button.js#Button', function Button() {
         return ({ text }: { text: string }) => <button>{text}</button>
       })
 
@@ -1061,7 +1061,7 @@ describe('stream', () => {
     })
 
     it('renders hydrated component with complex props', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card() {
         return (props: {
           title: string
           count: number
@@ -1125,7 +1125,7 @@ describe('stream', () => {
     })
 
     it('serializes virtual host elements', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card() {
         return (props: { children: RemixNode }) => (
           <div>
             <h1>Test Card</h1>
@@ -1157,7 +1157,7 @@ describe('stream', () => {
     })
 
     it('serializes virtual component elements', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card() {
         return (props: { children: RemixNode }) => (
           <div>
             <h1>Test Card</h1>
@@ -1166,7 +1166,7 @@ describe('stream', () => {
         )
       })
 
-      function UnwrappedChild(handle: Handle) {
+      function UnwrappedChild() {
         return () => (
           <p>
             <DeepChild />
@@ -1174,7 +1174,7 @@ describe('stream', () => {
         )
       }
 
-      function DeepChild(handle: Handle) {
+      function DeepChild() {
         return () => <span>Hello, world!</span>
       }
 
@@ -1212,7 +1212,7 @@ describe('stream', () => {
     })
 
     it('serializes Frame elements in entry props as frame descriptors', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card() {
         return (props: { children: RemixNode }) => <div>{props.children}</div>
       })
 
@@ -1248,11 +1248,11 @@ describe('stream', () => {
     })
 
     it('nests hydrated components', async () => {
-      let Card = clientEntry('/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/card.js#Card', function Card() {
         return ({ children }: { children: RemixNode }) => <div>{children}</div>
       })
 
-      let Button = clientEntry('/button.js#Button', function Button(handle: Handle) {
+      let Button = clientEntry('/button.js#Button', function Button() {
         return () => <button />
       })
 
@@ -1705,9 +1705,10 @@ describe('stream', () => {
 
       async function resolveFrame(
         src: string,
-        _target?: string,
+        target?: string,
         context?: { currentFrameSrc: string; topFrameSrc: string },
       ) {
+        void target
         invariant(context)
         resolveFrameContexts.push({ src, ...context })
 

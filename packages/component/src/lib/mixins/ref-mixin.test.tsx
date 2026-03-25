@@ -123,12 +123,12 @@ describe('ref mixin', () => {
   })
 })
 
-let infersNodeType = (
+let _infersNodeType = (
   <button
     mix={[
       ref((node, signal) => {
-        type inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
-        type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+        type _inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
+        type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
       }),
     ]}
   />

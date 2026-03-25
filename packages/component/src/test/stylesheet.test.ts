@@ -166,7 +166,6 @@ describe('createStyleManager', () => {
     document.body.appendChild(el)
 
     mgr.insert('rmx-a', '.rmx-a { color: rgb(255, 0, 0); }')
-    let sheet = document.adoptedStyleSheets[document.adoptedStyleSheets.length - 1]
     el.className = 'rmx-a'
     expect(getComputedStyle(el).color).toBe('rgb(255, 0, 0)')
 

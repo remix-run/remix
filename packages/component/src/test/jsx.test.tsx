@@ -14,6 +14,7 @@ describe('jsx', () => {
     expect(element.props.children).toEqual('Hello, world!')
   })
 
+  /* oxlint-disable eslint/no-unused-vars */
   it('warns when the wrong type of a prop is used', () => {
     let element = <a target="_blank">Hello, world!</a>
 
@@ -101,7 +102,7 @@ describe('jsx', () => {
     })
 
     it('accepts single or array mix values for component JSX while render props see arrays', () => {
-      let passthrough = createMixin((_handle) => {})
+      let passthrough = createMixin((handle) => {})
 
       function Button() {
         return (props: Props<'button'>) => {
@@ -138,7 +139,7 @@ describe('jsx', () => {
     })
 
     it('allows optional explicit narrowing for specific element kinds', () => {
-      let inputOnly = createMixin<HTMLInputElement>((_handle) => {})
+      let inputOnly = createMixin<HTMLInputElement>((handle) => {})
 
       let good = <input mix={[inputOnly()]} />
       // @ts-expect-error input-only mixin should not apply to button
@@ -207,4 +208,5 @@ describe('jsx', () => {
       )
     })
   })
+  /* oxlint-enable eslint/no-unused-vars */
 })

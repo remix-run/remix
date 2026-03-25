@@ -9,6 +9,7 @@ describe('resource routes helper', () => {
   it('creates a resource', () => {
     let book = resource('book')
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -39,6 +40,7 @@ describe('resource routes helper', () => {
   it('creates a resource with only option', () => {
     let book = resource('book', { only: ['show', 'update'] })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -61,6 +63,7 @@ describe('resource routes helper', () => {
   it('creates a resource with exclude option', () => {
     let book = resource('book', { exclude: ['new', 'create', 'edit', 'destroy'] })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -94,6 +97,7 @@ describe('resource routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -130,6 +134,7 @@ describe('resource routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -164,6 +169,7 @@ describe('resource routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -195,6 +201,7 @@ describe('resource routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<

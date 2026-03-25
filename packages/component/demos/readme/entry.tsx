@@ -54,7 +54,7 @@ function Counter(handle: Handle) {
 // ============================================================================
 // Components - Greeting
 // ============================================================================
-function Greeting(handle: Handle) {
+function Greeting() {
   return (props: { name: string }) => <h1>Hello, {props.name}!</h1>
 }
 
@@ -212,7 +212,7 @@ function KeyboardTracker(handle: Handle) {
 // ============================================================================
 // CSS Prop - Button (Basic)
 // ============================================================================
-function ButtonBasic(handle: Handle) {
+function ButtonBasic() {
   return () => (
     <button
       mix={[
@@ -240,7 +240,7 @@ function ButtonBasic(handle: Handle) {
 // ============================================================================
 // CSS Prop - Button (Advanced with nested rules)
 // ============================================================================
-function ButtonAdvanced(handle: Handle) {
+function ButtonAdvanced() {
   return () => (
     <button
       mix={[
@@ -287,7 +287,7 @@ function ButtonAdvanced(handle: Handle) {
 // ============================================================================
 // Ref Mixin - Form (Basic)
 // ============================================================================
-function FormBasic(handle: Handle) {
+function FormBasic() {
   let inputRef: HTMLInputElement
 
   return () => (
@@ -590,7 +590,7 @@ function ThemedContent(handle: Handle) {
 // ============================================================================
 // Fragments - List
 // ============================================================================
-function ListWithFragment(handle: Handle) {
+function ListWithFragment() {
   return () => (
     <ul mix={[css({ margin: 0, paddingLeft: '20px' })]}>
       <>
@@ -605,7 +605,7 @@ function ListWithFragment(handle: Handle) {
 // ============================================================================
 // Example Container Component
 // ============================================================================
-function Example(handle: Handle) {
+function Example() {
   return (props: { title: string; children: RemixNode }) => (
     <div className="example">
       <h2>{props.title}</h2>
@@ -617,7 +617,7 @@ function Example(handle: Handle) {
 // ============================================================================
 // Main Demo App
 // ============================================================================
-function DemoApp(handle: Handle) {
+function DemoApp() {
   return () => (
     <div className="examples-grid">
       <Example title="Getting Started - Counter">

@@ -7,7 +7,7 @@ export const ImageCarousel = clientEntry(
   function ImageCarousel(handle: Handle, setup?: { startIndex?: number }) {
     let index = setup?.startIndex ?? 0
 
-    let goPrev = (total: number) => {
+    let goPrev = () => {
       if (index <= 0) return
       index = index - 1
       handle.update()
@@ -77,7 +77,7 @@ export const ImageCarousel = clientEntry(
             aria-label="Previous image"
             disabled={index === 0}
             mix={[
-              on('click', () => goPrev(total)),
+              on('click', goPrev),
               css({
                 position: 'absolute',
                 top: '50%',

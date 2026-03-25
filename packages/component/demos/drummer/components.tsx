@@ -1,4 +1,4 @@
-import type { Handle, RemixNode, Props } from 'remix/component'
+import type { RemixNode, Props } from 'remix/component'
 import { css } from 'remix/component'
 
 export function Layout() {
@@ -168,7 +168,7 @@ export function BPMDisplay() {
   )
 }
 
-export function EqualizerBar(handle: Handle) {
+export function EqualizerBar() {
   let colors = [
     '#FF3000',
     '#FF3000',

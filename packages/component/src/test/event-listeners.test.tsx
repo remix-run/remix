@@ -107,10 +107,10 @@ describe('addEventListeners', () => {
 
   describe('types', () => {
     it('provides literal event and target types for document', () => {
-      function App(handle: Handle) {
+      function _App(handle: Handle) {
         addEventListeners(document, handle.signal, {
           keydown: (event) => {
-            type test = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
+            type _test = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
           },
         })
         return () => <div>App</div>
@@ -118,11 +118,11 @@ describe('addEventListeners', () => {
     })
 
     it('provides abort signal as required second listener argument', () => {
-      function App(handle: Handle) {
+      function _App(handle: Handle) {
         addEventListeners(document, handle.signal, {
           keydown: (event, signal) => {
-            type eventTest = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
-            type signalTest = Assert<Equal<typeof signal, AbortSignal>>
+            type _eventTest = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
+            type _signalTest = Assert<Equal<typeof signal, AbortSignal>>
           },
         })
         return () => <div>App</div>
@@ -141,7 +141,7 @@ describe('addEventListeners', () => {
 
       addEventListeners(target, controller.signal, {
         ping: (event) => {
-          type test = Assert<
+          type _test = Assert<
             Equal<typeof event, Dispatched<CustomEvent<{ value: number }>, PingTarget>>
           >
           void event.detail.value

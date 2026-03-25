@@ -85,11 +85,11 @@ describe('hydration', () => {
     })
 
     it('hydrates nested hydration boundaries', async () => {
-      let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
+      let Outer = clientEntry('/outer.js#Outer', function Outer() {
         return (props: { children: any }) => <div className="outer">{props.children}</div>
       })
 
-      let Inner = clientEntry('/inner.js#Inner', function Inner(handle: Handle) {
+      let Inner = clientEntry('/inner.js#Inner', function Inner() {
         return () => <span className="inner">Inner content</span>
       })
 

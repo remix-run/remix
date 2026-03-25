@@ -3,6 +3,7 @@ import type { Handle } from '../lib/component.ts'
 import { clientEntry, isEntry } from '../lib/client-entries.ts'
 
 describe('clientEntry', () => {
+  /* oxlint-disable eslint/no-unused-vars */
   describe('types', () => {
     it('keeps original types', () => {
       function Input(handle: Handle, props: { defaultValue?: string }) {
@@ -231,6 +232,7 @@ describe('clientEntry', () => {
       expect(EntryArray.$entry).toBe(true)
     })
   })
+  /* oxlint-enable eslint/no-unused-vars */
 
   describe('isEntry type guard', () => {
     it('returns true for entry components', () => {

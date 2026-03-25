@@ -11,7 +11,7 @@ describe('vnode rendering', () => {
 
       let capturedNode: Element | null = null
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <div
             mix={[

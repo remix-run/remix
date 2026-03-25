@@ -40,7 +40,7 @@ export let messagesAction = {
 
           try {
             controller.close()
-          } catch (error) {
+          } catch {
             // Stream may already be closed.
           }
         })

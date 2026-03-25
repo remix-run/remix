@@ -305,7 +305,7 @@ export function createStyleManager(layer: string = 'rmx') {
 
     // Update indices for all rules that came after the deleted one
     // They all shift down by 1
-    for (let [name, data] of ruleMap.entries()) {
+    for (let [, data] of ruleMap.entries()) {
       if (data.index > indexToDelete) {
         data.index--
       }

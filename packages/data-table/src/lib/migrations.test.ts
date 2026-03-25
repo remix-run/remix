@@ -424,7 +424,7 @@ describe('migration runner', () => {
   it('builds deterministic schema plans from migration APIs', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         let usersTable = table({
           name: 'app.users',
           columns: {
@@ -487,7 +487,7 @@ describe('migration runner', () => {
   it('auto-generates deterministic names when omitted', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         let accountsTable = table({
           name: 'app.accounts',
           columns: {
@@ -589,7 +589,7 @@ describe('migration runner', () => {
   it('prefers explicit names over generated defaults', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         let usersTable = table({
           name: 'users',
           columns: {
@@ -661,10 +661,10 @@ describe('migration runner', () => {
         id: '20260101000000',
         name: 'users',
         migration: createMigration({
-          async up({ db, schema }) {
+          async up({ schema }) {
             await schema.createTable(createIdTable('users'))
           },
-          async down({ db, schema }) {
+          async down({ schema }) {
             await schema.dropTable('users')
           },
         }),
@@ -673,10 +673,10 @@ describe('migration runner', () => {
         id: '20260102000000',
         name: 'posts',
         migration: createMigration({
-          async up({ db, schema }) {
+          async up({ schema }) {
             await schema.createTable(createIdTable('posts'))
           },
-          async down({ db, schema }) {
+          async down({ schema }) {
             await schema.dropTable('posts')
           },
         }),
@@ -710,7 +710,7 @@ describe('migration runner', () => {
   it('supports dryRun planning without executing migration DDL', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -730,7 +730,7 @@ describe('migration runner', () => {
   it('detects checksum drift before applying more migrations', async () => {
     let adapter = new MemoryMigrationAdapter()
     let appliedMigration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -764,7 +764,7 @@ describe('migration runner', () => {
     adapter.failOnMigrateKind = 'createTable'
 
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -785,7 +785,7 @@ describe('migration runner', () => {
 
     let migration = createMigration({
       transaction: 'required',
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -801,7 +801,7 @@ describe('migration runner', () => {
   it('throws for unknown migration targets and invalid step values', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -826,7 +826,7 @@ describe('migration runner', () => {
         id: '20260101000000',
         name: 'users',
         migration: createMigration({
-          async up({ db, schema }) {
+          async up({ schema }) {
             await schema.createTable(createIdTable('users'))
           },
           async down() {},
@@ -836,7 +836,7 @@ describe('migration runner', () => {
         id: '20260102000000',
         name: 'posts',
         migration: createMigration({
-          async up({ db, schema }) {
+          async up({ schema }) {
             await schema.createTable(createIdTable('posts'))
           },
           async down() {},
@@ -866,7 +866,7 @@ describe('migration runner', () => {
   it('emits full schema operation shapes from builder methods', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         let accountsTable = table({
           name: 'app.accounts',
           columns: {
@@ -1069,7 +1069,7 @@ describe('migration runner', () => {
     adapter.knownTables.set('app.users', new Set(['email']))
 
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         let existingTable = await schema.hasTable('app.users')
         let existingColumn = await schema.hasColumn('app.users', 'email')
         let plannedTableBefore = await schema.hasTable('app.pending')
@@ -1094,7 +1094,7 @@ describe('migration runner', () => {
   it('throws when a dryRun migration attempts to use db.exec', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ db }) {
         await db.exec(rawSql('select 1'))
       },
       async down() {},
@@ -1118,7 +1118,7 @@ describe('migration runner', () => {
   it('allows compiling SQL through the dryRun database adapter', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ db }) {
         let compiled = db.adapter.compileSql({
           kind: 'raw',
           sql: rawSql('select 1'),
@@ -1140,7 +1140,7 @@ describe('migration runner', () => {
   it('throws when a dryRun migration attempts to open a transaction', async () => {
     let adapter = new MemoryMigrationAdapter()
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ db }) {
         await db.transaction(async () => {})
       },
       async down() {},
@@ -1169,7 +1169,7 @@ describe('migration runner', () => {
     ]
 
     let migration = createMigration({
-      async up({ db, schema }) {
+      async up({ schema }) {
         await schema.createTable(createIdTable('users'))
       },
       async down() {},
@@ -1314,7 +1314,7 @@ describe('migration registry', () => {
       id: '20260101000000',
       name: 'users',
       migration: createMigration({
-        async up({ db, schema }) {
+        async up({ schema }) {
           await schema.createTable(createIdTable('users'))
         },
         async down() {},

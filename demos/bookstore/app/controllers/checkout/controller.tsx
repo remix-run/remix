@@ -84,7 +84,7 @@ export default {
         return created
       })
 
-      session.set('cart', clearCart(cart))
+      session.set('cart', clearCart())
 
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },

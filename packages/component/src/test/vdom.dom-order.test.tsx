@@ -95,7 +95,7 @@ describe('vnode rendering', () => {
 
       let Page: typeof PageA | typeof PageB = PageA
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <main>
             <nav>Nav</nav>
@@ -264,7 +264,7 @@ describe('vnode rendering', () => {
 
       let Page: typeof PageA | typeof PageB = PageA
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <main>
             <nav>Nav</nav>

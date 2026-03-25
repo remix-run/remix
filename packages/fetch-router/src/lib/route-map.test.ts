@@ -94,6 +94,7 @@ let routes = route({
   categories: categoriesRoutes,
 })
 
+/* oxlint-disable-next-line eslint/no-unused-vars */
 type Tests = [
   Assert<IsEqual<typeof categoriesRoutes.index, Route<'ANY', '/categories'>>>,
   Assert<IsEqual<typeof categoriesRoutes.create, Route<'POST', '/categories/:slug/edit'>>>,

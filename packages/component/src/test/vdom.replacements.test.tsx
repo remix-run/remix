@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
-import type { Handle } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
   describe('type<-->type updates', () => {
@@ -71,7 +70,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App(handle: Handle) {
+      function App() {
         let state = ++setupCalls
         return ({ title }: { title: string }) => (
           <div>
@@ -91,7 +90,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App(handle: Handle) {
+      function App() {
         let state = ++setupCalls
         return ({ title }: { title: string }) => (
           <>

@@ -193,15 +193,15 @@ describe('on mixin', () => {
   })
 })
 
-let infersNodeType = (
+let _infersNodeType = (
   <button
     mix={[
       on('pointerdown', (event, signal) => {
-        type inferredEvent = Assert<
+        type _inferredEvent = Assert<
           Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
         >
-        type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
-        type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+        type _inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+        type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
       }),
     ]}
   />

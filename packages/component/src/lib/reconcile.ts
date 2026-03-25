@@ -796,7 +796,7 @@ function diffFrame(
 
     let runtime = getFrameRuntime(frame)
     if (runtime) {
-      resolveClientFrame(next, runtime, rootTarget)
+      resolveClientFrame(next, runtime)
     }
   }
 
@@ -907,12 +907,12 @@ function insertFrame(
   node._frameInstance = instance
   runtime.frameInstances.set(start, instance)
 
-  resolveClientFrame(node, runtime, rootTarget)
+  resolveClientFrame(node, runtime)
 
   return cursor
 }
 
-function resolveClientFrame(node: VNode, runtime: FrameRuntime, rootTarget: EventTarget): void {
+function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let frameSrc = getFrameSrc(node)
   let instance = node._frameInstance as FrameInstance | undefined
   if (!instance) return

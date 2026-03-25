@@ -103,10 +103,6 @@ function WaitExample(handle: Handle) {
 
 export function SharedLayout(handle: Handle) {
   let state = true
-  let shouldAnimate = false
-  handle.queueTask(() => {
-    shouldAnimate = true
-  })
 
   return () => (
     <div
