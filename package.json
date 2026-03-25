@@ -26,13 +26,15 @@
     "docs": "cd docs && pnpm run docs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "generate-remix": "node scripts/generate-remix.ts",
+    "generate-remix": "node ./scripts/generate-remix.ts",
     "lint": "oxlint . -A all --quiet",
     "lint:fix": "oxlint . -A all --fix --quiet",
-    "pr-preview": "node scripts/pr-preview.ts",
-    "setup-installable-branch": "node scripts/setup-installable-branch.ts",
+    "pr-preview": "node ./scripts/pr-preview.ts",
+    "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
     "test": "pnpm --parallel run test",
-    "typecheck": "pnpm -r typecheck"
+    "test:changed": "node ./scripts/run-changed-workspaces.ts test",
+    "typecheck": "pnpm -r typecheck",
+    "typecheck:changed": "node ./scripts/run-changed-workspaces.ts typecheck"
   },
   "workspaces": [
     "packages/*"
