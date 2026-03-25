@@ -1,6 +1,6 @@
 import { bench, describe } from 'vitest'
 import { match } from 'path-to-regexp'
-import { ArrayMatcher, TrieMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher, TrieMatcher, type Matcher } from '@remix-run/route-pattern'
 
 import { patterns } from '../patterns/shopify.ts'
 
@@ -36,7 +36,7 @@ let urls: Array<URL> = [
   '/pl/blog/123',
 ].map((pathname) => new URL(`https://shopify.com${pathname}`))
 
-describe('match shopify', () => {
+describe('match many', () => {
   let pathToRegexpMatcher: Array<ReturnType<typeof match>> = []
   patterns.forEach((pattern) => {
     let matchFn = match(pattern.replace('(:locale)', '{:locale}').replace('*', '*path'), {
@@ -68,3 +68,24 @@ describe('match shopify', () => {
     urls.forEach((url) => trieMatcher.match(url))
   })
 })
+
+describe('lambda (setup + match one)', () => {
+  benchLambda('array', () => new ArrayMatcher<null>())
+  benchLambda('trie', () => new TrieMatcher<null>())
+})
+
+function benchLambda(name: string, createMatcher: () => Matcher<null>) {
+  let index = 0
+
+  bench(name, () => {
+    let matcher = createMatcher()
+
+    for (let pattern of patterns) {
+      matcher.add(pattern, null)
+    }
+
+    let url = urls[index]!
+    index = (index + 1) % urls.length
+    matcher.match(url)
+  })
+}
