@@ -36,7 +36,7 @@ jobs:
       # Normal checkout of the trigger branch on pushes
       - name: Checkout
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
           # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
@@ -46,7 +46,7 @@ jobs:
       # Checkout the PR branch when running on PRs
       - name: Checkout
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
@@ -58,7 +58,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: 'package.json'
           cache: pnpm
