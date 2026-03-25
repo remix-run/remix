@@ -1,23 +1,20 @@
 import type { BuildAction } from 'remix/fetch-router'
-import type { Router } from 'remix/fetch-router'
 
 import { StateSearchPage } from '../assets/state-search-page.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export function createStateSearchAction(router: Router) {
-  return {
-    handler(context) {
-      let initialQuery = new URL(context.request.url).searchParams.get('query') ?? ''
+export let stateSearchAction = {
+  handler(context) {
+    let initialQuery = new URL(context.request.url).searchParams.get('query') ?? ''
 
-      return render(<StateSearchRoutePage initialQuery={initialQuery} />, {
-        request: context.request,
-        router,
-      })
-    },
-  } satisfies BuildAction<'GET', typeof routes.stateSearch>
-}
+    return render(<StateSearchRoutePage initialQuery={initialQuery} />, {
+      request: context.request,
+      router: context.router,
+    })
+  },
+} satisfies BuildAction<'GET', typeof routes.stateSearch>
 
 function StateSearchRoutePage() {
   return ({ initialQuery }: { initialQuery: string }) => (

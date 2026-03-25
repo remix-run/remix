@@ -1,18 +1,15 @@
 import type { BuildAction } from 'remix/fetch-router'
-import type { Router } from 'remix/fetch-router'
 
 import { ClientMountedPageExample } from '../assets/client-mounted-page-example.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export function createClientMountedAction(router: Router) {
-  return {
-    handler(context) {
-      return render(<ClientMountedPage />, { request: context.request, router })
-    },
-  } satisfies BuildAction<'GET', typeof routes.clientMounted>
-}
+export let clientMountedAction = {
+  handler(context) {
+    return render(<ClientMountedPage />, { request: context.request, router: context.router })
+  },
+} satisfies BuildAction<'GET', typeof routes.clientMounted>
 
 function ClientMountedPage() {
   return () => (

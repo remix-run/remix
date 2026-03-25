@@ -1,23 +1,20 @@
 import { Frame } from 'remix/component'
 import type { BuildAction } from 'remix/fetch-router'
-import type { Router } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export function createReloadScopeAction(router: Router) {
-  return {
-    handler(context) {
-      let pageNow = new Date()
+export let reloadScopeAction = {
+  handler(context) {
+    let pageNow = new Date()
 
-      return render(<ReloadScopePage pageNow={pageNow} />, {
-        request: context.request,
-        router,
-      })
-    },
-  } satisfies BuildAction<'GET', typeof routes.reloadScope>
-}
+    return render(<ReloadScopePage pageNow={pageNow} />, {
+      request: context.request,
+      router: context.router,
+    })
+  },
+} satisfies BuildAction<'GET', typeof routes.reloadScope>
 
 function ReloadScopePage() {
   return ({ pageNow }: { pageNow: Date }) => (
