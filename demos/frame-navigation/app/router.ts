@@ -1,43 +1,15 @@
 import { createRouter } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { logger } from 'remix/logger-middleware'
-import { redirect } from 'remix/response/redirect'
 import { staticFiles } from 'remix/static-middleware'
-import type { Middleware } from 'remix/fetch-router'
 
 import authController from './controllers/auth/controller.tsx'
 import mainController from './controllers/main/controller.tsx'
 import settingsController from './controllers/settings/controller.tsx'
-import { hasAuthCookie } from './middleware/auth.ts'
+import { requireAuth } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
 let middleware = []
-
-let requireAuth: Middleware = async ({ request, url }, next) => {
-  let loginPath = routes.auth.login.index.href()
-  if (url.pathname === loginPath) {
-    return next()
-  }
-
-  if (await hasAuthCookie(request.headers.get('cookie'))) {
-    return next()
-  }
-
-  let isFrameRequest = request.headers.get('x-remix-frame') === 'true'
-  if (isFrameRequest) {
-    return new Response(
-      '<div><h1>Not authorized</h1><p>Refresh the page to sign in again.</p></div>',
-      {
-        status: 401,
-        headers: {
-          'Content-Type': 'text/html; charset=UTF-8',
-        },
-      },
-    )
-  }
-
-  return redirect(loginPath)
-}
 
 if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
@@ -52,7 +24,7 @@ middleware.push(
   }),
 )
 middleware.push(asyncContext())
-middleware.push(requireAuth)
+middleware.push(requireAuth())
 
 export let router = createRouter({ middleware })
 
