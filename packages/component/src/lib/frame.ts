@@ -270,8 +270,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    moveServerPreloadsToHead(container.doc, fragment)
-    moveServerStylesToHead(container.doc, fragment)
+    moveServerHeadContentToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -336,16 +335,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        moveServerPreloadsToHead(container.doc, early)
-        moveServerStylesToHead(container.doc, early)
+        moveServerHeadContentToHead(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          moveServerPreloadsToHead(container.doc, fragment)
-          moveServerStylesToHead(container.doc, fragment)
+          moveServerHeadContentToHead(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
@@ -354,8 +351,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          moveServerPreloadsToHead(container.doc, buffered)
-          moveServerStylesToHead(container.doc, buffered)
+          moveServerHeadContentToHead(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
@@ -499,47 +495,51 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void {
+function moveServerHeadContentToHead(doc: Document, fragment: DocumentFragment): void {
   let target = doc.head
   if (!target) return
 
-  let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
-  for (let style of styles) {
-    if (style instanceof HTMLStyleElement) {
-      target.appendChild(style)
+  let walker = doc.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT)
+  let headStart: Comment | null = null
+  let headEnd: Comment | null = null
+
+  while (walker.nextNode()) {
+    let comment = walker.currentNode
+    if (!(comment instanceof Comment)) continue
+    if (comment.data === ' rmx:head-content ') {
+      headStart = comment
+      continue
     }
+    if (comment.data === ' /rmx:head-content ' && headStart) {
+      headEnd = comment
+      break
+    }
+  }
+
+  if (headStart && headEnd) {
+    let current = headStart.nextSibling
+    while (current && current !== headEnd) {
+      let next = current.nextSibling
+      target.appendChild(current)
+      current = next
+    }
+    headStart.remove()
+    headEnd.remove()
   }
 
   let heads = Array.from(fragment.querySelectorAll('head'))
   for (let head of heads) {
-    if (!head.childNodes.length) {
-      head.remove()
+    while (head.firstChild) {
+      target.appendChild(head.firstChild)
     }
+    head.remove()
   }
-}
 
-function moveServerPreloadsToHead(doc: Document, fragment: DocumentFragment): void {
-  let target = doc.head
-  if (!target) return
-
-  let links = Array.from(fragment.querySelectorAll('link[rel="modulepreload"][data-rmx-preload]'))
-  for (let link of links) {
-    if (!(link instanceof HTMLLinkElement)) continue
-    let href = link.href
-    if (!href) {
-      link.remove()
-      continue
+  let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
+  for (let style of styles) {
+    if (style instanceof HTMLStyleElement && style.parentNode !== target) {
+      target.appendChild(style)
     }
-
-    let alreadyHoisted = Array.from(target.querySelectorAll('link[rel="modulepreload"]')).some(
-      (existing) => existing instanceof HTMLLinkElement && existing.href === href,
-    )
-    if (alreadyHoisted) {
-      link.remove()
-      continue
-    }
-
-    target.appendChild(link)
   }
 }
 

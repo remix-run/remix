@@ -8,6 +8,7 @@ Fetch-based server for compiling browser JavaScript and TypeScript modules on de
 - **Access Control** - Control exactly which files can be served with allow and deny rules
 - **Preloads** - Generate modulepreload URLs for `<link>` tags or `Link` headers
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
+- **Watch Mode** - Watch for file changes and invalidate cached scripts
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Server either inline or external sourcemaps
 
@@ -113,30 +114,44 @@ let scriptServer = createScriptServer({
 })
 ```
 
-## Preloads
-
-Use `preloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for one or more stable module URLs and their transitive dependencies. Pass the same stable non-fingerprinted request paths you would use in your `<script type="module" src="...">` tags.
+When you enable watch mode, call `await scriptServer.close()` during shutdown so the file watcher is cleaned up properly.
 
 ```ts
-let urls = await scriptServer.preloads('/scripts/app/client/entries/entry.tsx')
+process.on('SIGTERM', async () => {
+  await scriptServer.close()
+  process.exit(0)
+})
+```
+
+## Hrefs and Preloads
+
+Use `scriptServer.getHref()` when you need the public URL for a served file, for example in a `<script type="module" src="...">` tag.
+
+```ts
+let src = await scriptServer.getHref('app/client/entry.tsx')
+// '/scripts/app/client/entry.tsx'
+```
+
+Use `scriptServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for one or more files and their dependencies.
+
+```ts
+let preloads = await scriptServer.getPreloads(['app/client/entry.tsx', 'app/client/search.tsx'])
 // [
-//   '/scripts/app/client/entries/entry.tsx',
-//   '/scripts/app/shared/utils.ts.@abc123',
-//   '/scripts/npm/@remix-run/component/index.js.@def456',
+//   '/scripts/app/client/entry.tsx',
+//   '/scripts/app/client/search.tsx',
+//   '/scripts/app/shared/utils.ts',
+//   '/scripts/npm/@remix-run/component/index.js',
 //   ...etc
 // ]
-
-let combinedUrls = await scriptServer.preloads([
-  '/scripts/app/client/entries/entry.tsx',
-  '/scripts/app/client/entries/search.tsx',
-])
 ```
+
+Both helpers accept root-relative and absolute file paths, as well as `file://` URLs.
 
 ## Caching and Fingerprinting
 
-By default, modules are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the `script-server` instance, so source changes are picked up when your app recreates the server (for example, after a dev-server restart).
+By default, scripts are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the `script-server` instance.
 
-If you want the browser to stop revalidating non-entry module URLs, you can opt into source fingerprinting.
+If you want clients to cache scripts aggressively without revalidation, you can opt into source-based fingerprinting.
 
 ```ts
 import { createScriptServer } from 'remix/script-server'
@@ -145,35 +160,15 @@ let scriptServer = createScriptServer({
   root,
   routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
   allow: ['app/client/**', 'app/shared/**'],
-  entryPoints: ['app/client/entries/*'],
-  fingerprintInternalModules: {
+  fingerprint: {
     buildId: process.env.GITHUB_SHA,
   },
 })
 ```
 
-Modules matching `entryPoints` keep stable non-fingerprinted URLs.
+When fingerprinting is enabled, scripts use a `.@<fingerprint>` suffix and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
-Any module you need to reference directly from app code (e.g. in a `<script type="module" src="...">` tag) must be included in `entryPoints`. All other served modules are rewritten to URLs suffixed with `.@<fingerprint>` and served with `Cache-Control: public, max-age=31536000, immutable` by default.
-
-Source fingerprints are based on `sourceText + buildId`. The build ID must change for each deployment so that fingerprinted modules are invalidated together.
-
-You can also override the default cache header for fingerprinted internal modules:
-
-```ts
-let scriptServer = createScriptServer({
-  root,
-  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
-  entryPoints: ['app/client/entries/*'],
-  fingerprintInternalModules: {
-    buildId: process.env.GITHUB_SHA,
-    cacheControl: 'public, max-age=600',
-  },
-})
-```
-
-The caching strategy set by `fingerprintInternalModules` assumes that files on disk won't change, so it cannot be used together with `watch`.
+Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted modules are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so it cannot be used together with `watch`.
 
 ## Minification
 

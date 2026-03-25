@@ -11,7 +11,7 @@ interface BenchFixtureStat {
 export interface BenchFixture {
   id: 'basic' | 'deep-graph'
   label: string
-  entryPointPattern: string
+  entryPoint: string
   scriptServer: Pick<ScriptServerOptions, 'allow' | 'routes'>
   entryPointUrl: string
   expectedEntryUrlSubstrings: string[]
@@ -114,7 +114,7 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
   return {
     id: options.id,
     label: options.label,
-    entryPointPattern: entryPoint,
+    entryPoint,
     scriptServer: {
       allow: [options.projectRoot, options.packagesRoot, repoPackagesRoot],
       routes: [

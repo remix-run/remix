@@ -1,9 +1,7 @@
 import { css, type Handle, clientEntry, on } from 'remix/component'
 
-import { routes } from '../routes.ts'
-
 export const ImageCarousel = clientEntry(
-  routes.scripts.href({ path: 'app/assets/image-carousel.tsx#ImageCarousel' }),
+  import.meta.url,
   function ImageCarousel(handle: Handle, setup?: { startIndex?: number }) {
     let index = setup?.startIndex ?? 0
 

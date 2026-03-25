@@ -43,7 +43,10 @@ let benchmarks: Benchmark[] = [
       let fixture = await getBasicFixture()
       return async function run() {
         let scriptServer = createBenchScriptServer(fixture)
-        let source = await readHandledResponseText(scriptServer, fixture.entryPointUrl)
+        let source = await readHandledResponseText(
+          scriptServer,
+          await scriptServer.getHref(fixture.entryPoint),
+        )
         assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
       }
     },
@@ -54,10 +57,16 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getBasicFixture()
       let scriptServer = createBenchScriptServer(fixture)
-      let source = await readHandledResponseText(scriptServer, fixture.entryPointUrl)
+      let source = await readHandledResponseText(
+        scriptServer,
+        await scriptServer.getHref(fixture.entryPoint),
+      )
       assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
       return async function run() {
-        let nextSource = await readHandledResponseText(scriptServer, fixture.entryPointUrl)
+        let nextSource = await readHandledResponseText(
+          scriptServer,
+          await scriptServer.getHref(fixture.entryPoint),
+        )
         assertContainsSubstrings(nextSource, fixture.expectedEntryUrlSubstrings, fixture.label)
       }
     },
@@ -69,7 +78,7 @@ let benchmarks: Benchmark[] = [
       let fixture = await getDeepGraphFixture()
       return async function run() {
         let scriptServer = createBenchScriptServer(fixture)
-        let urls = await scriptServer.preloads(fixture.entryPointUrl)
+        let urls = await scriptServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }
     },
@@ -80,10 +89,10 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let scriptServer = createBenchScriptServer(fixture)
-      let initialUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      let initialUrls = await scriptServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(initialUrls, fixture)
       return async function run() {
-        let urls = await scriptServer.preloads(fixture.entryPointUrl)
+        let urls = await scriptServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }
     },
@@ -94,10 +103,10 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let scriptServer = createStableBenchScriptServer(fixture)
-      let initialUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      let initialUrls = await scriptServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(initialUrls, fixture)
       return async function run() {
-        let urls = await scriptServer.preloads(fixture.entryPointUrl)
+        let urls = await scriptServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }
     },
@@ -108,7 +117,7 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let scriptServer = createBenchScriptServer(fixture)
-      let preloadUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      let preloadUrls = await scriptServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(preloadUrls, fixture)
       let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
       assert.ok(internalUrls.length > 0, 'expected fingerprinted internal module URLs')
@@ -128,7 +137,7 @@ let benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let scriptServer = createStableBenchScriptServer(fixture)
-      let preloadUrls = await scriptServer.preloads(fixture.entryPointUrl)
+      let preloadUrls = await scriptServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(preloadUrls, fixture)
       let internalUrls = preloadUrls.slice(1)
       assert.ok(internalUrls.length > 0, 'expected internal module URLs')
@@ -150,8 +159,7 @@ function createBenchScriptServer(
 ): ScriptServer {
   let root = path.resolve(import.meta.dirname, '../../..')
   let options: ScriptServerOptions = {
-    entryPoints: [fixture.entryPointPattern],
-    fingerprintInternalModules: {
+    fingerprint: {
       buildId: String(Date.now()),
     },
     root,
@@ -167,7 +175,7 @@ function createStableBenchScriptServer(
   overrides: Partial<ScriptServerOptions> = {},
 ): ScriptServer {
   return createBenchScriptServer(fixture, {
-    fingerprintInternalModules: undefined,
+    fingerprint: undefined,
     ...overrides,
   })
 }

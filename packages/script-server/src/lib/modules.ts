@@ -80,9 +80,8 @@ type EmittedModule = {
 type ModuleCompilerOptions = {
   buildId?: string
   external: string[]
-  fingerprintInternalModules: boolean
+  fingerprintModules: boolean
   isAllowed(absolutePath: string): boolean
-  isEntryPoint(absolutePath: string): boolean
   minify: boolean
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
@@ -277,11 +276,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         let encoded = Buffer.from(rewriteResult.sourcemap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (resolvedOptions.sourceMaps === 'external') {
-        let mapPath = resolvedOptions.isEntryPoint(resolvedSourceModule.identityPath)
-          ? `${resolvedSourceModule.stableUrlPathname}.map`
-          : resolvedOptions.fingerprintInternalModules
-            ? `${resolvedSourceModule.stableUrlPathname}.@${resolvedSourceModule.fingerprint}.map`
-            : `${resolvedSourceModule.stableUrlPathname}.map`
+        let mapPath = `${getServedUrlForResolvedModule(resolvedSourceModule)}.map`
         finalCode += `\n//# sourceMappingURL=${mapPath}`
       }
     }
@@ -330,13 +325,9 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   function getServedUrlForResolvedModule(resolvedModule: ResolvedModule): string {
-    if (
-      resolvedOptions.isEntryPoint(resolvedModule.identityPath) ||
-      !resolvedOptions.fingerprintInternalModules
-    ) {
-      return resolvedModule.stableUrlPathname
-    }
-    return `${resolvedModule.stableUrlPathname}.@${resolvedModule.fingerprint}`
+    return resolvedOptions.fingerprintModules
+      ? `${resolvedModule.stableUrlPathname}.@${resolvedModule.fingerprint}`
+      : resolvedModule.stableUrlPathname
   }
 
   async function getResolvedModuleByIdentity(

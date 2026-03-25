@@ -1,13 +1,15 @@
+import * as path from 'node:path'
 import type { BuildAction } from 'remix/fetch-router'
 
 import type { routes } from '../../routes.ts'
 import { scriptServer } from '../../utils/script-server.ts'
 
-let entryUrl = '/scripts/app/entry.ts'
+let entryFilePath = path.resolve(import.meta.dirname, '../../client/entry.ts')
 
 export let homeController = {
   async handler() {
-    let preloadUrls = await scriptServer.preloads(entryUrl)
+    let entryUrl = await scriptServer.getHref(entryFilePath)
+    let preloadUrls = await scriptServer.getPreloads(entryFilePath)
     let preloadLinks = preloadUrls
       .map((url) => `<link rel="modulepreload" href="${escapeHtml(url)}">`)
       .join('\n')

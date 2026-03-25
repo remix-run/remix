@@ -2,9 +2,7 @@ import { type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
-let moduleUrl = routes.scripts.href({ path: 'app/assets/cart-button.tsx#CartButton' })
-
-export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
+export const CartButton = clientEntry(import.meta.url, function CartButton(handle: Handle) {
   let pending = false
 
   return ({ inCart, id, slug }: { inCart: boolean; id: string | number; slug: string }) => (

@@ -62,30 +62,17 @@ describe('clientEntry', () => {
       let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
 
       expect(EntryComponent.$entry).toBe(true)
-      expect(EntryComponent.$moduleUrl).toBe('/js/test.js')
-      expect(EntryComponent.$exportName).toBe('TestComponent')
+      expect(EntryComponent.$entryId).toBe('/js/test.js#TestComponent')
     })
 
-    it('parses module URL and export name from href', () => {
+    it('stores the original entry ID', () => {
       function MyComponent() {
         return () => <div>Hello</div>
       }
 
-      let EntryComponent = clientEntry('/js/components.js#MyComponent', MyComponent)
+      let EntryComponent = clientEntry('my-custom-entry-id', MyComponent)
 
-      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
-      expect(EntryComponent.$exportName).toBe('MyComponent')
-    })
-
-    it('uses component name as fallback when no export name provided', () => {
-      function NamedComponent() {
-        return () => <div>Hello</div>
-      }
-
-      let EntryComponent = clientEntry('/js/components.js', NamedComponent)
-
-      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
-      expect(EntryComponent.$exportName).toBe('NamedComponent')
+      expect(EntryComponent.$entryId).toBe('my-custom-entry-id')
     })
 
     it('preserves the original component functionality', () => {
@@ -126,40 +113,36 @@ describe('clientEntry', () => {
   })
 
   describe('error handling', () => {
-    it('throws error when no module URL provided', () => {
+    it('throws error when no entry ID provided', () => {
       function TestComponent() {
         return () => <div>Test</div>
       }
 
       expect(() => {
         clientEntry('', TestComponent)
-      }).toThrow('clientEntry() requires a module URL')
+      }).toThrow('clientEntry() requires an entry ID')
     })
 
-    it('throws error when no export name and component is anonymous', () => {
-      let anonymousComponent = function () {
+    it('preserves opaque entry IDs at declaration time', () => {
+      let anonymousHttpComponent = function () {
+        return () => <div>Test</div>
+      }
+      let anonymousFileComponent = function () {
         return () => <div>Test</div>
       }
 
       // Force the function name to be empty to simulate truly anonymous function
-      Object.defineProperty(anonymousComponent, 'name', { value: '' })
+      Object.defineProperty(anonymousHttpComponent, 'name', { value: '' })
+      Object.defineProperty(anonymousFileComponent, 'name', { value: '' })
 
-      expect(() => {
-        clientEntry('/js/test.js', anonymousComponent)
-      }).toThrow('clientEntry() requires either an export name in the href')
-    })
+      let httpEntry = clientEntry('/js/test.js', anonymousHttpComponent)
+      let fileEntry = clientEntry(
+        'file:///app/components/test-component.tsx',
+        anonymousFileComponent,
+      )
 
-    it('throws error when no export name and component name is empty', () => {
-      function TestComponent() {
-        return () => <div>Test</div>
-      }
-
-      // Simulate unnamed function
-      Object.defineProperty(TestComponent, 'name', { value: '' })
-
-      expect(() => {
-        clientEntry('/js/test.js', TestComponent)
-      }).toThrow('clientEntry() requires either an export name in the href')
+      expect(httpEntry.$entryId).toBe('/js/test.js')
+      expect(fileEntry.$entryId).toBe('file:///app/components/test-component.tsx')
     })
   })
 
@@ -279,8 +262,7 @@ describe('clientEntry', () => {
       let EntryCounter = clientEntry('/js/counter.js#Counter', Counter)
 
       expect(EntryCounter.$entry).toBe(true)
-      expect(EntryCounter.$moduleUrl).toBe('/js/counter.js')
-      expect(EntryCounter.$exportName).toBe('Counter')
+      expect(EntryCounter.$entryId).toBe('/js/counter.js#Counter')
     })
 
     it('handles simple components that return JSX directly', () => {
@@ -291,8 +273,7 @@ describe('clientEntry', () => {
       let EntrySimple = clientEntry('/js/simple.js#SimpleComponent', SimpleComponent)
 
       expect(EntrySimple.$entry).toBe(true)
-      expect(EntrySimple.$moduleUrl).toBe('/js/simple.js')
-      expect(EntrySimple.$exportName).toBe('SimpleComponent')
+      expect(EntrySimple.$entryId).toBe('/js/simple.js#SimpleComponent')
     })
   })
 })

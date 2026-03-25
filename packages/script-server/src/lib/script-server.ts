@@ -1,5 +1,6 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import chokidar from 'chokidar'
 import {
   createScriptServerCompilationError,
@@ -9,10 +10,6 @@ import { createModuleCompiler, createResponseForModule } from './modules.ts'
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { ScriptRouteDefinition } from './routes.ts'
-
-let fingerprintedCacheControl = 'public, max-age=31536000, immutable'
-let defaultWatchPoll = false
-let defaultWatchPollInterval = 100
 
 export interface ScriptServerWatchOptions {
   /**
@@ -29,17 +26,12 @@ export interface ScriptServerWatchOptions {
   pollInterval?: number
 }
 
-export interface ScriptServerFingerprintInternalModulesOptions {
+export interface ScriptServerFingerprintOptions {
   /**
    * Per-build invalidation token that must change whenever fingerprinted module URLs
    * should be invalidated together.
    */
   buildId: string
-  /**
-   * Cache-Control header used for fingerprinted internal modules.
-   * Defaults to `public, max-age=31536000, immutable`.
-   */
-  cacheControl?: string
 }
 
 export interface ScriptServerOptions {
@@ -70,17 +62,12 @@ export interface ScriptServerOptions {
    */
   sourceMapSourcePaths?: 'url' | 'absolute'
   /**
-   * File-space paths or glob patterns for modules that should keep stable non-fingerprinted URLs
-   * when internal module fingerprinting is enabled. Relative values are resolved from `root`.
-   */
-  entryPoints?: readonly string[]
-  /**
-   * Controls optional source-based URL fingerprinting for non-entry modules.
+   * Controls optional source-based URL fingerprinting for rewritten import URLs.
    *
    * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
-   * Requires at least one `entryPoints` pattern and cannot be used together with `watch`.
+   * Cannot be used together with `watch`.
    */
-  fingerprintInternalModules?: ScriptServerFingerprintInternalModulesOptions
+  fingerprint?: ScriptServerFingerprintOptions
   /**
    * Minify emitted modules.
    */
@@ -107,9 +94,13 @@ export interface ScriptServer {
    */
   fetch(request: Request): Promise<Response | null>
   /**
-   * Returns preload URLs for one or more module request paths, ordered shallowest-first.
+   * Returns the request href for a served module file.
    */
-  preloads(modulePathname: string | readonly string[]): Promise<string[]>
+  getHref(filePath: string): Promise<string>
+  /**
+   * Returns preload URLs for one or more served module files, ordered shallowest-first.
+   */
+  getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
    * Closes any watcher resources owned by this server instance.
    */
@@ -123,7 +114,7 @@ export interface ScriptServer {
  * fingerprinting, caching, and configurable route mapping.
  *
  * @param options Server configuration
- * @returns A {@link ScriptServer} with `fetch()` and `preloads()` methods
+ * @returns A {@link ScriptServer} with `fetch()`, `getHref()`, and `getPreloads()` methods
  *
  * @example
  * ```ts
@@ -140,34 +131,26 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let sourceMaps = options.sourceMaps
   let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
   let watchOptions = normalizeWatchOptions(options.watch)
-  let fingerprintOptions = normalizeFingerprintInternalModulesOptions({
-    entryPoints: options.entryPoints,
-    fingerprintInternalModules: options.fingerprintInternalModules,
+  let fingerprintOptions = normalizeFingerprintOptions({
+    fingerprint: options.fingerprint,
     watch: options.watch,
   })
   let external = options.external ?? []
-  let fingerprintInternalModules = fingerprintOptions.enabled
+  let fingerprintModules = fingerprintOptions.enabled
   let buildId = fingerprintOptions.buildId
-  let internalModuleCacheControl = fingerprintInternalModules
-    ? fingerprintOptions.cacheControl
-    : 'no-cache'
   let minify = options.minify ?? false
   let onError = options.onError ?? defaultErrorHandler
   let routes = compileRoutes({
     root,
     routes: options.routes,
   })
-  let entryPointMatchers = fingerprintOptions.entryPoints.map((entryPoint) =>
-    createFileMatcher(entryPoint, root, { allowDirectories: false, allowMissing: false }),
-  )
   let allowMatchers = options.allow.map((pattern) => createFileMatcher(pattern, root))
   let denyMatchers = (options.deny ?? []).map((pattern) => createFileMatcher(pattern, root))
   let moduleCompiler = createModuleCompiler({
     buildId,
     external,
-    fingerprintInternalModules,
+    fingerprintModules,
     isAllowed,
-    isEntryPoint,
     minify,
     routes,
     sourceMapSourcePaths,
@@ -223,10 +206,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     }
   }
 
-  function isEntryPoint(filePath: string): boolean {
-    return entryPointMatchers.some((matcher) => matcher(filePath))
-  }
-
   function isAllowed(filePath: string): boolean {
     if (!allowMatchers.some((matcher) => matcher(filePath))) return false
     if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
@@ -240,6 +219,39 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
         code: 'MODULE_OUTSIDE_ROUTES',
       },
     )
+  }
+
+  function resolveInputFilePath(filePath: string): string {
+    if (filePath.startsWith('file://')) {
+      return normalizeFilePath(fileURLToPath(new URL(filePath)))
+    }
+
+    if (filePath.includes('://')) {
+      throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
+    }
+
+    return resolveFilePath(root, filePath)
+  }
+
+  function resolveRequestedModule(filePath: string) {
+    let resolvedFilePath = resolveInputFilePath(filePath)
+    let resolvedModule = moduleCompiler.resolveRequestPath(resolvedFilePath)
+    if (!resolvedModule) {
+      throw createScriptServerCompilationError(`Module not found: ${resolvedFilePath}`, {
+        code: 'MODULE_NOT_FOUND',
+      })
+    }
+
+    if (!isAllowed(resolvedModule.identityPath)) {
+      throw createScriptServerCompilationError(
+        `Module is not allowed: ${resolvedModule.identityPath}`,
+        {
+          code: 'MODULE_NOT_ALLOWED',
+        },
+      )
+    }
+
+    return resolvedModule
   }
 
   return {
@@ -256,23 +268,22 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       if (!resolvedPath) return null
 
       try {
-        let resolvedModule = moduleCompiler.resolveServedPath(resolvedPath)
-        let ifNoneMatch = request.headers.get('If-None-Match')
-        let isEntry = isEntryPoint(resolvedModule.identityPath)
-
-        if (!requestedToken && !isEntry && fingerprintInternalModules) {
+        if (fingerprintModules && requestedToken === null) {
           return null
         }
+
+        let resolvedModule = moduleCompiler.resolveServedPath(resolvedPath)
+        let ifNoneMatch = request.headers.get('If-None-Match')
 
         let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
 
         if (requestedToken !== null) {
-          if (isEntry) return null
           if (compiledModule.fingerprint !== requestedToken) return null
         }
 
         return createResponseForModule(compiledModule, {
-          cacheControl: isEntry ? 'no-cache' : internalModuleCacheControl,
+          cacheControl:
+            requestedToken === null ? 'no-cache' : 'public, max-age=31536000, immutable',
           ifNoneMatch,
           isSourceMapRequest,
           method: request.method,
@@ -292,23 +303,21 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       }
     },
 
-    async preloads(modulePathname) {
-      let modulePathnames = Array.isArray(modulePathname) ? modulePathname : [modulePathname]
-      if (modulePathnames.length === 0) return []
-
-      let resolvedPaths = modulePathnames.map((pathname) => {
-        if (/\.@[A-Za-z0-9_-]+(?:\.map)?$/.test(pathname)) {
-          throw new Error(
-            `Preload URLs must use stable non-fingerprinted module paths, received "${pathname}"`,
-          )
-        }
-
-        let resolvedPath = routes.resolveUrlPathname(pathname)
-        if (!resolvedPath) throw createOutsideRoutesError(pathname)
-        return resolvedPath
-      })
-
-      return moduleCompiler.getPreloadUrls(resolvedPaths)
+    async getHref(filePath) {
+      let resolvedModule = resolveRequestedModule(filePath)
+      let href = routes.toUrlPathname(resolvedModule.identityPath)
+      if (!href) throw createOutsideRoutesError(resolvedModule.identityPath)
+      if (!fingerprintModules) return href
+      let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
+      return `${href}.@${compiledModule.fingerprint}`
+    },
+    async getPreloads(filePath) {
+      let filePaths = Array.isArray(filePath) ? filePath : [filePath]
+      if (filePaths.length === 0) return []
+      let identityPaths = filePaths.map(
+        (nextFilePath) => resolveRequestedModule(nextFilePath).identityPath,
+      )
+      return moduleCompiler.getPreloadUrls(identityPaths)
     },
     async close() {
       await watcher?.close()
@@ -375,54 +384,39 @@ function isPathNotFoundError(
   )
 }
 
-function normalizeFingerprintInternalModulesOptions(options: {
-  entryPoints: ScriptServerOptions['entryPoints']
-  fingerprintInternalModules: ScriptServerOptions['fingerprintInternalModules']
+function normalizeFingerprintOptions(options: {
+  fingerprint: ScriptServerOptions['fingerprint']
   watch: ScriptServerOptions['watch']
 }):
   | {
       enabled: false
       buildId?: string
-      cacheControl: string
-      entryPoints: readonly string[]
     }
   | {
       enabled: true
       buildId: string
-      cacheControl: string
-      entryPoints: readonly string[]
     } {
-  if (!options.fingerprintInternalModules) {
+  if (!options.fingerprint) {
     return {
       enabled: false,
-      cacheControl: 'no-cache',
-      entryPoints: [],
     }
   }
 
-  if (typeof options.fingerprintInternalModules.buildId !== 'string') {
-    throw new TypeError('fingerprintInternalModules.buildId must be a string')
+  if (typeof options.fingerprint.buildId !== 'string') {
+    throw new TypeError('fingerprint.buildId must be a string')
   }
 
-  if (options.fingerprintInternalModules.buildId.length === 0) {
-    throw new TypeError('fingerprintInternalModules.buildId must be a non-empty string')
-  }
-
-  if (!Array.isArray(options.entryPoints) || options.entryPoints.length === 0) {
-    throw new TypeError(
-      'entryPoints must be a non-empty array when fingerprintInternalModules is enabled',
-    )
+  if (options.fingerprint.buildId.length === 0) {
+    throw new TypeError('fingerprint.buildId must be a non-empty string')
   }
 
   if (options.watch) {
-    throw new TypeError('fingerprintInternalModules cannot be used with watch mode')
+    throw new TypeError('fingerprint cannot be used with watch mode')
   }
 
   return {
     enabled: true,
-    buildId: options.fingerprintInternalModules.buildId,
-    cacheControl: options.fingerprintInternalModules.cacheControl ?? fingerprintedCacheControl,
-    entryPoints: options.entryPoints,
+    buildId: options.fingerprint.buildId,
   }
 }
 
@@ -430,11 +424,11 @@ function normalizeWatchOptions(
   options: boolean | ScriptServerWatchOptions | undefined,
 ): Exclude<Parameters<typeof chokidar.watch>[1], undefined> | null {
   if (!options) return null
-  if (options === true) return {}
+  let watchOptions: ScriptServerWatchOptions = options === true ? {} : options
   return {
-    ignored: options.ignore ? [...options.ignore] : undefined,
-    interval: options.pollInterval ?? defaultWatchPollInterval,
-    usePolling: options.poll ?? defaultWatchPoll,
+    ignored: ['**/.git/**', ...(watchOptions.ignore ?? [])],
+    interval: watchOptions.pollInterval ?? 100,
+    usePolling: watchOptions.poll ?? false,
   }
 }
 

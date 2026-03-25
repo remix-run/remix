@@ -20,8 +20,7 @@ export let scriptServer = createScriptServer({
   allow: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts', 'packages/*/src/**'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  entryPoints: ['demos/bookstore/app/assets/*'],
-  fingerprintInternalModules: isDevelopment
+  fingerprint: isDevelopment
     ? undefined
     : {
         buildId: process.env.GITHUB_SHA ?? String(Date.now()),

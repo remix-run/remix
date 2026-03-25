@@ -33,11 +33,19 @@ export interface RenderToStreamOptions {
     context?: ResolveFrameContext,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   /**
-   * Callback used to resolve modulepreload hrefs for client entry modules during SSR.
+   * Callback used to resolve runtime module metadata for client entry modules during SSR.
    */
-  resolveClientEntryPreloads?: (
-    hrefs: string[],
-  ) => Promise<readonly string[]> | readonly string[] | Promise<string[]> | string[]
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry
+  /**
+   * Callback used to render head content for client entry modules during SSR.
+   */
+  resolveHeadContent?: (options: {
+    clientEntryIds: string[]
+    clientEntryHrefs: string[]
+  }) => Promise<string> | string
 }
 
 /**
@@ -54,6 +62,11 @@ interface HydrationData {
   moduleUrl: string
   exportName: string
   props: Record<string, unknown>
+}
+
+interface ResolvedClientEntry {
+  href: string
+  exportName: string
 }
 
 interface FrameData {
@@ -74,8 +87,13 @@ interface RenderContext {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
-  hydratedModuleUrls: Set<string>
-  hydrationPreloadUrls: string[]
+  hydrationEntryIds: Map<string, string>
+  hydrationComponents: Map<string, EntryComponent>
+  hydratedClientEntryIds: Set<string>
+  hydratedClientEntryHrefs: Set<string>
+  unresolvedClientEntryIds: Set<string>
+  headContent: string
+  blockingFrameHeadContents: string[]
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -190,8 +208,13 @@ export function renderToStream(
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
-    hydratedModuleUrls: new Set(),
-    hydrationPreloadUrls: [],
+    hydrationEntryIds: new Map(),
+    hydrationComponents: new Map(),
+    hydratedClientEntryIds: new Set(),
+    hydratedClientEntryHrefs: new Set(),
+    unresolvedClientEntryIds: new Set(),
+    headContent: '',
+    blockingFrameHeadContents: [],
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -203,11 +226,15 @@ export function renderToStream(
       try {
         let root = buildSegment(node, context, rootFrameState)
         await resolveBlocking(root)
-        if (options?.resolveClientEntryPreloads && context.hydratedModuleUrls.size > 0) {
-          let preloadUrls = await Promise.resolve(
-            options.resolveClientEntryPreloads([...context.hydratedModuleUrls]),
+        await resolveClientEntries(context, options?.resolveClientEntry)
+        validateClientEntriesForHydration(context)
+        if (options?.resolveHeadContent && context.hydratedClientEntryIds.size > 0) {
+          context.headContent = await Promise.resolve(
+            options.resolveHeadContent({
+              clientEntryIds: [...context.hydratedClientEntryIds],
+              clientEntryHrefs: [...context.hydratedClientEntryHrefs],
+            }),
           )
-          context.hydrationPreloadUrls = dedupeUrls(preloadUrls)
         }
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
@@ -805,15 +832,113 @@ function buildEntrySegment(
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
   context.hydrationData.set(instanceId, {
-    moduleUrl: type.$moduleUrl,
-    exportName: type.$exportName,
+    moduleUrl: '',
+    exportName: '',
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
-  context.hydratedModuleUrls.add(type.$moduleUrl)
+  context.hydrationEntryIds.set(instanceId, type.$entryId)
+  context.hydrationComponents.set(instanceId, type)
+  context.hydratedClientEntryIds.add(type.$entryId)
+  context.unresolvedClientEntryIds.add(type.$entryId)
 
   let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
   let end = staticSeg('<!-- /rmx:h -->')
   return compositeSeg([start, rendered, end])
+}
+
+function resolveDefaultClientEntry(
+  entryId: string,
+  component: EntryComponent,
+): ResolvedClientEntry {
+  let fallbackExportName = component.name || ''
+  let hashIndex = entryId.lastIndexOf('#')
+  if (hashIndex === -1) {
+    if (!fallbackExportName) {
+      throw new Error(
+        `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
+      )
+    }
+
+    return {
+      exportName: fallbackExportName,
+      href: entryId,
+    }
+  }
+
+  let exportName = entryId.slice(hashIndex + 1) || fallbackExportName || ''
+  if (!exportName) {
+    throw new Error(
+      `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
+    )
+  }
+
+  return {
+    exportName,
+    href: entryId.slice(0, hashIndex),
+  }
+}
+
+async function resolveClientEntries(
+  context: RenderContext,
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
+): Promise<void> {
+  let unresolvedEntryIds = [...context.unresolvedClientEntryIds]
+  if (unresolvedEntryIds.length === 0) return
+
+  for (let [hydrationId, entryId] of context.hydrationEntryIds) {
+    if (!context.unresolvedClientEntryIds.has(entryId)) continue
+
+    let hydrationData = context.hydrationData.get(hydrationId)
+    if (!hydrationData) continue
+    let component = context.hydrationComponents.get(hydrationId)
+    if (!component) {
+      throw new Error(`Missing component metadata for clientEntry "${entryId}".`)
+    }
+
+    let resolvedEntry = resolveClientEntry
+      ? await Promise.resolve(resolveClientEntry(entryId, component))
+      : resolveDefaultClientEntry(entryId, component)
+    validateResolvedClientEntry(entryId, resolvedEntry)
+
+    hydrationData.exportName = resolvedEntry.exportName
+    hydrationData.moduleUrl = resolvedEntry.href
+    context.hydratedClientEntryHrefs.add(resolvedEntry.href)
+  }
+  context.unresolvedClientEntryIds.clear()
+}
+
+function validateResolvedClientEntry(
+  entryId: string,
+  resolvedEntry: ResolvedClientEntry,
+): asserts resolvedEntry is ResolvedClientEntry {
+  if (!resolvedEntry || typeof resolvedEntry !== 'object') {
+    throw new Error(
+      `resolveClientEntry must return an object with href and exportName. Received "${entryId}".`,
+    )
+  }
+
+  if (!resolvedEntry.href) {
+    throw new Error(`resolveClientEntry must return a non-empty href. Received "${entryId}".`)
+  }
+
+  if (!resolvedEntry.exportName) {
+    throw new Error(`resolveClientEntry must return a non-empty exportName. Received "${entryId}".`)
+  }
+}
+
+function validateClientEntriesForHydration(context: RenderContext): void {
+  for (let [hydrationId, hydrationData] of context.hydrationData) {
+    if (hydrationData.exportName) continue
+
+    let entryId =
+      context.hydrationEntryIds.get(hydrationId) ??
+      `${hydrationData.moduleUrl}#${hydrationData.exportName}`
+
+    throw new Error(`Resolved client entry is missing an exportName. Received "${entryId}".`)
+  }
 }
 
 // Resolve all blocking frame content once
@@ -881,10 +1006,8 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
 
-  let headContent = ''
-  if (context.hydrationPreloadUrls.length > 0) {
-    headContent += renderHydrationPreloadLinks(context.hydrationPreloadUrls)
-  }
+  let headContent = context.blockingFrameHeadContents.join('')
+  headContent += renderResolvedHeadContent(context.headContent)
 
   let css = collectAllStyles(context)
   if (css) {
@@ -976,7 +1099,16 @@ function buildRmxDataScript(context: RenderContext): string {
   } = {}
 
   if (context.hydrationData.size > 0) {
-    data.h = Object.fromEntries(context.hydrationData)
+    data.h = Object.fromEntries(
+      [...context.hydrationData].map(([id, hydrationData]) => [
+        id,
+        {
+          exportName: hydrationData.exportName,
+          moduleUrl: hydrationData.moduleUrl,
+          props: hydrationData.props,
+        },
+      ]),
+    )
   }
 
   if (context.frameData.size > 0) {
@@ -988,15 +1120,22 @@ function buildRmxDataScript(context: RenderContext): string {
 }
 
 function mergeResolvedFrameRmxData(html: string, context: RenderContext): string {
-  return stripBlockingFramePreloadLinks(
-    html.replace(
+  return html
+    .replace(/<head\b[^>]*>([\s\S]*?)<\/head>/gi, (_match, headContent: string) => {
+      let nextHeadContent = headContent.trim()
+      if (nextHeadContent.length > 0) {
+        context.blockingFrameHeadContents.push(nextHeadContent)
+      }
+      return ''
+    })
+    .replace(
       /<script(?=[^>]*\bid=(["'])rmx-data\1)(?=[^>]*\btype=(["'])application\/json\2)[^>]*>([\s\S]*?)<\/script>/gi,
       (_match, _idQuote, _typeQuote, jsonText: string) => {
         mergeRmxDataPayload(context, parseRmxDataPayload(jsonText))
         return ''
       },
-    ),
-  )
+    )
+    .replace(/<head>\s*<\/head>/gi, '')
 }
 
 function escapeScriptJson(json: string): string {
@@ -1016,7 +1155,6 @@ function mergeRmxDataPayload(context: RenderContext, payload: RmxDataPayload): v
   if (payload.h) {
     for (let [id, hydrationData] of Object.entries(payload.h)) {
       context.hydrationData.set(id, hydrationData)
-      context.hydratedModuleUrls.add(hydrationData.moduleUrl)
     }
   }
 
@@ -1027,29 +1165,13 @@ function mergeRmxDataPayload(context: RenderContext, payload: RmxDataPayload): v
   }
 }
 
-function dedupeUrls(urls: readonly string[]): string[] {
-  let deduped: string[] = []
-  let seen = new Set<string>()
-
-  for (let url of urls) {
-    if (typeof url !== 'string' || url.length === 0 || seen.has(url)) continue
-    seen.add(url)
-    deduped.push(url)
-  }
-
-  return deduped
+function renderResolvedHeadContent(html: string): string {
+  if (!html) return ''
+  return `<!-- rmx:head-content -->${html}<!-- /rmx:head-content -->`
 }
 
-function renderHydrationPreloadLinks(urls: readonly string[]): string {
-  return urls
-    .map((href) => `<link rel="modulepreload" href="${escapeHtml(href)}" data-rmx-preload />`)
-    .join('')
-}
-
-function stripBlockingFramePreloadLinks(html: string): string {
-  return html
-    .replace(/<link rel="modulepreload" href="[^"]*" data-rmx-preload \/>/g, '')
-    .replace(/<head>\s*<\/head>/g, '')
+function stripResolvedHeadContent(html: string): string {
+  return html.replace(/<!-- rmx:head-content -->([\s\S]*?)<!-- \/rmx:head-content -->/g, '')
 }
 
 function serializeStyleObject(style: Record<string, any>): string {
