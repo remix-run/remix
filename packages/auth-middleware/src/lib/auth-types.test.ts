@@ -28,14 +28,14 @@ type IsEqual<A, B> =
 function expectTypeEquality<_check extends true>() {}
 
 const personalAccessToken = createBearerTokenAuthScheme({
-  name: 'pat' as const,
+  name: 'pat',
   verify(_token): { kind: 'bearer'; id: string } | null {
     return { kind: 'bearer', id: 'user-1' }
   },
 })
 
 const partnerKey = createAPIAuthScheme({
-  name: 'partner-key' as const,
+  name: 'partner-key',
   verify(_key): { kind: 'api-key'; id: number } | null {
     return { kind: 'api-key', id: 123 }
   },
@@ -65,8 +65,8 @@ type AuthContext = WithAuth<RequestContext, APIIdentity>
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
 
-expectTypeEquality<IsEqual<typeof personalAccessToken.name, 'pat'>>()
-expectTypeEquality<IsEqual<typeof partnerKey.name, 'partner-key'>>()
+expectTypeEquality<IsEqual<typeof personalAccessToken.name, string>>()
+expectTypeEquality<IsEqual<typeof partnerKey.name, string>>()
 expectTypeEquality<IsEqual<GetContextValue<AuthContext, typeof Auth>, AuthState<APIIdentity>>>()
 expectTypeEquality<
   IsEqual<GetContextValue<ProtectedAppContext, typeof Auth>, GoodAuth<APIIdentity>>

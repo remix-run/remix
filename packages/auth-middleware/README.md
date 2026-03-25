@@ -174,7 +174,7 @@ let authCookie = createCookie('__auth', {
   path: '/',
 })
 
-let authCookieScheme: AuthScheme<'demo-user', 'auth-cookie'> = {
+let authCookieScheme: AuthScheme<'demo-user'> = {
   name: 'auth-cookie',
   async authenticate(context) {
     let value = await authCookie.parse(context.headers.get('cookie'))

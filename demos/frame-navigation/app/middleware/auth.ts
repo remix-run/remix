@@ -14,7 +14,7 @@ export let authCookie = createCookie('frame-navigation-auth', {
   path: '/',
 })
 
-let authCookieScheme: AuthScheme<FrameAuthIdentity, 'auth-cookie'> = {
+let authCookieScheme: AuthScheme<FrameAuthIdentity> = {
   name: 'auth-cookie',
   async authenticate(context) {
     let cookie = await authCookie.parse(context.headers.get('cookie'))

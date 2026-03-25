@@ -102,20 +102,18 @@ export type AuthSchemeAuthenticateResult<identity = unknown> =
 /**
  * Authentication scheme contract consumed by `auth()`.
  */
-export interface AuthScheme<identity = unknown, method extends string = string> {
+export interface AuthScheme<identity = unknown> {
   /** Stable method name exposed on the resolved auth state. */
-  name: method
+  name: string
   /** Authenticates the current request or returns `null`/`undefined` to skip the scheme. */
   authenticate(
     context: RequestContext,
   ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
 }
 
-type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity, any> ? identity : never
+type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity> ? identity : never
 
-type AuthForSchemes<schemes extends readonly AuthScheme<any, any>[]> = AuthState<
-  AuthSchemeIdentity<schemes[number]>
->
+type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<AuthSchemeIdentity<schemes[number]>>
 
 type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
 
@@ -123,7 +121,7 @@ type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
  * Options for loading auth state for each request.
  */
 export interface AuthOptions<
-  schemes extends readonly AuthScheme<any, any>[] = AuthScheme<any, any>[],
+  schemes extends readonly AuthScheme<any>[] = AuthScheme<any>[],
 > {
   /** Auth schemes to run in order for each request. */
   schemes: readonly [...schemes]
@@ -135,7 +133,7 @@ export interface AuthOptions<
  * @param options Auth scheme configuration for the middleware.
  * @returns Middleware that resolves auth state into `context.get(Auth)`.
  */
-export function auth<schemes extends readonly AuthScheme<any, any>[]>(
+export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
 ): Middleware<any, any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
   if (options.schemes.length === 0) {
@@ -182,7 +180,7 @@ export function auth<schemes extends readonly AuthScheme<any, any>[]>(
   }
 }
 
-function createFailure(scheme: AuthScheme<any, any>, result: AuthSchemeFailure): AuthFailure {
+function createFailure(scheme: AuthScheme<any>, result: AuthSchemeFailure): AuthFailure {
   return {
     method: scheme.name,
     code: result.code ?? 'invalid_credentials',

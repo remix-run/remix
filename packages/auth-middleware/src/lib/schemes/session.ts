@@ -3,19 +3,12 @@ import { Session } from '@remix-run/session'
 
 import type { AuthFailure, AuthScheme } from '../auth.ts'
 
-type ResolvedMethod<name, fallback extends string> =
-  Extract<name, string> extends never ? fallback : Extract<name, string>
-
 /**
  * Options for creating a session-backed auth scheme.
  */
-export interface SessionAuthSchemeOptions<
-  identity,
-  session_value = unknown,
-  method extends string = 'session',
-> {
+export interface SessionAuthSchemeOptions<identity, session_value = unknown> {
   /** Method name exposed on the resolved auth state. */
-  name?: method
+  name?: string
   /** Reads the auth value persisted in the session for the current request. */
   read(session: Session, context: RequestContext): session_value | null | undefined
   /** Verifies the session auth value and returns the resolved identity on success. */
@@ -37,11 +30,10 @@ export interface SessionAuthSchemeOptions<
 export function createSessionAuthScheme<
   identity,
   session_value = unknown,
-  method extends string = 'session',
 >(
-  options: SessionAuthSchemeOptions<identity, session_value, method>,
-): AuthScheme<identity, ResolvedMethod<method, 'session'>> {
-  let name = (options.name ?? 'session') as ResolvedMethod<method, 'session'>
+  options: SessionAuthSchemeOptions<identity, session_value>,
+): AuthScheme<identity> {
+  let name = options.name ?? 'session'
 
   return {
     name,
