@@ -2118,18 +2118,15 @@ describe('run', () => {
   })
 
   it('does not duplicate initially-mounted Frame hydration in a client entry', async () => {
-    let MountedFrame = clientEntry(
-      '/js/mounted-frame.js#MountedFrame',
-      function MountedFrame() {
-        let showFrame = true
-        return () =>
-          showFrame ? (
-            <section>
-              <Frame src="/outer" fallback={<p id="outer-fallback">Loading outer…</p>} />
-            </section>
-          ) : null
-      },
-    )
+    let MountedFrame = clientEntry('/js/mounted-frame.js#MountedFrame', function MountedFrame() {
+      let showFrame = true
+      return () =>
+        showFrame ? (
+          <section>
+            <Frame src="/outer" fallback={<p id="outer-fallback">Loading outer…</p>} />
+          </section>
+        ) : null
+    })
 
     let outerStream = renderToStream(
       <div id="outer-root">
