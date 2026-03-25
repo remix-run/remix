@@ -63,7 +63,14 @@
 
 A skill is a reusable local instruction set stored in a `SKILL.md` file.
 
-### Available skills
+This repo has two different skill directories with different purposes:
+
+- `./skills/` contains skills for creating Remix applications and working with Remix itself as an app framework or consumer library.
+- `./.agents/skills/` contains skills for working on the packages, docs, demos, release flow, and other implementation details inside this repository.
+
+When deciding which skill to use, check both sections below and pick the set that matches the task.
+
+### Skills for working in this repository
 
 - **add-package**: Create or align a package in the Remix monorepo to match existing package conventions. Use when adding a brand new package under packages/, or when fixing an existing package's structure, test setup, TypeScript/build config, code style, and README layout to match the rest of Remix 3. (file: `./.agents/skills/add-package/SKILL.md`)
 - **make-change-file**: Create or update package change files using Remix repo conventions, deterministic naming, and release-note style. (file: `./.agents/skills/make-change-file/SKILL.md`)
@@ -74,3 +81,8 @@ A skill is a reusable local instruction set stored in a `SKILL.md` file.
 - **update-pr**: Rewrite GitHub PR titles and descriptions from scratch so they match the PR as it exists now, and always review the title when updating the body. (file: `./.agents/skills/update-pr/SKILL.md`)
 - **write-api-docs**: Write or audit public API docs for Remix packages. Use when adding or tightening JSDoc on exported functions, classes, interfaces, type aliases, or option objects. (file: `./.agents/skills/write-api-docs/SKILL.md`)
 - **write-readme**: Write or rewrite Remix package READMEs using this repo's structure, installation conventions, production-style examples, and section ordering. (file: `./.agents/skills/write-readme/SKILL.md`)
+
+### Skills for building Remix applications
+
+- **remix-project-layout**: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. Use when defining, reviewing, or bootstrapping an app layout; run the bundled TypeScript script when asked to scaffold it. (file: `./skills/remix-project-layout/SKILL.md`)
+- **remix-ui**: Build the UI of a Remix app. Use when creating pages, layouts, client entries, interactions, stateful UI, navigation, hydration, styling, animations, reusable mixins, or UI tests. (file: `./skills/remix-ui/SKILL.md`)

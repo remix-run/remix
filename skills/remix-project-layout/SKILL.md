@@ -1,9 +1,9 @@
 ---
-name: remix-application-layout
+name: remix-project-layout
 description: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. When asked to bootstrap that layout in a new directory, run the bundled TypeScript script.
 ---
 
-# Remix Application Layout
+# Remix Project Layout
 
 Use this skill when defining, reviewing, or bootstrapping the on-disk layout of a Remix
 application.
@@ -154,7 +154,7 @@ Do not invent one-off naming schemes when an existing convention already fits.
 When the user wants this layout scaffolded into a new directory, run:
 
 ```sh
-node skills/remix-application-layout/scripts/bootstrap_remix_application.ts <target-dir>
+node skills/remix-project-layout/scripts/bootstrap_remix_application.ts <target-dir>
 ```
 
 Optional flags:
