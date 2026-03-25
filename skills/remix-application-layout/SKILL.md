@@ -154,7 +154,7 @@ Do not invent one-off naming schemes when an existing convention already fits.
 When the user wants this layout scaffolded into a new directory, run:
 
 ```sh
-node app-skills/remix-application-layout/scripts/bootstrap_remix_application.ts <target-dir>
+node skills/remix-application-layout/scripts/bootstrap_remix_application.ts <target-dir>
 ```
 
 Optional flags:
