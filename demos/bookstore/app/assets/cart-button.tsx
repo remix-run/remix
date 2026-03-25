@@ -10,8 +10,7 @@ export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
   return ({ inCart, id, slug }: { inCart: boolean; id: string | number; slug: string }) => (
     <button
       type="button"
-      mix={[
-        on('click', async (_event, signal) => {
+      mix={on('click', async (_event, signal) => {
           pending = true
           handle.update()
 
@@ -30,8 +29,7 @@ export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
           if (signal.aborted) return
           pending = false
           handle.update()
-        }),
-      ]}
+        })}
       class="btn"
     >
       {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}

@@ -7,7 +7,7 @@ import { redirect } from 'remix/response/redirect'
 import { users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 import { AccountSettingsPage } from './page.tsx'
 
 let textField = f.field(s.defaulted(s.string(), ''))
@@ -17,7 +17,7 @@ let accountSettingsSchema = f.object({
   password: textField,
 })
 
-let settingsController = {
+export default {
   actions: {
     index() {
       let user = getCurrentUser()
@@ -38,5 +38,3 @@ let settingsController = {
     },
   },
 } satisfies Controller<typeof routes.account.settings>
-
-export default settingsController

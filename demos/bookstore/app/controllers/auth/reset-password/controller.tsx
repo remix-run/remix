@@ -6,11 +6,11 @@ import { redirect } from 'remix/response/redirect'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
 
-let resetPasswordController = {
+export default {
   actions: {
     index({ params, get }) {
       let session = get(Session)
@@ -59,5 +59,3 @@ let resetPasswordController = {
     },
   },
 } satisfies Controller<typeof routes.auth.resetPassword>
-
-export default resetPasswordController

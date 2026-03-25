@@ -7,7 +7,7 @@ export let ReloadScope = clientEntry(
     let topPending = false
 
     return () => (
-      <div mix={[css({ display: 'flex', gap: 8, flexWrap: 'wrap' })]}>
+      <div mix={css({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
         <button
           type="button"
           mix={[

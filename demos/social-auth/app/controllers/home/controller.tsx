@@ -11,7 +11,7 @@ import {
   readExternalProviderLinks,
   type ExternalProviderRegistry,
 } from '../../utils/external-auth.ts'
-import { render } from '../render.tsx'
+import { render } from '../../utils/render.tsx'
 
 export function createHomeController(
   registry: ExternalProviderRegistry = externalProviderRegistry,

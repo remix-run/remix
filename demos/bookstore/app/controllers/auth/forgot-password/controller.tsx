@@ -4,11 +4,11 @@ import { Database } from 'remix/data-table'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import type { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 import { forgotPasswordSchema, normalizeEmail } from '../schemas.ts'
 import { ForgotPasswordPage, ForgotPasswordSuccessPage } from './page.tsx'
 
-let forgotPasswordController = {
+export default {
   actions: {
     index() {
       return render(<ForgotPasswordPage />)
@@ -35,5 +35,3 @@ let forgotPasswordController = {
     },
   },
 } satisfies Controller<typeof routes.auth.forgotPassword>
-
-export default forgotPasswordController

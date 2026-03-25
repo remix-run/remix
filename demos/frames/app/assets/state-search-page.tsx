@@ -19,8 +19,8 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
           css({ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }),
         ]}
       >
-        <label mix={[css({ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 320px' })]}>
-          <span mix={[css({ fontSize: 13, color: '#b9c6ff' })]}>Search states</span>
+        <label mix={css({ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 320px' })}>
+          <span mix={css({ fontSize: 13, color: '#b9c6ff' })}>Search states</span>
           <input
             placeholder="Try: carolina, dakota, new"
             mix={[
@@ -38,8 +38,7 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
         </label>
         <button
           type="submit"
-          mix={[
-            css({
+          mix={css({
               padding: '8px 12px',
               borderRadius: 10,
               border: '1px solid rgba(255,255,255,0.18)',
@@ -48,8 +47,7 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
               cursor: 'pointer',
               marginTop: 20,
               '&:hover': { background: 'rgba(255,255,255,0.1)' },
-            }),
-          ]}
+            })}
         >
           Search
         </button>
@@ -57,22 +55,20 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
 
       {query.trim() ? (
         <div
-          mix={[
-            css({
+          mix={css({
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 12,
               padding: 12,
               background: 'rgba(255,255,255,0.03)',
-            }),
-          ]}
+            })}
         >
           <Frame
             src={routes.frames.stateSearchResults.href(undefined, { query })}
-            fallback={<div mix={[css({ color: '#9aa8e8' })]}>Searching states…</div>}
+            fallback={<div mix={css({ color: '#9aa8e8' })}>Searching states…</div>}
           />
         </div>
       ) : (
-        <p mix={[css({ margin: 0, color: '#9aa8e8' })]}>
+        <p mix={css({ margin: 0, color: '#9aa8e8' })}>
           Enter a state name to run the frame search.
         </p>
       )}

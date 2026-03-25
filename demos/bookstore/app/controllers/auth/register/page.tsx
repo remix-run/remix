@@ -1,13 +1,13 @@
 import { css } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
-import { Document } from '../../ui/document.tsx'
+import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
 
 export function RegisterPage() {
   return () => (
     <Document>
-      <div class="card" mix={[authCardStyle]}>
+      <div class="card" mix={authCardStyle}>
         <h1>Register</h1>
         <form method="POST" action={routes.auth.register.action.href()}>
           <div class="form-group">
@@ -36,7 +36,7 @@ export function RegisterPage() {
           </button>
         </form>
 
-        <p mix={[css({ marginTop: '1.5rem' })]}>
+        <p mix={css({ marginTop: '1.5rem' })}>
           Already have an account? <a href={routes.auth.login.index.href()}>Login here</a>
         </p>
       </div>
@@ -47,7 +47,7 @@ export function RegisterPage() {
 export function ExistingAccountPage() {
   return () => (
     <Document>
-      <div class="card" mix={[authCardStyle]}>
+      <div class="card" mix={authCardStyle}>
         <div class="alert alert-error">An account with this email already exists.</div>
         <p>
           <a href={routes.auth.register.index.href()} class="btn">
@@ -56,7 +56,7 @@ export function ExistingAccountPage() {
           <a
             href={routes.auth.login.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Login
           </a>

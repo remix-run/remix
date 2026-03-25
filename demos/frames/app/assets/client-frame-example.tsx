@@ -7,29 +7,25 @@ export let ClientFrameExample = clientEntry(
 
     return () => (
       <section
-        mix={[
-          css({
+        mix={css({
             marginTop: 16,
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 10,
             padding: 12,
             background: 'rgba(255,255,255,0.03)',
-          }),
-        ]}
+          })}
       >
         <div
-          mix={[
-            css({
+          mix={css({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
-            }),
-          ]}
+            })}
         >
           <div>
-            <div mix={[css({ fontSize: 13, color: '#b9c6ff' })]}>Client-rendered Frame</div>
-            <div mix={[css({ fontSize: 12, color: '#9aa8e8' })]}>
+            <div mix={css({ fontSize: 13, color: '#b9c6ff' })}>Client-rendered Frame</div>
+            <div mix={css({ fontSize: 12, color: '#9aa8e8' })}>
               Added after hydration via a client entry component.
             </div>
           </div>
@@ -56,10 +52,10 @@ export let ClientFrameExample = clientEntry(
         </div>
 
         {mounted ? (
-          <div mix={[css({ marginTop: 10 })]}>
+          <div mix={css({ marginTop: 10 })}>
             <Frame
               src="/frames/client-frame-example"
-              fallback={<div mix={[css({ color: '#9aa8e8' })]}>Loading client frame content…</div>}
+              fallback={<div mix={css({ color: '#9aa8e8' })}>Loading client frame content…</div>}
             />
           </div>
         ) : null}

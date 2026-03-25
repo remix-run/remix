@@ -2,7 +2,7 @@ import { css } from 'remix/component'
 
 import type { User } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { Layout } from '../../ui/layout.tsx'
+import { Layout } from '../../../ui/layout.tsx'
 
 export function AdminUserNotFoundPage() {
   return () => (
@@ -36,14 +36,14 @@ export function AdminUserShowPage() {
           <strong>Created:</strong> {new Date(user.created_at).toLocaleDateString()}
         </p>
 
-        <div mix={[css({ marginTop: '2rem' })]}>
+        <div mix={css({ marginTop: '2rem' })}>
           <a href={routes.admin.users.edit.href({ userId: user.id })} class="btn">
             Edit
           </a>
           <a
             href={routes.admin.users.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Back to List
           </a>

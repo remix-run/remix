@@ -2,8 +2,8 @@ import { css } from 'remix/component'
 
 import type { User } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { RestfulForm } from '../../ui/restful-form.tsx'
-import { Layout } from '../../ui/layout.tsx'
+import { RestfulForm } from '../../../ui/restful-form.tsx'
+import { Layout } from '../../../ui/layout.tsx'
 
 export function AccountSettingsPage() {
   return ({ user }: { user: User }) => (
@@ -33,7 +33,7 @@ export function AccountSettingsPage() {
           <a
             href={routes.account.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Cancel
           </a>

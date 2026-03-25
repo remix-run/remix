@@ -14,13 +14,8 @@ let databaseFilePath = getDatabaseFilePath()
 
 fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
 
-if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
-  fs.unlinkSync(databaseFilePath)
-}
-
 let sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
-registerTestDatabaseCleanup(databaseFilePath, sqlite)
 let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
@@ -179,10 +174,7 @@ async function initialize(): Promise<void> {
 }
 
 function getDatabaseFilePath(): string {
-  let fileName =
-    process.env.NODE_ENV === 'test'
-      ? `bookstore.test.${process.pid}.${Date.now()}.sqlite`
-      : 'bookstore.sqlite'
+  let fileName = process.env.NODE_ENV === 'test' ? 'bookstore.test.sqlite' : 'bookstore.sqlite'
 
   return fileURLToPath(new URL(fileName, databaseDirectoryUrl))
 }
@@ -190,18 +182,4 @@ function getDatabaseFilePath(): string {
 function getDatabaseDirectoryUrl(): URL {
   let directory = process.env.NODE_ENV === 'test' ? '../../tmp/' : '../../db/'
   return new URL(directory, import.meta.url)
-}
-
-function registerTestDatabaseCleanup(
-  databaseFilePath: string,
-  sqlite: BetterSqlite3.Database,
-): void {
-  if (process.env.NODE_ENV !== 'test') {
-    return
-  }
-
-  process.on('exit', () => {
-    sqlite.close()
-    fs.rmSync(databaseFilePath, { force: true })
-  })
 }

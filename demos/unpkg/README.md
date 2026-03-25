@@ -21,4 +21,4 @@ Semver ranges are supported (via the [semver](https://www.npmjs.com/package/semv
 - [`app/controllers/package-browser/controller.ts`](app/controllers/package-browser/controller.ts) handles package resolution, redirects for semver ranges and tags, and the directory-versus-file response branching.
 - [`app/utils/npm.ts`](app/utils/npm.ts) fetches package tarballs from npm, decompresses them with `node:zlib`, and parses them using `@remix-run/tar-parser`. The `parsePackagePath()` function handles tricky URLs like `/@remix-run/cookie@1.0.0/src/index.ts`.
 - [`app/utils/tarball-cache.ts`](app/utils/tarball-cache.ts) stores decompressed tarballs under the demo’s root `tmp/` directory using `remix/file-storage/fs`, which keeps runtime scratch data inside the demo itself.
-- [`app/controllers/render.ts`](app/controllers/render.ts) and [`app/controllers/ui/document.ts`](app/controllers/ui/document.ts) keep the shared document shell separate from feature controllers.
+- [`app/utils/render.ts`](app/utils/render.ts) and [`app/ui/document.ts`](app/ui/document.ts) keep the shared document shell separate from feature controllers.
