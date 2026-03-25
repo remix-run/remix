@@ -6,7 +6,7 @@ import { staticFiles } from 'remix/static-middleware'
 import authController from './controllers/auth/controller.tsx'
 import mainController from './controllers/main/controller.tsx'
 import settingsController from './controllers/settings/controller.tsx'
-import { requireAuth } from './middleware/auth.ts'
+import { loadAuth } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
 let middleware = []
@@ -24,7 +24,7 @@ middleware.push(
   }),
 )
 middleware.push(asyncContext())
-middleware.push(requireAuth())
+middleware.push(loadAuth())
 
 export let router = createRouter({ middleware })
 

@@ -3,6 +3,7 @@ import type { RemixNode } from 'remix/component'
 import { Frame } from 'remix/component'
 import { getContext } from 'remix/async-context-middleware'
 
+import { requireAuth } from '../../middleware/auth.ts'
 import { frames, type routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { render } from '../../utils/render.tsx'
@@ -16,6 +17,7 @@ import { Privacy } from './privacy-page.tsx'
 import { Profile } from './profile-page.tsx'
 
 export default {
+  middleware: [requireAuth],
   actions: {
     index() {
       return renderSettingsPage('overview', <Index />)
