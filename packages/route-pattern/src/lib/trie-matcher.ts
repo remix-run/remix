@@ -56,8 +56,14 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
    */
   match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
     url = typeof url === 'string' ? new URL(url) : url
-    let matches = this.matchAll(url, compareFn)
-    return matches[0] ?? null
+    let bestMatch: Match<string, data> | null = null
+    for (let result of this.trie.search(url)) {
+      let match = toMatch(result, url)
+      if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+        bestMatch = match
+      }
+    }
+    return bestMatch
   }
 
   /**
@@ -70,15 +76,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
   matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.trie.search(url)
-    return matches
-      .map((match) => ({
-        pattern: match.pattern,
-        url,
-        params: match.params,
-        paramsMeta: { hostname: match.hostname, pathname: match.pathname },
-        data: match.data,
-      }))
-      .sort(compareFn)
+    return matches.map((result) => toMatch(result, url)).sort(compareFn)
   }
 }
 
@@ -131,6 +129,16 @@ type SearchResult<data> = Array<{
   pathname: PartPatternMatch
   params: Record<string, string | undefined>
 }>
+
+function toMatch<data>(result: SearchResult<data>[number], url: URL): Match<string, data> {
+  return {
+    pattern: result.pattern,
+    url,
+    params: result.params,
+    paramsMeta: { hostname: result.hostname, pathname: result.pathname },
+    data: result.data,
+  }
+}
 
 export class Trie<data = unknown> {
   #ignoreCase: boolean
