@@ -1,15 +1,11 @@
----
-name: animate-elements
-description: Build UI animations in Remix using mixins (`mix`, `animateEntrance`, `animateExit`, `animateLayout`). Use when implementing enter/exit transitions, FLIP reordering, shared-layout swaps, or animation-heavy app interactions.
----
+## Animating Elements (`remix/component`)
 
-# Animating Elements (`remix/component`)
+Use this reference when building animations in app code.
 
-Use this skill when building animations.
+Use [./create-mixins.md](./create-mixins.md) as a follow-up when the animation work turns into
+authoring reusable animation mixins instead of applying built-in mixins in app code.
 
 ## Quick Start
-
-Import mixin helpers from `remix/component` and apply them via `mix`.
 
 ```tsx
 import { animateEntrance, animateExit, animateLayout, spring } from 'remix/component'
@@ -28,7 +24,7 @@ let el = (
 
 ## Core Patterns
 
-### 1) Enter-only element
+### Enter-only element
 
 ```tsx
 <div
@@ -43,7 +39,7 @@ let el = (
 />
 ```
 
-### 2) Toggle visibility with enter + exit
+### Toggle visibility with enter + exit
 
 ```tsx
 {
@@ -59,7 +55,7 @@ let el = (
 }
 ```
 
-### 3) Reordering/list layout animation
+### Reordering/list layout animation
 
 ```tsx
 {
@@ -76,10 +72,19 @@ let el = (
 }
 ```
 
-### 4) Shared-layout swap (same slot, different keyed child)
+### Shared-layout swap
 
 ```tsx
-<div css={{ display: 'grid', '& > *': { gridArea: '1 / 1' } }}>
+import { animateEntrance, animateExit, css } from 'remix/component'
+
+<div
+  mix={[
+    css({
+      display: 'grid',
+      '& > *': { gridArea: '1 / 1' },
+    }),
+  ]}
+>
   {state ? (
     <div key="a" mix={[animateEntrance({ opacity: 0 }), animateExit({ opacity: 0 })]} />
   ) : (
@@ -90,17 +95,17 @@ let el = (
 
 ## Practical Guidance
 
-- Always key conditional/switching elements you expect to transition.
-- Use `animateLayout` on the element whose position/size changes.
+- Always key conditional or switching elements you expect to transition.
+- Use `animateLayout` on the element whose position or size changes.
 - Prefer one clear transition intent per mixin:
   - entrance starts from a defined initial style
   - exit ends at a defined final style
 - For spring-style timing, spread `spring(...)` into the mixin config.
-- Default to `...spring()` for duration/easing in most cases.
-- Keep effectful DOM work (WAAPI shake, measurements) in `handle.queueTask(...)` or `ref(...)`, not in pure render math.
+- Default to `...spring()` for duration and easing in most cases.
+- Keep extra DOM work in `handle.queueTask(...)` or `ref(...)`, not in render math.
 
-## Animation Checklist
+## Checklist
 
-- [ ] Animated elements have stable keys where needed.
-- [ ] `animateLayout` is only on moving/resizing nodes.
-- [ ] No unnecessary custom state machines when simple mixins suffice.
+- [ ] Animated elements have stable keys where needed
+- [ ] `animateLayout` is only on moving or resizing nodes
+- [ ] No unnecessary custom state machines when simple mixins suffice
