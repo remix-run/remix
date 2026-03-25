@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
     "start": "tsx server.ts",
-    "test": "NODE_ENV=test tsx --test",
+    "test": "NODE_ENV=test node --import tsx --test --test-global-setup ./test/setup.ts \"app/**/*.test.ts\" \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   }
 }

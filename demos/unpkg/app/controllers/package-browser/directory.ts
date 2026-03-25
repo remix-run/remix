@@ -2,8 +2,8 @@ import { html } from 'remix/html-template'
 import { detectMimeType } from 'remix/mime'
 
 import type { PackageFile } from '../../utils/npm.ts'
-import { render } from '../render.ts'
-import { icons } from '../ui/icons.ts'
+import { render } from '../../utils/render.ts'
+import { icons } from '../../ui/icons.ts'
 import { renderBreadcrumb } from './breadcrumb.ts'
 import { formatBytes } from './format-bytes.ts'
 

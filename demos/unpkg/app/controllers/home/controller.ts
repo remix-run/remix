@@ -1,7 +1,7 @@
 import type { BuildAction } from 'remix/fetch-router'
 
 import type { routes } from '../../routes.ts'
-import { render } from '../render.ts'
+import { render } from '../../utils/render.ts'
 import { HomePage } from './page.ts'
 
 export let homeController = {

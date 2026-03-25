@@ -4,7 +4,7 @@ import type { BuildAction } from 'remix/fetch-router'
 import { AccountPage } from './page.tsx'
 import type { AuthenticatedAppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../render.tsx'
+import { render } from '../../utils/render.tsx'
 
 export let accountAction = {
   handler(context) {

@@ -11,22 +11,17 @@ export function matchSearch(
   params: URLSearchParams,
   constraints: RoutePattern['ast']['search'],
 ): boolean {
-  for (let [name, constraint] of constraints) {
+  for (let [name, requiredValues] of constraints) {
     let hasParam = params.has(name)
     let values = params.getAll(name)
 
-    if (constraint === null) {
+    if (requiredValues.size === 0) {
       if (!hasParam) return false
       continue
     }
 
-    if (constraint.size === 0) {
-      if (values.every((value) => value === '')) return false
-      continue
-    }
-
-    for (let value of constraint) {
-      if (!values.includes(value)) return false
+    for (let requiredValue of requiredValues) {
+      if (!values.includes(requiredValue)) return false
     }
   }
   return true

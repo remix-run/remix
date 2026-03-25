@@ -14,25 +14,26 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
+import apiController from './controllers/api/controller.tsx'
+import { about } from './controllers/about.tsx'
 import accountController from './controllers/account/controller.tsx'
 import adminController from './controllers/admin/controller.tsx'
 import authController from './controllers/auth/controller.tsx'
 import booksController from './controllers/books/controller.tsx'
-import cartController, { toggleCart } from './controllers/cart/controller.tsx'
-import fragmentsController from './controllers/cart/fragments/controller.tsx'
+import cartController from './controllers/cart/controller.tsx'
 import checkoutController from './controllers/checkout/controller.tsx'
-import * as storefrontController from './controllers/storefront/controller.tsx'
-import { uploadsAction } from './controllers/uploads/controller.tsx'
-import { initializeBookstoreDatabase } from './data/setup.ts'
-import { scriptServer } from './utils/scripts.ts'
+import contactController from './controllers/contact/controller.tsx'
+import fragmentsController from './controllers/fragments/controller.tsx'
+import { home } from './controllers/home.tsx'
+import { search } from './controllers/search.tsx'
+import { uploads } from './controllers/uploads.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadScriptEntry } from './middleware/script-entry.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-
-await initializeBookstoreDatabase()
+import { scriptServer } from './utils/scripts.ts'
 
 export type RootMiddleware = [
   ReturnType<typeof formData>,
@@ -84,14 +85,14 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
     return script ?? new Response('Not found', { status: 404 })
   })
 
-  router.get(routes.uploads, uploadsAction)
+  router.map(routes.uploads, uploads)
   router.map(routes.fragments, fragmentsController)
-  router.post(routes.api.cartToggle, toggleCart)
+  router.map(routes.api, apiController)
 
-  router.map(routes.home, storefrontController.home)
-  router.map(routes.about, storefrontController.about)
-  router.map(routes.contact, storefrontController.contact)
-  router.map(routes.search, storefrontController.search)
+  router.map(routes.home, home)
+  router.map(routes.about, about)
+  router.map(routes.contact, contactController)
+  router.map(routes.search, search)
 
   router.map(routes.books, booksController)
   router.map(routes.auth, authController)

@@ -1,4 +1,4 @@
-import * as styles from '../ui/styles.ts'
+import * as styles from '../../ui/styles.ts'
 
 export function Footer() {
   return ({ prefix, href, label }: { prefix: string; href: string; label: string }) => (

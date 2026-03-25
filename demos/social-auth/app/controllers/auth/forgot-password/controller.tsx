@@ -9,7 +9,7 @@ import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema
 import { getReturnToQuery } from '../../../middleware/auth.ts'
 import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 
 export let forgotPasswordController = {
   actions: {

@@ -1,10 +1,10 @@
-import { PasswordIcon } from '../../ui/icons.tsx'
-import { TextField } from '../../ui/form-field.tsx'
+import { PasswordIcon } from '../../../ui/icons.tsx'
+import { TextField } from '../../../ui/form-field.tsx'
 import { Footer } from '../footer.tsx'
-import { AuthCard } from '../../ui/auth-card.tsx'
-import { Document } from '../../ui/document.tsx'
-import { Notice } from '../../ui/notice.tsx'
-import * as styles from '../../ui/styles.ts'
+import { AuthCard } from '../../../ui/auth-card.tsx'
+import { Document } from '../../../ui/document.tsx'
+import { Notice } from '../../../ui/notice.tsx'
+import * as styles from '../../../ui/styles.ts'
 
 interface ResetPasswordPageProps {
   formAction: string

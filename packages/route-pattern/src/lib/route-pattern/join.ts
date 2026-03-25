@@ -100,24 +100,22 @@ type Search = RoutePattern['ast']['search']
  * @returns the merged search constraints
  */
 export function joinSearch(a: Search, b: Search): Search {
-  let result = new Map<string, Set<string> | null>()
+  let result = new Map<string, Set<string>>()
 
-  for (let [name, constraint] of a) {
-    result.set(name, constraint === null ? null : new Set(constraint))
+  for (let [name, requiredValues] of a) {
+    result.set(name, new Set(requiredValues))
   }
 
-  for (let [name, constraint] of b) {
+  for (let [name, requiredValues] of b) {
     let current = result.get(name)
 
-    if (current === null || current === undefined) {
-      result.set(name, constraint === null ? null : new Set(constraint))
+    if (current === undefined) {
+      result.set(name, new Set(requiredValues))
       continue
     }
 
-    if (constraint !== null) {
-      for (let value of constraint) {
-        current.add(value)
-      }
+    for (let value of requiredValues) {
+      current.add(value)
     }
   }
 

@@ -1,7 +1,7 @@
 import type { FrameContent, RemixNode } from 'remix/component'
 import { animateEntrance, createRoot, css, on, run, spring } from 'remix/component'
 
-import { routes } from '../../config/routes.ts'
+import { routes } from '../routes.ts'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {

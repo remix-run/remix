@@ -11,7 +11,7 @@ import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
 import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
-import { render } from '../render.tsx'
+import { render } from '../../utils/render.tsx'
 import { CheckoutConfirmationPage, CheckoutOrderNotFoundPage } from './confirmation-page.tsx'
 import { CheckoutPage, EmptyCheckoutPage } from './checkout-page.tsx'
 

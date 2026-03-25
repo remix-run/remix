@@ -327,13 +327,30 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
-      it('preserves URL encoding in variable values', () => {
+      it('matches non-ASCII param values', () => {
         let matcher = new MatcherClass()
-        matcher.add('://example.com/search/:query', null)
+        matcher.add(
+          '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
+          null,
+        )
 
-        let match = matcher.match('http://example.com/search/hello%20world')
+        let params = {
+          accented: 'café',
+          cjk: '北京-とうきょう-서울',
+          rtl: 'مرحبا-עולם',
+          combining: 'Hà-Nội',
+          emoji: '💿',
+          zwj: '🧑‍🚀', // 🚀 + zero-width joiner + 👨
+          nbsp: 'acme\u00A0corp',
+          fullwidth: 'ｗｉｄｅ',
+        }
+        let url = new URL(
+          `https://example.com/${params.accented}/${params.cjk}/${params.rtl}/${params.combining}/${params.emoji}/${params.zwj}/${params.nbsp}/${params.fullwidth}`,
+        )
+
+        let match = matcher.match(url.href)
         assert.ok(match)
-        assert.deepEqual(match.params, { query: 'hello%20world' })
+        assert.deepEqual(match.params, params)
       })
 
       it('matches wildcard segments', () => {
@@ -508,12 +525,13 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.ok(match)
       })
 
-      it('returns null when any value constraint has empty value', () => {
+      it('matches key-only constraint', () => {
         let matcher = new MatcherClass()
         matcher.add('://example.com/search?q=', null)
 
-        assert.equal(matcher.match('http://example.com/search?q='), null)
-        assert.equal(matcher.match('http://example.com/search?q'), null)
+        assert.ok(matcher.match('http://example.com/search?q'))
+        assert.ok(matcher.match('http://example.com/search?q='))
+        assert.ok(matcher.match('http://example.com/search?q=test'))
       })
 
       it('matches specific value with exact match', () => {
@@ -586,7 +604,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
         let match = matcher.match('http://example.com/search?q=test&lang=en')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/search?q&lang')
+        assert.equal(match.pattern.source, '://example.com/search?q=&lang=')
       })
 
       it('prefers exact value over any value', () => {
@@ -599,7 +617,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.equal(match.pattern.source, '://example.com/api?format=json')
       })
 
-      it('prefers any value over bare presence', () => {
+      it('ties specificity for both forms of key only constraints; tiebreaks using insertion order', () => {
         let matcher = new MatcherClass()
         matcher.add('://example.com/search?q', null)
         matcher.add('://example.com/search?q=', null)
@@ -810,7 +828,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
         let match = matcher.match('http://example.com/search?q=test')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/search?q')
+        assert.equal(match.pattern.source, '://example.com/search?q=')
       })
 
       it('returns null when no patterns match', () => {

@@ -148,11 +148,11 @@ describe('specificity', () => {
         )
       })
 
-      it('ranks any value higher than key only', () => {
+      it('ranks ?q and ?q= equally', () => {
         assertCompare(
           ['https://example.com/posts?q=', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello',
-          1,
+          0,
         )
       })
 

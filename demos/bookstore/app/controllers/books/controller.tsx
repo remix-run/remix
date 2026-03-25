@@ -4,10 +4,10 @@ import { Database, ilike } from 'remix/data-table'
 import { books } from '../../data/schema.ts'
 import type { routes } from '../../routes.ts'
 import { getCurrentCart } from '../../utils/context.ts'
-import { render } from '../render.tsx'
-import { BrowsePage } from './browse-page.tsx'
-import { BookDetailsPage, BookNotFoundPage } from './details-page.tsx'
+import { render } from '../../utils/render.tsx'
+import { IndexPage } from './index-page.tsx'
 import { GenreNotFoundPage, GenrePage } from './genre-page.tsx'
+import { BookNotFoundPage, ShowPage } from './show-page.tsx'
 
 export default {
   actions: {
@@ -18,7 +18,7 @@ export default {
       let cart = getCurrentCart()
 
       return render(
-        <BrowsePage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
+        <IndexPage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
       )
     },
 
@@ -49,7 +49,7 @@ export default {
 
       let imageUrls = JSON.parse(book.image_urls) as string[]
 
-      return render(<BookDetailsPage book={book} imageUrls={imageUrls} />, {
+      return render(<ShowPage book={book} imageUrls={imageUrls} />, {
         headers: { 'Cache-Control': 'no-store' },
       })
     },

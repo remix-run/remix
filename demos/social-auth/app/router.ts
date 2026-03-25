@@ -9,15 +9,12 @@ import { staticFiles } from 'remix/static-middleware'
 import { accountAction } from './controllers/account/controller.tsx'
 import { createAuthController } from './controllers/auth/controller.tsx'
 import { createHomeController } from './controllers/home/controller.tsx'
-import { initializeSocialAuthDatabase } from './data/setup.ts'
 import { loadAuth, requireAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 import type { AuthIdentity } from './utils/auth-session.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
-
-await initializeSocialAuthDatabase()
 
 type RootMiddleware = [
   ReturnType<typeof staticFiles>,

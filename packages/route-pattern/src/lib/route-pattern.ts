@@ -5,6 +5,7 @@ import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse
 import { serializeSearch } from './route-pattern/serialize.ts'
 import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
+import { tryDecodeURI } from './route-pattern/decode-uri.ts'
 import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
 
@@ -14,17 +15,26 @@ type AST = {
   readonly port: string | null
   readonly pathname: PartPattern
   /**
-   * - `null`: key must be present
-   * - Empty `Set`: key must be present with a value
-   * - Non-empty `Set`: key must be present with all these values
+   * Required values keyed by search param name
+   *
+   * Follows
+   * [WHATWG's application/x-www-form-urlencoded parsing](https://url.spec.whatwg.org/#application/x-www-form-urlencoded) spec
+   * (same as [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#percent_encoding)).
+   * For example, `+` is decoded as ` ` (literal space) instead of `%20`.
+   *
+   * - **Empty `Set`**: key must appear; value may be anything (including empty).
+   * - **Non-empty `Set`**: key must appear with all listed values; extra values are OK.
+   *
+   * Examples:
    *
    * ```ts
-   * new Map([['q', null]])                // -> ?q, ?q=, ?q=1
-   * new Map([['q', new Set()]])           // -> ?q=1
-   * new Map([['q', new Set(['x', 'y'])]]) // -> ?q=x&q=y
+   * parseSearch('q')            // -> Map([['q', new Set()]])
+   * parseSearch('q=')           // -> Map([['q', new Set()]])
+   * parseSearch('q=x&q=y')      // -> Map([['q', new Set(['x', 'y'])]])
+   * parseSearch('q&q=&q=x&q=y') // -> Map([['q', new Set(['x', 'y'])]])
    * ```
    */
-  readonly search: ReadonlyMap<string, ReadonlySet<string> | null>
+  readonly search: ReadonlyMap<string, ReadonlySet<string>>
 }
 
 /**
@@ -245,7 +255,7 @@ export class RoutePattern<source extends string = string> {
     }
 
     // url.pathname: remove leading slash
-    let pathname = this.ast.pathname.match(url.pathname.slice(1), options)
+    let pathname = this.ast.pathname.match(tryDecodeURI(url.pathname.slice(1)), options)
     if (pathname === null) return null
 
     if (!matchSearch(url.searchParams, this.ast.search)) return null

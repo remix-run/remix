@@ -1,7 +1,7 @@
 import { css } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
-import { Document } from '../../ui/document.tsx'
+import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
 
 export interface LoginPageProps {
@@ -12,11 +12,11 @@ export interface LoginPageProps {
 export function LoginPage() {
   return ({ error, formAction }: LoginPageProps) => (
     <Document>
-      <div class="card" mix={[authCardStyle]}>
+      <div class="card" mix={authCardStyle}>
         <h1>Login</h1>
 
         {typeof error === 'string' ? (
-          <div class="alert alert-error" mix={[css({ marginBottom: '1.5rem' })]}>
+          <div class="alert alert-error" mix={css({ marginBottom: '1.5rem' })}>
             {error}
           </div>
         ) : null}
@@ -43,7 +43,7 @@ export function LoginPage() {
           </button>
         </form>
 
-        <p mix={[css({ marginTop: '1.5rem' })]}>
+        <p mix={css({ marginTop: '1.5rem' })}>
           Don't have an account? <a href={routes.auth.register.index.href()}>Register here</a>
         </p>
         <p>
@@ -51,20 +51,18 @@ export function LoginPage() {
         </p>
 
         <div
-          mix={[
-            css({
-              marginTop: '2rem',
-              padding: '1rem',
-              background: '#f8f9fa',
-              borderRadius: '4px',
-            }),
-          ]}
+          mix={css({
+            marginTop: '2rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+          })}
         >
-          <p mix={[css({ fontSize: '0.9rem' })]}>
+          <p mix={css({ fontSize: '0.9rem' })}>
             <strong>Demo Accounts:</strong>
           </p>
-          <p mix={[css({ fontSize: '0.9rem' })]}>Admin: admin@bookstore.com / admin123</p>
-          <p mix={[css({ fontSize: '0.9rem' })]}>Customer: customer@example.com / password123</p>
+          <p mix={css({ fontSize: '0.9rem' })}>Admin: admin@bookstore.com / admin123</p>
+          <p mix={css({ fontSize: '0.9rem' })}>Customer: customer@example.com / password123</p>
         </div>
       </div>
     </Document>

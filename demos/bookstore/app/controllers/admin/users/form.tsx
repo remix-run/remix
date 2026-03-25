@@ -1,8 +1,8 @@
 import { css } from 'remix/component'
 
 import type { User } from '../../../data/schema.ts'
-import { RestfulForm } from '../../ui/restful-form.tsx'
-import { Layout } from '../../ui/layout.tsx'
+import { RestfulForm } from '../../../ui/restful-form.tsx'
+import { Layout } from '../../../ui/layout.tsx'
 
 export interface AdminUserFormPageProps {
   title: string
@@ -44,7 +44,7 @@ export function AdminUserFormPage() {
           <button type="submit" class="btn">
             {submitLabel}
           </button>
-          <a href={cancelHref} class="btn btn-secondary" mix={[css({ marginLeft: '0.5rem' })]}>
+          <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
             Cancel
           </a>
         </RestfulForm>

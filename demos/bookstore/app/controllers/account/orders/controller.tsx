@@ -5,11 +5,11 @@ import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import type { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 
-let ordersController = {
+export default {
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -49,5 +49,3 @@ let ordersController = {
     },
   },
 } satisfies Controller<typeof routes.account.orders>
-
-export default ordersController
