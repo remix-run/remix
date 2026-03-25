@@ -314,9 +314,7 @@ function GoodAsyncExample(handle: Handle) {
     handle.update()
   }
 
-  return () => (
-    <button mix={[on('click', load)]}>{loading ? 'Loading...' : 'Load data'}</button>
-  )
+  return () => <button mix={[on('click', load)]}>{loading ? 'Loading...' : 'Load data'}</button>
 }
 ```
 
@@ -1324,9 +1322,7 @@ function ReorderableList(handle: Handle) {
 
   return () => (
     <div>
-      <button mix={[on('click', reverse)]}>
-        Reverse List
-      </button>
+      <button mix={[on('click', reverse)]}>Reverse List</button>
       {items.map((item) => (
         <div key={item.id}>
           <input type="text" defaultValue={item.label} />
