@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "dependencies": {
+    "@oxlint/plugins": "^1.57.0",
     "@typescript/native-preview": "catalog:",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",

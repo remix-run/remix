@@ -6,9 +6,15 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^24.6.0
+      version: 24.10.4
     '@typescript/native-preview':
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
+    playwright:
+      specifier: ^1.53.1
+      version: 1.57.0
     tsx:
       specifier: ^4.20.6
       version: 4.21.0
@@ -20,6 +26,9 @@ importers:
 
   .:
     dependencies:
+      '@oxlint/plugins':
+        specifier: ^1.57.0
+        version: 1.57.0
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
@@ -2399,6 +2408,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
+
+  '@oxlint/plugins@1.57.0':
+    resolution: {integrity: sha512-4mAGdfUZNQSZwUbHs0xoUcKjByrdBSJ9iaCI3STn/d1ZVRKhW/82oCA6rdfSzO4vxrWH3/l+qYWh/tyrwPSpag==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -5355,6 +5368,8 @@ snapshots:
 
   '@oxlint/binding-win32-x64-msvc@1.57.0':
     optional: true
+
+  '@oxlint/plugins@1.57.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

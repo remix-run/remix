@@ -45,7 +45,10 @@
     {
       "files": ["**/*.{ts,tsx}"],
       "plugins": ["typescript", "import"],
-      "jsPlugins": ["./scripts/oxlint/remix-plugin.js"],
+      "jsPlugins": [
+        "./scripts/oxlint-plugins/interface-pascal-case-plugin.ts",
+        "./scripts/oxlint-plugins/no-typescript-accessibility-plugin.ts"
+      ],
       "rules": {
         "@typescript-eslint/consistent-type-imports": [
           "error",
@@ -67,15 +70,15 @@
             "ignorePackages": true
           }
         ],
-        "remix/interface-pascal-case": "error",
-        "remix/no-typescript-accessibility": "error"
+        "remix-interface/interface-pascal-case": "error",
+        "remix-typescript/no-typescript-accessibility": "error"
       }
     },
     {
       "files": ["**/*.{ts,tsx,js,jsx}"],
-      "jsPlugins": ["./scripts/oxlint/remix-plugin.js"],
+      "jsPlugins": ["./scripts/oxlint-plugins/prefer-let-locals-plugin.ts"],
       "rules": {
-        "remix/prefer-let-locals": "error",
+        "remix-style/prefer-let-locals": "error",
         "no-var": "error",
         "arrow-body-style": ["error", "as-needed"]
       }
