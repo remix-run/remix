@@ -7,6 +7,7 @@ import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 import { books, orderItems, orders, users } from './schema.ts'
+import { hashPassword } from '../utils/password-hash.ts'
 
 let databaseDirectoryUrl = getDatabaseDirectoryUrl()
 let migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
@@ -97,7 +98,7 @@ async function initialize(): Promise<void> {
       {
         id: 1,
         email: 'admin@bookstore.com',
-        password: 'admin123',
+        password_hash: await hashPassword('admin123'),
         name: 'Admin User',
         role: 'admin',
         created_at: new Date('2024-01-15').getTime(),
@@ -105,7 +106,7 @@ async function initialize(): Promise<void> {
       {
         id: 2,
         email: 'customer@example.com',
-        password: 'password123',
+        password_hash: await hashPassword('password123'),
         name: 'John Doe',
         role: 'customer',
         created_at: new Date('2024-03-01').getTime(),

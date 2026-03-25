@@ -27,7 +27,7 @@ export default createMigration({
       columns: {
         id: c.integer().primaryKey().autoIncrement(),
         email: c.text().notNull().unique(),
-        password: c.text().notNull(),
+        password_hash: c.text().notNull(),
         name: c.text().notNull(),
         role: c.text().notNull(),
         created_at: c.integer().notNull(),

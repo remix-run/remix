@@ -5,6 +5,8 @@ import { sql } from 'remix/data-table'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 
 import { db, initializeBookstoreDatabase } from './setup.ts'
+import { users } from './schema.ts'
+import { verifyPassword } from '../utils/password-hash.ts'
 
 function getRows(result: { rows?: Record<string, unknown>[] }): Record<string, unknown>[] {
   return result.rows ?? []
@@ -92,5 +94,19 @@ describe('bookstore database setup', () => {
     let afterCount = readRowCount(afterRows[0], 'count')
 
     assert.equal(afterCount, beforeCount)
+  })
+
+  it('stores verifiable password hashes for seeded users', async () => {
+    await initializeBookstoreDatabase()
+
+    let admin = await db.find(users, 1)
+    let customer = await db.find(users, 2)
+
+    assert.ok(admin)
+    assert.ok(customer)
+    assert.notEqual(admin.password_hash, 'admin123')
+    assert.notEqual(customer.password_hash, 'password123')
+    assert.equal(await verifyPassword('admin123', admin.password_hash), true)
+    assert.equal(await verifyPassword('password123', customer.password_hash), true)
   })
 })

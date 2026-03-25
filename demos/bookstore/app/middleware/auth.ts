@@ -12,6 +12,7 @@ import { users } from '../data/schema.ts'
 import type { User } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { parseId } from '../utils/ids.ts'
+import { verifyPassword } from '../utils/password-hash.ts'
 
 interface BookstoreAuthSession {
   userId: number
@@ -49,7 +50,7 @@ export let passwordProvider = createCredentialsAuthProvider({
     let db = context.get(Database)
     let user = await db.findOne(users, { where: { email } })
 
-    if (!user || user.password !== password) {
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
       return null
     }
 
