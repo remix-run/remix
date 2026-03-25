@@ -2,6 +2,14 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.15.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `parseMultipart()`, `parseMultipartStream()`, and `parseMultipartRequest()` now enforce finite default `maxParts` and `maxTotalSize` limits, and add `MaxPartsExceededError` and `MaxTotalSizeExceededError` for handling multipart envelope limit failures.
+
+  Apps that intentionally accept large multipart requests may need to raise `maxParts` or `maxTotalSize` explicitly.
+
 ## v0.14.2
 
 ### Patch Changes

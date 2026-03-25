@@ -2,6 +2,66 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-alpha.4
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Remove the `remix/data-table/sql` export. Import `SqlStatement`, `sql`, and `rawSql` from `remix/data-table` instead.
+
+  `remix/data-table/sql-helpers` remains available for adapter-facing SQL utilities.
+
+  `remix/data-table` now exports the `Database` class as a runtime value. You can construct a database directly with `new Database(adapter, options)` or keep using `createDatabase(adapter, options)`, which now delegates to the class constructor.
+
+  BREAKING CHANGE: `remix/data-table` no longer exports `QueryBuilder`. Import `Query` and `query` from `remix/data-table`, then execute unbound queries with `db.exec(...)`. `db.exec(...)` now accepts only raw SQL or `Query` values, and unbound terminal methods like `first()`, `count()`, `insert()`, and `update()` return `Query` objects instead of separate command descriptor types. `db.query(table)` remains available as shorthand and now returns the same bound `Query` class.
+
+  `remix/data-table/migrations` no longer exports a separate `Database` type alias. Import `Database` from `remix/data-table` when you need the migration `db` type directly.
+
+  The incidental `QueryMethod` type export has also been removed; use `Database['query']` or `QueryForTable<table>` when you need that type shape.
+
+  Added `package.json` `exports`:
+
+  - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
+  - `remix/auth` to re-export APIs from `@remix-run/auth`
+
+- Add `remix/cors-middleware` to re-export the CORS middleware APIs from `@remix-run/cors-middleware`.
+
+- Update `remix/component` and `remix/component/server` to re-export the latest `@remix-run/component` frame-navigation APIs.
+
+  `remix/component` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/component/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
+
+- Add browser-origin and CSRF protection middleware APIs to `remix`.
+
+  - `remix/cop-middleware` exposes `cop(options)` for browser-focused cross-origin protection
+    using `Sec-Fetch-Site` with `Origin` fallback, trusted origins, and configurable bypasses.
+  - `remix/csrf-middleware` exposes `csrf(options)` and `getCsrfToken(context)` for
+    session-backed CSRF tokens plus origin validation.
+  - Apps can use either middleware independently or layer `cop()`, `session()`, and `csrf()`
+    together when they want both browser-origin filtering and token-backed protection.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`async-context-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.2.0)
+  - [`auth@0.1.0`](https://github.com/remix-run/remix/releases/tag/auth@0.1.0)
+  - [`auth-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.1.0)
+  - [`component@0.6.0`](https://github.com/remix-run/remix/releases/tag/component@0.6.0)
+  - [`compression-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.4)
+  - [`cop-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.0)
+  - [`cors-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.0)
+  - [`csrf-middleware@0.1.0`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.0)
+  - [`data-schema@0.2.0`](https://github.com/remix-run/remix/releases/tag/data-schema@0.2.0)
+  - [`data-table@0.2.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.2.0)
+  - [`data-table-mysql@0.2.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.2.0)
+  - [`data-table-postgres@0.2.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.2.0)
+  - [`data-table-sqlite@0.2.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.2.0)
+  - [`fetch-router@0.18.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.0)
+  - [`form-data-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.2.0)
+  - [`form-data-parser@0.16.0`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.16.0)
+  - [`logger-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.1.4)
+  - [`method-override-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.5)
+  - [`multipart-parser@0.15.0`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.15.0)
+  - [`route-pattern@0.20.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.20.0)
+  - [`session-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.2.0)
+  - [`static-middleware@0.4.5`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.5)
+
 ## v3.0.0-alpha.3
 
 ### Pre-release Changes
