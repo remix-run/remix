@@ -1,17 +1,11 @@
-import { initializeBookstoreDatabase } from '../app/data/setup.ts'
-
-let initialization: Promise<void> | null = null
-
-function ensureInitialized(): Promise<void> {
-  if (initialization == null) {
-    initialization = initializeBookstoreDatabase()
-  }
-
-  return initialization
-}
-
-await ensureInitialized()
+import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 export async function globalSetup(): Promise<void> {
-  await ensureInitialized()
+  let databaseFilePath = fileURLToPath(new URL('../tmp/bookstore.test.sqlite', import.meta.url))
+
+  fs.rmSync(databaseFilePath, { force: true })
+
+  let { initializeBookstoreDatabase } = await import('../app/data/setup.ts')
+  await initializeBookstoreDatabase()
 }
