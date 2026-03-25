@@ -282,7 +282,7 @@ describe('type safety', () => {
     expectType<Equal<Row['projects'][number]['archived'], boolean>>()
 
     // @ts-expect-error select('id') should not expose non-selected account columns
-    rows[0].email
+    void rows[0].email
   })
 
   it('supports typed alias select() and joined order/group columns', async () => {
@@ -330,7 +330,7 @@ describe('type safety', () => {
     expectType<Equal<Row['projectArchived'], boolean>>()
 
     // @ts-expect-error alias select should not expose original source column names
-    rows[0].email
+    void rows[0].email
 
     function verifyTypeErrors(): void {
       db.query(accounts)

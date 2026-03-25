@@ -82,7 +82,7 @@ router.get(routes.public, (context) => {
   void authState
 
   // @ts-expect-error - auth must be narrowed before reading identity
-  currentAuth.identity
+  void currentAuth.identity
 
   if (currentAuth.ok) {
     let identity: APIIdentity = currentAuth.identity

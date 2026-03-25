@@ -44,8 +44,8 @@ describe('asyncContext', () => {
 
 if (false as boolean) {
   let user = getContext().get(CurrentUser)
-  user.id
+  void user.id
 
   // @ts-expect-error Property 'missing' does not exist on type '{ id: string }'
-  user.missing
+  void user.missing
 }

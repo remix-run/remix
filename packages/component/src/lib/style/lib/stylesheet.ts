@@ -270,14 +270,10 @@ export function createStyleManager(layer: string = 'rmx') {
     // New rule - insert and track
     let sheet = getStylesheet()
     let index = sheet.cssRules.length
-    try {
-      sheet.insertRule(`@layer ${layer} { ${rule} }`, index)
-      ruleMap.set(className, { count: 1, index })
-    } catch (error) {
-      // If insertion fails (e.g., invalid CSS), don't track it
-      // The browser will have thrown, so we can't proceed
-      throw error
-    }
+    // This may throw for invalid CSS. If it does, we intentionally let it
+    // bubble so the rule is not tracked unless insertion actually succeeds.
+    sheet.insertRule(`@layer ${layer} { ${rule} }`, index)
+    ruleMap.set(className, { count: 1, index })
   }
 
   function remove(className: string) {
