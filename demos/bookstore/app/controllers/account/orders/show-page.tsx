@@ -2,7 +2,7 @@ import { css } from 'remix/component'
 
 import type { Order } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { Layout } from '../../ui/layout.tsx'
+import { Layout } from '../../../ui/layout.tsx'
 
 export interface ShippingAddress {
   street: string

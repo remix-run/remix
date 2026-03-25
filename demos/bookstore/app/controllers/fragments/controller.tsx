@@ -2,14 +2,14 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import { Database } from 'remix/data-table'
 
-import { CartButton } from '../../../assets/cart-button.tsx'
-import { CartItems } from '../../../assets/cart-items.tsx'
-import { books } from '../../../data/schema.ts'
-import { routes } from '../../../routes.ts'
-import { getCartTotal } from '../../../utils/cart.ts'
-import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
-import { parseId } from '../../../utils/ids.ts'
-import { renderFragment } from '../../../utils/render.tsx'
+import { CartButton } from '../../assets/cart-button.tsx'
+import { CartItems } from '../../assets/cart-items.tsx'
+import { books } from '../../data/schema.ts'
+import { routes } from '../../routes.ts'
+import { getCartTotal } from '../../utils/cart.ts'
+import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
+import { parseId } from '../../utils/ids.ts'
+import { renderFragment } from '../../utils/render.tsx'
 
 export default {
   actions: {

@@ -1,9 +1,17 @@
+import type { BuildAction } from 'remix/fetch-router'
 import { css } from 'remix/component'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
+import { render } from '../utils/render.tsx'
 import { Layout } from '../ui/layout.tsx'
 
-export function AboutPage() {
+export let about: BuildAction<'GET', typeof routes.about> = {
+  handler() {
+    return render(<AboutPage />)
+  },
+}
+
+function AboutPage() {
   return () => (
     <Layout>
       <div class="card">

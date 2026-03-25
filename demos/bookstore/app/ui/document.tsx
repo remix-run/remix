@@ -1,6 +1,6 @@
 import type { RemixNode } from 'remix/component'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
 
 export interface DocumentProps {
   title?: string

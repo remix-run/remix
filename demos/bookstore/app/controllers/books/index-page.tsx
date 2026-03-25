@@ -3,17 +3,17 @@ import { css } from 'remix/component'
 import type { Book } from '../../data/schema.ts'
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../ui/book-card.tsx'
-import { Layout } from '../ui/layout.tsx'
+import { BookCard } from '../../ui/book-card.tsx'
+import { Layout } from '../../ui/layout.tsx'
 
-export interface BrowsePageProps {
+export interface IndexPageProps {
   allBooks: Book[]
   genres: string[]
   cart: Cart
 }
 
-export function BrowsePage() {
-  return ({ allBooks, cart, genres }: BrowsePageProps) => (
+export function IndexPage() {
+  return ({ allBooks, cart, genres }: IndexPageProps) => (
     <Layout>
       <h1>Browse Books</h1>
 

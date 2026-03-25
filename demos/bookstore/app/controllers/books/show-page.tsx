@@ -3,15 +3,15 @@ import { Frame, css } from 'remix/component'
 import type { Book } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel } from '../../assets/image-carousel.tsx'
-import { Layout } from '../ui/layout.tsx'
+import { Layout } from '../../ui/layout.tsx'
 
-export interface BookDetailsPageProps {
+export interface ShowPageProps {
   book: Book
   imageUrls: string[]
 }
 
-export function BookDetailsPage() {
-  return ({ book, imageUrls }: BookDetailsPageProps) => (
+export function ShowPage() {
+  return ({ book, imageUrls }: ShowPageProps) => (
     <Layout>
       <div mix={[css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })]}>
         <div

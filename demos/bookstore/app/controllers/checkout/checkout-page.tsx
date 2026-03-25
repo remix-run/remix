@@ -2,7 +2,7 @@ import { css } from 'remix/component'
 
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
-import { Layout } from '../ui/layout.tsx'
+import { Layout } from '../../ui/layout.tsx'
 
 export interface CheckoutPageProps {
   cart: Cart

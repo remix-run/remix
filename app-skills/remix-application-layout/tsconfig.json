@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "strict": true,
+    "target": "ESNext",
+    "types": ["node"],
+    "verbatimModuleSyntax": true
+  },
+  "include": ["scripts/**/*.ts"]
+}

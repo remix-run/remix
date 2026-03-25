@@ -1,7 +1,7 @@
 import { Frame, css } from 'remix/component'
 
-import type { Book } from '../../data/schema.ts'
-import { routes } from '../../routes.ts'
+import type { Book } from '../data/schema.ts'
+import { routes } from '../routes.ts'
 
 export interface BookCardProps {
   book: Book

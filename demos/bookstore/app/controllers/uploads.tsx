@@ -1,13 +1,10 @@
 import type { BuildAction } from 'remix/fetch-router'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
-import type { routes } from '../../routes.ts'
-import { uploadsStorage } from '../../utils/uploads.ts'
+import type { routes } from '../routes.ts'
+import { uploadsStorage } from '../utils/uploads.ts'
 
-export let uploadsAction: BuildAction<'GET', typeof routes.uploads> = async ({
-  request,
-  params,
-}) => {
+export let uploads: BuildAction<'GET', typeof routes.uploads> = async ({ request, params }) => {
   let file = await uploadsStorage.get(params.key)
 
   if (!file) {

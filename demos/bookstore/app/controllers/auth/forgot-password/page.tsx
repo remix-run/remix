@@ -1,7 +1,7 @@
 import { css } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
-import { Document } from '../../ui/document.tsx'
+import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
 
 export function ForgotPasswordPage() {

@@ -1,8 +1,8 @@
 import { css } from 'remix/component'
 
 import type { Book } from '../../../data/schema.ts'
-import { RestfulForm } from '../../ui/restful-form.tsx'
-import { Layout } from '../../ui/layout.tsx'
+import { RestfulForm } from '../../../ui/restful-form.tsx'
+import { Layout } from '../../../ui/layout.tsx'
 
 export interface AdminBookFormPageProps {
   title: string

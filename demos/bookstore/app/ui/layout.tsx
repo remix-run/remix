@@ -1,7 +1,7 @@
 import type { RemixNode } from 'remix/component'
 
-import { routes } from '../../routes.ts'
-import { getCurrentUserSafely } from '../../utils/context.ts'
+import { routes } from '../routes.ts'
+import { getCurrentUserSafely } from '../utils/context.ts'
 import { Document } from './document.tsx'
 
 export interface LayoutProps {
