@@ -21,4 +21,3 @@ This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/
 
 - Bumped `@remix-run/*` dependencies:
   - [`fetch-router@0.18.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.0)
-
