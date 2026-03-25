@@ -12,6 +12,9 @@ describe('uploads handler', () => {
   it('serves uploaded files from storage', async () => {
     let sessionId = await loginAsAdmin(router)
 
+    // Get initial book count
+    let initialBookCount = await db.count(books)
+
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
     let fileContent = 'fake image data'
@@ -72,6 +75,10 @@ describe('uploads handler', () => {
     let createResponse = await router.fetch(createRequest)
     assert.equal(createResponse.status, 302)
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
+
+    // Get the newly created book from the database
+    let currentBookCount = await db.count(books)
+    assert.equal(currentBookCount, initialBookCount + 1)
 
     let newBook = await db.findOne(books, { where: { slug: 'book-with-cover' } })
     assert.ok(newBook)
