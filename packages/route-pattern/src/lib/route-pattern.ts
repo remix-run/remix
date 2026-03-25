@@ -83,7 +83,7 @@ export class RoutePattern<source extends string = string> {
     }
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // oxlint-disable-next-line remix/no-typescript-accessibility
   private get hasOrigin(): boolean {
     return this.ast.protocol !== null || this.ast.hostname !== null || this.ast.port !== null
   }

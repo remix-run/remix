@@ -5,14 +5,11 @@
   "packageManager": "pnpm@10.32.1",
   "dependencies": {
     "@typescript/native-preview": "catalog:",
-    "eslint": "^9.33.0",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-jsdoc": "^61.5.0",
-    "eslint-plugin-prefer-let": "^4.0.0",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.17.4",
     "prettier": "^3.3.3",
     "tsx": "catalog:",
-    "typescript": "catalog:",
-    "typescript-eslint": "^8.40.0"
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.3.0"
@@ -29,8 +26,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "generate-remix": "node scripts/generate-remix.ts",
-    "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
+    "lint": "oxlint . -A all --quiet",
+    "lint:fix": "oxlint . -A all --fix --quiet",
     "pr-preview": "node scripts/pr-preview.ts",
     "setup-installable-branch": "node scripts/setup-installable-branch.ts",
     "test": "pnpm --parallel run test",

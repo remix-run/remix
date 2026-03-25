@@ -123,7 +123,7 @@ async function getRemixRunPackages() {
 
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`npx eslint packages/remix/ --max-warnings=0`)
+  logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -145,7 +145,7 @@ async function updateRemixPackage() {
   }
 
   // Run linter against generated code with --fix
-  logAndExec(`npx eslint packages/remix/ --max-warnings=0 --fix`)
+  logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
 
   // Update package.json
   console.log('Updating Remix package.json...')
