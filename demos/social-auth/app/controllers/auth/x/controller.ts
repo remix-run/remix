@@ -70,5 +70,3 @@ export function createXAuthController(
     },
   } satisfies Controller<typeof routes.auth.x, AppContext>
 }
-
-export let xAuthController = createXAuthController()

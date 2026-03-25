@@ -70,5 +70,3 @@ export function createGoogleAuthController(
     },
   } satisfies Controller<typeof routes.auth.google, AppContext>
 }
-
-export let googleAuthController = createGoogleAuthController()
