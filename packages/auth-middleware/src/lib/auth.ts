@@ -113,16 +113,16 @@ export interface AuthScheme<identity = unknown> {
 
 type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity> ? identity : never
 
-type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<AuthSchemeIdentity<schemes[number]>>
+type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<
+  AuthSchemeIdentity<schemes[number]>
+>
 
 type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
 
 /**
  * Options for loading auth state for each request.
  */
-export interface AuthOptions<
-  schemes extends readonly AuthScheme<any>[] = AuthScheme<any>[],
-> {
+export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthScheme<any>[]> {
   /** Auth schemes to run in order for each request. */
   schemes: readonly [...schemes]
 }

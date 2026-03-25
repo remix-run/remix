@@ -27,10 +27,7 @@ export interface SessionAuthSchemeOptions<identity, session_value = unknown> {
  * @param options Session reading, verification, and invalidation hooks.
  * @returns An auth scheme for use with `auth()`.
  */
-export function createSessionAuthScheme<
-  identity,
-  session_value = unknown,
->(
+export function createSessionAuthScheme<identity, session_value = unknown>(
   options: SessionAuthSchemeOptions<identity, session_value>,
 ): AuthScheme<identity> {
   let name = options.name ?? 'session'
