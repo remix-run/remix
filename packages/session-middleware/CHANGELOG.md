@@ -2,6 +2,21 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Session middleware no longer reads/writes `context.session`.
+
+  Session state is now stored on request context using the `Session` class itself as the context key and accessed with `context.get(Session)`.
+
+- `session()` now contributes `Session` to `fetch-router`'s typed request context, so apps deriving context from middleware can read `context.get(Session)` without manual type assertions.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.18.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.0)
+
 ## v0.1.4
 
 ### Patch Changes

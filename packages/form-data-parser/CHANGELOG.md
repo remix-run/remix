@@ -2,6 +2,19 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `parseFormData()` now enforces finite default multipart `maxParts` and `maxTotalSize` limits and surfaces multipart limit failures directly instead of treating them as generic parse noise.
+
+  Apps that intentionally accept large multipart submissions may need to raise these limits explicitly.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.15.0`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.15.0)
+
 ## v0.15.0
 
 ### Minor Changes

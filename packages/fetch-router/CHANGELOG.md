@@ -2,6 +2,35 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.18.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Action objects now use `handler` instead of `action`.
+
+  This applies to the object form accepted by `router.get(...)`, `router.post(...)`, and `router.map(...)`, and to `BuildAction` object definitions.
+
+- BREAKING CHANGE: Remove `context.storage`, `context.session`, `context.sessionStarted`, `context.formData`, and `context.files` from `@remix-run/fetch-router`, and rename `createStorageKey(...)` to `createContextKey(...)`.
+
+  `RequestContext` now provides request-scoped context methods directly (`context.get(key)`, `context.set(key, value)`, and `context.has(key)`), using keys created with `createContextKey(...)` or constructors like `Session` and `FormData`.
+
+  Session middleware now stores the request session with `context.set(Session, session)`, and form-data middleware now stores parsed form data with `context.set(FormData, formData)`. Uploaded files are read from `context.get(FormData)` using `get(...)`/`getAll(...)`.
+
+  `RequestContext` is now generic over route params and typed context entries (`RequestContext<{ id: string }, entries>`), and no longer accepts a request-method generic (`RequestContext<'GET', ...>`).
+
+- BREAKING CHANGE: `router.map()` controllers for route maps now require a single shape: an object with an `actions` property and optional `middleware`.
+
+  Migration: Wrap existing controller objects in `actions`. Nested route maps must also use nested controllers with `{ actions, middleware? }`.
+
+- `fetch-router` now threads request context types through `Router`, `Controller`, and `BuildAction`, and exports helpers like `MiddlewareContext`, `WithParams`, `MergeContext`, and `AnyParams` so apps can derive context contracts from installed middleware.
+
+### Patch Changes
+
+- The `Action`/`BuildAction` object form accepted by `router.get(...)`, `router.post(...)`, and `router.map(...)` now uses `{ handler, middleware? }`, so you can omit `middleware` entirely instead of writing `middleware: []` when you do not need route middleware.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.20.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.20.0)
+
 ## v0.17.0
 
 ### Minor Changes

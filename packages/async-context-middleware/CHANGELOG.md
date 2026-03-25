@@ -2,6 +2,17 @@
 
 This is the changelog for [`async-context-middleware`](https://github.com/remix-run/remix/tree/main/packages/async-context-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- `getContext()` can now be typed per app by augmenting `AsyncContextTypes`, which makes `asyncContext()` work cleanly with app-specific `fetch-router` request context contracts.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.18.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.0)
+
 ## v0.1.3
 
 ### Patch Changes

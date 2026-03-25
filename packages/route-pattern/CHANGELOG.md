@@ -2,6 +2,187 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.20.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Make search param pattern decoding and serialization consistent with `URLSearchParams`. Affects: `RoutePattern.{match,href,search,ast.search}`
+
+  Previously, `RoutePattern` treated `?q` and `?q=` as **different** constraints:
+
+  ```ts
+  // Before: `?q` and `?q=` are different
+
+  let url = new URL('https://example.com?q')
+
+  // Matches "key only" constraint?
+  new RoutePattern('?q').match(url) // ✅ match
+
+  // Matches "key and value" constraint?
+  new RoutePattern('?q=').match(url) // ❌ no match (`null`)
+
+  // Different constraints serialized to different strings
+  new RoutePattern('?q').search // -> 'q'
+  new RoutePattern('?q=').search // -> 'q='
+  ```
+
+  There were two main problems with that approach:
+
+  **Unintuitive matching**
+
+  ```ts
+  // URL search looks like `?q=`
+  let url = new URL('https://example.com?q=')
+
+  // Pattern search looks like `?q=`
+  let pattern = new RoutePattern('?q=')
+
+  // But "key and value" constraint doesn't match!
+  pattern.match(url) // ❌ no match (`null`)
+  ```
+
+  **Parsing and serialization**
+
+  For consistency with `URLSearchParams`, search param patterns should be parsed according to the [WHATWG `application/x-www-form-urlencoded` parsing spec](https://url.spec.whatwg.org/#application/x-www-form-urlencoded-parsing) and should also [encode spaces as `+`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#percent_encoding).
+
+  Now, we use `URLSearchParams` to parse search param patterns to guarantee decodings are consistent:
+
+  ```ts
+  let url = new URL('https://example.com?q=a+b')
+  // Decodes `+` to ` `
+  url.searchParams.getAll('q') // -> ['a b']
+
+  // Before
+  let pattern = new RoutePattern('?q=a+b')
+  // Does not decode `+` to ` `
+  pattern.ast.search.get('q') // -> ❌ Set { 'a+b' }
+
+  // After
+  let pattern = new RoutePattern('?q=a+b')
+  // Decodes `+` to ` `
+  pattern.ast.search.get('q') // -> ✅ Set { 'a b' }
+  ```
+
+  Similarly, now that `?q` and `?q=` are semantically equivalent, they should serialize to the same thing:
+
+  ```ts
+  new URLSearchParams('q=').toString() // 'q='
+
+  // Before
+  new RoutePattern('?q=').search // ❌ 'q'
+
+  // After
+  new RoutePattern('?q=').search // ✅ 'q='
+  ```
+
+  As a result, `RoutePattern`s can no longer represent a "key and any value" constraint.
+  In practice, this was a niche use-case so we chose correctness and consistency with `URLSearchParams`.
+  If the need for "key and any value" constraints arises, we can later introduce a separate syntax for that without the unintuitive shortcoming of `?q=`.
+
+  With "key and any value" constraints removed, the `missing-search-param` error type thrown by `RoutePattern.href` was made obsolete and was removed.
+
+- BREAKING CHANGE: `RoutePattern.ast` is now typed as deeply readonly.
+
+  This was always the intended design; the type system now reflects it:
+
+  ```ts
+  // Before
+  pattern.ast = { ...pattern.ast, protocol: 'https' }
+  pattern.ast.protocol = 'https'
+  pattern.ast.port = '443'
+  pattern.ast.hostname = null
+  pattern.ast.pathname = otherPattern.ast.pathname
+  pattern.ast.search.set('q', new Set(['x']))
+  pattern.ast.pathname.tokens.push({ type: 'text', text: 'x' })
+  pattern.ast.pathname.optionals.set(0, 1)
+
+  // After
+  pattern.ast = { ...pattern.ast, protocol: 'https' }
+  //      ~~~
+  // Cannot assign to 'ast' because it is a read-only property. (2703)
+
+  pattern.ast.protocol = 'https'
+  //          ~~~~~~~~~
+  // Cannot assign to 'protocol' because it is a read-only property. (2540)
+
+  pattern.ast.port = '443'
+  //          ~~~~
+  // Cannot assign to 'port' because it is a read-only property. (2540)
+
+  pattern.ast.hostname = null
+  //          ~~~~~~~~
+  // Cannot assign to 'hostname' because it is a read-only property. (2540)
+
+  pattern.ast.pathname = otherPattern.ast.pathname
+  //          ~~~~~~~~
+  // Cannot assign to 'pathname' because it is a read-only property. (2540)
+
+  pattern.ast.search.set('q', new Set(['x']))
+  //                 ~~~
+  // Property 'set' does not exist on type 'ReadonlyMap<string, ReadonlySet<string> | null>'. (2339)
+
+  pattern.ast.pathname.tokens.push({ type: 'text', text: 'x' })
+  //                          ~~~~
+  // Property 'push' does not exist on type 'ReadonlyArray<PartPatternToken>'. (2339)
+
+  pattern.ast.pathname.optionals.set(0, 1)
+  //                             ~~~
+  // Property 'set' does not exist on type 'ReadonlyMap<number, number>'. (2339)
+  ```
+
+- Matches return decoded values for params in pathname
+
+  ```ts
+  let pattern = new RoutePattern('/posts/:slug')
+
+  let url = new URL('https://blog.example.com/posts/💿')
+  pattern.match(url)?.params.slug
+  // Before -> '%F0%9F%92%BF'
+  // After -> '💿'
+
+  url = new URL('https://blog.example.com/posts/café-hà-nội')
+  pattern.match(url)?.params.slug
+  // Before -> 'caf%C3%A9-h%C3%A0-n%E1%BB%99i'
+  // After -> 'café-hà-nội'
+
+  url = new URL('https://blog.example.com/posts/北京')
+  pattern.match(url)?.params.slug
+  // Before -> '%E5%8C%97%E4%BA%AC'
+  // After -> '北京'
+
+  url = new URL('https://blog.example.com/posts/مرحبا')
+  pattern.match(url)?.params.slug
+  // Before -> '%D9%85%D8%B1%D8%AD%D8%A8%D8%A7'
+  // After -> 'مرحبا'
+  ```
+
+  If you need percent-encoded text again, use [`encodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI):
+
+  ```ts
+  let url = new URL('https://blog.example.com/posts/💿')
+  let slug = pattern.match(url)!.params.slug
+  // -> 💿
+
+  encodeURI(slug)
+  // -> '%F0%9F%92%BF'
+  ```
+
+### Patch Changes
+
+- Faster `TrieMatcher.match`: `O(m·log(m))` -> `O(m)`
+
+  Previously, `TrieMatcher.match` internally called `.matchAll`, then sorted the result to find the best match. For `m` matching route patterns, this took `O(m·log(m))` operations.
+
+  Now, `TrieMatcher.match` loops over the `m` matches, keeping track of the best one, resulting in `O(n)` operations.
+
+  In our benchmarks, this made our largest workload (~5000 route patterns) 17% faster with negligible or modest improvements to other workloads.
+
+- Faster type inference for `RoutePattern.href`, `RoutePattern.match`, and `Params`
+
+  Reduced type instantiations for parsing param types, resulting in
+  ~2-5x faster in relevant [type benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench/types), but varies depending on your route patterns.
+  May fix `"Type instantiation is excessively deep and possibly infinite" (ts2589)` for some apps.
+
 ## v0.19.0
 
 ### Minor Changes

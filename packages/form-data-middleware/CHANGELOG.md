@@ -2,6 +2,24 @@
 
 This is the changelog for [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Form data middleware no longer reads/writes `context.formData` or `context.files`.
+
+  Parsed `FormData` is now stored on request context with `context.set(FormData, formData)` and should be read with `context.get(FormData)`, including uploaded files via `get(...)`/`getAll(...)`.
+
+- `formData()` now contributes `FormData` to `fetch-router`'s typed request context, so apps deriving context from middleware can read `context.get(FormData)` without manual type assertions.
+
+### Patch Changes
+
+- `formData()` is now a no-op if `FormData` has already been parsed earlier in the request pipeline, so the middleware can be registered multiple times without re-reading or re-parsing the request body.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.18.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.0)
+  - [`form-data-parser@0.16.0`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.16.0)
+
 ## v0.1.4
 
 ### Patch Changes
