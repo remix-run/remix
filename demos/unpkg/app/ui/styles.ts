@@ -1,4 +1,4 @@
-export let styles = /* css */ `
+export const styles = /* css */ `
   * {
     box-sizing: border-box;
   }

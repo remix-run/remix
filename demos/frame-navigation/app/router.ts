@@ -9,7 +9,7 @@ import settingsController from './controllers/settings/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
-let middleware = []
+const middleware = []
 
 if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
@@ -26,7 +26,7 @@ middleware.push(
 middleware.push(asyncContext())
 middleware.push(loadAuth())
 
-export let router = createRouter({ middleware })
+export const router = createRouter({ middleware })
 
 router.map(routes.main, mainController)
 router.map(routes.auth, authController)

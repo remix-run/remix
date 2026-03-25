@@ -43,7 +43,7 @@ export function getTopFrame(): FrameHandle {
   return topFrame.handle
 }
 
-let namedFrames = new Map<string, FrameHandle>()
+const namedFrames = new Map<string, FrameHandle>()
 /**
  * Returns a named frame handle, falling back to the top frame when not found.
  *

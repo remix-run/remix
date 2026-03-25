@@ -132,7 +132,7 @@ function resolveLayoutConfig(config: LayoutConfig): LayoutAnimationConfig | null
   return config
 }
 
-let animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>((handle) => {
+const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>((handle) => {
   let snapshot: Box | null = null
   let currentConfig: LayoutConfig = true
   let currentDelta: Delta | null = null

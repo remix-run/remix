@@ -640,7 +640,7 @@ export type CreateTableOptions<
   validate?: TableValidate<TableRowFromColumns<columns>>
 }
 
-let defaultTimestampConfig: TimestampConfig = {
+const defaultTimestampConfig: TimestampConfig = {
   createdAt: 'created_at',
   updatedAt: 'updated_at',
 }

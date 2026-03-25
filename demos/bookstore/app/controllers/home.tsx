@@ -11,7 +11,7 @@ import { render } from '../utils/render.tsx'
 import { BookCard } from '../ui/book-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
-export let home: BuildAction<'GET', typeof routes.home> = {
+export const home: BuildAction<'GET', typeof routes.home> = {
   async handler({ get }) {
     let db = get(Database)
     let cart = getCurrentCart()

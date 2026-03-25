@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export let timeAction = {
+export const timeAction = {
   handler(context) {
     return render(<TimePage />, { request: context.request, router: context.router })
   },

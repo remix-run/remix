@@ -14,7 +14,7 @@ import {
   type ExternalProviderRegistry,
 } from '../../../utils/external-auth.ts'
 
-let label = getExternalProviderLabel('google')
+const label = getExternalProviderLabel('google')
 
 export function createGoogleAuthController(
   registry: ExternalProviderRegistry = externalProviderRegistry,

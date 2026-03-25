@@ -7,7 +7,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export let homeAction = {
+export const homeAction = {
   handler(context) {
     return render(<HomePage />, { request: context.request, router: context.router })
   },

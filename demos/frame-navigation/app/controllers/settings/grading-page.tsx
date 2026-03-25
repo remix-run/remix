@@ -25,19 +25,19 @@ export function Grading() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   margin: 0,
   fontSize: '1.5rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.6rem',
   color: '#475569',
   lineHeight: 1.7,
 })
 
-let cardStyle = css({
+const cardStyle = css({
   marginTop: '1rem',
   border: '1px solid #e2e8f0',
   borderRadius: '14px',
@@ -47,7 +47,7 @@ let cardStyle = css({
   gap: '0.7rem',
 })
 
-let settingStyle = css({
+const settingStyle = css({
   margin: 0,
   display: 'flex',
   justifyContent: 'space-between',

@@ -1,7 +1,7 @@
 import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 import { routes } from '../routes.ts'
 
-export let ClientMountedPageExample = clientEntry(
+export const ClientMountedPageExample = clientEntry(
   '/assets/client-mounted-page-example.js#ClientMountedPageExample',
   (handle: Handle) => {
     let showFrame = false

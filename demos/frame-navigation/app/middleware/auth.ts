@@ -8,13 +8,13 @@ import { routes } from '../routes.ts'
 
 type FrameAuthIdentity = 'frame-navigation-demo'
 
-export let authCookie = createCookie('frame-navigation-auth', {
+export const authCookie = createCookie('frame-navigation-auth', {
   httpOnly: true,
   sameSite: 'Lax',
   path: '/',
 })
 
-let authCookieScheme: AuthScheme<FrameAuthIdentity> = {
+const authCookieScheme: AuthScheme<FrameAuthIdentity> = {
   name: 'auth-cookie',
   async authenticate(context) {
     let cookie = await authCookie.parse(context.headers.get('cookie'))
@@ -40,7 +40,7 @@ export function isAuthenticated() {
   return authState.ok
 }
 
-export let requireAuth = requireAuthenticated<FrameAuthIdentity>({
+export const requireAuth = requireAuthenticated<FrameAuthIdentity>({
   onFailure(context) {
     let isFrameRequest = context.request.headers.get('x-remix-frame') === 'true'
     if (isFrameRequest) {

@@ -14,7 +14,7 @@ import {
   type ExternalProviderRegistry,
 } from '../../../utils/external-auth.ts'
 
-let label = getExternalProviderLabel('github')
+const label = getExternalProviderLabel('github')
 
 export function createGitHubAuthController(
   registry: ExternalProviderRegistry = externalProviderRegistry,

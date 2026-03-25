@@ -1,6 +1,6 @@
 import { animateLayout, css, type Handle, spring } from 'remix/component'
 
-let initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
+const initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
 
 function shuffle<T>(array: T[]): T[] {
   let result = [...array]

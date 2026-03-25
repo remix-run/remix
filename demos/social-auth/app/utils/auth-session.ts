@@ -18,7 +18,7 @@ export interface AuthIdentity {
   providerProfile: unknown | null
 }
 
-let authSessionSchema = s.object({
+const authSessionSchema = s.object({
   userId: s.number().refine(Number.isInteger, 'Expected an integer userId'),
   loginMethod: s.union([
     s.literal('credentials'),

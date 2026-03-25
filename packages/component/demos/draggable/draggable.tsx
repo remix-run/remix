@@ -5,14 +5,14 @@ export type DragDetail = {
   top: number
 }
 
-export let dragStartEvent = 'rmx:dragstart' as const
-export let dragEndEvent = 'rmx:dragend' as const
+export const dragStartEvent = 'rmx:dragstart' as const
+export const dragEndEvent = 'rmx:dragend' as const
 
 type DraggableProps = {
   on?: Record<string, (event: Event) => void>
 }
 
-let baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle) => {
+const baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handle) => {
   let node: HTMLElement | null = null
   let enabled = true
   let pointerId: number | null = null
@@ -117,7 +117,7 @@ type DraggableMixin = typeof baseDraggable & {
   readonly end: typeof dragEndEvent
 }
 
-export let draggable: DraggableMixin = Object.assign(baseDraggable, {
+export const draggable: DraggableMixin = Object.assign(baseDraggable, {
   start: dragStartEvent,
   end: dragEndEvent,
 })

@@ -1,8 +1,8 @@
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
-let defaultSafeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
-let defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
+const defaultSafeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
+const defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
 
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 

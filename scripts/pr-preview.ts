@@ -22,7 +22,7 @@ import { logAndExec } from './utils/process.ts'
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
 const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'
 
-let { positionals } = parseArgs({
+const { positionals } = parseArgs({
   allowPositionals: true,
   strict: true,
 })
@@ -32,14 +32,14 @@ if (positionals.length !== 3) {
   process.exit(1)
 }
 
-let [command, prNumberString, branch] = positionals
-let prNumber = parseInt(prNumberString, 10)
+const [command, prNumberString, branch] = positionals
+const prNumber = parseInt(prNumberString, 10)
 if (isNaN(prNumber) || prNumber <= 0) {
   printUsage()
   throw new Error(`Invalid PR number: ${prNumberString}`)
 }
 
-let commands: Record<string, () => Promise<void>> = {
+const commands: Record<string, () => Promise<void>> = {
   comment,
   cleanup,
 }

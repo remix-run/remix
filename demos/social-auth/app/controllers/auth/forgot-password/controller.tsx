@@ -11,7 +11,7 @@ import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import { render } from '../../../utils/render.tsx'
 
-export let forgotPasswordController = {
+export const forgotPasswordController = {
   actions: {
     index(context) {
       return render(

@@ -1,6 +1,6 @@
 import { del, get, post, put, route, form, resources } from 'remix/fetch-router/routes'
 
-export let routes = route({
+export const routes = route({
   assets: '/assets/*path',
   uploads: '/uploads/*key',
   fragments: route('fragments', {

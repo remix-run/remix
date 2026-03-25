@@ -3,7 +3,7 @@ import { animateEntrance, createRoot, css, on, run, spring } from 'remix/compone
 
 import { routes } from '../routes.ts'
 
-let app = run({
+const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
     let exp = (mod as any)[exportName]
@@ -117,7 +117,7 @@ function ErrorCard() {
   )
 }
 
-let pageCss = css({
+const pageCss = css({
   minHeight: '100vh',
   display: 'grid',
   placeItems: 'center',
@@ -127,7 +127,7 @@ let pageCss = css({
   fontFamily: 'ui-sans-serif, system-ui, sans-serif',
 })
 
-let cardCss = css({
+const cardCss = css({
   width: '100%',
   maxWidth: '560px',
   padding: '40px 36px',
@@ -137,13 +137,13 @@ let cardCss = css({
   boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
 })
 
-let animateGentlyIn = animateEntrance({
+const animateGentlyIn = animateEntrance({
   opacity: 0,
   transform: 'translateY(-14px) scale(0.97)',
   ...spring('smooth'),
 })
 
-let eyebrowCss = css({
+const eyebrowCss = css({
   margin: '0 0 12px',
   fontSize: '12px',
   fontWeight: '600',
@@ -152,21 +152,21 @@ let eyebrowCss = css({
   color: '#64748b',
 })
 
-let titleCss = css({
+const titleCss = css({
   margin: '0 0 12px',
   fontSize: '32px',
   lineHeight: '1.1',
   fontWeight: '700',
 })
 
-let messageCss = css({
+const messageCss = css({
   margin: '0',
   fontSize: '16px',
   lineHeight: '1.6',
   color: '#475569',
 })
 
-let reloadButtonCss = css({
+const reloadButtonCss = css({
   marginTop: '24px',
   padding: '12px 18px',
   border: 'none',
@@ -182,7 +182,7 @@ let reloadButtonCss = css({
   },
 })
 
-let actionLinkCss = css({
+const actionLinkCss = css({
   display: 'inline-flex',
   marginTop: '24px',
   padding: '12px 18px',

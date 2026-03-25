@@ -31,7 +31,7 @@ type Equal<left, right> =
 
 function expectType<condition extends true>(_value?: condition): void {}
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -40,7 +40,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -49,9 +49,9 @@ let projects = table({
   },
 })
 
-let accountProjects = hasMany(accounts, projects)
+const accountProjects = hasMany(accounts, projects)
 
-let inferredColumns = table({
+const inferredColumns = table({
   name: 'inferred_columns',
   columns: {
     id: column.integer(),
@@ -66,7 +66,7 @@ let inferredColumns = table({
   },
 })
 
-let cleanups = new Set<() => void>()
+const cleanups = new Set<() => void>()
 
 afterEach(() => {
   for (let cleanup of cleanups) {

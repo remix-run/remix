@@ -12,11 +12,11 @@ import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../../utils/render.tsx'
 import { AccountSettingsPage } from './page.tsx'
 
-let textField = f.field(s.defaulted(s.string(), ''))
-let passwordField = f.field(
+const textField = f.field(s.defaulted(s.string(), ''))
+const passwordField = f.field(
   s.defaulted(s.union([s.literal(''), s.string().pipe(minLength(8))]), ''),
 )
-let accountSettingsSchema = f.object({
+const accountSettingsSchema = f.object({
   name: textField,
   email: textField,
   password: passwordField,

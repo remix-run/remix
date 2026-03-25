@@ -37,7 +37,7 @@ export function loadAuth() {
   })
 }
 
-export let passwordProvider = createCredentialsAuthProvider({
+export const passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let formData = context.get(FormData)
 

@@ -12,7 +12,7 @@ import { sql } from './sql.ts'
 import type { SqliteTestAdapterOptions, SqliteTestSeed } from '../../test/sqlite-test-database.ts'
 import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -38,7 +38,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -48,7 +48,7 @@ let projects = table({
   },
 })
 
-let profiles = table({
+const profiles = table({
   name: 'profiles',
   columns: {
     id: column.integer(),
@@ -57,7 +57,7 @@ let profiles = table({
   },
 })
 
-let tasks = table({
+const tasks = table({
   name: 'tasks',
   columns: {
     id: column.integer(),
@@ -67,7 +67,7 @@ let tasks = table({
   },
 })
 
-let memberships = table({
+const memberships = table({
   name: 'memberships',
   primaryKey: ['organization_id', 'account_id'],
   columns: {
@@ -77,7 +77,7 @@ let memberships = table({
   },
 })
 
-let invoices = table({
+const invoices = table({
   name: 'billing.invoices',
   columns: {
     id: column.integer(),
@@ -86,14 +86,14 @@ let invoices = table({
   },
 })
 
-let accountProjects = hasMany(accounts, projects)
-let accountProfile = hasOne(accounts, profiles)
-let projectAccount = belongsTo(projects, accounts)
-let accountTasks = hasManyThrough(accounts, tasks, {
+const accountProjects = hasMany(accounts, projects)
+const accountProfile = hasOne(accounts, profiles)
+const projectAccount = belongsTo(projects, accounts)
+const accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 
-let cleanups = new Set<() => void>()
+const cleanups = new Set<() => void>()
 
 afterEach(() => {
   for (let cleanup of cleanups) {

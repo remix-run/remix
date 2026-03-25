@@ -38,17 +38,17 @@ export interface SpringIterator extends IterableIterator<number> {
   toString(): string
 }
 
-let presets: Record<SpringPreset, { duration: number; bounce: number }> = {
+const presets: Record<SpringPreset, { duration: number; bounce: number }> = {
   smooth: { duration: 400, bounce: -0.3 },
   snappy: { duration: 200, bounce: 0 },
   bouncy: { duration: 400, bounce: 0.3 },
 }
 
 // Rest thresholds for determining when spring has settled
-let restSpeed = 0.01
-let restDelta = 0.005
-let maxSettlingTime = 20_000
-let frameMs = 1000 / 60 // ~16.67ms per frame
+const restSpeed = 0.01
+const restDelta = 0.005
+const maxSettlingTime = 20_000
+const frameMs = 1000 / 60 // ~16.67ms per frame
 
 /**
  * Create a spring iterator for animations.

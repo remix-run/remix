@@ -11,12 +11,12 @@ type StyleManagerLike = {
   remove(className: string): void
 }
 
-let clientStyleCache: StyleCache = new Map()
+const clientStyleCache: StyleCache = new Map()
 
 /**
  * Applies generated class names for CSS object styles.
  */
-export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle) => {
+export const css = createMixin<Element, [styles: CSSProps], ElementProps>((handle) => {
   let activeSelector = ''
   let currentStyles: CSSProps = {}
 

@@ -6,7 +6,7 @@ import * as styles from '../../ui/styles.ts'
 import { SocialProviderButton } from './social-provider-button.tsx'
 import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 
-let { theme } = designSystem
+const { theme } = designSystem
 
 export function ExternalAuthSection() {
   return ({ providers }: { providers: ExternalProviderLink[] }) => (

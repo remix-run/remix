@@ -19,20 +19,20 @@ export function Index() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   margin: 0,
   fontSize: '1.5rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.6rem',
   color: '#475569',
   lineHeight: 1.7,
   maxWidth: '70ch',
 })
 
-let cardStyle = css({
+const cardStyle = css({
   marginTop: '1rem',
   border: '1px solid #e2e8f0',
   borderRadius: '14px',
@@ -40,13 +40,13 @@ let cardStyle = css({
   padding: '1rem',
 })
 
-let cardTitleStyle = css({
+const cardTitleStyle = css({
   margin: 0,
   fontWeight: 600,
   color: '#0f172a',
 })
 
-let cardBodyStyle = css({
+const cardBodyStyle = css({
   margin: '0.5rem 0 0',
   color: '#64748b',
 })

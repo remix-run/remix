@@ -14,7 +14,7 @@ import {
   type ExternalProviderRegistry,
 } from '../../../utils/external-auth.ts'
 
-let label = getExternalProviderLabel('x')
+const label = getExternalProviderLabel('x')
 
 export function createXAuthController(
   registry: ExternalProviderRegistry = externalProviderRegistry,

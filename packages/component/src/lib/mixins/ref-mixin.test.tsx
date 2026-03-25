@@ -123,7 +123,7 @@ describe('ref mixin', () => {
   })
 })
 
-let _infersNodeType = (
+const _infersNodeType = (
   <button
     mix={[
       ref((node, signal) => {

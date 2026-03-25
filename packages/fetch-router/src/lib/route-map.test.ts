@@ -71,7 +71,7 @@ describe('createRoutes', () => {
   })
 })
 
-let categoriesRoutes = route('categories', {
+const categoriesRoutes = route('categories', {
   index: '/',
   create: { method: 'POST', pattern: '/:slug/edit' },
   products: {
@@ -79,7 +79,7 @@ let categoriesRoutes = route('categories', {
   },
 })
 
-let routes = route({
+const routes = route({
   home: '/',
   promo: '(/:lang)/promo',
   about: {

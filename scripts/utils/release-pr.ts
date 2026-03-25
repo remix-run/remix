@@ -2,7 +2,7 @@ import type { PackageRelease } from './changes.ts'
 import { generateChangelogContent } from './changes.ts'
 
 // GitHub has a 65,536 character limit for PR body. We use 60,000 to be safe.
-let maxBodyLength = 60_000
+const maxBodyLength = 60_000
 
 /**
  * Generates the PR body for a release PR

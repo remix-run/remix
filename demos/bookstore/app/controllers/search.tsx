@@ -11,7 +11,7 @@ import { render } from '../utils/render.tsx'
 import { BookCard } from '../ui/book-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
-export let search: BuildAction<'GET', typeof routes.search> = {
+export const search: BuildAction<'GET', typeof routes.search> = {
   async handler({ get, url }) {
     let db = get(Database)
     let query = url.searchParams.get('q') ?? ''

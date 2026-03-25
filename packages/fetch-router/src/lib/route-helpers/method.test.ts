@@ -109,7 +109,7 @@ describe('route helpers composition', () => {
   })
 })
 
-let composedRoutes = route({
+const composedRoutes = route({
   home: '/',
   ...route('posts', {
     posts: get('/'),

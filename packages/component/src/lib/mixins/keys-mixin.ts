@@ -2,19 +2,19 @@ import { renderMixinElement } from '../mixin.ts'
 import { on } from './on-mixin.ts'
 import { createMixin } from '../mixin.ts'
 
-export let escapeEventType = 'keydown:Escape' as const
-export let enterEventType = 'keydown:Enter' as const
-export let spaceEventType = 'keydown: ' as const
-export let backspaceEventType = 'keydown:Backspace' as const
-export let deleteEventType = 'keydown:Delete' as const
-export let arrowLeftEventType = 'keydown:ArrowLeft' as const
-export let arrowRightEventType = 'keydown:ArrowRight' as const
-export let arrowUpEventType = 'keydown:ArrowUp' as const
-export let arrowDownEventType = 'keydown:ArrowDown' as const
-export let homeEventType = 'keydown:Home' as const
-export let endEventType = 'keydown:End' as const
-export let pageUpEventType = 'keydown:PageUp' as const
-export let pageDownEventType = 'keydown:PageDown' as const
+export const escapeEventType = 'keydown:Escape' as const
+export const enterEventType = 'keydown:Enter' as const
+export const spaceEventType = 'keydown: ' as const
+export const backspaceEventType = 'keydown:Backspace' as const
+export const deleteEventType = 'keydown:Delete' as const
+export const arrowLeftEventType = 'keydown:ArrowLeft' as const
+export const arrowRightEventType = 'keydown:ArrowRight' as const
+export const arrowUpEventType = 'keydown:ArrowUp' as const
+export const arrowDownEventType = 'keydown:ArrowDown' as const
+export const homeEventType = 'keydown:Home' as const
+export const endEventType = 'keydown:End' as const
+export const pageUpEventType = 'keydown:PageUp' as const
+export const pageDownEventType = 'keydown:PageDown' as const
 
 declare global {
   interface HTMLElementEventMap {
@@ -34,7 +34,7 @@ declare global {
   }
 }
 
-let keyToEventType: Record<string, string> = {
+const keyToEventType: Record<string, string> = {
   Escape: escapeEventType,
   Enter: enterEventType,
   ' ': spaceEventType,
@@ -50,7 +50,7 @@ let keyToEventType: Record<string, string> = {
   PageDown: pageDownEventType,
 }
 
-let baseKeysEvents = createMixin<HTMLElement>(
+const baseKeysEvents = createMixin<HTMLElement>(
   (handle) => (props) =>
     renderMixinElement(handle.element, {
       ...(props ?? {}),
@@ -88,7 +88,7 @@ type KeysEventsMixin = typeof baseKeysEvents & {
 /**
  * Normalizes common keyboard keys into custom key-specific DOM events.
  */
-export let keysEvents: KeysEventsMixin = Object.assign(baseKeysEvents, {
+export const keysEvents: KeysEventsMixin = Object.assign(baseKeysEvents, {
   escape: escapeEventType,
   enter: enterEventType,
   space: spaceEventType,

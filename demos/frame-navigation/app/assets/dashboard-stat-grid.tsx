@@ -10,7 +10,7 @@ type DashboardStatGridProps = {
   cards: StatCard[]
 }
 
-export let DashboardStatGrid = clientEntry(
+export const DashboardStatGrid = clientEntry(
   '/assets/dashboard-stat-grid.js#DashboardStatGrid',
   function DashboardStatGrid(_handle: Handle) {
     return ({ cards }: DashboardStatGridProps) => (
@@ -26,14 +26,14 @@ export let DashboardStatGrid = clientEntry(
   },
 )
 
-let statsGridStyle = css({
+const statsGridStyle = css({
   marginTop: '1.25rem',
   display: 'grid',
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   gap: '0.75rem',
 })
 
-let statCardStyle = css({
+const statCardStyle = css({
   border: '1px solid #e2e8f0',
   borderRadius: '12px',
   padding: '1rem',
@@ -51,13 +51,13 @@ let statCardStyle = css({
   },
 })
 
-let statLabelStyle = css({
+const statLabelStyle = css({
   margin: 0,
   fontSize: '0.875rem',
   color: '#64748b',
 })
 
-let statValueStyle = css({
+const statValueStyle = css({
   margin: '0.3rem 0 0',
   fontSize: '1.5rem',
   fontWeight: 700,

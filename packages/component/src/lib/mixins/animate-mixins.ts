@@ -36,8 +36,8 @@ type AnimationState = {
   properties: string[]
 }
 
-let animatingNodes = new WeakMap<Element, AnimationState>()
-let initialEntranceSeenByParent = new WeakMap<ParentNode, Set<string>>()
+const animatingNodes = new WeakMap<Element, AnimationState>()
+const initialEntranceSeenByParent = new WeakMap<ParentNode, Set<string>>()
 
 function extractStyleProps(config: AnimateMixinConfig): Keyframe {
   let result: Keyframe = {}
@@ -167,7 +167,7 @@ function shouldSkipInitialEntrance(
   return true
 }
 
-let animateEntranceMixin = createMixin<Element, [config: AnimationConfig], ElementProps>(
+const animateEntranceMixin = createMixin<Element, [config: AnimationConfig], ElementProps>(
   (handle) => {
     let currentConfig: AnimationConfig = true
 
@@ -194,7 +194,7 @@ let animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Eleme
   },
 )
 
-let animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>((handle) => {
+const animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>((handle) => {
   let currentConfig: AnimationConfig = true
   let node: Element | null = null
 

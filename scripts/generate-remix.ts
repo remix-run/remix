@@ -13,11 +13,11 @@ import path from 'node:path'
 import url from 'node:url'
 import { logAndExec } from './utils/process.ts'
 
-let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
-let packagesDir = path.resolve(__dirname, '../packages')
-let remixDir = path.join(packagesDir, 'remix')
-let remixChangesDir = path.join(remixDir, '.changes')
-let remixPackageJsonPath = path.join(remixDir, 'package.json')
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
+const packagesDir = path.resolve(__dirname, '../packages')
+const remixDir = path.join(packagesDir, 'remix')
+const remixChangesDir = path.join(remixDir, '.changes')
+const remixPackageJsonPath = path.join(remixDir, 'package.json')
 
 const SOURCE_FOLDER = 'src'
 
@@ -36,11 +36,11 @@ type ExportEntry = {
   reExportFrom: string
 }
 
-let { remixRunPackages, allExports } = await getRemixRunPackages()
-let remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
+const { remixRunPackages, allExports } = await getRemixRunPackages()
+const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
 // Track existing exports for comparison
-let existingExports = new Set<string>(
+const existingExports = new Set<string>(
   Object.keys(remixPackageJson.exports || {}).filter(
     (key) => key !== '.' && key !== './package.json',
   ),

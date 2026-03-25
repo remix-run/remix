@@ -17,7 +17,7 @@ type SettingsLayoutProps = {
   children?: RemixNode
 }
 
-let settingsItems = [
+const settingsItems = [
   {
     id: 'overview',
     route: routes.settings.index,
@@ -68,14 +68,14 @@ export function SettingsLayout() {
   )
 }
 
-let contentShellStyle = css({
+const contentShellStyle = css({
   display: 'grid',
   gridTemplateColumns: '240px minmax(0, 1fr)',
   gap: '1.25rem',
   alignItems: 'start',
 })
 
-let secondarySidebarStyle = css({
+const secondarySidebarStyle = css({
   position: 'sticky',
   top: '1.5rem',
   border: '1px solid #e2e8f0',
@@ -84,7 +84,7 @@ let secondarySidebarStyle = css({
   padding: '0.9rem',
 })
 
-let secondarySidebarTitleStyle = css({
+const secondarySidebarTitleStyle = css({
   margin: 0,
   color: '#64748b',
   fontSize: '0.85rem',
@@ -93,7 +93,7 @@ let secondarySidebarTitleStyle = css({
   fontWeight: 600,
 })
 
-let secondaryNavStyle = css({
+const secondaryNavStyle = css({
   marginTop: '0.7rem',
   display: 'grid',
   gap: '0.35rem',
@@ -113,7 +113,7 @@ let secondaryNavStyle = css({
   },
 })
 
-let secondaryContentStyle = css({
+const secondaryContentStyle = css({
   minWidth: 0,
 })
 

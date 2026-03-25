@@ -5,7 +5,7 @@ import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -13,7 +13,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -22,7 +22,7 @@ let projects = table({
   },
 })
 
-let invoices = table({
+const invoices = table({
   name: 'billing.invoices',
   columns: {
     id: column.integer(),
@@ -30,7 +30,7 @@ let invoices = table({
   },
 })
 
-let accountProjects = table({
+const accountProjects = table({
   name: 'account_projects',
   columns: {
     account_id: column.integer(),

@@ -15,7 +15,7 @@ type ServerStyleState = {
 }
 
 let serverStyleState: ServerStyleState | null = null
-let activeManagers = new Set<ActiveManager>()
+const activeManagers = new Set<ActiveManager>()
 
 function isHtmlStyleElement(node: unknown): node is HTMLStyleElement {
   return typeof node === 'object' && node !== null && node instanceof HTMLStyleElement

@@ -9,17 +9,17 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 import { books, orderItems, orders, users } from './schema.ts'
 import { hashPassword } from '../utils/password-hash.ts'
 
-let databaseDirectoryUrl = getDatabaseDirectoryUrl()
-let migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
-let databaseFilePath = getDatabaseFilePath()
+const databaseDirectoryUrl = getDatabaseDirectoryUrl()
+const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
+const databaseFilePath = getDatabaseFilePath()
 
 fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
 
-let sqlite = new BetterSqlite3(databaseFilePath)
+const sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
-let adapter = createSqliteDatabaseAdapter(sqlite)
+const adapter = createSqliteDatabaseAdapter(sqlite)
 
-export let db = createDatabase(adapter)
+export const db = createDatabase(adapter)
 
 let initializePromise: Promise<void> | null = null
 

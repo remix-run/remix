@@ -16,12 +16,12 @@ type LinkCurrentProps = ElementProps & {
   'aria-disabled'?: boolean | 'true' | 'false'
 }
 
-let nativeLinkHostTypes = new Set(['a', 'area'])
+const nativeLinkHostTypes = new Set(['a', 'area'])
 
 /**
  * Adds client-side navigation behavior to anchor-like elements.
  */
-export let link = createMixin<
+export const link = createMixin<
   HTMLElement,
   [href: string, options?: NavigationOptions],
   LinkCurrentProps

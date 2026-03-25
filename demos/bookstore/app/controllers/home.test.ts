@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { assertContains, createTestRouter } from '../../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('home handler', () => {
   it('GET / returns home page', async () => {

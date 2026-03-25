@@ -1,7 +1,7 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { Vary } from '@remix-run/headers'
 
-let defaultCorsMethods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE']
+const defaultCorsMethods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE']
 
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 

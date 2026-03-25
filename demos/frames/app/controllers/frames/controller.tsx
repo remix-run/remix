@@ -8,7 +8,7 @@ import { routes } from '../../routes.ts'
 import { render } from '../../utils/render.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
-export let framesController = {
+export const framesController = {
   actions: {
     async sidebar() {
       await delay(400)

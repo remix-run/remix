@@ -1,7 +1,7 @@
 import { column as c, table } from 'remix/data-table'
 import type { TableRow } from 'remix/data-table'
 
-export let users = table({
+export const users = table({
   name: 'users',
   columns: {
     id: c.integer().primaryKey().autoIncrement(),
@@ -42,7 +42,7 @@ export let users = table({
   },
 })
 
-export let authAccounts = table({
+export const authAccounts = table({
   name: 'auth_accounts',
   columns: {
     id: c.integer().primaryKey().autoIncrement(),
@@ -91,7 +91,7 @@ export let authAccounts = table({
   },
 })
 
-export let passwordResetTokens = table({
+export const passwordResetTokens = table({
   name: 'password_reset_tokens',
   primaryKey: ['token'],
   columns: {

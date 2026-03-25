@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { assertContains, createTestRouter } from '../../../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('contact controller', () => {
   it('POST /contact returns success message', async () => {

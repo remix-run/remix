@@ -15,7 +15,7 @@ import { parseAuthSession, parseProviderProfile } from '../utils/auth-session.ts
 import { verifyPassword } from '../utils/password-hash.ts'
 import { routes } from '../routes.ts'
 
-let loginSchema = f.object({
+const loginSchema = f.object({
   email: f.field(s.defaulted(s.string(), '')),
   password: f.field(s.defaulted(s.string(), '')),
 })
@@ -52,7 +52,7 @@ export function loadAuth() {
   })
 }
 
-export let passwordProvider = createCredentialsAuthProvider({
+export const passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let { email, password } = s.parse(loginSchema, context.get(FormData))
 
@@ -78,7 +78,7 @@ export let passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export let requireAuth = requireAuthenticated<AuthIdentity>({
+export const requireAuth = requireAuthenticated<AuthIdentity>({
   onFailure() {
     return redirect(routes.home.href())
   },

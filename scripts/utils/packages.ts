@@ -30,7 +30,7 @@ export function getPackageFile(packageDirName: string, filename: string): string
  * Builds a mapping from npm package names to directory names by reading
  * all package.json files in the packages directory.
  */
-let getNpmPackageNameToDirectoryMap = (() => {
+const getNpmPackageNameToDirectoryMap = (() => {
   let map: Map<string, string> | null = null
 
   return function getNpmPackageNameToDirectoryMap(): Map<string, string> {
@@ -116,7 +116,7 @@ interface PackageInfo {
  * Gets information about all packages in the monorepo, including their
  * @remix-run/* dependencies.
  */
-let getPackageInfoMap = (() => {
+const getPackageInfoMap = (() => {
   let map: Map<string, PackageInfo> | null = null
 
   return function getPackageInfoMap(): Map<string, PackageInfo> {

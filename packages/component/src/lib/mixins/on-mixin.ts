@@ -18,7 +18,7 @@ type ListenerFor<target extends Element, type extends EventType<target>> = Signa
   Parameters<AddEventListenerFor<target, type>>[0]
 >
 
-let onMixin = createMixin<
+const onMixin = createMixin<
   Element,
   [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean],
   ElementProps

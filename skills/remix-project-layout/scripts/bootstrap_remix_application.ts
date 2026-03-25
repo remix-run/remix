@@ -22,10 +22,10 @@ type FileSpec = {
   path: string
 }
 
-let scriptDir = path.dirname(fileURLToPath(import.meta.url))
-let defaultTsxVersion = '^4.20.6'
-let defaultTypesNodeVersion = '^24.6.0'
-let defaultTypescriptVersion = '^5.9.3'
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const defaultTsxVersion = '^4.20.6'
+const defaultTypesNodeVersion = '^24.6.0'
+const defaultTypescriptVersion = '^5.9.3'
 
 await main()
 

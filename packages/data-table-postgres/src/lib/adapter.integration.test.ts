@@ -11,7 +11,7 @@ import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
-let integrationEnabled =
+const integrationEnabled =
   process.env.DATA_TABLE_INTEGRATION === '1' &&
   typeof process.env.DATA_TABLE_POSTGRES_URL === 'string'
 

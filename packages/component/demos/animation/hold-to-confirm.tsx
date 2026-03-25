@@ -10,14 +10,14 @@ import {
 } from 'remix/component'
 
 // Demo
-let buttonExitAnimation = {
+const buttonExitAnimation = {
   opacity: 0,
   transform: 'scale(1.15)',
   duration: 100,
   easing: 'ease-in',
 }
 
-let confirmationEnterAnimation = {
+const confirmationEnterAnimation = {
   opacity: 0,
   transform: 'scale(0.9)',
   duration: 200,
@@ -231,9 +231,9 @@ function CheckIcon() {
 }
 
 const PRESS_CONFIRM_TIME = 2000
-let pressConfirmStartEventType = 'demo:press-confirm-start' as const
-let pressConfirmCancelEventType = 'demo:press-confirm-cancel' as const
-let pressConfirmEndEventType = 'demo:press-confirm-end' as const
+const pressConfirmStartEventType = 'demo:press-confirm-start'
+const pressConfirmCancelEventType = 'demo:press-confirm-cancel'
+const pressConfirmEndEventType = 'demo:press-confirm-end'
 
 declare global {
   interface HTMLElementEventMap {
@@ -243,7 +243,7 @@ declare global {
   }
 }
 
-let baseConfirmPress = createMixin<HTMLElement>((handle) => {
+const baseConfirmPress = createMixin<HTMLElement>((handle) => {
   let timer = 0
 
   let clearTimer = () => {
@@ -291,7 +291,7 @@ type ConfirmPressMixin = typeof baseConfirmPress & {
   readonly end: typeof pressConfirmEndEventType
 }
 
-let confirmPress: ConfirmPressMixin = Object.assign(baseConfirmPress, {
+const confirmPress: ConfirmPressMixin = Object.assign(baseConfirmPress, {
   start: pressConfirmStartEventType,
   cancel: pressConfirmCancelEventType,
   end: pressConfirmEndEventType,

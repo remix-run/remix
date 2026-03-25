@@ -5,8 +5,8 @@ import { createClient } from 'redis'
 
 import { createRedisSessionStorage } from './redis-storage.ts'
 
-let redisUrl = process.env.SESSION_REDIS_URL
-let integrationEnabled = process.env.SESSION_REDIS_INTEGRATION === '1' && redisUrl != null
+const redisUrl = process.env.SESSION_REDIS_URL
+const integrationEnabled = process.env.SESSION_REDIS_INTEGRATION === '1' && redisUrl != null
 
 describe('redis session storage integration', { skip: !integrationEnabled }, () => {
   let client: ReturnType<typeof createClient>

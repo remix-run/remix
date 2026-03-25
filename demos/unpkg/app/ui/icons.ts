@@ -1,6 +1,6 @@
 import { html } from 'remix/html-template'
 
-export let icons = {
+export const icons = {
   file: html`<svg
     class="icon-file"
     viewBox="0 0 16 16"

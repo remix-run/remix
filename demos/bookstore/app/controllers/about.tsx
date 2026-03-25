@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 import { render } from '../utils/render.tsx'
 import { Layout } from '../ui/layout.tsx'
 
-export let about: BuildAction<'GET', typeof routes.about> = {
+export const about: BuildAction<'GET', typeof routes.about> = {
   handler() {
     return render(<AboutPage />)
   },

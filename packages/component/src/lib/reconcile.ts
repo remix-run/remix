@@ -51,7 +51,7 @@ const MATCHED = 1 << 1
 
 let idCounter = 0
 let persistedRemovalToken = 0
-let persistedMixinNodes = new Set<CommittedHostNode>()
+const persistedMixinNodes = new Set<CommittedHostNode>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 // Compute SVG context for a node based on its parent and type.

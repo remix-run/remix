@@ -12,7 +12,7 @@ type LayoutProps = {
   children?: RemixNode
 }
 
-let navItems = [
+const navItems = [
   { id: 'dashboard', label: 'Dashboard', route: routes.main.index },
   { id: 'courses', label: 'Courses', route: routes.main.courses },
   { id: 'calendar', label: 'Calendar', route: routes.main.calendar },
@@ -62,7 +62,7 @@ export function Layout() {
   )
 }
 
-let bodyStyle = css({
+const bodyStyle = css({
   margin: 0,
   minHeight: '100vh',
   fontFamily:
@@ -71,13 +71,13 @@ let bodyStyle = css({
   backgroundColor: '#f8fafc',
 })
 
-let appShellStyle = css({
+const appShellStyle = css({
   height: '100vh',
   display: 'grid',
   gridTemplateColumns: '280px minmax(0, 1fr)',
 })
 
-let sidebarStyle = css({
+const sidebarStyle = css({
   position: 'sticky',
   top: 0,
   alignSelf: 'start',
@@ -91,7 +91,7 @@ let sidebarStyle = css({
   gap: '0.75rem',
 })
 
-let brandLinkStyle = css({
+const brandLinkStyle = css({
   fontWeight: 700,
   letterSpacing: '-0.01em',
   color: '#0f172a',
@@ -99,13 +99,13 @@ let brandLinkStyle = css({
   fontSize: '1.1rem',
 })
 
-let sidebarSubtitleStyle = css({
+const sidebarSubtitleStyle = css({
   margin: 0,
   color: '#64748b',
   fontSize: '0.9rem',
 })
 
-let navStyle = css({
+const navStyle = css({
   display: 'grid',
   gap: '0.35rem',
   marginTop: '0.5rem',
@@ -125,12 +125,12 @@ let navStyle = css({
   },
 })
 
-let logoutFormStyle = css({
+const logoutFormStyle = css({
   marginTop: 'auto',
   paddingTop: '1rem',
 })
 
-let logoutButtonStyle = css({
+const logoutButtonStyle = css({
   width: '100%',
   border: 'none',
   borderRadius: '10px',
@@ -142,17 +142,17 @@ let logoutButtonStyle = css({
   color: '#0f172a',
 })
 
-let mainStyle = css({
+const mainStyle = css({
   padding: '1.5rem 2rem 3rem',
 })
 
-let mainHeaderStyle = css({
+const mainHeaderStyle = css({
   marginBottom: '1.25rem',
   paddingBottom: '0.75rem',
   borderBottom: '1px solid #e2e8f0',
 })
 
-let mainTitleStyle = css({
+const mainTitleStyle = css({
   margin: 0,
   fontSize: '1.25rem',
   color: '#0f172a',

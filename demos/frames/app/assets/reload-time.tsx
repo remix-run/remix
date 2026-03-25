@@ -1,6 +1,6 @@
 import { clientEntry, css, on, type Handle } from 'remix/component'
 
-export let ReloadTime = clientEntry(
+export const ReloadTime = clientEntry(
   '/assets/reload-time.js#ReloadTime',
   function ReloadTime(handle: Handle) {
     let pending = false

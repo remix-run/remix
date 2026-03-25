@@ -12,7 +12,7 @@ import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
 
-let CurrentUser = createContextKey<unknown>()
+const CurrentUser = createContextKey<unknown>()
 
 declare module './async-context.ts' {
   interface AsyncContextTypes {

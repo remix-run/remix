@@ -117,7 +117,7 @@ export function AspectRatio(handle: Handle) {
   )
 }
 
-let rangeInputCss = {
+const rangeInputCss = {
   flex: 1,
   accentColor: '#8df0cc',
   cursor: 'pointer',

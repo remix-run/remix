@@ -89,7 +89,7 @@ function App(handle: Handle) {
   )
 }
 
-let container = document.getElementById('app')
+const container = document.getElementById('app')
 if (container) {
   createRoot(container).render(<App />)
 }

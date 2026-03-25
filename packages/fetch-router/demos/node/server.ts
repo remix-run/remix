@@ -5,7 +5,7 @@ import { router } from './app/router.ts'
 
 const PORT = 44100
 
-let server = http.createServer(
+const server = http.createServer(
   createRequestListener(async (request) => {
     try {
       return await router.fetch(request)

@@ -13,16 +13,16 @@ import { AdminBookFormPage } from './form.tsx'
 import { AdminBooksIndexPage } from './index-page.tsx'
 import { AdminBookNotFoundPage, AdminBookShowPage } from './show-page.tsx'
 
-let textField = f.field(s.defaulted(s.string(), ''))
-let optionalTextField = f.field(s.optional(s.string()))
-let priceField = f.field(s.defaulted(s.string(), '0'))
-let publishedYearField = f.field(s.defaulted(s.string(), '2024'), {
+const textField = f.field(s.defaulted(s.string(), ''))
+const optionalTextField = f.field(s.optional(s.string()))
+const priceField = f.field(s.defaulted(s.string(), '0'))
+const publishedYearField = f.field(s.defaulted(s.string(), '2024'), {
   name: 'publishedYear',
 })
-let inStockField = f.field(s.defaulted(coerce.boolean(), false), {
+const inStockField = f.field(s.defaulted(coerce.boolean(), false), {
   name: 'inStock',
 })
-let bookSchema = f.object({
+const bookSchema = f.object({
   slug: textField,
   title: textField,
   author: textField,

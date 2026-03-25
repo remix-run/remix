@@ -7,7 +7,7 @@ import { Layout } from '../ui/layout.tsx'
 import { getMessageLimit } from '../utils/message-limit.ts'
 import { render } from '../utils/render.ts'
 
-export let homeAction = {
+export const homeAction = {
   handler(context) {
     let limit = getMessageLimit(context.url)
 

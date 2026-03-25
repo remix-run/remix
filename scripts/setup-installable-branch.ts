@@ -27,24 +27,24 @@ import { logAndExec } from './utils/process.ts'
  * they install as nested deps the same way.
  */
 
-let { positionals } = util.parseArgs({
+const { positionals } = util.parseArgs({
   allowPositionals: true,
 })
 
 // Use first positional argument or fall back to --branch flag or default
-let installableBranch = positionals[0]
+const installableBranch = positionals[0]
 if (!installableBranch) {
   throw new Error('Error: You must provide an installable branch name')
 }
 
 // Error if git status is not clean
-let gitStatus = logAndExec('git status --porcelain', true)
+const gitStatus = logAndExec('git status --porcelain', true)
 if (gitStatus) {
   throw new Error('Error: Git working directory is not clean. Commit or stash changes first.')
 }
 
 // Capture the current branch name
-let sha = logAndExec('git rev-parse --short HEAD ', true).trim()
+const sha = logAndExec('git rev-parse --short HEAD ', true).trim()
 
 console.log(`Preparing installable branch \`${installableBranch}\` from sha ${sha}`)
 

@@ -2,7 +2,7 @@ import { css, type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
-let moduleUrl = routes.assets.href({ path: 'cart-items.js#CartItems' })
+const moduleUrl = routes.assets.href({ path: 'cart-items.js#CartItems' })
 
 type CartItem = {
   bookId: number
@@ -23,7 +23,7 @@ type PendingAction = {
   bookId: number
 } | null
 
-export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {
+export const CartItems = clientEntry(moduleUrl, (handle: Handle) => {
   let pendingAction: PendingAction = null
 
   let submit = async (form: HTMLFormElement, signal: AbortSignal, nextAction: PendingAction) => {

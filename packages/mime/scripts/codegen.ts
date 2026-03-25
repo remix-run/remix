@@ -34,7 +34,7 @@ export function generateCompressibleMimeTypesContent(): string {
   return `// DO NOT EDIT. THIS IS GENERATED CODE.
 // Run \`pnpm codegen\` to update.
 
-export let compressibleMimeTypes = new Set([
+export const compressibleMimeTypes = new Set([
 ${compressibleTypes.map((type) => `  '${type}',`).join('\n')}
 ])
 `
@@ -88,7 +88,7 @@ export function generateMimeTypesContent(): string {
   return `// DO NOT EDIT. THIS IS GENERATED CODE.
 // Run \`pnpm codegen\` to update.
 
-export let mimeTypes: Record<string, string> = {
+export const mimeTypes: Record<string, string> = {
 ${entries.join('\n')}
 }
 `

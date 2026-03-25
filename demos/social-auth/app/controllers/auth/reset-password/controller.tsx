@@ -30,7 +30,7 @@ async function loadResetToken(context: AppContext<{ token: string }>) {
   return resetToken
 }
 
-export let resetPasswordController = {
+export const resetPasswordController = {
   actions: {
     async index(context) {
       let resetToken = await loadResetToken(context)

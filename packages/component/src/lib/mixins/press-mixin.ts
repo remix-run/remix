@@ -1,10 +1,10 @@
 import { createMixin } from '../mixin.ts'
 
-export let pressEventType = 'rmx:press' as const
-export let pressDownEventType = 'rmx:press-down' as const
-export let pressUpEventType = 'rmx:press-up' as const
-export let longPressEventType = 'rmx:long-press' as const
-export let pressCancelEventType = 'rmx:press-cancel' as const
+export const pressEventType = 'rmx:press' as const
+export const pressDownEventType = 'rmx:press-down' as const
+export const pressUpEventType = 'rmx:press-up' as const
+export const longPressEventType = 'rmx:long-press' as const
+export const pressCancelEventType = 'rmx:press-cancel' as const
 
 declare global {
   interface HTMLElementEventMap {
@@ -45,7 +45,7 @@ export class PressEvent extends Event {
   }
 }
 
-let basePressEvents = createMixin<HTMLElement>((handle) => {
+const basePressEvents = createMixin<HTMLElement>((handle) => {
   let target: HTMLElement | null = null
   let doc: Document | null = null
   let isPointerDown = false
@@ -197,7 +197,7 @@ type PressEventsMixin = typeof basePressEvents & {
 /**
  * Normalizes pointer and keyboard input into press lifecycle events.
  */
-export let pressEvents: PressEventsMixin = Object.assign(basePressEvents, {
+export const pressEvents: PressEventsMixin = Object.assign(basePressEvents, {
   press: pressEventType,
   down: pressDownEventType,
   up: pressUpEventType,

@@ -1,4 +1,4 @@
-let tokens = {
+const tokens = {
   color: {
     white: '#ffffff',
     blue050: '#eff6ff',
@@ -57,7 +57,7 @@ let tokens = {
   },
 }
 
-let theme = {
+const theme = {
   surface: {
     pageBackground: `linear-gradient(to bottom right, ${tokens.color.blue050}, ${tokens.color.blue100})`,
     card: tokens.color.white,
@@ -88,7 +88,7 @@ let theme = {
   },
 }
 
-export let designSystem = {
+export const designSystem = {
   tokens,
   theme,
 }

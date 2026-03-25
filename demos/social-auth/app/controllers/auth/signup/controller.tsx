@@ -14,7 +14,7 @@ import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../../utils/render.tsx'
 
-export let signupController = {
+export const signupController = {
   actions: {
     index(context) {
       return render(

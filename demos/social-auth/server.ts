@@ -12,9 +12,9 @@ import {
 
 await initializeSocialAuthDatabase()
 
-let router = createSocialAuthRouter()
+const router = createSocialAuthRouter()
 
-let server = http.createServer(
+const server = http.createServer(
   createRequestListener(async (request) => {
     try {
       return await router.fetch(request)
@@ -25,7 +25,7 @@ let server = http.createServer(
   }),
 )
 
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   let demoUrl = getDemoOrigin()

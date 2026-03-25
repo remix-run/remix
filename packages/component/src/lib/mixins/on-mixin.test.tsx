@@ -193,7 +193,7 @@ describe('on mixin', () => {
   })
 })
 
-let _infersNodeType = (
+const _infersNodeType = (
   <button
     mix={[
       on('pointerdown', (event, signal) => {

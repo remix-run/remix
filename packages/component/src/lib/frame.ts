@@ -56,8 +56,8 @@ type InternalFrameContent = FrameContent | DocumentFragment
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
-let bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
-let frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
+const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
+const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {

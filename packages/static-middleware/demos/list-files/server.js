@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 44100
 
 // Point to the monorepo root (two levels up from demos/list-files)
-let root = path.resolve(__dirname, '..', '..', '..', '..')
+const root = path.resolve(__dirname, '..', '..', '..', '..')
 
-let router = createRouter({
+const router = createRouter({
   middleware: [
     staticFiles(root, {
       listFiles: true,
@@ -21,7 +21,7 @@ let router = createRouter({
   ],
 })
 
-let server = http.createServer(createRequestListener((request) => router.fetch(request)))
+const server = http.createServer(createRequestListener((request) => router.fetch(request)))
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)

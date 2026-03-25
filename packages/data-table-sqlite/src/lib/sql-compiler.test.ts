@@ -24,7 +24,7 @@ import {
 } from '@remix-run/data-table'
 import { compileSqliteOperation } from './sql-compiler.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -34,7 +34,7 @@ let accounts = table({
   },
 })
 
-let tasks = table({
+const tasks = table({
   name: 'tasks',
   columns: {
     id: column.integer(),
@@ -45,7 +45,7 @@ let tasks = table({
 
 let statements: DataManipulationOperation[] = []
 
-let fakeAdapter = {
+const fakeAdapter = {
   capabilities: {
     upsert: true,
     returning: true,
@@ -69,7 +69,7 @@ let fakeAdapter = {
     return {}
   },
 } as DatabaseAdapter
-let db = createDatabase(fakeAdapter)
+const db = createDatabase(fakeAdapter)
 
 describe('sqlite sql-compiler', () => {
   beforeEach(() => {

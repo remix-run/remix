@@ -1,6 +1,6 @@
 import { clientEntry, css, on, type Handle } from 'remix/component'
 
-export let ReloadScope = clientEntry(
+export const ReloadScope = clientEntry(
   '/assets/reload-scope.js#ReloadScope',
   function ReloadScope(handle: Handle) {
     let framePending = false

@@ -10,7 +10,7 @@ import { designSystem } from '../../ui/design-system.ts'
 import * as styles from '../../ui/styles.ts'
 import type { AuthIdentity } from '../../utils/auth-session.ts'
 
-let { tokens } = designSystem
+const { tokens } = designSystem
 
 interface AccountPageProps {
   identity: AuthIdentity

@@ -10,7 +10,7 @@ import { stateSearchAction } from './controllers/state-search.tsx'
 import { timeAction } from './controllers/time.tsx'
 import { routes } from './routes.ts'
 
-let middleware = []
+const middleware = []
 
 if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
@@ -25,7 +25,7 @@ middleware.push(
   }),
 )
 
-export let router = createRouter({ middleware })
+export const router = createRouter({ middleware })
 router.get(routes.home, homeAction)
 router.get(routes.clientMounted, clientMountedAction)
 router.get(routes.time, timeAction)

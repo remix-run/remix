@@ -6,7 +6,7 @@ export interface Post {
   createdAt: Date
 }
 
-let posts: Post[] = [
+const posts: Post[] = [
   {
     id: '1',
     title: 'Welcome to the Blog',

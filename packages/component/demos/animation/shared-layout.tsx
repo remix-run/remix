@@ -1,6 +1,6 @@
 import { animateEntrance, animateExit, css, on, type Handle, type RemixNode } from 'remix/component'
 
-let ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
+const ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 
 function OverlapExample(handle: Handle) {
   let shouldAnimate = false

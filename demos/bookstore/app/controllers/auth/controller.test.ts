@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { assertContains, createTestRouter, getSessionCookie } from '../../../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('auth handlers', () => {
   it('POST /login with valid credentials sets session cookie and redirects', async () => {
