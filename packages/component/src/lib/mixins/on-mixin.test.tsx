@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from '../vdom.ts'
-import { on } from './on-mixin.tsx'
+import { on } from './on-mixin.ts'
 import { invariant } from '../invariant.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
-import type { Dispatched } from './on-mixin.tsx'
+import type { Dispatched } from './on-mixin.ts'
 
 describe('on mixin', () => {
   it('updates listeners in place without rebinding when capture is unchanged', () => {

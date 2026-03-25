@@ -1,4 +1,4 @@
-import { createMixin } from '../mixin.ts'
+import { createMixin, renderMixinElement } from '../mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import { invariant } from '../invariant.ts'
 import { processStyleClass } from '../style/index.ts'
@@ -56,12 +56,10 @@ export let css = createMixin<Element, [styles: CSSProps], ElementProps>((handle)
       return handle.element
     }
 
-    return (
-      <handle.element
-        {...props}
-        className={props.className ? `${props.className} ${selector}` : selector}
-      />
-    )
+    return renderMixinElement(handle.element, {
+      ...(props ?? {}),
+      className: props?.className ? `${props.className} ${selector}` : selector,
+    })
   }
 })
 

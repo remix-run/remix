@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
 import type { RemixNode } from '../jsx.ts'
-import { link } from './link-mixin.tsx'
+import { link } from './link-mixin.ts'
 
 function render(node: RemixNode) {
   let container = document.createElement('div')

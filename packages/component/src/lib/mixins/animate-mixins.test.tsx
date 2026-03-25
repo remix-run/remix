@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createRoot } from '../vdom.ts'
-import { animateEntrance, animateExit } from './animate-mixins.tsx'
+import { animateEntrance, animateExit } from './animate-mixins.ts'
 import { invariant } from '../invariant.ts'
 
 describe('animate entrance/exit mixins', () => {

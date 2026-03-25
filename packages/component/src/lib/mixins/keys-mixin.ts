@@ -1,4 +1,5 @@
-import { on } from './on-mixin.tsx'
+import { renderMixinElement } from '../mixin.ts'
+import { on } from './on-mixin.ts'
 import { createMixin } from '../mixin.ts'
 
 export let escapeEventType = 'keydown:Escape' as const
@@ -49,10 +50,10 @@ let keyToEventType: Record<string, string> = {
   PageDown: pageDownEventType,
 }
 
-let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
-  <handle.element
-    {...props}
-    mix={[
+let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) =>
+  renderMixinElement(handle.element, {
+    ...(props ?? {}),
+    mix: [
       on('keydown', (event) => {
         let type = keyToEventType[event.key]
         if (!type) return
@@ -63,9 +64,9 @@ let baseKeysEvents = createMixin<HTMLElement>((handle) => (props) => (
           }),
         )
       }),
-    ]}
-  />
-))
+    ],
+  }),
+)
 
 type KeysEventsMixin = typeof baseKeysEvents & {
   readonly escape: typeof escapeEventType
