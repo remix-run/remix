@@ -33,7 +33,8 @@ export let framesController = {
       return render(
         <div>
           <p style={{ marginTop: 0, color: '#b9c6ff' }}>
-            Rendered by <code>/frames/activity</code> at <time>{new Date().toLocaleTimeString()}</time>.
+            Rendered by <code>/frames/activity</code> at{' '}
+            <time>{new Date().toLocaleTimeString()}</time>.
           </p>
           <Frame
             src={routes.frames.activityDetail.href()}

@@ -21,8 +21,8 @@ function ClientMountedPage() {
         Client-mounted nested non-blocking frame
       </h1>
       <p style={{ marginTop: 0, color: '#b9c6ff' }}>
-        Mount the outer frame, then watch the nested frame fallback render before its server
-        content streams in.
+        Mount the outer frame, then watch the nested frame fallback render before its server content
+        streams in.
       </p>
       <ClientMountedPageExample />
     </Document>

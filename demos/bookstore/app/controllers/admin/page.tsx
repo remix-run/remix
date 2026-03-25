@@ -10,10 +10,10 @@ export function AdminDashboardPage() {
 
       <div
         mix={css({
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '1.5rem',
-          })}
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '1.5rem',
+        })}
       >
         <div class="card">
           <h2>Manage Books</h2>

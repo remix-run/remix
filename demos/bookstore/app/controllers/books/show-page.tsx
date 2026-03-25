@@ -16,11 +16,11 @@ export function ShowPage() {
       <div mix={css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })}>
         <div
           mix={css({
-              height: '400px',
-              borderRadius: '8px',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              overflow: 'hidden',
-            })}
+            height: '400px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+          })}
         >
           <ImageCarousel images={imageUrls} />
         </div>
@@ -49,11 +49,11 @@ export function ShowPage() {
 
           <div
             mix={css({
-                margin: '1.5rem 0',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '4px',
-              })}
+              margin: '1.5rem 0',
+              padding: '1rem',
+              background: '#f8f9fa',
+              borderRadius: '4px',
+            })}
           >
             <p>
               <strong>ISBN:</strong> {book.isbn}

@@ -9,20 +9,20 @@ export let ClientMountedPageExample = clientEntry(
     return () => (
       <section
         mix={css({
-            marginTop: 16,
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 10,
-            padding: 12,
-            background: 'rgba(255,255,255,0.03)',
-          })}
+          marginTop: 16,
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10,
+          padding: 12,
+          background: 'rgba(255,255,255,0.03)',
+        })}
       >
         <div
           mix={css({
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-            })}
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          })}
         >
           <div>
             <div mix={css({ fontSize: 13, color: '#b9c6ff' })}>Client-mounted frame test</div>

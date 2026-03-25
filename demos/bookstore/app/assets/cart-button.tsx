@@ -11,25 +11,25 @@ export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
     <button
       type="button"
       mix={on('click', async (_event, signal) => {
-          pending = true
-          handle.update()
+        pending = true
+        handle.update()
 
-          let formData = new FormData()
-          formData.set('bookId', String(id))
-          formData.set('slug', slug)
+        let formData = new FormData()
+        formData.set('bookId', String(id))
+        formData.set('slug', slug)
 
-          await fetch(routes.api.cartToggle.href(), {
-            method: 'POST',
-            body: formData,
-            signal,
-          })
+        await fetch(routes.api.cartToggle.href(), {
+          method: 'POST',
+          body: formData,
+          signal,
+        })
 
-          await handle.frame.reload()
-          await new Promise((resolve) => setTimeout(resolve, 500))
-          if (signal.aborted) return
-          pending = false
-          handle.update()
-        })}
+        await handle.frame.reload()
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        if (signal.aborted) return
+        pending = false
+        handle.update()
+      })}
       class="btn"
     >
       {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}

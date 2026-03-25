@@ -28,21 +28,21 @@ export const ImageCarousel = clientEntry(
       return (
         <div
           mix={css({
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              overflow: 'hidden',
-              backgroundColor: '#f5f5f5',
-            })}
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            backgroundColor: '#f5f5f5',
+          })}
         >
           <div
             mix={css({
-                display: 'flex',
-                height: '100%',
-                width: '100%',
-                transition: 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
-                willChange: 'transform',
-              })}
+              display: 'flex',
+              height: '100%',
+              width: '100%',
+              transition: 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
+              willChange: 'transform',
+            })}
             style={{
               transform: `translateX(-${index * 100}%)`,
             }}
@@ -51,22 +51,22 @@ export const ImageCarousel = clientEntry(
               <div
                 key={src + i}
                 mix={css({
-                    minWidth: '100%',
-                    height: '100%',
-                    position: 'relative',
-                  })}
+                  minWidth: '100%',
+                  height: '100%',
+                  position: 'relative',
+                })}
               >
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
                   mix={css({
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                      userSelect: 'none',
-                      pointerEvents: 'none',
-                    })}
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    userSelect: 'none',
+                    pointerEvents: 'none',
+                  })}
                   draggable={false}
                 />
               </div>

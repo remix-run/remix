@@ -26,8 +26,7 @@ function ReloadScopePage() {
         Frame reload vs top reload
       </h1>
       <p style={{ marginTop: 0, color: '#b9c6ff' }}>
-        Reload only this frame, or reload the entire runtime tree from inside the same client
-        entry.
+        Reload only this frame, or reload the entire runtime tree from inside the same client entry.
       </p>
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 13, color: '#b9c6ff' }}>Page server time</div>

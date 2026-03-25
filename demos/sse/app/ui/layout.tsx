@@ -47,13 +47,13 @@ export function Layout() {
       </head>
       <body
         mix={css({
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            lineHeight: 1.5,
-            padding: '2rem',
-            maxWidth: '800px',
-            margin: '0 auto',
-            background: '#f5f5f5',
-          })}
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          lineHeight: 1.5,
+          padding: '2rem',
+          maxWidth: '800px',
+          margin: '0 auto',
+          background: '#f5f5f5',
+        })}
       >
         {children}
       </body>

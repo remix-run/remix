@@ -39,15 +39,15 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
         <button
           type="submit"
           mix={css({
-              padding: '8px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.18)',
-              background: 'rgba(255,255,255,0.06)',
-              color: '#e9eefc',
-              cursor: 'pointer',
-              marginTop: 20,
-              '&:hover': { background: 'rgba(255,255,255,0.1)' },
-            })}
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: '1px solid rgba(255,255,255,0.18)',
+            background: 'rgba(255,255,255,0.06)',
+            color: '#e9eefc',
+            cursor: 'pointer',
+            marginTop: 20,
+            '&:hover': { background: 'rgba(255,255,255,0.1)' },
+          })}
         >
           Search
         </button>
@@ -56,11 +56,11 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
       {query.trim() ? (
         <div
           mix={css({
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 12,
-              padding: 12,
-              background: 'rgba(255,255,255,0.03)',
-            })}
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 12,
+            padding: 12,
+            background: 'rgba(255,255,255,0.03)',
+          })}
         >
           <Frame
             src={routes.frames.stateSearchResults.href(undefined, { query })}

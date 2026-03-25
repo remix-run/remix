@@ -12,7 +12,7 @@ export function render(node: RemixNode, options: RenderOptions = {}): Response {
   let stream =
     options.request && options.router
       ? renderToStream(node, {
-          resolveFrame: src => resolveFrameViaRouter(options.router!, options.request!, src),
+          resolveFrame: (src) => resolveFrameViaRouter(options.router!, options.request!, src),
           onError(error) {
             console.error(error)
           },

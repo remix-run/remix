@@ -52,11 +52,11 @@ export function LoginPage() {
 
         <div
           mix={css({
-              marginTop: '2rem',
-              padding: '1rem',
-              background: '#f8f9fa',
-              borderRadius: '4px',
-            })}
+            marginTop: '2rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+          })}
         >
           <p mix={css({ fontSize: '0.9rem' })}>
             <strong>Demo Accounts:</strong>

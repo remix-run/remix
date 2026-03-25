@@ -28,9 +28,7 @@ export let Counter = clientEntry(
         >
           −
         </button>
-        <span
-          mix={css({ minWidth: 48, textAlign: 'center', fontVariantNumeric: 'tabular-nums' })}
-        >
+        <span mix={css({ minWidth: 48, textAlign: 'center', fontVariantNumeric: 'tabular-nums' })}>
           {count}
         </span>
         <button

@@ -20,40 +20,40 @@ export let homeAction = {
 
         <div
           mix={css({
-              background: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              marginBottom: '1.5rem',
-            })}
+            background: 'white',
+            padding: '1.5rem',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: '1.5rem',
+          })}
         >
           <label
             mix={css({
-                display: 'block',
-                fontWeight: 600,
-                marginBottom: '0.5rem',
-                color: '#333',
-              })}
+              display: 'block',
+              fontWeight: 600,
+              marginBottom: '0.5rem',
+              color: '#333',
+            })}
           >
             Compression:
           </label>
           <div
             mix={css({
-                padding: '0.5rem',
-                background: '#f8f9fa',
-                borderRadius: '4px',
-                color: '#666',
-              })}
+              padding: '0.5rem',
+              background: '#f8f9fa',
+              borderRadius: '4px',
+              color: '#666',
+            })}
           >
             Encoding is negotiated automatically via{' '}
             <code
               mix={css({
-                  background: '#f5f5f5',
-                  padding: '0.2rem 0.4rem',
-                  borderRadius: '3px',
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: '0.9em',
-                })}
+                background: '#f5f5f5',
+                padding: '0.2rem 0.4rem',
+                borderRadius: '3px',
+                fontFamily: "'Courier New', monospace",
+                fontSize: '0.9em',
+              })}
             >
               Accept-Encoding
             </code>{' '}
@@ -62,12 +62,12 @@ export let homeAction = {
             Open DevTools Network tab to see{' '}
             <code
               mix={css({
-                  background: '#f5f5f5',
-                  padding: '0.2rem 0.4rem',
-                  borderRadius: '3px',
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: '0.9em',
-                })}
+                background: '#f5f5f5',
+                padding: '0.2rem 0.4rem',
+                borderRadius: '3px',
+                fontFamily: "'Courier New', monospace",
+                fontSize: '0.9em',
+              })}
             >
               Content-Encoding
             </code>{' '}
@@ -77,30 +77,30 @@ export let homeAction = {
 
         <div
           mix={css({
-              background: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              marginBottom: '1.5rem',
-            })}
+            background: 'white',
+            padding: '1.5rem',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: '1.5rem',
+          })}
         >
           <label
             mix={css({
-                display: 'block',
-                fontWeight: 600,
-                marginBottom: '0.5rem',
-                color: '#333',
-              })}
+              display: 'block',
+              fontWeight: 600,
+              marginBottom: '0.5rem',
+              color: '#333',
+            })}
           >
             Message Limit:
           </label>
           <div
             mix={css({
-                padding: '0.5rem',
-                background: '#f8f9fa',
-                borderRadius: '4px',
-                color: '#666',
-              })}
+              padding: '0.5rem',
+              background: '#f8f9fa',
+              borderRadius: '4px',
+              color: '#666',
+            })}
           >
             {limit ? (
               <>
@@ -113,12 +113,12 @@ export let homeAction = {
                   Add{' '}
                   <code
                     mix={css({
-                        background: '#f5f5f5',
-                        padding: '0.2rem 0.4rem',
-                        borderRadius: '3px',
-                        fontFamily: "'Courier New', monospace",
-                        fontSize: '0.9em',
-                      })}
+                      background: '#f5f5f5',
+                      padding: '0.2rem 0.4rem',
+                      borderRadius: '3px',
+                      fontFamily: "'Courier New', monospace",
+                      fontSize: '0.9em',
+                    })}
                   >
                     ?limit=10
                   </code>{' '}

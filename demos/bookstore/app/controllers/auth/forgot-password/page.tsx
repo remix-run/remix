@@ -39,11 +39,11 @@ export function ForgotPasswordSuccessPage() {
         {token ? (
           <div
             mix={css({
-                marginTop: '1rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '4px',
-              })}
+              marginTop: '1rem',
+              padding: '1rem',
+              background: '#f8f9fa',
+              borderRadius: '4px',
+            })}
           >
             <p mix={css({ fontSize: '0.9rem' })}>
               <strong>Demo Mode:</strong> Click the link below to reset your password
