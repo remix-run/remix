@@ -27,7 +27,7 @@ let cartUpdateSchema = f.object({
   redirect: redirectField,
 })
 
-let cartApiController = {
+export default {
   actions: {
     async add({ get }) {
       let db = get(Database)
@@ -104,5 +104,3 @@ let cartApiController = {
     },
   },
 } satisfies Controller<typeof routes.cart.api>
-
-export default cartApiController

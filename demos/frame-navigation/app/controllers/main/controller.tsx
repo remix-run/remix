@@ -1,13 +1,13 @@
 import type { Controller } from 'remix/fetch-router'
 import type { RemixNode } from 'remix/component'
 
-import type { routes } from '../../config/routes.ts'
-import { render } from '../../config/render.tsx'
-import { type MainNavItem, Layout } from '../lib/Layout.tsx'
-import { MainAccountPage } from './account.tsx'
-import { MainCalendarPage } from './calendar.tsx'
-import { MainCoursesPage } from './courses.tsx'
-import { MainIndexPage } from './index.tsx'
+import type { routes } from '../../routes.ts'
+import { Layout, type MainNavItem } from '../../ui/layout.tsx'
+import { render } from '../../utils/render.tsx'
+import { MainAccountPage } from './account-page.tsx'
+import { MainCalendarPage } from './calendar-page.tsx'
+import { MainCoursesPage } from './courses-page.tsx'
+import { MainIndexPage } from './index-page.tsx'
 
 function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNode) {
   return render(
@@ -17,7 +17,7 @@ function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNod
   )
 }
 
-let mainController: Controller<typeof routes.main> = {
+export default {
   actions: {
     index() {
       return renderMainPage('Dashboard', 'dashboard', <MainIndexPage />)
@@ -32,6 +32,4 @@ let mainController: Controller<typeof routes.main> = {
       return renderMainPage('Account', 'account', <MainAccountPage />)
     },
   },
-}
-
-export default mainController
+} satisfies Controller<typeof routes.main>

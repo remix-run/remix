@@ -33,7 +33,7 @@ export function AccountSettingsPage() {
           <a
             href={routes.account.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Cancel
           </a>

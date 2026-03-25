@@ -1,8 +1,8 @@
 import type { RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
-import { routes } from '../../config/routes.ts'
-import { NavLink } from './NavLink.tsx'
+import { routes } from '../routes.ts'
+import { NavLink } from './nav-link.tsx'
 
 type MainNavItem = 'dashboard' | 'courses' | 'calendar' | 'account' | 'settings'
 

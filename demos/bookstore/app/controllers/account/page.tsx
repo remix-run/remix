@@ -24,14 +24,14 @@ export function AccountPage() {
           <strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}
         </p>
 
-        <p mix={[css({ marginTop: '1.5rem' })]}>
+        <p mix={css({ marginTop: '1.5rem' })}>
           <a href={routes.account.settings.index.href()} class="btn">
             Edit Settings
           </a>
         </p>
       </div>
 
-      <div class="card" mix={[css({ marginTop: '1.5rem' })]}>
+      <div class="card" mix={css({ marginTop: '1.5rem' })}>
         <h2>Quick Links</h2>
         <p>
           <a href={routes.account.orders.index.href()} class="btn btn-secondary">
@@ -40,7 +40,7 @@ export function AccountPage() {
           <a
             href={routes.books.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Browse Books
           </a>

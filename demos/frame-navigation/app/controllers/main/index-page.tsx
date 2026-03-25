@@ -1,7 +1,7 @@
 import { css } from 'remix/component'
 
-import { DashboardStatGrid } from '../assets/dashboard-stat-grid.tsx'
-import { routes } from '../../config/routes.ts'
+import { DashboardStatGrid } from '../../assets/dashboard-stat-grid.tsx'
+import { routes } from '../../routes.ts'
 
 let statCards = [
   {

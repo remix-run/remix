@@ -12,7 +12,7 @@ import { Session } from '../../../middleware/session.ts'
 import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { render } from '../../render.tsx'
+import { render } from '../../../utils/render.tsx'
 
 async function loadResetToken(context: AppContext<{ token: string }>) {
   let db = context.get(Database)

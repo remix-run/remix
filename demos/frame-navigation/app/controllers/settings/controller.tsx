@@ -3,17 +3,17 @@ import type { RemixNode } from 'remix/component'
 import { Frame } from 'remix/component'
 import { getContext } from 'remix/async-context-middleware'
 
-import { frames, type routes } from '../../config/routes.ts'
-import { render } from '../../config/render.tsx'
-import { Layout } from '../lib/Layout.tsx'
-import { type SettingsNavItem, SettingsLayout } from './layout.tsx'
+import { frames, type routes } from '../../routes.ts'
+import { Layout } from '../../ui/layout.tsx'
+import { render } from '../../utils/render.tsx'
+import { SettingsLayout, type SettingsNavItem } from './layout.tsx'
 
-import { Grading } from './grading.tsx'
-import { Index } from './index.tsx'
-import { Integrations } from './integrations.tsx'
-import { Notifications } from './notifications.tsx'
-import { Privacy } from './privacy.tsx'
-import { Profile } from './profile.tsx'
+import { Grading } from './grading-page.tsx'
+import { Index } from './index-page.tsx'
+import { Integrations } from './integrations-page.tsx'
+import { Notifications } from './notifications-page.tsx'
+import { Privacy } from './privacy-page.tsx'
+import { Profile } from './profile-page.tsx'
 
 export default {
   actions: {

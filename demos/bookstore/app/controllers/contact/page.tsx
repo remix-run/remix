@@ -8,7 +8,7 @@ export function ContactPage() {
     <Layout>
       <div class="card">
         <h1>Contact Us</h1>
-        <p mix={[css({ margin: '1rem 0' })]}>
+        <p mix={css({ margin: '1rem 0' })}>
           Have a question or feedback? We'd love to hear from you!
         </p>
 

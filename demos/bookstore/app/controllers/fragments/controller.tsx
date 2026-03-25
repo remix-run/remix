@@ -35,9 +35,9 @@ export default {
 
       if (cart.items.length === 0) {
         return renderFragment(
-          <div mix={[css({ marginTop: '2rem' })]}>
+          <div mix={css({ marginTop: '2rem' })}>
             <p>Your cart is empty.</p>
-            <p mix={[css({ marginTop: '1rem' })]}>
+            <p mix={css({ marginTop: '1rem' })}>
               <a href={routes.books.index.href()} class="btn">
                 Browse Books
               </a>

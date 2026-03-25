@@ -9,7 +9,7 @@ import { render } from '../../../utils/render.tsx'
 import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 
-let ordersController = {
+export default {
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -49,5 +49,3 @@ let ordersController = {
     },
   },
 } satisfies Controller<typeof routes.account.orders>
-
-export default ordersController

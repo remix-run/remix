@@ -90,17 +90,17 @@ export function AdminBookFormPage() {
           <div class="form-group">
             <label for="cover">Book Cover Image</label>
             {book && book.cover_url !== '/images/placeholder.jpg' ? (
-              <div mix={[css({ marginBottom: '0.5rem' })]}>
+              <div mix={css({ marginBottom: '0.5rem' })}>
                 <img
                   src={book.cover_url}
                   alt={book.title}
-                  mix={[css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })]}
+                  mix={css({ maxWidth: '200px', height: 'auto', borderRadius: '4px' })}
                 />
-                <p mix={[css({ fontSize: '0.875rem', color: '#666' })]}>Current cover image</p>
+                <p mix={css({ fontSize: '0.875rem', color: '#666' })}>Current cover image</p>
               </div>
             ) : null}
             <input type="file" id="cover" name="cover" accept="image/*" />
-            <small mix={[css({ color: '#666' })]}>
+            <small mix={css({ color: '#666' })}>
               {book
                 ? 'Optional. Upload a new cover image to replace the current one.'
                 : 'Optional. Upload a cover image for this book.'}
@@ -110,7 +110,7 @@ export function AdminBookFormPage() {
           <button type="submit" class="btn">
             {submitLabel}
           </button>
-          <a href={cancelHref} class="btn btn-secondary" mix={[css({ marginLeft: '0.5rem' })]}>
+          <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
             Cancel
           </a>
         </RestfulForm>

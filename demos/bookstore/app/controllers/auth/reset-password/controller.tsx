@@ -10,7 +10,7 @@ import { render } from '../../../utils/render.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
 
-let resetPasswordController = {
+export default {
   actions: {
     index({ params, get }) {
       let session = get(Session)
@@ -59,5 +59,3 @@ let resetPasswordController = {
     },
   },
 } satisfies Controller<typeof routes.auth.resetPassword>
-
-export default resetPasswordController

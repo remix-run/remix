@@ -16,7 +16,7 @@ export function BookCard() {
         <h3>{book.title}</h3>
         <p class="author">by {book.author}</p>
         <p class="price">${book.price.toFixed(2)}</p>
-        <div mix={[css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })]}>
+        <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
           <a href={routes.books.show.href({ slug: book.slug })} class="btn">
             View Details
           </a>

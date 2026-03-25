@@ -17,7 +17,7 @@ let accountSettingsSchema = f.object({
   password: textField,
 })
 
-let settingsController = {
+export default {
   actions: {
     index() {
       let user = getCurrentUser()
@@ -38,5 +38,3 @@ let settingsController = {
     },
   },
 } satisfies Controller<typeof routes.account.settings>
-
-export default settingsController

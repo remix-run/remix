@@ -10,7 +10,7 @@ import { render } from '../../../utils/render.tsx'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 
-let registerController = {
+export default {
   actions: {
     index() {
       return render(<RegisterPage />)
@@ -44,5 +44,3 @@ let registerController = {
     },
   },
 } satisfies Controller<typeof routes.auth.register>
-
-export default registerController

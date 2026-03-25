@@ -42,18 +42,18 @@ function SearchPage() {
     <Layout>
       <h1>Search Results</h1>
 
-      <div class="card" mix={[css({ marginBottom: '2rem' })]}>
+      <div class="card" mix={css({ marginBottom: '2rem' })}>
         <form
           action={routes.search.href()}
           method="GET"
-          mix={[css({ display: 'flex', gap: '0.5rem' })]}
+          mix={css({ display: 'flex', gap: '0.5rem' })}
         >
           <input
             type="search"
             name="q"
             placeholder="Search books..."
             value={query}
-            mix={[css({ flex: 1, padding: '0.5rem' })]}
+            mix={css({ flex: 1, padding: '0.5rem' })}
           />
           <button type="submit" class="btn">
             Search
@@ -62,7 +62,7 @@ function SearchPage() {
       </div>
 
       {query ? (
-        <p mix={[css({ marginBottom: '1rem' })]}>
+        <p mix={css({ marginBottom: '1rem' })}>
           Found {matchingBooks.length} result(s) for "{query}"
         </p>
       ) : null}

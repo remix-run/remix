@@ -1,9 +1,9 @@
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
-import { routes } from '../../config/routes.ts'
+import { routes } from '../../routes.ts'
 import loginController from './login/controller.tsx'
-import { authCookie } from './session.ts'
+import { authCookie } from '../../middleware/auth.ts'
 
 export default {
   actions: {

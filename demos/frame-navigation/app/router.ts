@@ -5,10 +5,10 @@ import { redirect } from 'remix/response/redirect'
 import { staticFiles } from 'remix/static-middleware'
 import type { Middleware } from 'remix/fetch-router'
 
-import authController from '../app/auth/controller.tsx'
-import { hasAuthCookie } from '../app/auth/session.ts'
-import mainController from '../app/main/controller.tsx'
-import settingsController from '../app/settings/controller.tsx'
+import authController from './controllers/auth/controller.tsx'
+import mainController from './controllers/main/controller.tsx'
+import settingsController from './controllers/settings/controller.tsx'
+import { hasAuthCookie } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
 let middleware = []

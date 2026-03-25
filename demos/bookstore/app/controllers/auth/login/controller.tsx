@@ -12,7 +12,7 @@ import {
 } from '../../../middleware/auth.ts'
 import { LoginPage } from './page.tsx'
 
-let loginController = {
+export default {
   actions: {
     index({ get, url }) {
       let session = get(Session)
@@ -40,5 +40,3 @@ let loginController = {
     },
   },
 } satisfies Controller<typeof routes.auth.login>
-
-export default loginController

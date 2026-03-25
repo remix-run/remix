@@ -41,7 +41,7 @@ function HomePage() {
     <Layout>
       <div class="card">
         <h1>Welcome to the Bookstore</h1>
-        <p mix={[css({ margin: '1rem 0' })]}>
+        <p mix={css({ margin: '1rem 0' })}>
           Discover your next favorite book from our curated collection of fiction, non-fiction, and
           more.
         </p>
@@ -52,7 +52,7 @@ function HomePage() {
         </p>
       </div>
 
-      <h2 mix={[css({ margin: '2rem 0 1rem' })]}>Featured Books</h2>
+      <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Books</h2>
       <div class="grid">
         {featuredBooks.map((book) => {
           let inCart = cart.items.some((item) => item.slug === book.slug)

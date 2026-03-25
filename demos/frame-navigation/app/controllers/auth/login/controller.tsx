@@ -2,11 +2,11 @@ import type { Controller } from 'remix/fetch-router'
 import { css } from 'remix/component'
 import { redirect } from 'remix/response/redirect'
 
-import { routes } from '../../../config/routes.ts'
-import { render } from '../../../config/render.tsx'
-import { authCookie, isAuthenticated } from '../session.ts'
+import { routes } from '../../../routes.ts'
+import { render } from '../../../utils/render.tsx'
+import { authCookie, isAuthenticated } from '../../../middleware/auth.ts'
 
-let loginController = {
+export default {
   actions: {
     async index() {
       if (await isAuthenticated()) {
@@ -51,8 +51,6 @@ let loginController = {
     },
   },
 } satisfies Controller<typeof routes.auth.login>
-
-export default loginController
 
 let cardStyle = css({
   maxWidth: '38rem',

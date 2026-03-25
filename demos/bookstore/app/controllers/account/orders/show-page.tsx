@@ -39,8 +39,8 @@ export function AccountOrderShowPage() {
           <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
         </p>
 
-        <h2 mix={[css({ marginTop: '2rem' })]}>Items</h2>
-        <table mix={[css({ marginTop: '1rem' })]}>
+        <h2 mix={css({ marginTop: '2rem' })}>Items</h2>
+        <table mix={css({ marginTop: '1rem' })}>
           <thead>
             <tr>
               <th>Book</th>
@@ -61,22 +61,22 @@ export function AccountOrderShowPage() {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
+              <td colSpan={3} mix={css({ textAlign: 'right', fontWeight: 'bold' })}>
                 Total:
               </td>
-              <td mix={[css({ fontWeight: 'bold' })]}>${order.total.toFixed(2)}</td>
+              <td mix={css({ fontWeight: 'bold' })}>${order.total.toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>
 
-        <h2 mix={[css({ marginTop: '2rem' })]}>Shipping Address</h2>
+        <h2 mix={css({ marginTop: '2rem' })}>Shipping Address</h2>
         <p>{shippingAddress.street}</p>
         <p>
           {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
         </p>
       </div>
 
-      <p mix={[css({ marginTop: '1.5rem' })]}>
+      <p mix={css({ marginTop: '1.5rem' })}>
         <a href={routes.account.orders.index.href()} class="btn btn-secondary">
           Back to Orders
         </a>

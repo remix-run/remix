@@ -44,7 +44,7 @@ export function AdminUserFormPage() {
           <button type="submit" class="btn">
             {submitLabel}
           </button>
-          <a href={cancelHref} class="btn btn-secondary" mix={[css({ marginLeft: '0.5rem' })]}>
+          <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
             Cancel
           </a>
         </RestfulForm>

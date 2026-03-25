@@ -9,7 +9,7 @@ export function AdminOrdersIndexPage() {
     <Layout>
       <h1>Manage Orders</h1>
 
-      <p mix={[css({ marginBottom: '1rem' })]}>
+      <p mix={css({ marginBottom: '1rem' })}>
         <a href={routes.admin.index.href()} class="btn btn-secondary">
           Back to Dashboard
         </a>
@@ -41,7 +41,7 @@ export function AdminOrdersIndexPage() {
                   <a
                     href={routes.admin.orders.show.href({ orderId: order.id })}
                     class="btn btn-secondary"
-                    mix={[css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })]}
+                    mix={css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })}
                   >
                     View
                   </a>

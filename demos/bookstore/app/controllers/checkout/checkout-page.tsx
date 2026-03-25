@@ -15,7 +15,7 @@ export function EmptyCheckoutPage() {
       <div class="card">
         <h1>Checkout</h1>
         <p>Your cart is empty. Add some books before checking out.</p>
-        <p mix={[css({ marginTop: '1rem' })]}>
+        <p mix={css({ marginTop: '1rem' })}>
           <a href={routes.books.index.href()} class="btn">
             Browse Books
           </a>
@@ -32,7 +32,7 @@ export function CheckoutPage() {
 
       <div class="card">
         <h2>Order Summary</h2>
-        <table mix={[css({ marginTop: '1rem' })]}>
+        <table mix={css({ marginTop: '1rem' })}>
           <thead>
             <tr>
               <th>Book</th>
@@ -53,16 +53,16 @@ export function CheckoutPage() {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} mix={[css({ textAlign: 'right', fontWeight: 'bold' })]}>
+              <td colSpan={3} mix={css({ textAlign: 'right', fontWeight: 'bold' })}>
                 Total:
               </td>
-              <td mix={[css({ fontWeight: 'bold' })]}>${total.toFixed(2)}</td>
+              <td mix={css({ fontWeight: 'bold' })}>${total.toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      <div class="card" mix={[css({ marginTop: '1.5rem' })]}>
+      <div class="card" mix={css({ marginTop: '1.5rem' })}>
         <h2>Shipping Information</h2>
         <form method="POST" action={routes.checkout.action.href()}>
           <div class="form-group">
@@ -91,7 +91,7 @@ export function CheckoutPage() {
           <a
             href={routes.cart.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Back to Cart
           </a>

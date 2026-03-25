@@ -23,7 +23,7 @@ export function CheckoutConfirmationPage() {
   return ({ order }: { order: Order }) => (
     <Layout>
       <div class="alert alert-success">
-        <h1 mix={[css({ marginBottom: '0.5rem' })]}>Order Confirmed!</h1>
+        <h1 mix={css({ marginBottom: '0.5rem' })}>Order Confirmed!</h1>
         <p>Thank you for your purchase. Your order has been placed successfully.</p>
       </div>
 
@@ -39,19 +39,19 @@ export function CheckoutConfirmationPage() {
           <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
         </p>
 
-        <p mix={[css({ marginTop: '2rem' })]}>
+        <p mix={css({ marginTop: '2rem' })}>
           We'll send you a confirmation email shortly. You can track your order status in your
           account.
         </p>
 
-        <div mix={[css({ marginTop: '2rem' })]}>
+        <div mix={css({ marginTop: '2rem' })}>
           <a href={routes.account.orders.show.href({ orderId: order.id })} class="btn">
             View Order Details
           </a>
           <a
             href={routes.books.index.href()}
             class="btn btn-secondary"
-            mix={[css({ marginLeft: '0.5rem' })]}
+            mix={css({ marginLeft: '0.5rem' })}
           >
             Continue Shopping
           </a>
