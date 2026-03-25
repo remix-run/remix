@@ -43,10 +43,12 @@ const preferLetLocalsRule = defineRule({
   },
 })
 
-// Enforces the repo convention that `const` is reserved for module scope and
-// local bindings should use `let` instead. The autofix only rewrites the
-// declaration keyword, leaving module-scope exports and declarations untouched.
-const plugin = definePlugin({
+/**
+ * Enforces the repo convention that `const` is reserved for module scope and
+ * local bindings should use `let` instead. The autofix only rewrites the
+ * declaration keyword, leaving module-scope exports and declarations untouched.
+ */
+export default definePlugin({
   meta: {
     name: 'remix-style',
   },
@@ -54,5 +56,3 @@ const plugin = definePlugin({
     'prefer-let-locals': preferLetLocalsRule,
   },
 })
-
-export default plugin

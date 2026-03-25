@@ -53,10 +53,12 @@ const noTypescriptAccessibilityRule = defineRule({
   },
 })
 
-// Enforces the repo's class style rules by rejecting TypeScript accessibility
-// modifiers and parameter properties. In this codebase we rely on native class
-// fields, implicit public members, and `#private` state instead of TS-only syntax.
-const plugin = definePlugin({
+/**
+ * Enforces the repo's class style rules by rejecting TypeScript accessibility
+ * modifiers and parameter properties. In this codebase we rely on native class
+ * fields, implicit public members, and `#private` state instead of TS-only syntax.
+ */
+export default definePlugin({
   meta: {
     name: 'remix-typescript',
   },
@@ -64,5 +66,3 @@ const plugin = definePlugin({
     'no-typescript-accessibility': noTypescriptAccessibilityRule,
   },
 })
-
-export default plugin

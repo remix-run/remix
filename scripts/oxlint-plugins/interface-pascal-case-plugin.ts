@@ -23,10 +23,12 @@ const interfacePascalCaseRule = defineRule({
   },
 })
 
-// Enforces the repo convention that TypeScript interface names use PascalCase.
-// This is intentionally limited to interface declarations so it does not affect
-// other identifiers that may have different naming constraints in other rules.
-const plugin = definePlugin({
+/**
+ * Enforces the repo convention that TypeScript interface names use PascalCase.
+ * This is intentionally limited to interface declarations so it does not affect
+ * other identifiers that may have different naming constraints in other rules.
+ */
+export default definePlugin({
   meta: {
     name: 'remix-interface',
   },
@@ -34,5 +36,3 @@ const plugin = definePlugin({
     'interface-pascal-case': interfacePascalCaseRule,
   },
 })
-
-export default plugin
