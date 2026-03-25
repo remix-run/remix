@@ -231,9 +231,9 @@ function CheckIcon() {
 }
 
 const PRESS_CONFIRM_TIME = 2000
-const pressConfirmStartEventType = 'demo:press-confirm-start'
-const pressConfirmCancelEventType = 'demo:press-confirm-cancel'
-const pressConfirmEndEventType = 'demo:press-confirm-end'
+const pressConfirmStartEventType = 'demo:press-confirm-start' as const
+const pressConfirmCancelEventType = 'demo:press-confirm-cancel' as const
+const pressConfirmEndEventType = 'demo:press-confirm-end' as const
 
 declare global {
   interface HTMLElementEventMap {
