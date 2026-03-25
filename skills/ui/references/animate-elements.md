@@ -76,7 +76,6 @@ let el = (
 
 ```tsx
 import { animateEntrance, animateExit, css } from 'remix/component'
-
 ;<div
   mix={[
     css({
