@@ -11,7 +11,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
-import * as semver from 'semver'
 import { logAndExec } from './utils/process.ts'
 
 let __dirname = path.dirname(url.fileURLToPath(import.meta.url))

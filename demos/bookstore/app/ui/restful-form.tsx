@@ -1,4 +1,4 @@
-import type { Props, RemixNode } from 'remix/component'
+import type { Props } from 'remix/component'
 
 export interface RestfulFormProps extends Props<'form'> {
   /**

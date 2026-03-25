@@ -8,7 +8,6 @@ import type {
   CommittedComponentNode,
   CommittedHostNode,
   CommittedTextNode,
-  FragmentNode,
   HostNode,
   TextNode,
   VNode,

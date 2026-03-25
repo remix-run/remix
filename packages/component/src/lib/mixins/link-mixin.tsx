@@ -1,7 +1,4 @@
-// @jsxRuntime classic
-// @jsx jsx
 import { createMixin } from '../mixin.ts'
-import { jsx } from '../jsx.ts'
 import { navigate } from '../navigation.ts'
 import { on } from './on-mixin.tsx'
 import type { ElementProps } from '../jsx.ts'

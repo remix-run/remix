@@ -4,7 +4,6 @@ import {
   css,
   on,
   type Handle,
-  type Props,
   type RemixNode,
 } from 'remix/component'
 
