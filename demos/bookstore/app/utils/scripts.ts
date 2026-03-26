@@ -2,10 +2,10 @@ import * as path from 'node:path'
 import { createScriptServer } from 'remix/script-server'
 import { scriptsBase } from '../routes.ts'
 
-let repoRoot = path.resolve(import.meta.dirname, '../../../..')
-let isDevelopment = process.env.NODE_ENV === 'development'
+const repoRoot = path.resolve(import.meta.dirname, '../../../..')
+const isDevelopment = process.env.NODE_ENV === 'development'
 
-export let scriptServer = createScriptServer({
+export const scriptServer = createScriptServer({
   root: repoRoot,
   routes: [
     {
