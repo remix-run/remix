@@ -44,7 +44,7 @@
     "clean": "git clean -fdX",
     "cli": "tsx ./src/index.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test": "node --test './src/**/*.test.ts'",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
