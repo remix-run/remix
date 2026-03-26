@@ -17,6 +17,5 @@ if (import.meta.main) {
 }
 
 function setExitCode(exitCode: number) {
-  let runtimeProcess = process
-  Reflect.set(runtimeProcess, 'exitCode', exitCode)
+  globalThis.process.exitCode = exitCode
 }

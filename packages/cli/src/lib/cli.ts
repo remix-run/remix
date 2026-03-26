@@ -3,6 +3,7 @@ import * as process from 'node:process'
 
 import { UsageError } from './errors.ts'
 import { getNewCommandHelpText, runNewCommand } from './commands/new.ts'
+import { getRoutesCommandHelpText, runRoutesCommand } from './commands/routes.ts'
 import { getSkillsCommandHelpText, runSkillsCommand } from './commands/skills.ts'
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
@@ -35,6 +36,10 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     return runSkillsCommand(rest)
   }
 
+  if (command === 'routes') {
+    return runRoutesCommand(rest)
+  }
+
   process.stderr.write(`Unknown command: ${command}\n\n`)
   process.stderr.write(getCliHelpText())
   return 1
@@ -46,6 +51,7 @@ export function getCliHelpText(): string {
 
 Commands:
   new <name>     Create a new Remix project
+  routes         Show the route tree for the current project
   skills         Manage Remix skills for the current project
 
 Options:
@@ -55,6 +61,7 @@ Options:
 Examples:
   remix new my-remix-app
   remix new my-remix-app --app-name "My Remix App"
+  remix routes
   remix skills install
 `
 }
@@ -78,4 +85,5 @@ async function readPackageJson(url: URL): Promise<{ version?: unknown }> {
 }
 
 export { getNewCommandHelpText }
+export { getRoutesCommandHelpText }
 export { getSkillsCommandHelpText }

@@ -13,6 +13,7 @@ describe('run', () => {
 
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
+    assert.match(result.stdout, /routes\s+Show the route tree/)
     assert.match(result.stdout, /skills\s+Manage Remix skills/)
     assert.equal(result.stderr, '')
   })
@@ -32,6 +33,14 @@ describe('run', () => {
 
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints routes command help', async () => {
+    let result = await captureOutput(() => run(['routes', '--help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.match(result.stdout, /Usage:\s+remix routes \[--json\]/)
     assert.equal(result.stderr, '')
   })
 

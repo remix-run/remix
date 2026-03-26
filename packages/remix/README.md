@@ -14,6 +14,7 @@ npm i remix
 
 ```sh
 remix new my-remix-app
+remix routes
 remix skills install
 ```
 
@@ -23,6 +24,7 @@ remix skills install
 import { run } from 'remix/cli'
 
 await run(['new', 'my-remix-app'])
+await run(['routes'])
 await run(['skills', 'list'])
 ```
 

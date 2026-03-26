@@ -1,0 +1,8 @@
+{
+  "name": "routes-invalid-value-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

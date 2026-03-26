@@ -449,6 +449,30 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  packages/cli/test-fixtures/routes-import-error:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../remix
+
+  packages/cli/test-fixtures/routes-invalid-value:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../remix
+
+  packages/cli/test-fixtures/routes-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../remix
+
+  packages/cli/test-fixtures/routes-no-export:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../remix
+
   packages/component:
     dependencies:
       '@types/dom-navigation':

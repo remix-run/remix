@@ -1,0 +1,8 @@
+{
+  "name": "routes-no-export-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}
