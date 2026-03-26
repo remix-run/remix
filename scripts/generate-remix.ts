@@ -277,7 +277,6 @@ function createCliWrapperSource(reExportFrom: string): string {
   return `#!/usr/bin/env node
 // IMPORTANT: This file is auto-generated, please do not edit manually.
 import * as process from 'node:process'
-import { pathToFileURL } from 'node:url'
 
 import { run as runCli } from '${reExportFrom}'
 
@@ -294,7 +293,7 @@ export async function run(argv?: string[]): Promise<number> {
   }
 }
 
-if (process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (import.meta.main) {
   void run().then(
     (exitCode) => {
       setExitCode(exitCode)

@@ -65,6 +65,7 @@ describe('run', () => {
       ) as {
         dependencies: Record<string, string>
         devDependencies: Record<string, string>
+        engines: Record<string, string>
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
@@ -74,6 +75,7 @@ describe('run', () => {
       assert.equal(packageJson.dependencies.tsx, 'latest')
       assert.equal(packageJson.devDependencies['@types/node'], 'latest')
       assert.equal(packageJson.devDependencies.typescript, 'latest')
+      assert.equal(packageJson.engines.node, '>=24.3.0')
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Keep simple pages in flat files like `app\/controllers\/home\.tsx`/)

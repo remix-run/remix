@@ -10,6 +10,7 @@ const BOOTSTRAP_DIRECTORY = path.resolve(
   '../../bootstrap',
 )
 const BOOTSTRAP_EXCLUDED_NAMES = new Set(['.gitkeep', 'node_modules'])
+const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
 
 export interface BootstrapProjectOptions {
   appName: string | null
@@ -80,6 +81,7 @@ async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConf
   let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as {
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
+    engines?: Record<string, string>
     name?: string
   }
 
@@ -93,6 +95,10 @@ async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConf
     ...packageJson.devDependencies,
     '@types/node': 'latest',
     typescript: 'latest',
+  }
+  packageJson.engines = {
+    ...packageJson.engines,
+    node: `>=${MINIMUM_SUPPORTED_NODE_VERSION}`,
   }
 
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8')

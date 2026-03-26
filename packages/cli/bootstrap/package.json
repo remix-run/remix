@@ -8,6 +8,9 @@
     "test": "NODE_ENV=test tsx --test",
     "typecheck": "tsc --noEmit"
   },
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "dependencies": {
     "remix": "workspace:^",
     "tsx": "catalog:"
