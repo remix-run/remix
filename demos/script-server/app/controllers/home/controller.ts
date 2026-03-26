@@ -124,13 +124,6 @@ export let homeController = {
           </p>
         </article>
 
-        <article class="panel">
-          <h2>Test package metadata</h2>
-          <p>
-            Flip <code>app/node_modules/demo-copy/package.json</code> from
-            <code>./v1.ts</code> to <code>./v2.ts</code> and refresh.
-          </p>
-        </article>
       </section>
 
       <script type="module" src="${entryUrl}"></script>

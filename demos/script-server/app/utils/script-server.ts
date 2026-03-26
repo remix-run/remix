@@ -4,11 +4,8 @@ import { createScriptServer } from 'remix/script-server'
 let isDevelopment = process.env.NODE_ENV === 'development'
 
 export let scriptServer = createScriptServer({
-  allow: ['app/client/**', 'app/node_modules/**'],
+  allow: ['app/client/**'],
   root: path.resolve(import.meta.dirname, '../..'),
-  routes: [
-    { urlPattern: '/scripts/app/*path', filePattern: 'app/client/*path' },
-    { urlPattern: '/scripts/npm/*path', filePattern: 'app/node_modules/*path' },
-  ],
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/client/*path' }],
   watch: isDevelopment,
 })

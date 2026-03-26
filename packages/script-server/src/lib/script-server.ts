@@ -1,6 +1,7 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import type { FSWatcher } from 'chokidar'
 import chokidar from 'chokidar'
 import {
   createScriptServerCompilationError,
@@ -107,6 +108,23 @@ export interface ScriptServer {
   close(): Promise<void>
 }
 
+type ScriptServerInternals = {
+  watcher: FSWatcher | null
+  watcherReady: Promise<void>
+}
+
+let internalStateByScriptServer = new WeakMap<ScriptServer, ScriptServerInternals>()
+
+// Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
+export function getInternalScriptServerWatcher(scriptServer: ScriptServer): FSWatcher | null {
+  return internalStateByScriptServer.get(scriptServer)?.watcher ?? null
+}
+
+// Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
+export function waitForInternalScriptServerWatcher(scriptServer: ScriptServer): Promise<void> {
+  return internalStateByScriptServer.get(scriptServer)?.watcherReady ?? Promise.resolve()
+}
+
 /**
  * Create the server-side scripts server.
  *
@@ -165,6 +183,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
           ...watchOptions,
         })
       : null
+  let watcherReady = createWatcherReadyPromise(watcher)
 
   if (watcher) {
     watcher.on('add', (filePath) => {
@@ -254,7 +273,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     return resolvedModule
   }
 
-  return {
+  let scriptServer: ScriptServer = {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
@@ -323,6 +342,34 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
       await watcher?.close()
     },
   }
+
+  internalStateByScriptServer.set(scriptServer, {
+    watcher,
+    watcherReady,
+  })
+
+  return scriptServer
+}
+
+function createWatcherReadyPromise(watcher: FSWatcher | null): Promise<void> {
+  if (!watcher) return Promise.resolve()
+
+  let activeWatcher = watcher
+
+  return new Promise<void>((resolve, reject) => {
+    function handleReady() {
+      activeWatcher.off('error', handleError)
+      resolve()
+    }
+
+    function handleError(error: unknown) {
+      activeWatcher.off('ready', handleReady)
+      reject(error)
+    }
+
+    activeWatcher.once('ready', handleReady)
+    activeWatcher.once('error', handleError)
+  })
 }
 
 type FileMatcher = (filePath: string) => boolean

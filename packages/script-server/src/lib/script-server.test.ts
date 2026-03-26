@@ -9,8 +9,11 @@ import { SourceMapConsumer } from 'source-map-js'
 import { isScriptServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
 import type { ScriptServerFingerprintOptions } from './script-server.ts'
-
-import { createScriptServer } from './script-server.ts'
+import {
+  createScriptServer,
+  getInternalScriptServerWatcher,
+  waitForInternalScriptServerWatcher,
+} from './script-server.ts'
 
 async function makeTmpDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'script-server-test-'))
@@ -110,7 +113,7 @@ function sleep(ms: number): Promise<void> {
 async function waitFor<T>(
   callback: () => Promise<T>,
   predicate: (value: T) => boolean,
-  timeoutMs = 2000,
+  timeoutMs = 5000,
 ): Promise<T> {
   let start = Date.now()
 
@@ -122,6 +125,22 @@ async function waitFor<T>(
     }
     await sleep(25)
   }
+}
+
+async function waitForWatchedTestServerReady(
+  scriptServer: ReturnType<typeof createScriptServer>,
+  root: string,
+): Promise<void> {
+  await waitForInternalScriptServerWatcher(scriptServer)
+
+  let watcher = getInternalScriptServerWatcher(scriptServer)
+  if (!watcher) return
+
+  let watchedRoot = normalizeWindowsPath(nodeFs.realpathSync(path.join(root, 'app')))
+  await waitFor(
+    async () => Object.keys(watcher.getWatched()).map(normalizeWindowsPath),
+    (watchedDirectories) => watchedDirectories.includes(watchedRoot),
+  )
 }
 
 async function assertInternalServerError(response: Response): Promise<void> {
@@ -923,6 +942,8 @@ describe('script-server', () => {
     let scriptServer = createWatchedTestServer(dir)
 
     try {
+      await waitForWatchedTestServerReady(scriptServer, dir)
+
       let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
       assert.ok(firstResponse)
       assert.match(await firstResponse.text(), /value = 1/)
@@ -955,6 +976,8 @@ describe('script-server', () => {
       })
 
       try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
         let before = await get(scriptServer, '/scripts/app/entry.ts')
         assert.ok(before)
         await assertInternalServerError(before)
@@ -1007,6 +1030,8 @@ describe('script-server', () => {
       let scriptServer = createWatchedTestServer(caseDir)
 
       try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
         let before = await scriptServer.getPreloads('app/entry.tsx')
         assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
 
@@ -1048,6 +1073,8 @@ describe('script-server', () => {
       let scriptServer = createWatchedTestServer(caseDir)
 
       try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
         let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /example\/a\.ts/)
@@ -1087,6 +1114,8 @@ describe('script-server', () => {
       let scriptServer = createWatchedTestServer(caseDir)
 
       try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
         let before = await get(scriptServer, '/scripts/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/scripts\/app\/dep\.js/)
@@ -1121,6 +1150,8 @@ describe('script-server', () => {
       let scriptServer = createWatchedTestServer(caseDir)
 
       try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
         let before = await get(scriptServer, '/scripts/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
@@ -1150,6 +1181,8 @@ describe('script-server', () => {
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let scriptServer = createWatchedTestServer(caseDir)
+
+      await waitForWatchedTestServerReady(scriptServer, caseDir)
 
       let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
       assert.ok(firstResponse)

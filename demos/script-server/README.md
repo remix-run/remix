@@ -6,7 +6,7 @@ Client-only demo for `remix/script-server` that keeps a single Node process runn
 
 - Serving browser-only TypeScript modules from `script-server`
 - Running a long-lived dev server without restarting the Node process on source edits
-- Picking up normal source edits, dynamic imports, extensionless relative import changes, and `package.json` export changes
+- Picking up normal source edits, dynamic imports, and extensionless relative import changes
 
 ## Run It
 
@@ -31,13 +31,3 @@ The client imports `./live-copy` without a file extension.
 3. Refresh the page
 
 The message should switch to the TypeScript file without restarting the server.
-
-### Package metadata changes
-
-The client imports the local `demo-copy` package from `app/node_modules/demo-copy`.
-
-1. Open `app/node_modules/demo-copy/package.json`
-2. Change the export from `./v1.ts` to `./v2.ts`
-3. Refresh the page
-
-The package message should update without restarting the Node process.

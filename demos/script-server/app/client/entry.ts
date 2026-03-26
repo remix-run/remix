@@ -1,5 +1,3 @@
-import { describePackageSource } from 'demo-copy'
-
 // Deliberately extensionless so the demo can show resolution winner changes in watch mode.
 // eslint-disable-next-line import/extensions
 import { describeLiveCopy } from './live-copy'
@@ -39,13 +37,6 @@ function render() {
         </p>
       </section>
 
-      <section style="background: #0f172a; border-radius: 0.9rem; padding: 1rem;">
-        <h3 style="margin-top: 0">Package export</h3>
-        <p>${describePackageSource()}</p>
-        <p style="font-size: 0.9rem; color: #cbd5e1;">
-          Imported from the local <code>demo-copy</code> package.
-        </p>
-      </section>
     </div>
 
     <section style="margin-top: 1rem; background: #0f172a; border-radius: 0.9rem; padding: 1rem;">
