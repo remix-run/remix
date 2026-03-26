@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/assert": "workspace:^",
-    "@remix-run/test": "workspace:^",
     "@octokit/request": "^9.1.3",
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "semver": "^7.6.3"
