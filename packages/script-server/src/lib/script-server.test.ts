@@ -60,9 +60,11 @@ function createWatchedTestServer(
   root: string,
   overrides: Partial<Parameters<typeof createScriptServer>[0]> = {},
 ) {
+  let watch = process.platform === 'win32' ? { poll: true, pollInterval: 100 } : true
+
   return createTestServer(root, {
-    watch: true,
     ...overrides,
+    watch: overrides.watch ?? watch,
   })
 }
 
