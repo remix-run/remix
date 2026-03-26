@@ -3,6 +3,7 @@ import * as process from 'node:process'
 
 import { UsageError } from './errors.ts'
 import { getNewCommandHelpText, runNewCommand } from './commands/new.ts'
+import { getSkillsCommandHelpText, runSkillsCommand } from './commands/skills.ts'
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   while (argv[0] === '--') {
@@ -30,6 +31,10 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     return runNewCommand(rest)
   }
 
+  if (command === 'skills') {
+    return runSkillsCommand(rest)
+  }
+
   process.stderr.write(`Unknown command: ${command}\n\n`)
   process.stderr.write(getCliHelpText())
   return 1
@@ -41,6 +46,7 @@ export function getCliHelpText(): string {
 
 Commands:
   new <name>     Create a new Remix project
+  skills         Manage Remix skills for the current project
 
 Options:
   -h, --help     Show help
@@ -49,6 +55,7 @@ Options:
 Examples:
   remix new my-remix-app
   remix new my-remix-app --app-name "My Remix App"
+  remix skills install
 `
 }
 
@@ -71,3 +78,4 @@ async function readPackageJson(url: URL): Promise<{ version?: unknown }> {
 }
 
 export { getNewCommandHelpText }
+export { getSkillsCommandHelpText }

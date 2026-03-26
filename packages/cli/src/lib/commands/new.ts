@@ -29,6 +29,8 @@ export function getNewCommandHelpText(): string {
   return `Usage:
   remix new <target-dir> [--app-name <name>] [--force]
 
+Create a new Remix project in the target directory.
+
 Examples:
   remix new ./my-remix-app
   remix new ./my-remix-app --app-name "My Remix App"

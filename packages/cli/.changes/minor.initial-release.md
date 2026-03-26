@@ -1,1 +1,1 @@
-Initial release of `@remix-run/cli` with the public `run()` API and the new `remix new <name>` project scaffolding command.
+Initial release of `@remix-run/cli` with the public `run()` API, the `remix new <name>` project scaffolding command, and the `remix skills install|list|status` workflow for syncing Remix skills into `.agents/skills`.

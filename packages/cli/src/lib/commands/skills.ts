@@ -1,0 +1,187 @@
+import * as process from 'node:process'
+
+import { UsageError } from '../errors.ts'
+import { getSkillsOverview, installRemixSkills } from '../skills.ts'
+
+export async function runSkillsCommand(argv: string[]): Promise<number> {
+  if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help' || argv[0] === 'help') {
+    process.stdout.write(getSkillsCommandHelpText())
+    return 0
+  }
+
+  let [subcommand, ...rest] = argv
+
+  try {
+    if (subcommand === 'install') {
+      return runSkillsInstallCommand(rest)
+    }
+
+    if (subcommand === 'list') {
+      return runSkillsListCommand(rest)
+    }
+
+    if (subcommand === 'status') {
+      return runSkillsStatusCommand(rest)
+    }
+
+    throw new UsageError(`Unknown skills command: ${subcommand}`)
+  } catch (error) {
+    if (error instanceof UsageError) {
+      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(getSkillsCommandHelpText())
+      return 1
+    }
+
+    throw error
+  }
+}
+
+export function getSkillsCommandHelpText(): string {
+  return `Usage:
+  remix skills <command>
+
+Manage Remix skills for the current project.
+
+Commands:
+  install      Install Remix skills into .agents/skills
+  list         List available Remix skills and local state
+  status       Show what remix skills install would change
+
+Examples:
+  remix skills install
+  remix skills list
+  remix skills status
+`
+}
+
+export function getSkillsInstallCommandHelpText(): string {
+  return `Usage:
+  remix skills install
+
+Install or refresh Remix skills in .agents/skills for the current project.
+
+Examples:
+  remix skills install
+`
+}
+
+export function getSkillsListCommandHelpText(): string {
+  return `Usage:
+  remix skills list
+
+List Remix skills from GitHub and show their local state.
+
+Examples:
+  remix skills list
+`
+}
+
+export function getSkillsStatusCommandHelpText(): string {
+  return `Usage:
+  remix skills status
+
+Show what remix skills install would add or replace.
+
+Examples:
+  remix skills status
+`
+}
+
+async function runSkillsInstallCommand(argv: string[]): Promise<number> {
+  if (argv.includes('-h') || argv.includes('--help')) {
+    process.stdout.write(getSkillsInstallCommandHelpText())
+    return 0
+  }
+
+  return runSkillsAction(argv, getSkillsInstallCommandHelpText(), async () => {
+    let result = await installRemixSkills()
+    if (result.appliedChanges.length === 0) {
+      process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
+      return 0
+    }
+
+    process.stdout.write(`Synced Remix skills into ${result.skillsDir}:\n`)
+    for (let change of result.appliedChanges) {
+      process.stdout.write(`${toPastTense(change.action)} ${change.name}\n`)
+    }
+    return 0
+  })
+}
+
+async function runSkillsListCommand(argv: string[]): Promise<number> {
+  if (argv.includes('-h') || argv.includes('--help')) {
+    process.stdout.write(getSkillsListCommandHelpText())
+    return 0
+  }
+
+  return runSkillsAction(argv, getSkillsListCommandHelpText(), async () => {
+    let result = await getSkillsOverview()
+    process.stdout.write(`Remix skills in ${result.skillsDir}:\n`)
+    for (let entry of result.entries) {
+      process.stdout.write(`${entry.state} ${entry.name}\n`)
+    }
+    return 0
+  })
+}
+
+async function runSkillsStatusCommand(argv: string[]): Promise<number> {
+  if (argv.includes('-h') || argv.includes('--help')) {
+    process.stdout.write(getSkillsStatusCommandHelpText())
+    return 0
+  }
+
+  return runSkillsAction(argv, getSkillsStatusCommandHelpText(), async () => {
+    let result = await getSkillsOverview()
+    if (result.changes.length === 0) {
+      process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
+      return 0
+    }
+
+    process.stdout.write(`Remix skills to sync into ${result.skillsDir}:\n`)
+    for (let change of result.changes) {
+      process.stdout.write(`${change.action} ${change.name}\n`)
+    }
+    return 0
+  })
+}
+
+async function runSkillsAction(
+  argv: string[],
+  helpText: string,
+  callback: () => Promise<number>,
+): Promise<number> {
+  try {
+    ensureNoExtraArgs(argv)
+    return await callback()
+  } catch (error) {
+    if (error instanceof UsageError) {
+      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(helpText)
+      return 1
+    }
+
+    if (error instanceof Error) {
+      process.stderr.write(`${error.message}\n`)
+      return 1
+    }
+
+    throw error
+  }
+}
+
+function ensureNoExtraArgs(argv: string[]): void {
+  if (argv.length === 0) {
+    return
+  }
+
+  let [arg] = argv
+  if (arg.startsWith('-')) {
+    throw new UsageError(`Unknown argument: ${arg}`)
+  }
+
+  throw new UsageError(`Unexpected extra argument: ${arg}`)
+}
+
+function toPastTense(action: 'add' | 'replace'): string {
+  return action === 'add' ? 'added' : 'replaced'
+}

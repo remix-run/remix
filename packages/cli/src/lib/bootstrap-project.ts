@@ -42,7 +42,7 @@ export async function bootstrapProject(
   let config = {
     appDisplayName: options.appName ?? humanizeName(rawAppName),
     packageName: toPackageName(rawAppName),
-    remixVersion: await readDefaultRemixVersion(),
+    remixVersion: readDefaultRemixVersion(),
   } satisfies BootstrapConfig
 
   await ensureTargetDirectory(targetDir, options.force)
@@ -59,7 +59,7 @@ export async function bootstrapProject(
   }
 }
 
-async function readDefaultRemixVersion(): Promise<string> {
+function readDefaultRemixVersion(): string {
   let overriddenVersion = process.env.REMIX_VERSION?.trim()
   if (overriddenVersion) {
     return overriddenVersion
@@ -70,15 +70,12 @@ async function readDefaultRemixVersion(): Promise<string> {
 
 function createTemplateValues(config: BootstrapConfig): TemplateValues {
   return {
-    '__RMX_APP_DISPLAY_NAME__': config.appDisplayName,
-    '__RMX_APP_DISPLAY_NAME_REGEX__': escapeRegExp(config.appDisplayName),
+    __RMX_APP_DISPLAY_NAME__: config.appDisplayName,
+    __RMX_APP_DISPLAY_NAME_REGEX__: escapeRegExp(config.appDisplayName),
   }
 }
 
-async function writeScaffoldPackageJson(
-  targetDir: string,
-  config: BootstrapConfig,
-): Promise<void> {
+async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConfig): Promise<void> {
   let packageJsonPath = path.join(targetDir, 'package.json')
   let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as {
     dependencies?: Record<string, string>

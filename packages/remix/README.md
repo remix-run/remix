@@ -14,6 +14,7 @@ npm i remix
 
 ```sh
 remix new my-remix-app
+remix skills install
 ```
 
 ## Programmatic CLI
@@ -22,6 +23,7 @@ remix new my-remix-app
 import { run } from 'remix/cli'
 
 await run(['new', 'my-remix-app'])
+await run(['skills', 'list'])
 ```
 
 ## License

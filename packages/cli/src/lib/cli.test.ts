@@ -13,6 +13,7 @@ describe('run', () => {
 
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
+    assert.match(result.stdout, /skills\s+Manage Remix skills/)
     assert.equal(result.stderr, '')
   })
 
