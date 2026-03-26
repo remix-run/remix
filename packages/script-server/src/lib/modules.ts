@@ -18,9 +18,9 @@ import {
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 
-let lexerReady = lexerInit
-let preloadTraversalConcurrency = getPreloadTraversalConcurrency()
-let scriptModuleTypes = [
+const lexerReady = lexerInit
+const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
+const scriptModuleTypes = [
   { extension: '.js', loader: 'js' },
   { extension: '.jsx', loader: 'jsx' },
   { extension: '.mjs', loader: 'js' },
@@ -28,9 +28,9 @@ let scriptModuleTypes = [
   { extension: '.ts', loader: 'ts' },
   { extension: '.tsx', loader: 'tsx' },
 ] as const satisfies ReadonlyArray<{ extension: string; loader: esbuild.Loader }>
-let supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
-let supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
-let transformLoaderByExtension = new Map<string, esbuild.Loader>(
+const supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
+const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
+const transformLoaderByExtension = new Map<string, esbuild.Loader>(
   scriptModuleTypes.map(({ extension, loader }) => [extension, loader] as const),
 )
 

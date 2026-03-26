@@ -4,7 +4,7 @@ import { homeController } from './controllers/home/controller.ts'
 import { routes } from './routes.ts'
 import { scriptServer } from './utils/script-server.ts'
 
-export let router = createRouter()
+export const router = createRouter()
 
 router.map(routes.home, homeController)
 

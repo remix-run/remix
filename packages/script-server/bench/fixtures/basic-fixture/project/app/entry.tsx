@@ -3,7 +3,7 @@ import { stableLabel } from '#packages/shared/strings'
 import { GridPanel } from '@bench/ui/panel'
 import { summarizeBasicFixture } from './summary.ts'
 
-let entryStyles = css({
+const entryStyles = css({
   display: 'grid',
   gap: '8px',
   padding: '12px',

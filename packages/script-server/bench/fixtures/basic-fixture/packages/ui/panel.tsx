@@ -1,7 +1,7 @@
 import { css } from '@remix-run/component'
 import type { RemixNode } from '@remix-run/component'
 
-let panelStyles = css({
+const panelStyles = css({
   display: 'grid',
   gap: '12px',
   padding: '16px',

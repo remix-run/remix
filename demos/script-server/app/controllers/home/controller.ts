@@ -4,9 +4,9 @@ import type { BuildAction } from 'remix/fetch-router'
 import type { routes } from '../../routes.ts'
 import { scriptServer } from '../../utils/script-server.ts'
 
-let entryFilePath = path.resolve(import.meta.dirname, '../../client/entry.ts')
+const entryFilePath = path.resolve(import.meta.dirname, '../../client/entry.ts')
 
-export let homeController = {
+export const homeController = {
   async handler() {
     let entryUrl = await scriptServer.getHref(entryFilePath)
     let preloadUrls = await scriptServer.getPreloads(entryFilePath)

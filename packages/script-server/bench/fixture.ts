@@ -19,7 +19,7 @@ export interface BenchFixture {
   stats: BenchFixtureStat[]
 }
 
-let benchFixturePromises = new Map<BenchFixture['id'], Promise<BenchFixture>>()
+const benchFixturePromises = new Map<BenchFixture['id'], Promise<BenchFixture>>()
 
 export function getBasicFixture(): Promise<BenchFixture> {
   return getFixture('basic')

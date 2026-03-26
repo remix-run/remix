@@ -7,7 +7,7 @@ import { sectionTone } from '../../theme.ts'
 import { getFeatureData01 } from './data.ts'
 import { scoreFeature01 } from './model.ts'
 
-let cardStyles = css({
+const cardStyles = css({
   display: 'grid',
   gap: '8px',
   padding: '12px',

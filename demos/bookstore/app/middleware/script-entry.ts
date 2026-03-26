@@ -10,8 +10,8 @@ interface ScriptEntry {
   preloads: string[]
 }
 
-let scriptEntryKey = createContextKey<ScriptEntry>()
-let defaultEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
+const scriptEntryKey = createContextKey<ScriptEntry>()
+const defaultEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
 
 export function loadScriptEntry(entry = defaultEntry): Middleware {
   return async (context, next) => {

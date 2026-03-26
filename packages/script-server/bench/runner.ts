@@ -35,7 +35,7 @@ interface BenchmarkResults {
   [benchmarkName: string]: BenchmarkResult
 }
 
-let benchmarks: Benchmark[] = [
+const benchmarks: Benchmark[] = [
   {
     id: 'basic-cold-entry',
     name: 'basic fixture / cold entry',
@@ -341,9 +341,9 @@ function formatFixtureStats(fixture: BenchFixture): string {
   return fixture.stats.map((stat) => `${stat.label}=${stat.value}`).join(', ')
 }
 
-let options = parseArgOptions()
+const options = parseArgOptions()
 
-let [basicFixture, deepGraphFixture] = await Promise.all([getBasicFixture(), getDeepGraphFixture()])
+const [basicFixture, deepGraphFixture] = await Promise.all([getBasicFixture(), getDeepGraphFixture()])
 console.log(`Fixture ${basicFixture.label}: ${formatFixtureStats(basicFixture)}`)
 console.log(`Fixture ${deepGraphFixture.label}: ${formatFixtureStats(deepGraphFixture)}`)
 

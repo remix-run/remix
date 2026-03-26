@@ -1,6 +1,6 @@
 import { parseSync } from '@swc/core'
 
-let suspiciousCommonJSPattern =
+const suspiciousCommonJSPattern =
   /\brequire\s*(?:\(|\.|\[)|\bmodule\s*(?:\.\s*exports|\[\s*['"`]exports['"`]\s*\])|\bexports\s*(?:\.|=|\[)/
 
 interface AstNode {

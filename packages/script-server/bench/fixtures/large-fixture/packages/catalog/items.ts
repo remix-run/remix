@@ -1,4 +1,4 @@
-export let itemsById: Record<string, { id: string; name: string; priceCents: number }> = {
+export const itemsById: Record<string, { id: string; name: string; priceCents: number }> = {
   'item-00': {
     id: 'item-00',
     name: 'fixture item 00',

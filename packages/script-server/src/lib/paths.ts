@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 
-let windowsDriveLetterRE = /^[A-Za-z]:\//
-let uncPrefixRE = /^\/\/[^/]+\/[^/]+/
+const windowsDriveLetterRE = /^[A-Za-z]:\//
+const uncPrefixRE = /^\/\/[^/]+\/[^/]+/
 
 export function normalizeWindowsPath(filePath: string): string {
   return filePath

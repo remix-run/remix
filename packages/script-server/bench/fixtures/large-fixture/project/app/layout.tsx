@@ -2,7 +2,7 @@ import { css } from '@remix-run/component'
 import { GridPanel } from '#packages/ui/panel'
 import { palette } from './theme.ts'
 
-let frame = css({
+const frame = css({
   color: palette.foreground,
   backgroundColor: palette.background,
   padding: '24px',

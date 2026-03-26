@@ -1,6 +1,6 @@
 import { css } from '@remix-run/component'
 
-let badgeStyles = css({
+const badgeStyles = css({
   display: 'inline-flex',
   fontSize: '11px',
   letterSpacing: '0.08em',

@@ -1,6 +1,6 @@
 import { css } from '@remix-run/component'
 
-let buttonStyles = css({
+const buttonStyles = css({
   padding: '8px 12px',
   borderRadius: '999px',
   fontSize: '12px',

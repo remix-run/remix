@@ -1,7 +1,7 @@
 import { css } from '@remix-run/component'
 import { chunkPairs } from '../shared/arrays.ts'
 
-let panelStyles = css({
+const panelStyles = css({
   display: 'grid',
   gap: '16px',
 })

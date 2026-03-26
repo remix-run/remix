@@ -2,13 +2,13 @@
 // eslint-disable-next-line import/extensions
 import { describeLiveCopy } from './live-copy'
 
-let root = document.getElementById('app-root')
+const root = document.getElementById('app-root')
 
 if (!(root instanceof HTMLElement)) {
   throw new Error('Expected #app-root to exist')
 }
 
-let rootElement = root
+const rootElement = root
 
 let count = 0
 let lazyPanelLoaded = false

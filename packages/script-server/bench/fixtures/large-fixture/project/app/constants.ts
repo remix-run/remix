@@ -1,4 +1,4 @@
-export let featureIds = [
+export const featureIds = [
   'feature-00',
   'feature-01',
   'feature-02',

@@ -113,7 +113,7 @@ type ScriptServerInternals = {
   watcherReady: Promise<void>
 }
 
-let internalStateByScriptServer = new WeakMap<ScriptServer, ScriptServerInternals>()
+const internalStateByScriptServer = new WeakMap<ScriptServer, ScriptServerInternals>()
 
 // Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
 export function getInternalScriptServerWatcher(scriptServer: ScriptServer): FSWatcher | null {
