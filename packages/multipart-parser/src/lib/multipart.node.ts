@@ -17,6 +17,7 @@ import { getMultipartBoundary } from './multipart-request.ts'
  *
  * @param message The multipart message as a `Buffer` or an iterable of `Buffer` chunks
  * @param options Options for the parser
+ * @yields Parsed {@link MultipartPart} objects from the multipart message
  * @returns A generator yielding {@link MultipartPart} objects
  */
 export function* parseMultipart(
@@ -35,6 +36,7 @@ export function* parseMultipart(
  *
  * @param stream A Node.js `Readable` stream containing multipart data
  * @param options Options for the parser
+ * @yields Parsed {@link MultipartPart} objects from the multipart stream
  * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartStream(
@@ -61,6 +63,7 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
  * @param req The Node.js `http.IncomingMessage` object containing multipart data
  * @param options Options for the parser, such as `maxHeaderSize`, `maxFileSize`, `maxParts`,
  * and `maxTotalSize`
+ * @yields Parsed {@link MultipartPart} objects from the multipart request body
  * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartRequest(

@@ -39,11 +39,11 @@ import {
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
-let rootDir = getRootDir()
+const rootDir = getRootDir()
 
-let args = process.argv.slice(2)
-let skipCiCheck = args.includes('--skip-ci-check')
-let dryRun = args.includes('--dry-run')
+const args = process.argv.slice(2)
+const skipCiCheck = args.includes('--skip-ci-check')
+const dryRun = args.includes('--dry-run')
 
 interface PublishedPackage {
   packageName: string

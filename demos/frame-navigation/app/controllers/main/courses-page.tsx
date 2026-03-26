@@ -15,20 +15,20 @@ export function MainCoursesPage() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   marginTop: 0,
   fontSize: '1.8rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.5rem',
   color: '#475569',
   lineHeight: 1.7,
   maxWidth: '65ch',
 })
 
-let courseListStyle = css({
+const courseListStyle = css({
   listStyle: 'none',
   margin: '1.25rem 0 0',
   padding: 0,
@@ -36,7 +36,7 @@ let courseListStyle = css({
   gap: '0.75rem',
 })
 
-let courseItemStyle = css({
+const courseItemStyle = css({
   border: '1px solid #e2e8f0',
   borderRadius: '12px',
   padding: '0.9rem 1rem',

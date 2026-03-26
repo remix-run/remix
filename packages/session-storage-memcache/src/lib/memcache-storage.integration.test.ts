@@ -7,7 +7,7 @@ import {
   type MemcacheSessionStorageOptions,
 } from './memcache-storage.ts'
 
-let integrationEnabled =
+const integrationEnabled =
   process.env.SESSION_MEMCACHE_INTEGRATION === '1' &&
   typeof process.env.SESSION_MEMCACHE_SERVER === 'string'
 

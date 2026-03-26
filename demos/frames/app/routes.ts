@@ -1,6 +1,6 @@
 import { get, route } from 'remix/fetch-router/routes'
 
-export let routes = route({
+export const routes = route({
   home: get('/'),
   time: get('/time'),
   reloadScope: get('/reload-scope'),

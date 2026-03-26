@@ -15,8 +15,8 @@ import { render } from '../../utils/render.tsx'
 import { CheckoutConfirmationPage, CheckoutOrderNotFoundPage } from './confirmation-page.tsx'
 import { CheckoutPage, EmptyCheckoutPage } from './checkout-page.tsx'
 
-let textField = f.field(s.defaulted(s.string(), ''))
-let shippingAddressSchema = f.object({
+const textField = f.field(s.defaulted(s.string(), ''))
+const shippingAddressSchema = f.object({
   street: textField,
   city: textField,
   state: textField,
@@ -84,7 +84,7 @@ export default {
         return created
       })
 
-      session.set('cart', clearCart(cart))
+      session.set('cart', clearCart())
 
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },

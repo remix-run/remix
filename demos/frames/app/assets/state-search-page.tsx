@@ -1,8 +1,8 @@
 import { clientEntry, Frame, css, on, ref, type Handle } from 'remix/component'
 import { routes } from '../routes.ts'
 
-let moduleUrl = '/assets/state-search-page.js#StateSearchPage'
-export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: string) => {
+const moduleUrl = '/assets/state-search-page.js#StateSearchPage'
+export const StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: string) => {
   let query = setup || ''
   let input: HTMLInputElement
 

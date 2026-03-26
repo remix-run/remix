@@ -15,18 +15,18 @@ export function Profile() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   margin: 0,
   fontSize: '1.5rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.6rem',
   color: '#475569',
 })
 
-let detailsStyle = css({
+const detailsStyle = css({
   marginTop: '1rem',
   border: '1px solid #e2e8f0',
   borderRadius: '14px',
@@ -37,11 +37,11 @@ let detailsStyle = css({
   rowGap: '0.6rem',
 })
 
-let termStyle = css({
+const termStyle = css({
   color: '#64748b',
 })
 
-let valueStyle = css({
+const valueStyle = css({
   margin: 0,
   color: '#0f172a',
 })

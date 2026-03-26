@@ -8,7 +8,7 @@ import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -18,7 +18,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -28,7 +28,7 @@ let projects = table({
   },
 })
 
-let tasks = table({
+const tasks = table({
   name: 'tasks',
   columns: {
     id: column.integer(),
@@ -38,8 +38,8 @@ let tasks = table({
   },
 })
 
-let accountProjects = hasMany(accounts, projects)
-let accountTasks = hasManyThrough(accounts, tasks, {
+const accountProjects = hasMany(accounts, projects)
+const accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 

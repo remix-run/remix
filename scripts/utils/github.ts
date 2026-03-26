@@ -3,8 +3,8 @@ import { request } from '@octokit/request'
 import { getChangelogEntry } from './changes.ts'
 import { getGitTag, getPackageShortName } from './packages.ts'
 
-let owner = 'remix-run'
-let repo = 'remix'
+const owner = 'remix-run'
+const repo = 'remix'
 
 function getToken(): string {
   let token = process.env.GITHUB_TOKEN

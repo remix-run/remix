@@ -10,8 +10,8 @@ import { addToCart, removeFromCart } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
 
-let bookIdField = f.field(s.optional(s.string()))
-let bookIdSchema = f.object({
+const bookIdField = f.field(s.optional(s.string()))
+const bookIdSchema = f.object({
   bookId: bookIdField,
 })
 

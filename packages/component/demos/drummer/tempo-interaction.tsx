@@ -15,9 +15,9 @@ export class TempoEvent extends Event {
   }
 }
 
-export let tempoEventType = 'my:tempo' as const
+export const tempoEventType = 'my:tempo' as const
 
-let baseTempoEvents = createMixin<HTMLElement>((handle) => {
+const baseTempoEvents = createMixin<HTMLElement>((handle) => {
   let taps: number[] = []
   let resetTimer = 0
 
@@ -65,6 +65,6 @@ type TempoEventsMixin = typeof baseTempoEvents & {
   readonly type: typeof tempoEventType
 }
 
-export let tempoEvents: TempoEventsMixin = Object.assign(baseTempoEvents, {
+export const tempoEvents: TempoEventsMixin = Object.assign(baseTempoEvents, {
   type: tempoEventType,
 })

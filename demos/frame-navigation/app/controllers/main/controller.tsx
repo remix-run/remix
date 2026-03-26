@@ -1,6 +1,7 @@
 import type { Controller } from 'remix/fetch-router'
 import type { RemixNode } from 'remix/component'
 
+import { requireAuth } from '../../middleware/auth.ts'
 import type { routes } from '../../routes.ts'
 import { Layout, type MainNavItem } from '../../ui/layout.tsx'
 import { render } from '../../utils/render.tsx'
@@ -18,6 +19,7 @@ function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNod
 }
 
 export default {
+  middleware: [requireAuth],
   actions: {
     index() {
       return renderMainPage('Dashboard', 'dashboard', <MainIndexPage />)

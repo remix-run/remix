@@ -71,7 +71,7 @@ describe('createRoutes', () => {
   })
 })
 
-let categoriesRoutes = route('categories', {
+const categoriesRoutes = route('categories', {
   index: '/',
   create: { method: 'POST', pattern: '/:slug/edit' },
   products: {
@@ -79,7 +79,7 @@ let categoriesRoutes = route('categories', {
   },
 })
 
-let routes = route({
+const routes = route({
   home: '/',
   promo: '(/:lang)/promo',
   about: {
@@ -94,6 +94,7 @@ let routes = route({
   categories: categoriesRoutes,
 })
 
+/* oxlint-disable-next-line eslint/no-unused-vars */
 type Tests = [
   Assert<IsEqual<typeof categoriesRoutes.index, Route<'ANY', '/categories'>>>,
   Assert<IsEqual<typeof categoriesRoutes.create, Route<'POST', '/categories/:slug/edit'>>>,

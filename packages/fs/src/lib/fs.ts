@@ -1,4 +1,5 @@
 import * as fs from 'node:fs'
+import { once } from 'node:events'
 import { detectMimeType } from '@remix-run/mime'
 
 import { type LazyContent, LazyFile } from '@remix-run/lazy-file'
@@ -93,24 +94,35 @@ export function writeFile(
   to: string | number | fs.promises.FileHandle,
   file: { stream(): ReadableStream<Uint8Array> },
 ): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    let writeStream =
-      typeof to === 'string'
-        ? fs.createWriteStream(to)
-        : fs.createWriteStream('ignored', { fd: to })
+  let writeStream =
+    typeof to === 'string' ? fs.createWriteStream(to) : fs.createWriteStream('ignored', { fd: to })
 
-    try {
-      for await (let chunk of file.stream()) {
-        writeStream.write(chunk)
+  return writeToStream(writeStream, file.stream())
+}
+
+async function writeToStream(
+  writeStream: fs.WriteStream,
+  stream: ReadableStream<Uint8Array>,
+): Promise<void> {
+  let closed = once(writeStream, 'close')
+
+  try {
+    for await (let chunk of stream) {
+      if (writeStream.write(chunk)) {
+        continue
       }
 
-      writeStream.end(() => {
-        resolve()
-      })
-    } catch (error) {
-      writeStream.end(() => {
-        reject(error)
-      })
+      await once(writeStream, 'drain')
     }
-  })
+
+    writeStream.end()
+    await once(writeStream, 'finish')
+  } catch (error) {
+    if (!writeStream.destroyed) {
+      writeStream.destroy()
+    }
+
+    await closed.catch(() => {})
+    throw error
+  }
 }

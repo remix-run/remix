@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import type { Handle } from '../lib/component.ts'
-import { ref } from '../lib/mixins/ref-mixin.tsx'
+import { ref } from '../lib/mixins/ref-mixin.ts'
 
 describe('vnode rendering', () => {
   describe('ref', () => {
@@ -11,7 +11,7 @@ describe('vnode rendering', () => {
 
       let capturedNode: Element | null = null
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <div
             mix={[

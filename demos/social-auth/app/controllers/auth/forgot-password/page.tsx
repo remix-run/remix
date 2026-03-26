@@ -9,7 +9,7 @@ import { Document } from '../../../ui/document.tsx'
 import { Notice } from '../../../ui/notice.tsx'
 import * as styles from '../../../ui/styles.ts'
 
-let { tokens } = designSystem
+const { tokens } = designSystem
 
 interface ForgotPasswordPageProps {
   formAction: string

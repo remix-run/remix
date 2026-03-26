@@ -2,9 +2,9 @@ import { css } from 'remix/component'
 
 import { designSystem } from './design-system.ts'
 
-let { tokens, theme } = designSystem
+const { tokens, theme } = designSystem
 
-export let pageReset = css({
+export const pageReset = css({
   '& *': {
     margin: 0,
     padding: 0,
@@ -22,7 +22,7 @@ export let pageReset = css({
   },
 })
 
-export let page = css({
+export const page = css({
   margin: 0,
   width: '100vw',
   minHeight: '100vh',
@@ -34,7 +34,7 @@ export let page = css({
   fontFamily: tokens.typography.family.sans,
 })
 
-export let card = css({
+export const card = css({
   width: '100%',
   maxWidth: tokens.size.cardMaxWidth,
   padding: tokens.space.xxl,
@@ -43,30 +43,30 @@ export let card = css({
   boxShadow: tokens.shadow.card,
 })
 
-export let cardHeader = css({
+export const cardHeader = css({
   marginBottom: tokens.space.xxl,
   textAlign: 'center',
 })
 
-export let heading = css({
+export const heading = css({
   marginBottom: tokens.space.xs,
   fontSize: tokens.typography.size.title,
   fontWeight: tokens.typography.weight.semibold,
   color: theme.text.heading,
 })
 
-export let subtitle = css({
+export const subtitle = css({
   color: theme.text.body,
   fontSize: tokens.typography.size.md,
 })
 
-export let form = css({
+export const form = css({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.space.lg,
 })
 
-export let fieldLabel = css({
+export const fieldLabel = css({
   display: 'block',
   marginBottom: tokens.space.xs,
   fontSize: tokens.typography.size.sm,
@@ -74,7 +74,7 @@ export let fieldLabel = css({
   fontWeight: tokens.typography.weight.medium,
 })
 
-export let fieldIcon = css({
+export const fieldIcon = css({
   position: 'absolute',
   left: tokens.space.md,
   top: '50%',
@@ -84,7 +84,7 @@ export let fieldIcon = css({
   color: theme.icon.subtle,
 })
 
-export let fieldInput = css({
+export const fieldInput = css({
   width: '100%',
   padding: `${tokens.space.xs} ${tokens.space.lg} ${tokens.space.xs} ${tokens.space.fieldInset}`,
   border: theme.border.subtle,
@@ -99,7 +99,7 @@ export let fieldInput = css({
   },
 })
 
-export let formOptions = css({
+export const formOptions = css({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -107,19 +107,19 @@ export let formOptions = css({
   fontSize: tokens.typography.size.sm,
 })
 
-export let rememberMe = css({
+export const rememberMe = css({
   display: 'flex',
   alignItems: 'center',
   cursor: 'pointer',
   color: theme.text.body,
 })
 
-export let rememberCheckbox = css({
+export const rememberCheckbox = css({
   marginRight: tokens.space.xs,
   cursor: 'pointer',
 })
 
-export let helperLink = css({
+export const helperLink = css({
   background: 'none',
   border: 'none',
   color: theme.action.link,
@@ -132,7 +132,7 @@ export let helperLink = css({
   },
 })
 
-export let submitButton = css({
+export const submitButton = css({
   width: '100%',
   display: 'block',
   padding: tokens.space.sm,
@@ -155,7 +155,7 @@ export let submitButton = css({
   },
 })
 
-export let secondaryButton = css({
+export const secondaryButton = css({
   width: '100%',
   display: 'block',
   padding: tokens.space.sm,
@@ -178,25 +178,25 @@ export let secondaryButton = css({
   },
 })
 
-export let divider = css({
+export const divider = css({
   margin: `${tokens.space.xl} 0`,
   display: 'flex',
   alignItems: 'center',
 })
 
-export let dividerText = css({
+export const dividerText = css({
   padding: `0 ${tokens.space.lg}`,
   fontSize: tokens.typography.size.sm,
   color: theme.text.muted,
 })
 
-export let socialButtons = css({
+export const socialButtons = css({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.space.md,
 })
 
-export let socialButton = css({
+export const socialButton = css({
   width: '100%',
   padding: `${tokens.space.sm} ${tokens.space.lg}`,
   border: theme.border.subtle,
@@ -215,7 +215,7 @@ export let socialButton = css({
   },
 })
 
-export let socialButtonDisabled = css({
+export const socialButtonDisabled = css({
   opacity: 0.55,
   cursor: 'not-allowed',
   '&:hover': {
@@ -223,43 +223,43 @@ export let socialButtonDisabled = css({
   },
 })
 
-export let socialIcon = css({
+export const socialIcon = css({
   width: tokens.size.icon,
   height: tokens.size.icon,
 })
 
-export let socialButtonLabel = css({
+export const socialButtonLabel = css({
   color: theme.text.label,
   fontWeight: tokens.typography.weight.medium,
 })
 
-export let footerText = css({
+export const footerText = css({
   marginTop: tokens.space.xl,
   textAlign: 'center',
   fontSize: tokens.typography.size.sm,
   color: theme.text.body,
 })
 
-export let notice = css({
+export const notice = css({
   padding: tokens.space.md,
   borderRadius: tokens.radius.md,
   marginBottom: tokens.space.lg,
   fontSize: tokens.typography.size.sm,
 })
 
-export let errorNotice = css({
+export const errorNotice = css({
   backgroundColor: '#fee2e2',
   color: '#991b1b',
   border: '1px solid #fecaca',
 })
 
-export let successNotice = css({
+export const successNotice = css({
   backgroundColor: '#dcfce7',
   color: '#166534',
   border: '1px solid #bbf7d0',
 })
 
-export let infoPanel = css({
+export const infoPanel = css({
   padding: tokens.space.lg,
   borderRadius: tokens.radius.md,
   backgroundColor: theme.surface.subtleHover,
@@ -267,21 +267,21 @@ export let infoPanel = css({
   fontSize: tokens.typography.size.sm,
 })
 
-export let buttonRow = css({
+export const buttonRow = css({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.space.md,
   marginTop: tokens.space.lg,
 })
 
-export let profileHeader = css({
+export const profileHeader = css({
   display: 'flex',
   alignItems: 'center',
   gap: tokens.space.lg,
   marginBottom: tokens.space.xl,
 })
 
-export let profileAvatar = css({
+export const profileAvatar = css({
   width: '72px',
   height: '72px',
   borderRadius: '999px',
@@ -291,7 +291,7 @@ export let profileAvatar = css({
   display: 'block',
 })
 
-export let profileFallbackAvatar = css({
+export const profileFallbackAvatar = css({
   width: '72px',
   height: '72px',
   borderRadius: '999px',
@@ -304,19 +304,19 @@ export let profileFallbackAvatar = css({
   fontWeight: tokens.typography.weight.semibold,
 })
 
-export let profileName = css({
+export const profileName = css({
   color: theme.text.heading,
   fontSize: '1.375rem',
   fontWeight: tokens.typography.weight.semibold,
 })
 
-export let profileMeta = css({
+export const profileMeta = css({
   color: theme.text.body,
   fontSize: tokens.typography.size.sm,
   marginTop: tokens.space.xs,
 })
 
-export let dataDump = css({
+export const dataDump = css({
   marginTop: tokens.space.lg,
   padding: tokens.space.lg,
   borderRadius: tokens.radius.md,

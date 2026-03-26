@@ -1,5 +1,5 @@
 import type * as dom from './dom.d.ts'
-import type { Component, Handle, RenderFn } from './component.ts'
+import type { Handle, RenderFn } from './component.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.

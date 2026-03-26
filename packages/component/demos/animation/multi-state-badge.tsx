@@ -21,14 +21,14 @@ const ICON_SIZE = 20
 const STROKE_WIDTH = 1.5
 const VIEW_BOX_SIZE = 24
 
-let iconEnterAnimation = {
+const iconEnterAnimation = {
   transform: 'translateY(-40px) scale(0.5)',
   filter: 'blur(6px)',
   duration: 150,
   easing: 'ease-out',
 }
 
-let iconExitAnimation = {
+const iconExitAnimation = {
   transform: 'translateY(40px) scale(0.5)',
   filter: 'blur(6px)',
   duration: 150,

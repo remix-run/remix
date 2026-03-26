@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { mock } from 'node:test'
 
-let fixturesDir = path.join(import.meta.dirname, 'fixtures')
+const fixturesDir = path.join(import.meta.dirname, 'fixtures')
 
 interface MockResponse {
   status: number

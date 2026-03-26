@@ -31,7 +31,7 @@ type Equal<left, right> =
 
 function expectType<condition extends true>(_value?: condition): void {}
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -40,7 +40,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -49,9 +49,9 @@ let projects = table({
   },
 })
 
-let accountProjects = hasMany(accounts, projects)
+const accountProjects = hasMany(accounts, projects)
 
-let inferredColumns = table({
+const inferredColumns = table({
   name: 'inferred_columns',
   columns: {
     id: column.integer(),
@@ -66,7 +66,7 @@ let inferredColumns = table({
   },
 })
 
-let cleanups = new Set<() => void>()
+const cleanups = new Set<() => void>()
 
 afterEach(() => {
   for (let cleanup of cleanups) {
@@ -282,7 +282,7 @@ describe('type safety', () => {
     expectType<Equal<Row['projects'][number]['archived'], boolean>>()
 
     // @ts-expect-error select('id') should not expose non-selected account columns
-    rows[0].email
+    void rows[0].email
   })
 
   it('supports typed alias select() and joined order/group columns', async () => {
@@ -330,7 +330,7 @@ describe('type safety', () => {
     expectType<Equal<Row['projectArchived'], boolean>>()
 
     // @ts-expect-error alias select should not expose original source column names
-    rows[0].email
+    void rows[0].email
 
     function verifyTypeErrors(): void {
       db.query(accounts)

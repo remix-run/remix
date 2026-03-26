@@ -8,7 +8,6 @@ import type {
   CommittedComponentNode,
   CommittedHostNode,
   CommittedTextNode,
-  FragmentNode,
   HostNode,
   TextNode,
   VNode,
@@ -52,7 +51,7 @@ const MATCHED = 1 << 1
 
 let idCounter = 0
 let persistedRemovalToken = 0
-let persistedMixinNodes = new Set<CommittedHostNode>()
+const persistedMixinNodes = new Set<CommittedHostNode>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 // Compute SVG context for a node based on its parent and type.
@@ -797,7 +796,7 @@ function diffFrame(
 
     let runtime = getFrameRuntime(frame)
     if (runtime) {
-      resolveClientFrame(next, runtime, rootTarget)
+      resolveClientFrame(next, runtime)
     }
   }
 
@@ -908,12 +907,12 @@ function insertFrame(
   node._frameInstance = instance
   runtime.frameInstances.set(start, instance)
 
-  resolveClientFrame(node, runtime, rootTarget)
+  resolveClientFrame(node, runtime)
 
   return cursor
 }
 
-function resolveClientFrame(node: VNode, runtime: FrameRuntime, rootTarget: EventTarget): void {
+function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let frameSrc = getFrameSrc(node)
   let instance = node._frameInstance as FrameInstance | undefined
   if (!instance) return

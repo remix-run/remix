@@ -4,7 +4,7 @@ import type { routes } from '../../routes.ts'
 import { render } from '../../utils/render.ts'
 import { HomePage } from './page.ts'
 
-export let homeController = {
+export const homeController = {
   handler() {
     return render('UNPKG - npm package browser', HomePage())
   },

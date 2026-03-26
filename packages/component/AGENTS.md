@@ -2,7 +2,7 @@
 
 This guide provides a comprehensive overview of the Remix Component API, its runtime behavior, and practical use cases for building interactive UIs.
 
-> Note: Host-element `on` props were removed. Use `mix={[on('event', handler)]}` for DOM event listeners.
+> Note: Host-element `on`, `css`, `animate`, and `connect` props were removed. Use `mix={[on('event', handler)]}`, `mix={[css(...)]}`, animation mixins, and `mix={[ref(...)]}` instead.
 
 ## Getting Started
 
@@ -66,7 +66,7 @@ The root object provides several methods:
 
 - **`render(node)`** - Renders a component tree into the root container
 - **`flush()`** - Synchronously flushes all pending updates and tasks
-- **`remove()`** - Removes the component tree and cleans up
+- **`dispose()`** - Removes the component tree and cleans up
 
 ```tsx
 let root = createRoot(document.body)
@@ -78,7 +78,7 @@ root.render(<App />)
 root.flush()
 
 // Later, remove the app
-root.remove()
+root.dispose()
 ```
 
 ## Component Factory and Runtime Behavior
@@ -123,7 +123,7 @@ When a component is rendered:
 
 3. **Component Removal**:
    - `handle.signal` is aborted
-   - All event listeners registered via `handle.on()` are automatically cleaned up
+   - Listeners registered with `addEventListeners(..., handle.signal, ...)` are automatically cleaned up
    - Any queued tasks are executed with an aborted signal
 
 ### Setup vs Props
@@ -255,8 +255,8 @@ function BadExample(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             shouldLoad = true // Setting state just to trigger queueTask
             handle.update()
             handle.queueTask(() => {
@@ -264,8 +264,8 @@ function BadExample(handle: Handle) {
                 // Do work
               }
             })
-          },
-        }}
+          }),
+        ]}
       >
         Load
       </button>
@@ -278,13 +278,13 @@ function GoodExample(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             handle.queueTask(() => {
               // Do work directly - no intermediate state needed
             })
-          },
-        }}
+          }),
+        ]}
       >
         Load
       </button>
@@ -314,7 +314,7 @@ function GoodAsyncExample(handle: Handle) {
     handle.update()
   }
 
-  return () => <button on={{ click: load }}>{loading ? 'Loading...' : 'Load data'}</button>
+  return () => <button mix={[on('click', load)]}>{loading ? 'Loading...' : 'Load data'}</button>
 }
 ```
 
@@ -357,15 +357,17 @@ function Clock(handle: Handle) {
 }
 ```
 
-### `handle.on(target, listeners)`
+### `addEventListeners(target, handle.signal, listeners)`
 
 Listen to an `EventTarget` with automatic cleanup when the component disconnects. Ideal for global event targets like `document` and `window`.
 
 ```tsx
+import { addEventListeners, type Handle } from 'remix/component'
+
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  handle.on(document, {
+  addEventListeners(document, handle.signal, {
     keydown(event) {
       keys.push(event.key)
       handle.update()
@@ -411,7 +413,17 @@ function App(handle: Handle<{ theme: string }>) {
 
 function Header(handle: Handle) {
   let { theme } = handle.context.get(App)
-  return () => <header css={{ backgroundColor: theme === 'dark' ? '#000' : '#fff' }}>Header</header>
+  return () => (
+    <header
+      mix={[
+        css({
+          backgroundColor: theme === 'dark' ? '#000' : '#fff',
+        }),
+      ]}
+    >
+      Header
+    </header>
+  )
 }
 ```
 
@@ -460,12 +472,12 @@ function Counter(handle: Handle) {
     <div>
       <span>Count: {count}</span>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             count++
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Increment
       </button>
@@ -527,14 +539,14 @@ function SearchForm(handle: Handle) {
 
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let query = formData.get('query') as string
           // Use query for search
-        },
-      }}
+        }),
+      ]}
     >
       <input name="query" />
       <button type="submit">Search</button>
@@ -546,14 +558,14 @@ function SearchForm(handle: Handle) {
 function SearchForm(handle: Handle) {
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let query = formData.get('query') as string
           // Use query for search - no component state needed
-        },
-      }}
+        }),
+      ]}
     >
       <input name="query" />
       <button type="submit">Search</button>
@@ -575,8 +587,8 @@ function FormValidator(handle: Handle) {
 
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let email = formData.get('email') as string
@@ -591,8 +603,8 @@ function FormValidator(handle: Handle) {
           // Submit form
           validationError = null
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       {validationError && <div>{validationError}</div>}
       <input name="email" />
@@ -607,8 +619,8 @@ function FormValidator(handle: Handle) {
 
   return () => (
     <form
-      on={{
-        submit(event) {
+      mix={[
+        on('submit', (event) => {
           event.preventDefault()
           let formData = new FormData(event.currentTarget)
           let email = formData.get('email') as string
@@ -625,8 +637,8 @@ function FormValidator(handle: Handle) {
             validationError = null
             handle.update()
           }
-        },
-      }}
+        }),
+      ]}
     >
       {validationError && <div>{validationError}</div>}
       <input name="email" />
@@ -646,12 +658,12 @@ function Toggle(handle: Handle) {
   return () => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             isOpen = !isOpen
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Toggle
       </button>
@@ -668,8 +680,8 @@ function SearchResults(handle: Handle) {
   return () => (
     <div>
       <input
-        on={{
-          async input(event, signal) {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             // Do work in handler scope
             loading = true
@@ -683,8 +695,8 @@ function SearchResults(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {results.map((result, i) => (
@@ -695,24 +707,26 @@ function SearchResults(handle: Handle) {
 }
 ```
 
-### CSS Prop with Pseudo-Selectors and Descendant Selectors
+### `css(...)` Mixin with Pseudo-Selectors and Descendant Selectors
 
-The `css` prop provides inline styling with support for pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries. It follows modern CSS nesting selector rules. Use `&` to reference the current element in pseudo-selectors and attribute selectors.
+The `css(...)` mixin provides stylesheet-like styling with support for pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries. It follows modern CSS nesting selector rules. Use `&` to reference the current element in pseudo-selectors and attribute selectors.
 
-#### Basic CSS Prop
+#### Basic `css(...)` Usage
 
 ```tsx
 function Button() {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'blue',
-        padding: '12px 24px',
-        borderRadius: '4px',
-        border: 'none',
-        cursor: 'pointer',
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+        }),
+      ]}
     >
       Click me
     </button>
@@ -720,36 +734,29 @@ function Button() {
 }
 ```
 
-#### Performance: CSS Prop vs Style Prop
+#### Performance: `css(...)` vs `style`
 
-The `css` prop produces static styles that are inserted into the document as CSS rules, while the `style` prop applies styles directly to the element. For **dynamic styles** that change frequently, use the `style` prop for better performance:
+The `css(...)` mixin produces static styles that are inserted into the document as CSS rules, while the `style` prop applies styles directly to the element. For **dynamic styles** that change frequently, use the `style` prop for better performance:
 
 ```tsx
-// ❌ Avoid: Using css prop for dynamic styles
+// ❌ Avoid: Putting dynamic values into css(...)
 function ProgressBar(handle: Handle) {
   let progress = 0
 
-  return () => (
-    <div
-      css={{
-        width: `${progress}%`, // Creates new CSS rule on every update
-        backgroundColor: 'blue',
-      }}
-    >
-      {progress}%
-    </div>
-  )
+  return () => <div style={{ width: `${progress}%`, backgroundColor: 'blue' }}>{progress}%</div>
 }
 
-// ✅ Prefer: Using style prop for dynamic styles
+// ✅ Prefer: Keep static rules in css(...) and dynamic values in style
 function ProgressBar(handle: Handle) {
   let progress = 0
 
   return () => (
     <div
-      css={{
-        backgroundColor: 'blue', // Static styles in css prop
-      }}
+      mix={[
+        css({
+          backgroundColor: 'blue', // Static styles in css(...)
+        }),
+      ]}
       style={{
         width: `${progress}%`, // Dynamic styles in style prop
       }}
@@ -760,7 +767,7 @@ function ProgressBar(handle: Handle) {
 }
 ```
 
-**Use the `css` prop for:**
+**Use `css(...)` for:**
 
 - Static styles that don't change
 - Styles that need pseudo-selectors (`:hover`, `:focus`, etc.)
@@ -779,30 +786,32 @@ Use `&` to reference the current element in pseudo-selectors:
 function Button() {
   return () => (
     <button
-      css={{
-        color: 'white',
-        backgroundColor: 'blue',
-        padding: '12px 24px',
-        borderRadius: '4px',
-        border: 'none',
-        cursor: 'pointer',
-        '&:hover': {
-          backgroundColor: 'darkblue',
-          transform: 'translateY(-1px)',
-        },
-        '&:active': {
-          backgroundColor: 'navy',
-          transform: 'translateY(0)',
-        },
-        '&:focus': {
-          outline: '2px solid yellow',
-          outlineOffset: '2px',
-        },
-        '&:disabled': {
-          opacity: 0.5,
-          cursor: 'not-allowed',
-        },
-      }}
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+            transform: 'translateY(-1px)',
+          },
+          '&:active': {
+            backgroundColor: 'navy',
+            transform: 'translateY(0)',
+          },
+          '&:focus': {
+            outline: '2px solid yellow',
+            outlineOffset: '2px',
+          },
+          '&:disabled': {
+            opacity: 0.5,
+            cursor: 'not-allowed',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -818,20 +827,22 @@ Use `&::before` and `&::after` for pseudo-elements:
 function Badge() {
   return (props: { count: number }) => (
     <div
-      css={{
-        position: 'relative',
-        display: 'inline-block',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: '-4px',
-          right: '-4px',
-          width: '8px',
-          height: '8px',
-          backgroundColor: 'red',
-          borderRadius: '50%',
-        },
-      }}
+      mix={[
+        css({
+          position: 'relative',
+          display: 'inline-block',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '-4px',
+            right: '-4px',
+            width: '8px',
+            height: '8px',
+            backgroundColor: 'red',
+            borderRadius: '50%',
+          },
+        }),
+      ]}
     >
       {props.count > 0 && <span>{props.count}</span>}
     </div>
@@ -848,18 +859,20 @@ function Input() {
   return (props: { required?: boolean }) => (
     <input
       required={props.required}
-      css={{
-        padding: '8px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        '&[required]': {
-          borderColor: 'red',
-        },
-        '&[aria-invalid="true"]': {
-          borderColor: 'red',
-          outline: '2px solid red',
-        },
-      }}
+      mix={[
+        css({
+          padding: '8px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          '&[required]': {
+            borderColor: 'red',
+          },
+          '&[aria-invalid="true"]': {
+            borderColor: 'red',
+            outline: '2px solid red',
+          },
+        }),
+      ]}
     />
   )
 }
@@ -873,31 +886,33 @@ Use class names or element selectors directly for descendant selectors:
 function Card() {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
-        padding: '20px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        // Style descendants
-        '& h2': {
-          marginTop: 0,
-          fontSize: '24px',
-          fontWeight: 'bold',
-        },
-        '& p': {
-          color: '#666',
-          lineHeight: 1.6,
-        },
-        '& .icon': {
-          width: '24px',
-          height: '24px',
-          marginRight: '8px',
-        },
-        '& button': {
-          marginTop: '16px',
-        },
-      }}
+      mix={[
+        css({
+          padding: '20px',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          // Style descendants
+          '& h2': {
+            marginTop: 0,
+            fontSize: '24px',
+            fontWeight: 'bold',
+          },
+          '& p': {
+            color: '#666',
+            lineHeight: 1.6,
+          },
+          '& .icon': {
+            width: '24px',
+            height: '24px',
+            marginRight: '8px',
+          },
+          '& button': {
+            marginTop: '16px',
+          },
+        }),
+      ]}
     >
       {props.children}
     </div>
@@ -930,22 +945,21 @@ function CardWithJSState(handle: Handle) {
 
   return (props: { children: RemixNode }) => (
     <div
-      on={{
-        mouseenter() {
+      mix={[
+        on('mouseenter', () => {
           isHovered = true
           handle.update()
-        },
-        mouseleave() {
+        }),
+        on('mouseleave', () => {
           isHovered = false
           handle.update()
-        },
-      }}
-      css={{
+        }),
+      ]}
+      style={{
         border: `1px solid ${isHovered ? 'blue' : '#ddd'}`,
-        // ... more conditional styling based on isHovered
       }}
     >
-      <div className="title" css={{ color: isHovered ? 'blue' : '#333' }}>
+      <div className="title" style={{ color: isHovered ? 'blue' : '#333' }}>
         Title
       </div>
     </div>
@@ -956,31 +970,33 @@ function CardWithJSState(handle: Handle) {
 function Card(handle: Handle) {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        // Parent hover affects children - use nested selector
-        '&:hover': {
-          borderColor: 'blue',
-          // Child text changes color on parent hover
+      mix={[
+        css({
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          padding: '20px',
+          // Parent hover affects children - use nested selector
+          '&:hover': {
+            borderColor: 'blue',
+            // Child text changes color on parent hover
+            '& .title': {
+              color: 'blue',
+            },
+            '& .description': {
+              opacity: 1,
+            },
+          },
           '& .title': {
-            color: 'blue',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: '#333',
           },
           '& .description': {
-            opacity: 1,
+            opacity: 0.7,
+            marginTop: '8px',
           },
-        },
-        '& .title': {
-          fontSize: '20px',
-          fontWeight: 'bold',
-          color: '#333',
-        },
-        '& .description': {
-          opacity: 0.7,
-          marginTop: '8px',
-        },
-      }}
+        }),
+      ]}
     >
       <div className="title">Title</div>
     </div>
@@ -994,21 +1010,23 @@ function Card(handle: Handle) {
 function Button() {
   return () => (
     <button
-      css={{
-        backgroundColor: 'blue',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '4px',
-        border: 'none',
-        cursor: 'pointer',
-        // Element's own hover - style directly, no nesting needed
-        '&:hover': {
-          backgroundColor: 'darkblue',
-        },
-        '&:active': {
-          transform: 'scale(0.98)',
-        },
-      }}
+      mix={[
+        css({
+          backgroundColor: 'blue',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+          // Element's own hover - style directly, no nesting needed
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
     >
       Click me
     </button>
@@ -1022,26 +1040,28 @@ function Button() {
 function Navigation() {
   return () => (
     <nav
-      css={{
-        display: 'flex',
-        gap: '16px',
-        // Styling descendant links - appropriate use of nesting
-        '& a': {
-          color: 'blue',
-          textDecoration: 'none',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          // Link's own hover state - this is fine nested under '& a'
-          '&:hover': {
-            backgroundColor: '#f0f0f0',
-            color: 'darkblue',
+      mix={[
+        css({
+          display: 'flex',
+          gap: '16px',
+          // Styling descendant links - appropriate use of nesting
+          '& a': {
+            color: 'blue',
+            textDecoration: 'none',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            // Link's own hover state - this is fine nested under '& a'
+            '&:hover': {
+              backgroundColor: '#f0f0f0',
+              color: 'darkblue',
+            },
+            '&[aria-current="page"]': {
+              backgroundColor: 'blue',
+              color: 'white',
+            },
           },
-          '&[aria-current="page"]': {
-            backgroundColor: 'blue',
-            color: 'white',
-          },
-        },
-      }}
+        }),
+      ]}
     >
       <a href="/">Home</a>
       <a href="/about">About</a>
@@ -1059,17 +1079,19 @@ Use `@media` for responsive design:
 function ResponsiveGrid() {
   return (props: { children: RemixNode }) => (
     <div
-      css={{
-        display: 'grid',
-        gap: '16px',
-        gridTemplateColumns: '1fr',
-        '@media (min-width: 768px)': {
-          gridTemplateColumns: 'repeat(2, 1fr)',
-        },
-        '@media (min-width: 1024px)': {
-          gridTemplateColumns: 'repeat(3, 1fr)',
-        },
-      }}
+      mix={[
+        css({
+          display: 'grid',
+          gap: '16px',
+          gridTemplateColumns: '1fr',
+          '@media (min-width: 768px)': {
+            gridTemplateColumns: 'repeat(2, 1fr)',
+          },
+          '@media (min-width: 1024px)': {
+            gridTemplateColumns: 'repeat(3, 1fr)',
+          },
+        }),
+      ]}
     >
       {props.children}
     </div>
@@ -1085,87 +1107,99 @@ Here's a comprehensive example demonstrating parent-state-affecting-children and
 function ProductCard() {
   return (props: { title: string; price: number; image: string }) => (
     <div
-      css={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        // Parent hover affects the card itself
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          // Parent hover affects children - appropriate use of nesting
-          '& .title': {
-            color: 'blue',
-          },
-          '& button': {
-            backgroundColor: 'darkblue',
-          },
-        },
-        '@media (max-width: 768px)': {
+      mix={[
+        css({
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          // Parent hover affects the card itself
           '&:hover': {
-            transform: 'translateY(-2px)',
+            transform: 'translateY(-4px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            // Parent hover affects children - appropriate use of nesting
+            '& .title': {
+              color: 'blue',
+            },
+            '& button': {
+              backgroundColor: 'darkblue',
+            },
           },
-        },
-      }}
+          '@media (max-width: 768px)': {
+            '&:hover': {
+              transform: 'translateY(-2px)',
+            },
+          },
+        }),
+      ]}
     >
       <img
         src={props.image}
         alt={props.title}
-        css={{
-          width: '100%',
-          height: '200px',
-          objectFit: 'cover',
-          '@media (max-width: 768px)': {
-            height: '150px',
-          },
-        }}
+        mix={[
+          css({
+            width: '100%',
+            height: '200px',
+            objectFit: 'cover',
+            '@media (max-width: 768px)': {
+              height: '150px',
+            },
+          }),
+        ]}
       />
       <div
         className="content"
-        css={{
-          padding: '16px',
-          '@media (max-width: 768px)': {
-            padding: '12px',
-          },
-        }}
+        mix={[
+          css({
+            padding: '16px',
+            '@media (max-width: 768px)': {
+              padding: '12px',
+            },
+          }),
+        ]}
       >
         <h3
           className="title"
-          css={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            marginTop: 0,
-            marginBottom: '8px',
-            transition: 'color 0.2s',
-          }}
+          mix={[
+            css({
+              fontSize: '18px',
+              fontWeight: 'bold',
+              marginTop: 0,
+              marginBottom: '8px',
+              transition: 'color 0.2s',
+            }),
+          ]}
         >
           {props.title}
         </h3>
         <div
           className="price"
-          css={{
-            fontSize: '20px',
-            color: 'green',
-            fontWeight: 'bold',
-          }}
+          mix={[
+            css({
+              fontSize: '20px',
+              color: 'green',
+              fontWeight: 'bold',
+            }),
+          ]}
         >
           ${props.price}
         </div>
         <button
-          css={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: 'blue',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-            '&:active': {
-              transform: 'scale(0.98)',
-            },
-          }}
+          mix={[
+            css({
+              width: '100%',
+              padding: '12px',
+              backgroundColor: 'blue',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+              '&:active': {
+                transform: 'scale(0.98)',
+              },
+            }),
+          ]}
         >
           Add to Cart
         </button>
@@ -1178,7 +1212,7 @@ function ProductCard() {
 This example demonstrates:
 
 - **Parent hover affecting children**: Card hover changes title color and button background (only nested selector needed)
-- **Styles on elements themselves**: Each element (`img`, `.content`, `.title`, `.price`, `button`) has its own `css` prop
+- **Styles on elements themselves**: Each element (`img`, `.content`, `.title`, `.price`, `button`) has its own `css(...)` mixin
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements that need them
 
@@ -1194,12 +1228,12 @@ function Form(handle: Handle) {
     <form>
       <input type="text" mix={[ref((node) => (inputRef = node))]} />
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             // Focus the input from elsewhere in the form
             inputRef.focus()
-          },
-        }}
+          }),
+        ]}
       >
         Focus Input
       </button>
@@ -1288,13 +1322,7 @@ function ReorderableList(handle: Handle) {
 
   return () => (
     <div>
-      <button
-        on={{
-          click: reverse,
-        }}
-      >
-        Reverse List
-      </button>
+      <button mix={[on('click', reverse)]}>Reverse List</button>
       {items.map((item) => (
         <div key={item.id}>
           <input type="text" defaultValue={item.label} />
@@ -1333,7 +1361,15 @@ Components can compose other components via `children`:
 ```tsx
 function Layout() {
   return (props: { children: RemixNode }) => (
-    <div css={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div
+      mix={[
+        css({
+          padding: '20px',
+          maxWidth: '1200px',
+          margin: '0 auto',
+        }),
+      ]}
+    >
       <header>My App</header>
       <main>{props.children}</main>
       <footer>© 2024</footer>
@@ -1366,13 +1402,13 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             theme = theme === 'light' ? 'dark' : 'light'
             handle.context.set({ theme })
             handle.update()
-          },
-        }}
+          }),
+        ]}
       >
         Toggle Theme
       </button>
@@ -1385,7 +1421,15 @@ function ThemedContent(handle: Handle) {
   let { theme } = handle.context.get(ThemeProvider)
 
   return () => (
-    <div css={{ backgroundColor: theme === 'dark' ? '#000' : '#fff' }}>Current theme: {theme}</div>
+    <div
+      mix={[
+        css({
+          backgroundColor: theme === 'dark' ? '#000' : '#fff',
+        }),
+      ]}
+    >
+      Current theme: {theme}
+    </div>
   )
 }
 ```
@@ -1397,7 +1441,7 @@ function ThemedContent(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
 
 ```tsx
-import { TypedEventTarget } from 'remix/component'
+import { TypedEventTarget, addEventListeners } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -1419,12 +1463,12 @@ function ThemeProvider(handle: Handle<Theme>) {
   return (props: { children: RemixNode }) => (
     <div>
       <button
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             // No update needed - consumers subscribe to changes
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
-          },
-        }}
+          }),
+        ]}
       >
         Toggle Theme
       </button>
@@ -1437,14 +1481,20 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProvider)
 
   // Subscribe to granular updates
-  handle.on(theme, {
+  addEventListeners(theme, handle.signal, {
     change() {
       handle.update()
     },
   })
 
   return () => (
-    <div css={{ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' }}>
+    <div
+      mix={[
+        css({
+          backgroundColor: theme.value === 'dark' ? '#000' : '#fff',
+        }),
+      ]}
+    >
       Current theme: {theme.value}
     </div>
   )
@@ -1518,7 +1568,7 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
 
 function EventListener(handle: Handle, setup: DataEmitter) {
   // Set up listeners once with automatic cleanup
-  handle.on(setup, {
+  addEventListeners(setup, handle.signal, {
     data(event) {
       // Handle data
       handle.update()
@@ -1537,7 +1587,7 @@ function WindowResizeTracker(handle: Handle) {
   let height = window.innerHeight
 
   // Set up global listeners once
-  handle.on(window, {
+  addEventListeners(window, handle.signal, {
     resize() {
       width = window.innerWidth
       height = window.innerHeight
@@ -1609,17 +1659,17 @@ function Modal(handle: Handle) {
   return () => (
     <div>
       <button
-        mix={[ref((node) => (openButton = node))]}
-        on={{
-          click() {
+        mix={[
+          ref((node) => (openButton = node)),
+          on('click', () => {
             isOpen = true
             handle.update()
             // Queue focus operation after modal renders
             handle.queueTask(() => {
               closeButton.focus()
             })
-          },
-        }}
+          }),
+        ]}
       >
         Open Modal
       </button>
@@ -1627,17 +1677,17 @@ function Modal(handle: Handle) {
       {isOpen && (
         <div role="dialog">
           <button
-            mix={[ref((node) => (closeButton = node))]}
-            on={{
-              click() {
+            mix={[
+              ref((node) => (closeButton = node)),
+              on('click', () => {
                 isOpen = false
                 handle.update()
                 // Queue focus operation after modal closes
                 handle.queueTask(() => {
                   openButton.focus()
                 })
-              },
-            }}
+              }),
+            ]}
           >
             Close
           </button>
@@ -1659,9 +1709,9 @@ function ScrollableList(handle: Handle) {
   return () => (
     <div>
       <input
-        mix={[ref((node) => (newItemInput = node))]}
-        on={{
-          keydown(event) {
+        mix={[
+          ref((node) => (newItemInput = node)),
+          on('keydown', (event) => {
             if (event.key === 'Enter') {
               let text = event.currentTarget.value
               if (text.trim()) {
@@ -1674,15 +1724,17 @@ function ScrollableList(handle: Handle) {
                 })
               }
             }
-          },
-        }}
+          }),
+        ]}
       />
       <div
-        mix={[ref((node) => (listContainer = node))]}
-        css={{
-          maxHeight: '300px',
-          overflowY: 'auto',
-        }}
+        mix={[
+          ref((node) => (listContainer = node)),
+          css({
+            maxHeight: '300px',
+            overflowY: 'auto',
+          }),
+        ]}
       >
         {items.map((item, i) => (
           <div key={i}>{item}</div>
@@ -1709,13 +1761,13 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        on={{
-          async input(event, signal) {
+        mix={[
+          on('input', async (event, signal) => {
             // Read value directly from the input - no component state needed
             let query = event.currentTarget.value
             // ... use query for search
-          },
-        }}
+          }),
+        ]}
       />
     </div>
   )
@@ -1740,16 +1792,16 @@ function SlugForm(handle: Handle) {
       <label>
         <input
           type="checkbox"
-          on={{
-            change(event) {
+          mix={[
+            on('change', (event) => {
               if (event.currentTarget.checked) {
                 generatedSlug = crypto.randomUUID().slice(0, 8)
               } else {
                 generatedSlug = ''
               }
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
         Auto-generate slug
       </label>
@@ -1759,12 +1811,12 @@ function SlugForm(handle: Handle) {
           type="text"
           value={generatedSlug || slug}
           disabled={!!generatedSlug}
-          on={{
-            input(event) {
+          mix={[
+            on('input', (event) => {
               slug = event.currentTarget.value
               handle.update()
-            },
-          }}
+            }),
+          ]}
         />
       </label>
     </form>
@@ -1809,8 +1861,8 @@ function SearchInput(handle: Handle) {
     <div>
       <input
         type="text"
-        on={{
-          async input(event, signal) {
+        mix={[
+          on('input', async (event, signal) => {
             let query = event.currentTarget.value
             loading = true
             handle.update()
@@ -1824,8 +1876,8 @@ function SearchInput(handle: Handle) {
             results = data.results
             loading = false
             handle.update()
-          },
-        }}
+          }),
+        ]}
       />
       {loading && <div>Loading...</div>}
       {!loading && results.length > 0 && (
@@ -1934,12 +1986,12 @@ function Counter(handle: Handle) {
 
   return () => (
     <button
-      on={{
-        click() {
+      mix={[
+        on('click', () => {
           count++
           handle.update()
-        },
-      }}
+        }),
+      ]}
     >
       Count: {count}
     </button>

@@ -15,20 +15,20 @@ export function MainCalendarPage() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   marginTop: 0,
   fontSize: '1.8rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.5rem',
   color: '#475569',
   lineHeight: 1.7,
   maxWidth: '65ch',
 })
 
-let cardStyle = css({
+const cardStyle = css({
   marginTop: '1.25rem',
   border: '1px solid #e2e8f0',
   borderRadius: '14px',
@@ -36,18 +36,18 @@ let cardStyle = css({
   backgroundColor: '#ffffff',
 })
 
-let cardTitleStyle = css({
+const cardTitleStyle = css({
   margin: 0,
   fontWeight: 600,
   color: '#0f172a',
 })
 
-let eventFirstStyle = css({
+const eventFirstStyle = css({
   margin: '0.5rem 0 0',
   color: '#334155',
 })
 
-let eventNextStyle = css({
+const eventNextStyle = css({
   margin: '0.35rem 0 0',
   color: '#334155',
 })

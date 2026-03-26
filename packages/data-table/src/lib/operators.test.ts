@@ -24,14 +24,14 @@ import {
 } from './operators.ts'
 import { table } from './table.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -39,7 +39,7 @@ let projects = table({
   },
 })
 
-let invoices = table({
+const invoices = table({
   name: 'billing.invoices',
   columns: {
     id: column.integer(),

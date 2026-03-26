@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export let reloadScopeAction = {
+export const reloadScopeAction = {
   handler(context) {
     let pageNow = new Date()
 

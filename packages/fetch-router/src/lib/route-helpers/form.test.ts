@@ -9,6 +9,7 @@ describe('form routes helper', () => {
   it('creates a route map with index and action routes', () => {
     let login = form('login')
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -28,6 +29,7 @@ describe('form routes helper', () => {
   it('supports a custom form method', () => {
     let settings = form('settings', { formMethod: 'PUT' })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -47,6 +49,7 @@ describe('form routes helper', () => {
   it('supports a custom index name', () => {
     let profile = form('profile', { names: { index: 'show' } })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -66,6 +69,7 @@ describe('form routes helper', () => {
   it('supports a custom action name', () => {
     let signup = form('signup', { names: { action: 'register' } })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -90,6 +94,7 @@ describe('form routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -115,6 +120,7 @@ describe('form routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<
@@ -139,6 +145,7 @@ describe('form routes helper', () => {
       },
     })
 
+    /* oxlint-disable-next-line eslint/no-unused-vars */
     type T = [
       Assert<
         IsEqual<

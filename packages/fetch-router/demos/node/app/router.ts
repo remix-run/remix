@@ -24,11 +24,11 @@ const postSchema = f.object({
   content: textField,
 })
 
-let sessionCookie = createCookie('__sess', {
+const sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
 })
 
-let sessionStorage = createCookieSessionStorage()
+const sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
   return ({ get }, next) => {
@@ -41,7 +41,7 @@ function requireAuth(): Middleware {
   }
 }
 
-export let router = createRouter({
+export const router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 

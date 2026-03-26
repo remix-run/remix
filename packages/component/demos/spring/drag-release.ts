@@ -1,6 +1,6 @@
 import { addEventListeners, createMixin } from 'remix/component'
 
-export let dragVelocityReleaseEventType = 'rmx:drag-velocity-release' as const
+export const dragVelocityReleaseEventType = 'rmx:drag-velocity-release' as const
 
 declare global {
   interface HTMLElementEventMap {
@@ -26,7 +26,7 @@ export class DragVelocityEvent extends Event {
   }
 }
 
-let baseDragVelocityEvents = createMixin<HTMLElement>((handle) => {
+const baseDragVelocityEvents = createMixin<HTMLElement>((handle) => {
   let target: HTMLElement
   let isTracking = false
   let pointerId: number | null = null
@@ -113,6 +113,6 @@ type DragVelocityEventsMixin = typeof baseDragVelocityEvents & {
   readonly release: typeof dragVelocityReleaseEventType
 }
 
-export let dragVelocityEvents: DragVelocityEventsMixin = Object.assign(baseDragVelocityEvents, {
+export const dragVelocityEvents: DragVelocityEventsMixin = Object.assign(baseDragVelocityEvents, {
   release: dragVelocityReleaseEventType,
 })

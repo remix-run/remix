@@ -106,7 +106,7 @@ export const users = table({
   columns: {
     id: c.integer(),
     email: c.text(),
-    password: c.text(),
+    password_hash: c.text(),
     name: c.text(),
     role: c.enum(['customer', 'admin']),
     created_at: c.integer(),
@@ -122,8 +122,8 @@ export const users = table({
       next.email = normalizeEmail(next.email)
     }
 
-    if (typeof next.password === 'string') {
-      next.password = next.password.trim()
+    if (typeof next.password_hash === 'string') {
+      next.password_hash = next.password_hash.trim()
     }
 
     if (operation === 'create' && next.role === undefined) {
@@ -158,12 +158,12 @@ export const users = table({
     }
 
     if (
-      (operation === 'create' && typeof value.password !== 'string') ||
-      (typeof value.password === 'string' && value.password.length < 8)
+      (operation === 'create' && typeof value.password_hash !== 'string') ||
+      (typeof value.password_hash === 'string' && value.password_hash.length === 0)
     ) {
       issues.push({
-        message: 'Password must be at least 8 characters long.',
-        path: ['password'],
+        message: 'Password hash is required.',
+        path: ['password_hash'],
       })
     }
 

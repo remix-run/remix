@@ -293,7 +293,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
 
     if (!getContent) {
       // Extract setup prop (passed to component setup function, not render)
-      let { setup, ...propsWithoutSetup } = props as { setup?: unknown }
+      let { setup } = props as { setup?: unknown }
       let result = config.type(handle, setup)
       if (typeof result !== 'function') {
         let name = config.type.name || 'Anonymous'
@@ -317,8 +317,8 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     return dequeueTasks()
   }
 
-  function setScheduleUpdate(_scheduleUpdate: () => void) {
-    scheduleUpdate = _scheduleUpdate
+  function setScheduleUpdate(nextScheduleUpdate: () => void) {
+    scheduleUpdate = nextScheduleUpdate
   }
 
   function getContextValue(): C | undefined {
@@ -335,6 +335,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
  * @returns A placeholder render function handled by the reconciler.
  */
 export function Frame(handle: Handle<FrameHandle>) {
+  void handle
   return (_: FrameProps) => null // reconciler renders
 }
 

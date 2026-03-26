@@ -1,7 +1,7 @@
 // DO NOT EDIT. THIS IS GENERATED CODE.
 // Run `pnpm codegen` to update.
 
-export let mimeTypes: Record<string, string> = {
+export const mimeTypes: Record<string, string> = {
   '123': 'application/vnd.lotus-1-2-3',
   '1km': 'application/vnd.1000minds.decision-model+xml',
   '210': 'model/step',

@@ -1,6 +1,6 @@
 import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 
-export let ClientFrameExample = clientEntry(
+export const ClientFrameExample = clientEntry(
   '/assets/client-frame-example.js#ClientFrameExample',
   function ClientFrameExample(handle: Handle) {
     let mounted = false

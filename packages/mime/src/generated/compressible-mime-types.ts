@@ -1,7 +1,7 @@
 // DO NOT EDIT. THIS IS GENERATED CODE.
 // Run `pnpm codegen` to update.
 
-export let compressibleMimeTypes = new Set([
+export const compressibleMimeTypes = new Set([
   'application/dart',
   'application/ecmascript',
   'application/javascript',

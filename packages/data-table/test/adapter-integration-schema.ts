@@ -8,7 +8,7 @@ type AdapterIntegrationSchemaStatements = {
   reset: string[]
 }
 
-let mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
+const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',
@@ -43,7 +43,7 @@ let mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
-let postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
+const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',
@@ -78,7 +78,7 @@ let postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
   reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
-let sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
+const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
   drop: [
     'drop table if exists tasks',
     'drop table if exists projects',

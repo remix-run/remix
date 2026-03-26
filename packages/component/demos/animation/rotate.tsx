@@ -1,4 +1,4 @@
-import { css, spring } from 'remix/component'
+import { css } from 'remix/component'
 
 export function Rotate() {
   return () => (

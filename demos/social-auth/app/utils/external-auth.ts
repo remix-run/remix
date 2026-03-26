@@ -36,21 +36,21 @@ interface ProviderStatus {
   missingEnvVars: string[]
 }
 
-let providerLabels = {
+const providerLabels = {
   google: 'Google',
   github: 'GitHub',
   x: 'X',
 } satisfies Record<ExternalProviderName, string>
 
-let providerEnvPrefixes = {
+const providerEnvPrefixes = {
   google: 'GOOGLE',
   github: 'GITHUB',
   x: 'X',
 } satisfies Record<ExternalProviderName, ProviderEnvPrefix>
 
-export let externalProviderNames = ['google', 'github', 'x'] as const
+export const externalProviderNames = ['google', 'github', 'x'] as const
 
-export let externalProviderRegistry = createExternalProviderRegistry()
+export const externalProviderRegistry = createExternalProviderRegistry()
 
 export function createExternalProviderRegistry(
   options: {

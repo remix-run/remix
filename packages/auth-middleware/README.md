@@ -157,6 +157,72 @@ Only use a scheme like this when the app is reachable exclusively through infras
 
 The scheme `name` becomes `auth.method` when authentication succeeds.
 
+## Simple Auth Cookies
+
+If your app already has an auth cookie and you do not need a session-backed identity lookup, you can use a small custom auth scheme and still rely on `requireAuth()` for route protection.
+
+```ts
+import { auth, requireAuth } from 'remix/auth-middleware'
+import type { AuthScheme } from 'remix/auth-middleware'
+import { createCookie } from 'remix/cookie'
+import { createRouter } from 'remix/fetch-router'
+import { redirect } from 'remix/response/redirect'
+
+let authCookie = createCookie('__auth', {
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+})
+
+let authCookieScheme: AuthScheme<'demo-user'> = {
+  name: 'auth-cookie',
+  async authenticate(context) {
+    let value = await authCookie.parse(context.headers.get('cookie'))
+    if (value !== '1') {
+      return
+    }
+
+    return {
+      status: 'success',
+      identity: 'demo-user',
+    }
+  },
+}
+
+let requireAuthCookie = requireAuth<'demo-user'>({
+  onFailure(context) {
+    let isFrameRequest = context.request.headers.get('x-remix-frame') === 'true'
+    if (isFrameRequest) {
+      return new Response('<p>Not authorized</p>', {
+        status: 401,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      })
+    }
+
+    return redirect('/login')
+  },
+})
+
+let router = createRouter({
+  middleware: [
+    auth({
+      schemes: [authCookieScheme],
+    }),
+  ],
+})
+
+router.get('/dashboard', {
+  middleware: [requireAuthCookie],
+  handler() {
+    return new Response('ok')
+  },
+})
+```
+
+This pattern keeps the auth check app-owned. Use [`remix/session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
+
 ## Related Packages
 
 - [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth) - Browser auth primitives for credentials, OAuth, and OIDC flows

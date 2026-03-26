@@ -47,7 +47,7 @@ const routes = route({
 const plainRouter = createRouter()
 plainRouter.get('/public', (context) => {
   // @ts-expect-error - CurrentUser is nullable without middleware refinement
-  context.get(CurrentUser).id
+  void context.get(CurrentUser).id
 
   return new Response('Public')
 })

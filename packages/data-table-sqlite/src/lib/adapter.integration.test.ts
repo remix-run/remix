@@ -11,7 +11,7 @@ import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-let integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1' && canOpenSqliteDatabase()
+const integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1' && canOpenSqliteDatabase()
 
 describe('sqlite adapter integration', () => {
   let sqlite: BetterSqliteDatabase

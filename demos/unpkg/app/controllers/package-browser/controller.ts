@@ -17,7 +17,7 @@ import { renderDirectoryListing } from './directory.ts'
 import { renderError } from './error.ts'
 import { renderFileContent } from './file-content.ts'
 
-export let packageBrowserController = {
+export const packageBrowserController = {
   async handler({ params }) {
     let path = params.path ?? ''
 

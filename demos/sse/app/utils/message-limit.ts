@@ -2,7 +2,7 @@ import * as coerce from 'remix/data-schema/coerce'
 import * as f from 'remix/data-schema/form-data'
 import * as s from 'remix/data-schema'
 
-let messageLimitSchema = f.object({
+const messageLimitSchema = f.object({
   limit: f.field(s.optional(coerce.number())),
 })
 

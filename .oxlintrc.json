@@ -1,0 +1,122 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/*.d.ts",
+    "**/dist/**",
+    "**/docs/**",
+    "**/demos/bookstore/public/assets/**",
+    "**/demos/sse/public/assets/**",
+    "**/coverage/**",
+    "**/bench/**",
+    "**/examples/**",
+    "**/*.min.js",
+    "**/*.bundled.*",
+    "**/public/assets/**",
+    "node_modules/**",
+    "reference/**",
+    "packages/multipart-parser/demos/deno/**"
+  ],
+  "options": {
+    "typeAware": true
+  },
+  "settings": {
+    "jsdoc": {
+      "ignorePrivate": true,
+      "tagNamePreference": {
+        "return": "return"
+      }
+    }
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-unused-expressions": "off",
+    "no-useless-escape": "off",
+    "no-async-promise-executor": "off",
+    "no-useless-catch": "off",
+    "jsdoc/require-yields": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.{ts,tsx}"],
+      "plugins": ["typescript", "import"],
+      "jsPlugins": [
+        "./scripts/oxlint-plugins/interface-pascal-case-plugin.ts",
+        "./scripts/oxlint-plugins/no-typescript-accessibility-plugin.ts"
+      ],
+      "rules": {
+        "@typescript-eslint/consistent-type-imports": [
+          "error",
+          {
+            "prefer": "type-imports",
+            "fixStyle": "separate-type-imports"
+          }
+        ],
+        "@typescript-eslint/consistent-type-exports": [
+          "error",
+          {
+            "fixMixedExportsWithInlineTypeSpecifier": false
+          }
+        ],
+        "import/extensions": [
+          "error",
+          "always",
+          {
+            "ignorePackages": true
+          }
+        ],
+        "remix-interface/interface-pascal-case": "error",
+        "remix-typescript/no-typescript-accessibility": "error"
+      }
+    },
+    {
+      "files": ["**/*.{ts,tsx,js,jsx}"],
+      "jsPlugins": ["./scripts/oxlint-plugins/prefer-let-locals-plugin.ts"],
+      "rules": {
+        "remix-style/prefer-const-module-scope": "error",
+        "remix-style/prefer-let-locals": "error",
+        "no-var": "error",
+        "arrow-body-style": ["error", "as-needed"]
+      }
+    },
+    {
+      "files": ["packages/**/*.{ts,tsx}"],
+      "plugins": ["jsdoc"],
+      "rules": {
+        "jsdoc/check-access": "error",
+        "jsdoc/check-property-names": "error",
+        "jsdoc/check-tag-names": "error",
+        "jsdoc/empty-tags": "error",
+        "jsdoc/implements-on-classes": "error",
+        "jsdoc/no-defaults": "error",
+        "jsdoc/require-param": "error",
+        "jsdoc/require-param-description": "error",
+        "jsdoc/require-param-name": "error",
+        "jsdoc/require-returns": ["error", { "checkGetters": false }],
+        "jsdoc/require-returns-description": "error"
+      }
+    },
+    {
+      "files": ["packages/**/*.test.ts"],
+      "plugins": ["jsdoc"],
+      "rules": {
+        "jsdoc/check-access": "off",
+        "jsdoc/check-property-names": "off",
+        "jsdoc/check-tag-names": "off",
+        "jsdoc/empty-tags": "off",
+        "jsdoc/implements-on-classes": "off",
+        "jsdoc/no-defaults": "off",
+        "jsdoc/require-param": "off",
+        "jsdoc/require-param-description": "off",
+        "jsdoc/require-param-name": "off",
+        "jsdoc/require-returns": "off",
+        "jsdoc/require-returns-description": "off"
+      }
+    }
+  ]
+}

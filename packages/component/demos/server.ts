@@ -7,17 +7,17 @@ import { route } from 'remix/fetch-router/routes'
 import { createRequestListener } from 'remix/node-fetch-server'
 import { staticFiles } from 'remix/static-middleware'
 
-let demosDir = path.resolve(import.meta.dirname)
+const demosDir = path.resolve(import.meta.dirname)
 
-let routes = route({
+const routes = route({
   index: '/',
 })
 
-let router = createRouter({
+const router = createRouter({
   middleware: [staticFiles('.')],
 })
 
-let html = String.raw
+const html = String.raw
 
 router.get(routes.index, () => {
   let entries = fs.readdirSync(demosDir, { withFileTypes: true })
@@ -75,7 +75,7 @@ router.get(routes.index, () => {
   )
 })
 
-let server = http.createServer(
+const server = http.createServer(
   createRequestListener(async (request) => await router.fetch(request)),
 )
 

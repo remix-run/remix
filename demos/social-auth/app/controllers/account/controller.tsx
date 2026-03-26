@@ -6,7 +6,7 @@ import type { AuthenticatedAppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../../utils/render.tsx'
 
-export let accountAction = {
+export const accountAction = {
   handler(context) {
     let auth = context.get(Auth)
 

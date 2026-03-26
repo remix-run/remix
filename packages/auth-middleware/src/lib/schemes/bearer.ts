@@ -2,22 +2,14 @@ import type { RequestContext } from '@remix-run/fetch-router'
 
 import type { AuthScheme } from '../auth.ts'
 
-type ResolvedMethod<name, fallback extends string> =
-  Extract<name, string> extends never ? fallback : Extract<name, string>
-
-type InferIdentity<verify extends (token: string, context: RequestContext) => unknown> = Exclude<
-  Awaited<ReturnType<verify>>,
-  null
->
-
 const AUTH_HEADER_RE = /^([^\s]+)\s+(.+)$/
 
 /**
  * Options for creating a bearer-token auth scheme.
  */
-export interface BearerTokenAuthSchemeOptions<identity, method extends string = 'bearer'> {
+export interface BearerTokenAuthSchemeOptions<identity> {
   /** Method name exposed on the resolved auth state. */
-  name?: method
+  name?: string
   /** Request header that carries the bearer token. */
   headerName?: string
   /** Authorization scheme prefix expected in the header value. */
@@ -34,18 +26,10 @@ export interface BearerTokenAuthSchemeOptions<identity, method extends string = 
  * @param options Header parsing and token verification options.
  * @returns An auth scheme for use with `auth()`.
  */
-export function createBearerTokenAuthScheme<
-  options extends {
-    name?: string
-    headerName?: string
-    scheme?: string
-    challenge?: string
-    verify: (token: string, context: RequestContext) => unknown
-  },
->(
-  options: options,
-): AuthScheme<InferIdentity<options['verify']>, ResolvedMethod<options['name'], 'bearer'>> {
-  let name = (options.name ?? 'bearer') as ResolvedMethod<options['name'], 'bearer'>
+export function createBearerTokenAuthScheme<identity>(
+  options: BearerTokenAuthSchemeOptions<identity>,
+): AuthScheme<identity> {
+  let name = options.name ?? 'bearer'
   let headerName = options.headerName ?? 'Authorization'
   let scheme = options.scheme ?? 'Bearer'
   let challenge = options.challenge ?? scheme
@@ -96,7 +80,7 @@ export function createBearerTokenAuthScheme<
 
       return {
         status: 'success',
-        identity: identity as InferIdentity<options['verify']>,
+        identity,
       }
     },
   }

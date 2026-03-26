@@ -88,7 +88,7 @@ describe('vnode rendering', () => {
         }
       }
 
-      function App(handle: Handle) {
+      function App() {
         return () => (
           <Listbox>
             <Option value="Option 1" />

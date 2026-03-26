@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createTestRouter } from '../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('router', () => {
   it('responds to basic GET request', async () => {

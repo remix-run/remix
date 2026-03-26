@@ -7,12 +7,12 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 44100
 
-let options = {
+const options = {
   key: fs.readFileSync(path.join(__dirname, 'server.key')),
   cert: fs.readFileSync(path.join(__dirname, 'server.crt')),
 }
 
-let server = http2.createSecureServer(options)
+const server = http2.createSecureServer(options)
 
 server.on(
   'request',

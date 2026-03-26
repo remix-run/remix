@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export let stateSearchAction = {
+export const stateSearchAction = {
   handler(context) {
     let initialQuery = new URL(context.request.url).searchParams.get('query') ?? ''
 

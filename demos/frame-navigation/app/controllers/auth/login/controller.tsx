@@ -52,7 +52,7 @@ export default {
   },
 } satisfies Controller<typeof routes.auth.login>
 
-let cardStyle = css({
+const cardStyle = css({
   maxWidth: '38rem',
   border: '1px solid #e2e8f0',
   borderRadius: '18px',
@@ -61,7 +61,7 @@ let cardStyle = css({
   boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)',
 })
 
-let loginBodyStyle = css({
+const loginBodyStyle = css({
   margin: 0,
   minHeight: '100vh',
   fontFamily:
@@ -70,14 +70,14 @@ let loginBodyStyle = css({
   background: 'radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 28%), #f8fafc',
 })
 
-let loginShellStyle = css({
+const loginShellStyle = css({
   minHeight: '100vh',
   display: 'grid',
   placeItems: 'center',
   padding: '2rem',
 })
 
-let eyebrowStyle = css({
+const eyebrowStyle = css({
   margin: 0,
   fontSize: '0.8rem',
   fontWeight: 700,
@@ -86,24 +86,24 @@ let eyebrowStyle = css({
   color: '#6366f1',
 })
 
-let titleStyle = css({
+const titleStyle = css({
   marginTop: '0.6rem',
   marginBottom: '0.75rem',
   fontSize: '1.7rem',
   color: '#0f172a',
 })
 
-let bodyStyle = css({
+const bodyStyle = css({
   margin: 0,
   color: '#475569',
   lineHeight: 1.7,
 })
 
-let formStyle = css({
+const formStyle = css({
   marginTop: '1.5rem',
 })
 
-let primaryButtonStyle = css({
+const primaryButtonStyle = css({
   border: 'none',
   borderRadius: '999px',
   padding: '0.8rem 1.1rem',

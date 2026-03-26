@@ -6,9 +6,9 @@ import { initializeBookstoreDatabase } from './app/data/setup.ts'
 
 await initializeBookstoreDatabase()
 
-let router = createBookstoreRouter()
+const router = createBookstoreRouter()
 
-let server = http.createServer(
+const server = http.createServer(
   createRequestListener(async (request) => {
     try {
       return await router.fetch(request)
@@ -19,7 +19,7 @@ let server = http.createServer(
   }),
 )
 
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`Bookstore is running on http://localhost:${port}`)

@@ -1,10 +1,10 @@
 import { form, get, post, route } from 'remix/fetch-router/routes'
 
-export let frames = {
+export const frames = {
   settings: 'settings',
 } as const
 
-export let routes = {
+export const routes = {
   main: route('/', {
     index: get('/'),
     courses: get('courses'),

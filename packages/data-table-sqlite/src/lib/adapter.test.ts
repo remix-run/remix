@@ -6,7 +6,7 @@ import { column, createDatabase, table, eq } from '@remix-run/data-table'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),
@@ -15,7 +15,7 @@ let accounts = table({
   },
 })
 
-let projects = table({
+const projects = table({
   name: 'projects',
   columns: {
     id: column.integer(),
@@ -24,7 +24,7 @@ let projects = table({
   },
 })
 
-let accountProjects = table({
+const accountProjects = table({
   name: 'account_projects',
   columns: {
     account_id: column.integer(),
@@ -34,7 +34,7 @@ let accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
-let sqliteAvailable = canOpenSqliteDatabase()
+const sqliteAvailable = canOpenSqliteDatabase()
 
 describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {

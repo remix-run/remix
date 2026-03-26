@@ -15,7 +15,7 @@ jobs:
       has_change_files: ${{ steps.check.outputs.has_change_files }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check for change files
         id: check
@@ -43,13 +43,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: 'package.json'
           cache: pnpm
@@ -62,7 +62,7 @@ jobs:
         run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-browsers
         with:
           path: ~/.cache/ms-playwright

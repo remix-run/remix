@@ -39,5 +39,3 @@ export function createHomeController(
     )
   }
 }
-
-export let home = createHomeController()

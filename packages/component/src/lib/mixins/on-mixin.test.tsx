@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from '../vdom.ts'
-import { on } from './on-mixin.tsx'
+import { on } from './on-mixin.ts'
 import { invariant } from '../invariant.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
-import type { Dispatched } from './on-mixin.tsx'
+import type { Dispatched } from './on-mixin.ts'
 
 describe('on mixin', () => {
   it('updates listeners in place without rebinding when capture is unchanged', () => {
@@ -193,15 +193,15 @@ describe('on mixin', () => {
   })
 })
 
-let infersNodeType = (
+const _infersNodeType = (
   <button
     mix={[
       on('pointerdown', (event, signal) => {
-        type inferredEvent = Assert<
+        type _inferredEvent = Assert<
           Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
         >
-        type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
-        type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+        type _inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+        type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
       }),
     ]}
   />

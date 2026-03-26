@@ -67,5 +67,3 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
 
   return router
 }
-
-export let router = createSocialAuthRouter()

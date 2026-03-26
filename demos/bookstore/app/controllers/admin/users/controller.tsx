@@ -13,11 +13,11 @@ import { AdminUserFormPage } from './form.tsx'
 import { AdminUsersIndexPage } from './index-page.tsx'
 import { AdminUserNotFoundPage, AdminUserShowPage } from './show-page.tsx'
 
-let textField = f.field(s.defaulted(s.string(), ''))
-let roleField = f.field(
+const textField = f.field(s.defaulted(s.string(), ''))
+const roleField = f.field(
   s.defaulted(s.union([s.literal('customer'), s.literal('admin')]), 'customer'),
 )
-let userSchema = f.object({
+const userSchema = f.object({
   name: textField,
   email: textField,
   role: roleField,

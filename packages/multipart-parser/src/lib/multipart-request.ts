@@ -31,6 +31,7 @@ export function isMultipartRequest(request: Request): boolean {
  * @param request The `Request` object containing multipart data
  * @param options Optional parser options, such as `maxHeaderSize`, `maxFileSize`, `maxParts`,
  * and `maxTotalSize`
+ * @yields Parsed {@link MultipartPart} objects from the request body
  * @returns An async generator yielding {@link MultipartPart} objects
  */
 export async function* parseMultipartRequest(

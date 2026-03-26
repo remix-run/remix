@@ -10,7 +10,7 @@ import {
   parseMultipartStream,
 } from './multipart.ts'
 
-let boundary = '----WebKitFormBoundaryPMcT9NSv6M3P8D4Q'
+const boundary = '----WebKitFormBoundaryPMcT9NSv6M3P8D4Q'
 
 function createChunkedIterable(body: Uint8Array, chunkSize: number): Uint8Array[] {
   let chunks: Uint8Array[] = []

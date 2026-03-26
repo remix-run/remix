@@ -1,7 +1,6 @@
-import type { Handle } from 'remix/component'
 import { css, on, ref } from 'remix/component'
 
-export function InterruptibleKeyframes(handle: Handle) {
+export function InterruptibleKeyframes() {
   let box: HTMLDivElement
   let currentAnimation: Animation | null = null
 

@@ -57,7 +57,7 @@ export function removeFromCart(cart: Cart, bookId: number): Cart {
   return cart
 }
 
-export function clearCart(cart: Cart): Cart {
+export function clearCart(): Cart {
   return { items: [] }
 }
 

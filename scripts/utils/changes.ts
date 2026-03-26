@@ -858,7 +858,7 @@ function parseChangelog(packageDirName: string): AllChangelogEntries | null {
   }
 
   let changelog = readFile(changelogPath)
-  let parser = /^## ([a-z\d\.\-]+)(?: \(([^)]+)\))?$/gim
+  let parser = /^## ([a-z\d.-]+)(?: \(([^)]+)\))?$/gim
 
   let result: AllChangelogEntries = {}
 

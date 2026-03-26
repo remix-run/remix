@@ -4,7 +4,7 @@ import { AwsClient } from 'aws4fetch'
 
 import { createS3FileStorage } from './s3.ts'
 
-let integrationEnabled =
+const integrationEnabled =
   process.env.FILE_STORAGE_S3_INTEGRATION === '1' &&
   typeof process.env.FILE_STORAGE_S3_ENDPOINT === 'string' &&
   typeof process.env.FILE_STORAGE_S3_BUCKET === 'string' &&

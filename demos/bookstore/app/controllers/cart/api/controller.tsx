@@ -11,17 +11,14 @@ import { addToCart, removeFromCart, updateCartItem } from '../../../utils/cart.t
 import { getCurrentCart } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 
-let bookIdField = f.field(s.optional(s.string()))
-let quantityField = f.field(s.defaulted(s.string(), '1'))
-let redirectField = f.field(s.optional(s.string()))
-let bookIdSchema = f.object({
-  bookId: bookIdField,
-})
-let cartActionSchema = f.object({
+const bookIdField = f.field(s.optional(s.string()))
+const quantityField = f.field(s.defaulted(s.string(), '1'))
+const redirectField = f.field(s.optional(s.string()))
+const cartActionSchema = f.object({
   bookId: bookIdField,
   redirect: redirectField,
 })
-let cartUpdateSchema = f.object({
+const cartUpdateSchema = f.object({
   bookId: bookIdField,
   quantity: quantityField,
   redirect: redirectField,

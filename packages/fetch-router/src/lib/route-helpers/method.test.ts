@@ -109,7 +109,7 @@ describe('route helpers composition', () => {
   })
 })
 
-let composedRoutes = route({
+const composedRoutes = route({
   home: '/',
   ...route('posts', {
     posts: get('/'),
@@ -126,6 +126,7 @@ let composedRoutes = route({
   put: put(new RoutePattern('/misc/put')),
 })
 
+/* oxlint-disable-next-line eslint/no-unused-vars */
 type Tests = [
   Assert<IsEqual<typeof composedRoutes.posts, Route<'GET', '/posts'>>>,
   Assert<IsEqual<typeof composedRoutes.createPost, Route<'POST', '/posts'>>>,

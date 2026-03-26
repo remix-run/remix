@@ -3,8 +3,8 @@ import { Session } from '@remix-run/session'
 
 import type { OAuthTransaction } from './provider.ts'
 
-let textEncoder = new TextEncoder()
-let base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const textEncoder = new TextEncoder()
+const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 export function createCodeVerifier(): string {
   return createRandomToken(48)

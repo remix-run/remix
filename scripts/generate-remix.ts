@@ -11,14 +11,13 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
-import * as semver from 'semver'
 import { logAndExec } from './utils/process.ts'
 
-let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
-let packagesDir = path.resolve(__dirname, '../packages')
-let remixDir = path.join(packagesDir, 'remix')
-let remixChangesDir = path.join(remixDir, '.changes')
-let remixPackageJsonPath = path.join(remixDir, 'package.json')
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
+const packagesDir = path.resolve(__dirname, '../packages')
+const remixDir = path.join(packagesDir, 'remix')
+const remixChangesDir = path.join(remixDir, '.changes')
+const remixPackageJsonPath = path.join(remixDir, 'package.json')
 
 const SOURCE_FOLDER = 'src'
 
@@ -37,11 +36,11 @@ type ExportEntry = {
   reExportFrom: string
 }
 
-let { remixRunPackages, allExports } = await getRemixRunPackages()
-let remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
+const { remixRunPackages, allExports } = await getRemixRunPackages()
+const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
 // Track existing exports for comparison
-let existingExports = new Set<string>(
+const existingExports = new Set<string>(
   Object.keys(remixPackageJson.exports || {}).filter(
     (key) => key !== '.' && key !== './package.json',
   ),
@@ -123,7 +122,7 @@ async function getRemixRunPackages() {
 
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`npx eslint packages/remix/ --max-warnings=0`)
+  logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -145,7 +144,7 @@ async function updateRemixPackage() {
   }
 
   // Run linter against generated code with --fix
-  logAndExec(`npx eslint packages/remix/ --max-warnings=0 --fix`)
+  logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
 
   // Update package.json
   console.log('Updating Remix package.json...')

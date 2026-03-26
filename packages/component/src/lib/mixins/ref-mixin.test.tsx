@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { Handle } from '../component.ts'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import { ref } from './ref-mixin.tsx'
+import { ref } from './ref-mixin.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
 
 describe('ref mixin', () => {
@@ -123,12 +123,12 @@ describe('ref mixin', () => {
   })
 })
 
-let infersNodeType = (
+const _infersNodeType = (
   <button
     mix={[
       ref((node, signal) => {
-        type inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
-        type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+        type _inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
+        type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
       }),
     ]}
   />

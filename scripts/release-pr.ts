@@ -12,12 +12,12 @@ import { generatePrBody } from './utils/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
 import { findOpenPr, createPr, updatePr, closePr } from './utils/github.ts'
 
-let args = process.argv.slice(2)
-let preview = args.includes('--preview')
+const args = process.argv.slice(2)
+const preview = args.includes('--preview')
 
-let baseBranch = 'main'
-let prBranch = 'release-pr/main'
-let prTitle = 'Release'
+const baseBranch = 'main'
+const prBranch = 'release-pr/main'
+const prTitle = 'Release'
 
 async function main() {
   console.log(preview ? '🔍 PREVIEW MODE\n' : '')

@@ -1,4 +1,4 @@
-let migrationFilenamePattern = /^(\d{14})_(.+)\.(?:m?ts|m?js|cts|cjs)$/
+const migrationFilenamePattern = /^(\d{14})_(.+)\.(?:m?ts|m?js|cts|cjs)$/
 
 /**
  * Parses a migration filename into `{ id, name }`.

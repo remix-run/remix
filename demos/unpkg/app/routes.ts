@@ -1,6 +1,6 @@
 import { get, route } from 'remix/fetch-router/routes'
 
-export let routes = route({
+export const routes = route({
   home: get('/'),
   packageBrowser: get('/*path'),
 })

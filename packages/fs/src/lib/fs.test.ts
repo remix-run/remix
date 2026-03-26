@@ -253,4 +253,22 @@ describe('writeFile', () => {
     let written = fs.readFileSync(destPath)
     assert.deepEqual(written, binaryData)
   })
+
+  it('rejects when the source stream fails', async () => {
+    let destPath = path.join(tmpDir, 'dest.txt')
+
+    await assert.rejects(
+      () =>
+        writeFile(destPath, {
+          stream() {
+            return new ReadableStream({
+              start(controller) {
+                controller.error(new Error('stream failed'))
+              },
+            })
+          },
+        }),
+      /stream failed/,
+    )
+  })
 })

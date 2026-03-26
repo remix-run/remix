@@ -2180,18 +2180,15 @@ describe('run', () => {
   })
 
   it('does not duplicate initially-mounted Frame hydration in a client entry', async () => {
-    let MountedFrame = clientEntry(
-      '/js/mounted-frame.js#MountedFrame',
-      function MountedFrame(handle: Handle) {
-        let showFrame = true
-        return () =>
-          showFrame ? (
-            <section>
-              <Frame src="/outer" fallback={<p id="outer-fallback">Loading outer…</p>} />
-            </section>
-          ) : null
-      },
-    )
+    let MountedFrame = clientEntry('/js/mounted-frame.js#MountedFrame', function MountedFrame() {
+      let showFrame = true
+      return () =>
+        showFrame ? (
+          <section>
+            <Frame src="/outer" fallback={<p id="outer-fallback">Loading outer…</p>} />
+          </section>
+        ) : null
+    })
 
     let outerStream = renderToStream(
       <div id="outer-root">
@@ -2264,7 +2261,7 @@ describe('run', () => {
   })
 
   it('renders Frame semantics from entry children during initial hydration', async () => {
-    let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+    let Card = clientEntry('/js/card.js#Card', function Card() {
       return (props: { children: any }) => <section>{props.children}</section>
     })
 

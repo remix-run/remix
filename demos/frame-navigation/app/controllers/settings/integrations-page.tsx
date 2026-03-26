@@ -25,19 +25,19 @@ export function Integrations() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   margin: 0,
   fontSize: '1.5rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.6rem',
   color: '#475569',
   lineHeight: 1.7,
 })
 
-let integrationsStyle = css({
+const integrationsStyle = css({
   listStyle: 'none',
   margin: '1rem 0 0',
   padding: 0,
@@ -45,7 +45,7 @@ let integrationsStyle = css({
   gap: '0.55rem',
 })
 
-let integrationRowStyle = css({
+const integrationRowStyle = css({
   border: '1px solid #e2e8f0',
   borderRadius: '12px',
   backgroundColor: '#ffffff',

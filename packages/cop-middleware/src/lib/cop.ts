@@ -1,7 +1,7 @@
 import { RequestMethods } from '@remix-run/fetch-router'
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 
-let safeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
+const safeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
 
 type BypassSegment = { type: 'static'; value: string } | { type: 'wildcard' } | { type: 'rest' }
 

@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 import { DashboardStatGrid } from '../../assets/dashboard-stat-grid.tsx'
 import { routes } from '../../routes.ts'
 
-let statCards = [
+const statCards = [
   {
     label: 'In progress',
     value: '4 courses',
@@ -36,20 +36,20 @@ export function MainIndexPage() {
   )
 }
 
-let titleStyle = css({
+const titleStyle = css({
   marginTop: 0,
   fontSize: '1.8rem',
   color: '#0f172a',
 })
 
-let descriptionStyle = css({
+const descriptionStyle = css({
   marginTop: '0.5rem',
   color: '#475569',
   lineHeight: 1.7,
   maxWidth: '65ch',
 })
 
-let hintStyle = css({
+const hintStyle = css({
   marginTop: '0.85rem',
   color: '#64748b',
   fontSize: '0.9rem',

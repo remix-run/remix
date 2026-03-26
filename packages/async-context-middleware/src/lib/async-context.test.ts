@@ -12,7 +12,7 @@ import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
 
-let CurrentUser = createContextKey<unknown>()
+const CurrentUser = createContextKey<unknown>()
 
 declare module './async-context.ts' {
   interface AsyncContextTypes {
@@ -44,8 +44,8 @@ describe('asyncContext', () => {
 
 if (false as boolean) {
   let user = getContext().get(CurrentUser)
-  user.id
+  void user.id
 
   // @ts-expect-error Property 'missing' does not exist on type '{ id: string }'
-  user.missing
+  void user.missing
 }

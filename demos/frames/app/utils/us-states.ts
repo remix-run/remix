@@ -1,4 +1,4 @@
-export let unitedStates = [
+export const unitedStates = [
   'Alabama',
   'Alaska',
   'Arizona',

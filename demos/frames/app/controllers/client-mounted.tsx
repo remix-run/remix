@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from '../utils/render.ts'
 
-export let clientMountedAction = {
+export const clientMountedAction = {
   handler(context) {
     return render(<ClientMountedPage />, { request: context.request, router: context.router })
   },

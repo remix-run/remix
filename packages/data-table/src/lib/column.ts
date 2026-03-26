@@ -331,7 +331,7 @@ function createColumnBuilder<output = unknown>(
  * let email = c.varchar(255).notNull().unique('users_email_uq')
  * ```
  */
-export let column: ColumnNamespace = {
+export const column: ColumnNamespace = {
   varchar(length: number) {
     return new ColumnBuilder({ type: 'varchar', length })
   },

@@ -15,7 +15,7 @@ type ServerStyleState = {
 }
 
 let serverStyleState: ServerStyleState | null = null
-let activeManagers = new Set<ActiveManager>()
+const activeManagers = new Set<ActiveManager>()
 
 function isHtmlStyleElement(node: unknown): node is HTMLStyleElement {
   return typeof node === 'object' && node !== null && node instanceof HTMLStyleElement
@@ -270,14 +270,10 @@ export function createStyleManager(layer: string = 'rmx') {
     // New rule - insert and track
     let sheet = getStylesheet()
     let index = sheet.cssRules.length
-    try {
-      sheet.insertRule(`@layer ${layer} { ${rule} }`, index)
-      ruleMap.set(className, { count: 1, index })
-    } catch (error) {
-      // If insertion fails (e.g., invalid CSS), don't track it
-      // The browser will have thrown, so we can't proceed
-      throw error
-    }
+    // This may throw for invalid CSS. If it does, we intentionally let it
+    // bubble so the rule is not tracked unless insertion actually succeeds.
+    sheet.insertRule(`@layer ${layer} { ${rule} }`, index)
+    ruleMap.set(className, { count: 1, index })
   }
 
   function remove(className: string) {
@@ -309,7 +305,7 @@ export function createStyleManager(layer: string = 'rmx') {
 
     // Update indices for all rules that came after the deleted one
     // They all shift down by 1
-    for (let [name, data] of ruleMap.entries()) {
+    for (let [, data] of ruleMap.entries()) {
       if (data.index > indexToDelete) {
         data.index--
       }

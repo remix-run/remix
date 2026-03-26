@@ -40,7 +40,7 @@ export function equal(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
  * @param b the second match to compare
  * @returns negative if `a` is less specific, positive if more specific, 0 if equal
  */
-export let ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b)
+export const ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b)
 
 /**
  * Comparator function for sorting matches from most specific to least specific.
@@ -49,7 +49,7 @@ export let ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number => c
  * @param b the second match to compare
  * @returns positive if `a` is less specific, negative if more specific, 0 if equal
  */
-export let descending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b) * -1
+export const descending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b) * -1
 
 /**
  * Compare two matches by specificity.

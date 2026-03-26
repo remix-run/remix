@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createTestRouter, loginAsAdmin, requestWithSession } from '../../../../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('admin books handlers', () => {
   it('POST /admin/books creates new book when admin', async () => {

@@ -661,11 +661,6 @@ describe('createFileResponse()', () => {
         type: 'text/plain',
         lastModified: fileDate.getTime(),
       })
-      let request1 = new Request('http://localhost/test.txt')
-
-      let response1 = await createFileResponse(mockFile, request1)
-      let etag = response1.headers.get('ETag')
-
       let request2 = new Request('http://localhost/test.txt', {
         headers: {
           'If-None-Match': 'W/"wrong-etag"',

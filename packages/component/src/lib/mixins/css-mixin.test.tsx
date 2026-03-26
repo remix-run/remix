@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import { css } from './css-mixin.tsx'
+import { css } from './css-mixin.ts'
 
 describe('css mixin', () => {
   it('concatenates generated classes with existing className', () => {

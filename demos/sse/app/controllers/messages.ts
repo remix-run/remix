@@ -3,7 +3,7 @@ import type { BuildAction } from 'remix/fetch-router'
 import type { routes } from '../routes.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'
 
-export let messagesAction = {
+export const messagesAction = {
   handler(context) {
     let limit = getMessageLimit(context.url)
 
@@ -40,7 +40,7 @@ export let messagesAction = {
 
           try {
             controller.close()
-          } catch (error) {
+          } catch {
             // Stream may already be closed.
           }
         })

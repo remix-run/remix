@@ -21,7 +21,7 @@ type PendingAction = {
   bookId: number
 } | null
 
-export let CartItems = clientEntry(import.meta.url, function CartItems(handle: Handle) {
+export const CartItems = clientEntry(import.meta.url, function CartItems(handle: Handle) {
   let pendingAction: PendingAction = null
 
   let submit = async (form: HTMLFormElement, signal: AbortSignal, nextAction: PendingAction) => {

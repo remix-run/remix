@@ -151,5 +151,5 @@ function App(handle: Handle) {
   )
 }
 
-let root = createRoot(document.body)
+const root = createRoot(document.body)
 root.render(<App />)

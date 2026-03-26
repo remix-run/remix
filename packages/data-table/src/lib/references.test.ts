@@ -5,7 +5,7 @@ import { column } from './column.ts'
 import { isColumnReference, normalizeColumnInput } from './references.ts'
 import { table } from './table.ts'
 
-let accounts = table({
+const accounts = table({
   name: 'accounts',
   columns: {
     id: column.integer(),

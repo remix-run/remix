@@ -6,6 +6,7 @@ import { redirect } from 'remix/response/redirect'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
+import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../../utils/render.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
@@ -52,7 +53,7 @@ export default {
         return redirect(routes.auth.resetPassword.index.href({ token }))
       }
 
-      await db.update(users, user.id, { password })
+      await db.update(users, user.id, { password_hash: await hashPassword(password) })
       await db.delete(passwordResetTokens, { token })
 
       return render(<ResetPasswordSuccessPage />)

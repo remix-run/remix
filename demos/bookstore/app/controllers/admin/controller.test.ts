@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createTestRouter, loginAsCustomer, requestWithSession } from '../../../test/helpers.ts'
 
-let router = createTestRouter()
+const router = createTestRouter()
 
 describe('admin handlers', () => {
   it('GET /admin redirects when not authenticated', async () => {

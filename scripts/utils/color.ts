@@ -1,4 +1,4 @@
-export let colors = {
+export const colors = {
   // Regular colors
   black: '\x1b[30m',
   red: '\x1b[31m',

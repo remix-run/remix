@@ -2,6 +2,7 @@ import type { FrameHandle } from './component.ts'
 import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { SchedulerPhaseEvent } from './scheduler.ts'
+import { jsx } from './jsx.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import { invariant } from './invariant.ts'
 
@@ -78,6 +79,14 @@ export type MixinHandle<
   signal: AbortSignal
   update(): Promise<AbortSignal>
   queueTask(task: (node: node, signal: AbortSignal) => void): void
+}
+
+export function renderMixinElement<
+  node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+>(element: MixinElement<node, props>, props?: MixinProps<node, props>): RemixElement {
+  let { key, ...rest } = (props ?? {}) as MixinProps<node, props> & { key?: any }
+  return jsx(element, rest, key)
 }
 
 type MixinRuntimeType<

@@ -12,9 +12,9 @@ import { authAccounts, passwordResetTokens, users } from './schema.ts'
 const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'
 const DEMO_USER_AVATAR_URL = 'https://randomuser.me/api/portraits/men/32.jpg'
 
-let dbDirectoryUrl = new URL('../../db/', import.meta.url)
-let migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dbDirectoryUrl))
-let databaseFilePath = getDatabaseFilePath()
+const dbDirectoryUrl = new URL('../../db/', import.meta.url)
+const migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dbDirectoryUrl))
+const databaseFilePath = getDatabaseFilePath()
 
 fs.mkdirSync(fileURLToPath(dbDirectoryUrl), { recursive: true })
 
@@ -22,11 +22,11 @@ if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
   fs.unlinkSync(databaseFilePath)
 }
 
-let sqlite = new BetterSqlite3(databaseFilePath)
+const sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
-let adapter = createSqliteDatabaseAdapter(sqlite)
+const adapter = createSqliteDatabaseAdapter(sqlite)
 
-export let db = createDatabase(adapter)
+export const db = createDatabase(adapter)
 
 let initializePromise: Promise<void> | null = null
 
