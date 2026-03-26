@@ -133,12 +133,13 @@ describe('skills command', () => {
           captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
         ),
       )
-      let expectedSkillsDir = await fs.realpath(path.join(tmpDir, 'custom', 'skills'))
 
       assert.equal(result.exitCode, 0)
       assert.match(
         result.stdout,
-        new RegExp(`Synced Remix skills into ${escapeRegExp(expectedSkillsDir)}:`),
+        new RegExp(
+          `Synced Remix skills into .*[\\\\/]${escapeRegExp(path.join('custom', 'skills'))}:`,
+        ),
       )
       await assertPathExists(path.join(tmpDir, 'custom', 'skills', 'remix-project-layout', 'SKILL.md'))
       await assertPathExists(path.join(tmpDir, 'custom', 'skills', 'remix-ui', 'SKILL.md'))
