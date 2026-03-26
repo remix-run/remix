@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-import * as process from 'node:process'
-
-export { run } from './lib/cli.ts'
 import { run } from './lib/cli.ts'
 
 if (import.meta.main) {
@@ -19,3 +16,5 @@ if (import.meta.main) {
 function setExitCode(exitCode: number) {
   globalThis.process.exitCode = exitCode
 }
+
+export { run }

@@ -3,9 +3,9 @@ import * as process from 'node:process'
 
 import { UsageError } from './errors.ts'
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
-import { getNewCommandHelpText, runNewCommand } from './commands/new.ts'
-import { getRoutesCommandHelpText, runRoutesCommand } from './commands/routes.ts'
-import { getSkillsCommandHelpText, runSkillsCommand } from './commands/skills.ts'
+import { runNewCommand } from './commands/new.ts'
+import { runRoutesCommand } from './commands/routes.ts'
+import { runSkillsCommand } from './commands/skills.ts'
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   while (argv[0] === '--') {
@@ -67,8 +67,3 @@ async function readCliVersion(): Promise<string> {
 async function readPackageJson(url: URL): Promise<{ version?: unknown }> {
   return JSON.parse(await fs.readFile(url, 'utf8')) as { version?: unknown }
 }
-export { getCliHelpText }
-export { getHelpCommandHelpText } from './commands/help.ts'
-export { getNewCommandHelpText }
-export { getRoutesCommandHelpText }
-export { getSkillsCommandHelpText }
