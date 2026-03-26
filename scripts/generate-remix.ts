@@ -19,6 +19,7 @@ const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
 
+const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
 
 type RemixRunPackage = {
@@ -43,6 +44,8 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
+  // Whether this export is a straight re-export or a generated wrapper.
+  sourceKind: 'cli-wrapper' | 'reexport'
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -114,11 +117,21 @@ async function getRemixRunPackages() {
 
         if (exportPath === '.') {
           // Main export
-          remixRunPackage.exports.push({
-            sourceFile: `${shortName}.ts`,
-            exportPath: `./${shortName}`,
-            reExportFrom: packageName,
-          })
+          if (packageName === CLI_PACKAGE_NAME) {
+            remixRunPackage.exports.push({
+              sourceFile: 'cli.ts',
+              exportPath: './cli',
+              reExportFrom: packageName,
+              sourceKind: 'cli-wrapper',
+            })
+          } else {
+            remixRunPackage.exports.push({
+              sourceFile: `${shortName}.ts`,
+              exportPath: `./${shortName}`,
+              reExportFrom: packageName,
+              sourceKind: 'reexport',
+            })
+          }
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
@@ -126,6 +139,7 @@ async function getRemixRunPackages() {
             sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${shortName}/${subExport}`,
             reExportFrom: `${packageName}/${subExport}`,
+            sourceKind: 'reexport',
           })
         }
       }
@@ -169,10 +183,7 @@ async function updateRemixPackage() {
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
-    let content = [
-      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'\n`,
-    ].join('\n')
+    let content = createExportSource(entry)
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
 
@@ -218,6 +229,13 @@ async function updateRemixPackage() {
 
   remixPackageJson.exports['./package.json'] = './package.json'
   remixPackageJson.publishConfig.exports['./package.json'] = './package.json'
+  if (allExports.some((entry) => entry.exportPath === './cli')) {
+    remixPackageJson.bin = {
+      remix: './dist/cli.js',
+    }
+  } else {
+    delete remixPackageJson.bin
+  }
 
   if (allBins.length > 0) {
     remixPackageJson.bin = {}
@@ -240,6 +258,67 @@ async function updateRemixPackage() {
     JSON.stringify(remixPackageJson, null, 2) + '\n',
     'utf-8',
   )
+}
+
+function createExportSource(entry: ExportEntry): string {
+  if (entry.sourceKind === 'cli-wrapper') {
+    return createCliWrapperSource(entry.reExportFrom)
+  }
+
+  return [
+    `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+    `export * from '${entry.reExportFrom}'\n`,
+  ].join('\n')
+}
+
+function createCliWrapperSource(reExportFrom: string): string {
+  let remixVersion = remixPackageJson.version as string
+
+  return `#!/usr/bin/env node
+// IMPORTANT: This file is auto-generated, please do not edit manually.
+import * as process from 'node:process'
+import { pathToFileURL } from 'node:url'
+
+import { run as runCli } from '${reExportFrom}'
+
+const remixVersion = ${JSON.stringify(remixVersion)}
+
+export async function run(argv?: string[]): Promise<number> {
+  let previousCliVersion = process.env.REMIX_CLI_VERSION
+  process.env.REMIX_CLI_VERSION = remixVersion
+
+  try {
+    return await runCli(argv)
+  } finally {
+    restoreEnvironmentVariable('REMIX_CLI_VERSION', previousCliVersion)
+  }
+}
+
+if (process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void run().then(
+    (exitCode) => {
+      setExitCode(exitCode)
+    },
+    (error: unknown) => {
+      console.error(error)
+      setExitCode(1)
+    },
+  )
+}
+
+function setExitCode(exitCode: number) {
+  let runtimeProcess = process
+  Reflect.set(runtimeProcess, 'exitCode', exitCode)
+}
+
+function restoreEnvironmentVariable(name: string, value: string | undefined) {
+  if (value == null) {
+    delete process.env[name]
+  } else {
+    process.env[name] = value
+  }
+}
+`
 }
 
 // Build exports change summary
