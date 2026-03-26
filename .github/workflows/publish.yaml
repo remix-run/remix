@@ -36,6 +36,8 @@ jobs:
     needs: check
     if: needs.check.outputs.has_change_files == 'false'
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.get_tag.outputs.tag }}
 
     permissions:
       contents: write # Required for creating tags and GitHub releases
@@ -84,6 +86,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output tag
+        id: get_tag
         run: echo "tag=$(git tag --points-at HEAD | grep -e '^remix@3')" >> $GITHUB_OUTPUT
 
   docs:
