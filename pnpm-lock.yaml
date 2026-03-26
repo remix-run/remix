@@ -1667,10 +1667,10 @@ importers:
         specifier: ^9.1.3
         version: 9.1.3
       '@remix-run/assert':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/assert
       '@remix-run/test':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/test
       '@types/node':
         specifier: 'catalog:'
