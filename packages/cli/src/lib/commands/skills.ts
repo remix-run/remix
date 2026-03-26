@@ -4,7 +4,7 @@ import { UsageError } from '../errors.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
 
 export async function runSkillsCommand(argv: string[]): Promise<number> {
-  if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help' || argv[0] === 'help') {
+  if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help') {
     process.stdout.write(getSkillsCommandHelpText())
     return 0
   }

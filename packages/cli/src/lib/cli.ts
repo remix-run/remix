@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as process from 'node:process'
 
 import { UsageError } from './errors.ts'
+import { getCliHelpText, runHelpCommand } from './commands/help.ts'
 import { getNewCommandHelpText, runNewCommand } from './commands/new.ts'
 import { getRoutesCommandHelpText, runRoutesCommand } from './commands/routes.ts'
 import { getSkillsCommandHelpText, runSkillsCommand } from './commands/skills.ts'
@@ -18,9 +19,13 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
 
   let [command, ...rest] = argv
 
-  if (command === '-h' || command === '--help' || command === 'help') {
+  if (command === '-h' || command === '--help') {
     process.stdout.write(getCliHelpText())
     return 0
+  }
+
+  if (command === 'help') {
+    return runHelpCommand(rest)
   }
 
   if (command === '-v' || command === '--version') {
@@ -45,27 +50,6 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
   return 1
 }
 
-export function getCliHelpText(): string {
-  return `Usage:
-  remix <command> [options]
-
-Commands:
-  new <name>     Create a new Remix project
-  routes         Show the route tree for the current project
-  skills         Manage Remix skills for the current project
-
-Options:
-  -h, --help     Show help
-  -v, --version  Show version
-
-Examples:
-  remix new my-remix-app
-  remix new my-remix-app --app-name "My Remix App"
-  remix routes
-  remix skills install
-`
-}
-
 async function readCliVersion(): Promise<string> {
   let overriddenVersion = process.env.REMIX_CLI_VERSION?.trim()
   if (overriddenVersion) {
@@ -83,7 +67,8 @@ async function readCliVersion(): Promise<string> {
 async function readPackageJson(url: URL): Promise<{ version?: unknown }> {
   return JSON.parse(await fs.readFile(url, 'utf8')) as { version?: unknown }
 }
-
+export { getCliHelpText }
+export { getHelpCommandHelpText } from './commands/help.ts'
 export { getNewCommandHelpText }
 export { getRoutesCommandHelpText }
 export { getSkillsCommandHelpText }

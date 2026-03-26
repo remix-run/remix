@@ -18,6 +18,23 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('prints root help from the help command', async () => {
+    let result = await captureOutput(() => run(['help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
+    assert.match(result.stdout, /help \[command\]\s+Show help/)
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints help command help', async () => {
+    let result = await captureOutput(() => run(['help', '--help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.match(result.stdout, /Usage:\s+remix help \[command\]/)
+    assert.equal(result.stderr, '')
+  })
+
   it('prints the configured version', async () => {
     let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
       captureOutput(() => run(['--version'])),
@@ -34,6 +51,33 @@ describe('run', () => {
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix new <target-dir>/)
     assert.equal(result.stderr, '')
+  })
+
+  it('prints new command help when no additional arguments are provided', async () => {
+    let result = await captureOutput(() => run(['new']))
+
+    assert.equal(result.exitCode, 0)
+    assert.match(result.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints command help from the help command', async () => {
+    let newHelp = await captureOutput(() => run(['help', 'new']))
+    let helpHelp = await captureOutput(() => run(['help', 'help']))
+    let routesHelp = await captureOutput(() => run(['help', 'routes']))
+    let skillsHelp = await captureOutput(() => run(['help', 'skills']))
+    let skillsInstallHelp = await captureOutput(() => run(['help', 'skills', 'install']))
+
+    assert.equal(newHelp.exitCode, 0)
+    assert.match(newHelp.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(helpHelp.exitCode, 0)
+    assert.match(helpHelp.stdout, /Usage:\s+remix help \[command\]/)
+    assert.equal(routesHelp.exitCode, 0)
+    assert.match(routesHelp.stdout, /Usage:\s+remix routes \[--json\]/)
+    assert.equal(skillsHelp.exitCode, 0)
+    assert.match(skillsHelp.stdout, /Usage:\s+remix skills <command>/)
+    assert.equal(skillsInstallHelp.exitCode, 0)
+    assert.match(skillsInstallHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
   })
 
   it('prints routes command help', async () => {
@@ -57,6 +101,14 @@ describe('run', () => {
 
     assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /Unknown command: unknown/)
+    assert.match(result.stderr, /Usage:\s+remix <command> \[options\]/)
+  })
+
+  it('fails for unknown help topics', async () => {
+    let result = await captureOutput(() => run(['help', 'unknown']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /Unknown help topic: unknown/)
     assert.match(result.stderr, /Usage:\s+remix <command> \[options\]/)
   })
 

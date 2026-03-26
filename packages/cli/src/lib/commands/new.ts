@@ -5,7 +5,7 @@ import { bootstrapProject } from '../bootstrap-project.ts'
 import { UsageError } from '../errors.ts'
 
 export async function runNewCommand(argv: string[]): Promise<number> {
-  if (argv.includes('-h') || argv.includes('--help')) {
+  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getNewCommandHelpText())
     return 0
   }

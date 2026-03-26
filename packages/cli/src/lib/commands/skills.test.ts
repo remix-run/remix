@@ -36,6 +36,14 @@ describe('skills command', () => {
     assert.match(statusHelp.stdout, /Usage:\s+remix skills status/)
   })
 
+  it('does not treat help as a skills subcommand', async () => {
+    let result = await captureOutput(() => run(['skills', 'help']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /Unknown skills command: help/)
+    assert.match(result.stderr, /Usage:\s+remix skills <command>/)
+  })
+
   it('installs remote skills into .agents/skills and creates the directory', async () => {
     let remoteSkills = {
       'remix-project-layout': {
