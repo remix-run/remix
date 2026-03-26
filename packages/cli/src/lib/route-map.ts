@@ -4,6 +4,12 @@ import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
+import {
+  getActionOwnerCandidates,
+  getControllerOwnerCandidates,
+  getPreferredOwnerDisplayPath,
+} from './controller-files.ts'
+
 export type RouteOwnerKind = 'action' | 'controller'
 export type RouteTreeNodeKind = 'group' | 'route'
 
@@ -138,27 +144,25 @@ async function getRouteOwner(
   parentSegments: string[],
 ): Promise<RouteTreeOwner> {
   let kind: RouteOwnerKind
-  let relativePath: string
+  let candidatePaths: string[]
 
   if (rawNode.kind === 'group') {
     kind = 'controller'
-    relativePath = normalizeRelativePath(
-      path.join('app', 'controllers', ...parentSegments, rawNode.key, 'controller.tsx'),
-    )
+    candidatePaths = getControllerOwnerCandidates([...parentSegments, rawNode.key])
   } else if (parentSegments.length === 0) {
     kind = 'action'
-    relativePath = normalizeRelativePath(path.join('app', 'controllers', `${rawNode.key}.tsx`))
+    candidatePaths = getActionOwnerCandidates([rawNode.key])
   } else {
     kind = 'controller'
-    relativePath = normalizeRelativePath(
-      path.join('app', 'controllers', ...parentSegments, 'controller.tsx'),
-    )
+    candidatePaths = getControllerOwnerCandidates(parentSegments)
   }
 
+  let existingPath = await findFirstExistingPath(appRoot, candidatePaths)
+
   return {
-    exists: await pathExists(path.join(appRoot, relativePath)),
+    exists: existingPath != null,
     kind,
-    path: relativePath,
+    path: existingPath ?? getPreferredOwnerDisplayPath(candidatePaths),
   }
 }
 
@@ -251,6 +255,19 @@ async function pathExists(filePath: string): Promise<boolean> {
   }
 }
 
+async function findFirstExistingPath(
+  appRoot: string,
+  candidatePaths: string[],
+): Promise<string | null> {
+  for (let candidatePath of candidatePaths) {
+    if (await pathExists(path.join(appRoot, candidatePath))) {
+      return candidatePath
+    }
+  }
+
+  return null
+}
+
 function getRouteMapWorkerPath(): string {
   let currentFilePath = fileURLToPath(import.meta.url)
   let extension = currentFilePath.endsWith('.ts') ? '.ts' : '.js'
@@ -268,8 +285,4 @@ function createRouteMapWorkerEnv(): NodeJS.ProcessEnv {
   }
 
   return env
-}
-
-function normalizeRelativePath(filePath: string): string {
-  return filePath.split(path.sep).join('/')
 }

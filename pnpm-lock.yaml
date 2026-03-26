@@ -449,29 +449,77 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/cli/test-fixtures/routes-import-error:
+  packages/cli/test/fixtures/doctor-ambiguous:
     dependencies:
       remix:
         specifier: workspace:*
-        version: link:../../../remix
+        version: link:../../../../remix
 
-  packages/cli/test-fixtures/routes-invalid-value:
+  packages/cli/test/fixtures/doctor-clean:
     dependencies:
       remix:
         specifier: workspace:*
-        version: link:../../../remix
+        version: link:../../../../remix
 
-  packages/cli/test-fixtures/routes-missing:
+  packages/cli/test/fixtures/doctor-generic-buckets:
     dependencies:
       remix:
         specifier: workspace:*
-        version: link:../../../remix
+        version: link:../../../../remix
 
-  packages/cli/test-fixtures/routes-no-export:
+  packages/cli/test/fixtures/doctor-missing:
     dependencies:
       remix:
         specifier: workspace:*
-        version: link:../../../remix
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-orphans:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-wrong-kind:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-basic:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-import-error:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-invalid-value:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-no-export:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-tree:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
 
   packages/component:
     dependencies:

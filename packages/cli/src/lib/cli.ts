@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as process from 'node:process'
 
 import { UsageError } from './errors.ts'
+import { runDoctorCommand } from './commands/doctor.ts'
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
 import { runNewCommand } from './commands/new.ts'
 import { runRoutesCommand } from './commands/routes.ts'
@@ -35,6 +36,10 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
 
   if (command === 'new') {
     return runNewCommand(rest)
+  }
+
+  if (command === 'doctor') {
+    return runDoctorCommand(rest)
   }
 
   if (command === 'skills') {

@@ -7,26 +7,10 @@ import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
+import { getFixturePath } from '../../../test/fixtures.ts'
+
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'index.ts')
-const BOOTSTRAP_APP_DIR = path.join(ROOT_DIR, 'packages', 'cli', 'bootstrap')
-const BOOKSTORE_APP_DIR = path.join(ROOT_DIR, 'demos', 'bookstore')
-const MISSING_OWNER_FIXTURE_DIR = path.join(ROOT_DIR, 'packages', 'cli', 'test-fixtures', 'routes-missing')
-const NO_EXPORT_FIXTURE_DIR = path.join(ROOT_DIR, 'packages', 'cli', 'test-fixtures', 'routes-no-export')
-const INVALID_VALUE_FIXTURE_DIR = path.join(
-  ROOT_DIR,
-  'packages',
-  'cli',
-  'test-fixtures',
-  'routes-invalid-value',
-)
-const IMPORT_ERROR_FIXTURE_DIR = path.join(
-  ROOT_DIR,
-  'packages',
-  'cli',
-  'test-fixtures',
-  'routes-import-error',
-)
 
 describe('routes command', () => {
   it('prints routes command help', async () => {
@@ -38,8 +22,8 @@ describe('routes command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('prints flat leaf mappings for the bootstrap app', async () => {
-    let result = runRoutesCommand([], BOOTSTRAP_APP_DIR)
+  it('prints flat leaf mappings for a basic fixture app', async () => {
+    let result = runRoutesCommand([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.tsx/)
@@ -48,7 +32,7 @@ describe('routes command', () => {
   })
 
   it('works from a nested directory inside an app', async () => {
-    let nestedDir = path.join(BOOKSTORE_APP_DIR, 'app', 'controllers', 'admin')
+    let nestedDir = path.join(getFixturePath('routes-tree'), 'app', 'controllers', 'admin')
     let result = runRoutesCommand([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
@@ -62,8 +46,19 @@ describe('routes command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('resolves owner files with js, jsx, and ts extensions', async () => {
+    let result = runRoutesCommand([], getFixturePath('doctor-clean'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.js/)
+    assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> app\/controllers\/about\.jsx/)
+    assert.match(result.stdout, /contact -> app\/controllers\/contact\/controller\.ts/)
+    assert.equal(result.stderr, '')
+  })
+
   it('prints normalized JSON with owner metadata', async () => {
-    let result = runRoutesCommand(['--json'], BOOKSTORE_APP_DIR)
+    let fixtureDir = getFixturePath('routes-tree')
+    let result = runRoutesCommand(['--json'], fixtureDir)
 
     assert.equal(result.status, 0, result.stderr)
     assert.equal(result.stderr, '')
@@ -74,8 +69,8 @@ describe('routes command', () => {
       tree: RouteTreeNode[]
     }
 
-    assert.equal(payload.appRoot, BOOKSTORE_APP_DIR)
-    assert.equal(payload.routesFile, path.join(BOOKSTORE_APP_DIR, 'app', 'routes.ts'))
+    assert.equal(payload.appRoot, fixtureDir)
+    assert.equal(payload.routesFile, path.join(fixtureDir, 'app', 'routes.ts'))
 
     let home = findRouteNode(payload.tree, 'home')
     let account = findRouteNode(payload.tree, 'account')
@@ -122,7 +117,7 @@ describe('routes command', () => {
   })
 
   it('annotates missing owners without failing the command', async () => {
-    let result = runRoutesCommand([], MISSING_OWNER_FIXTURE_DIR)
+    let result = runRoutesCommand([], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.tsx \[missing\]/)
@@ -148,21 +143,21 @@ describe('routes command', () => {
   })
 
   it('fails when the route module does not export routes', async () => {
-    let result = runRoutesCommand([], NO_EXPORT_FIXTURE_DIR)
+    let result = runRoutesCommand([], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /must export a named "routes" value/)
   })
 
   it('fails when the route map contains invalid values', async () => {
-    let result = runRoutesCommand([], INVALID_VALUE_FIXTURE_DIR)
+    let result = runRoutesCommand([], getFixturePath('routes-invalid-value'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Invalid route map value at "broken"/)
   })
 
   it('fails when importing the route module throws', async () => {
-    let result = runRoutesCommand([], IMPORT_ERROR_FIXTURE_DIR)
+    let result = runRoutesCommand([], getFixturePath('routes-import-error'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /boom from routes fixture/)

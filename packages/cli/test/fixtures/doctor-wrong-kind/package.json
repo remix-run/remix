@@ -1,0 +1,8 @@
+{
+  "name": "doctor-wrong-kind-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

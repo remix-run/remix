@@ -1,6 +1,7 @@
 import * as process from 'node:process'
 
 import { UsageError } from '../errors.ts'
+import { getDoctorCommandHelpText } from './doctor.ts'
 import { getNewCommandHelpText } from './new.ts'
 import { getRoutesCommandHelpText } from './routes.ts'
 import {
@@ -37,6 +38,7 @@ export function getCliHelpText(): string {
 Commands:
   help [command]  Show help for Remix commands
   new <name>      Create a new Remix project
+  doctor          Check controller conventions for the current project
   routes          Show the route tree for the current project
   skills          Manage Remix skills for the current project
 
@@ -46,7 +48,9 @@ Options:
 
 Examples:
   remix help
+  remix help doctor
   remix help skills install
+  remix doctor
   remix new my-remix-app
   remix new my-remix-app --app-name "My Remix App"
   remix routes
@@ -62,6 +66,7 @@ Show help for Remix commands.
 
 Examples:
   remix help
+  remix help doctor
   remix help new
   remix help routes
   remix help skills install
@@ -81,6 +86,10 @@ function getCommandHelpText(argv: string[]): string {
 
   if (command === 'new' && rest.length === 0) {
     return getNewCommandHelpText()
+  }
+
+  if (command === 'doctor' && rest.length === 0) {
+    return getDoctorCommandHelpText()
   }
 
   if (command === 'routes' && rest.length === 0) {

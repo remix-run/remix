@@ -1,0 +1,8 @@
+{
+  "name": "doctor-orphans-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}
