@@ -1,0 +1,152 @@
+import type { render } from './render.ts'
+import type { Browser, BrowserContextOptions, Page } from 'playwright'
+import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
+import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
+import type { V8CoverageEntry } from './coverage.ts'
+
+import type { CreateServerFunction } from './e2e-server.ts'
+
+/**
+ * Test Context providing utilities for testing via remix-test.  The context is
+ * passed as the first argument to the {@link test}/{@link it} functions.
+ *
+ * @example
+ * describe('my test suite', () => {
+ *   it('my test case', async (t) => {
+ *     let mockFn = t.mock(() => 'mocked value')
+ *     // ...
+ *   })
+ * })
+ */
+export interface TestContext {
+  /**
+   * Registers a cleanup function to be called after the test completes.
+   *
+   * @param {() => void} fn - The cleanup function to execute
+   * @returns {void}
+   */
+  after(fn: () => void): void
+
+  /**
+   * Creates a mock function with an optional implementation.
+   *
+   * @template T - The function type to be mocked
+   * @param {T} [impl] - Optional custom implementation for the mock
+   * @returns {MockFunction<T>} A mock function instance
+   */
+  mock<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+
+  /**
+   * Creates a spy on an object's method with optional implementation override.
+   *
+   * @template T - The object type
+   * @template K - The method key of the object
+   * @param {T} obj - The object to spy on
+   * @param {K} method - The method name to spy on
+   * @param {T[K]} [impl] - Optional implementation override (must be a function)
+   * @returns {MockFunction} A mock function instance for the spied method
+   */
+  spyOn<T extends object, K extends keyof T>(
+    obj: T,
+    method: K,
+    impl?: T[K] extends (...args: any[]) => any ? T[K] : never,
+  ): MockFunction
+
+  /**
+   * Activates fake timers for testing time-dependent code.
+   *
+   * @returns {FakeTimers} A fake timers instance for controlling time
+   */
+  useFakeTimers(): FakeTimers
+
+  /**
+   * Renders a component for testing purposes.
+   * Alias to the {@link render} function.
+   */
+  render: typeof render
+
+  /**
+   * Starts a test server with the provided request handler.
+   *
+   * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
+   * @returns {Promise<Page>} A promise resolving to a page instance for the server
+   */
+  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+}
+
+export function createTestContext(options: {
+  render?: typeof render
+  createServer?: CreateServerFunction
+  browser?: Browser
+  coverage?: boolean
+  open?: boolean
+  playwrightPageOptions?: BrowserContextOptions
+  e2eBrowserCoverageEntries?: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>
+}): TestContext & {
+  cleanup(): Promise<void>
+} {
+  let cleanups: Array<() => void | Promise<void>> = []
+  return {
+    mock: mock.fn,
+    spyOn(obj, method, impl) {
+      let mockFn = mock.spyOn(obj, method, impl as any)
+      if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
+      return mockFn
+    },
+    after(fn) {
+      cleanups.push(fn)
+    },
+    useFakeTimers() {
+      let timers = createFakeTimers()
+      cleanups.push(timers.restore)
+      return timers
+    },
+    render(node, opts) {
+      if (!options.render) {
+        throw new Error('t.render() is only available in browser test suites')
+      }
+
+      let result = options.render(node, opts)
+      cleanups.push(result.cleanup)
+      return result
+    },
+    async serve(handler) {
+      if (!options.createServer || !options.browser) {
+        throw new Error('t.serve() is only available in E2E test suites')
+      }
+
+      let server = await options.createServer(handler)
+      let page = await options.browser.newPage({
+        ...options.playwrightPageOptions,
+        baseURL: server.baseUrl,
+      })
+
+      let coverageEnabled = options.coverage && options.browser.browserType().name() === 'chromium'
+      if (coverageEnabled) {
+        await page.coverage.startJSCoverage({ resetOnNavigation: false })
+        cleanups.push(async () => {
+          let entries = await page.coverage.stopJSCoverage()
+          options.e2eBrowserCoverageEntries?.push({
+            entries: entries as unknown as V8CoverageEntry[],
+            baseUrl: server.baseUrl,
+          })
+        })
+      }
+
+      cleanups.push(async () => {
+        if (!options.open) {
+          await page.close()
+        }
+        await server.close()
+      })
+
+      return page
+    },
+    async cleanup() {
+      for (let fn of cleanups) await fn()
+      cleanups.length = 0
+    },
+  }
+}
+
+export type { MockFunction, MockCall, MockContext }
