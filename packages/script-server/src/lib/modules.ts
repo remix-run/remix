@@ -810,7 +810,7 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   let resolvedPath: string
 
   try {
-    resolvedPath = fs.realpathSync(normalizeFilePath(absolutePath))
+    resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -821,14 +821,14 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   }
 
   return {
-    identityPath: normalizeFilePath(resolvedPath),
+    identityPath: resolvedPath,
     resolvedPath,
   }
 }
 
 function resolveActualPath(identityPath: string): string | null {
   try {
-    return fs.realpathSync(identityPath)
+    return normalizeFilePath(fs.realpathSync(identityPath))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
