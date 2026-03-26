@@ -27,6 +27,10 @@ export interface SkillsInstallResult extends SkillsOverview {
   appliedChanges: SkillChange[]
 }
 
+export interface SkillsInstallOptions {
+  skillsDir?: string
+}
+
 interface GitHubBlobResponse {
   content?: unknown
   encoding?: unknown
@@ -81,8 +85,9 @@ export async function getSkillsOverview(
 export async function installRemixSkills(
   cwd: string = process.cwd(),
   fetchImpl: FetchImpl = globalThis.fetch,
+  options: SkillsInstallOptions = {},
 ): Promise<SkillsInstallResult> {
-  let plan = await loadSkillsPlan(cwd, fetchImpl)
+  let plan = await loadSkillsPlan(cwd, fetchImpl, options)
 
   await fs.mkdir(plan.skillsDir, { recursive: true })
   for (let change of plan.changes) {
@@ -105,13 +110,17 @@ export async function installRemixSkills(
   }
 }
 
-async function loadSkillsPlan(cwd: string, fetchImpl: FetchImpl): Promise<SkillsPlan> {
+async function loadSkillsPlan(
+  cwd: string,
+  fetchImpl: FetchImpl,
+  options: SkillsInstallOptions = {},
+): Promise<SkillsPlan> {
   if (typeof fetchImpl !== 'function') {
     throw new Error('This runtime does not provide fetch().')
   }
 
   let projectRoot = await findProjectRoot(cwd)
-  let skillsDir = path.join(projectRoot, '.agents', 'skills')
+  let skillsDir = resolveSkillsDir(projectRoot, options.skillsDir)
   let remoteSkills = await fetchRemoteSkills(fetchImpl)
   let entries = await Promise.all(
     remoteSkills.map(async (remoteSkill) => {
@@ -280,6 +289,18 @@ async function findProjectRoot(startDir: string): Promise<string> {
   }
 
   throw new Error('Could not find a project root. Run this command inside a Remix project.')
+}
+
+function resolveSkillsDir(projectRoot: string, skillsDir: string | undefined): string {
+  if (skillsDir == null || skillsDir.length === 0) {
+    return path.join(projectRoot, '.agents', 'skills')
+  }
+
+  if (path.isAbsolute(skillsDir)) {
+    return skillsDir
+  }
+
+  return path.resolve(projectRoot, skillsDir)
 }
 
 async function pathExists(filePath: string): Promise<boolean> {

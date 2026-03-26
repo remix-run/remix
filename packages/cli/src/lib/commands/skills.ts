@@ -43,7 +43,7 @@ export function getSkillsCommandHelpText(): string {
 Manage Remix skills for the current project.
 
 Commands:
-  install      Install Remix skills into .agents/skills
+  install      Install Remix skills into .agents/skills or a custom directory
   list         List available Remix skills and local state
   status       Show what remix skills install would change
 
@@ -56,12 +56,16 @@ Examples:
 
 export function getSkillsInstallCommandHelpText(): string {
   return `Usage:
-  remix skills install
+  remix skills install [--dir <path>]
 
 Install or refresh Remix skills in .agents/skills for the current project.
 
+Options:
+  --dir <path>  Install skills into a custom directory relative to the project root
+
 Examples:
   remix skills install
+  remix skills install --dir custom/skills
 `
 }
 
@@ -93,8 +97,23 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  return runSkillsAction(argv, getSkillsInstallCommandHelpText(), async () => {
-    let result = await installRemixSkills()
+  let options: { dir: string | null }
+  try {
+    options = parseSkillsInstallCommandArgs(argv)
+  } catch (error) {
+    if (error instanceof UsageError) {
+      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(getSkillsInstallCommandHelpText())
+      return 1
+    }
+
+    throw error
+  }
+
+  return runSkillsAction([], getSkillsInstallCommandHelpText(), async () => {
+    let result = await installRemixSkills(process.cwd(), globalThis.fetch, {
+      skillsDir: options.dir ?? undefined,
+    })
     if (result.appliedChanges.length === 0) {
       process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
       return 0
@@ -180,6 +199,34 @@ function ensureNoExtraArgs(argv: string[]): void {
   }
 
   throw new UsageError(`Unexpected extra argument: ${arg}`)
+}
+
+function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {
+  let dir: string | null = null
+  let index = 0
+
+  while (index < argv.length) {
+    let arg = argv[index]
+
+    if (arg === '--dir') {
+      let next = argv[index + 1]
+      if (!next) {
+        throw new UsageError('--dir requires a value.')
+      }
+
+      dir = next
+      index += 2
+      continue
+    }
+
+    if (arg.startsWith('-')) {
+      throw new UsageError(`Unknown argument: ${arg}`)
+    }
+
+    throw new UsageError(`Unexpected extra argument: ${arg}`)
+  }
+
+  return { dir }
 }
 
 function toPastTense(action: 'add' | 'replace'): string {

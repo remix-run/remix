@@ -29,6 +29,7 @@ describe('skills command', () => {
 
     assert.equal(installHelp.exitCode, 0)
     assert.match(installHelp.stdout, /Usage:\s+remix skills install/)
+    assert.match(installHelp.stdout, /--dir <path>/)
     assert.equal(listHelp.exitCode, 0)
     assert.match(listHelp.stdout, /Usage:\s+remix skills list/)
     assert.equal(statusHelp.exitCode, 0)
@@ -101,6 +102,52 @@ describe('skills command', () => {
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
+  })
+
+  it('installs remote skills into a custom directory relative to the project root', async () => {
+    let remoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let nestedDir = path.join(tmpDir, 'app', 'routes')
+      await fs.mkdir(nestedDir, { recursive: true })
+
+      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
+        withCwd(nestedDir, () =>
+          captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
+        ),
+      )
+      let expectedSkillsDir = await fs.realpath(path.join(tmpDir, 'custom', 'skills'))
+
+      assert.equal(result.exitCode, 0)
+      assert.match(
+        result.stdout,
+        new RegExp(`Synced Remix skills into ${escapeRegExp(expectedSkillsDir)}:`),
+      )
+      await assertPathExists(path.join(tmpDir, 'custom', 'skills', 'remix-project-layout', 'SKILL.md'))
+      await assertPathExists(path.join(tmpDir, 'custom', 'skills', 'remix-ui', 'SKILL.md'))
+      await assert.rejects(fs.access(path.join(tmpDir, '.agents', 'skills')), (error: unknown) => {
+        let nodeError = error as NodeJS.ErrnoException
+        return nodeError.code === 'ENOENT'
+      })
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when skills install --dir is missing a value', async () => {
+    let result = await captureOutput(() => run(['skills', 'install', '--dir']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /--dir requires a value\./)
   })
 
   it('lists all remote skills with local state from a nested directory', async () => {
@@ -374,4 +421,8 @@ async function writeFiles(rootDir: string, files: Record<string, string>): Promi
 
 async function assertPathExists(filePath: string): Promise<void> {
   await fs.access(filePath)
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&')
 }
