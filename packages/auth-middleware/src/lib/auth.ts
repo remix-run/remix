@@ -49,7 +49,7 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
 /**
  * Context key used to read auth state with `context.get(Auth)`.
  */
-export const Auth = createContextKey<AuthState>()
+export const Auth: ReturnType<typeof createContextKey<AuthState>> = createContextKey<AuthState>()
 
 export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
   context,
