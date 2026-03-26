@@ -60,11 +60,9 @@ function createWatchedTestServer(
   root: string,
   overrides: Partial<Parameters<typeof createScriptServer>[0]> = {},
 ) {
-  let watch = process.platform === 'win32' ? { poll: true, pollInterval: 100 } : true
-
   return createTestServer(root, {
     ...overrides,
-    watch: overrides.watch ?? watch,
+    watch: overrides.watch ?? true,
   })
 }
 
@@ -142,6 +140,20 @@ async function waitForWatchedTestServerReady(
   await waitFor(
     async () => Object.keys(watcher.getWatched()).map(normalizeWindowsPath),
     (watchedDirectories) => watchedDirectories.includes(watchedRoot),
+  )
+}
+
+function getNormalizedWatchedTree(
+  scriptServer: ReturnType<typeof createScriptServer>,
+): Record<string, string[]> {
+  let watcher = getInternalScriptServerWatcher(scriptServer)
+  if (!watcher) return {}
+
+  return Object.fromEntries(
+    Object.entries(watcher.getWatched()).map(([directory, entries]) => [
+      normalizeWindowsPath(directory),
+      [...entries].sort(),
+    ]),
   )
 }
 
@@ -941,12 +953,21 @@ describe('script-server', () => {
 
   it('picks up source changes in watch mode without restarting', async () => {
     let caseDir = await makeTmpDir()
+    let debugWatch = process.platform === 'win32'
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let scriptServer = createWatchedTestServer(caseDir)
+      let watcherEvents: string[] = []
 
       try {
         await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let watcher = getInternalScriptServerWatcher(scriptServer)
+        if (debugWatch) {
+          watcher?.on('all', (event, filePath) => {
+            watcherEvents.push(`${event}:${normalizeWindowsPath(String(filePath))}`)
+          })
+        }
 
         let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
         assert.ok(firstResponse)
@@ -954,14 +975,43 @@ describe('script-server', () => {
 
         await write(caseDir, 'app/entry.ts', 'export const value = 2')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(scriptServer, '/scripts/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /value = 2/.test(body),
-        )
+        let secondBody: string
+        try {
+          secondBody = await waitFor(
+            async () => {
+              let response = await get(scriptServer, '/scripts/app/entry.ts')
+              assert.ok(response)
+              return response.text()
+            },
+            (body) => /value = 2/.test(body),
+          )
+        } catch (error) {
+          if (debugWatch) {
+            let currentResponse = await get(scriptServer, '/scripts/app/entry.ts')
+            let currentBody = currentResponse ? await currentResponse.text() : null
+            let entryPath = path.join(caseDir, 'app/entry.ts')
+            let entryStats = await fs.stat(entryPath)
+            let entryBody = await fs.readFile(entryPath, 'utf-8')
+
+            console.error(
+              '[script-server watch debug]',
+              JSON.stringify(
+                {
+                  currentBody,
+                  entryBody,
+                  entryMtimeMs: entryStats.mtimeMs,
+                  platform: process.platform,
+                  watchedTree: getNormalizedWatchedTree(scriptServer),
+                  watcherEvents,
+                },
+                null,
+                2,
+              ),
+            )
+          }
+
+          throw error
+        }
 
         assert.match(secondBody, /value = 2/)
       } finally {
