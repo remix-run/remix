@@ -10,5 +10,6 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
+  "include": ["src"],
   "exclude": ["dist"]
 }

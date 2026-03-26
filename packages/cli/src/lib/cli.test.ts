@@ -66,6 +66,7 @@ describe('run', () => {
         dependencies: Record<string, string>
         devDependencies: Record<string, string>
         engines: Record<string, string>
+        name: string
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
