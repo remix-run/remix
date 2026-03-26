@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@remix-run/test": "workspace:*",
+    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },

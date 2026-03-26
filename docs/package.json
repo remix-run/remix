@@ -11,7 +11,7 @@
     "semver": "^7.7.3"
   },
   "devDependencies": {
-    "@types/dom-navigation": "^1.0.6",
+    "@types/dom-navigation": "catalog:",
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",

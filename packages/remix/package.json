@@ -339,7 +339,7 @@
     }
   },
   "devDependencies": {
-    "@types/dom-navigation": "^1.0.7",
+    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },

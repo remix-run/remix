@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "playwright": "catalog:"

@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/dom-navigation": "^1.0.7",
+    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "playwright": "catalog:",
