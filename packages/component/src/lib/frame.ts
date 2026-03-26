@@ -270,7 +270,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    moveServerHeadContentToHead(container.doc, fragment)
+    moveServerLinksAndStylesToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -335,14 +335,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        moveServerHeadContentToHead(container.doc, early)
+        moveServerLinksAndStylesToHead(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          moveServerHeadContentToHead(container.doc, fragment)
+          moveServerLinksAndStylesToHead(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
@@ -351,7 +351,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          moveServerHeadContentToHead(container.doc, buffered)
+          moveServerLinksAndStylesToHead(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
@@ -495,45 +495,11 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function moveServerHeadContentToHead(doc: Document, fragment: DocumentFragment): void {
+function moveServerLinksAndStylesToHead(doc: Document, fragment: DocumentFragment): void {
   let target = doc.head
   if (!target) return
 
-  let walker = doc.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT)
-  let headStart: Comment | null = null
-  let headEnd: Comment | null = null
-
-  while (walker.nextNode()) {
-    let comment = walker.currentNode
-    if (!(comment instanceof Comment)) continue
-    if (comment.data === ' rmx:head-content ') {
-      headStart = comment
-      continue
-    }
-    if (comment.data === ' /rmx:head-content ' && headStart) {
-      headEnd = comment
-      break
-    }
-  }
-
-  if (headStart && headEnd) {
-    let current = headStart.nextSibling
-    while (current && current !== headEnd) {
-      let next = current.nextSibling
-      target.appendChild(current)
-      current = next
-    }
-    headStart.remove()
-    headEnd.remove()
-  }
-
-  let heads = Array.from(fragment.querySelectorAll('head'))
-  for (let head of heads) {
-    while (head.firstChild) {
-      target.appendChild(head.firstChild)
-    }
-    head.remove()
-  }
+  moveServerLinksToHead(target, fragment)
 
   let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
   for (let style of styles) {
@@ -541,6 +507,61 @@ function moveServerHeadContentToHead(doc: Document, fragment: DocumentFragment):
       target.appendChild(style)
     }
   }
+
+  let heads = Array.from(fragment.querySelectorAll('head'))
+  for (let head of heads) {
+    head.remove()
+  }
+}
+
+function moveServerLinksToHead(target: HTMLHeadElement, fragment: DocumentFragment): void {
+  let doc = target.ownerDocument
+  let walker = doc.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT)
+  let linkStart: Comment | null = null
+  let linkEnd: Comment | null = null
+
+  while (walker.nextNode()) {
+    let comment = walker.currentNode
+    if (!(comment instanceof Comment)) continue
+    if (comment.data === ' rmx:links ') {
+      linkStart = comment
+      continue
+    }
+    if (comment.data === ' /rmx:links ' && linkStart) {
+      linkEnd = comment
+      moveServerLinkRangeToHead(target, linkStart, linkEnd)
+      linkStart = null
+      linkEnd = null
+    }
+  }
+}
+
+function moveServerLinkRangeToHead(
+  target: HTMLHeadElement,
+  linkStart: Comment,
+  linkEnd: Comment,
+): void {
+  let existingLinks = new Set(
+    Array.from(target.querySelectorAll('link')).map((link) => link.outerHTML),
+  )
+  let current = linkStart.nextSibling
+
+  while (current && current !== linkEnd) {
+    let next = current.nextSibling
+    if (current instanceof HTMLLinkElement) {
+      if (!existingLinks.has(current.outerHTML)) {
+        existingLinks.add(current.outerHTML)
+        target.appendChild(current)
+      } else {
+        current.remove()
+      }
+    } else {
+      current.remove()
+    }
+    current = next
+  }
+  linkStart.remove()
+  linkEnd.remove()
 }
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {

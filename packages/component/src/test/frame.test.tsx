@@ -1575,18 +1575,18 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('hoists hydration head content from streamed frame content into head', async () => {
+  it('hoists hydration client-entry links from streamed frame content into head', async () => {
     let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
       return () => <button id="counter">Counter</button>
     })
 
     let innerContent = await drain(
       renderToStream(<Counter />, {
-        async resolveHeadContent() {
+        async resolveClientEntryLinks() {
           return [
-            '<link rel="modulepreload" href="/scripts/counter.js" />',
-            '<link rel="modulepreload" href="/scripts/shared.js" />',
-          ].join('')
+            { rel: 'modulepreload', href: '/scripts/counter.js' },
+            { rel: 'modulepreload', href: '/scripts/shared.js' },
+          ]
         },
       }),
     )

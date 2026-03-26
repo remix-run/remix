@@ -1010,7 +1010,7 @@ describe('stream', () => {
       expect(endIdx).toBeGreaterThan(contentIdx)
     })
 
-    it('injects resolved head content for hydrated modules before the first chunk', async () => {
+    it('injects resolved client-entry links for hydrated modules before the first chunk', async () => {
       let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
         return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
       })
@@ -1028,14 +1028,14 @@ describe('stream', () => {
           </body>
         </html>,
         {
-          async resolveHeadContent({ clientEntryIds, clientEntryHrefs }) {
+          async resolveClientEntryLinks({ clientEntryIds, clientEntryHrefs }) {
             receivedEntryIds = clientEntryIds
             receivedEntryHrefs = clientEntryHrefs
             return [
-              '<link rel="modulepreload" href="/scripts/counter.js" />',
-              '<link rel="modulepreload" href="/scripts/shared.js" />',
-              '<link rel="modulepreload" href="/scripts/shared.js" />',
-            ].join('')
+              { rel: 'modulepreload', href: '/scripts/counter.js' },
+              { rel: 'modulepreload', href: '/scripts/shared.js' },
+              { rel: 'modulepreload', href: '/scripts/shared.js' },
+            ]
           },
         },
       )
@@ -1044,6 +1044,7 @@ describe('stream', () => {
 
       expect(receivedEntryIds).toEqual(['/js/counter.js#Counter'])
       expect(receivedEntryHrefs).toEqual(['/js/counter.js'])
+      expect(html).toContain('<!-- rmx:links -->')
       expect(html).toContain('<link rel="modulepreload" href="/scripts/counter.js" />')
       expect(html).toContain('<link rel="modulepreload" href="/scripts/shared.js" />')
       expect(html.indexOf('<link rel="modulepreload" href="/scripts/counter.js" />')).toBeLessThan(
@@ -1051,28 +1052,29 @@ describe('stream', () => {
       )
       expect(
         html.match(/<link rel="modulepreload" href="\/scripts\/shared\.js" \/>/g)?.length,
-      ).toBe(2)
+      ).toBe(1)
     })
 
-    it('renders hydration head content as fragment head content', async () => {
+    it('renders hydration client-entry links as fragment head content', async () => {
       let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
         return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
       })
 
       let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveHeadContent() {
-          return '<link rel="modulepreload" href="/scripts/counter.js" />'
+        async resolveClientEntryLinks() {
+          return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
         },
       })
 
       let html = await drain(stream)
 
       expect(html).toContain('<head>')
+      expect(html).toContain('<!-- rmx:links -->')
       expect(html).toContain('<link rel="modulepreload" href="/scripts/counter.js" />')
       expect(html).toContain('<script type="application/json" id="rmx-data">')
     })
 
-    it('hoists resolved head content from blocking frames without exposing entry ids', async () => {
+    it('hoists resolved client-entry links from blocking frames without exposing entry ids', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
         function BlockingFrameCounter(handle: Handle) {
@@ -1080,7 +1082,7 @@ describe('stream', () => {
         },
       )
 
-      let parentResolveHeadContentCalled = false
+      let parentResolveClientEntryLinksCalled = false
       let stream = renderToStream(
         <html>
           <head>
@@ -1108,24 +1110,25 @@ describe('stream', () => {
                       exportName: 'Counter',
                     }
                   },
-                  async resolveHeadContent() {
-                    return '<link rel="modulepreload" href="/scripts/counter.js" />'
+                  async resolveClientEntryLinks() {
+                    return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
                   },
                 },
               ),
             ),
-          async resolveHeadContent() {
-            parentResolveHeadContentCalled = true
-            return ''
+          async resolveClientEntryLinks() {
+            parentResolveClientEntryLinksCalled = true
+            return []
           },
         },
       )
 
       let html = await drain(stream)
 
-      expect(parentResolveHeadContentCalled).toBe(false)
+      expect(parentResolveClientEntryLinksCalled).toBe(false)
       expect(html).toContain('<link rel="modulepreload" href="/scripts/counter.js" />')
       expect(html).not.toContain('<body><link rel="modulepreload"')
+      expect(html).not.toContain('<body><head>')
       expect(html).toContain('<div>Count: 42</div>')
       expect(html.match(/<script type="application\/json" id="rmx-data">/g)?.length).toBe(1)
 
@@ -1140,7 +1143,7 @@ describe('stream', () => {
       })
     })
 
-    it('passes original client-entry ids and resolved hrefs to head resolution', async () => {
+    it('passes original client-entry ids and resolved hrefs to client-entry link resolution', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
         function ResolverCounter(handle: Handle) {
@@ -1151,10 +1154,10 @@ describe('stream', () => {
       let receivedEntryIds: string[] = []
       let receivedEntryHrefs: string[] = []
       let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveHeadContent({ clientEntryIds, clientEntryHrefs }) {
+        async resolveClientEntryLinks({ clientEntryIds, clientEntryHrefs }) {
           receivedEntryIds = clientEntryIds
           receivedEntryHrefs = clientEntryHrefs
-          return '<link rel="modulepreload" href="/scripts/counter.js" />'
+          return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
         },
         async resolveClientEntry(entryId, component) {
           expect(entryId).toBe('file:///app/components/counter.tsx')
@@ -1180,6 +1183,49 @@ describe('stream', () => {
         exportName: 'Counter',
         props: { initialCount: 42 },
       })
+    })
+
+    it('dedupes hoisted blocking-frame links against document links', async () => {
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>App</title>
+          </head>
+          <body>
+            <Counter initialCount={1} />
+            <Frame src="/child" />
+          </body>
+        </html>,
+        {
+          async resolveClientEntryLinks({ clientEntryHrefs }) {
+            return clientEntryHrefs.map((href) => ({ rel: 'modulepreload', href }))
+          },
+          async resolveFrame() {
+            return drain(
+              renderToStream(
+                <html>
+                  <body>
+                    <Counter initialCount={2} />
+                  </body>
+                </html>,
+                {
+                  async resolveClientEntryLinks({ clientEntryHrefs }) {
+                    return clientEntryHrefs.map((href) => ({ rel: 'modulepreload', href }))
+                  },
+                },
+              ),
+            )
+          },
+        },
+      )
+
+      let html = await drain(stream)
+
+      expect(html.match(/<link rel="modulepreload" href="\/js\/counter\.js" \/>/g)?.length).toBe(1)
     })
 
     it('uses the component name as the default export name during SSR', async () => {

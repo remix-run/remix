@@ -1,3 +1,3 @@
-Add `resolveHeadContent()` for rendering head markup from client entry data during SSR.
+Add `resolveClientEntryLinks()` for rendering client-entry link tags during SSR.
 
-`renderToStream()` now accepts `resolveHeadContent({ clientEntryIds, clientEntryHrefs })` which returns `Promise<string>` so you can return additional `<head>` HTML content for client entries during server rendering.
+`renderToStream()` now accepts `resolveClientEntryLinks({ clientEntryIds, clientEntryHrefs })` which returns `Promise<LinkDescriptor[]>`

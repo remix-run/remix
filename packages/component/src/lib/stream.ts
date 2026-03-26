@@ -40,12 +40,16 @@ export interface RenderToStreamOptions {
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry
   /**
-   * Callback used to render head content for client entry modules during SSR.
+   * Callback used to resolve link descriptors for client entry modules during SSR.
    */
-  resolveHeadContent?: (options: {
+  resolveClientEntryLinks?: (options: {
     clientEntryIds: string[]
     clientEntryHrefs: string[]
-  }) => Promise<string> | string
+  }) =>
+    | Promise<readonly ClientEntryLinkDescriptor[]>
+    | readonly ClientEntryLinkDescriptor[]
+    | Promise<ClientEntryLinkDescriptor[]>
+    | ClientEntryLinkDescriptor[]
 }
 
 /**
@@ -67,6 +71,26 @@ interface HydrationData {
 interface ResolvedClientEntry {
   href: string
   exportName: string
+}
+
+export interface ClientEntryLinkDescriptor {
+  rel: string
+  as?: string
+  blocking?: string
+  color?: string
+  crossOrigin?: string
+  disabled?: boolean
+  fetchPriority?: string
+  href?: string
+  hrefLang?: string
+  imageSizes?: string
+  imageSrcSet?: string
+  integrity?: string
+  media?: string
+  referrerPolicy?: string
+  sizes?: string
+  title?: string
+  type?: string
 }
 
 interface FrameData {
@@ -92,8 +116,9 @@ interface RenderContext {
   hydratedClientEntryIds: Set<string>
   hydratedClientEntryHrefs: Set<string>
   unresolvedClientEntryIds: Set<string>
-  headContent: string
-  blockingFrameHeadContents: string[]
+  clientEntryLinks: ClientEntryLinkDescriptor[]
+  blockingFrameLinks: ClientEntryLinkDescriptor[]
+  blockingFrameStyleTags: string[]
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -163,6 +188,10 @@ const NUMERIC_CSS_PROPS = new Set([
 
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
 const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
+const RMX_LINKS_BLOCK_PATTERN = /<!-- rmx:links -->([\s\S]*?)<!-- \/rmx:links -->/g
+const RMX_STYLE_TAG_PATTERN = /<style(?=[^>]*\bdata-rmx-styles\b)[^>]*>[\s\S]*?<\/style>/gi
+const LINK_TAG_PATTERN = /<link\b[\s\S]*?\/?>/gi
+const LINK_ATTR_PATTERN = /([^\s=/>]+)(?:="([^"]*)")?/g
 
 function createSsrSignalError() {
   return new Error('handle.signal is not available during SSR.')
@@ -213,8 +242,9 @@ export function renderToStream(
     hydratedClientEntryIds: new Set(),
     hydratedClientEntryHrefs: new Set(),
     unresolvedClientEntryIds: new Set(),
-    headContent: '',
-    blockingFrameHeadContents: [],
+    clientEntryLinks: [],
+    blockingFrameLinks: [],
+    blockingFrameStyleTags: [],
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -228,13 +258,14 @@ export function renderToStream(
         await resolveBlocking(root)
         await resolveClientEntries(context, options?.resolveClientEntry)
         validateClientEntriesForHydration(context)
-        if (options?.resolveHeadContent && context.hydratedClientEntryIds.size > 0) {
-          context.headContent = await Promise.resolve(
-            options.resolveHeadContent({
+        if (options?.resolveClientEntryLinks && context.hydratedClientEntryIds.size > 0) {
+          let links = await Promise.resolve(
+            options.resolveClientEntryLinks({
               clientEntryIds: [...context.hydratedClientEntryIds],
               clientEntryHrefs: [...context.hydratedClientEntryHrefs],
             }),
           )
+          context.clientEntryLinks = dedupeClientEntryLinks(links)
         }
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
@@ -885,8 +916,7 @@ async function resolveClientEntries(
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
 ): Promise<void> {
-  let unresolvedEntryIds = [...context.unresolvedClientEntryIds]
-  if (unresolvedEntryIds.length === 0) return
+  if (context.unresolvedClientEntryIds.size === 0) return
 
   for (let [hydrationId, entryId] of context.hydrationEntryIds) {
     if (!context.unresolvedClientEntryIds.has(entryId)) continue
@@ -1006,8 +1036,11 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
 
-  let headContent = context.blockingFrameHeadContents.join('')
-  headContent += renderResolvedHeadContent(context.headContent)
+  let headContent = renderResolvedClientEntryLinks([
+    ...context.blockingFrameLinks,
+    ...context.clientEntryLinks,
+  ])
+  headContent += dedupeHtmlFragments(context.blockingFrameStyleTags).join('')
 
   let css = collectAllStyles(context)
   if (css) {
@@ -1122,10 +1155,7 @@ function buildRmxDataScript(context: RenderContext): string {
 function mergeResolvedFrameRmxData(html: string, context: RenderContext): string {
   return html
     .replace(/<head\b[^>]*>([\s\S]*?)<\/head>/gi, (_match, headContent: string) => {
-      let nextHeadContent = headContent.trim()
-      if (nextHeadContent.length > 0) {
-        context.blockingFrameHeadContents.push(nextHeadContent)
-      }
+      mergeResolvedFrameHeadContent(headContent, context)
       return ''
     })
     .replace(
@@ -1136,6 +1166,14 @@ function mergeResolvedFrameRmxData(html: string, context: RenderContext): string
       },
     )
     .replace(/<head>\s*<\/head>/gi, '')
+}
+
+function mergeResolvedFrameHeadContent(headContent: string, context: RenderContext): void {
+  let extractedLinks = extractResolvedClientEntryLinks(headContent)
+  context.blockingFrameLinks.push(...extractedLinks.links)
+
+  let extractedStyles = extractServerStyleTags(extractedLinks.html)
+  context.blockingFrameStyleTags.push(...extractedStyles.styleTags)
 }
 
 function escapeScriptJson(json: string): string {
@@ -1165,13 +1203,159 @@ function mergeRmxDataPayload(context: RenderContext, payload: RmxDataPayload): v
   }
 }
 
-function renderResolvedHeadContent(html: string): string {
-  if (!html) return ''
-  return `<!-- rmx:head-content -->${html}<!-- /rmx:head-content -->`
+function renderResolvedClientEntryLinks(links: readonly ClientEntryLinkDescriptor[]): string {
+  let dedupedLinks = dedupeClientEntryLinks(links)
+  if (dedupedLinks.length === 0) return ''
+  return `<!-- rmx:links -->${dedupedLinks.map(renderClientEntryLink).join('')}<!-- /rmx:links -->`
 }
 
-function stripResolvedHeadContent(html: string): string {
-  return html.replace(/<!-- rmx:head-content -->([\s\S]*?)<!-- \/rmx:head-content -->/g, '')
+function renderClientEntryLink(link: ClientEntryLinkDescriptor): string {
+  return `<link${renderAttributes(link, false)} />`
+}
+
+function dedupeClientEntryLinks(
+  links: readonly ClientEntryLinkDescriptor[],
+): ClientEntryLinkDescriptor[] {
+  let deduped: ClientEntryLinkDescriptor[] = []
+  let seen = new Set<string>()
+
+  for (let link of links) {
+    if (!link || typeof link.rel !== 'string' || link.rel.length === 0) continue
+    let rendered = renderClientEntryLink(link)
+    if (seen.has(rendered)) continue
+    seen.add(rendered)
+    deduped.push(link)
+  }
+
+  return deduped
+}
+
+function dedupeHtmlFragments(fragments: readonly string[]): string[] {
+  let deduped: string[] = []
+  let seen = new Set<string>()
+
+  for (let fragment of fragments) {
+    if (!fragment || seen.has(fragment)) continue
+    seen.add(fragment)
+    deduped.push(fragment)
+  }
+
+  return deduped
+}
+
+function extractResolvedClientEntryLinks(html: string): {
+  html: string
+  links: ClientEntryLinkDescriptor[]
+} {
+  let links: ClientEntryLinkDescriptor[] = []
+  let strippedHtml = html.replace(RMX_LINKS_BLOCK_PATTERN, (_match, linksHtml: string) => {
+    links.push(...parseClientEntryLinks(linksHtml))
+    return ''
+  })
+
+  return {
+    html: strippedHtml,
+    links,
+  }
+}
+
+function extractServerStyleTags(html: string): { html: string; styleTags: string[] } {
+  let styleTags: string[] = []
+  let strippedHtml = html.replace(RMX_STYLE_TAG_PATTERN, (styleTag) => {
+    styleTags.push(styleTag)
+    return ''
+  })
+
+  return {
+    html: strippedHtml,
+    styleTags,
+  }
+}
+
+function parseClientEntryLinks(html: string): ClientEntryLinkDescriptor[] {
+  let links: ClientEntryLinkDescriptor[] = []
+  let matches = html.match(LINK_TAG_PATTERN) ?? []
+
+  for (let linkHtml of matches) {
+    let link = parseClientEntryLink(linkHtml)
+    if (link) links.push(link)
+  }
+
+  return links
+}
+
+function parseClientEntryLink(html: string): ClientEntryLinkDescriptor | null {
+  let descriptor: Partial<ClientEntryLinkDescriptor> = {}
+  LINK_ATTR_PATTERN.lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = LINK_ATTR_PATTERN.exec(html))) {
+    let descriptorKey = parseClientEntryLinkAttributeName(match[1])
+    if (!descriptorKey) continue
+
+    if (match[2] === undefined) {
+      descriptor[descriptorKey] = true as never
+      continue
+    }
+
+    descriptor[descriptorKey] = unescapeHtml(match[2]) as never
+  }
+
+  if (typeof descriptor.rel !== 'string' || descriptor.rel.length === 0) {
+    return null
+  }
+
+  return descriptor as ClientEntryLinkDescriptor
+}
+
+function parseClientEntryLinkAttributeName(name: string): keyof ClientEntryLinkDescriptor | null {
+  switch (name.toLowerCase()) {
+    case 'as':
+      return 'as'
+    case 'blocking':
+      return 'blocking'
+    case 'color':
+      return 'color'
+    case 'crossorigin':
+      return 'crossOrigin'
+    case 'disabled':
+      return 'disabled'
+    case 'fetchpriority':
+      return 'fetchPriority'
+    case 'href':
+      return 'href'
+    case 'hreflang':
+      return 'hrefLang'
+    case 'imagesizes':
+      return 'imageSizes'
+    case 'imagesrcset':
+      return 'imageSrcSet'
+    case 'integrity':
+      return 'integrity'
+    case 'media':
+      return 'media'
+    case 'referrerpolicy':
+      return 'referrerPolicy'
+    case 'rel':
+      return 'rel'
+    case 'sizes':
+      return 'sizes'
+    case 'title':
+      return 'title'
+    case 'type':
+      return 'type'
+    default:
+      return null
+  }
+}
+
+function unescapeHtml(str: string): string {
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&')
 }
 
 function serializeStyleObject(style: Record<string, any>): string {

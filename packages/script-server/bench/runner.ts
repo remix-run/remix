@@ -343,7 +343,10 @@ function formatFixtureStats(fixture: BenchFixture): string {
 
 const options = parseArgOptions()
 
-const [basicFixture, deepGraphFixture] = await Promise.all([getBasicFixture(), getDeepGraphFixture()])
+const [basicFixture, deepGraphFixture] = await Promise.all([
+  getBasicFixture(),
+  getDeepGraphFixture(),
+])
 console.log(`Fixture ${basicFixture.label}: ${formatFixtureStats(basicFixture)}`)
 console.log(`Fixture ${deepGraphFixture.label}: ${formatFixtureStats(deepGraphFixture)}`)
 

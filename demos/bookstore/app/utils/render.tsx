@@ -22,9 +22,9 @@ export function render(node: RemixNode, init?: ResponseInit) {
         exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
       }
     },
-    async resolveHeadContent({ clientEntryIds }) {
+    async resolveClientEntryLinks({ clientEntryIds }) {
       let preloads = await scriptServer.getPreloads(clientEntryIds).catch(() => [])
-      return preloads.map((href) => `<link rel="modulepreload" href="${href}">`).join('')
+      return preloads.map((href) => ({ rel: 'modulepreload', href }))
     },
     onError(error) {
       console.error(error)
