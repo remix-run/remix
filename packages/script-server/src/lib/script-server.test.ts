@@ -938,30 +938,35 @@ describe('script-server', () => {
   })
 
   it('picks up source changes in watch mode without restarting', async () => {
-    await write(dir, 'app/entry.ts', 'export const value = 1')
-    let scriptServer = createWatchedTestServer(dir)
-
+    let caseDir = await makeTmpDir()
     try {
-      await waitForWatchedTestServerReady(scriptServer, dir)
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let scriptServer = createWatchedTestServer(caseDir)
 
-      let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
-      assert.ok(firstResponse)
-      assert.match(await firstResponse.text(), /value = 1/)
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
 
-      await write(dir, 'app/entry.ts', 'export const value = 2')
+        let firstResponse = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 1/)
 
-      let secondBody = await waitFor(
-        async () => {
-          let response = await get(scriptServer, '/scripts/app/entry.ts')
-          assert.ok(response)
-          return response.text()
-        },
-        (body) => /value = 2/.test(body),
-      )
+        await write(caseDir, 'app/entry.ts', 'export const value = 2')
 
-      assert.match(secondBody, /value = 2/)
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /value = 2/.test(body),
+        )
+
+        assert.match(secondBody, /value = 2/)
+      } finally {
+        await scriptServer.close()
+      }
     } finally {
-      await scriptServer.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
     }
   })
 
