@@ -13,11 +13,14 @@ try to teach every subsystem in detail here.
 
 - Treat Remix as a fullstack app framework with clear subsystems: server, routing, data, UI, auth,
   files, and security.
-- Prefer Remix's runtime request flow and Web API primitives over framework-specific build-time
-  abstractions.
-- Think in terms of composing focused modules into one app, not picking unrelated packages ad hoc.
-- When the app uses the `remix` package, prefer imports like
-  `import { createRouter } from 'remix/fetch-router'`.
+- Build around the runtime request flow first: request handling, middleware, route ownership, data
+  access, rendering, then optional client-side enhancement.
+- Prefer standard Web APIs such as `Request`, `Response`, `URL`, `Headers`, `FormData`, and `File`
+  across app code so the same mental model works on both the server and in the browser.
+- Think in terms of one cohesive app made from focused Remix subsystems, not a pile of unrelated
+  packages or one-off patterns.
+- When the app uses the `remix` package, prefer `remix/...` imports over reaching for
+  `@remix-run/...` package names by default.
 - Use this skill to orient and route; switch to narrower skills once the task is clearly about
   layout, UI, or another subsystem.
 
@@ -43,8 +46,8 @@ Use this as the default mental model:
   Use `../remix-ui/SKILL.md` for pages, layouts, rendering, interactions, styling, frames,
   navigation behavior, client entries, and UI tests.
 - Server and middleware
-  TODO: Add `remix-server` for Fetch server setup, middleware composition, request context, and
-  runtime wiring.
+  Use `../remix-server/SKILL.md` for Fetch server setup, middleware composition, request context,
+  and runtime wiring.
 - Routing and controller contracts
   TODO: Add `remix-routing` for route contracts, nested route structure, controller mapping, and URL
   ownership.
@@ -64,5 +67,11 @@ Use this as the default mental model:
   `../remix-project-layout/SKILL.md`.
 - If the task is "build this screen", "add interactivity", "wire client behavior", or "style this
   UI", use `../remix-ui/SKILL.md`.
+- If the task is "how should I test this UI?" or "how do I verify this interaction?", use
+  `../remix-ui/SKILL.md`.
+- If the task is "wire the request pipeline", "set up `server.ts`", "compose middleware", or
+  "define request-scoped context", use `../remix-server/SKILL.md`.
+- If the task is "how should I test this request flow?" or "where should runtime integration checks
+  live?", use `../remix-server/SKILL.md`.
 - If the task spans multiple subsystems, use this overview to identify the main workstreams first,
   then hand off to narrower skills.

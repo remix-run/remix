@@ -47,6 +47,11 @@ Also read the READMEs, docs, and demos that define the subsystem you are writing
   that subsystem or handwaving past it.
 - Treat cross-skill handoffs as part of the skill design, not optional polish. If a neighboring
   subsystem matters to the task, point to the skill that owns it.
+- Make every cross-reference earn its place. Do not add generic sibling-skill lists when the skill
+  already explains the relevant boundary inline or the linked skill is only loosely related.
+- Make repeated guidance earn its place too. Do not restate defaults from broader skills unless the
+  narrower skill is adding subsystem-specific meaning, correcting a common wrong turn, or showing a
+  concrete shape the agent should copy.
 - Use TODOs to preserve the intended shape of the skill graph when downstream skills are not ready
   yet. Do not fake completeness with placeholder detail.
 
@@ -66,6 +71,10 @@ Do not turn an overview skill into a project plan, package catalog, or omnibus r
 - Focus on one subsystem or one kind of decision.
 - Teach practical defaults, ownership rules, and workflows.
 - Link to sibling skills instead of absorbing their responsibilities.
+- Prefer boundary handoffs in the exact spot where the boundary matters over a generic "Related
+  Skills" section that just lists neighboring nodes.
+- Prefer small, copyable code-shape examples when they teach the subsystem better than another
+  paragraph of prose.
 - Add `references/` files when the skill needs to spider into deeper API details, patterns,
   examples, or edge cases that would bloat the main `SKILL.md`.
 - If another skill owns a related subsystem, reference that skill directly instead of duplicating
@@ -82,6 +91,26 @@ Prefer linking to another skill when:
 - another skill owns the neighboring subsystem
 - the overlap is conceptual or workflow-related rather than just extra API detail
 - repeating the explanation would blur skill boundaries
+- the handoff helps the agent decide what to do next right at the point of confusion
+
+Avoid linking to another skill when:
+
+- the target skill is only loosely adjacent and the link does not change the next action
+- the same boundary is already stated clearly elsewhere in the skill
+- the section would turn into a generic catalog of sibling skills instead of a real handoff
+
+Prefer repeating guidance from another skill only when:
+
+- the narrower skill needs to translate the broader rule into subsystem-specific action
+- the repeated note prevents a common mistake in this subsystem
+- a short example makes the guidance more concrete than the source skill does
+
+Avoid repeating guidance when:
+
+- it is only restating a convention the agent already learned from `remix-overview` or another
+  upstream skill
+- the repeated prose does not change what the agent should do next
+- a code example or boundary handoff would teach the point more clearly
 
 ## Rules
 
@@ -98,6 +127,10 @@ Prefer linking to another skill when:
   needed.
 - Prefer linking to the skill that owns a neighboring subsystem over re-explaining that subsystem in
   summary form.
+- Do not default to a broad "Related Skills" section. Add one only when the skill truly has a small,
+  stable set of high-value handoffs that are not already covered inline.
+- Do not duplicate overview-level conventions in specialist skills unless the repetition is
+  materially more concrete or subsystem-specific.
 - Use relative paths when pointing to sibling skills or local references so the relationship is
   explicit and durable.
 - Keep prose oriented around building something: structure, request flow, rendering, data,
@@ -108,13 +141,15 @@ Prefer linking to another skill when:
 - Use a short intro that says what the skill is for and what it should not try to do.
 - Use a small set of sections with clear jobs.
 - Give one concrete import or API-shape example when it prevents a common wrong turn.
+- Replace weak "prefer imports like ..." reminders with a concrete shape example when the real
+  lesson is how the subsystem is wired together.
 - Use `references/` for progressive disclosure when the skill needs deeper detail.
 - Give each reference a one-line reason to read it, as `remix-ui` does.
 - Prefer short routing guidance such as "use `remix-project-layout` for structure" over long
   repeated explanations.
 - Point to sibling skills when a task touches their subsystem.
-- Add a small "Related Skills" or equivalent routing hint when a specialist skill commonly leans on
-  neighboring subsystems.
+- If you need a routing section, prefer names like "Hand Off To" or "Future Skill Handoffs" when
+  they describe the section more honestly than "Related Skills".
 - When a future skill is not ready, mention it with a TODO and keep moving.
 
 ## Anti-Patterns
@@ -125,6 +160,9 @@ Prefer linking to another skill when:
 - Duplicating another skill's detailed workflow instead of handing off to it.
 - Letting one skill become an omnibus just because several related references could fit there.
 - Re-explaining a neighboring subsystem instead of pointing to the skill that owns it.
+- Adding weak or redundant cross-links just because nearby skills exist.
+- Repeating overview-level guidance in a specialist skill without adding narrower, more useful
+  direction.
 - Leaving invalid frontmatter or malformed Markdown structure in a skill.
 - Filling the skill with temporary author notes that are not useful to the agent consuming it.
 
@@ -140,4 +178,7 @@ Prefer linking to another skill when:
   app composition matters?
 - Does it use local `references/` for deeper detail instead of bloating the main `SKILL.md`?
 - Does it point to sibling skills when another subsystem owns part of the problem?
+- Do cross-references appear only where they materially help the agent choose the next step?
+- Does the skill avoid repeating broader-scope guidance unless it adds subsystem-specific value or a
+  concrete example?
 - Are TODOs used only to preserve shape, not to hide missing core content?
