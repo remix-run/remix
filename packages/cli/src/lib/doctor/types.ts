@@ -27,17 +27,38 @@ export type DoctorFindingCode =
   | 'orphan-controller'
   | 'orphan-route-directory'
 
+export type DoctorFixKind = 'create-directory' | 'create-file'
+
 export interface DoctorFinding {
   actualPath?: string
   code: DoctorFindingCode
   expectedPath?: string
+  fixable?: boolean
   message: string
   routeName?: string
   severity: DoctorFindingSeverity
   suite: DoctorSuiteName
 }
 
+export interface DoctorFixPlan {
+  code: DoctorFindingCode
+  contents?: string
+  kind: DoctorFixKind
+  path: string
+  routeName?: string
+  suite: DoctorSuiteName
+}
+
+export interface DoctorAppliedFix {
+  code: DoctorFindingCode
+  kind: DoctorFixKind
+  path: string
+  routeName?: string
+  suite: DoctorSuiteName
+}
+
 export interface DoctorSuiteResult {
+  appliedFixes?: DoctorAppliedFix[]
   findings: DoctorFinding[]
   name: DoctorSuiteName
   reason?: string
@@ -45,8 +66,10 @@ export interface DoctorSuiteResult {
 }
 
 export interface DoctorReport {
+  appliedFixes?: DoctorAppliedFix[]
   appRoot?: string
   findings: DoctorFinding[]
+  remainingFindings?: DoctorFinding[]
   routesFile?: string
   suites: DoctorSuiteResult[]
 }

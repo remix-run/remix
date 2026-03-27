@@ -17,6 +17,7 @@ export interface OwnershipRouteNode {
   children: OwnershipRouteNode[]
   key: string
   kind: RouteTreeNodeKind
+  method?: string
   name: string
 }
 

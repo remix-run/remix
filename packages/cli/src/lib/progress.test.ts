@@ -112,7 +112,7 @@ describe('progress', () => {
               await writeProgressCommandHeader('doctor', process.stdout)
 
               assert.deepEqual(writes, [
-                '\u001B[94mR\u001B[0m\u001B[92me\u001B[0m\u001B[93mm\u001B[0m\u001B[95mi\u001B[0m\u001B[91mx\u001B[0m v9.9.9 - doctor\n\n',
+                '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
               ])
             }),
           ),

@@ -1,6 +1,7 @@
 import * as path from 'node:path'
 
 const OWNER_FILE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'] as const
+export type OwnerFileExtension = (typeof OWNER_FILE_EXTENSIONS)[number]
 
 export function getActionOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
@@ -25,6 +26,17 @@ export function getRouteSubtreePath(segments: string[]): string {
 export function getPreferredOwnerDisplayPath(candidates: string[]): string {
   let tsxCandidate = candidates.find((candidate) => candidate.endsWith('.tsx'))
   return tsxCandidate ?? candidates[0] ?? ''
+}
+
+export function getOwnerCandidateForExtension(
+  candidates: string[],
+  extension: OwnerFileExtension,
+): string | null {
+  return candidates.find((candidate) => candidate.endsWith(extension)) ?? null
+}
+
+export function getOwnerFileExtension(filePath: string): OwnerFileExtension | null {
+  return OWNER_FILE_EXTENSIONS.find((extension) => filePath.endsWith(extension)) ?? null
 }
 
 export function toDiskSegment(segment: string): string {

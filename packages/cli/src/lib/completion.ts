@@ -154,7 +154,11 @@ function completeCommand(
   }
 
   if (command === 'doctor') {
-    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, ['--json', '--strict'])
+    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [
+      '--fix',
+      '--json',
+      '--strict',
+    ])
   }
 
   if (command === 'routes') {

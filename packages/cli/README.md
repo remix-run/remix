@@ -7,6 +7,7 @@ Command-line interface for creating and managing Remix projects.
 - Create new Remix projects with zero-install `npm create remix` or installed `remix new`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
+- Create missing low-risk controller owner files with `remix doctor --fix`
 - Inspect the current app route tree with `remix routes`
 - Sync Remix skills into `.agents/skills` with `remix skills`
 - Print the current Remix version with `remix version`
@@ -45,6 +46,7 @@ The rest of the CLI is available through the installed `remix` command:
 remix new my-remix-app
 remix completion bash >> ~/.bashrc
 remix doctor
+remix doctor --fix
 remix routes
 remix routes --table
 remix routes --table --no-headers
@@ -61,6 +63,7 @@ import { run } from 'remix/cli'
 await run(['new', 'my-remix-app'])
 await run(['completion', 'bash'])
 await run(['doctor'])
+await run(['doctor', '--fix'])
 await run(['routes'])
 await run(['routes', '--table'])
 await run(['routes', '--table', '--no-headers'])

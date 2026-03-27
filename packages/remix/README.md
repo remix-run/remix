@@ -24,6 +24,7 @@ After installing `remix`, the equivalent local command and the rest of the CLI a
 remix new my-remix-app
 remix completion bash >> ~/.bashrc
 remix doctor
+remix doctor --fix
 remix routes
 remix routes --table
 remix routes --table --no-headers
@@ -40,6 +41,7 @@ import { run } from 'remix/cli'
 await run(['new', 'my-remix-app'])
 await run(['completion', 'bash'])
 await run(['doctor'])
+await run(['doctor', '--fix'])
 await run(['routes'])
 await run(['routes', '--table'])
 await run(['routes', '--table', '--no-headers'])

@@ -82,7 +82,10 @@ describe('run', () => {
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
     assert.equal(doctorHelp.exitCode, 0)
-    assert.match(doctorHelp.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--no-color\]/)
+    assert.match(
+      doctorHelp.stdout,
+      /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/,
+    )
     assert.equal(completionHelp.exitCode, 0)
     assert.match(completionHelp.stdout, /Usage:\s+remix completion <bash\|zsh>/)
     assert.equal(newHelp.exitCode, 0)

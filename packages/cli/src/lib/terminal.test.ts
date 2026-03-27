@@ -90,7 +90,7 @@ describe('terminal', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), 'ok')
-          assert.equal(remixWordmark(), 'Remix')
+          assert.equal(remixWordmark(), 'REMIX')
           assert.equal(reset(process.stdout), '')
         }),
       ),
@@ -204,7 +204,7 @@ describe('terminal', () => {
 
           assert.equal(
             remixWordmark(),
-            '\u001B[94mR\u001B[0m\u001B[92me\u001B[0m\u001B[93mm\u001B[0m\u001B[95mi\u001B[0m\u001B[91mx\u001B[0m',
+            '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m',
           )
         }),
       ),
@@ -216,7 +216,7 @@ describe('terminal', () => {
       withTTY(process.stdout, true, () => {
         configureColors({ disabled: false })
 
-        assert.equal(remixWordmark(), 'Remix')
+        assert.equal(remixWordmark(), 'REMIX')
       }),
     )
   })

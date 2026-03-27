@@ -3,10 +3,14 @@ import * as process from 'node:process'
 
 import { checkControllerConventions } from '../doctor/controllers.ts'
 import { checkEnvironment } from '../doctor/environment.ts'
+import { applyDoctorFixPlans } from '../doctor/fixes.ts'
 import { checkProject } from '../doctor/project.ts'
 import {
+  createDoctorSuite,
   createSkippedDoctorSuite,
+  type DoctorAppliedFix,
   type DoctorFinding,
+  type DoctorFixPlan,
   type DoctorReport,
   type DoctorSuiteName,
   type DoctorSuiteResult,
@@ -34,6 +38,12 @@ const DOCTOR_SUITE_LABELS = {
   },
 } satisfies Record<DoctorSuiteName, string | { complete: string; running: string }>
 
+interface DoctorCommandOptions {
+  fix: boolean
+  json: boolean
+  strict: boolean
+}
+
 export async function runDoctorCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getDoctorCommandHelpText())
@@ -48,7 +58,8 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     if (!options.json) {
       await writeProgressCommandHeader('doctor', process.stdout)
     }
-    let report = await collectDoctorReport(progress)
+
+    let report = await collectDoctorReport(progress, options)
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
@@ -56,7 +67,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
       process.stdout.write(renderDoctorSummary(report))
     }
 
-    if (options.strict && hasWarningFindings(report.findings)) {
+    if ((options.fix || options.strict) && hasWarningFindings(report.findings)) {
       return 1
     }
 
@@ -73,22 +84,25 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
 export function getDoctorCommandHelpText(): string {
   return `Usage:
-  remix doctor [--json] [--strict] [--no-color]
+  remix doctor [--json] [--strict] [--fix] [--no-color]
 
 Check project environment and Remix app conventions for the current project.
 
 Options:
   --json       Print doctor findings as JSON
   --strict     Exit with status 1 when warning-level findings are present
+  --fix        Create missing low-risk controller owner files
 
 Examples:
   remix doctor
   remix doctor --json
   remix doctor --strict
+  remix doctor --fix
 `
 }
 
-function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolean } {
+function parseDoctorCommandArgs(argv: string[]): DoctorCommandOptions {
+  let fix = false
   let json = false
   let strict = false
 
@@ -103,6 +117,11 @@ function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolea
       continue
     }
 
+    if (arg === '--fix') {
+      fix = true
+      continue
+    }
+
     if (arg.startsWith('-')) {
       throw unknownArgument(arg)
     }
@@ -110,12 +129,14 @@ function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolea
     throw unexpectedExtraArgument(arg)
   }
 
-  return { json, strict }
+  return { fix, json, strict }
 }
 
 async function collectDoctorReport(
   progress: StepProgressReporter<DoctorSuiteName> | null,
+  options: DoctorCommandOptions,
 ): Promise<DoctorReport> {
+  let appliedFixes: DoctorAppliedFix[] = []
   let environment = await runDoctorSuite(progress, 'environment', () => checkEnvironment())
   let findings = [...environment.suite.findings]
   let suites: DoctorSuiteResult[] = [environment.suite]
@@ -126,6 +147,7 @@ async function collectDoctorReport(
 
   if (progress != null) {
     writeSuiteFindings(environment.suite)
+    writeSuiteAppliedFixes(environment.suite)
     writeSuiteGap(progress)
   }
 
@@ -143,7 +165,9 @@ async function collectDoctorReport(
 
     return {
       appRoot: environment.projectRoot,
+      appliedFixes,
       findings,
+      remainingFindings: findings,
       routesFile,
       suites,
     }
@@ -156,6 +180,7 @@ async function collectDoctorReport(
 
   if (progress != null) {
     writeSuiteFindings(project.suite)
+    writeSuiteAppliedFixes(project.suite)
     writeSuiteGap(progress)
   }
 
@@ -167,38 +192,85 @@ async function collectDoctorReport(
 
     return {
       appRoot: environment.projectRoot,
+      appliedFixes,
       findings,
+      remainingFindings: findings,
       routesFile,
       suites,
     }
   }
 
-  let controllers = await runDoctorSuite(progress, 'controllers', async () => ({
-    suite: await checkControllerConventions(
+  let controllers = await runDoctorSuite(progress, 'controllers', async () => {
+    let controllerResult = await checkControllerConventions(
       project.routeManifest!.appRoot,
       project.routeManifest!.tree,
-    ),
-  }))
+    )
+    let remainingFindings = controllerResult.suite.findings
+    let suiteAppliedFixes: DoctorAppliedFix[] = []
+
+    if (options.fix && controllerResult.fixPlans.length > 0) {
+      suiteAppliedFixes = await applyDoctorFixPlans(
+        project.routeManifest!.appRoot,
+        controllerResult.fixPlans,
+      )
+      remainingFindings = getRemainingFindings(controllerResult.suite.findings, suiteAppliedFixes)
+    }
+
+    let suite = createDoctorSuite('controllers', remainingFindings)
+    if (suiteAppliedFixes.length > 0) {
+      suite.appliedFixes = suiteAppliedFixes
+    }
+
+    return { appliedFixes: suiteAppliedFixes, suite }
+  })
+
   findings.push(...controllers.suite.findings)
+  appliedFixes.push(...(controllers.appliedFixes ?? []))
   suites.push(controllers.suite)
 
   if (progress != null) {
     writeSuiteFindings(controllers.suite)
+    writeSuiteAppliedFixes(controllers.suite)
     writeSuiteGap(progress)
   }
 
-  return {
+  let report: DoctorReport = {
     appRoot: environment.projectRoot,
     findings,
     routesFile,
     suites,
   }
+
+  if (options.fix) {
+    report.appliedFixes = appliedFixes
+    report.remainingFindings = findings
+  }
+
+  return report
+}
+
+function getRemainingFindings(
+  findings: DoctorFinding[],
+  appliedFixes: DoctorAppliedFix[],
+): DoctorFinding[] {
+  let appliedFindingKeys = new Set(
+    appliedFixes.map((appliedFix) => `${appliedFix.code}:${appliedFix.routeName ?? ''}`),
+  )
+
+  return findings.filter(
+    (finding) => !appliedFindingKeys.has(`${finding.code}:${finding.routeName ?? ''}`),
+  )
 }
 
 function renderDoctorSummary(report: DoctorReport): string {
   let lines: string[] = []
   let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
   let adviceCount = report.findings.length - warningCount
+
+  if ((report.appliedFixes?.length ?? 0) > 0) {
+    let fixCount = report.appliedFixes!.length
+    lines.push(`Applied ${fixCount} ${fixCount === 1 ? 'fix' : 'fixes'}.`)
+  }
 
   if (report.findings.length === 0) {
     lines.push('Doctor found no issues.')
@@ -223,6 +295,14 @@ function formatFinding(finding: DoctorFinding): string {
   return line
 }
 
+function formatAppliedFix(appliedFix: DoctorAppliedFix): string {
+  if (appliedFix.kind === 'create-file') {
+    return `  • Created ${appliedFix.path}`
+  }
+
+  return `  • Created ${appliedFix.path}`
+}
+
 function writeSuiteGap(progress: StepProgressReporter<DoctorSuiteName> | null): void {
   if (progress == null) {
     return
@@ -231,7 +311,9 @@ function writeSuiteGap(progress: StepProgressReporter<DoctorSuiteName> | null): 
   process.stdout.write('\n')
 }
 
-async function runDoctorSuite<result extends { suite: DoctorSuiteResult }>(
+async function runDoctorSuite<
+  result extends { appliedFixes?: DoctorAppliedFix[]; suite: DoctorSuiteResult },
+>(
   progress: StepProgressReporter<DoctorSuiteName> | null,
   label: DoctorSuiteName,
   callback: () => Promise<result>,
@@ -263,5 +345,17 @@ function writeSuiteFindings(suite: DoctorSuiteResult): void {
 
   for (let finding of suite.findings) {
     process.stdout.write(`${formatFinding(finding)}\n`)
+  }
+}
+
+function writeSuiteAppliedFixes(suite: DoctorSuiteResult): void {
+  if ((suite.appliedFixes?.length ?? 0) === 0) {
+    return
+  }
+
+  process.stdout.write('  Applied fixes:\n')
+
+  for (let appliedFix of suite.appliedFixes ?? []) {
+    process.stdout.write(`${formatAppliedFix(appliedFix)}\n`)
   }
 }

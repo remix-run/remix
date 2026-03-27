@@ -17,8 +17,9 @@ describe('doctor command', () => {
     let result = runDoctorCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--no-color\]/)
+    assert.match(result.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/)
     assert.match(result.stdout, /Check project environment and Remix app conventions/)
+    assert.match(result.stdout, /--fix\s+Create missing low-risk controller owner files/)
     assert.equal(result.stderr, '')
   })
 
@@ -47,6 +48,15 @@ describe('doctor command', () => {
     )
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.match(result.stdout, /Summary: 0 warnings, 0 advice\./)
+    assert.equal(result.stderr, '')
+  })
+
+  it('applies no fixes for a clean fixture', async () => {
+    let result = runDoctorCommand(['--fix'], getFixturePath('doctor-clean'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.doesNotMatch(result.stdout, /Applied fixes:/)
+    assert.match(result.stdout, /Doctor found no issues\./)
     assert.equal(result.stderr, '')
   })
 
@@ -230,6 +240,46 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('creates runnable placeholder owners for missing routes and leaves the project clean', async () => {
+    let projectDir = await copyFixtureProject('doctor-missing')
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /✓ controllers/)
+      assert.match(fixResult.stdout, /Applied fixes:/)
+      assert.match(fixResult.stdout, /• Created app\/controllers\/home\.js/)
+      assert.match(fixResult.stdout, /• Created app\/controllers\/contact\/controller\.js/)
+      assert.match(fixResult.stdout, /Applied 2 fixes\./)
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
+
+      let homeSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'home.js'),
+        'utf8',
+      )
+      let contactSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'contact', 'controller.js'),
+        'utf8',
+      )
+
+      assert.match(homeSource, /export const home = \{/)
+      assert.match(homeSource, /TODO: implement routes\.home/)
+      assert.match(contactSource, /export default \{/)
+      assert.match(contactSource, /index\(\) \{/)
+      assert.match(contactSource, /action\(\) \{/)
+      assert.match(contactSource, /TODO: implement routes\.contact\.index/)
+      assert.match(contactSource, /TODO: implement routes\.contact\.action/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('accepts the global no-color flag', async () => {
     let result = runDoctorCommand(['--no-color'], getFixturePath('doctor-missing'))
 
@@ -264,6 +314,35 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('creates a typed controller placeholder for incomplete controllers from local tsx evidence', async () => {
+    let projectDir = await copyFixtureProject('doctor-incomplete-controller')
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /✓ controllers/)
+      assert.match(fixResult.stdout, /• Created app\/controllers\/contact\/controller\.tsx/)
+
+      let contactSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'),
+        'utf8',
+      )
+
+      assert.match(contactSource, /import type \{ Controller \} from 'remix\/fetch-router'/)
+      assert.match(contactSource, /import type \{ routes \} from '\.\.\/\.\.\/routes\.ts'/)
+      assert.match(contactSource, /export default \{/)
+      assert.match(contactSource, /\} satisfies Controller<typeof routes\.contact>/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('reports wrong owner kinds for actions and controller folders', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-wrong-kind'))
 
@@ -277,6 +356,29 @@ describe('doctor command', () => {
       /• \[WARN\] Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
     )
     assert.equal(result.stderr, '')
+  })
+
+  it('does not change non-fixable controller warnings', async () => {
+    let projectDir = await copyFixtureProject('doctor-wrong-kind')
+
+    try {
+      let result = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(result.status, 1)
+      assert.match(
+        result.stdout,
+        /Route "home" expects action app\/controllers\/home\.tsx, but found controller app\/controllers\/home\/controller\.js\./,
+      )
+      assert.match(
+        result.stdout,
+        /Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
+      )
+      assert.doesNotMatch(result.stdout, /Applied fixes:/)
+      await assertPathMissing(path.join(projectDir, 'app', 'controllers', 'home.tsx'))
+      await assertPathMissing(path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'))
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('reports promotion drift for standalone actions that also have route-local files', async () => {
@@ -369,6 +471,170 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('creates nested controller placeholders with kebab-case paths and camelCase actions', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/routes.ts': [
+          "import { form, route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          '  auth: {',
+          "    forgotPassword: form('forgot-password'),",
+          "    resetPassword: form('reset-password/:token'),",
+          '  },',
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'workspace:*',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-nested-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+        'tsconfig.json': JSON.stringify(
+          {
+            compilerOptions: {
+              jsx: 'react-jsx',
+            },
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /• Created app\/controllers\/auth\/controller\.tsx/)
+      assert.match(
+        fixResult.stdout,
+        /• Created app\/controllers\/auth\/forgot-password\/controller\.tsx/,
+      )
+      assert.match(
+        fixResult.stdout,
+        /• Created app\/controllers\/auth\/reset-password\/controller\.tsx/,
+      )
+
+      let authSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'auth', 'controller.tsx'),
+        'utf8',
+      )
+      let forgotPasswordSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'auth', 'forgot-password', 'controller.tsx'),
+        'utf8',
+      )
+
+      assert.match(authSource, /import forgotPasswordController from '\.\/forgot-password\/controller\.tsx'/)
+      assert.match(authSource, /import resetPasswordController from '\.\/reset-password\/controller\.tsx'/)
+      assert.match(authSource, /forgotPassword: forgotPasswordController/)
+      assert.match(authSource, /resetPassword: resetPasswordController/)
+      assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.index/)
+      assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.action/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('prefers existing ts owner files when inferring missing action extensions', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/controllers/about.ts': 'export {}\n',
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  home: '/',",
+          "  about: '/about',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'workspace:*',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-ts-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let result = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /• Created app\/controllers\/home\.ts/)
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home.ts'))
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('prefers existing jsx owner files when inferring missing action extensions', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/controllers/about.jsx': 'export {}\n',
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  home: '/',",
+          "  about: '/about',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'workspace:*',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-jsx-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let result = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /• Created app\/controllers\/home\.jsx/)
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home.jsx'))
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('reports project warnings when routes is not exported', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-no-export'))
 
@@ -429,6 +695,26 @@ describe('doctor command', () => {
     assert.equal(contact.actualPath, 'app/controllers/contact.ts')
   })
 
+  it('prints applied fixes and remaining findings as json', async () => {
+    let projectDir = await copyFixtureProject('doctor-missing')
+
+    try {
+      let result = runDoctorCommand(['--fix', '--json'], projectDir)
+
+      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.stderr, '')
+
+      let payload = JSON.parse(result.stdout) as DoctorReport
+
+      assert.equal(payload.findings.length, 0)
+      assert.equal(payload.remainingFindings?.length, 0)
+      assert.equal(payload.appliedFixes?.length, 2)
+      assert.equal(payload.suites.find((suite) => suite.name === 'controllers')?.status, 'ok')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('prints skipped suites as json when project blocks controllers', async () => {
     let fixtureDir = getFixturePath('routes-no-export')
     let result = runDoctorCommand(['--json'], fixtureDir)
@@ -468,7 +754,16 @@ function runDoctorCommand(args: string[], cwd: string) {
   })
 }
 
-async function createTempProject(files: Record<string, string>): Promise<string> {
+async function copyFixtureProject(name: string): Promise<string> {
+  let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), `remix-${name}-`))
+  await fs.cp(getFixturePath(name), projectDir, { recursive: true })
+  return projectDir
+}
+
+async function createTempProject(
+  files: Record<string, string>,
+  options: { linkRemix?: boolean } = {},
+): Promise<string> {
   let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-doctor-'))
 
   for (let [filePath, contents] of Object.entries(files)) {
@@ -477,21 +772,54 @@ async function createTempProject(files: Record<string, string>): Promise<string>
     await fs.writeFile(absolutePath, `${contents}\n`, 'utf8')
   }
 
+  if (options.linkRemix) {
+    await linkRemix(projectDir)
+  }
+
   return projectDir
 }
 
+async function linkRemix(projectDir: string): Promise<void> {
+  await fs.mkdir(path.join(projectDir, 'node_modules'), { recursive: true })
+  await fs.symlink(
+    path.join(ROOT_DIR, 'packages', 'remix'),
+    path.join(projectDir, 'node_modules', 'remix'),
+  )
+}
+
+async function assertPathExists(filePath: string): Promise<void> {
+  await fs.access(filePath)
+}
+
+async function assertPathMissing(filePath: string): Promise<void> {
+  await assert.rejects(() => fs.access(filePath))
+}
+
 interface DoctorReport {
+  appliedFixes?: DoctorAppliedFix[]
   appRoot?: string
   findings: DoctorFinding[]
+  remainingFindings?: DoctorFinding[]
   routesFile?: string
   suites: DoctorSuite[]
 }
 
 interface DoctorSuite {
+  appliedFixes?: DoctorAppliedFix[]
   findings: DoctorFinding[]
   name: 'controllers' | 'environment' | 'project'
   reason?: string
   status: 'issues' | 'ok' | 'skipped'
+}
+
+interface DoctorAppliedFix {
+  code:
+    | 'incomplete-controller'
+    | 'missing-owner'
+  kind: 'create-directory' | 'create-file'
+  path: string
+  routeName?: string
+  suite: 'controllers' | 'environment' | 'project'
 }
 
 interface DoctorFinding {
