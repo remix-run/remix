@@ -3,22 +3,13 @@ name: remix-ui
 description: Build the UI of a Remix app. Use when creating pages, layouts, client entries, interactions, stateful UI, navigation, hydration, styling, animations, reusable mixins, or UI tests.
 ---
 
-# Build UI
+# Remix UI
 
-Use this skill when building the UI of a Remix app.
+Use this skill for the UI of a Remix app: pages, layouts, rendering, interactivity, styling,
+frames, navigation behavior, client entries, animations, mixins, and UI tests.
 
 This skill uses Remix Component as the UI model behind the app's pages, layouts, interactions, and
 client behavior.
-
-## When to Use
-
-- Creating or updating pages, layouts, and presentational components
-- Adding interactivity, state, event handling, or reactive DOM work
-- Styling with `css(...)`, `style`, refs, keyboard helpers, or press helpers
-- Adding or refactoring `clientEntry(...)`, `run(...)`, frames, or UI navigation
-- Implementing enter/exit/layout animations
-- Authoring reusable mixins with `createMixin(...)`
-- Writing or updating UI-focused component tests
 
 ## Procedure
 

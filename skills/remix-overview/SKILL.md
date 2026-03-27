@@ -1,0 +1,68 @@
+---
+name: remix-overview
+description: Explain Remix as a fullstack web framework and route broad app-building tasks to the right Remix skills. Use when starting a new Remix app, orienting to the framework, scoping a feature, or deciding whether work belongs in project layout, UI, server, routing, data, auth, files, or security.
+---
+
+# Remix Overview
+
+Treat Remix as a fullstack app framework with focused subsystems. Use this skill to build the
+mental model, identify the main subsystem involved in the task, and choose the next skill. Do not
+try to teach every subsystem in detail here.
+
+## Core Model
+
+- Treat Remix as a fullstack app framework with clear subsystems: server, routing, data, UI, auth,
+  files, and security.
+- Prefer Remix's runtime request flow and Web API primitives over framework-specific build-time
+  abstractions.
+- Think in terms of composing focused modules into one app, not picking unrelated packages ad hoc.
+- When the app uses the `remix` package, prefer imports like
+  `import { createRouter } from 'remix/fetch-router'`.
+- Use this skill to orient and route; switch to narrower skills once the task is clearly about
+  layout, UI, or another subsystem.
+
+## Request Flow
+
+Use this as the default mental model:
+
+1. A request reaches the Remix server runtime.
+2. Middleware composes request concerns such as sessions, auth, parsing, logging, uploads, and
+   security.
+3. The router matches a typed route and dispatches to the owning controller or action.
+4. The route reads or mutates data.
+5. The app renders UI with the Remix Component model.
+6. Optional client behavior enhances the page through client entries, navigation, frames, or other
+   browser-owned behavior.
+
+## Major Subsystems
+
+- Structure and code ownership
+  Use `../remix-project-layout/SKILL.md` for where code belongs on disk, route ownership, naming
+  conventions, and how structure should evolve as the app grows.
+- UI rendering and client behavior
+  Use `../remix-ui/SKILL.md` for pages, layouts, rendering, interactions, styling, frames,
+  navigation behavior, client entries, and UI tests.
+- Server and middleware
+  TODO: Add `remix-server` for Fetch server setup, middleware composition, request context, and
+  runtime wiring.
+- Routing and controller contracts
+  TODO: Add `remix-routing` for route contracts, nested route structure, controller mapping, and URL
+  ownership.
+- Data and persistence
+  TODO: Add `remix-data` for schema validation, form-data decoding, query/persistence patterns,
+  migrations, and seeding.
+- Authentication and sessions
+  TODO: Add `remix-auth` and decide how `remix-sessions` should be represented.
+- Files, uploads, and asset delivery
+  TODO: Add `remix-files-assets` for static files, uploads, storage, and asset handlers.
+- Security
+  TODO: Decide whether `remix-security` should stand alone or remain part of `remix-server`.
+
+## Route Broad Tasks
+
+- If the task is "start a new app" or "where should this code live?", use
+  `../remix-project-layout/SKILL.md`.
+- If the task is "build this screen", "add interactivity", "wire client behavior", or "style this
+  UI", use `../remix-ui/SKILL.md`.
+- If the task spans multiple subsystems, use this overview to identify the main workstreams first,
+  then hand off to narrower skills.
