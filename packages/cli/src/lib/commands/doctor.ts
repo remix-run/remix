@@ -40,14 +40,14 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     if (error instanceof UsageError) {
-      process.stderr.write(lightRed(`${error.message}\n`))
+      process.stderr.write(lightRed(`${error.message}\n`, 'stderr'))
       process.stderr.write('\n')
       process.stderr.write(getDoctorCommandHelpText())
       return 1
     }
 
     if (error instanceof Error) {
-      process.stderr.write(ensureTerminalReset(lightRed(`${error.message}\n`)))
+      process.stderr.write(ensureTerminalReset(lightRed(`${error.message}\n`, 'stderr'), 'stderr'))
       return 1
     }
 
@@ -57,7 +57,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
 export function getDoctorCommandHelpText(): string {
   return `Usage:
-  remix doctor [--json] [--strict]
+  remix doctor [--json] [--strict] [--no-color]
 
 Check Remix controller-directory conventions for the current project.
 
@@ -134,6 +134,6 @@ function formatFinding(finding: DoctorFinding): string {
   return lightGray(line)
 }
 
-function ensureTerminalReset(output: string): string {
-  return `${output}${reset()}`
+function ensureTerminalReset(output: string, target: 'stderr' | 'stdout' = 'stdout'): string {
+  return `${output}${reset(target)}`
 }

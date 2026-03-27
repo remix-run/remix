@@ -18,6 +18,8 @@ remix doctor
 remix routes
 remix routes --table
 remix skills install
+remix version
+remix --no-color doctor
 ```
 
 ## Programmatic CLI
@@ -30,6 +32,7 @@ await run(['doctor'])
 await run(['routes'])
 await run(['routes', '--table'])
 await run(['skills', 'list'])
+await run(['version'])
 ```
 
 ## License

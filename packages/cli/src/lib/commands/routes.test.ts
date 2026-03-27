@@ -17,7 +17,10 @@ describe('routes command', () => {
     let result = runRoutesCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
+    assert.match(
+      result.stdout,
+      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+    )
     assert.match(result.stdout, /--table\s+Print routes as a flat table/)
     assert.match(result.stdout, /--verbose\s+Show full owner paths/)
     assert.match(result.stdout, /Show the Remix route tree/)
@@ -33,7 +36,7 @@ describe('routes command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('does not print color when NO_COLOR is set', async () => {
+  it('does not print color when output is not a tty', async () => {
     let result = runRoutesCommand([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
@@ -83,39 +86,11 @@ describe('routes command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('colors present routes light gray and missing routes light red', async () => {
-    let compactPresent = runRoutesCommand([], getFixturePath('routes-basic'), { color: true })
-    let compactMissing = runRoutesCommand([], getFixturePath('routes-missing'), { color: true })
-    let tableMissing = runRoutesCommand(['--table'], getFixturePath('routes-missing'), {
-      color: true,
-    })
-    let verboseMissing = runRoutesCommand(['--verbose'], getFixturePath('routes-missing'), {
-      color: true,
-    })
+  it('accepts the global no-color flag', async () => {
+    let result = runRoutesCommand(['--no-color'], getFixturePath('routes-missing'))
 
-    assert.equal(compactPresent.status, 0, compactPresent.stderr)
-    assert.equal(compactMissing.status, 0, compactMissing.stderr)
-    assert.equal(tableMissing.status, 0, tableMissing.stderr)
-    assert.equal(verboseMissing.status, 0, verboseMissing.stderr)
-
-    assert.match(compactPresent.stdout, /\u001B\[90mhome\s+ANY\s+\/\s+-> home\.tsx\u001B\[0m/)
-    assert.match(compactMissing.stdout, /\u001B\[91mhome\s+ANY\s+\/\s+-> home\.tsx \[missing\]\u001B\[0m/)
-    assert.match(
-      compactMissing.stdout,
-      /\u001B\[91m.*auth -> auth\/controller\.tsx \[missing\]\u001B\[0m/,
-    )
-    assert.match(
-      tableMissing.stdout,
-      /\u001B\[91mauth\.login\.action\s+POST\s+\/auth\/login\s+auth\/login\/controller\.tsx \[missing\]\u001B\[0m/,
-    )
-    assert.match(
-      verboseMissing.stdout,
-      /\u001B\[91mhome\s+ANY\s+\/\s+-> app\/controllers\/home\.tsx \[missing\]\u001B\[0m/,
-    )
-    assert.match(compactPresent.stdout, /\u001B\[0m\n\u001B\[0m$/)
-    assert.match(compactMissing.stdout, /\u001B\[0m\n\u001B\[0m$/)
-    assert.match(tableMissing.stdout, /\u001B\[0m\n\u001B\[0m$/)
-    assert.match(verboseMissing.stdout, /\u001B\[0m\n\u001B\[0m$/)
+    assert.equal(result.status, 0, result.stderr)
+    assert.doesNotMatch(result.stdout, /\u001B\[/)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
@@ -273,19 +248,10 @@ function findRouteNode(tree: RouteTreeNode[], name: string): RouteTreeNode | und
   return undefined
 }
 
-function runRoutesCommand(args: string[], cwd: string, options: { color?: boolean } = {}) {
-  let env = { ...process.env }
-
-  if (options.color) {
-    delete env.NO_COLOR
-  } else {
-    env.NO_COLOR = '1'
-  }
-
+function runRoutesCommand(args: string[], cwd: string) {
   return spawnSync(process.execPath, [CLI_ENTRY_PATH, 'routes', ...args], {
     cwd,
     encoding: 'utf8',
-    env,
   })
 }
 

@@ -16,6 +16,8 @@ describe('run', () => {
     assert.match(result.stdout, /doctor\s+Check controller conventions/)
     assert.match(result.stdout, /routes\s+Show the route tree/)
     assert.match(result.stdout, /skills\s+Manage Remix skills/)
+    assert.match(result.stdout, /version\s+Show the current Remix CLI version/)
+    assert.match(result.stdout, /--no-color\s+Disable ANSI color output/)
     assert.equal(result.stderr, '')
   })
 
@@ -46,6 +48,16 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('prints the configured version from the version command', async () => {
+    let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
+      captureOutput(() => run(['version'])),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, '9.9.9\n')
+    assert.equal(result.stderr, '')
+  })
+
   it('prints new command help', async () => {
     let result = await captureOutput(() => run(['new', '--help']))
 
@@ -69,26 +81,53 @@ describe('run', () => {
     let routesHelp = await captureOutput(() => run(['help', 'routes']))
     let skillsHelp = await captureOutput(() => run(['help', 'skills']))
     let skillsInstallHelp = await captureOutput(() => run(['help', 'skills', 'install']))
+    let versionHelp = await captureOutput(() => run(['help', 'version']))
 
     assert.equal(doctorHelp.exitCode, 0)
-    assert.match(doctorHelp.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\]/)
+    assert.match(doctorHelp.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--no-color\]/)
     assert.equal(newHelp.exitCode, 0)
     assert.match(newHelp.stdout, /Usage:\s+remix new <target-dir>/)
     assert.equal(helpHelp.exitCode, 0)
     assert.match(helpHelp.stdout, /Usage:\s+remix help \[command\]/)
     assert.equal(routesHelp.exitCode, 0)
-    assert.match(routesHelp.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
+    assert.match(
+      routesHelp.stdout,
+      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+    )
     assert.equal(skillsHelp.exitCode, 0)
     assert.match(skillsHelp.stdout, /Usage:\s+remix skills <command>/)
     assert.equal(skillsInstallHelp.exitCode, 0)
     assert.match(skillsInstallHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
+    assert.equal(versionHelp.exitCode, 0)
+    assert.match(versionHelp.stdout, /Usage:\s+remix version/)
   })
 
   it('prints routes command help', async () => {
     let result = await captureOutput(() => run(['routes', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
+    assert.match(
+      result.stdout,
+      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints version command help', async () => {
+    let result = await captureOutput(() => run(['version', '--help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.match(result.stdout, /Usage:\s+remix version/)
+    assert.equal(result.stderr, '')
+  })
+
+  it('accepts the global no-color flag', async () => {
+    let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
+      captureOutput(() => run(['--no-color', 'version'])),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, '9.9.9\n')
     assert.equal(result.stderr, '')
   })
 

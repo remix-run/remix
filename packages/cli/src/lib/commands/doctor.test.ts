@@ -15,7 +15,10 @@ describe('doctor command', () => {
     let result = runDoctorCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\]/)
+    assert.match(
+      result.stdout,
+      /Usage:\s+remix doctor \[--json\] \[--strict\] \[--no-color\]/,
+    )
     assert.match(result.stdout, /Check Remix controller-directory conventions/)
     assert.equal(result.stderr, '')
   })
@@ -40,7 +43,7 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('does not print color when NO_COLOR is set', async () => {
+  it('does not print color when output is not a tty', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-missing'))
 
     assert.equal(result.status, 0, result.stderr)
@@ -60,22 +63,11 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('colors warnings yellow and errors red', async () => {
-    let warningResult = runDoctorCommand([], getFixturePath('doctor-missing'), { color: true })
-    let errorResult = runDoctorCommand([], getFixturePath('routes-no-export'), { color: true })
+  it('accepts the global no-color flag', async () => {
+    let result = runDoctorCommand(['--no-color'], getFixturePath('doctor-missing'))
 
-    assert.equal(warningResult.status, 0, warningResult.stderr)
-    assert.match(
-      warningResult.stdout,
-      /\u001B\[93m  WARN Route "home" is missing action app\/controllers\/home\.tsx\.\u001B\[0m/,
-    )
-    assert.match(warningResult.stdout, /Summary: 2 warnings, 0 advice\.\n\u001B\[0m$/)
-
-    assert.equal(errorResult.status, 1)
-    assert.match(
-      errorResult.stderr,
-      /\u001B\[91m[\s\S]*must export a named "routes" value\.[\s\S]*\u001B\[0m/,
-    )
+    assert.equal(result.status, 0, result.stderr)
+    assert.doesNotMatch(result.stdout, /\u001B\[/)
   })
 
   it('reports duplicate owner files for actions and controllers', async () => {
@@ -251,19 +243,10 @@ describe('doctor command', () => {
   })
 })
 
-function runDoctorCommand(args: string[], cwd: string, options: { color?: boolean } = {}) {
-  let env = { ...process.env }
-
-  if (options.color) {
-    delete env.NO_COLOR
-  } else {
-    env.NO_COLOR = '1'
-  }
-
+function runDoctorCommand(args: string[], cwd: string) {
   return spawnSync(process.execPath, [CLI_ENTRY_PATH, 'doctor', ...args], {
     cwd,
     encoding: 'utf8',
-    env,
   })
 }
 

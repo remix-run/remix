@@ -10,6 +10,7 @@ import {
   getSkillsListCommandHelpText,
   getSkillsStatusCommandHelpText,
 } from './skills.ts'
+import { getVersionCommandHelpText } from './version.ts'
 
 export async function runHelpCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -41,9 +42,11 @@ Commands:
   doctor          Check controller conventions for the current project
   routes          Show the route tree for the current project
   skills          Manage Remix skills for the current project
+  version         Show the current Remix CLI version
 
 Options:
   -h, --help      Show help
+  --no-color      Disable ANSI color output
   -v, --version   Show version
 
 Examples:
@@ -55,6 +58,7 @@ Examples:
   remix new my-remix-app --app-name "My Remix App"
   remix routes
   remix skills install
+  remix version
 `
 }
 
@@ -70,6 +74,7 @@ Examples:
   remix help new
   remix help routes
   remix help skills install
+  remix help version
 `
 }
 
@@ -98,6 +103,10 @@ function getCommandHelpText(argv: string[]): string {
 
   if (command === 'skills') {
     return getSkillsHelpText(rest)
+  }
+
+  if (command === 'version' && rest.length === 0) {
+    return getVersionCommandHelpText()
   }
 
   throw new UsageError(`Unknown help topic: ${argv.join(' ')}`)

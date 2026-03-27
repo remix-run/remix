@@ -41,7 +41,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
 
 export function getRoutesCommandHelpText(): string {
   return `Usage:
-  remix routes [--json | --table] [--verbose]
+  remix routes [--json | --table] [--verbose] [--no-color]
 
 Show the Remix route tree for the current app.
 
@@ -260,5 +260,5 @@ function getCompactOwnerPath(ownerPath: string): string {
 }
 
 function ensureTerminalReset(output: string): string {
-  return `${output}${reset()}`
+  return `${output}${reset('stdout')}`
 }
