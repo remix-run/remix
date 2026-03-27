@@ -28,7 +28,7 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /✓ environment/)
-    assert.match(result.stdout, /✓ project-contract/)
+    assert.match(result.stdout, /✓ project/)
     assert.match(result.stdout, /✓ controllers/)
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.equal(result.stderr, '')
@@ -39,9 +39,12 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /✓ environment/)
-    assert.match(result.stdout, /✓ project-contract/)
+    assert.match(result.stdout, /✓ project/)
     assert.match(result.stdout, /✓ controllers/)
-    assert.match(result.stdout, /✓ controllers\n\nDoctor found no issues\./)
+    assert.match(
+      result.stdout,
+      /✓ environment\n\n• Checking project\.\.\.\n✓ project\n\n• Checking controllers\.\.\.\n✓ controllers\n\nDoctor found no issues\./,
+    )
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.match(result.stdout, /Summary: 0 warnings, 0 advice\./)
     assert.equal(result.stderr, '')
@@ -63,11 +66,8 @@ describe('doctor command', () => {
 
       assert.equal(result.status, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /WARN Could not find package\.json/)
-      assert.match(
-        result.stdout,
-        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
-      )
+      assert.match(result.stdout, /• \[WARN\] Could not find package\.json/)
+      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -84,11 +84,8 @@ describe('doctor command', () => {
 
       assert.equal(result.status, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /WARN package\.json is not valid JSON\./)
-      assert.match(
-        result.stdout,
-        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
-      )
+      assert.match(result.stdout, /• \[WARN\] package\.json is not valid JSON\./)
+      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -127,12 +124,9 @@ describe('doctor command', () => {
       assert.match(result.stdout, /✗ environment/)
       assert.match(
         result.stdout,
-        /WARN Project requires Node\.js >=99\.0\.0, but the current runtime is v\d+\.\d+\.\d+\./,
+        /• \[WARN\] Project requires Node\.js >=99\.0\.0, but the current runtime is v\d+\.\d+\.\d+\./,
       )
-      assert.match(
-        result.stdout,
-        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
-      )
+      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -144,8 +138,8 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /✗ environment/)
-    assert.match(result.stdout, /WARN package\.json does not declare a remix dependency\./)
-    assert.match(result.stdout, /• project-contract \(skipped: Blocked by environment warnings\.\)/)
+    assert.match(result.stdout, /• \[WARN\] package\.json does not declare a remix dependency\./)
+    assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
     assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
   })
 
@@ -173,11 +167,8 @@ describe('doctor command', () => {
 
       assert.equal(result.status, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /WARN Could not resolve remix from this project\./)
-      assert.match(
-        result.stdout,
-        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
-      )
+      assert.match(result.stdout, /• \[WARN\] Could not resolve remix from this project\./)
+      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -214,12 +205,9 @@ describe('doctor command', () => {
 
       assert.equal(result.status, 0, result.stderr)
       assert.match(result.stdout, /✓ environment/)
-      assert.match(result.stdout, /✗ project-contract/)
-      assert.match(result.stdout, /WARN Project is missing app\/routes\.ts\./)
-      assert.match(
-        result.stdout,
-        /• controllers \(skipped: Blocked by project-contract warnings\.\)/,
-      )
+      assert.match(result.stdout, /✗ project/)
+      assert.match(result.stdout, /• \[WARN\] Project is missing app\/routes\.ts\./)
+      assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
       assert.equal(result.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -230,10 +218,13 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /WARN Route "home" is missing action app\/controllers\/home\.tsx\./)
     assert.match(
       result.stdout,
-      /WARN Route "contact" is missing controller app\/controllers\/contact\/controller\.tsx\./,
+      /• \[WARN\] Route "home" is missing action app\/controllers\/home\.tsx\./,
+    )
+    assert.match(
+      result.stdout,
+      /• \[WARN\] Route "contact" is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
     assert.match(result.stdout, /controller\.tsx\.\n\nSummary: 2 warnings, 0 advice\./)
     assert.equal(result.stderr, '')
@@ -252,11 +243,11 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Route "home" has multiple action files: app\/controllers\/home\.ts, app\/controllers\/home\.tsx\. Keep only one action owner file\./,
+      /• \[WARN\] Route "home" has multiple action files: app\/controllers\/home\.ts, app\/controllers\/home\.tsx\. Keep only one action owner file\./,
     )
     assert.match(
       result.stdout,
-      /WARN Route "contact" has multiple controller files: app\/controllers\/contact\/controller\.ts, app\/controllers\/contact\/controller\.jsx\. Keep only one controller owner file\./,
+      /• \[WARN\] Route "contact" has multiple controller files: app\/controllers\/contact\/controller\.ts, app\/controllers\/contact\/controller\.jsx\. Keep only one controller owner file\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -267,7 +258,7 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Route "contact" has files under app\/controllers\/contact, but is missing controller app\/controllers\/contact\/controller\.tsx\./,
+      /• \[WARN\] Route "contact" has files under app\/controllers\/contact, but is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
     assert.doesNotMatch(result.stdout, /Route "contact" is missing controller/)
     assert.equal(result.stderr, '')
@@ -279,11 +270,11 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Route "home" expects action app\/controllers\/home\.tsx, but found controller app\/controllers\/home\/controller\.js\./,
+      /• \[WARN\] Route "home" expects action app\/controllers\/home\.tsx, but found controller app\/controllers\/home\/controller\.js\./,
     )
     assert.match(
       result.stdout,
-      /WARN Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
+      /• \[WARN\] Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -294,7 +285,7 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Route "home" uses action app\/controllers\/home\.js, but also has files under app\/controllers\/home\. Promote it to controller app\/controllers\/home\/controller\.tsx or keep the route in app\/controllers\/home\.js\./,
+      /• \[WARN\] Route "home" uses action app\/controllers\/home\.js, but also has files under app\/controllers\/home\. Promote it to controller app\/controllers\/home\/controller\.tsx or keep the route in app\/controllers\/home\.js\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -305,11 +296,11 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Route "home" has both action app\/controllers\/home\.js and controller app\/controllers\/home\/controller\.ts\./,
+      /• \[WARN\] Route "home" has both action app\/controllers\/home\.js and controller app\/controllers\/home\/controller\.ts\./,
     )
     assert.match(
       result.stdout,
-      /WARN Route "contact" has both controller app\/controllers\/contact\/controller\.jsx and standalone action app\/controllers\/contact\.ts\./,
+      /• \[WARN\] Route "contact" has both controller app\/controllers\/contact\/controller\.jsx and standalone action app\/controllers\/contact\.ts\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -320,11 +311,11 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Standalone action app\/controllers\/about\.jsx does not match any top-level route\./,
+      /• \[WARN\] Standalone action app\/controllers\/about\.jsx does not match any top-level route\./,
     )
     assert.match(
       result.stdout,
-      /WARN Controller app\/controllers\/unused\/controller\.js does not match any route group\./,
+      /• \[WARN\] Controller app\/controllers\/unused\/controller\.js does not match any route group\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -335,7 +326,7 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Directory app\/controllers\/unused does not match any route subtree\./,
+      /• \[WARN\] Directory app\/controllers\/unused does not match any route subtree\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -346,11 +337,11 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /WARN Directory app\/controllers\/components does not match any route subtree\./,
+      /• \[WARN\] Directory app\/controllers\/components does not match any route subtree\./,
     )
     assert.match(
       result.stdout,
-      /WARN Standalone action app\/controllers\/helpers\.js does not match any top-level route\./,
+      /• \[WARN\] Standalone action app\/controllers\/helpers\.js does not match any top-level route\./,
     )
     assert.doesNotMatch(
       result.stdout,
@@ -378,33 +369,33 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('reports project-contract warnings when routes is not exported', async () => {
+  it('reports project warnings when routes is not exported', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project-contract/)
-    assert.match(result.stdout, /must export a named "routes" value/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
+    assert.match(result.stdout, /✗ project/)
+    assert.match(result.stdout, /• \[WARN\] app\/routes\.ts must export a named "routes" value\./)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 
-  it('reports project-contract warnings when the route map is invalid', async () => {
+  it('reports project warnings when the route map is invalid', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-invalid-value'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project-contract/)
-    assert.match(result.stdout, /Invalid route map value at "broken"/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
+    assert.match(result.stdout, /✗ project/)
+    assert.match(result.stdout, /• \[WARN\] Invalid route map value at "broken"/)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 
-  it('reports project-contract warnings when importing routes throws', async () => {
+  it('reports project warnings when importing routes throws', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-import-error'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project-contract/)
-    assert.match(result.stdout, /Failed to load app\/routes\.ts: boom from routes fixture/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
+    assert.match(result.stdout, /✗ project/)
+    assert.match(result.stdout, /• \[WARN\] Failed to load app\/routes\.ts: boom from routes fixture/)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 
@@ -417,7 +408,7 @@ describe('doctor command', () => {
 
     let payload = JSON.parse(result.stdout) as DoctorReport
     let environmentSuite = payload.suites.find((suite) => suite.name === 'environment')
-    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project-contract')
+    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project')
     let controllersSuite = payload.suites.find((suite) => suite.name === 'controllers')
     let home = controllersSuite?.findings.find((finding) => finding.routeName === 'home')
     let contact = controllersSuite?.findings.find((finding) => finding.routeName === 'contact')
@@ -438,19 +429,19 @@ describe('doctor command', () => {
     assert.equal(contact.actualPath, 'app/controllers/contact.ts')
   })
 
-  it('prints skipped suites as json when project-contract blocks controllers', async () => {
+  it('prints skipped suites as json when project blocks controllers', async () => {
     let fixtureDir = getFixturePath('routes-no-export')
     let result = runDoctorCommand(['--json'], fixtureDir)
 
     assert.equal(result.status, 0, result.stderr)
 
     let payload = JSON.parse(result.stdout) as DoctorReport
-    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project-contract')
+    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project')
     let controllersSuite = payload.suites.find((suite) => suite.name === 'controllers')
 
     assert.equal(projectContractSuite?.status, 'issues')
     assert.equal(controllersSuite?.status, 'skipped')
-    assert.equal(controllersSuite?.reason, 'Blocked by project-contract warnings.')
+    assert.equal(controllersSuite?.reason, 'Blocked by project warnings.')
   })
 
   it('fails strict mode when controller warnings are present', async () => {
@@ -461,7 +452,7 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('fails strict mode when project-contract warnings are present', async () => {
+  it('fails strict mode when project warnings are present', async () => {
     let result = runDoctorCommand(['--strict'], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 1)
@@ -498,7 +489,7 @@ interface DoctorReport {
 
 interface DoctorSuite {
   findings: DoctorFinding[]
-  name: 'controllers' | 'environment' | 'project-contract'
+  name: 'controllers' | 'environment' | 'project'
   reason?: string
   status: 'issues' | 'ok' | 'skipped'
 }
@@ -533,5 +524,5 @@ interface DoctorFinding {
   message: string
   routeName?: string
   severity: 'advice' | 'warn'
-  suite: 'controllers' | 'environment' | 'project-contract'
+  suite: 'controllers' | 'environment' | 'project'
 }

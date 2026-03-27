@@ -19,13 +19,13 @@ export async function checkProjectContract(
   if (!(await pathExists(routesFile))) {
     return {
       routesFile,
-      suite: createDoctorSuite('project-contract', [
+      suite: createDoctorSuite('project', [
         {
           code: 'routes-file-missing',
           expectedPath: 'app/routes.ts',
           message: 'Project is missing app/routes.ts.',
           severity: 'warn',
-          suite: 'project-contract',
+          suite: 'project',
         },
       ]),
     }
@@ -37,14 +37,14 @@ export async function checkProjectContract(
     return {
       routeManifest,
       routesFile,
-      suite: createDoctorSuite('project-contract', []),
+      suite: createDoctorSuite('project', []),
     }
   } catch (error) {
     let finding = toProjectContractFinding(error)
 
     return {
       routesFile,
-      suite: createDoctorSuite('project-contract', [finding]),
+      suite: createDoctorSuite('project', [finding]),
     }
   }
 }
@@ -56,7 +56,7 @@ function toProjectContractFinding(error: unknown): DoctorFinding {
         code: 'route-map-invalid-json',
         message: 'Route-map loader returned invalid JSON while loading app/routes.ts.',
         severity: 'warn',
-        suite: 'project-contract',
+        suite: 'project',
       }
     }
 
@@ -65,7 +65,7 @@ function toProjectContractFinding(error: unknown): DoctorFinding {
         code: 'route-map-loader-signal',
         message: error.message,
         severity: 'warn',
-        suite: 'project-contract',
+        suite: 'project',
       }
     }
 
@@ -79,7 +79,7 @@ function toProjectContractFinding(error: unknown): DoctorFinding {
     code: 'route-module-import-failed',
     message: `Failed to load app/routes.ts: ${message}`,
     severity: 'warn',
-    suite: 'project-contract',
+    suite: 'project',
   }
 }
 
@@ -87,9 +87,9 @@ function classifyRouteMapLoaderFailure(message: string): DoctorFinding {
   if (message.includes('must export a named "routes" value')) {
     return {
       code: 'routes-export-missing',
-      message,
+      message: 'app/routes.ts must export a named "routes" value.',
       severity: 'warn',
-      suite: 'project-contract',
+      suite: 'project',
     }
   }
 
@@ -101,7 +101,7 @@ function classifyRouteMapLoaderFailure(message: string): DoctorFinding {
       code: 'route-map-invalid',
       message,
       severity: 'warn',
-      suite: 'project-contract',
+      suite: 'project',
     }
   }
 
@@ -109,7 +109,7 @@ function classifyRouteMapLoaderFailure(message: string): DoctorFinding {
     code: 'route-module-import-failed',
     message: `Failed to load app/routes.ts: ${message}`,
     severity: 'warn',
-    suite: 'project-contract',
+    suite: 'project',
   }
 }
 

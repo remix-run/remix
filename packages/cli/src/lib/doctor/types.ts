@@ -1,4 +1,4 @@
-export type DoctorSuiteName = 'environment' | 'project-contract' | 'controllers'
+export type DoctorSuiteName = 'environment' | 'project' | 'controllers'
 export type DoctorFindingSeverity = 'warn' | 'advice'
 export type DoctorSuiteStatus = 'ok' | 'issues' | 'skipped'
 

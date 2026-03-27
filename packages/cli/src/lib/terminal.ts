@@ -49,15 +49,15 @@ export function reset(target: NodeJS.WriteStream): string {
 
 export function remixWordmark(target: NodeJS.WriteStream = process.stdout): string {
   if (isColorDisabled(target)) {
-    return 'REMIX'
+    return 'Remix'
   }
 
   return [
     paint('R', ANSI_LIGHT_BLUE, target),
-    paint('E', ANSI_LIGHT_GREEN, target),
-    paint('M', ANSI_LIGHT_YELLOW, target),
-    paint('I', ANSI_LIGHT_MAGENTA, target),
-    paint('X', ANSI_LIGHT_RED, target),
+    paint('e', ANSI_LIGHT_GREEN, target),
+    paint('m', ANSI_LIGHT_YELLOW, target),
+    paint('i', ANSI_LIGHT_MAGENTA, target),
+    paint('x', ANSI_LIGHT_RED, target),
   ].join('')
 }
 

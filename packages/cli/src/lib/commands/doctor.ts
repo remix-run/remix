@@ -20,10 +20,19 @@ import {
 import { lightRed, lightYellow } from '../terminal.ts'
 
 const DOCTOR_SUITE_LABELS = {
-  controllers: 'controllers',
-  environment: 'environment',
-  'project-contract': 'project-contract',
-} satisfies Record<DoctorSuiteName, string>
+  controllers: {
+    complete: 'controllers',
+    running: 'Checking controllers',
+  },
+  environment: {
+    complete: 'environment',
+    running: 'Checking environment',
+  },
+  project: {
+    complete: 'project',
+    running: 'Checking project',
+  },
+} satisfies Record<DoctorSuiteName, string | { complete: string; running: string }>
 
 export async function runDoctorCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -44,7 +53,6 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      progress?.writeSummaryGap()
       process.stdout.write(renderDoctorSummary(report))
     }
 
@@ -118,11 +126,12 @@ async function collectDoctorReport(
 
   if (progress != null) {
     writeSuiteFindings(environment.suite)
+    writeSuiteGap(progress)
   }
 
   if (hasWarningFindings(environment.suite.findings)) {
     let projectContractSuite = createSkippedDoctorSuite(
-      'project-contract',
+      'project',
       'Blocked by environment warnings.',
     )
     let controllersSuite = createSkippedDoctorSuite(
@@ -131,7 +140,9 @@ async function collectDoctorReport(
     )
     suites.push(projectContractSuite, controllersSuite)
     progress?.skip(projectContractSuite.name, projectContractSuite.reason)
+    writeSuiteGap(progress)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
+    writeSuiteGap(progress)
 
     return {
       appRoot: environment.projectRoot,
@@ -141,7 +152,7 @@ async function collectDoctorReport(
     }
   }
 
-  let projectContract = await runDoctorSuite(progress, 'project-contract', () =>
+  let projectContract = await runDoctorSuite(progress, 'project', () =>
     checkProjectContract(environment.projectRoot!),
   )
   findings.push(...projectContract.suite.findings)
@@ -150,15 +161,14 @@ async function collectDoctorReport(
 
   if (progress != null) {
     writeSuiteFindings(projectContract.suite)
+    writeSuiteGap(progress)
   }
 
   if (hasWarningFindings(projectContract.suite.findings)) {
-    let controllersSuite = createSkippedDoctorSuite(
-      'controllers',
-      'Blocked by project-contract warnings.',
-    )
+    let controllersSuite = createSkippedDoctorSuite('controllers', 'Blocked by project warnings.')
     suites.push(controllersSuite)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
+    writeSuiteGap(progress)
 
     return {
       appRoot: environment.projectRoot,
@@ -179,6 +189,7 @@ async function collectDoctorReport(
 
   if (progress != null) {
     writeSuiteFindings(controllers.suite)
+    writeSuiteGap(progress)
   }
 
   return {
@@ -208,13 +219,21 @@ function hasWarningFindings(findings: DoctorFinding[]): boolean {
 }
 
 function formatFinding(finding: DoctorFinding): string {
-  let line = `  ${finding.severity.toUpperCase()} ${finding.message}`
+  let line = `  • [${finding.severity.toUpperCase()}] ${finding.message}`
 
   if (finding.severity === 'warn') {
     return lightYellow(line)
   }
 
   return line
+}
+
+function writeSuiteGap(progress: StepProgressReporter<DoctorSuiteName> | null): void {
+  if (progress == null) {
+    return
+  }
+
+  process.stdout.write('\n')
 }
 
 async function runDoctorSuite<result extends { suite: DoctorSuiteResult }>(

@@ -12,6 +12,11 @@ interface ProgressReporterOptions {
   frameIntervalMs?: number
 }
 
+interface StepProgressLabel {
+  complete: string
+  running?: string
+}
+
 export interface ProgressReporter {
   fail(label?: string): void
   skip(label: string, reason?: string): void
@@ -108,7 +113,7 @@ export function createProgressReporter(
 }
 
 export function createStepProgressReporter<step extends string>(
-  labels: Record<step, string>,
+  labels: Record<step, string | StepProgressLabel>,
   target: NodeJS.WriteStream = process.stdout,
   options: ProgressReporterOptions = {},
 ): StepProgressReporter<step> {
@@ -116,16 +121,16 @@ export function createStepProgressReporter<step extends string>(
 
   return {
     fail(step) {
-      progress.fail(labels[step])
+      progress.fail(getCompleteLabel(labels[step]))
     },
     skip(step, reason) {
-      progress.skip(labels[step], reason)
+      progress.skip(getCompleteLabel(labels[step]), reason)
     },
     start(step) {
-      progress.start(labels[step])
+      progress.start(getRunningLabel(labels[step]))
     },
     succeed(step) {
-      progress.succeed(labels[step])
+      progress.succeed(getCompleteLabel(labels[step]))
     },
     writeSummaryGap() {
       progress.writeSummaryGap()
@@ -160,7 +165,7 @@ export async function writeProgressCommandHeader(
 
   try {
     let version = readRemixVersion()
-    target.write(`${remixWordmark(target)} ${version} (${commandLabel})\n\n`)
+    target.write(`${remixWordmark(target)} v${version} - ${commandLabel}\n\n`)
   } catch {}
 }
 
@@ -196,4 +201,12 @@ function writeFinalLine(target: NodeJS.WriteStream, interactive: boolean, line: 
   }
 
   target.write(`${line}\n`)
+}
+
+function getCompleteLabel(label: string | StepProgressLabel): string {
+  return typeof label === 'string' ? label : label.complete
+}
+
+function getRunningLabel(label: string | StepProgressLabel): string {
+  return typeof label === 'string' ? label : (label.running ?? label.complete)
 }
