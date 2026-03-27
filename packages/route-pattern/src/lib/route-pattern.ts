@@ -5,7 +5,7 @@ import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse
 import { serializeSearch } from './route-pattern/serialize.ts'
 import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
-import { tryDecodeURI } from './route-pattern/decode-uri.ts'
+import { decodeHostname, decodePathname } from './decode.ts'
 import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
 
@@ -227,6 +227,7 @@ export class RoutePattern<source extends string = string> {
    */
   match(url: string | URL, options?: { ignoreCase?: boolean }): RoutePatternMatch<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
+    let decodedHostname = decodeHostname(url.hostname)
 
     let hostname: PartPatternMatch | null = null
     if (this.hasOrigin) {
@@ -240,7 +241,7 @@ export class RoutePattern<source extends string = string> {
 
       // hostname: null matches any hostname
       if (this.ast.hostname !== null) {
-        hostname = this.ast.hostname.match(url.hostname, { ignoreCase: true })
+        hostname = this.ast.hostname.match(decodedHostname, { ignoreCase: true })
         if (hostname === null) return null
       }
 
@@ -251,11 +252,13 @@ export class RoutePattern<source extends string = string> {
 
     if (this.ast.hostname === null) {
       // Pathname-only pattern - treat hostname as wildcard match
-      hostname = [{ type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname }]
+      hostname = [
+        { type: '*', name: '*', begin: 0, end: decodedHostname.length, value: decodedHostname },
+      ]
     }
 
     // url.pathname: remove leading slash
-    let pathname = this.ast.pathname.match(tryDecodeURI(url.pathname.slice(1)), options)
+    let pathname = this.ast.pathname.match(decodePathname(url.pathname.slice(1)), options)
     if (pathname === null) return null
 
     if (!matchSearch(url.searchParams, this.ast.search)) return null

@@ -8,7 +8,7 @@ import * as Variant from './trie-matcher/variant.ts'
 import { unreachable } from './unreachable.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
-import { tryDecodeURI } from './route-pattern/decode-uri.ts'
+import { decodeHostname, decodePathname } from './decode.ts'
 import { matchSearch } from './route-pattern/match.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
@@ -235,6 +235,7 @@ export class Trie<data = unknown> {
 
   search(url: URL): SearchResult<data> {
     let origins: Array<{ hostnameMatch: PartPatternMatch; pathnameNode: PathnameNode<data> }> = []
+    let decodedHostname = decodeHostname(url.hostname)
 
     // protocol -> hostname
     let protocol = url.protocol.slice(0, -1)
@@ -246,14 +247,14 @@ export class Trie<data = unknown> {
     if (anyHostname) {
       origins.push({
         hostnameMatch: [
-          { type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname },
+          { type: '*', name: '*', begin: 0, end: decodedHostname.length, value: decodedHostname },
         ],
         pathnameNode: anyHostname,
       })
     }
 
     // static hostname + port -> pathname (hostname case-insensitive)
-    let staticHostname = hostNameNode.static.get(url.hostname.toLowerCase())
+    let staticHostname = hostNameNode.static.get(decodedHostname.toLowerCase())
     if (staticHostname) {
       let pathnameNode = staticHostname.get(url.port)
       if (pathnameNode) {
@@ -262,7 +263,7 @@ export class Trie<data = unknown> {
     }
     // dynamic hostname + port -> pathname
     hostNameNode.dynamic.forEach(({ part, portNode }) => {
-      let match = part.match(url.hostname, { ignoreCase: true })
+      let match = part.match(decodedHostname, { ignoreCase: true })
       if (match) {
         let pathnameNode = portNode.get(url.port)
         if (pathnameNode) {
@@ -274,7 +275,7 @@ export class Trie<data = unknown> {
     let results: SearchResult<data> = []
 
     // pathname
-    let urlSegments = tryDecodeURI(url.pathname.slice(1)).split('/')
+    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
     for (let origin of origins) {
       let stack: Array<{
         segmentIndex: number
