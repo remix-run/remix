@@ -2,16 +2,16 @@ import * as assert from 'node:assert/strict'
 import * as process from 'node:process'
 import { describe, it } from 'node:test'
 
-import { configureColors, lightGray, lightRed, reset } from './color.ts'
+import { bold, configureColors, lightRed, reset, restoreTerminalFormatting } from './color.ts'
 
 describe('color', () => {
-  it('colors stdout when stdout is a tty', async () => {
+  it('styles stdout when stdout is a tty', async () => {
     withEnv('NO_COLOR', undefined, () =>
       withEnv('TERM', 'xterm-256color', () =>
         withTTY(process.stdout, true, () => {
           configureColors({ disabled: false })
 
-          assert.equal(lightGray('ok'), '\u001B[90mok\u001B[0m')
+          assert.equal(bold('ok'), '\u001B[1mok\u001B[0m')
           assert.equal(reset(), '\u001B[0m')
         }),
       ),
@@ -37,7 +37,7 @@ describe('color', () => {
         withTTY(process.stdout, false, () => {
           configureColors({ disabled: false })
 
-          assert.equal(lightGray('ok'), 'ok')
+          assert.equal(bold('ok'), 'ok')
           assert.equal(reset(), '')
         }),
       ),
@@ -62,7 +62,7 @@ describe('color', () => {
       withTTY(process.stdout, true, () => {
         configureColors({ disabled: false })
 
-        assert.equal(lightGray('ok'), 'ok')
+        assert.equal(bold('ok'), 'ok')
         assert.equal(reset(), '')
       }),
     )
@@ -74,7 +74,7 @@ describe('color', () => {
         withTTY(process.stdout, true, () => {
           configureColors({ disabled: false })
 
-          assert.equal(lightGray('ok'), 'ok')
+          assert.equal(bold('ok'), 'ok')
           assert.equal(reset(), '')
         }),
       ),
@@ -87,8 +87,50 @@ describe('color', () => {
         withTTY(process.stdout, true, () => {
           configureColors({ disabled: true })
 
-          assert.equal(lightGray('ok'), 'ok')
+          assert.equal(bold('ok'), 'ok')
           assert.equal(reset(), '')
+        }),
+      ),
+    )
+  })
+
+  it('restores terminal formatting on stdout when stdout supports ansi', async () => {
+    withEnv('TERM', 'xterm-256color', () =>
+      withTTY(process.stdout, true, () =>
+        withCapturedWrites(process.stdout, (writes) => {
+          configureColors({ disabled: true })
+
+          restoreTerminalFormatting()
+
+          assert.deepEqual(writes, ['\u001B[0m'])
+        }),
+      ),
+    )
+  })
+
+  it('restores terminal formatting on stderr when only stderr supports ansi', async () => {
+    withEnv('TERM', 'xterm-256color', () =>
+      withTTY(process.stdout, false, () =>
+        withTTY(process.stderr, true, () =>
+          withCapturedWrites(process.stderr, (writes) => {
+            configureColors({ disabled: false })
+
+            restoreTerminalFormatting()
+
+            assert.deepEqual(writes, ['\u001B[0m'])
+          }),
+        ),
+      ),
+    )
+  })
+
+  it('does not restore terminal formatting when ansi is unavailable', async () => {
+    withEnv('TERM', 'dumb', () =>
+      withTTY(process.stdout, true, () =>
+        withCapturedWrites(process.stdout, (writes) => {
+          restoreTerminalFormatting()
+
+          assert.deepEqual(writes, [])
         }),
       ),
     )
@@ -132,5 +174,24 @@ function withTTY<T>(stream: NodeJS.WriteStream, isTTY: boolean, callback: () => 
     } else {
       Object.defineProperty(stream, 'isTTY', previous)
     }
+  }
+}
+
+function withCapturedWrites<T>(
+  stream: NodeJS.WriteStream,
+  callback: (writes: string[]) => T,
+): T {
+  let writes: string[] = []
+  let originalWrite = stream.write.bind(stream)
+
+  stream.write = ((chunk: string | Uint8Array) => {
+    writes.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8'))
+    return true
+  }) as typeof stream.write
+
+  try {
+    return callback(writes)
+  } finally {
+    stream.write = originalWrite
   }
 }

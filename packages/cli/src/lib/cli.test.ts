@@ -92,7 +92,7 @@ describe('run', () => {
     assert.equal(routesHelp.exitCode, 0)
     assert.match(
       routesHelp.stdout,
-      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+      /Usage:\s+remix routes \[--json \| --table\] \[--no-headers\] \[--verbose\] \[--no-color\]/,
     )
     assert.equal(skillsHelp.exitCode, 0)
     assert.match(skillsHelp.stdout, /Usage:\s+remix skills <command>/)
@@ -108,7 +108,7 @@ describe('run', () => {
     assert.equal(result.exitCode, 0)
     assert.match(
       result.stdout,
-      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+      /Usage:\s+remix routes \[--json \| --table\] \[--no-headers\] \[--verbose\] \[--no-color\]/,
     )
     assert.equal(result.stderr, '')
   })

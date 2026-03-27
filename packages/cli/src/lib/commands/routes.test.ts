@@ -19,9 +19,10 @@ describe('routes command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /Usage:\s+remix routes \[--json \| --table\] \[--verbose\] \[--no-color\]/,
+      /Usage:\s+remix routes \[--json \| --table\] \[--no-headers\] \[--verbose\] \[--no-color\]/,
     )
     assert.match(result.stdout, /--table\s+Print routes as a flat table/)
+    assert.match(result.stdout, /--no-headers\s+Omit the table header row when using --table/)
     assert.match(result.stdout, /--verbose\s+Show full owner paths/)
     assert.match(result.stdout, /Show the Remix route tree/)
     assert.equal(result.stderr, '')
@@ -83,6 +84,16 @@ describe('routes command', () => {
       result.stdout,
       /admin\.users\.destroy\s+DELETE\s+\/admin\/users\/:userId\s+admin\/users\/controller\.tsx/,
     )
+    assert.equal(result.stderr, '')
+  })
+
+  it('omits the table header row with --no-headers', async () => {
+    let result = runRoutesCommand(['--table', '--no-headers'], getFixturePath('routes-tree'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.doesNotMatch(result.stdout, /Route\s+Method\s+Path\s+Owner/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+home\.tsx/)
+    assert.match(result.stdout, /auth\.login\.action\s+POST\s+\/login\s+auth\/login\/controller\.tsx/)
     assert.equal(result.stderr, '')
   })
 
@@ -196,6 +207,13 @@ describe('routes command', () => {
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Cannot combine --json with --verbose/)
+  })
+
+  it('rejects --no-headers without table formatting', async () => {
+    let result = runRoutesCommand(['--no-headers'], getFixturePath('routes-basic'))
+
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Cannot use --no-headers without --table/)
   })
 
   it('fails when no app/routes.ts can be found', async () => {

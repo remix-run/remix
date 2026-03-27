@@ -33,7 +33,9 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
 
     throw unknownSkillsCommand(subcommand)
   } catch (error) {
-    process.stderr.write(renderCliError(toCliError(error), { helpText: getSkillsCommandHelpText() }))
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsCommandHelpText() }),
+    )
     return 1
   }
 }
@@ -45,7 +47,7 @@ export function getSkillsCommandHelpText(): string {
 Manage Remix skills for the current project.
 
 Commands:
-  install [--dir <path>]  Install Remix skills into .agents/skills or a custom directory
+  install [--dir <path>]           Install Remix skills into a local directory
   list [--dir <path>] [--json]     List available Remix skills and local state
   status [--dir <path>] [--json]   Show what remix skills install would change
 

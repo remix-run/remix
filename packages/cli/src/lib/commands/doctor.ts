@@ -1,6 +1,6 @@
 import * as process from 'node:process'
 
-import { lightGray, lightRed, lightYellow, reset } from '../color.ts'
+import { lightRed, lightYellow } from '../color.ts'
 import {
   checkControllerConventions,
   type DoctorFinding,
@@ -30,7 +30,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      process.stdout.write(ensureTerminalReset(renderDoctorReport(suite)))
+      process.stdout.write(renderDoctorReport(suite))
     }
 
     if (options.strict && hasWarningFindings(findings)) {
@@ -40,12 +40,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(
-      ensureTerminalReset(
-        lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), 'stderr'),
-        'stderr',
-      ),
-    )
+    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), 'stderr'))
     return 1
   }
 }
@@ -126,9 +121,5 @@ function formatFinding(finding: DoctorFinding): string {
     return lightYellow(line)
   }
 
-  return lightGray(line)
-}
-
-function ensureTerminalReset(output: string, target: 'stderr' | 'stdout' = 'stdout'): string {
-  return `${output}${reset(target)}`
+  return line
 }

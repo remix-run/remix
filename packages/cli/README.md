@@ -27,6 +27,7 @@ remix new my-remix-app
 remix doctor
 remix routes
 remix routes --table
+remix routes --table --no-headers
 remix skills install
 remix version
 remix --no-color doctor
@@ -41,6 +42,7 @@ await run(['new', 'my-remix-app'])
 await run(['doctor'])
 await run(['routes'])
 await run(['routes', '--table'])
+await run(['routes', '--table', '--no-headers'])
 await run(['skills', 'status'])
 await run(['version'])
 ```

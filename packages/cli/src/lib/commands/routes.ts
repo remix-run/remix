@@ -1,6 +1,6 @@
 import * as process from 'node:process'
 
-import { lightGray, lightRed, reset } from '../color.ts'
+import { bold, lightRed } from '../color.ts'
 import {
   invalidFlagCombination,
   renderCliError,
@@ -25,33 +25,33 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
-      process.stdout.write(ensureTerminalReset(renderRouteMap(routeMap, options)))
+      process.stdout.write(renderRouteMap(routeMap, options))
     }
 
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(
-      `${lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), 'stderr')}${reset('stderr')}`,
-    )
+    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), 'stderr'))
     return 1
   }
 }
 
 export function getRoutesCommandHelpText(): string {
   return `Usage:
-  remix routes [--json | --table] [--verbose] [--no-color]
+  remix routes [--json | --table] [--no-headers] [--verbose] [--no-color]
 
 Show the Remix route tree for the current app.
 
 Options:
   --json       Print the normalized route tree as JSON
   --table      Print routes as a flat table
+  --no-headers Omit the table header row when using --table
   --verbose    Show full owner paths in tree or table output
 
 Examples:
   remix routes
   remix routes --table
+  remix routes --table --no-headers
   remix routes --verbose
   remix routes --json
 `
@@ -59,12 +59,14 @@ Examples:
 
 interface RoutesCommandOptions {
   json: boolean
+  noHeaders: boolean
   table: boolean
   verbose: boolean
 }
 
 function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
   let json = false
+  let noHeaders = false
   let table = false
   let verbose = false
 
@@ -76,6 +78,11 @@ function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
 
     if (arg === '--table') {
       table = true
+      continue
+    }
+
+    if (arg === '--no-headers') {
+      noHeaders = true
       continue
     }
 
@@ -99,7 +106,11 @@ function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
     throw invalidFlagCombination('Cannot combine --json with --verbose.')
   }
 
-  return { json, table, verbose }
+  if (noHeaders && !table) {
+    throw invalidFlagCombination('Cannot use --no-headers without --table.')
+  }
+
+  return { json, noHeaders, table, verbose }
 }
 
 function renderRouteMap(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
@@ -201,14 +212,17 @@ function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOption
   let routeWidth = rows.reduce((width, row) => Math.max(width, row.route.length), 'Route'.length)
   let methodWidth = rows.reduce((width, row) => Math.max(width, row.method.length), 'Method'.length)
   let pathWidth = rows.reduce((width, row) => Math.max(width, row.path.length), 'Path'.length)
-  let lines = [
-    [
-      'Route'.padEnd(routeWidth),
-      'Method'.padEnd(methodWidth),
-      'Path'.padEnd(pathWidth),
-      'Owner',
-    ].join('  '),
-  ]
+  let lines =
+    options.noHeaders
+      ? []
+      : [
+          [
+            bold('Route'.padEnd(routeWidth)),
+            bold('Method'.padEnd(methodWidth)),
+            bold('Path'.padEnd(pathWidth)),
+            bold('Owner'),
+          ].join('  '),
+        ]
 
   for (let row of rows) {
     lines.push(
@@ -247,7 +261,7 @@ function formatOwner(node: RouteTreeNode, options: RoutesCommandOptions): string
 }
 
 function colorRouteLine(line: string, node: RouteTreeNode): string {
-  return node.owner.exists ? lightGray(line) : lightRed(line)
+  return node.owner.exists ? line : lightRed(line)
 }
 
 function getCompactOwnerPath(ownerPath: string): string {
@@ -256,8 +270,4 @@ function getCompactOwnerPath(ownerPath: string): string {
   }
 
   return ownerPath
-}
-
-function ensureTerminalReset(output: string): string {
-  return `${output}${reset('stdout')}`
 }
