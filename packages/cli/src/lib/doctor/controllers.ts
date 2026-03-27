@@ -1,5 +1,8 @@
-import { inspectControllerOwnership, type OwnedSubtree } from '../controller-ownership.ts'
-import type { LoadedRouteMap } from '../route-map.ts'
+import {
+  inspectControllerOwnership,
+  type OwnedSubtree,
+  type OwnershipRouteNode,
+} from '../controller-ownership.ts'
 
 export type DoctorSuiteName = 'controllers'
 export type DoctorFindingSeverity = 'warn' | 'advice'
@@ -30,9 +33,10 @@ export interface DoctorSuiteResult {
 }
 
 export async function checkControllerConventions(
-  routeMap: LoadedRouteMap,
+  appRoot: string,
+  tree: OwnershipRouteNode[],
 ): Promise<DoctorSuiteResult> {
-  let ownership = await inspectControllerOwnership(routeMap)
+  let ownership = await inspectControllerOwnership(appRoot, tree)
   let findings = [
     ...getSubtreeFindings(ownership.subtrees),
     ...ownership.orphanActionPaths.map((actualPath) => ({

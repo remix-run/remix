@@ -4,11 +4,7 @@ import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import {
-  getActionOwnerCandidates,
-  getControllerOwnerCandidates,
-  getPreferredOwnerDisplayPath,
-} from './controller-files.ts'
+import { inspectControllerOwnership, type OwnedSubtree } from './controller-ownership.ts'
 
 export type RouteOwnerKind = 'action' | 'controller'
 export type RouteTreeNodeKind = 'group' | 'route'
@@ -35,6 +31,12 @@ export interface LoadedRouteMap {
   tree: RouteTreeNode[]
 }
 
+export interface LoadedRouteManifest {
+  appRoot: string
+  routesFile: string
+  tree: RawRouteTreeNode[]
+}
+
 export interface RawRouteTreeNode {
   children: RawRouteTreeNode[]
   key: string
@@ -45,10 +47,21 @@ export interface RawRouteTreeNode {
 }
 
 export async function loadRouteMap(cwd: string = process.cwd()): Promise<LoadedRouteMap> {
+  let manifest = await loadRouteManifest(cwd)
+  let ownership = await inspectControllerOwnership(manifest.appRoot, manifest.tree)
+  let tree = decorateRouteTree(manifest.tree, ownership.subtrees)
+
+  return {
+    appRoot: manifest.appRoot,
+    routesFile: manifest.routesFile,
+    tree,
+  }
+}
+
+export async function loadRouteManifest(cwd: string = process.cwd()): Promise<LoadedRouteManifest> {
   let appRoot = await findRemixAppRoot(cwd)
   let routesFile = path.join(appRoot, 'app', 'routes.ts')
-  let rawTree = await loadRawRouteMap(appRoot, routesFile)
-  let tree = await decorateRouteTree(appRoot, rawTree)
+  let tree = await loadRawRouteMap(appRoot, routesFile)
 
   return {
     appRoot,
@@ -111,58 +124,62 @@ async function loadRawRouteMap(appRoot: string, routesFile: string): Promise<Raw
   return assertRawRouteTree(parsed)
 }
 
-async function decorateRouteTree(
-  appRoot: string,
+function decorateRouteTree(
   rawTree: RawRouteTreeNode[],
+  subtrees: OwnedSubtree[],
   parentSegments: string[] = [],
-): Promise<RouteTreeNode[]> {
-  return Promise.all(
-    rawTree.map(async (rawNode) => {
-      let owner = await getRouteOwner(appRoot, rawNode, parentSegments)
-      let nextParentSegments =
-        rawNode.kind === 'group' ? [...parentSegments, rawNode.key] : parentSegments
+): RouteTreeNode[] {
+  let subtreesByRouteName = new Map(subtrees.map((subtree) => [subtree.routeName, subtree]))
 
-      return {
-        children:
-          rawNode.kind === 'group'
-            ? await decorateRouteTree(appRoot, rawNode.children, nextParentSegments)
-            : [],
-        key: rawNode.key,
-        kind: rawNode.kind,
-        method: rawNode.method,
-        name: rawNode.name,
-        owner,
-        pattern: rawNode.pattern,
-      } satisfies RouteTreeNode
-    }),
-  )
+  return decorateRouteTreeWithLookup(rawTree, subtreesByRouteName, parentSegments)
 }
 
-async function getRouteOwner(
-  appRoot: string,
+function decorateRouteTreeWithLookup(
+  rawTree: RawRouteTreeNode[],
+  subtreesByRouteName: Map<string, OwnedSubtree>,
+  parentSegments: string[] = [],
+): RouteTreeNode[] {
+  return rawTree.map((rawNode) => {
+    let owner = getRouteOwner(rawNode, parentSegments, subtreesByRouteName)
+    let nextParentSegments =
+      rawNode.kind === 'group' ? [...parentSegments, rawNode.key] : parentSegments
+
+    return {
+      children:
+        rawNode.kind === 'group'
+          ? decorateRouteTreeWithLookup(rawNode.children, subtreesByRouteName, nextParentSegments)
+          : [],
+      key: rawNode.key,
+      kind: rawNode.kind,
+      method: rawNode.method,
+      name: rawNode.name,
+      owner,
+      pattern: rawNode.pattern,
+    } satisfies RouteTreeNode
+  })
+}
+
+function getRouteOwner(
   rawNode: RawRouteTreeNode,
   parentSegments: string[],
-): Promise<RouteTreeOwner> {
-  let kind: RouteOwnerKind
-  let candidatePaths: string[]
+  subtreesByRouteName: Map<string, OwnedSubtree>,
+): RouteTreeOwner {
+  let ownerRouteName =
+    rawNode.kind === 'group'
+      ? rawNode.name
+      : parentSegments.length === 0
+        ? rawNode.name
+        : parentSegments.join('.')
+  let subtree = subtreesByRouteName.get(ownerRouteName)
 
-  if (rawNode.kind === 'group') {
-    kind = 'controller'
-    candidatePaths = getControllerOwnerCandidates([...parentSegments, rawNode.key])
-  } else if (parentSegments.length === 0) {
-    kind = 'action'
-    candidatePaths = getActionOwnerCandidates([rawNode.key])
-  } else {
-    kind = 'controller'
-    candidatePaths = getControllerOwnerCandidates(parentSegments)
+  if (subtree == null) {
+    throw new Error(`Could not resolve owner plan for "${rawNode.name}".`)
   }
 
-  let existingPath = await findFirstExistingPath(appRoot, candidatePaths)
-
   return {
-    exists: existingPath != null,
-    kind,
-    path: existingPath ?? getPreferredOwnerDisplayPath(candidatePaths),
+    exists: subtree.actualEntryPath != null,
+    kind: subtree.kind,
+    path: subtree.actualEntryPath ?? subtree.entryDisplayPath,
   }
 }
 
@@ -253,19 +270,6 @@ async function pathExists(filePath: string): Promise<boolean> {
 
     throw error
   }
-}
-
-async function findFirstExistingPath(
-  appRoot: string,
-  candidatePaths: string[],
-): Promise<string | null> {
-  for (let candidatePath of candidatePaths) {
-    if (await pathExists(path.join(appRoot, candidatePath))) {
-      return candidatePath
-    }
-  }
-
-  return null
 }
 
 function getRouteMapWorkerPath(): string {

@@ -6,7 +6,7 @@ import {
   type DoctorSuiteResult,
 } from '../doctor/controllers.ts'
 import { UsageError } from '../errors.ts'
-import { loadRouteMap } from '../route-map.ts'
+import { loadRouteManifest } from '../route-map.ts'
 
 export async function runDoctorCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -16,13 +16,13 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseDoctorCommandArgs(argv)
-    let routeMap = await loadRouteMap()
-    let suite = await checkControllerConventions(routeMap)
+    let routeManifest = await loadRouteManifest()
+    let suite = await checkControllerConventions(routeManifest.appRoot, routeManifest.tree)
     let findings = suite.findings
     let report = {
-      appRoot: routeMap.appRoot,
+      appRoot: routeManifest.appRoot,
       findings,
-      routesFile: routeMap.routesFile,
+      routesFile: routeManifest.routesFile,
       suites: [suite],
     }
 

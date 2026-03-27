@@ -3,13 +3,12 @@ import { describe, it } from 'node:test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
 import { inspectControllerOwnership } from './controller-ownership.ts'
-import { loadRouteMap } from './route-map.ts'
+import { loadRouteManifest } from './route-map.ts'
 
 describe('controller ownership', () => {
   it('tracks duplicate owner files for a single route subtree', async () => {
-    let ownership = await inspectControllerOwnership(
-      await loadRouteMap(getFixturePath('doctor-duplicate-owner')),
-    )
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-duplicate-owner'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
     let home = ownership.subtrees.find((subtree) => subtree.routeName === 'home')
     let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
 
@@ -23,9 +22,8 @@ describe('controller ownership', () => {
   })
 
   it('claims nested files for the deepest matching subtree', async () => {
-    let ownership = await inspectControllerOwnership(
-      await loadRouteMap(getFixturePath('routes-tree')),
-    )
+    let routeManifest = await loadRouteManifest(getFixturePath('routes-tree'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
     let auth = ownership.subtrees.find((subtree) => subtree.routeName === 'auth')
     let authLogin = ownership.subtrees.find((subtree) => subtree.routeName === 'auth.login')
 
@@ -36,9 +34,8 @@ describe('controller ownership', () => {
   })
 
   it('tracks promotion drift inside a standalone action subtree', async () => {
-    let ownership = await inspectControllerOwnership(
-      await loadRouteMap(getFixturePath('doctor-promotion-drift')),
-    )
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-promotion-drift'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
     let home = ownership.subtrees.find((subtree) => subtree.routeName === 'home')
 
     assert.ok(home)
@@ -48,17 +45,15 @@ describe('controller ownership', () => {
   })
 
   it('tracks extraneous root directories outside the route tree', async () => {
-    let ownership = await inspectControllerOwnership(
-      await loadRouteMap(getFixturePath('doctor-orphan-route-local-file')),
-    )
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-orphan-route-local-file'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
 
     assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/controllers/unused'])
   })
 
   it('tracks extraneous root directories from the route-map shape', async () => {
-    let ownership = await inspectControllerOwnership(
-      await loadRouteMap(getFixturePath('doctor-generic-buckets')),
-    )
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-generic-buckets'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
 
     assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/controllers/components'])
   })

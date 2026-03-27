@@ -10,7 +10,14 @@ import {
   isActionFileName,
   isControllerEntryFileName,
 } from './controller-files.ts'
-import type { LoadedRouteMap, RouteOwnerKind, RouteTreeNode } from './route-map.ts'
+import type { RouteOwnerKind, RouteTreeNodeKind } from './route-map.ts'
+
+export interface OwnershipRouteNode {
+  children: OwnershipRouteNode[]
+  key: string
+  kind: RouteTreeNodeKind
+  name: string
+}
 
 export interface ControllerDirectoryScan {
   actionEntryPaths: Set<string>
@@ -47,10 +54,11 @@ export interface ControllerOwnership {
 }
 
 export async function inspectControllerOwnership(
-  routeMap: LoadedRouteMap,
+  appRoot: string,
+  tree: OwnershipRouteNode[],
 ): Promise<ControllerOwnership> {
-  let subtreePlans = buildOwnedSubtrees(routeMap.tree)
-  let scan = await scanControllersDirectory(routeMap.appRoot)
+  let subtreePlans = buildOwnedSubtrees(tree)
+  let scan = await scanControllersDirectory(appRoot)
   let subtrees = applyScanToSubtrees(subtreePlans, scan)
 
   return {
@@ -63,7 +71,7 @@ export async function inspectControllerOwnership(
 }
 
 export function buildOwnedSubtrees(
-  tree: RouteTreeNode[],
+  tree: OwnershipRouteNode[],
   depth: number = 0,
   subtrees: OwnedSubtreePlan[] = [],
 ): OwnedSubtreePlan[] {
@@ -115,8 +123,8 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
       entries = await fs.readdir(currentDir, { withFileTypes: true })
     } catch (error) {
       let nodeError = error as NodeJS.ErrnoException
-      if (nodeError.code === 'ENOENT') {
-        throw new Error('Could not read app/controllers. Run this command inside a Remix app.')
+      if (nodeError.code === 'ENOENT' && isRoot) {
+        return
       }
 
       throw error
