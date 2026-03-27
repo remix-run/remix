@@ -3,6 +3,8 @@ import * as process from 'node:process'
 import { UsageError } from '../errors.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
 
+const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
+
 export async function runRoutesCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getRoutesCommandHelpText())
@@ -16,7 +18,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
-      process.stdout.write(renderRouteMap(routeMap))
+      process.stdout.write(renderRouteMap(routeMap, options))
     }
 
     return 0
@@ -38,25 +40,47 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
 
 export function getRoutesCommandHelpText(): string {
   return `Usage:
-  remix routes [--json]
+  remix routes [--json | --table] [--verbose]
 
 Show the Remix route tree for the current app.
 
 Options:
   --json       Print the normalized route tree as JSON
+  --table      Print routes as a flat table
+  --verbose    Show full owner paths in tree or table output
 
 Examples:
   remix routes
+  remix routes --table
+  remix routes --verbose
   remix routes --json
 `
 }
 
-function parseRoutesCommandArgs(argv: string[]): { json: boolean } {
+interface RoutesCommandOptions {
+  json: boolean
+  table: boolean
+  verbose: boolean
+}
+
+function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
   let json = false
+  let table = false
+  let verbose = false
 
   for (let arg of argv) {
     if (arg === '--json') {
       json = true
+      continue
+    }
+
+    if (arg === '--table') {
+      table = true
+      continue
+    }
+
+    if (arg === '--verbose') {
+      verbose = true
       continue
     }
 
@@ -67,21 +91,54 @@ function parseRoutesCommandArgs(argv: string[]): { json: boolean } {
     throw new UsageError(`Unexpected extra argument: ${arg}`)
   }
 
-  return { json }
+  if (json && table) {
+    throw new UsageError('Cannot combine --json with --table.')
+  }
+
+  if (json && verbose) {
+    throw new UsageError('Cannot combine --json with --verbose.')
+  }
+
+  return { json, table, verbose }
 }
 
-function renderRouteMap(routeMap: LoadedRouteMap): string {
+function renderRouteMap(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
   if (routeMap.tree.length === 0) {
     return 'No routes.\n'
   }
 
-  let lines: string[] = []
+  if (options.table) {
+    return renderRouteTable(routeMap, options)
+  }
 
-  routeMap.tree.forEach((node, index) => {
-    renderRouteNode(lines, node, '', index === routeMap.tree.length - 1, true)
-  })
+  let lines: string[] = []
+  renderRouteNodes(lines, routeMap.tree, '', true, null, options)
 
   return `${lines.join('\n')}\n`
+}
+
+function renderRouteNodes(
+  lines: string[],
+  nodes: RouteTreeNode[],
+  prefix: string,
+  isRoot: boolean,
+  parentOwnerPath: string | null,
+  options: RoutesCommandOptions,
+): void {
+  let leafKeyWidth = getLeafKeyWidth(nodes)
+
+  nodes.forEach((node, index) => {
+    renderRouteNode(
+      lines,
+      node,
+      prefix,
+      index === nodes.length - 1,
+      isRoot,
+      parentOwnerPath,
+      leafKeyWidth,
+      options,
+    )
+  })
 }
 
 function renderRouteNode(
@@ -90,26 +147,104 @@ function renderRouteNode(
   prefix: string,
   isLast: boolean,
   isRoot: boolean,
+  parentOwnerPath: string | null,
+  leafKeyWidth: number,
+  options: RoutesCommandOptions,
 ): void {
   let branch = isRoot ? '' : isLast ? '└─ ' : '├─ '
-  lines.push(`${prefix}${branch}${formatRouteNode(node)}`)
+  lines.push(`${prefix}${branch}${formatRouteNode(node, parentOwnerPath, leafKeyWidth, options)}`)
 
   if (node.kind !== 'group') {
     return
   }
 
   let childPrefix = isRoot ? '' : `${prefix}${isLast ? '   ' : '│  '}`
-  node.children.forEach((child, index) => {
-    renderRouteNode(lines, child, childPrefix, index === node.children.length - 1, false)
-  })
+  renderRouteNodes(lines, node.children, childPrefix, false, node.owner.path, options)
 }
 
-function formatRouteNode(node: RouteTreeNode): string {
-  let owner = `${node.owner.path}${node.owner.exists ? '' : ' [missing]'}`
+function getLeafKeyWidth(nodes: RouteTreeNode[]): number {
+  let leafNodes = nodes.filter((node) => node.kind === 'route')
+
+  return leafNodes.reduce((width, node) => Math.max(width, node.key.length), 0)
+}
+
+function formatRouteNode(
+  node: RouteTreeNode,
+  parentOwnerPath: string | null,
+  leafKeyWidth: number,
+  options: RoutesCommandOptions,
+): string {
+  let owner = formatOwner(node, options)
 
   if (node.kind === 'group') {
     return `${node.key} -> ${owner}`
   }
 
-  return `${node.key} ${node.method!.padEnd(6)} ${node.pattern} -> ${owner}`
+  let leaf = `${node.key.padEnd(leafKeyWidth)}  ${node.method!.padEnd(6)} ${node.pattern}`
+
+  if (options.verbose || parentOwnerPath == null || parentOwnerPath !== node.owner.path) {
+    return `${leaf} -> ${owner}`
+  }
+
+  return leaf
+}
+
+function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
+  let rows = flattenRoutes(routeMap.tree).map((node) => ({
+    method: node.method!,
+    owner: formatOwner(node, options),
+    path: node.pattern!,
+    route: node.name,
+  }))
+  let routeWidth = rows.reduce((width, row) => Math.max(width, row.route.length), 'Route'.length)
+  let methodWidth = rows.reduce((width, row) => Math.max(width, row.method.length), 'Method'.length)
+  let pathWidth = rows.reduce((width, row) => Math.max(width, row.path.length), 'Path'.length)
+  let lines = [
+    [
+      'Route'.padEnd(routeWidth),
+      'Method'.padEnd(methodWidth),
+      'Path'.padEnd(pathWidth),
+      'Owner',
+    ].join('  '),
+  ]
+
+  for (let row of rows) {
+    lines.push(
+      [
+        row.route.padEnd(routeWidth),
+        row.method.padEnd(methodWidth),
+        row.path.padEnd(pathWidth),
+        row.owner,
+      ].join('  '),
+    )
+  }
+
+  return `${lines.join('\n')}\n`
+}
+
+function flattenRoutes(nodes: RouteTreeNode[], routes: RouteTreeNode[] = []): RouteTreeNode[] {
+  for (let node of nodes) {
+    if (node.kind === 'route') {
+      routes.push(node)
+      continue
+    }
+
+    flattenRoutes(node.children, routes)
+  }
+
+  return routes
+}
+
+function formatOwner(node: RouteTreeNode, options: RoutesCommandOptions): string {
+  let ownerPath = options.verbose ? node.owner.path : getCompactOwnerPath(node.owner.path)
+
+  return `${ownerPath}${node.owner.exists ? '' : ' [missing]'}`
+}
+
+function getCompactOwnerPath(ownerPath: string): string {
+  if (ownerPath.startsWith(CONTROLLERS_PATH_PREFIX)) {
+    return ownerPath.slice(CONTROLLERS_PATH_PREFIX.length)
+  }
+
+  return ownerPath
 }

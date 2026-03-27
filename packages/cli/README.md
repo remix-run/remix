@@ -25,6 +25,7 @@ The primary interface is the `remix` command:
 remix new my-remix-app
 remix doctor
 remix routes
+remix routes --table
 remix skills install
 ```
 
@@ -36,6 +37,7 @@ import { run } from 'remix/cli'
 await run(['new', 'my-remix-app'])
 await run(['doctor'])
 await run(['routes'])
+await run(['routes', '--table'])
 await run(['skills', 'status'])
 ```
 

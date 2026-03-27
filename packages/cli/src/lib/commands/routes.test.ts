@@ -17,17 +17,19 @@ describe('routes command', () => {
     let result = runRoutesCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix routes \[--json\]/)
+    assert.match(result.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
+    assert.match(result.stdout, /--table\s+Print routes as a flat table/)
+    assert.match(result.stdout, /--verbose\s+Show full owner paths/)
     assert.match(result.stdout, /Show the Remix route tree/)
     assert.equal(result.stderr, '')
   })
 
-  it('prints flat leaf mappings for a basic fixture app', async () => {
+  it('prints a compact tree for a basic fixture app', async () => {
     let result = runRoutesCommand([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.tsx/)
-    assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> app\/controllers\/auth\.tsx/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx/)
+    assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> auth\.tsx/)
     assert.equal(result.stderr, '')
   })
 
@@ -36,13 +38,41 @@ describe('routes command', () => {
     let result = runRoutesCommand([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /auth -> auth\/controller\.tsx/)
+    assert.match(result.stdout, /login -> auth\/login\/controller\.tsx/)
+    assert.match(result.stdout, /action\s+POST\s+\/login(?!\s+->)/)
+    assert.match(result.stdout, /orders -> account\/orders\/controller\.tsx/)
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints a verbose tree with full owner paths on every route', async () => {
+    let result = runRoutesCommand(['--verbose'], getFixturePath('routes-tree'))
+
+    assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /auth -> app\/controllers\/auth\/controller\.tsx/)
     assert.match(result.stdout, /login -> app\/controllers\/auth\/login\/controller\.tsx/)
     assert.match(
       result.stdout,
-      /action POST\s+\/login -> app\/controllers\/auth\/login\/controller\.tsx/,
+      /action\s+POST\s+\/login -> app\/controllers\/auth\/login\/controller\.tsx/,
     )
-    assert.match(result.stdout, /orders -> app\/controllers\/account\/orders\/controller\.tsx/)
+    assert.match(
+      result.stdout,
+      /logout\s+POST\s+\/logout -> app\/controllers\/auth\/controller\.tsx/,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('prints a flat table of routes', async () => {
+    let result = runRoutesCommand(['--table'], getFixturePath('routes-tree'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /Route\s+Method\s+Path\s+Owner/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+home\.tsx/)
+    assert.match(result.stdout, /auth\.login\.action\s+POST\s+\/login\s+auth\/login\/controller\.tsx/)
+    assert.match(
+      result.stdout,
+      /admin\.users\.destroy\s+DELETE\s+\/admin\/users\/:userId\s+admin\/users\/controller\.tsx/,
+    )
     assert.equal(result.stderr, '')
   })
 
@@ -50,9 +80,9 @@ describe('routes command', () => {
     let result = runRoutesCommand([], getFixturePath('doctor-clean'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.js/)
-    assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> app\/controllers\/about\.jsx/)
-    assert.match(result.stdout, /contact -> app\/controllers\/contact\/controller\.ts/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.js/)
+    assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> about\.jsx/)
+    assert.match(result.stdout, /contact -> contact\/controller\.ts/)
     assert.equal(result.stderr, '')
   })
 
@@ -120,13 +150,25 @@ describe('routes command', () => {
     let result = runRoutesCommand([], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> app\/controllers\/home\.tsx \[missing\]/)
-    assert.match(result.stdout, /auth -> app\/controllers\/auth\/controller\.tsx \[missing\]/)
-    assert.match(
-      result.stdout,
-      /action POST\s+\/auth\/login -> app\/controllers\/auth\/login\/controller\.tsx \[missing\]/,
-    )
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx \[missing\]/)
+    assert.match(result.stdout, /auth -> auth\/controller\.tsx \[missing\]/)
+    assert.match(result.stdout, /login -> auth\/login\/controller\.tsx \[missing\]/)
+    assert.match(result.stdout, /action\s+POST\s+\/auth\/login(?!\s+->)/)
     assert.equal(result.stderr, '')
+  })
+
+  it('rejects --json when combined with table formatting', async () => {
+    let result = runRoutesCommand(['--json', '--table'], getFixturePath('routes-basic'))
+
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Cannot combine --json with --table/)
+  })
+
+  it('rejects --json when combined with verbose formatting', async () => {
+    let result = runRoutesCommand(['--json', '--verbose'], getFixturePath('routes-basic'))
+
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Cannot combine --json with --verbose/)
   })
 
   it('fails when no app/routes.ts can be found', async () => {

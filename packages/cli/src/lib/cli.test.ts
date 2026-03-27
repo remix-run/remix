@@ -77,7 +77,7 @@ describe('run', () => {
     assert.equal(helpHelp.exitCode, 0)
     assert.match(helpHelp.stdout, /Usage:\s+remix help \[command\]/)
     assert.equal(routesHelp.exitCode, 0)
-    assert.match(routesHelp.stdout, /Usage:\s+remix routes \[--json\]/)
+    assert.match(routesHelp.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
     assert.equal(skillsHelp.exitCode, 0)
     assert.match(skillsHelp.stdout, /Usage:\s+remix skills <command>/)
     assert.equal(skillsInstallHelp.exitCode, 0)
@@ -88,7 +88,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['routes', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix routes \[--json\]/)
+    assert.match(result.stdout, /Usage:\s+remix routes \[--json \| --table\] \[--verbose\]/)
     assert.equal(result.stderr, '')
   })
 
