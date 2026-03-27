@@ -43,14 +43,15 @@ export function getSkillsCommandHelpText(): string {
 Manage Remix skills for the current project.
 
 Commands:
-  install      Install Remix skills into .agents/skills or a custom directory
-  list         List available Remix skills and local state
-  status       Show what remix skills install would change
+  install [--dir <path>]  Install Remix skills into .agents/skills or a custom directory
+  list [--dir <path>]     List available Remix skills and local state
+  status [--dir <path>]   Show what remix skills install would change
 
 Examples:
   remix skills install
-  remix skills list
-  remix skills status
+  remix skills install --dir custom/skills
+  remix skills list --dir custom/skills
+  remix skills status --dir custom/skills
 `
 }
 
@@ -71,23 +72,31 @@ Examples:
 
 export function getSkillsListCommandHelpText(): string {
   return `Usage:
-  remix skills list
+  remix skills list [--dir <path>]
 
 List Remix skills from GitHub and show their local state.
 
+Options:
+  --dir <path>  Read local skills from a custom directory relative to the project root
+
 Examples:
   remix skills list
+  remix skills list --dir custom/skills
 `
 }
 
 export function getSkillsStatusCommandHelpText(): string {
   return `Usage:
-  remix skills status
+  remix skills status [--dir <path>]
 
 Show what remix skills install would add or replace.
 
+Options:
+  --dir <path>  Read local skills from a custom directory relative to the project root
+
 Examples:
   remix skills status
+  remix skills status --dir custom/skills
 `
 }
 
@@ -133,8 +142,23 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  return runSkillsAction(argv, getSkillsListCommandHelpText(), async () => {
-    let result = await getSkillsOverview()
+  let options: { dir: string | null }
+  try {
+    options = parseSkillsDirArgs(argv)
+  } catch (error) {
+    if (error instanceof UsageError) {
+      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(getSkillsListCommandHelpText())
+      return 1
+    }
+
+    throw error
+  }
+
+  return runSkillsAction([], getSkillsListCommandHelpText(), async () => {
+    let result = await getSkillsOverview(process.cwd(), globalThis.fetch, {
+      skillsDir: options.dir ?? undefined,
+    })
     process.stdout.write(`Remix skills in ${result.skillsDir}:\n`)
     for (let entry of result.entries) {
       process.stdout.write(`${entry.state} ${entry.name}\n`)
@@ -149,8 +173,23 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  return runSkillsAction(argv, getSkillsStatusCommandHelpText(), async () => {
-    let result = await getSkillsOverview()
+  let options: { dir: string | null }
+  try {
+    options = parseSkillsDirArgs(argv)
+  } catch (error) {
+    if (error instanceof UsageError) {
+      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(getSkillsStatusCommandHelpText())
+      return 1
+    }
+
+    throw error
+  }
+
+  return runSkillsAction([], getSkillsStatusCommandHelpText(), async () => {
+    let result = await getSkillsOverview(process.cwd(), globalThis.fetch, {
+      skillsDir: options.dir ?? undefined,
+    })
     if (result.changes.length === 0) {
       process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
       return 0
@@ -202,6 +241,10 @@ function ensureNoExtraArgs(argv: string[]): void {
 }
 
 function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {
+  return parseSkillsDirArgs(argv)
+}
+
+function parseSkillsDirArgs(argv: string[]): { dir: string | null } {
   let dir: string | null = null
   let index = 0
 

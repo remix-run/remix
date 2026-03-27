@@ -31,6 +31,10 @@ export interface SkillsInstallOptions {
   skillsDir?: string
 }
 
+export interface SkillsOverviewOptions {
+  skillsDir?: string
+}
+
 interface GitHubBlobResponse {
   content?: unknown
   encoding?: unknown
@@ -72,8 +76,9 @@ type FetchImpl = typeof fetch
 export async function getSkillsOverview(
   cwd: string = process.cwd(),
   fetchImpl: FetchImpl = globalThis.fetch,
+  options: SkillsOverviewOptions = {},
 ): Promise<SkillsOverview> {
-  let plan = await loadSkillsPlan(cwd, fetchImpl)
+  let plan = await loadSkillsPlan(cwd, fetchImpl, options)
   return {
     changes: plan.changes,
     entries: plan.entries,

@@ -16,7 +16,12 @@ describe('skills command', () => {
 
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix skills <command>/)
-    assert.match(result.stdout, /install/)
+    assert.match(result.stdout, /install \[--dir <path>\]/)
+    assert.match(result.stdout, /list \[--dir <path>\]/)
+    assert.match(result.stdout, /status \[--dir <path>\]/)
+    assert.match(result.stdout, /remix skills install --dir custom\/skills/)
+    assert.match(result.stdout, /remix skills list --dir custom\/skills/)
+    assert.match(result.stdout, /remix skills status --dir custom\/skills/)
     assert.match(result.stdout, /list/)
     assert.match(result.stdout, /status/)
     assert.equal(result.stderr, '')
@@ -28,12 +33,17 @@ describe('skills command', () => {
     let statusHelp = await captureOutput(() => run(['skills', 'status', '--help']))
 
     assert.equal(installHelp.exitCode, 0)
-    assert.match(installHelp.stdout, /Usage:\s+remix skills install/)
+    assert.match(installHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
     assert.match(installHelp.stdout, /--dir <path>/)
+    assert.match(installHelp.stdout, /remix skills install --dir custom\/skills/)
     assert.equal(listHelp.exitCode, 0)
-    assert.match(listHelp.stdout, /Usage:\s+remix skills list/)
+    assert.match(listHelp.stdout, /Usage:\s+remix skills list \[--dir <path>\]/)
+    assert.match(listHelp.stdout, /--dir <path>/)
+    assert.match(listHelp.stdout, /remix skills list --dir custom\/skills/)
     assert.equal(statusHelp.exitCode, 0)
-    assert.match(statusHelp.stdout, /Usage:\s+remix skills status/)
+    assert.match(statusHelp.stdout, /Usage:\s+remix skills status \[--dir <path>\]/)
+    assert.match(statusHelp.stdout, /--dir <path>/)
+    assert.match(statusHelp.stdout, /remix skills status --dir custom\/skills/)
   })
 
   it('does not treat help as a skills subcommand', async () => {
@@ -159,6 +169,22 @@ describe('skills command', () => {
     assert.match(result.stderr, /--dir requires a value\./)
   })
 
+  it('fails when skills list --dir is missing a value', async () => {
+    let result = await captureOutput(() => run(['skills', 'list', '--dir']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /--dir requires a value\./)
+    assert.match(result.stderr, /Usage:\s+remix skills list \[--dir <path>\]/)
+  })
+
+  it('fails when skills status --dir is missing a value', async () => {
+    let result = await captureOutput(() => run(['skills', 'status', '--dir']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /--dir requires a value\./)
+    assert.match(result.stderr, /Usage:\s+remix skills status \[--dir <path>\]/)
+  })
+
   it('lists all remote skills with local state from a nested directory', async () => {
     let remoteSkills = {
       'remix-auth': {
@@ -197,6 +223,43 @@ describe('skills command', () => {
     }
   })
 
+  it('lists local skill state from a custom directory relative to the project root', async () => {
+    let remoteSkills = {
+      'remix-auth': {
+        'SKILL.md': '# Auth\n',
+      },
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      await writeFiles(path.join(tmpDir, 'custom', 'skills'), {
+        'remix-project-layout/SKILL.md': '# Layout\n',
+      })
+      let nestedDir = path.join(tmpDir, 'app', 'routes')
+      await fs.mkdir(nestedDir, { recursive: true })
+
+      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
+        withCwd(nestedDir, () =>
+          captureOutput(() => run(['skills', 'list', '--dir', 'custom/skills'])),
+        ),
+      )
+
+      assert.equal(result.exitCode, 0)
+      assert.match(
+        result.stdout,
+        new RegExp(`Remix skills in .*[\\\\/]${escapeRegExp(path.join('custom', 'skills'))}:`),
+      )
+      assert.match(result.stdout, /installed remix-project-layout/)
+      assert.match(result.stdout, /missing remix-auth/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   it('shows only pending changes in skills status', async () => {
     let remoteSkills = {
       'remix-auth': {
@@ -223,6 +286,50 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
+      assert.match(result.stdout, /add remix-auth/)
+      assert.match(result.stdout, /replace remix-ui/)
+      assert.doesNotMatch(result.stdout, /remix-project-layout/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('shows pending changes from a custom directory relative to the project root', async () => {
+    let remoteSkills = {
+      'remix-auth': {
+        'SKILL.md': '# Auth\n',
+      },
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      await writeFiles(path.join(tmpDir, 'custom', 'skills'), {
+        'remix-project-layout/SKILL.md': '# Layout\n',
+        'remix-ui/SKILL.md': '# Old UI\n',
+      })
+      let nestedDir = path.join(tmpDir, 'app', 'routes')
+      await fs.mkdir(nestedDir, { recursive: true })
+
+      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
+        withCwd(nestedDir, () =>
+          captureOutput(() => run(['skills', 'status', '--dir', 'custom/skills'])),
+        ),
+      )
+
+      assert.equal(result.exitCode, 0)
+      assert.match(
+        result.stdout,
+        new RegExp(
+          `Remix skills to sync into .*[\\\\/]${escapeRegExp(path.join('custom', 'skills'))}:`,
+        ),
+      )
       assert.match(result.stdout, /add remix-auth/)
       assert.match(result.stdout, /replace remix-ui/)
       assert.doesNotMatch(result.stdout, /remix-project-layout/)
