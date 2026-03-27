@@ -10,6 +10,7 @@ import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
 import { tryDecodeURI } from './route-pattern/decode-uri.ts'
 import { matchSearch } from './route-pattern/match.ts'
+import { toUnicode } from './punycode.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
@@ -235,6 +236,7 @@ export class Trie<data = unknown> {
 
   search(url: URL): SearchResult<data> {
     let origins: Array<{ hostnameMatch: PartPatternMatch; pathnameNode: PathnameNode<data> }> = []
+    let normalizedHostname = toUnicode(url.hostname)
 
     // protocol -> hostname
     let protocol = url.protocol.slice(0, -1)
@@ -246,14 +248,14 @@ export class Trie<data = unknown> {
     if (anyHostname) {
       origins.push({
         hostnameMatch: [
-          { type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname },
+          { type: '*', name: '*', begin: 0, end: normalizedHostname.length, value: normalizedHostname },
         ],
         pathnameNode: anyHostname,
       })
     }
 
     // static hostname + port -> pathname (hostname case-insensitive)
-    let staticHostname = hostNameNode.static.get(url.hostname.toLowerCase())
+    let staticHostname = hostNameNode.static.get(normalizedHostname.toLowerCase())
     if (staticHostname) {
       let pathnameNode = staticHostname.get(url.port)
       if (pathnameNode) {
@@ -262,7 +264,7 @@ export class Trie<data = unknown> {
     }
     // dynamic hostname + port -> pathname
     hostNameNode.dynamic.forEach(({ part, portNode }) => {
-      let match = part.match(url.hostname, { ignoreCase: true })
+      let match = part.match(normalizedHostname, { ignoreCase: true })
       if (match) {
         let pathnameNode = portNode.get(url.port)
         if (pathnameNode) {

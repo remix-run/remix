@@ -829,6 +829,23 @@ describe('RoutePattern', () => {
     })
 
     describe('hostname', () => {
+      it('matches non-ASCII hostname param values', () => {
+        let params = {
+          // Unlike pathname params, hostname labels can't use the emoji, zwj,
+          // nbsp, or fullwidth cases; see:
+          // https://unicode.org/reports/tr46/#Validity_Criteria
+          accented: 'café',
+          cjk: '北京',
+          rtl: 'مرحبا',
+          combining: 'hà-nội',
+        }
+        let url = new URL(
+          `https://${params.accented}.${params.cjk}.${params.rtl}.${params.combining}.example.com/path`,
+        )
+
+        assertMatch('://:accented.:cjk.:rtl.:combining.example.com/path', url.href, { params })
+      })
+
       it('matches one variable', () => {
         assertMatch('://:host.com/path', 'https://example.com/path', {
           params: { host: 'example' },

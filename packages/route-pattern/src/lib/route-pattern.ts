@@ -8,6 +8,7 @@ import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
 import { tryDecodeURI } from './route-pattern/decode-uri.ts'
 import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
+import { toUnicode } from './punycode.ts'
 
 type AST = {
   readonly protocol: 'http' | 'https' | 'http(s)' | null
@@ -227,6 +228,7 @@ export class RoutePattern<source extends string = string> {
    */
   match(url: string | URL, options?: { ignoreCase?: boolean }): RoutePatternMatch<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
+    let decodedHostname = toUnicode(url.hostname)
 
     let hostname: PartPatternMatch | null = null
     if (this.hasOrigin) {
@@ -240,7 +242,7 @@ export class RoutePattern<source extends string = string> {
 
       // hostname: null matches any hostname
       if (this.ast.hostname !== null) {
-        hostname = this.ast.hostname.match(url.hostname, { ignoreCase: true })
+        hostname = this.ast.hostname.match(decodedHostname, { ignoreCase: true })
         if (hostname === null) return null
       }
 
@@ -251,7 +253,9 @@ export class RoutePattern<source extends string = string> {
 
     if (this.ast.hostname === null) {
       // Pathname-only pattern - treat hostname as wildcard match
-      hostname = [{ type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname }]
+      hostname = [
+        { type: '*', name: '*', begin: 0, end: decodedHostname.length, value: decodedHostname },
+      ]
     }
 
     // url.pathname: remove leading slash

@@ -85,6 +85,28 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.deepEqual(match.params, {})
       })
 
+      it('matches non-ASCII hostname param values', () => {
+        let matcher = new MatcherClass()
+        matcher.add('://:accented.:cjk.:rtl.:combining.example.com/users', null)
+
+        let params = {
+          // Unlike pathname params, hostname labels can't use the emoji, zwj,
+          // nbsp, or fullwidth cases; see:
+          // https://unicode.org/reports/tr46/#Validity_Criteria
+          accented: 'café',
+          cjk: '北京',
+          rtl: 'مرحبا',
+          combining: 'hà-nội',
+        }
+        let url = new URL(
+          `https://${params.accented}.${params.cjk}.${params.rtl}.${params.combining}.example.com/users`,
+        )
+
+        let match = matcher.match(url.href)
+        assert.ok(match)
+        assert.deepEqual(match.params, params)
+      })
+
       it('returns null when static hostname does not match', () => {
         let matcher = new MatcherClass()
         matcher.add('://example.com/users', null)
