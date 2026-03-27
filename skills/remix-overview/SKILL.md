@@ -49,8 +49,8 @@ Use this as the default mental model:
   Use `../remix-server/SKILL.md` for Fetch server setup, middleware composition, request context,
   and runtime wiring.
 - Routing and controller contracts
-  TODO: Add `remix-routing` for route contracts, nested route structure, controller mapping, and URL
-  ownership.
+  Use `../remix-routing/SKILL.md` for route contracts, nested route structure, controller mapping,
+  and URL ownership.
 - Data and persistence
   TODO: Add `remix-data` for schema validation, form-data decoding, query/persistence patterns,
   migrations, and seeding.
@@ -71,6 +71,8 @@ Use this as the default mental model:
   `../remix-ui/SKILL.md`.
 - If the task is "wire the request pipeline", "set up `server.ts`", "compose middleware", or
   "define request-scoped context", use `../remix-server/SKILL.md`.
+- If the task is "define this URL space", "author `app/routes.ts`", "generate links from the route
+  contract", or "map controllers to routes", use `../remix-routing/SKILL.md`.
 - If the task is "how should I test this request flow?" or "where should runtime integration checks
   live?", use `../remix-server/SKILL.md`.
 - If the task spans multiple subsystems, use this overview to identify the main workstreams first,

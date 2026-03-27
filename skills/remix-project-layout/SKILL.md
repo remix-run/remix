@@ -12,6 +12,9 @@ This skill is about structure and conventions. It defines where code belongs, ho
 maps to files on disk, and how a Remix app should be organized as it grows. When the user wants a
 new app scaffolded, run the bundled script instead of recreating the starter files by hand.
 
+Use `../remix-routing/SKILL.md` when the question is about the shape of `app/routes.ts`, route
+nesting, or controller-to-route mapping rather than where those files live.
+
 ## Root Layout
 
 Use these root directories consistently:

@@ -9,7 +9,8 @@ Use this skill for the server/runtime shell of a Remix app: request entrypoints,
 global middleware composition, request-scoped context, and runtime-only wiring.
 
 This skill is not the place to design route contracts or render UI. Use
-`../remix-project-layout/SKILL.md` for file placement and controller ownership, and use
+`../remix-project-layout/SKILL.md` for file placement and controller ownership, use
+`../remix-routing/SKILL.md` for route contracts and controller mapping, and use
 `../remix-ui/SKILL.md` for rendering, layouts, client entries, frames, and interactivity.
 
 ## Procedure
@@ -71,8 +72,7 @@ export let router = createRouter({
 
 ## Future Skill Handoffs
 
-- TODO: Add `../remix-routing/SKILL.md` for route contracts and controller mapping once that skill
-  exists.
+- Use `../remix-routing/SKILL.md` for route contracts, nested route maps, and controller mapping.
 - TODO: Add `../remix-data/SKILL.md` for validation, persistence, and data workflows once that
   skill exists.
 - TODO: Add `../remix-auth/SKILL.md` and decide whether `remix-sessions` stands alone later.

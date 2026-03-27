@@ -19,9 +19,9 @@ notes, or vague marketing copy.
 Before drafting or revising a user-facing skill, read the existing skill graph, the current
 user-facing skills, and the relevant package and demo docs:
 
-- `skills/skill-architecture.md`
 - `skills/remix-overview/SKILL.md`
 - `skills/remix-project-layout/SKILL.md`
+- `skills/remix-routing/SKILL.md`
 - `skills/remix-ui/SKILL.md`
 
 Also read the READMEs, docs, and demos that define the subsystem you are writing about:
