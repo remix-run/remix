@@ -1,6 +1,7 @@
 import * as process from 'node:process'
 
 import { configureColors, restoreTerminalFormatting } from './color.ts'
+import { runCompletionCommand } from './commands/completion.ts'
 import { runDoctorCommand } from './commands/doctor.ts'
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
 import { runNewCommand } from './commands/new.ts'
@@ -43,6 +44,10 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
       return runNewCommand(rest)
     }
 
+    if (command === 'completion') {
+      return runCompletionCommand(rest)
+    }
+
     if (command === 'doctor') {
       return runDoctorCommand(rest)
     }
@@ -70,7 +75,14 @@ function extractGlobalOptions(argv: string[]): { argv: string[]; noColor: boolea
   let filteredArgv: string[] = []
   let noColor = false
 
-  for (let arg of argv) {
+  for (let index = 0; index < argv.length; index++) {
+    let arg = argv[index]!
+
+    if (arg === '--') {
+      filteredArgv.push(...argv.slice(index))
+      break
+    }
+
     if (arg === '--no-color') {
       noColor = true
       continue

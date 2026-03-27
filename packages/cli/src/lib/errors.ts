@@ -32,6 +32,10 @@ export const CLI_ERROR_DEFINITIONS = {
     code: 'RMX_CLI_VERSION_UNAVAILABLE',
     title: 'Could not determine the Remix CLI version',
   },
+  invalidCompletionRequest: {
+    code: 'RMX_INVALID_COMPLETION_REQUEST',
+    title: 'Invalid completion request',
+  },
   fetchUnavailable: {
     code: 'RMX_FETCH_UNAVAILABLE',
     title: 'This runtime does not provide fetch()',
@@ -119,6 +123,11 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Unknown command',
     fix: 'Run `remix help` to see available commands.',
   },
+  unknownCompletionShell: {
+    code: 'RMX_UNKNOWN_COMPLETION_SHELL',
+    title: 'Unknown completion shell',
+    fix: 'Run `remix completion bash` or `remix completion zsh`.',
+  },
   unknownHelpTopic: {
     code: 'RMX_UNKNOWN_HELP_TOPIC',
     title: 'Unknown help topic',
@@ -169,6 +178,12 @@ export function cliVersionUnavailable(packageJsonPath?: string): CliError {
   return createCliError(CLI_ERROR_DEFINITIONS.cliVersionUnavailable, {
     context: packageJsonPath == null ? undefined : { packageJsonPath },
     message: 'Could not determine the current Remix CLI version.',
+  })
+}
+
+export function invalidCompletionRequest(): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.invalidCompletionRequest, {
+    message: 'Invalid completion request.',
   })
 }
 
@@ -290,6 +305,13 @@ export function unknownCommand(command: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.unknownCommand, {
     context: { command },
     message: `Unknown command: ${command}`,
+  })
+}
+
+export function unknownCompletionShell(shell: string): UsageError {
+  return createUsageError(CLI_ERROR_DEFINITIONS.unknownCompletionShell, {
+    context: { shell },
+    message: `Unknown completion shell: ${shell}`,
   })
 }
 

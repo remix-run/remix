@@ -14,6 +14,7 @@ npm i remix
 
 ```sh
 remix new my-remix-app
+remix completion bash >> ~/.bashrc
 remix doctor
 remix routes
 remix routes --table
@@ -29,6 +30,7 @@ remix --no-color doctor
 import { run } from 'remix/cli'
 
 await run(['new', 'my-remix-app'])
+await run(['completion', 'bash'])
 await run(['doctor'])
 await run(['routes'])
 await run(['routes', '--table'])

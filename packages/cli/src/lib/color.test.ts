@@ -12,7 +12,7 @@ describe('color', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), '\u001B[1mok\u001B[0m')
-          assert.equal(reset(), '\u001B[0m')
+          assert.equal(reset(process.stdout), '\u001B[0m')
         }),
       ),
     )
@@ -24,8 +24,8 @@ describe('color', () => {
         withTTY(process.stderr, true, () => {
           configureColors({ disabled: false })
 
-          assert.equal(lightRed('nope', 'stderr'), '\u001B[91mnope\u001B[0m')
-          assert.equal(reset('stderr'), '\u001B[0m')
+          assert.equal(lightRed('nope', process.stderr), '\u001B[91mnope\u001B[0m')
+          assert.equal(reset(process.stderr), '\u001B[0m')
         }),
       ),
     )
@@ -38,7 +38,7 @@ describe('color', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), 'ok')
-          assert.equal(reset(), '')
+          assert.equal(reset(process.stdout), '')
         }),
       ),
     )
@@ -50,8 +50,8 @@ describe('color', () => {
         withTTY(process.stderr, false, () => {
           configureColors({ disabled: false })
 
-          assert.equal(lightRed('nope', 'stderr'), 'nope')
-          assert.equal(reset('stderr'), '')
+          assert.equal(lightRed('nope', process.stderr), 'nope')
+          assert.equal(reset(process.stderr), '')
         }),
       ),
     )
@@ -63,7 +63,7 @@ describe('color', () => {
         configureColors({ disabled: false })
 
         assert.equal(bold('ok'), 'ok')
-        assert.equal(reset(), '')
+        assert.equal(reset(process.stdout), '')
       }),
     )
   })
@@ -75,7 +75,7 @@ describe('color', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), 'ok')
-          assert.equal(reset(), '')
+          assert.equal(reset(process.stdout), '')
         }),
       ),
     )
@@ -88,7 +88,7 @@ describe('color', () => {
           configureColors({ disabled: true })
 
           assert.equal(bold('ok'), 'ok')
-          assert.equal(reset(), '')
+          assert.equal(reset(process.stdout), '')
         }),
       ),
     )

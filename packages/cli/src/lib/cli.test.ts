@@ -13,6 +13,7 @@ describe('run', () => {
 
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
+    assert.match(result.stdout, /completion\s+Print shell completion scripts/)
     assert.match(result.stdout, /doctor\s+Check controller conventions/)
     assert.match(result.stdout, /routes\s+Show the route tree/)
     assert.match(result.stdout, /skills\s+Manage Remix skills/)
@@ -76,6 +77,7 @@ describe('run', () => {
 
   it('prints command help from the help command', async () => {
     let doctorHelp = await captureOutput(() => run(['help', 'doctor']))
+    let completionHelp = await captureOutput(() => run(['help', 'completion']))
     let newHelp = await captureOutput(() => run(['help', 'new']))
     let helpHelp = await captureOutput(() => run(['help', 'help']))
     let routesHelp = await captureOutput(() => run(['help', 'routes']))
@@ -85,6 +87,8 @@ describe('run', () => {
 
     assert.equal(doctorHelp.exitCode, 0)
     assert.match(doctorHelp.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--no-color\]/)
+    assert.equal(completionHelp.exitCode, 0)
+    assert.match(completionHelp.stdout, /Usage:\s+remix completion <bash\|zsh>/)
     assert.equal(newHelp.exitCode, 0)
     assert.match(newHelp.stdout, /Usage:\s+remix new <target-dir>/)
     assert.equal(helpHelp.exitCode, 0)

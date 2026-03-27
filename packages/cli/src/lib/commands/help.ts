@@ -1,5 +1,6 @@
 import * as process from 'node:process'
 
+import { getCompletionCommandHelpText } from './completion.ts'
 import { renderCliError, unknownHelpTopic } from '../errors.ts'
 import { getDoctorCommandHelpText } from './doctor.ts'
 import { getNewCommandHelpText } from './new.ts'
@@ -32,6 +33,7 @@ export function getCliHelpText(): string {
   remix <command> [options]
 
 Commands:
+  completion     Print shell completion scripts for Remix
   help [command]  Show help for Remix commands
   new <name>      Create a new Remix project
   doctor          Check controller conventions for the current project
@@ -45,7 +47,9 @@ Options:
   -v, --version   Show version
 
 Examples:
+  remix completion bash
   remix help
+  remix help completion
   remix help doctor
   remix help skills install
   remix doctor
@@ -65,6 +69,7 @@ Show help for Remix commands.
 
 Examples:
   remix help
+  remix help completion
   remix help doctor
   remix help new
   remix help routes
@@ -86,6 +91,10 @@ function getCommandHelpText(argv: string[]): string {
 
   if (command === 'new' && rest.length === 0) {
     return getNewCommandHelpText()
+  }
+
+  if (command === 'completion' && rest.length === 0) {
+    return getCompletionCommandHelpText()
   }
 
   if (command === 'doctor' && rest.length === 0) {

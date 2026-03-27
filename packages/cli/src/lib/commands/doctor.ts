@@ -40,7 +40,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), 'stderr'))
+    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr))
     return 1
   }
 }

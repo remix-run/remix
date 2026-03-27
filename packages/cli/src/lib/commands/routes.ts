@@ -31,7 +31,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), 'stderr'))
+    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), process.stderr))
     return 1
   }
 }
