@@ -19,6 +19,20 @@ Command-line interface for creating and managing Remix projects.
 npm i remix
 ```
 
+## Shell completion
+
+Install bash completion:
+
+```sh
+remix completion bash >> ~/.bashrc
+```
+
+Install zsh completion:
+
+```sh
+remix completion zsh >> ~/.zshrc
+```
+
 ## Usage
 
 The primary interface is the `remix` command:
