@@ -6,7 +6,7 @@ import {
   type DoctorFinding,
   type DoctorSuiteResult,
 } from '../doctor/controllers.ts'
-import { UsageError } from '../errors.ts'
+import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
 import { loadRouteManifest } from '../route-map.ts'
 
 export async function runDoctorCommand(argv: string[]): Promise<number> {
@@ -39,19 +39,14 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
     return 0
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(lightRed(`${error.message}\n`, 'stderr'))
-      process.stderr.write('\n')
-      process.stderr.write(getDoctorCommandHelpText())
-      return 1
-    }
-
-    if (error instanceof Error) {
-      process.stderr.write(ensureTerminalReset(lightRed(`${error.message}\n`, 'stderr'), 'stderr'))
-      return 1
-    }
-
-    throw error
+    let cliError = toCliError(error)
+    process.stderr.write(
+      ensureTerminalReset(
+        lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), 'stderr'),
+        'stderr',
+      ),
+    )
+    return 1
   }
 }
 
@@ -88,10 +83,10 @@ function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolea
     }
 
     if (arg.startsWith('-')) {
-      throw new UsageError(`Unknown argument: ${arg}`)
+      throw unknownArgument(arg)
     }
 
-    throw new UsageError(`Unexpected extra argument: ${arg}`)
+    throw unexpectedExtraArgument(arg)
   }
 
   return { json, strict }

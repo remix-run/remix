@@ -2,6 +2,8 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 
+import { fetchUnavailable, projectRootNotFound, remoteSkillDataMissing } from './errors.ts'
+
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
 const REMIX_SKILLS_PATH = 'skills/'
@@ -98,7 +100,7 @@ export async function installRemixSkills(
   for (let change of plan.changes) {
     let remoteSkill = plan.remoteSkills.find((skill) => skill.name === change.name)
     if (remoteSkill == null) {
-      throw new Error(`Could not find remote data for Remix skill: ${change.name}`)
+      throw remoteSkillDataMissing(change.name)
     }
 
     let skillDir = path.join(plan.skillsDir, remoteSkill.name)
@@ -121,7 +123,7 @@ async function loadSkillsPlan(
   options: SkillsInstallOptions = {},
 ): Promise<SkillsPlan> {
   if (typeof fetchImpl !== 'function') {
-    throw new Error('This runtime does not provide fetch().')
+    throw fetchUnavailable()
   }
 
   let projectRoot = await findProjectRoot(cwd)
@@ -293,7 +295,7 @@ async function findProjectRoot(startDir: string): Promise<string> {
     currentDir = parentDir
   }
 
-  throw new Error('Could not find a project root. Run this command inside a Remix project.')
+  throw projectRootNotFound(startDir)
 }
 
 function resolveSkillsDir(projectRoot: string, skillsDir: string | undefined): string {

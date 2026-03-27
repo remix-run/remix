@@ -3,7 +3,12 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { UsageError } from './errors.ts'
+import {
+  appNameUnavailable,
+  invalidPackageName,
+  targetDirectoryNotEmpty,
+  targetPathNotDirectory,
+} from './errors.ts'
 
 const BOOTSTRAP_DIRECTORY = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -37,7 +42,7 @@ export async function bootstrapProject(
   let targetDir = path.resolve(options.targetDir)
   let rawAppName = options.appName ?? path.basename(targetDir)
   if (rawAppName.length === 0) {
-    throw new UsageError('Could not determine an app name from the target directory.')
+    throw appNameUnavailable(targetDir)
   }
 
   let config = {
@@ -108,14 +113,12 @@ async function ensureTargetDirectory(targetDir: string, force: boolean): Promise
   try {
     let stats = await fs.stat(targetDir)
     if (!stats.isDirectory()) {
-      throw new UsageError(`Target path is not a directory: ${targetDir}`)
+      throw targetPathNotDirectory(targetDir)
     }
 
     let entries = await fs.readdir(targetDir)
     if (entries.length > 0 && !force) {
-      throw new UsageError(
-        `Target directory is not empty: ${targetDir}. Re-run with --force to continue.`,
-      )
+      throw targetDirectoryNotEmpty(targetDir)
     }
   } catch (error) {
     let nodeError = error as NodeJS.ErrnoException
@@ -188,7 +191,7 @@ function toPackageName(value: string): string {
     .replace(/^-+|-+$/g, '')
 
   if (packageName.length === 0) {
-    throw new UsageError(`Could not derive a valid package name from "${value}".`)
+    throw invalidPackageName(value)
   }
 
   return packageName

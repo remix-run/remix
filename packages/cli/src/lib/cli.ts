@@ -7,6 +7,7 @@ import { runNewCommand } from './commands/new.ts'
 import { runRoutesCommand } from './commands/routes.ts'
 import { runSkillsCommand } from './commands/skills.ts'
 import { runVersionCommand } from './commands/version.ts'
+import { renderCliError, unknownCommand } from './errors.ts'
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   while (argv[0] === '--') {
@@ -57,8 +58,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
     return runVersionCommand(rest)
   }
 
-  process.stderr.write(`Unknown command: ${command}\n\n`)
-  process.stderr.write(getCliHelpText())
+  process.stderr.write(renderCliError(unknownCommand(command), { helpText: getCliHelpText() }))
   return 1
 }
 

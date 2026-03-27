@@ -2,7 +2,14 @@ import * as process from 'node:process'
 
 import type { BootstrapProjectOptions } from '../bootstrap-project.ts'
 import { bootstrapProject } from '../bootstrap-project.ts'
-import { UsageError } from '../errors.ts'
+import {
+  renderCliError,
+  missingOptionValue,
+  missingTargetDirectory,
+  toCliError,
+  unknownArgument,
+  unexpectedExtraArgument,
+} from '../errors.ts'
 
 export async function runNewCommand(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
@@ -15,13 +22,8 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     process.stdout.write(`Created ${result.appDisplayName} at ${result.targetDir}\n`)
     return 0
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getNewCommandHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(renderCliError(toCliError(error), { helpText: getNewCommandHelpText() }))
+    return 1
   }
 }
 
@@ -50,7 +52,7 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
     if (arg === '--app-name') {
       let next = argv[index + 1]
       if (!next) {
-        throw new UsageError('--app-name requires a value.')
+        throw missingOptionValue('--app-name')
       }
 
       appName = next
@@ -65,11 +67,11 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
     }
 
     if (arg.startsWith('--')) {
-      throw new UsageError(`Unknown argument: ${arg}`)
+      throw unknownArgument(arg)
     }
 
     if (targetDir != null) {
-      throw new UsageError(`Unexpected extra argument: ${arg}`)
+      throw unexpectedExtraArgument(arg)
     }
 
     targetDir = arg
@@ -77,7 +79,7 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
   }
 
   if (targetDir == null) {
-    throw new UsageError('A target directory is required.')
+    throw missingTargetDirectory()
   }
 
   return { appName, force, targetDir }

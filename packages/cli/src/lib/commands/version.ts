@@ -1,7 +1,13 @@
 import * as fs from 'node:fs/promises'
 import * as process from 'node:process'
 
-import { UsageError } from '../errors.ts'
+import {
+  cliVersionUnavailable,
+  renderCliError,
+  toCliError,
+  unknownArgument,
+  unexpectedExtraArgument,
+} from '../errors.ts'
 
 export async function runVersionCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -9,22 +15,25 @@ export async function runVersionCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  if (argv.length > 0) {
-    let [arg] = argv
+  try {
+    if (argv.length > 0) {
+      let [arg] = argv
 
-    if (arg.startsWith('-')) {
-      process.stderr.write(`Unknown argument: ${arg}\n\n`)
-      process.stderr.write(getVersionCommandHelpText())
-      return 1
+      if (arg.startsWith('-')) {
+        throw unknownArgument(arg)
+      }
+
+      throw unexpectedExtraArgument(arg)
     }
 
-    process.stderr.write(`Unexpected extra argument: ${arg}\n\n`)
-    process.stderr.write(getVersionCommandHelpText())
+    process.stdout.write(`${await readCliVersion()}\n`)
+    return 0
+  } catch (error) {
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getVersionCommandHelpText() }),
+    )
     return 1
   }
-
-  process.stdout.write(`${await readCliVersion()}\n`)
-  return 0
 }
 
 export function getVersionCommandHelpText(): string {
@@ -45,9 +54,10 @@ async function readCliVersion(): Promise<string> {
     return overriddenVersion
   }
 
-  let packageJson = await readPackageJson(new URL('../../../package.json', import.meta.url))
+  let packageJsonUrl = new URL('../../../package.json', import.meta.url)
+  let packageJson = await readPackageJson(packageJsonUrl)
   if (typeof packageJson.version !== 'string' || packageJson.version.length === 0) {
-    throw new UsageError('Could not determine the current Remix CLI version.')
+    throw cliVersionUnavailable(packageJsonUrl.pathname)
   }
 
   return packageJson.version

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { run } from './lib/cli.ts'
+import { renderCliError } from './lib/errors.ts'
 
 if (import.meta.main) {
   void run().then(
@@ -7,7 +8,7 @@ if (import.meta.main) {
       setExitCode(exitCode)
     },
     (error: unknown) => {
-      console.error(error)
+      process.stderr.write(renderCliError(error))
       setExitCode(1)
     },
   )

@@ -1,6 +1,13 @@
 import * as process from 'node:process'
 
-import { UsageError } from '../errors.ts'
+import {
+  missingOptionValue,
+  renderCliError,
+  toCliError,
+  unknownArgument,
+  unknownSkillsCommand,
+  unexpectedExtraArgument,
+} from '../errors.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
 
 export async function runSkillsCommand(argv: string[]): Promise<number> {
@@ -24,15 +31,10 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
       return runSkillsStatusCommand(rest)
     }
 
-    throw new UsageError(`Unknown skills command: ${subcommand}`)
+    throw unknownSkillsCommand(subcommand)
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getSkillsCommandHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(renderCliError(toCliError(error), { helpText: getSkillsCommandHelpText() }))
+    return 1
   }
 }
 
@@ -116,13 +118,10 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
   try {
     options = parseSkillsInstallCommandArgs(argv)
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getSkillsInstallCommandHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsInstallCommandHelpText() }),
+    )
+    return 1
   }
 
   return runSkillsAction([], getSkillsInstallCommandHelpText(), async () => {
@@ -152,13 +151,10 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
   try {
     options = parseSkillsDirArgs(argv, { allowJson: true })
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getSkillsListCommandHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText() }),
+    )
+    return 1
   }
 
   return runSkillsAction([], getSkillsListCommandHelpText(), async () => {
@@ -198,13 +194,10 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
   try {
     options = parseSkillsDirArgs(argv, { allowJson: true })
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getSkillsStatusCommandHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsStatusCommandHelpText() }),
+    )
+    return 1
   }
 
   return runSkillsAction([], getSkillsStatusCommandHelpText(), async () => {
@@ -248,18 +241,8 @@ async function runSkillsAction(
     ensureNoExtraArgs(argv)
     return await callback()
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(helpText)
-      return 1
-    }
-
-    if (error instanceof Error) {
-      process.stderr.write(`${error.message}\n`)
-      return 1
-    }
-
-    throw error
+    process.stderr.write(renderCliError(toCliError(error), { helpText }))
+    return 1
   }
 }
 
@@ -270,10 +253,10 @@ function ensureNoExtraArgs(argv: string[]): void {
 
   let [arg] = argv
   if (arg.startsWith('-')) {
-    throw new UsageError(`Unknown argument: ${arg}`)
+    throw unknownArgument(arg)
   }
 
-  throw new UsageError(`Unexpected extra argument: ${arg}`)
+  throw unexpectedExtraArgument(arg)
 }
 
 function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {
@@ -295,7 +278,7 @@ function parseSkillsDirArgs(
     if (arg === '--dir') {
       let next = argv[index + 1]
       if (!next) {
-        throw new UsageError('--dir requires a value.')
+        throw missingOptionValue('--dir')
       }
 
       dir = next
@@ -310,10 +293,10 @@ function parseSkillsDirArgs(
     }
 
     if (arg.startsWith('-')) {
-      throw new UsageError(`Unknown argument: ${arg}`)
+      throw unknownArgument(arg)
     }
 
-    throw new UsageError(`Unexpected extra argument: ${arg}`)
+    throw unexpectedExtraArgument(arg)
   }
 
   return { dir, json }

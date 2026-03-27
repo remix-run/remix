@@ -5,6 +5,13 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 import { inspectControllerOwnership, type OwnedSubtree } from './controller-ownership.ts'
+import {
+  routeMapLoaderFailed,
+  routeMapLoaderInvalidJson,
+  routeMapLoaderSignal,
+  routeOwnerPlanUnresolved,
+  routesFileNotFound,
+} from './errors.ts'
 
 export type RouteOwnerKind = 'action' | 'controller'
 export type RouteTreeNodeKind = 'group' | 'route'
@@ -102,7 +109,7 @@ async function loadRawRouteMap(appRoot: string, routesFile: string): Promise<Raw
   )
 
   if (exitResult.signal != null) {
-    throw new Error(`Route-map loader exited from signal ${exitResult.signal}.`)
+    throw routeMapLoaderSignal(exitResult.signal)
   }
 
   if (exitResult.code !== 0) {
@@ -111,14 +118,14 @@ async function loadRawRouteMap(appRoot: string, routesFile: string): Promise<Raw
       message = 'Route-map loader failed.'
     }
 
-    throw new Error(message)
+    throw routeMapLoaderFailed(message)
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(stdout)
   } catch {
-    throw new Error('Route-map loader returned invalid JSON.')
+    throw routeMapLoaderInvalidJson()
   }
 
   return assertRawRouteTree(parsed)
@@ -173,7 +180,7 @@ function getRouteOwner(
   let subtree = subtreesByRouteName.get(ownerRouteName)
 
   if (subtree == null) {
-    throw new Error(`Could not resolve owner plan for "${rawNode.name}".`)
+    throw routeOwnerPlanUnresolved(rawNode.name)
   }
 
   return {
@@ -255,7 +262,7 @@ async function findRemixAppRoot(startDir: string): Promise<string> {
     currentDir = parentDir
   }
 
-  throw new Error('Could not find app/routes.ts. Run this command inside a Remix app.')
+  throw routesFileNotFound(startDir)
 }
 
 async function pathExists(filePath: string): Promise<boolean> {

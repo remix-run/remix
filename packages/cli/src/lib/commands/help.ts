@@ -1,6 +1,6 @@
 import * as process from 'node:process'
 
-import { UsageError } from '../errors.ts'
+import { renderCliError, unknownHelpTopic } from '../errors.ts'
 import { getDoctorCommandHelpText } from './doctor.ts'
 import { getNewCommandHelpText } from './new.ts'
 import { getRoutesCommandHelpText } from './routes.ts'
@@ -22,13 +22,8 @@ export async function runHelpCommand(argv: string[]): Promise<number> {
     process.stdout.write(getCommandHelpText(argv))
     return 0
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getCliHelpText())
-      return 1
-    }
-
-    throw error
+    process.stderr.write(renderCliError(error, { helpText: getCliHelpText() }))
+    return 1
   }
 }
 
@@ -109,11 +104,11 @@ function getCommandHelpText(argv: string[]): string {
     return getVersionCommandHelpText()
   }
 
-  throw new UsageError(`Unknown help topic: ${argv.join(' ')}`)
+  throw unknownHelpTopic(argv.join(' '))
 }
 
 function getNestedHelpText(command: string, argv: string[]): string {
-  throw new UsageError(`Unknown help topic: ${command} ${argv.join(' ')}`)
+  throw unknownHelpTopic(`${command} ${argv.join(' ')}`)
 }
 
 function getSkillsHelpText(argv: string[]): string {
@@ -123,7 +118,7 @@ function getSkillsHelpText(argv: string[]): string {
 
   let [subcommand, ...rest] = argv
   if (rest.length > 0) {
-    throw new UsageError(`Unknown help topic: skills ${argv.join(' ')}`)
+    throw unknownHelpTopic(`skills ${argv.join(' ')}`)
   }
 
   if (subcommand === 'install') {
@@ -138,5 +133,5 @@ function getSkillsHelpText(argv: string[]): string {
     return getSkillsStatusCommandHelpText()
   }
 
-  throw new UsageError(`Unknown help topic: skills ${argv.join(' ')}`)
+  throw unknownHelpTopic(`skills ${argv.join(' ')}`)
 }

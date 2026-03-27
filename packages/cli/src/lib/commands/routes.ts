@@ -1,7 +1,13 @@
 import * as process from 'node:process'
 
 import { lightGray, lightRed, reset } from '../color.ts'
-import { UsageError } from '../errors.ts'
+import {
+  invalidFlagCombination,
+  renderCliError,
+  toCliError,
+  unknownArgument,
+  unexpectedExtraArgument,
+} from '../errors.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
 
 const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
@@ -24,18 +30,11 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
 
     return 0
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
-      process.stderr.write(getRoutesCommandHelpText())
-      return 1
-    }
-
-    if (error instanceof Error) {
-      process.stderr.write(`${error.message}\n`)
-      return 1
-    }
-
-    throw error
+    let cliError = toCliError(error)
+    process.stderr.write(
+      `${lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), 'stderr')}${reset('stderr')}`,
+    )
+    return 1
   }
 }
 
@@ -86,18 +85,18 @@ function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
     }
 
     if (arg.startsWith('-')) {
-      throw new UsageError(`Unknown argument: ${arg}`)
+      throw unknownArgument(arg)
     }
 
-    throw new UsageError(`Unexpected extra argument: ${arg}`)
+    throw unexpectedExtraArgument(arg)
   }
 
   if (json && table) {
-    throw new UsageError('Cannot combine --json with --table.')
+    throw invalidFlagCombination('Cannot combine --json with --table.')
   }
 
   if (json && verbose) {
-    throw new UsageError('Cannot combine --json with --verbose.')
+    throw invalidFlagCombination('Cannot combine --json with --verbose.')
   }
 
   return { json, table, verbose }
