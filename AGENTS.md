@@ -58,6 +58,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
 - `write-readme` at `.agents/skills/write-readme/SKILL.md`: Draft or revise package READMEs in the repo's style.
+- `write-user-facing-skill` at `.agents/skills/write-user-facing-skill/SKILL.md`: Create or revise user-facing app-builder skills under `skills/` so they orient agents to Remix and route them to the right subsystem skills.
 
 ## App And Demo Skills
 
