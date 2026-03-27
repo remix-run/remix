@@ -455,6 +455,12 @@ importers:
         specifier: workspace:*
         version: link:../../../../remix
 
+  packages/cli/test/fixtures/doctor-camel-case-keys:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
   packages/cli/test/fixtures/doctor-clean:
     dependencies:
       remix:

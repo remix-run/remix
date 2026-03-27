@@ -1,0 +1,8 @@
+{
+  "name": "doctor-camel-case-keys-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

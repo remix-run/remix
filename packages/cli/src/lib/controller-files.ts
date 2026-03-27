@@ -4,13 +4,17 @@ const OWNER_FILE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'] as const
 
 export function getActionOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(path.join('app', 'controllers', `${path.join(...segments)}${extension}`)),
+    normalizeRelativePath(
+      path.join('app', 'controllers', `${path.join(...segments)}${extension}`),
+    ),
   )
 }
 
 export function getControllerOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(path.join('app', 'controllers', ...segments, `controller${extension}`)),
+    normalizeRelativePath(
+      path.join('app', 'controllers', ...segments, `controller${extension}`),
+    ),
   )
 }
 
@@ -21,6 +25,13 @@ export function getRouteSubtreePath(segments: string[]): string {
 export function getPreferredOwnerDisplayPath(candidates: string[]): string {
   let tsxCandidate = candidates.find((candidate) => candidate.endsWith('.tsx'))
   return tsxCandidate ?? candidates[0] ?? ''
+}
+
+export function toDiskSegment(segment: string): string {
+  return segment
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+    .toLowerCase()
 }
 
 export function isControllerEntryFileName(fileName: string): boolean {

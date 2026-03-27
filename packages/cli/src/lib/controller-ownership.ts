@@ -9,6 +9,7 @@ import {
   getRouteSubtreePath,
   isActionFileName,
   isControllerEntryFileName,
+  toDiskSegment,
 } from './controller-files.ts'
 import type { RouteOwnerKind, RouteTreeNodeKind } from './route-map.ts'
 
@@ -72,35 +73,41 @@ export async function inspectControllerOwnership(
 
 export function buildOwnedSubtrees(
   tree: OwnershipRouteNode[],
-  depth: number = 0,
+  parentSegments: string[] = [],
   subtrees: OwnedSubtreePlan[] = [],
 ): OwnedSubtreePlan[] {
   for (let node of tree) {
+    let segments = [...parentSegments, toDiskSegment(node.key)]
+
     if (node.kind === 'group') {
-      let segments = node.name.split('.')
+      let alternateCandidates = getActionOwnerCandidates(segments)
+      let entryCandidates = getControllerOwnerCandidates(segments)
+
       subtrees.push({
-        alternateCandidates: getActionOwnerCandidates(segments),
-        alternateDisplayPath: getPreferredOwnerDisplayPath(getActionOwnerCandidates(segments)),
-        entryCandidates: getControllerOwnerCandidates(segments),
-        entryDisplayPath: getPreferredOwnerDisplayPath(getControllerOwnerCandidates(segments)),
+        alternateCandidates,
+        alternateDisplayPath: getPreferredOwnerDisplayPath(alternateCandidates),
+        entryCandidates,
+        entryDisplayPath: getPreferredOwnerDisplayPath(entryCandidates),
         kind: 'controller',
         routeName: node.name,
         subtreePath: getRouteSubtreePath(segments),
       })
-      buildOwnedSubtrees(node.children, depth + 1, subtrees)
+      buildOwnedSubtrees(node.children, segments, subtrees)
       continue
     }
 
-    if (depth > 0) {
+    if (parentSegments.length > 0) {
       continue
     }
 
-    let segments = [node.key]
+    let alternateCandidates = getControllerOwnerCandidates(segments)
+    let entryCandidates = getActionOwnerCandidates(segments)
+
     subtrees.push({
-      alternateCandidates: getControllerOwnerCandidates(segments),
-      alternateDisplayPath: getPreferredOwnerDisplayPath(getControllerOwnerCandidates(segments)),
-      entryCandidates: getActionOwnerCandidates(segments),
-      entryDisplayPath: getPreferredOwnerDisplayPath(getActionOwnerCandidates(segments)),
+      alternateCandidates,
+      alternateDisplayPath: getPreferredOwnerDisplayPath(alternateCandidates),
+      entryCandidates,
+      entryDisplayPath: getPreferredOwnerDisplayPath(entryCandidates),
       kind: 'action',
       routeName: node.name,
       subtreePath: getRouteSubtreePath(segments),

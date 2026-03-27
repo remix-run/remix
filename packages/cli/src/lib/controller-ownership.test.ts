@@ -44,6 +44,40 @@ describe('controller ownership', () => {
     assert.deepEqual(home.claimedRouteLocalFilePaths, ['app/controllers/home/page.tsx'])
   })
 
+  it('normalizes camelCase route keys to kebab-case disk segments', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-camel-case-keys'))
+    let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
+    let userSettings = ownership.subtrees.find((subtree) => subtree.routeName === 'userSettings')
+    let forgotPassword = ownership.subtrees.find(
+      (subtree) => subtree.routeName === 'auth.forgotPassword',
+    )
+    let resetPassword = ownership.subtrees.find(
+      (subtree) => subtree.routeName === 'auth.resetPassword',
+    )
+
+    assert.ok(userSettings)
+    assert.ok(forgotPassword)
+    assert.ok(resetPassword)
+    assert.equal(userSettings.entryDisplayPath, 'app/controllers/user-settings.tsx')
+    assert.equal(userSettings.actualEntryPath, 'app/controllers/user-settings.tsx')
+    assert.equal(
+      forgotPassword.entryDisplayPath,
+      'app/controllers/auth/forgot-password/controller.tsx',
+    )
+    assert.equal(
+      forgotPassword.actualEntryPath,
+      'app/controllers/auth/forgot-password/controller.tsx',
+    )
+    assert.equal(
+      resetPassword.entryDisplayPath,
+      'app/controllers/auth/reset-password/controller.tsx',
+    )
+    assert.equal(
+      resetPassword.actualEntryPath,
+      'app/controllers/auth/reset-password/controller.tsx',
+    )
+  })
+
   it('tracks extraneous root directories outside the route tree', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-orphan-route-local-file'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)

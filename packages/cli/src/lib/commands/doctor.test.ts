@@ -200,6 +200,16 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('uses kebab-case controller paths for camelCase route keys', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-camel-case-keys'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /No findings\./)
+    assert.doesNotMatch(result.stdout, /forgotPassword/)
+    assert.doesNotMatch(result.stdout, /resetPassword/)
+    assert.equal(result.stderr, '')
+  })
+
   it('prints machine-readable findings as json', async () => {
     let fixtureDir = getFixturePath('doctor-wrong-kind')
     let result = runDoctorCommand(['--json'], fixtureDir)

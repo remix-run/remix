@@ -128,6 +128,16 @@ describe('routes command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('maps camelCase route keys to kebab-case owner paths', async () => {
+    let result = runRoutesCommand([], getFixturePath('doctor-camel-case-keys'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /userSettings\s+ANY\s+\/user-settings\s+-> user-settings\.tsx/)
+    assert.match(result.stdout, /forgotPassword -> auth\/forgot-password\/controller\.tsx/)
+    assert.match(result.stdout, /resetPassword -> auth\/reset-password\/controller\.tsx/)
+    assert.equal(result.stderr, '')
+  })
+
   it('prints normalized JSON with owner metadata', async () => {
     let fixtureDir = getFixturePath('routes-tree')
     let result = runRoutesCommand(['--json'], fixtureDir)
