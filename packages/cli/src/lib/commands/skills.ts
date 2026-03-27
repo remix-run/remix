@@ -1,5 +1,6 @@
 import * as process from 'node:process'
 
+import { getDisplayPath } from '../display-path.ts'
 import {
   missingOptionValue,
   renderCliError,
@@ -8,7 +9,16 @@ import {
   unknownSkillsCommand,
   unexpectedExtraArgument,
 } from '../errors.ts'
+import type { SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
+import { createStepProgressReporter, writeProgressCommandHeader } from '../progress.ts'
+
+const SKILLS_INSTALL_PROGRESS_LABELS = {
+  'compare-local-skills': 'Compare local skills',
+  'fetch-remix-skills': 'Fetch Remix skills from GitHub',
+  'resolve-project-root': 'Resolve project root',
+  'write-updated-skills': 'Write updated skills',
+} satisfies Record<SkillsInstallPhase, string>
 
 export async function runSkillsCommand(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help') {
@@ -80,7 +90,7 @@ export function getSkillsListCommandHelpText(): string {
   return `Usage:
   remix skills list [--dir <path>] [--json]
 
-List Remix skills from GitHub and show their local state.
+List installed Remix skills and show their local state.
 
 Options:
   --dir <path>  Read local skills from a custom directory relative to the project root
@@ -126,21 +136,34 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     return 1
   }
 
-  return runSkillsAction([], getSkillsInstallCommandHelpText(), async () => {
-    let result = await installRemixSkills(process.cwd(), globalThis.fetch, {
+  let progress = createSkillsInstallProgressReporter()
+  let cwd = process.cwd()
+
+  try {
+    await writeProgressCommandHeader('skills install', process.stdout)
+    let result = await installRemixSkills(cwd, globalThis.fetch, {
+      progress,
       skillsDir: options.dir ?? undefined,
     })
+    let skillsDir = getDisplayPath(result.skillsDir, cwd)
+    progress.writeSummaryGap()
     if (result.appliedChanges.length === 0) {
-      process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
+      process.stdout.write(`No changes. ${skillsDir} is up to date.\n`)
       return 0
     }
 
-    process.stdout.write(`Synced Remix skills into ${result.skillsDir}:\n`)
-    for (let change of result.appliedChanges) {
-      process.stdout.write(`${toPastTense(change.action)} ${change.name}\n`)
+    process.stdout.write(`Synced Remix skills into ${skillsDir}:\n`)
+    for (let line of formatAppliedChanges(result.appliedChanges)) {
+      process.stdout.write(`${line}\n`)
     }
     return 0
-  })
+  } catch (error) {
+    progress.writeSummaryGap()
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsInstallCommandHelpText() }),
+    )
+    return 1
+  }
 }
 
 async function runSkillsListCommand(argv: string[]): Promise<number> {
@@ -159,15 +182,19 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     return 1
   }
 
+  let cwd = process.cwd()
+
   return runSkillsAction([], getSkillsListCommandHelpText(), async () => {
-    let result = await getSkillsOverview(process.cwd(), globalThis.fetch, {
+    let result = await getSkillsOverview(cwd, globalThis.fetch, {
       skillsDir: options.dir ?? undefined,
     })
+    let entries = result.entries.filter((entry) => entry.state !== 'missing')
+
     if (options.json) {
       process.stdout.write(
         `${JSON.stringify(
           {
-            entries: result.entries,
+            entries,
             projectRoot: result.projectRoot,
             skillsDir: result.skillsDir,
           },
@@ -178,9 +205,9 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
       return 0
     }
 
-    process.stdout.write(`Remix skills in ${result.skillsDir}:\n`)
-    for (let entry of result.entries) {
-      process.stdout.write(`${entry.state} ${entry.name}\n`)
+    process.stdout.write(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:\n`)
+    for (let entry of entries) {
+      process.stdout.write(`${BULLET} ${entry.state} ${entry.name}\n`)
     }
     return 0
   })
@@ -202,8 +229,10 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
     return 1
   }
 
+  let cwd = process.cwd()
+
   return runSkillsAction([], getSkillsStatusCommandHelpText(), async () => {
-    let result = await getSkillsOverview(process.cwd(), globalThis.fetch, {
+    let result = await getSkillsOverview(cwd, globalThis.fetch, {
       skillsDir: options.dir ?? undefined,
     })
     if (options.json) {
@@ -222,11 +251,11 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
     }
 
     if (result.changes.length === 0) {
-      process.stdout.write(`No changes. ${result.skillsDir} is up to date.\n`)
+      process.stdout.write(`No changes. ${getDisplayPath(result.skillsDir, cwd)} is up to date.\n`)
       return 0
     }
 
-    process.stdout.write(`Remix skills to sync into ${result.skillsDir}:\n`)
+    process.stdout.write(`Remix skills to sync into ${getDisplayPath(result.skillsDir, cwd)}:\n`)
     for (let change of result.changes) {
       process.stdout.write(`${change.action} ${change.name}\n`)
     }
@@ -259,6 +288,21 @@ function ensureNoExtraArgs(argv: string[]): void {
   }
 
   throw unexpectedExtraArgument(arg)
+}
+
+function createSkillsInstallProgressReporter(): SkillsProgressReporter {
+  return createStepProgressReporter(SKILLS_INSTALL_PROGRESS_LABELS, process.stdout)
+}
+
+function formatAppliedChanges(
+  changes: Array<{ action: 'add' | 'replace'; name: string }>,
+): string[] {
+  let showAction = changes.some((change) => change.action !== 'add')
+  return changes.map((change) =>
+    showAction
+      ? `${BULLET} ${toPastTense(change.action)} ${change.name}`
+      : `${BULLET} ${change.name}`,
+  )
 }
 
 function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {
@@ -307,3 +351,5 @@ function parseSkillsDirArgs(
 function toPastTense(action: 'add' | 'replace'): string {
   return action === 'add' ? 'added' : 'replaced'
 }
+
+const BULLET = '•'

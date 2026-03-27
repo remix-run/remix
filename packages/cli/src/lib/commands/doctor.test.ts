@@ -27,9 +27,9 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /^environment/m)
-    assert.match(result.stdout, /^project-contract/m)
-    assert.match(result.stdout, /^controllers/m)
+    assert.match(result.stdout, /✓ environment/)
+    assert.match(result.stdout, /✓ project-contract/)
+    assert.match(result.stdout, /✓ controllers/)
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.equal(result.stderr, '')
   })
@@ -38,9 +38,11 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-clean'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /^environment\n  No findings\./m)
-    assert.match(result.stdout, /^project-contract\n  No findings\./m)
-    assert.match(result.stdout, /^controllers\n  No findings\./m)
+    assert.match(result.stdout, /✓ environment/)
+    assert.match(result.stdout, /✓ project-contract/)
+    assert.match(result.stdout, /✓ controllers/)
+    assert.match(result.stdout, /✓ controllers\n\nDoctor found no issues\./)
+    assert.match(result.stdout, /Doctor found no issues\./)
     assert.match(result.stdout, /Summary: 0 warnings, 0 advice\./)
     assert.equal(result.stderr, '')
   })
@@ -60,12 +62,13 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /WARN Could not find package\.json/)
       assert.match(
         result.stdout,
-        /^project-contract\n  Skipped: Blocked by environment warnings\./m,
+        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
       )
-      assert.match(result.stdout, /^controllers\n  Skipped: Blocked by environment warnings\./m)
+      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -80,12 +83,13 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /WARN package\.json is not valid JSON\./)
       assert.match(
         result.stdout,
-        /^project-contract\n  Skipped: Blocked by environment warnings\./m,
+        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
       )
-      assert.match(result.stdout, /^controllers\n  Skipped: Blocked by environment warnings\./m)
+      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -120,15 +124,16 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /✗ environment/)
       assert.match(
         result.stdout,
         /WARN Project requires Node\.js >=99\.0\.0, but the current runtime is v\d+\.\d+\.\d+\./,
       )
       assert.match(
         result.stdout,
-        /^project-contract\n  Skipped: Blocked by environment warnings\./m,
+        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
       )
-      assert.match(result.stdout, /^controllers\n  Skipped: Blocked by environment warnings\./m)
+      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -138,9 +143,10 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-env-missing-remix-dependency'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /✗ environment/)
     assert.match(result.stdout, /WARN package\.json does not declare a remix dependency\./)
-    assert.match(result.stdout, /^project-contract\n  Skipped: Blocked by environment warnings\./m)
-    assert.match(result.stdout, /^controllers\n  Skipped: Blocked by environment warnings\./m)
+    assert.match(result.stdout, /• project-contract \(skipped: Blocked by environment warnings\.\)/)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
   })
 
   it('reports unresolved remix installs and skips later suites', async () => {
@@ -166,12 +172,13 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /WARN Could not resolve remix from this project\./)
       assert.match(
         result.stdout,
-        /^project-contract\n  Skipped: Blocked by environment warnings\./m,
+        /• project-contract \(skipped: Blocked by environment warnings\.\)/,
       )
-      assert.match(result.stdout, /^controllers\n  Skipped: Blocked by environment warnings\./m)
+      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -206,11 +213,12 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /^environment\n  No findings\./m)
+      assert.match(result.stdout, /✓ environment/)
+      assert.match(result.stdout, /✗ project-contract/)
       assert.match(result.stdout, /WARN Project is missing app\/routes\.ts\./)
       assert.match(
         result.stdout,
-        /^controllers\n  Skipped: Blocked by project-contract warnings\./m,
+        /• controllers \(skipped: Blocked by project-contract warnings\.\)/,
       )
       assert.equal(result.stderr, '')
     } finally {
@@ -227,6 +235,7 @@ describe('doctor command', () => {
       result.stdout,
       /WARN Route "contact" is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
+    assert.match(result.stdout, /controller\.tsx\.\n\nSummary: 2 warnings, 0 advice\./)
     assert.equal(result.stderr, '')
   })
 
@@ -354,7 +363,7 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-route-names'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /^controllers\n  No findings\./m)
+    assert.match(result.stdout, /✓ controllers/)
     assert.doesNotMatch(result.stdout, /shared-bucket/)
     assert.equal(result.stderr, '')
   })
@@ -363,7 +372,7 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-camel-case-keys'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /^controllers\n  No findings\./m)
+    assert.match(result.stdout, /✓ controllers/)
     assert.doesNotMatch(result.stdout, /forgotPassword/)
     assert.doesNotMatch(result.stdout, /resetPassword/)
     assert.equal(result.stderr, '')
@@ -373,8 +382,9 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /✗ project-contract/)
     assert.match(result.stdout, /must export a named "routes" value/)
-    assert.match(result.stdout, /^controllers\n  Skipped: Blocked by project-contract warnings\./m)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 
@@ -382,8 +392,9 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('routes-invalid-value'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /✗ project-contract/)
     assert.match(result.stdout, /Invalid route map value at "broken"/)
-    assert.match(result.stdout, /^controllers\n  Skipped: Blocked by project-contract warnings\./m)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 
@@ -391,8 +402,9 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('routes-import-error'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /✗ project-contract/)
     assert.match(result.stdout, /Failed to load app\/routes\.ts: boom from routes fixture/)
-    assert.match(result.stdout, /^controllers\n  Skipped: Blocked by project-contract warnings\./m)
+    assert.match(result.stdout, /• controllers \(skipped: Blocked by project-contract warnings\.\)/)
     assert.equal(result.stderr, '')
   })
 

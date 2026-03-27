@@ -17,7 +17,7 @@ describe('run', () => {
     assert.match(result.stdout, /doctor\s+Check project health/)
     assert.match(result.stdout, /routes\s+Show the route tree/)
     assert.match(result.stdout, /skills\s+Manage Remix skills/)
-    assert.match(result.stdout, /version\s+Show the current Remix CLI version/)
+    assert.match(result.stdout, /version\s+Show the current Remix version/)
     assert.match(result.stdout, /--no-color\s+Disable ANSI color output/)
     assert.equal(result.stderr, '')
   })
@@ -40,9 +40,7 @@ describe('run', () => {
   })
 
   it('prints the configured version', async () => {
-    let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
-      captureOutput(() => run(['--version'])),
-    )
+    let result = await captureOutput(() => run(['--version'], { remixVersion: '9.9.9' }))
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, '9.9.9\n')
@@ -50,9 +48,7 @@ describe('run', () => {
   })
 
   it('prints the configured version from the version command', async () => {
-    let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
-      captureOutput(() => run(['version'])),
-    )
+    let result = await captureOutput(() => run(['version'], { remixVersion: '9.9.9' }))
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, '9.9.9\n')
@@ -126,8 +122,8 @@ describe('run', () => {
   })
 
   it('accepts the global no-color flag', async () => {
-    let result = await withEnv('REMIX_CLI_VERSION', '9.9.9', () =>
-      captureOutput(() => run(['--no-color', 'version'])),
+    let result = await captureOutput(() =>
+      run(['--no-color', 'version'], { remixVersion: '9.9.9' }),
     )
 
     assert.equal(result.exitCode, 0)
@@ -166,7 +162,17 @@ describe('run', () => {
       let result = await captureOutput(() => run(['new', appDir, '--app-name', 'My App']))
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, new RegExp(`Created My App at ${escapeRegExp(appDir)}`))
+      assert.match(result.stdout, /• Prepare target directory\.\.\./)
+      assert.match(result.stdout, /✓ Prepare target directory/)
+      assert.match(result.stdout, /• Generate scaffold files\.\.\./)
+      assert.match(result.stdout, /✓ Generate scaffold files/)
+      assert.match(result.stdout, /• Finalize package\.json\.\.\./)
+      assert.match(result.stdout, /✓ Finalize package\.json/)
+      assert.match(result.stdout, /✓ Finalize package\.json\n\nCreated My App at/)
+      assert.match(
+        result.stdout,
+        new RegExp(`Created My App at ${escapeRegExp(path.relative(process.cwd(), appDir))}`),
+      )
 
       let packageJson = JSON.parse(
         await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
@@ -220,12 +226,34 @@ describe('run', () => {
     }
   })
 
+  it('marks scaffold generation as failed before rendering the error', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
+
+    try {
+      let appDir = path.join(tmpDir, 'my-app')
+      await fs.mkdir(appDir, { recursive: true })
+      await fs.writeFile(path.join(appDir, 'app'), 'blocking file', 'utf8')
+
+      let result = await captureOutput(() => run(['new', appDir, '--force']))
+
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stdout, /• Prepare target directory\.\.\./)
+      assert.match(result.stdout, /✓ Prepare target directory/)
+      assert.match(result.stdout, /• Generate scaffold files\.\.\./)
+      assert.match(result.stdout, /✗ Generate scaffold files/)
+      assert.match(result.stdout, /✗ Generate scaffold files\n\n$/)
+      assert.match(result.stderr, /Target path is not a directory|EEXIST|ENOTDIR/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   it('uses the override version when remix version is omitted', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'my-app')
       let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
-        captureOutput(() => run(['new', appDir])),
+        captureOutput(() => run(['new', appDir], { remixVersion: '9.9.9' })),
       )
 
       assert.equal(result.exitCode, 0)
@@ -240,6 +268,36 @@ describe('run', () => {
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
+  })
+
+  it('uses the runtime Remix version as the default scaffold version', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
+    try {
+      let appDir = path.join(tmpDir, 'my-app')
+      let result = await captureOutput(() => run(['new', appDir], { remixVersion: '4.5.6' }))
+
+      assert.equal(result.exitCode, 0)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
+      ) as {
+        dependencies: Record<string, string>
+      }
+
+      assert.equal(packageJson.dependencies.remix, '4.5.6')
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not let REMIX_VERSION override the reported Remix version', async () => {
+    let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+      captureOutput(() => run(['version'], { remixVersion: '9.9.9' })),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, '9.9.9\n')
+    assert.equal(result.stderr, '')
   })
 
   it('rejects the removed remix version flag', async () => {

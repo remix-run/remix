@@ -9,7 +9,7 @@ Command-line interface for creating and managing Remix projects.
 - Check project environment and Remix app conventions with `remix doctor`
 - Inspect the current app route tree with `remix routes`
 - Sync Remix skills into `.agents/skills` with `remix skills`
-- Print the current CLI version with `remix version`
+- Print the current Remix version with `remix version`
 - Use the same CLI through the `remix` package or the `remix/cli` API
 - Scaffold a starter app that matches the Remix project layout conventions
 

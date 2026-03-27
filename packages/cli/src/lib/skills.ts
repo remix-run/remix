@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { fetchUnavailable, projectRootNotFound, remoteSkillDataMissing } from './errors.ts'
+import { runProgressStep, type StepProgressReporter } from './progress.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
@@ -30,12 +31,21 @@ export interface SkillsInstallResult extends SkillsOverview {
 }
 
 export interface SkillsInstallOptions {
+  progress?: SkillsProgressReporter
   skillsDir?: string
 }
 
 export interface SkillsOverviewOptions {
   skillsDir?: string
 }
+
+export type SkillsInstallPhase =
+  | 'resolve-project-root'
+  | 'fetch-remix-skills'
+  | 'compare-local-skills'
+  | 'write-updated-skills'
+
+export type SkillsProgressReporter = StepProgressReporter<SkillsInstallPhase>
 
 interface GitHubBlobResponse {
   content?: unknown
@@ -96,17 +106,30 @@ export async function installRemixSkills(
 ): Promise<SkillsInstallResult> {
   let plan = await loadSkillsPlan(cwd, fetchImpl, options)
 
-  await fs.mkdir(plan.skillsDir, { recursive: true })
-  for (let change of plan.changes) {
-    let remoteSkill = plan.remoteSkills.find((skill) => skill.name === change.name)
-    if (remoteSkill == null) {
-      throw remoteSkillDataMissing(change.name)
+  if (plan.changes.length === 0) {
+    options.progress?.skip('write-updated-skills', 'No changes.')
+    return {
+      appliedChanges: plan.changes,
+      changes: plan.changes,
+      entries: plan.entries,
+      projectRoot: plan.projectRoot,
+      skillsDir: plan.skillsDir,
     }
-
-    let skillDir = path.join(plan.skillsDir, remoteSkill.name)
-    await fs.rm(skillDir, { recursive: true, force: true })
-    await writeRemoteSkill(skillDir, remoteSkill)
   }
+
+  await runProgressStep(options.progress, 'write-updated-skills', async () => {
+    await fs.mkdir(plan.skillsDir, { recursive: true })
+    for (let change of plan.changes) {
+      let remoteSkill = plan.remoteSkills.find((skill) => skill.name === change.name)
+      if (remoteSkill == null) {
+        throw remoteSkillDataMissing(change.name)
+      }
+
+      let skillDir = path.join(plan.skillsDir, remoteSkill.name)
+      await fs.rm(skillDir, { recursive: true, force: true })
+      await writeRemoteSkill(skillDir, remoteSkill)
+    }
+  })
 
   return {
     appliedChanges: plan.changes,
@@ -126,17 +149,23 @@ async function loadSkillsPlan(
     throw fetchUnavailable()
   }
 
-  let projectRoot = await findProjectRoot(cwd)
+  let projectRoot = await runProgressStep(options.progress, 'resolve-project-root', () =>
+    findProjectRoot(cwd),
+  )
   let skillsDir = resolveSkillsDir(projectRoot, options.skillsDir)
-  let remoteSkills = await fetchRemoteSkills(fetchImpl)
-  let entries = await Promise.all(
-    remoteSkills.map(async (remoteSkill) => {
-      let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
-      return {
-        name: remoteSkill.name,
-        state: getSkillState(remoteSkill, localSkill),
-      } satisfies SkillStatusEntry
-    }),
+  let remoteSkills = await runProgressStep(options.progress, 'fetch-remix-skills', () =>
+    fetchRemoteSkills(fetchImpl),
+  )
+  let entries = await runProgressStep(options.progress, 'compare-local-skills', async () =>
+    Promise.all(
+      remoteSkills.map(async (remoteSkill) => {
+        let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
+        return {
+          name: remoteSkill.name,
+          state: getSkillState(remoteSkill, localSkill),
+        } satisfies SkillStatusEntry
+      }),
+    ),
   )
 
   entries.sort((left, right) => left.name.localeCompare(right.name))
@@ -281,6 +310,7 @@ async function findProjectRoot(startDir: string): Promise<string> {
 
   while (true) {
     if (
+      (await pathExists(path.join(currentDir, 'package.json'))) ||
       (await pathExists(path.join(currentDir, '.agents'))) ||
       (await pathExists(path.join(currentDir, '.git')))
     ) {

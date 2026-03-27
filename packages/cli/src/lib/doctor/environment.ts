@@ -129,14 +129,17 @@ async function readPackageJson(
     source = await fs.readFile(packageJsonPath, 'utf8')
   } catch (error) {
     let nodeError = error as NodeJS.ErrnoException
-    let detail = nodeError.code == null ? packageJsonPath : `${packageJsonPath} (${nodeError.code})`
+    let detail =
+      nodeError.code == null
+        ? 'Could not read package.json.'
+        : `Could not read package.json (${nodeError.code}).`
 
     return {
       suite: createDoctorSuite('environment', [
         {
           actualPath: 'package.json',
           code: 'package-json-read-failed',
-          message: `Could not read package.json at ${detail}.`,
+          message: detail,
           severity: 'warn',
           suite: 'environment',
         },

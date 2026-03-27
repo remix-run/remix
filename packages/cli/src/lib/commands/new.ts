@@ -1,6 +1,10 @@
 import * as process from 'node:process'
 
-import type { BootstrapProjectOptions } from '../bootstrap-project.ts'
+import type {
+  BootstrapProjectOptions,
+  BootstrapProjectPhase,
+  BootstrapProgressReporter,
+} from '../bootstrap-project.ts'
 import { bootstrapProject } from '../bootstrap-project.ts'
 import {
   renderCliError,
@@ -10,6 +14,14 @@ import {
   unknownArgument,
   unexpectedExtraArgument,
 } from '../errors.ts'
+import { getDisplayPath } from '../display-path.ts'
+import { createStepProgressReporter, writeProgressCommandHeader } from '../progress.ts'
+
+const NEW_PROGRESS_LABELS = {
+  'finalize-package-json': 'Finalize package.json',
+  'generate-scaffold-files': 'Generate scaffold files',
+  'prepare-target-directory': 'Prepare target directory',
+} satisfies Record<BootstrapProjectPhase, string>
 
 export async function runNewCommand(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
@@ -17,11 +29,19 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     return 0
   }
 
+  let progress = createNewProgressReporter()
+
   try {
-    let result = await bootstrapProject(parseNewCommandArgs(argv))
-    process.stdout.write(`Created ${result.appDisplayName} at ${result.targetDir}\n`)
+    let options = parseNewCommandArgs(argv)
+    await writeProgressCommandHeader('new', process.stdout)
+    let result = await bootstrapProject(options, progress)
+    progress.writeSummaryGap()
+    process.stdout.write(
+      `Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir)}\n`,
+    )
     return 0
   } catch (error) {
+    progress.writeSummaryGap()
     process.stderr.write(renderCliError(toCliError(error), { helpText: getNewCommandHelpText() }))
     return 1
   }
@@ -83,4 +103,8 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
   }
 
   return { appName, force, targetDir }
+}
+
+function createNewProgressReporter(): BootstrapProgressReporter {
+  return createStepProgressReporter(NEW_PROGRESS_LABELS, process.stdout)
 }

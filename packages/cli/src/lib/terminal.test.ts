@@ -2,9 +2,21 @@ import * as assert from 'node:assert/strict'
 import * as process from 'node:process'
 import { describe, it } from 'node:test'
 
-import { bold, configureColors, lightRed, reset, restoreTerminalFormatting } from './color.ts'
+import {
+  bold,
+  configureColors,
+  lightBlue,
+  lightGreen,
+  lightMagenta,
+  lightRed,
+  remixWordmark,
+  reset,
+  restoreTerminalFormatting,
+  writeCommandEpilogue,
+  writeCommandPreamble,
+} from './terminal.ts'
 
-describe('color', () => {
+describe('terminal', () => {
   it('styles stdout when stdout is a tty', async () => {
     withEnv('NO_COLOR', undefined, () =>
       withEnv('TERM', 'xterm-256color', () =>
@@ -12,6 +24,9 @@ describe('color', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), '\u001B[1mok\u001B[0m')
+          assert.equal(lightBlue('hi'), '\u001B[94mhi\u001B[0m')
+          assert.equal(lightGreen('yes'), '\u001B[92myes\u001B[0m')
+          assert.equal(lightMagenta('wow'), '\u001B[95mwow\u001B[0m')
           assert.equal(reset(process.stdout), '\u001B[0m')
         }),
       ),
@@ -75,6 +90,7 @@ describe('color', () => {
           configureColors({ disabled: false })
 
           assert.equal(bold('ok'), 'ok')
+          assert.equal(remixWordmark(), 'REMIX')
           assert.equal(reset(process.stdout), '')
         }),
       ),
@@ -135,6 +151,75 @@ describe('color', () => {
       ),
     )
   })
+
+  it('writes a leading blank line to stdout when stdout is a tty', async () => {
+    withTTY(process.stdout, true, () =>
+      withCapturedWrites(process.stdout, (writes) => {
+        writeCommandPreamble()
+
+        assert.deepEqual(writes, ['\n'])
+      }),
+    )
+  })
+
+  it('writes a leading blank line to stderr when only stderr is a tty', async () => {
+    withTTY(process.stdout, false, () =>
+      withTTY(process.stderr, true, () =>
+        withCapturedWrites(process.stderr, (writes) => {
+          writeCommandPreamble()
+
+          assert.deepEqual(writes, ['\n'])
+        }),
+      ),
+    )
+  })
+
+  it('writes a trailing blank line to stdout when stdout is a tty', async () => {
+    withTTY(process.stdout, true, () =>
+      withCapturedWrites(process.stdout, (writes) => {
+        writeCommandEpilogue()
+
+        assert.deepEqual(writes, ['\n'])
+      }),
+    )
+  })
+
+  it('writes a trailing blank line to stderr when only stderr is a tty', async () => {
+    withTTY(process.stdout, false, () =>
+      withTTY(process.stderr, true, () =>
+        withCapturedWrites(process.stderr, (writes) => {
+          writeCommandEpilogue()
+
+          assert.deepEqual(writes, ['\n'])
+        }),
+      ),
+    )
+  })
+
+  it('renders the REMIX wordmark with one color per letter when colors are enabled', async () => {
+    withEnv('NO_COLOR', undefined, () =>
+      withEnv('TERM', 'xterm-256color', () =>
+        withTTY(process.stdout, true, () => {
+          configureColors({ disabled: false })
+
+          assert.equal(
+            remixWordmark(),
+            '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m',
+          )
+        }),
+      ),
+    )
+  })
+
+  it('renders the REMIX wordmark without color when colors are disabled', async () => {
+    withEnv('NO_COLOR', '1', () =>
+      withTTY(process.stdout, true, () => {
+        configureColors({ disabled: false })
+
+        assert.equal(remixWordmark(), 'REMIX')
+      }),
+    )
+  })
 })
 
 function withEnv<T>(name: string, value: string | undefined, callback: () => T): T {
@@ -177,10 +262,7 @@ function withTTY<T>(stream: NodeJS.WriteStream, isTTY: boolean, callback: () => 
   }
 }
 
-function withCapturedWrites<T>(
-  stream: NodeJS.WriteStream,
-  callback: (writes: string[]) => T,
-): T {
+function withCapturedWrites<T>(stream: NodeJS.WriteStream, callback: (writes: string[]) => T): T {
   let writes: string[] = []
   let originalWrite = stream.write.bind(stream)
 

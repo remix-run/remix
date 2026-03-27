@@ -28,9 +28,9 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not determine an app name',
     fix: 'Pass --app-name or choose a target directory name that can become an app name.',
   },
-  cliVersionUnavailable: {
-    code: 'RMX_CLI_VERSION_UNAVAILABLE',
-    title: 'Could not determine the Remix CLI version',
+  remixVersionUnavailable: {
+    code: 'RMX_REMIX_VERSION_UNAVAILABLE',
+    title: 'Could not determine the Remix version',
   },
   invalidCompletionRequest: {
     code: 'RMX_INVALID_COMPLETION_REQUEST',
@@ -174,10 +174,9 @@ export function appNameUnavailable(targetDir?: string): UsageError {
   })
 }
 
-export function cliVersionUnavailable(packageJsonPath?: string): CliError {
-  return createCliError(CLI_ERROR_DEFINITIONS.cliVersionUnavailable, {
-    context: packageJsonPath == null ? undefined : { packageJsonPath },
-    message: 'Could not determine the current Remix CLI version.',
+export function remixVersionUnavailable(): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.remixVersionUnavailable, {
+    message: 'Could not determine the current Remix version.',
   })
 }
 
@@ -336,10 +335,7 @@ export function unexpectedExtraArgument(argument: string): UsageError {
   })
 }
 
-export function renderCliError(
-  error: unknown,
-  options: { helpText?: string } = {},
-): string {
+export function renderCliError(error: unknown, options: { helpText?: string } = {}): string {
   let cliError = toCliError(error)
   let lines = [`Error [${cliError.code}] ${cliError.title}`, cliError.message]
 

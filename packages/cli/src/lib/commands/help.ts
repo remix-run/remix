@@ -39,7 +39,7 @@ Commands:
   doctor          Check project health for the current project
   routes          Show the route tree for the current project
   skills          Manage Remix skills for the current project
-  version         Show the current Remix CLI version
+  version         Show the current Remix version
 
 Options:
   -h, --help      Show help

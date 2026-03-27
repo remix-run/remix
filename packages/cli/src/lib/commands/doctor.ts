@@ -1,7 +1,6 @@
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { lightRed, lightYellow } from '../color.ts'
 import { checkControllerConventions } from '../doctor/controllers.ts'
 import { checkEnvironment } from '../doctor/environment.ts'
 import { checkProjectContract } from '../doctor/project-contract.ts'
@@ -9,9 +8,22 @@ import {
   createSkippedDoctorSuite,
   type DoctorFinding,
   type DoctorReport,
+  type DoctorSuiteName,
   type DoctorSuiteResult,
 } from '../doctor/types.ts'
 import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
+import {
+  createStepProgressReporter,
+  type StepProgressReporter,
+  writeProgressCommandHeader,
+} from '../progress.ts'
+import { lightRed, lightYellow } from '../terminal.ts'
+
+const DOCTOR_SUITE_LABELS = {
+  controllers: 'controllers',
+  environment: 'environment',
+  'project-contract': 'project-contract',
+} satisfies Record<DoctorSuiteName, string>
 
 export async function runDoctorCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -19,59 +31,31 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   }
 
+  let progress: StepProgressReporter<DoctorSuiteName> | null = null
+
   try {
     let options = parseDoctorCommandArgs(argv)
-    let environment = await checkEnvironment()
-    let findings = [...environment.suite.findings]
-    let suites: DoctorSuiteResult[] = [environment.suite]
-    let routesFile =
-      environment.projectRoot == null
-        ? undefined
-        : path.join(environment.projectRoot, 'app', 'routes.ts')
-
-    if (hasWarningFindings(environment.suite.findings)) {
-      suites.push(createSkippedDoctorSuite('project-contract', 'Blocked by environment warnings.'))
-      suites.push(createSkippedDoctorSuite('controllers', 'Blocked by environment warnings.'))
-    } else {
-      let projectContract = await checkProjectContract(environment.projectRoot!)
-      findings.push(...projectContract.suite.findings)
-      routesFile = projectContract.routesFile
-      suites.push(projectContract.suite)
-
-      if (hasWarningFindings(projectContract.suite.findings)) {
-        suites.push(
-          createSkippedDoctorSuite('controllers', 'Blocked by project-contract warnings.'),
-        )
-      } else {
-        let controllers = await checkControllerConventions(
-          projectContract.routeManifest!.appRoot,
-          projectContract.routeManifest!.tree,
-        )
-        findings.push(...controllers.findings)
-        suites.push(controllers)
-      }
+    progress = options.json ? null : createStepProgressReporter(DOCTOR_SUITE_LABELS, process.stdout)
+    if (!options.json) {
+      await writeProgressCommandHeader('doctor', process.stdout)
     }
-
-    let report: DoctorReport = {
-      appRoot: environment.projectRoot,
-      findings,
-      routesFile,
-      suites,
-    }
+    let report = await collectDoctorReport(progress)
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      process.stdout.write(renderDoctorReport(report))
+      progress?.writeSummaryGap()
+      process.stdout.write(renderDoctorSummary(report))
     }
 
-    if (options.strict && hasWarningFindings(findings)) {
+    if (options.strict && hasWarningFindings(report.findings)) {
       return 1
     }
 
     return 0
   } catch (error) {
     let cliError = toCliError(error)
+    progress?.writeSummaryGap()
     process.stderr.write(
       lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr),
     )
@@ -121,34 +105,94 @@ function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolea
   return { json, strict }
 }
 
-function renderDoctorReport(report: DoctorReport): string {
-  let lines: string[] = []
-  let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
-  let adviceCount = report.findings.length - warningCount
+async function collectDoctorReport(
+  progress: StepProgressReporter<DoctorSuiteName> | null,
+): Promise<DoctorReport> {
+  let environment = await runDoctorSuite(progress, 'environment', () => checkEnvironment())
+  let findings = [...environment.suite.findings]
+  let suites: DoctorSuiteResult[] = [environment.suite]
+  let routesFile =
+    environment.projectRoot == null
+      ? undefined
+      : path.join(environment.projectRoot, 'app', 'routes.ts')
 
-  for (let [index, suite] of report.suites.entries()) {
-    if (index > 0) {
-      lines.push('')
-    }
+  if (progress != null) {
+    writeSuiteFindings(environment.suite)
+  }
 
-    lines.push(suite.name)
+  if (hasWarningFindings(environment.suite.findings)) {
+    let projectContractSuite = createSkippedDoctorSuite(
+      'project-contract',
+      'Blocked by environment warnings.',
+    )
+    let controllersSuite = createSkippedDoctorSuite(
+      'controllers',
+      'Blocked by environment warnings.',
+    )
+    suites.push(projectContractSuite, controllersSuite)
+    progress?.skip(projectContractSuite.name, projectContractSuite.reason)
+    progress?.skip(controllersSuite.name, controllersSuite.reason)
 
-    if (suite.status === 'skipped') {
-      lines.push(`  Skipped: ${suite.reason ?? 'This suite did not run.'}`)
-      continue
-    }
-
-    if (suite.findings.length === 0) {
-      lines.push('  No findings.')
-      continue
-    }
-
-    for (let finding of suite.findings) {
-      lines.push(formatFinding(finding))
+    return {
+      appRoot: environment.projectRoot,
+      findings,
+      routesFile,
+      suites,
     }
   }
 
-  lines.push('')
+  let projectContract = await runDoctorSuite(progress, 'project-contract', () =>
+    checkProjectContract(environment.projectRoot!),
+  )
+  findings.push(...projectContract.suite.findings)
+  routesFile = projectContract.routesFile
+  suites.push(projectContract.suite)
+
+  if (progress != null) {
+    writeSuiteFindings(projectContract.suite)
+  }
+
+  if (hasWarningFindings(projectContract.suite.findings)) {
+    let controllersSuite = createSkippedDoctorSuite(
+      'controllers',
+      'Blocked by project-contract warnings.',
+    )
+    suites.push(controllersSuite)
+    progress?.skip(controllersSuite.name, controllersSuite.reason)
+
+    return {
+      appRoot: environment.projectRoot,
+      findings,
+      routesFile,
+      suites,
+    }
+  }
+
+  let controllers = await runDoctorSuite(progress, 'controllers', async () => ({
+    suite: await checkControllerConventions(
+      projectContract.routeManifest!.appRoot,
+      projectContract.routeManifest!.tree,
+    ),
+  }))
+  findings.push(...controllers.suite.findings)
+  suites.push(controllers.suite)
+
+  if (progress != null) {
+    writeSuiteFindings(controllers.suite)
+  }
+
+  return {
+    appRoot: environment.projectRoot,
+    findings,
+    routesFile,
+    suites,
+  }
+}
+
+function renderDoctorSummary(report: DoctorReport): string {
+  let lines: string[] = []
+  let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
+  let adviceCount = report.findings.length - warningCount
 
   if (report.findings.length === 0) {
     lines.push('Doctor found no issues.')
@@ -171,4 +215,39 @@ function formatFinding(finding: DoctorFinding): string {
   }
 
   return line
+}
+
+async function runDoctorSuite<result extends { suite: DoctorSuiteResult }>(
+  progress: StepProgressReporter<DoctorSuiteName> | null,
+  label: DoctorSuiteName,
+  callback: () => Promise<result>,
+): Promise<result> {
+  progress?.start(label)
+
+  try {
+    let result = await callback()
+
+    if (result.suite.status === 'ok') {
+      progress?.succeed(label)
+    } else if (result.suite.status === 'issues') {
+      progress?.fail(label)
+    } else {
+      progress?.skip(label, result.suite.reason)
+    }
+
+    return result
+  } catch (error) {
+    progress?.fail(label)
+    throw error
+  }
+}
+
+function writeSuiteFindings(suite: DoctorSuiteResult): void {
+  if (suite.status !== 'issues') {
+    return
+  }
+
+  for (let finding of suite.findings) {
+    process.stdout.write(`${formatFinding(finding)}\n`)
+  }
 }

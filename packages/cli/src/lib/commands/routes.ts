@@ -1,6 +1,5 @@
 import * as process from 'node:process'
 
-import { bold, lightRed } from '../color.ts'
 import {
   invalidFlagCombination,
   renderCliError,
@@ -9,6 +8,7 @@ import {
   unexpectedExtraArgument,
 } from '../errors.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
+import { bold, lightRed } from '../terminal.ts'
 
 const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
 

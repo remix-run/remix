@@ -9,6 +9,8 @@ import {
   targetDirectoryNotEmpty,
   targetPathNotDirectory,
 } from './errors.ts'
+import { runProgressStep, type StepProgressReporter } from './progress.ts'
+import { getRuntimeRemixVersion } from './runtime-context.ts'
 
 const BOOTSTRAP_DIRECTORY = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -23,10 +25,17 @@ export interface BootstrapProjectOptions {
   targetDir: string
 }
 
+export type BootstrapProjectPhase =
+  | 'prepare-target-directory'
+  | 'generate-scaffold-files'
+  | 'finalize-package-json'
+
 export interface BootstrappedProject {
   appDisplayName: string
   targetDir: string
 }
+
+export type BootstrapProgressReporter = StepProgressReporter<BootstrapProjectPhase>
 
 interface BootstrapConfig {
   appDisplayName: string
@@ -38,6 +47,7 @@ type TemplateValues = Record<string, string>
 
 export async function bootstrapProject(
   options: BootstrapProjectOptions,
+  progress?: BootstrapProgressReporter,
 ): Promise<BootstrappedProject> {
   let targetDir = path.resolve(options.targetDir)
   let rawAppName = options.appName ?? path.basename(targetDir)
@@ -51,13 +61,19 @@ export async function bootstrapProject(
     remixVersion: readDefaultRemixVersion(),
   } satisfies BootstrapConfig
 
-  await ensureTargetDirectory(targetDir, options.force)
-  await copyBootstrapDirectory({
-    sourceDir: BOOTSTRAP_DIRECTORY,
-    targetDir,
-    templateValues: createTemplateValues(config),
-  })
-  await writeScaffoldPackageJson(targetDir, config)
+  await runProgressStep(progress, 'prepare-target-directory', () =>
+    ensureTargetDirectory(targetDir, options.force),
+  )
+  await runProgressStep(progress, 'generate-scaffold-files', () =>
+    copyBootstrapDirectory({
+      sourceDir: BOOTSTRAP_DIRECTORY,
+      targetDir,
+      templateValues: createTemplateValues(config),
+    }),
+  )
+  await runProgressStep(progress, 'finalize-package-json', () =>
+    writeScaffoldPackageJson(targetDir, config),
+  )
 
   return {
     appDisplayName: config.appDisplayName,
@@ -71,7 +87,7 @@ function readDefaultRemixVersion(): string {
     return overriddenVersion
   }
 
-  return 'latest'
+  return getRuntimeRemixVersion() ?? 'latest'
 }
 
 function createTemplateValues(config: BootstrapConfig): TemplateValues {
