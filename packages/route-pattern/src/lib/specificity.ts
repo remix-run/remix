@@ -1,5 +1,5 @@
 import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
-import { toUnicode } from './punycode.ts'
+import { decodeHostname } from './decode.ts'
 
 /**
  * Returns true if match `a` is less specific than match `b`.
@@ -64,7 +64,7 @@ export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 
   if (a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
-  let hostname = toUnicode(a.url.hostname)
+  let hostname = decodeHostname(a.url.hostname)
 
   // Hostname comparison
   let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)

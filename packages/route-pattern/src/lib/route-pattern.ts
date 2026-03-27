@@ -5,10 +5,9 @@ import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse
 import { serializeSearch } from './route-pattern/serialize.ts'
 import { joinPathname, joinSearch } from './route-pattern/join.ts'
 import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
-import { tryDecodeURI } from './route-pattern/decode-uri.ts'
+import { decodeHostname, decodePathname } from './decode.ts'
 import { matchSearch } from './route-pattern/match.ts'
 import type { Params } from './route-pattern/params.ts'
-import { toUnicode } from './punycode.ts'
 
 type AST = {
   readonly protocol: 'http' | 'https' | 'http(s)' | null
@@ -228,7 +227,7 @@ export class RoutePattern<source extends string = string> {
    */
   match(url: string | URL, options?: { ignoreCase?: boolean }): RoutePatternMatch<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
-    let decodedHostname = toUnicode(url.hostname)
+    let decodedHostname = decodeHostname(url.hostname)
 
     let hostname: PartPatternMatch | null = null
     if (this.hasOrigin) {
@@ -259,7 +258,7 @@ export class RoutePattern<source extends string = string> {
     }
 
     // url.pathname: remove leading slash
-    let pathname = this.ast.pathname.match(tryDecodeURI(url.pathname.slice(1)), options)
+    let pathname = this.ast.pathname.match(decodePathname(url.pathname.slice(1)), options)
     if (pathname === null) return null
 
     if (!matchSearch(url.searchParams, this.ast.search)) return null
