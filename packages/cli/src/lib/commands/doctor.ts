@@ -1,5 +1,6 @@
 import * as process from 'node:process'
 
+import { lightGray, lightRed, lightYellow, reset } from '../color.ts'
 import {
   checkControllerConventions,
   type DoctorFinding,
@@ -29,7 +30,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      process.stdout.write(renderDoctorReport(suite))
+      process.stdout.write(ensureTerminalReset(renderDoctorReport(suite)))
     }
 
     if (options.strict && hasWarningFindings(findings)) {
@@ -39,13 +40,14 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n\n`)
+      process.stderr.write(lightRed(`${error.message}\n`))
+      process.stderr.write('\n')
       process.stderr.write(getDoctorCommandHelpText())
       return 1
     }
 
     if (error instanceof Error) {
-      process.stderr.write(`${error.message}\n`)
+      process.stderr.write(ensureTerminalReset(lightRed(`${error.message}\n`)))
       return 1
     }
 
@@ -109,7 +111,7 @@ function renderDoctorReport(suite: DoctorSuiteResult): string {
   }
 
   for (let finding of suite.findings) {
-    lines.push(`  ${finding.severity.toUpperCase()} ${finding.message}`)
+    lines.push(formatFinding(finding))
   }
 
   lines.push('')
@@ -120,4 +122,18 @@ function renderDoctorReport(suite: DoctorSuiteResult): string {
 
 function hasWarningFindings(findings: DoctorFinding[]): boolean {
   return findings.some((finding) => finding.severity === 'warn')
+}
+
+function formatFinding(finding: DoctorFinding): string {
+  let line = `  ${finding.severity.toUpperCase()} ${finding.message}`
+
+  if (finding.severity === 'warn') {
+    return lightYellow(line)
+  }
+
+  return lightGray(line)
+}
+
+function ensureTerminalReset(output: string): string {
+  return `${output}${reset()}`
 }

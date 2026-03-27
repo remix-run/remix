@@ -1,5 +1,6 @@
 import * as process from 'node:process'
 
+import { lightGray, lightRed, reset } from '../color.ts'
 import { UsageError } from '../errors.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
 
@@ -18,7 +19,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
-      process.stdout.write(renderRouteMap(routeMap, options))
+      process.stdout.write(ensureTerminalReset(renderRouteMap(routeMap, options)))
     }
 
     return 0
@@ -152,7 +153,8 @@ function renderRouteNode(
   options: RoutesCommandOptions,
 ): void {
   let branch = isRoot ? '' : isLast ? '└─ ' : '├─ '
-  lines.push(`${prefix}${branch}${formatRouteNode(node, parentOwnerPath, leafKeyWidth, options)}`)
+  let line = `${prefix}${branch}${formatRouteNode(node, parentOwnerPath, leafKeyWidth, options)}`
+  lines.push(colorRouteLine(line, node))
 
   if (node.kind !== 'group') {
     return
@@ -192,6 +194,7 @@ function formatRouteNode(
 function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
   let rows = flattenRoutes(routeMap.tree).map((node) => ({
     method: node.method!,
+    node,
     owner: formatOwner(node, options),
     path: node.pattern!,
     route: node.name,
@@ -210,12 +213,15 @@ function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOption
 
   for (let row of rows) {
     lines.push(
-      [
-        row.route.padEnd(routeWidth),
-        row.method.padEnd(methodWidth),
-        row.path.padEnd(pathWidth),
-        row.owner,
-      ].join('  '),
+      colorRouteLine(
+        [
+          row.route.padEnd(routeWidth),
+          row.method.padEnd(methodWidth),
+          row.path.padEnd(pathWidth),
+          row.owner,
+        ].join('  '),
+        row.node,
+      ),
     )
   }
 
@@ -241,10 +247,18 @@ function formatOwner(node: RouteTreeNode, options: RoutesCommandOptions): string
   return `${ownerPath}${node.owner.exists ? '' : ' [missing]'}`
 }
 
+function colorRouteLine(line: string, node: RouteTreeNode): string {
+  return node.owner.exists ? lightGray(line) : lightRed(line)
+}
+
 function getCompactOwnerPath(ownerPath: string): string {
   if (ownerPath.startsWith(CONTROLLERS_PATH_PREFIX)) {
     return ownerPath.slice(CONTROLLERS_PATH_PREFIX.length)
   }
 
   return ownerPath
+}
+
+function ensureTerminalReset(output: string): string {
+  return `${output}${reset()}`
 }
