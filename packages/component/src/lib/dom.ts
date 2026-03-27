@@ -2848,6 +2848,8 @@ export interface LinkHTMLProps<eventTarget extends EventTarget = HTMLLinkElement
   integrity?: Trackable<string | undefined>
   /** The `media` HTML attribute. */
   media?: Trackable<string | undefined>
+  /** The `imageSizes` HTML attribute. */
+  imageSizes?: Trackable<string | undefined>
   /** The `imageSrcSet` HTML attribute. */
   imageSrcSet?: Trackable<string | undefined>
   /** The `referrerpolicy` HTML attribute. */

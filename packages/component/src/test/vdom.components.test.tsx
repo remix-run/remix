@@ -170,6 +170,70 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div>Phase C</div>')
     })
 
+    it('hoists only resource hint links on client updates', () => {
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      let rerender = () => {}
+
+      function App(handle: Handle) {
+        let phase = 0
+        rerender = () => {
+          phase++
+          handle.update()
+        }
+
+        return () => {
+          if (phase === 0) {
+            return (
+              <>
+                <link rel="preload" href="/scripts/a.js" as="script" />
+                <link rel="stylesheet" href="/styles/a.css" />
+                <div>Phase A</div>
+              </>
+            )
+          }
+
+          if (phase === 1) {
+            return (
+              <>
+                <link rel="preload" href="/scripts/a.js" as="script" />
+                <link rel="modulepreload" href="/scripts/b.js" />
+                <link rel="stylesheet" href="/styles/b.css" />
+                <div>Phase B</div>
+              </>
+            )
+          }
+
+          return <div>Phase C</div>
+        }
+      }
+
+      let root = createRoot(container)
+      root.render(<App />)
+      root.flush()
+
+      expect(document.head.querySelector('link[rel="preload"][href="/scripts/a.js"]')).toBeTruthy()
+      expect(container.querySelector('link[rel="preload"]')).toBeNull()
+      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe('/styles/a.css')
+
+      rerender()
+      root.flush()
+
+      expect(document.head.querySelectorAll('link[rel="preload"], link[rel="modulepreload"]')).toHaveLength(2)
+      expect(document.head.querySelectorAll('link[rel="preload"][href="/scripts/a.js"]')).toHaveLength(1)
+      expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]')).toBeTruthy()
+      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe('/styles/b.css')
+      expect(container.querySelector('link[rel="preload"], link[rel="modulepreload"]')).toBeNull()
+
+      rerender()
+      root.flush()
+
+      expect(document.head.querySelector('link[rel="preload"], link[rel="modulepreload"]')).toBeNull()
+      expect(container.innerHTML).toBe('<div>Phase C</div>')
+      root.dispose()
+    })
+
     it('dispose cleans up explicit head subtree', () => {
       let container = document.createElement('div')
       document.body.appendChild(container)
