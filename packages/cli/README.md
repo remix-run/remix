@@ -6,7 +6,7 @@ Command-line interface for creating and managing Remix projects.
 
 - Create new Remix projects with `remix new`
 - Print shell completion scripts with `remix completion`
-- Check controller-directory conventions with `remix doctor`
+- Check project environment and Remix app conventions with `remix doctor`
 - Inspect the current app route tree with `remix routes`
 - Sync Remix skills into `.agents/skills` with `remix skills`
 - Print the current CLI version with `remix version`

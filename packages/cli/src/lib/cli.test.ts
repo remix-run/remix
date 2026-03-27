@@ -14,7 +14,7 @@ describe('run', () => {
     assert.equal(result.exitCode, 0)
     assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
     assert.match(result.stdout, /completion\s+Print shell completion scripts/)
-    assert.match(result.stdout, /doctor\s+Check controller conventions/)
+    assert.match(result.stdout, /doctor\s+Check project health/)
     assert.match(result.stdout, /routes\s+Show the route tree/)
     assert.match(result.stdout, /skills\s+Manage Remix skills/)
     assert.match(result.stdout, /version\s+Show the current Remix CLI version/)

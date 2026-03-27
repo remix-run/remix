@@ -3,34 +3,7 @@ import {
   type OwnedSubtree,
   type OwnershipRouteNode,
 } from '../controller-ownership.ts'
-
-export type DoctorSuiteName = 'controllers'
-export type DoctorFindingSeverity = 'warn' | 'advice'
-export type DoctorFindingCode =
-  | 'missing-owner'
-  | 'wrong-owner-kind'
-  | 'ambiguous-owner'
-  | 'duplicate-owner-file'
-  | 'incomplete-controller'
-  | 'promotion-drift'
-  | 'orphan-action'
-  | 'orphan-controller'
-  | 'orphan-route-directory'
-
-export interface DoctorFinding {
-  actualPath?: string
-  code: DoctorFindingCode
-  expectedPath?: string
-  message: string
-  routeName?: string
-  severity: DoctorFindingSeverity
-  suite: DoctorSuiteName
-}
-
-export interface DoctorSuiteResult {
-  findings: DoctorFinding[]
-  name: DoctorSuiteName
-}
+import { createDoctorSuite, type DoctorFinding, type DoctorSuiteResult } from './types.ts'
 
 export async function checkControllerConventions(
   appRoot: string,
@@ -62,10 +35,7 @@ export async function checkControllerConventions(
     })),
   ]
 
-  return {
-    findings,
-    name: 'controllers',
-  }
+  return createDoctorSuite('controllers', findings)
 }
 
 function getSubtreeFindings(subtrees: OwnedSubtree[]): DoctorFinding[] {

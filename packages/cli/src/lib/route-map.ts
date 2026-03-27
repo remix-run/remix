@@ -67,6 +67,10 @@ export async function loadRouteMap(cwd: string = process.cwd()): Promise<LoadedR
 
 export async function loadRouteManifest(cwd: string = process.cwd()): Promise<LoadedRouteManifest> {
   let appRoot = await findRemixAppRoot(cwd)
+  return loadRouteManifestFromAppRoot(appRoot)
+}
+
+export async function loadRouteManifestFromAppRoot(appRoot: string): Promise<LoadedRouteManifest> {
   let routesFile = path.join(appRoot, 'app', 'routes.ts')
   let tree = await loadRawRouteMap(appRoot, routesFile)
 

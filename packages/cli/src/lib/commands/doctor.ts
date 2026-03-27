@@ -1,13 +1,17 @@
+import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { lightRed, lightYellow } from '../color.ts'
+import { checkControllerConventions } from '../doctor/controllers.ts'
+import { checkEnvironment } from '../doctor/environment.ts'
+import { checkProjectContract } from '../doctor/project-contract.ts'
 import {
-  checkControllerConventions,
+  createSkippedDoctorSuite,
   type DoctorFinding,
+  type DoctorReport,
   type DoctorSuiteResult,
-} from '../doctor/controllers.ts'
+} from '../doctor/types.ts'
 import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
-import { loadRouteManifest } from '../route-map.ts'
 
 export async function runDoctorCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -17,20 +21,48 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseDoctorCommandArgs(argv)
-    let routeManifest = await loadRouteManifest()
-    let suite = await checkControllerConventions(routeManifest.appRoot, routeManifest.tree)
-    let findings = suite.findings
-    let report = {
-      appRoot: routeManifest.appRoot,
+    let environment = await checkEnvironment()
+    let findings = [...environment.suite.findings]
+    let suites: DoctorSuiteResult[] = [environment.suite]
+    let routesFile =
+      environment.projectRoot == null
+        ? undefined
+        : path.join(environment.projectRoot, 'app', 'routes.ts')
+
+    if (hasWarningFindings(environment.suite.findings)) {
+      suites.push(createSkippedDoctorSuite('project-contract', 'Blocked by environment warnings.'))
+      suites.push(createSkippedDoctorSuite('controllers', 'Blocked by environment warnings.'))
+    } else {
+      let projectContract = await checkProjectContract(environment.projectRoot!)
+      findings.push(...projectContract.suite.findings)
+      routesFile = projectContract.routesFile
+      suites.push(projectContract.suite)
+
+      if (hasWarningFindings(projectContract.suite.findings)) {
+        suites.push(
+          createSkippedDoctorSuite('controllers', 'Blocked by project-contract warnings.'),
+        )
+      } else {
+        let controllers = await checkControllerConventions(
+          projectContract.routeManifest!.appRoot,
+          projectContract.routeManifest!.tree,
+        )
+        findings.push(...controllers.findings)
+        suites.push(controllers)
+      }
+    }
+
+    let report: DoctorReport = {
+      appRoot: environment.projectRoot,
       findings,
-      routesFile: routeManifest.routesFile,
-      suites: [suite],
+      routesFile,
+      suites,
     }
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      process.stdout.write(renderDoctorReport(suite))
+      process.stdout.write(renderDoctorReport(report))
     }
 
     if (options.strict && hasWarningFindings(findings)) {
@@ -40,7 +72,9 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr))
+    process.stderr.write(
+      lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr),
+    )
     return 1
   }
 }
@@ -49,7 +83,7 @@ export function getDoctorCommandHelpText(): string {
   return `Usage:
   remix doctor [--json] [--strict] [--no-color]
 
-Check Remix controller-directory conventions for the current project.
+Check project environment and Remix app conventions for the current project.
 
 Options:
   --json       Print doctor findings as JSON
@@ -87,24 +121,39 @@ function parseDoctorCommandArgs(argv: string[]): { json: boolean; strict: boolea
   return { json, strict }
 }
 
-function renderDoctorReport(suite: DoctorSuiteResult): string {
-  let lines: string[] = [suite.name]
-  let warningCount = suite.findings.filter((finding) => finding.severity === 'warn').length
-  let adviceCount = suite.findings.length - warningCount
+function renderDoctorReport(report: DoctorReport): string {
+  let lines: string[] = []
+  let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
+  let adviceCount = report.findings.length - warningCount
 
-  if (suite.findings.length === 0) {
-    lines.push('  No findings.')
-    lines.push('')
-    lines.push('Doctor found no issues.')
-    lines.push('Summary: 0 warnings, 0 advice.')
-    return `${lines.join('\n')}\n`
-  }
+  for (let [index, suite] of report.suites.entries()) {
+    if (index > 0) {
+      lines.push('')
+    }
 
-  for (let finding of suite.findings) {
-    lines.push(formatFinding(finding))
+    lines.push(suite.name)
+
+    if (suite.status === 'skipped') {
+      lines.push(`  Skipped: ${suite.reason ?? 'This suite did not run.'}`)
+      continue
+    }
+
+    if (suite.findings.length === 0) {
+      lines.push('  No findings.')
+      continue
+    }
+
+    for (let finding of suite.findings) {
+      lines.push(formatFinding(finding))
+    }
   }
 
   lines.push('')
+
+  if (report.findings.length === 0) {
+    lines.push('Doctor found no issues.')
+  }
+
   lines.push(`Summary: ${warningCount} warnings, ${adviceCount} advice.`)
 
   return `${lines.join('\n')}\n`

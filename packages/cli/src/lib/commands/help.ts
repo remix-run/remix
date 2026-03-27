@@ -36,7 +36,7 @@ Commands:
   completion     Print shell completion scripts for Remix
   help [command]  Show help for Remix commands
   new <name>      Create a new Remix project
-  doctor          Check controller conventions for the current project
+  doctor          Check project health for the current project
   routes          Show the route tree for the current project
   skills          Manage Remix skills for the current project
   version         Show the current Remix CLI version
