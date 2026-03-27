@@ -12,6 +12,14 @@ npm i remix
 
 ## CLI
 
+Create a new app without installing first:
+
+```sh
+npm create remix@latest my-remix-app
+```
+
+After installing `remix`, the equivalent local command and the rest of the CLI are available through `remix`:
+
 ```sh
 remix new my-remix-app
 remix completion bash >> ~/.bashrc

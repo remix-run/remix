@@ -4,7 +4,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Features
 
-- Create new Remix projects with `remix new`
+- Create new Remix projects with zero-install `npm create remix` or installed `remix new`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
 - Inspect the current app route tree with `remix routes`
@@ -14,6 +14,8 @@ Command-line interface for creating and managing Remix projects.
 - Scaffold a starter app that matches the Remix project layout conventions
 
 ## Installation
+
+Use `npm create remix@latest <target-dir>` for zero-install scaffolding. Install `remix` when you want the local `remix` command:
 
 ```sh
 npm i remix
@@ -35,7 +37,9 @@ remix completion zsh >> ~/.zshrc
 
 ## Usage
 
-The primary interface is the `remix` command:
+Use `npm create remix@latest my-remix-app` for zero-install scaffolding. After installing Remix, the equivalent local command is `remix new my-remix-app`.
+
+The rest of the CLI is available through the installed `remix` command:
 
 ```sh
 remix new my-remix-app
