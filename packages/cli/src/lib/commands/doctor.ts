@@ -3,7 +3,7 @@ import * as process from 'node:process'
 
 import { checkControllerConventions } from '../doctor/controllers.ts'
 import { checkEnvironment } from '../doctor/environment.ts'
-import { checkProjectContract } from '../doctor/project-contract.ts'
+import { checkProject } from '../doctor/project.ts'
 import {
   createSkippedDoctorSuite,
   type DoctorFinding,
@@ -130,16 +130,13 @@ async function collectDoctorReport(
   }
 
   if (hasWarningFindings(environment.suite.findings)) {
-    let projectContractSuite = createSkippedDoctorSuite(
-      'project',
-      'Blocked by environment warnings.',
-    )
+    let projectSuite = createSkippedDoctorSuite('project', 'Blocked by environment warnings.')
     let controllersSuite = createSkippedDoctorSuite(
       'controllers',
       'Blocked by environment warnings.',
     )
-    suites.push(projectContractSuite, controllersSuite)
-    progress?.skip(projectContractSuite.name, projectContractSuite.reason)
+    suites.push(projectSuite, controllersSuite)
+    progress?.skip(projectSuite.name, projectSuite.reason)
     writeSuiteGap(progress)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
     writeSuiteGap(progress)
@@ -152,19 +149,17 @@ async function collectDoctorReport(
     }
   }
 
-  let projectContract = await runDoctorSuite(progress, 'project', () =>
-    checkProjectContract(environment.projectRoot!),
-  )
-  findings.push(...projectContract.suite.findings)
-  routesFile = projectContract.routesFile
-  suites.push(projectContract.suite)
+  let project = await runDoctorSuite(progress, 'project', () => checkProject(environment.projectRoot!))
+  findings.push(...project.suite.findings)
+  routesFile = project.routesFile
+  suites.push(project.suite)
 
   if (progress != null) {
-    writeSuiteFindings(projectContract.suite)
+    writeSuiteFindings(project.suite)
     writeSuiteGap(progress)
   }
 
-  if (hasWarningFindings(projectContract.suite.findings)) {
+  if (hasWarningFindings(project.suite.findings)) {
     let controllersSuite = createSkippedDoctorSuite('controllers', 'Blocked by project warnings.')
     suites.push(controllersSuite)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
@@ -180,8 +175,8 @@ async function collectDoctorReport(
 
   let controllers = await runDoctorSuite(progress, 'controllers', async () => ({
     suite: await checkControllerConventions(
-      projectContract.routeManifest!.appRoot,
-      projectContract.routeManifest!.tree,
+      project.routeManifest!.appRoot,
+      project.routeManifest!.tree,
     ),
   }))
   findings.push(...controllers.suite.findings)

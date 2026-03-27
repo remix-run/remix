@@ -47,12 +47,12 @@ describe('progress', () => {
 
             progress.start('environment')
             progress.fail()
-            progress.skip('controllers', 'Blocked by project-contract warnings.')
+            progress.skip('controllers', 'Blocked by project warnings.')
 
             assert.deepEqual(writes, [
               '• environment...\n',
               '✗ environment\n',
-              '• controllers (skipped: Blocked by project-contract warnings.)\n',
+              '• controllers (skipped: Blocked by project warnings.)\n',
             ])
           }),
         ),

@@ -408,7 +408,7 @@ describe('doctor command', () => {
 
     let payload = JSON.parse(result.stdout) as DoctorReport
     let environmentSuite = payload.suites.find((suite) => suite.name === 'environment')
-    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project')
+    let projectSuite = payload.suites.find((suite) => suite.name === 'project')
     let controllersSuite = payload.suites.find((suite) => suite.name === 'controllers')
     let home = controllersSuite?.findings.find((finding) => finding.routeName === 'home')
     let contact = controllersSuite?.findings.find((finding) => finding.routeName === 'contact')
@@ -417,7 +417,7 @@ describe('doctor command', () => {
     assert.equal(payload.routesFile, path.join(fixtureDir, 'app', 'routes.ts'))
     assert.equal(payload.findings.length, 2)
     assert.equal(environmentSuite?.status, 'ok')
-    assert.equal(projectContractSuite?.status, 'ok')
+    assert.equal(projectSuite?.status, 'ok')
     assert.equal(controllersSuite?.status, 'issues')
     assert.ok(home)
     assert.equal(home.code, 'wrong-owner-kind')
@@ -436,10 +436,10 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
 
     let payload = JSON.parse(result.stdout) as DoctorReport
-    let projectContractSuite = payload.suites.find((suite) => suite.name === 'project')
+    let projectSuite = payload.suites.find((suite) => suite.name === 'project')
     let controllersSuite = payload.suites.find((suite) => suite.name === 'controllers')
 
-    assert.equal(projectContractSuite?.status, 'issues')
+    assert.equal(projectSuite?.status, 'issues')
     assert.equal(controllersSuite?.status, 'skipped')
     assert.equal(controllersSuite?.reason, 'Blocked by project warnings.')
   })

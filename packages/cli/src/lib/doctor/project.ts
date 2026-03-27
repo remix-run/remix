@@ -5,15 +5,13 @@ import { CliError } from '../errors.ts'
 import { loadRouteManifestFromAppRoot, type LoadedRouteManifest } from '../route-map.ts'
 import { createDoctorSuite, type DoctorFinding, type DoctorSuiteResult } from './types.ts'
 
-export interface ProjectContractDoctorResult {
+export interface ProjectDoctorResult {
   routesFile: string
   routeManifest?: LoadedRouteManifest
   suite: DoctorSuiteResult
 }
 
-export async function checkProjectContract(
-  projectRoot: string,
-): Promise<ProjectContractDoctorResult> {
+export async function checkProject(projectRoot: string): Promise<ProjectDoctorResult> {
   let routesFile = path.join(projectRoot, 'app', 'routes.ts')
 
   if (!(await pathExists(routesFile))) {
@@ -40,7 +38,7 @@ export async function checkProjectContract(
       suite: createDoctorSuite('project', []),
     }
   } catch (error) {
-    let finding = toProjectContractFinding(error)
+    let finding = toProjectFinding(error)
 
     return {
       routesFile,
@@ -49,7 +47,7 @@ export async function checkProjectContract(
   }
 }
 
-function toProjectContractFinding(error: unknown): DoctorFinding {
+function toProjectFinding(error: unknown): DoctorFinding {
   if (error instanceof CliError) {
     if (error.code === 'RMX_ROUTE_MAP_LOADER_INVALID_JSON') {
       return {
