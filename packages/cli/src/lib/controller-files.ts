@@ -14,6 +14,10 @@ export function getControllerOwnerCandidates(segments: string[]): string[] {
   )
 }
 
+export function getRouteSubtreePath(segments: string[]): string {
+  return normalizeRelativePath(path.join('app', 'controllers', ...segments))
+}
+
 export function getPreferredOwnerDisplayPath(candidates: string[]): string {
   let tsxCandidate = candidates.find((candidate) => candidate.endsWith('.tsx'))
   return tsxCandidate ?? candidates[0] ?? ''

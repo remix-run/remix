@@ -1,15 +1,5 @@
-import * as fs from 'node:fs/promises'
-import * as path from 'node:path'
-
-import {
-  getActionOwnerCandidates,
-  getControllerOwnerCandidates,
-  getOwnerModuleBaseName,
-  getPreferredOwnerDisplayPath,
-  isControllerEntryFileName,
-  isActionFileName,
-} from '../controller-files.ts'
-import type { LoadedRouteMap, RouteOwnerKind, RouteTreeNode } from '../route-map.ts'
+import { inspectControllerOwnership, type OwnedSubtree } from '../controller-ownership.ts'
+import type { LoadedRouteMap } from '../route-map.ts'
 
 export type DoctorSuiteName = 'controllers'
 export type DoctorFindingSeverity = 'warn' | 'advice'
@@ -17,9 +7,12 @@ export type DoctorFindingCode =
   | 'missing-owner'
   | 'wrong-owner-kind'
   | 'ambiguous-owner'
+  | 'duplicate-owner-file'
+  | 'incomplete-controller'
+  | 'promotion-drift'
   | 'orphan-action'
   | 'orphan-controller'
-  | 'generic-bucket'
+  | 'orphan-route-directory'
 
 export interface DoctorFinding {
   actualPath?: string
@@ -36,32 +29,33 @@ export interface DoctorSuiteResult {
   name: DoctorSuiteName
 }
 
-interface ExpectedOwner {
-  alternateCandidates: string[]
-  expectedCandidates: string[]
-  kind: RouteOwnerKind
-  routeName: string
-}
-
-interface ControllerDirectoryScan {
-  controllerPaths: Set<string>
-  actionPaths: Set<string>
-  genericBucketPaths: string[]
-  topLevelActionPaths: Set<string>
-}
-
-const GENERIC_BUCKET_DIRECTORIES = new Set(['components', 'lib', 'shared', 'utils'])
-const GENERIC_BUCKET_FILE_BASENAMES = new Set(['helpers', 'common', 'misc'])
-
 export async function checkControllerConventions(
   routeMap: LoadedRouteMap,
 ): Promise<DoctorSuiteResult> {
-  let expectedOwners = collectExpectedOwners(routeMap.tree)
-  let scan = await scanControllersDirectory(routeMap.appRoot)
+  let ownership = await inspectControllerOwnership(routeMap)
   let findings = [
-    ...getExpectedOwnerFindings(expectedOwners, scan),
-    ...getOrphanFindings(expectedOwners, scan),
-    ...getGenericBucketFindings(scan),
+    ...getSubtreeFindings(ownership.subtrees),
+    ...ownership.orphanActionPaths.map((actualPath) => ({
+      actualPath,
+      code: 'orphan-action' as const,
+      message: `Standalone action ${actualPath} does not match any top-level route.`,
+      severity: 'warn' as const,
+      suite: 'controllers' as const,
+    })),
+    ...ownership.orphanControllerPaths.map((actualPath) => ({
+      actualPath,
+      code: 'orphan-controller' as const,
+      message: `Controller ${actualPath} does not match any route group.`,
+      severity: 'warn' as const,
+      suite: 'controllers' as const,
+    })),
+    ...ownership.orphanRouteDirectoryPaths.map((actualPath) => ({
+      actualPath,
+      code: 'orphan-route-directory' as const,
+      message: `Directory ${actualPath} does not match any route subtree.`,
+      severity: 'warn' as const,
+      suite: 'controllers' as const,
+    })),
   ]
 
   return {
@@ -70,165 +64,120 @@ export async function checkControllerConventions(
   }
 }
 
-function collectExpectedOwners(
-  tree: RouteTreeNode[],
-  depth: number = 0,
-  expectedOwners: ExpectedOwner[] = [],
-): ExpectedOwner[] {
-  for (let node of tree) {
-    if (node.kind === 'group') {
-      let segments = node.name.split('.')
-      expectedOwners.push({
-        alternateCandidates: getActionOwnerCandidates(segments),
-        expectedCandidates: getControllerOwnerCandidates(segments),
-        kind: node.owner.kind,
-        routeName: node.name,
-      })
-      collectExpectedOwners(node.children, depth + 1, expectedOwners)
-      continue
-    }
-
-    if (depth > 0) {
-      continue
-    }
-
-    expectedOwners.push({
-      alternateCandidates: getControllerOwnerCandidates([node.key]),
-      expectedCandidates: getActionOwnerCandidates([node.key]),
-      kind: node.owner.kind,
-      routeName: node.name,
-    })
-  }
-
-  return expectedOwners
-}
-
-async function scanControllersDirectory(appRoot: string): Promise<ControllerDirectoryScan> {
-  let controllersDir = path.join(appRoot, 'app', 'controllers')
-  let controllerPaths = new Set<string>()
-  let actionPaths = new Set<string>()
-  let genericBucketPaths: string[] = []
-  let topLevelActionPaths = new Set<string>()
-
-  async function walk(currentDir: string, isRoot: boolean): Promise<void> {
-    let entries
-    try {
-      entries = await fs.readdir(currentDir, { withFileTypes: true })
-    } catch (error) {
-      let nodeError = error as NodeJS.ErrnoException
-      if (nodeError.code === 'ENOENT') {
-        throw new Error('Could not read app/controllers. Run this command inside a Remix app.')
-      }
-
-      throw error
-    }
-
-    for (let entry of entries) {
-      let entryPath = path.join(currentDir, entry.name)
-      let relativePath = normalizeRelativePath(path.relative(appRoot, entryPath))
-
-      if (entry.isDirectory()) {
-        if (GENERIC_BUCKET_DIRECTORIES.has(entry.name)) {
-          genericBucketPaths.push(relativePath)
-        }
-
-        await walk(entryPath, false)
-        continue
-      }
-
-      if (!entry.isFile()) {
-        continue
-      }
-
-      if (isControllerEntryFileName(entry.name)) {
-        controllerPaths.add(relativePath)
-        continue
-      }
-
-      if (isGenericBucketFileName(entry.name)) {
-        genericBucketPaths.push(relativePath)
-      }
-
-      if (!isActionCandidate(entry.name)) {
-        continue
-      }
-
-      actionPaths.add(relativePath)
-
-      if (isRoot) {
-        topLevelActionPaths.add(relativePath)
-      }
-    }
-  }
-
-  await walk(controllersDir, true)
-
-  return {
-    controllerPaths,
-    actionPaths,
-    genericBucketPaths: genericBucketPaths.sort(),
-    topLevelActionPaths,
-  }
-}
-
-function getExpectedOwnerFindings(
-  expectedOwners: ExpectedOwner[],
-  scan: ControllerDirectoryScan,
-): DoctorFinding[] {
+function getSubtreeFindings(subtrees: OwnedSubtree[]): DoctorFinding[] {
   let findings: DoctorFinding[] = []
 
-  for (let owner of expectedOwners) {
-    let expectedPath = findOwnerPath(scan, owner.kind, owner.expectedCandidates)
-    let alternatePath = findOwnerPath(scan, invertOwnerKind(owner.kind), owner.alternateCandidates)
-    let expectedDisplayPath = expectedPath ?? getPreferredOwnerDisplayPath(owner.expectedCandidates)
-    let expectedExists = expectedPath != null
-    let alternateExists = alternatePath != null
+  for (let subtree of subtrees) {
+    let actualEntryPath = subtree.actualEntryPath ?? undefined
+    let actualAlternatePath = subtree.actualAlternatePath ?? undefined
 
-    if (expectedExists && alternateExists) {
-      let actualAlternatePath = alternatePath ?? undefined
+    if (subtree.actualEntryPaths.length > 1) {
+      findings.push({
+        actualPath: subtree.actualEntryPaths[0],
+        code: 'duplicate-owner-file',
+        expectedPath: subtree.entryDisplayPath,
+        message: `Route "${subtree.routeName}" has multiple ${subtree.kind} files: ${subtree.actualEntryPaths.join(', ')}. Keep only one ${subtree.kind} owner file.`,
+        routeName: subtree.routeName,
+        severity: 'warn',
+        suite: 'controllers',
+      })
+      continue
+    }
 
+    if (subtree.actualAlternatePaths.length > 1) {
+      let alternateKind = subtree.kind === 'action' ? 'controller' : 'action'
+
+      findings.push({
+        actualPath: subtree.actualAlternatePaths[0],
+        code: 'duplicate-owner-file',
+        expectedPath: subtree.entryDisplayPath,
+        message: `Route "${subtree.routeName}" has multiple ${alternateKind} files: ${subtree.actualAlternatePaths.join(', ')}. Keep only one ${alternateKind} owner file.`,
+        routeName: subtree.routeName,
+        severity: 'warn',
+        suite: 'controllers',
+      })
+      continue
+    }
+
+    if (actualEntryPath != null && actualAlternatePath != null) {
       findings.push({
         actualPath: actualAlternatePath,
         code: 'ambiguous-owner',
-        expectedPath: expectedDisplayPath,
+        expectedPath: actualEntryPath,
         message:
-          owner.kind === 'action'
-            ? `Route "${owner.routeName}" has both action ${expectedDisplayPath} and controller ${actualAlternatePath}.`
-            : `Route "${owner.routeName}" has both controller ${expectedDisplayPath} and standalone action ${actualAlternatePath}.`,
-        routeName: owner.routeName,
+          subtree.kind === 'action'
+            ? `Route "${subtree.routeName}" has both action ${actualEntryPath} and controller ${actualAlternatePath}.`
+            : `Route "${subtree.routeName}" has both controller ${actualEntryPath} and standalone action ${actualAlternatePath}.`,
+        routeName: subtree.routeName,
         severity: 'warn',
         suite: 'controllers',
       })
       continue
     }
 
-    if (alternateExists) {
-      let actualAlternatePath = alternatePath ?? undefined
-
+    if (actualAlternatePath != null) {
       findings.push({
         actualPath: actualAlternatePath,
         code: 'wrong-owner-kind',
-        expectedPath: expectedDisplayPath,
+        expectedPath: subtree.entryDisplayPath,
         message:
-          owner.kind === 'action'
-            ? `Route "${owner.routeName}" expects action ${expectedDisplayPath}, but found controller ${actualAlternatePath}.`
-            : `Route "${owner.routeName}" expects controller ${expectedDisplayPath}, but found standalone action ${actualAlternatePath}.`,
-        routeName: owner.routeName,
+          subtree.kind === 'action'
+            ? `Route "${subtree.routeName}" expects action ${subtree.entryDisplayPath}, but found controller ${actualAlternatePath}.`
+            : `Route "${subtree.routeName}" expects controller ${subtree.entryDisplayPath}, but found standalone action ${actualAlternatePath}.`,
+        routeName: subtree.routeName,
         severity: 'warn',
         suite: 'controllers',
       })
       continue
     }
 
-    if (!expectedExists) {
+    if (subtree.kind === 'controller' && subtree.actualEntryPath == null) {
+      if (subtree.claimedFilePaths.length > 0) {
+        findings.push({
+          actualPath: subtree.subtreePath,
+          code: 'incomplete-controller',
+          expectedPath: subtree.entryDisplayPath,
+          message: `Route "${subtree.routeName}" has files under ${subtree.subtreePath}, but is missing controller ${subtree.entryDisplayPath}.`,
+          routeName: subtree.routeName,
+          severity: 'warn',
+          suite: 'controllers',
+        })
+        continue
+      }
+
       findings.push({
         code: 'missing-owner',
-        expectedPath: expectedDisplayPath,
+        expectedPath: subtree.entryDisplayPath,
+        message: `Route "${subtree.routeName}" is missing controller ${subtree.entryDisplayPath}.`,
+        routeName: subtree.routeName,
+        severity: 'warn',
+        suite: 'controllers',
+      })
+      continue
+    }
+
+    if (subtree.kind === 'action' && subtree.claimedFilePaths.length > 0) {
+      findings.push({
+        actualPath: subtree.subtreePath,
+        code: 'promotion-drift',
+        expectedPath: actualEntryPath ?? subtree.entryDisplayPath,
         message:
-          owner.kind === 'action'
-            ? `Route "${owner.routeName}" is missing action ${expectedDisplayPath}.`
-            : `Route "${owner.routeName}" is missing controller ${expectedDisplayPath}.`,
-        routeName: owner.routeName,
+          actualEntryPath == null
+            ? `Route "${subtree.routeName}" has files under ${subtree.subtreePath}, but is still expected to use action ${subtree.entryDisplayPath}. Promote it to controller ${subtree.alternateDisplayPath} or move the files back into ${subtree.entryDisplayPath}.`
+            : `Route "${subtree.routeName}" uses action ${actualEntryPath}, but also has files under ${subtree.subtreePath}. Promote it to controller ${subtree.alternateDisplayPath} or keep the route in ${actualEntryPath}.`,
+        routeName: subtree.routeName,
+        severity: 'warn',
+        suite: 'controllers',
+      })
+      continue
+    }
+
+    if (subtree.actualEntryPath == null) {
+      findings.push({
+        code: 'missing-owner',
+        expectedPath: subtree.entryDisplayPath,
+        message: `Route "${subtree.routeName}" is missing action ${subtree.entryDisplayPath}.`,
+        routeName: subtree.routeName,
         severity: 'warn',
         suite: 'controllers',
       })
@@ -236,111 +185,4 @@ function getExpectedOwnerFindings(
   }
 
   return findings
-}
-
-function getOrphanFindings(
-  expectedOwners: ExpectedOwner[],
-  scan: ControllerDirectoryScan,
-): DoctorFinding[] {
-  let findings: DoctorFinding[] = []
-  let expectedActionPaths = new Set(
-    expectedOwners
-      .filter((owner) => owner.kind === 'action')
-      .flatMap((owner) => owner.expectedCandidates),
-  )
-  let expectedControllerPaths = new Set(
-    expectedOwners
-      .filter((owner) => owner.kind === 'controller')
-      .flatMap((owner) => owner.expectedCandidates),
-  )
-  let alternateActionPaths = new Set(
-    expectedOwners
-      .filter((owner) => owner.kind === 'controller')
-      .flatMap((owner) => owner.alternateCandidates),
-  )
-  let alternateControllerPaths = new Set(
-    expectedOwners
-      .filter((owner) => owner.kind === 'action')
-      .flatMap((owner) => owner.alternateCandidates),
-  )
-
-  let orphanActions = [...scan.topLevelActionPaths]
-    .filter((filePath) => !expectedActionPaths.has(filePath))
-    .filter((filePath) => !alternateActionPaths.has(filePath))
-    .sort()
-  let orphanControllers = [...scan.controllerPaths]
-    .filter((filePath) => !expectedControllerPaths.has(filePath))
-    .filter((filePath) => !alternateControllerPaths.has(filePath))
-    .sort()
-
-  for (let actualPath of orphanActions) {
-    findings.push({
-      actualPath,
-      code: 'orphan-action',
-      message: `Standalone action ${actualPath} does not match any top-level route.`,
-      severity: 'warn',
-      suite: 'controllers',
-    })
-  }
-
-  for (let actualPath of orphanControllers) {
-    findings.push({
-      actualPath,
-      code: 'orphan-controller',
-      message: `Controller ${actualPath} does not match any route group.`,
-      severity: 'warn',
-      suite: 'controllers',
-    })
-  }
-
-  return findings
-}
-
-function getGenericBucketFindings(scan: ControllerDirectoryScan): DoctorFinding[] {
-  return scan.genericBucketPaths.map((actualPath) => ({
-    actualPath,
-    code: 'generic-bucket',
-    message: `${actualPath} uses a generic shared-bucket name inside app/controllers.`,
-    severity: 'advice',
-    suite: 'controllers',
-  }))
-}
-
-function hasOwnerPath(
-  scan: ControllerDirectoryScan,
-  kind: RouteOwnerKind,
-  filePath: string,
-): boolean {
-  return kind === 'action' ? scan.actionPaths.has(filePath) : scan.controllerPaths.has(filePath)
-}
-
-function invertOwnerKind(kind: RouteOwnerKind): RouteOwnerKind {
-  return kind === 'action' ? 'controller' : 'action'
-}
-
-function isActionCandidate(fileName: string): boolean {
-  return isActionFileName(fileName) && !isGenericBucketFileName(fileName)
-}
-
-function findOwnerPath(
-  scan: ControllerDirectoryScan,
-  kind: RouteOwnerKind,
-  candidatePaths: string[],
-): string | null {
-  for (let candidatePath of candidatePaths) {
-    if (hasOwnerPath(scan, kind, candidatePath)) {
-      return candidatePath
-    }
-  }
-
-  return null
-}
-
-function isGenericBucketFileName(fileName: string): boolean {
-  let baseName = getOwnerModuleBaseName(fileName)
-  return baseName != null && GENERIC_BUCKET_FILE_BASENAMES.has(baseName)
-}
-
-function normalizeRelativePath(filePath: string): string {
-  return filePath.split(path.sep).join('/')
 }

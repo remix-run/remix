@@ -461,7 +461,19 @@ importers:
         specifier: workspace:*
         version: link:../../../../remix
 
+  packages/cli/test/fixtures/doctor-duplicate-owner:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
   packages/cli/test/fixtures/doctor-generic-buckets:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-incomplete-controller:
     dependencies:
       remix:
         specifier: workspace:*
@@ -473,7 +485,25 @@ importers:
         specifier: workspace:*
         version: link:../../../../remix
 
+  packages/cli/test/fixtures/doctor-orphan-route-local-file:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
   packages/cli/test/fixtures/doctor-orphans:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-promotion-drift:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-route-names:
     dependencies:
       remix:
         specifier: workspace:*

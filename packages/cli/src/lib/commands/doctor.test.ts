@@ -52,6 +52,33 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('reports duplicate owner files for actions and controllers', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-duplicate-owner'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(
+      result.stdout,
+      /WARN Route "home" has multiple action files: app\/controllers\/home\.ts, app\/controllers\/home\.tsx\. Keep only one action owner file\./,
+    )
+    assert.match(
+      result.stdout,
+      /WARN Route "contact" has multiple controller files: app\/controllers\/contact\/controller\.ts, app\/controllers\/contact\/controller\.jsx\. Keep only one controller owner file\./,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('reports incomplete controllers when a controller folder is missing its entry file', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-incomplete-controller'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(
+      result.stdout,
+      /WARN Route "contact" has files under app\/controllers\/contact, but is missing controller app\/controllers\/contact\/controller\.tsx\./,
+    )
+    assert.doesNotMatch(result.stdout, /Route "contact" is missing controller/)
+    assert.equal(result.stderr, '')
+  })
+
   it('reports wrong owner kinds for actions and controller folders', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-wrong-kind'))
 
@@ -63,6 +90,17 @@ describe('doctor command', () => {
     assert.match(
       result.stdout,
       /WARN Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('reports promotion drift for standalone actions that also have route-local files', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-promotion-drift'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(
+      result.stdout,
+      /WARN Route "home" uses action app\/controllers\/home\.js, but also has files under app\/controllers\/home\. Promote it to controller app\/controllers\/home\/controller\.tsx or keep the route in app\/controllers\/home\.js\./,
     )
     assert.equal(result.stderr, '')
   })
@@ -97,21 +135,43 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('reports generic buckets as advice and does not fail strict mode for advice only', async () => {
-    let fixtureDir = getFixturePath('doctor-generic-buckets')
-    let result = runDoctorCommand([], fixtureDir)
-    let strictResult = runDoctorCommand(['--strict'], fixtureDir)
+  it('reports extraneous route directories outside any controller route', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-orphan-route-local-file'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(
       result.stdout,
-      /ADVICE app\/controllers\/components uses a generic shared-bucket name inside app\/controllers\./,
+      /WARN Directory app\/controllers\/unused does not match any route subtree\./,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('reports extraneous route directories from the controller tree shape', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-generic-buckets'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(
+      result.stdout,
+      /WARN Directory app\/controllers\/components does not match any route subtree\./,
     )
     assert.match(
       result.stdout,
-      /ADVICE app\/controllers\/helpers\.js uses a generic shared-bucket name inside app\/controllers\./,
+      /WARN Standalone action app\/controllers\/helpers\.js does not match any top-level route\./,
     )
-    assert.equal(strictResult.status, 0, strictResult.stderr)
+    assert.doesNotMatch(
+      result.stdout,
+      /Route-local file app\/controllers\/components\/example\.jsx does not live under any controller route\./,
+    )
+    assert.equal(result.stderr, '')
+  })
+
+  it('allows route names like shared and common when the route map declares them', async () => {
+    let result = runDoctorCommand([], getFixturePath('doctor-route-names'))
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /No findings\./)
+    assert.doesNotMatch(result.stdout, /shared-bucket/)
+    assert.equal(result.stderr, '')
   })
 
   it('prints machine-readable findings as json', async () => {
@@ -178,10 +238,13 @@ interface DoctorFinding {
   actualPath?: string
   code:
     | 'ambiguous-owner'
-    | 'generic-bucket'
+    | 'duplicate-owner-file'
+    | 'incomplete-controller'
     | 'missing-owner'
     | 'orphan-action'
     | 'orphan-controller'
+    | 'orphan-route-directory'
+    | 'promotion-drift'
     | 'wrong-owner-kind'
   expectedPath?: string
   message: string

@@ -1,0 +1,8 @@
+{
+  "name": "doctor-promotion-drift-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

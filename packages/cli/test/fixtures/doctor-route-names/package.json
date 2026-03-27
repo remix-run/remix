@@ -1,0 +1,8 @@
+{
+  "name": "doctor-route-names-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

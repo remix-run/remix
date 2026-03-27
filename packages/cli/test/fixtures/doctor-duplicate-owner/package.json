@@ -1,0 +1,8 @@
+{
+  "name": "doctor-duplicate-owner-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}
