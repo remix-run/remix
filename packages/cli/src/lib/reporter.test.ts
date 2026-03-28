@@ -19,12 +19,15 @@ describe('reporter', () => {
         reporter.out.bullet(reporter.out.label('WARN', 'Missing app/routes.ts.'))
         reporter.out.bullet('Created app/controllers/home.tsx')
       })
+      reporter.finish()
 
       assert.deepEqual(writes, [
+        '\n',
         'Summary\n',
         'Findings:\n',
         '  • [WARN] Missing app/routes.ts.\n',
         '  • Created app/controllers/home.tsx\n',
+        '\n',
       ])
     })
   })
@@ -47,8 +50,9 @@ describe('reporter', () => {
       reporter.out.blank()
       reporter.out.blank()
       reporter.out.line('Two')
+      reporter.finish()
 
-      assert.deepEqual(writes, ['One\n', '\n', 'Two\n'])
+      assert.deepEqual(writes, ['\n', 'One\n', '\n', 'Two\n', '\n'])
     })
   })
 
@@ -73,13 +77,16 @@ describe('reporter', () => {
               noHeaders: true,
               rows: [['home', 'ANY']],
             })
+            reporter.finish()
 
             assert.deepEqual(writes, [
+              '\n',
               '\u001B[1mRoute            \u001B[0m  \u001B[1mMethod\u001B[0m\n',
               'home               ANY   \n',
               'auth.login.action  POST  \n',
               '\n',
               'home   ANY   \n',
+              '\n',
             ])
           }),
         ),
@@ -100,7 +107,8 @@ describe('reporter', () => {
             reporter.status.succeedStep()
             reporter.status.summaryGap()
 
-            assert.equal(writes[0], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
+            assert.equal(writes[0], '\n')
+            assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
             assert.ok(
               writes.some(
                 (write) =>
@@ -129,11 +137,14 @@ describe('reporter', () => {
             reporter.status.startStep('Checking project')
             reporter.status.failStep()
             reporter.status.skipStep('controllers', 'Blocked by project warnings.')
+            reporter.finish()
 
             assert.deepEqual(writes, [
+              '\n',
               '• Checking project...\n',
               '✗ Checking project\n',
               '• controllers (skipped: Blocked by project warnings.)\n',
+              '\n',
             ])
           }),
         ),
@@ -155,7 +166,8 @@ describe('reporter', () => {
 
                 assert.deepEqual(stdoutWrites, [])
                 assert.deepEqual(stderrWrites, [
-                  '\n\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
+                  '\n',
+                  '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
                 ])
               }),
             ),

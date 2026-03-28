@@ -154,17 +154,20 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     progress.writeSummaryGap()
     if (result.appliedChanges.length === 0) {
       reporter.out.line(`No changes. ${skillsDir} is up to date.`)
+      reporter.finish()
       return 0
     }
 
     reporter.out.line(`Synced Remix skills into ${skillsDir}:`)
     reporter.out.bullets(formatAppliedChanges(result.appliedChanges))
+    reporter.finish()
     return 0
   } catch (error) {
     progress.writeSummaryGap()
     process.stderr.write(
       renderCliError(toCliError(error), { helpText: getSkillsInstallCommandHelpText() }),
     )
+    reporter.finish()
     return 1
   }
 }
@@ -211,6 +214,7 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
 
     reporter.out.line(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:`)
     reporter.out.bullets(entries.map((entry) => `${entry.state} ${entry.name}`))
+    reporter.finish()
     return 0
   })
 }
@@ -255,11 +259,13 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
 
     if (result.changes.length === 0) {
       reporter.out.line(`No changes. ${getDisplayPath(result.skillsDir, cwd)} is up to date.`)
+      reporter.finish()
       return 0
     }
 
     reporter.out.line(`Remix skills to sync into ${getDisplayPath(result.skillsDir, cwd)}:`)
     reporter.out.bullets(result.changes.map((change) => `${change.action} ${change.name}`))
+    reporter.finish()
     return 0
   })
 }

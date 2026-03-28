@@ -81,7 +81,7 @@ export function createDoctorSuite(
   return {
     findings,
     name,
-    status: findings.length === 0 ? 'ok' : 'issues',
+    status: findings.some((finding) => finding.severity === 'warn') ? 'issues' : 'ok',
   }
 }
 

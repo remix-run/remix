@@ -42,10 +42,12 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     let result = await bootstrapProject(options, progress)
     progress.writeSummaryGap()
     reporter.out.line(`Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir)}`)
+    reporter.finish()
     return 0
   } catch (error) {
     progress.writeSummaryGap()
     process.stderr.write(renderCliError(toCliError(error), { helpText: getNewCommandHelpText() }))
+    reporter.finish()
     return 1
   }
 }

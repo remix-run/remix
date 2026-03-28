@@ -8,6 +8,7 @@ import {
   lightGray,
   lightGreen,
   lightRed,
+  lightYellow,
   remixWordmark,
 } from './terminal.ts'
 
@@ -22,6 +23,7 @@ interface StepProgressLabel {
 }
 
 export interface CommandReporter {
+  finish(): void
   out: TextChannel
   status: StatusChannel
 }
@@ -39,7 +41,7 @@ export interface TextChannel {
   bullets(items: string[]): void
   dedent(): void
   indent(): void
-  label(tag: string, text: string): string
+  label(tag: string, text: string, options?: LabelOptions): string
   line(text?: string): void
   section(title: string, callback?: () => void): void
   table(options: TableOptions): void
@@ -53,6 +55,10 @@ export interface StatusChannel extends TextChannel {
   startStep(label: string): void
   succeedStep(label?: string): void
   summaryGap(): void
+}
+
+export interface LabelOptions {
+  tone?: 'error' | 'warn'
 }
 
 export interface CreateCommandReporterOptions {
@@ -70,10 +76,30 @@ export interface StepProgressReporter<step extends string> {
 }
 
 export function createCommandReporter(options: CreateCommandReporterOptions = {}): CommandReporter {
+  let stdout = options.stdout ?? process.stdout
+  let stderr = options.stderr ?? process.stderr
+  let states = new Map<NodeJS.WriteStream, ReporterStreamState>()
+  let getState = (stream: NodeJS.WriteStream) => {
+    let state = states.get(stream)
+    if (state != null) {
+      return state
+    }
+
+    state = new ReporterStreamState(stream)
+    states.set(stream, state)
+    return state
+  }
+
   return {
-    out: new ReporterTextChannel(options.stdout ?? process.stdout),
+    finish() {
+      for (let state of states.values()) {
+        state.finish()
+      }
+    },
+    out: new ReporterTextChannel(stdout, getState(stdout)),
     status: new ReporterStatusChannel(
-      options.stderr ?? process.stderr,
+      stderr,
+      getState(stderr),
       options.statusFrameIntervalMs ?? DEFAULT_STATUS_FRAME_INTERVAL_MS,
     ),
   }
@@ -121,20 +147,20 @@ export async function runProgressStep<step extends string, result>(
 
 class ReporterTextChannel implements TextChannel {
   #indentLevel = 0
-  #pendingBlank = false
+  #state: ReporterStreamState
   #stream: NodeJS.WriteStream
-  #hasWrittenContent = false
 
-  constructor(stream: NodeJS.WriteStream) {
+  constructor(stream: NodeJS.WriteStream, state: ReporterStreamState) {
     this.#stream = stream
+    this.#state = state
   }
 
   blank(): void {
-    if (!this.#hasWrittenContent) {
+    if (!this.#state.hasWrittenContent()) {
       return
     }
 
-    this.#pendingBlank = true
+    this.#state.queueBlank()
   }
 
   bullet(text: string): void {
@@ -155,8 +181,18 @@ class ReporterTextChannel implements TextChannel {
     this.#indentLevel += 1
   }
 
-  label(tag: string, text: string): string {
-    return `${formatLabel(tag)} ${text}`
+  label(tag: string, text: string, options?: LabelOptions): string {
+    let line = `${formatLabel(tag)} ${text}`
+
+    if (options?.tone === 'warn') {
+      return lightYellow(line, this.#stream)
+    }
+
+    if (options?.tone === 'error') {
+      return lightRed(line, this.#stream)
+    }
+
+    return line
   }
 
   line(text = ''): void {
@@ -218,13 +254,8 @@ class ReporterTextChannel implements TextChannel {
     return this.#stream
   }
 
-  protected noteImmediateWrite(): void {
-    this.#hasWrittenContent = true
-    this.#pendingBlank = false
-  }
-
   protected writeImmediate(text: string): void {
-    this.#write(text)
+    this.#state.writeImmediate(text)
   }
 
   protected getIndentText(): string {
@@ -232,12 +263,7 @@ class ReporterTextChannel implements TextChannel {
   }
 
   #flushPendingBlank(): void {
-    if (!this.#pendingBlank) {
-      return
-    }
-
-    this.#write('\n')
-    this.#pendingBlank = false
+    this.#state.flushPendingBlank()
   }
 
   #getIndent(): string {
@@ -245,8 +271,7 @@ class ReporterTextChannel implements TextChannel {
   }
 
   #write(text: string): void {
-    this.#stream.write(text)
-    this.#hasWrittenContent = true
+    this.#state.write(text)
   }
 }
 
@@ -258,8 +283,8 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
   #hasRenderedStep = false
   #hasWrittenSummaryGap = false
 
-  constructor(stream: NodeJS.WriteStream, frameIntervalMs: number) {
-    super(stream)
+  constructor(stream: NodeJS.WriteStream, state: ReporterStreamState, frameIntervalMs: number) {
+    super(stream, state)
     this.#frameIntervalMs = frameIntervalMs
   }
 
@@ -270,8 +295,7 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
 
     try {
       let version = readRemixVersion()
-      this.writeImmediate(`\n${remixWordmark(this.getStream())} v${version} - ${commandLabel}\n\n`)
-      this.noteImmediateWrite()
+      this.writeImmediate(`${remixWordmark(this.getStream())} v${version} - ${commandLabel}\n\n`)
     } catch {}
   }
 
@@ -316,7 +340,6 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
     }
 
     this.writeImmediate(`${this.#formatRunningLine(label, '...')}\n`)
-    this.noteImmediateWrite()
   }
 
   succeedStep(label = this.#activeLabel ?? ''): void {
@@ -332,7 +355,6 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
     }
 
     this.writeImmediate('\n')
-    this.noteImmediateWrite()
     this.#hasWrittenSummaryGap = true
   }
 
@@ -376,12 +398,102 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
   #writeFinalLine(line: string): void {
     if (this.#isInteractive()) {
       this.writeImmediate(`${this.#renderLiveLine(line)}\n`)
-      this.noteImmediateWrite()
       return
     }
 
     this.writeImmediate(`${line}\n`)
-    this.noteImmediateWrite()
+  }
+}
+
+class ReporterStreamState {
+  #hasWrittenContent = false
+  #hasWrittenPreamble = false
+  #pendingBlank = false
+  #stream: NodeJS.WriteStream
+  #trailingNewlineCount = 0
+
+  constructor(stream: NodeJS.WriteStream) {
+    this.#stream = stream
+  }
+
+  finish(): void {
+    if (!this.#hasWrittenContent) {
+      return
+    }
+
+    if (this.#trailingNewlineCount >= 2) {
+      return
+    }
+
+    this.#writeRaw('\n')
+    this.#pendingBlank = false
+  }
+
+  flushPendingBlank(): void {
+    if (!this.#pendingBlank) {
+      return
+    }
+
+    this.#writeRaw('\n')
+    this.#pendingBlank = false
+  }
+
+  hasWrittenContent(): boolean {
+    return this.#hasWrittenContent
+  }
+
+  queueBlank(): void {
+    this.#pendingBlank = true
+  }
+
+  write(text: string): void {
+    if (!this.#hasWrittenPreamble) {
+      this.#writeRaw('\n')
+      this.#hasWrittenPreamble = true
+    }
+
+    this.#writeRaw(text)
+    this.#hasWrittenContent = true
+  }
+
+  writeImmediate(text: string): void {
+    if (!this.#hasWrittenPreamble) {
+      this.#writeRaw('\n')
+      this.#hasWrittenPreamble = true
+    }
+
+    this.#writeRaw(text)
+    this.#hasWrittenContent = true
+    this.#pendingBlank = false
+  }
+
+  #writeRaw(text: string): void {
+    this.#stream.write(text)
+    this.#updateTrailingNewlines(text)
+  }
+
+  #updateTrailingNewlines(text: string): void {
+    let trailingNewlines = 0
+
+    for (let index = text.length - 1; index >= 0; index--) {
+      if (text[index] !== '\n') {
+        break
+      }
+
+      trailingNewlines += 1
+    }
+
+    if (trailingNewlines === 0) {
+      this.#trailingNewlineCount = 0
+      return
+    }
+
+    if (trailingNewlines === text.length) {
+      this.#trailingNewlineCount += trailingNewlines
+      return
+    }
+
+    this.#trailingNewlineCount = trailingNewlines
   }
 }
 

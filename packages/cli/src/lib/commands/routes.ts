@@ -28,6 +28,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
       writeRouteMap(reporter.out, routeMap, options)
+      reporter.finish()
     }
 
     return 0

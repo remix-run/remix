@@ -50,22 +50,25 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let reporter = createCommandReporter()
+  let options = parseDoctorCommandArgs(argv)
+  let reporter = options.json
+    ? createCommandReporter()
+    : createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
   let progress: StepProgressReporter<DoctorSuiteName> | null = null
 
   try {
-    let options = parseDoctorCommandArgs(argv)
     progress = options.json ? null : createDoctorProgressReporter(reporter)
     if (!options.json) {
       await reporter.status.commandHeader('doctor')
     }
 
-    let report = await collectDoctorReport(progress, options)
+    let report = await collectDoctorReport(progress, options, options.json ? null : reporter)
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
       writeDoctorReport(reporter, report)
+      reporter.finish()
     }
 
     if ((options.fix || options.strict) && hasWarningFindings(report.findings)) {
@@ -79,6 +82,9 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     process.stderr.write(
       lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr),
     )
+    if (!options.json) {
+      reporter.finish()
+    }
     return 1
   }
 }
@@ -136,6 +142,7 @@ function parseDoctorCommandArgs(argv: string[]): DoctorCommandOptions {
 async function collectDoctorReport(
   progress: StepProgressReporter<DoctorSuiteName> | null,
   options: DoctorCommandOptions,
+  reporter: CommandReporter | null,
 ): Promise<DoctorReport> {
   let appliedFixes: DoctorAppliedFix[] = []
   let environment = await runDoctorSuite(progress, 'environment', async () => {
@@ -172,6 +179,7 @@ async function collectDoctorReport(
     environment.projectRoot == null
       ? undefined
       : path.join(environment.projectRoot, 'app', 'routes.ts')
+  writeDoctorSuiteDetails(reporter, environment.suite)
   progress?.writeSummaryGap()
 
   if (hasWarningFindings(environment.suite.findings)) {
@@ -182,8 +190,10 @@ async function collectDoctorReport(
     )
     suites.push(projectSuite, controllersSuite)
     progress?.skip(projectSuite.name, projectSuite.reason)
+    writeDoctorSuiteDetails(reporter, projectSuite)
     progress?.writeSummaryGap()
     progress?.skip(controllersSuite.name, controllersSuite.reason)
+    writeDoctorSuiteDetails(reporter, controllersSuite)
     progress?.writeSummaryGap()
 
     return {
@@ -228,12 +238,14 @@ async function collectDoctorReport(
   appliedFixes.push(...(project.appliedFixes ?? []))
   routesFile = project.routesFile
   suites.push(project.suite)
+  writeDoctorSuiteDetails(reporter, project.suite)
   progress?.writeSummaryGap()
 
   if (hasWarningFindings(project.suite.findings)) {
     let controllersSuite = createSkippedDoctorSuite('controllers', 'Blocked by project warnings.')
     suites.push(controllersSuite)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
+    writeDoctorSuiteDetails(reporter, controllersSuite)
     progress?.writeSummaryGap()
 
     return {
@@ -273,6 +285,7 @@ async function collectDoctorReport(
   findings.push(...controllers.suite.findings)
   appliedFixes.push(...(controllers.appliedFixes ?? []))
   suites.push(controllers.suite)
+  writeDoctorSuiteDetails(reporter, controllers.suite)
   progress?.writeSummaryGap()
 
   let report: DoctorReport = {
@@ -349,25 +362,6 @@ function createDoctorProgressReporter(
 }
 
 function writeDoctorReport(reporter: CommandReporter, report: DoctorReport): void {
-  for (let suite of report.suites) {
-    if (suite.status !== 'issues' && (suite.appliedFixes?.length ?? 0) === 0) {
-      continue
-    }
-
-    reporter.out.section(`${suite.name}:`, () => {
-      for (let finding of suite.findings) {
-        reporter.out.bullet(reporter.out.label(finding.severity.toUpperCase(), finding.message))
-      }
-
-      if ((suite.appliedFixes?.length ?? 0) > 0) {
-        reporter.out.section('Applied fixes:', () => {
-          reporter.out.bullets((suite.appliedFixes ?? []).map(formatAppliedFix))
-        })
-      }
-    })
-    reporter.out.blank()
-  }
-
   let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
   let adviceCount = report.findings.length - warningCount
 
@@ -381,4 +375,30 @@ function writeDoctorReport(reporter: CommandReporter, report: DoctorReport): voi
   }
 
   reporter.out.line(`Summary: ${warningCount} warnings, ${adviceCount} advice.`)
+}
+
+function writeDoctorSuiteDetails(reporter: CommandReporter | null, suite: DoctorSuiteResult): void {
+  if (reporter == null) {
+    return
+  }
+
+  if (suite.findings.length === 0 && (suite.appliedFixes?.length ?? 0) === 0) {
+    return
+  }
+
+  reporter.out.withIndent(() => {
+    for (let finding of suite.findings) {
+      reporter.out.bullet(
+        reporter.out.label(finding.severity.toUpperCase(), finding.message, {
+          tone: finding.severity === 'warn' ? 'warn' : undefined,
+        }),
+      )
+    }
+
+    if ((suite.appliedFixes?.length ?? 0) > 0) {
+      reporter.out.section('Applied fixes:', () => {
+        reporter.out.bullets((suite.appliedFixes ?? []).map(formatAppliedFix))
+      })
+    }
+  })
 }
