@@ -67,7 +67,7 @@ await run(['doctor', '--fix'])
 await run(['routes'])
 await run(['routes', '--table'])
 await run(['routes', '--table', '--no-headers'])
-await run(['skills', 'status'])
+await run(['skills', 'list'])
 await run(['version'])
 ```
 
