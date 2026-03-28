@@ -2,9 +2,9 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { checkControllerConventions } from '../doctor/controllers.ts'
-import { checkEnvironment } from '../doctor/environment.ts'
+import { checkEnvironment, getEnvironmentFixPlans } from '../doctor/environment.ts'
 import { applyDoctorFixPlans } from '../doctor/fixes.ts'
-import { checkProject } from '../doctor/project.ts'
+import { checkProject, getProjectFixPlans } from '../doctor/project.ts'
 import {
   createDoctorSuite,
   createSkippedDoctorSuite,
@@ -92,7 +92,7 @@ Check project environment and Remix app conventions for the current project.
 Options:
   --json       Print doctor findings as JSON
   --strict     Exit with status 1 when warning-level findings are present
-  --fix        Create missing low-risk controller owner files
+  --fix        Apply low-risk project and controller fixes
 
 Examples:
   remix doctor
@@ -138,8 +138,35 @@ async function collectDoctorReport(
   options: DoctorCommandOptions,
 ): Promise<DoctorReport> {
   let appliedFixes: DoctorAppliedFix[] = []
-  let environment = await runDoctorSuite(progress, 'environment', () => checkEnvironment())
+  let environment = await runDoctorSuite(progress, 'environment', async () => {
+    let result = await checkEnvironment()
+    let suiteAppliedFixes: DoctorAppliedFix[] = []
+    let finalResult = result
+
+    if (options.fix && result.projectRoot != null) {
+      let fixPlans = getEnvironmentFixPlans(result)
+      if (fixPlans.length > 0) {
+        suiteAppliedFixes = await applyDoctorFixPlans(result.projectRoot, fixPlans)
+        finalResult = await checkEnvironment(result.projectRoot)
+      }
+    }
+
+    let suite = finalResult.suite
+    if (suiteAppliedFixes.length > 0) {
+      suite = {
+        ...suite,
+        appliedFixes: suiteAppliedFixes,
+      }
+    }
+
+    return {
+      appliedFixes: suiteAppliedFixes,
+      projectRoot: finalResult.projectRoot ?? result.projectRoot,
+      suite,
+    }
+  })
   let findings = [...environment.suite.findings]
+  appliedFixes.push(...(environment.appliedFixes ?? []))
   let suites: DoctorSuiteResult[] = [environment.suite]
   let routesFile =
     environment.projectRoot == null
@@ -169,10 +196,36 @@ async function collectDoctorReport(
     }
   }
 
-  let project = await runDoctorSuite(progress, 'project', () =>
-    checkProject(environment.projectRoot!),
-  )
+  let project = await runDoctorSuite(progress, 'project', async () => {
+    let result = await checkProject(environment.projectRoot!)
+    let suiteAppliedFixes: DoctorAppliedFix[] = []
+    let finalResult = result
+
+    if (options.fix) {
+      let fixPlans = await getProjectFixPlans(environment.projectRoot!)
+      if (fixPlans.length > 0) {
+        suiteAppliedFixes = await applyDoctorFixPlans(environment.projectRoot!, fixPlans)
+        finalResult = await checkProject(environment.projectRoot!)
+      }
+    }
+
+    let suite = finalResult.suite
+    if (suiteAppliedFixes.length > 0) {
+      suite = {
+        ...suite,
+        appliedFixes: suiteAppliedFixes,
+      }
+    }
+
+    return {
+      appliedFixes: suiteAppliedFixes,
+      routeManifest: finalResult.routeManifest,
+      routesFile: finalResult.routesFile,
+      suite,
+    }
+  })
   findings.push(...project.suite.findings)
+  appliedFixes.push(...(project.appliedFixes ?? []))
   routesFile = project.routesFile
   suites.push(project.suite)
   progress?.writeSummaryGap()
@@ -255,6 +308,10 @@ function hasWarningFindings(findings: DoctorFinding[]): boolean {
 }
 
 function formatAppliedFix(appliedFix: DoctorAppliedFix): string {
+  if (appliedFix.kind === 'update-file') {
+    return `Updated ${appliedFix.path}`
+  }
+
   return `Created ${appliedFix.path}`
 }
 

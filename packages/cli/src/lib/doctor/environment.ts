@@ -3,7 +3,14 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { createRequire } from 'node:module'
 
-import { createDoctorSuite, type DoctorFinding, type DoctorSuiteResult } from './types.ts'
+import { MINIMUM_SUPPORTED_NODE_VERSION } from '../bootstrap-project.ts'
+import { getRuntimeRemixVersion } from '../runtime-context.ts'
+import {
+  createDoctorSuite,
+  type DoctorFinding,
+  type DoctorFixPlan,
+  type DoctorSuiteResult,
+} from './types.ts'
 
 interface DoctorPackageJson {
   dependencies?: Record<string, string>
@@ -13,6 +20,8 @@ interface DoctorPackageJson {
 }
 
 export interface EnvironmentDoctorResult {
+  packageJson?: DoctorPackageJson
+  packageJsonPath?: string
   projectRoot?: string
   suite: DoctorSuiteResult
 }
@@ -50,6 +59,7 @@ export async function checkEnvironment(
     findings.push({
       actualPath: 'package.json',
       code: 'node-engine-missing',
+      fixable: true,
       message:
         'package.json does not declare engines.node. Add one to document the supported Node.js version.',
       severity: 'advice',
@@ -62,6 +72,7 @@ export async function checkEnvironment(
       findings.push({
         actualPath: 'package.json',
         code: 'node-engine-unparseable',
+        fixable: true,
         message: `Could not evaluate engines.node "${nodeRequirement}" automatically.`,
         severity: 'advice',
         suite: 'environment',
@@ -70,6 +81,7 @@ export async function checkEnvironment(
       findings.push({
         actualPath: 'package.json',
         code: 'node-version-unsupported',
+        fixable: true,
         message: `Project requires Node.js ${nodeRequirement}, but the current runtime is ${process.version}.`,
         severity: 'warn',
         suite: 'environment',
@@ -81,6 +93,7 @@ export async function checkEnvironment(
     findings.push({
       actualPath: 'package.json',
       code: 'remix-dependency-missing',
+      fixable: true,
       message: 'package.json does not declare a remix dependency.',
       severity: 'warn',
       suite: 'environment',
@@ -98,9 +111,58 @@ export async function checkEnvironment(
   }
 
   return {
+    packageJson,
+    packageJsonPath,
     projectRoot,
     suite: createDoctorSuite('environment', findings),
   }
+}
+
+export function getEnvironmentFixPlans(result: EnvironmentDoctorResult): DoctorFixPlan[] {
+  if (result.projectRoot == null || result.packageJson == null || result.packageJsonPath == null) {
+    return []
+  }
+
+  let packageJson = structuredClone(result.packageJson)
+  let code = getEnvironmentFixCode(result.suite.findings)
+  let changed = false
+
+  if (
+    result.suite.findings.some(
+      (finding) =>
+        finding.code === 'node-engine-missing' ||
+        finding.code === 'node-engine-unparseable' ||
+        finding.code === 'node-version-unsupported',
+    )
+  ) {
+    packageJson.engines = {
+      ...packageJson.engines,
+      node: `>=${MINIMUM_SUPPORTED_NODE_VERSION}`,
+    }
+    changed = true
+  }
+
+  if (result.suite.findings.some((finding) => finding.code === 'remix-dependency-missing')) {
+    packageJson.dependencies = {
+      ...packageJson.dependencies,
+      remix: getRuntimeRemixVersion() ?? 'latest',
+    }
+    changed = true
+  }
+
+  if (!changed || code == null) {
+    return []
+  }
+
+  return [
+    {
+      code,
+      contents: `${JSON.stringify(packageJson, null, 2)}\n`,
+      kind: 'update-file',
+      path: 'package.json',
+      suite: 'environment',
+    },
+  ]
 }
 
 async function findNearestPackageRoot(startDir: string): Promise<string | null> {
@@ -166,6 +228,18 @@ async function readPackageJson(
 
 function hasRemixDependency(packageJson: DoctorPackageJson): boolean {
   return packageJson.dependencies?.remix != null || packageJson.devDependencies?.remix != null
+}
+
+function getEnvironmentFixCode(findings: DoctorFinding[]): DoctorFixPlan['code'] | null {
+  let fixableFinding = findings.find(
+    (finding) =>
+      finding.code === 'node-engine-missing' ||
+      finding.code === 'node-engine-unparseable' ||
+      finding.code === 'node-version-unsupported' ||
+      finding.code === 'remix-dependency-missing',
+  )
+
+  return fixableFinding?.code ?? null
 }
 
 function canResolveRemix(projectRoot: string): boolean {

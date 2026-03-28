@@ -22,7 +22,7 @@ describe('doctor command', () => {
       /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/,
     )
     assert.match(result.stdout, /Check project environment and Remix app conventions/)
-    assert.match(result.stdout, /--fix\s+Create missing low-risk controller owner files/)
+    assert.match(result.stdout, /--fix\s+Apply low-risk project and controller fixes/)
     assert.equal(result.stderr, '')
   })
 
@@ -157,6 +157,62 @@ describe('doctor command', () => {
     )
   })
 
+  it('updates package.json with supported engines.node and a remix dependency', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/controllers/home.js': [
+          'export const home = {',
+          '  handler() {',
+          "    return new Response('ok')",
+          '  },',
+          '}',
+        ].join('\n'),
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  home: '/',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            name: 'doctor-fix-package-json-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stderr, /✓ environment/)
+      assert.match(fixResult.stdout, /environment:\n  Applied fixes:\n    • Updated package\.json/)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(projectDir, 'package.json'), 'utf8'),
+      ) as {
+        dependencies: Record<string, string>
+        engines: Record<string, string>
+      }
+
+      assert.equal(packageJson.dependencies.remix, 'latest')
+      assert.equal(packageJson.engines.node, '>=24.3.0')
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('reports unresolved remix installs and skips later suites', async () => {
     let tmpDir = await createTempProject({
       'package.json': JSON.stringify(
@@ -230,6 +286,65 @@ describe('doctor command', () => {
     }
   })
 
+  it('updates unsupported engines.node to the supported floor', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/controllers/home.js': [
+          'export const home = {',
+          '  handler() {',
+          "    return new Response('ok')",
+          '  },',
+          '}',
+        ].join('\n'),
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  home: '/',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'latest',
+            },
+            engines: {
+              node: '>=99.0.0',
+            },
+            name: 'doctor-fix-node-engine-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /Updated package\.json/)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(projectDir, 'package.json'), 'utf8'),
+      ) as {
+        engines: Record<string, string>
+      }
+
+      assert.equal(packageJson.engines.node, '>=24.3.0')
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('reports missing action and controller owners', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-missing'))
 
@@ -244,6 +359,58 @@ describe('doctor command', () => {
       /• \[WARN\] Route "contact" is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
     assert.match(result.stdout, /controller\.tsx\.\n\nSummary: 2 warnings, 0 advice\./)
+  })
+
+  it('creates app/routes.ts and a default home action when routes are missing', async () => {
+    let projectDir = await createTempProject(
+      {
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'latest',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-routes-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stderr, /✓ project/)
+      assert.match(fixResult.stdout, /project:\n  Applied fixes:/)
+      assert.match(fixResult.stdout, /Created app\/routes\.ts/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/home\.js/)
+
+      let routesSource = await fs.readFile(path.join(projectDir, 'app', 'routes.ts'), 'utf8')
+      let homeSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'home.js'),
+        'utf8',
+      )
+
+      assert.match(routesSource, /export const routes = route\(\{/)
+      assert.match(routesSource, /home: '\//)
+      assert.match(homeSource, /export const home = \{/)
+      assert.match(homeSource, /content-type': 'text\/html; charset=utf-8'/)
+      assert.match(homeSource, /<h1>Home<\/h1>/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('creates runnable placeholder owners for missing routes and leaves the project clean', async () => {
@@ -831,8 +998,15 @@ interface DoctorSuite {
 }
 
 interface DoctorAppliedFix {
-  code: 'incomplete-controller' | 'missing-owner'
-  kind: 'create-directory' | 'create-file'
+  code:
+    | 'incomplete-controller'
+    | 'missing-owner'
+    | 'node-engine-missing'
+    | 'node-engine-unparseable'
+    | 'node-version-unsupported'
+    | 'remix-dependency-missing'
+    | 'routes-file-missing'
+  kind: 'create-directory' | 'create-file' | 'update-file'
   path: string
   routeName?: string
   suite: 'controllers' | 'environment' | 'project'

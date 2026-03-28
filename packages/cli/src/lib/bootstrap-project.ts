@@ -17,7 +17,7 @@ const BOOTSTRAP_DIRECTORY = path.resolve(
   '../../bootstrap',
 )
 const BOOTSTRAP_EXCLUDED_NAMES = new Set(['.gitkeep', 'node_modules'])
-const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
+export const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
 
 export interface BootstrapProjectOptions {
   appName: string | null

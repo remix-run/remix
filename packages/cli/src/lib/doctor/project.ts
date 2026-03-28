@@ -1,9 +1,20 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
+import {
+  getOwnerFileExtension,
+  isActionFileName,
+  isControllerEntryFileName,
+  type OwnerFileExtension,
+} from '../controller-files.ts'
 import { CliError } from '../errors.ts'
 import { loadRouteManifestFromAppRoot, type LoadedRouteManifest } from '../route-map.ts'
-import { createDoctorSuite, type DoctorFinding, type DoctorSuiteResult } from './types.ts'
+import {
+  createDoctorSuite,
+  type DoctorFinding,
+  type DoctorFixPlan,
+  type DoctorSuiteResult,
+} from './types.ts'
 
 export interface ProjectDoctorResult {
   routesFile: string
@@ -21,6 +32,7 @@ export async function checkProject(projectRoot: string): Promise<ProjectDoctorRe
         {
           code: 'routes-file-missing',
           expectedPath: 'app/routes.ts',
+          fixable: true,
           message: 'Project is missing app/routes.ts.',
           severity: 'warn',
           suite: 'project',
@@ -45,6 +57,35 @@ export async function checkProject(projectRoot: string): Promise<ProjectDoctorRe
       suite: createDoctorSuite('project', [finding]),
     }
   }
+}
+
+export async function getProjectFixPlans(projectRoot: string): Promise<DoctorFixPlan[]> {
+  let routesFile = path.join(projectRoot, 'app', 'routes.ts')
+  if (await pathExists(routesFile)) {
+    return []
+  }
+
+  let homeActionPath = normalizeRelativePath(
+    path.join('app', 'controllers', `home${await inferHomeOwnerExtension(projectRoot)}`),
+  )
+
+  return [
+    {
+      code: 'routes-file-missing',
+      contents: renderDefaultRoutesFile(),
+      kind: 'create-file',
+      path: 'app/routes.ts',
+      suite: 'project',
+    },
+    {
+      code: 'missing-owner',
+      contents: renderDefaultHomeAction(homeActionPath),
+      kind: 'create-file',
+      path: homeActionPath,
+      routeName: 'home',
+      suite: 'project',
+    },
+  ]
 }
 
 function toProjectFinding(error: unknown): DoctorFinding {
@@ -123,4 +164,137 @@ async function pathExists(filePath: string): Promise<boolean> {
 
     throw error
   }
+}
+
+async function inferHomeOwnerExtension(projectRoot: string): Promise<OwnerFileExtension> {
+  let controllersDir = path.join(projectRoot, 'app', 'controllers')
+  let extensions = await collectOwnerExtensions(controllersDir)
+
+  if (extensions.length > 0) {
+    return getMostCommonExtension(extensions)
+  }
+
+  if (await pathExists(path.join(projectRoot, 'tsconfig.json'))) {
+    return '.tsx'
+  }
+
+  return '.js'
+}
+
+async function collectOwnerExtensions(directory: string): Promise<OwnerFileExtension[]> {
+  try {
+    let entries = await fs.readdir(directory, { withFileTypes: true })
+    let extensions: OwnerFileExtension[] = []
+
+    for (let entry of entries) {
+      let absolutePath = path.join(directory, entry.name)
+
+      if (entry.isDirectory()) {
+        extensions.push(...(await collectOwnerExtensions(absolutePath)))
+        continue
+      }
+
+      let fileName = path.basename(absolutePath)
+      if (!isActionFileName(fileName) && !isControllerEntryFileName(fileName)) {
+        continue
+      }
+
+      let extension = getOwnerFileExtension(fileName)
+      if (extension != null) {
+        extensions.push(extension)
+      }
+    }
+
+    return extensions
+  } catch (error) {
+    let nodeError = error as NodeJS.ErrnoException
+    if (nodeError.code === 'ENOENT') {
+      return []
+    }
+
+    throw error
+  }
+}
+
+function getMostCommonExtension(extensions: OwnerFileExtension[]): OwnerFileExtension {
+  let priority: OwnerFileExtension[] = ['.tsx', '.ts', '.jsx', '.js']
+  let counts = new Map<OwnerFileExtension, number>()
+
+  for (let extension of extensions) {
+    counts.set(extension, (counts.get(extension) ?? 0) + 1)
+  }
+
+  let bestExtension = priority[0]
+  let bestCount = -1
+
+  for (let extension of priority) {
+    let count = counts.get(extension) ?? 0
+    if (count > bestCount) {
+      bestCount = count
+      bestExtension = extension
+    }
+  }
+
+  return bestExtension
+}
+
+function renderDefaultRoutesFile(): string {
+  return [
+    `import { route } from 'remix/fetch-router/routes'`,
+    '',
+    'export const routes = route({',
+    `  home: '/',`,
+    '})',
+    '',
+  ].join('\n')
+}
+
+function normalizeRelativePath(filePath: string): string {
+  return filePath.split(path.sep).join('/')
+}
+
+function renderDefaultHomeAction(entryPath: string): string {
+  let extension = getOwnerFileExtension(entryPath)
+  let html = [
+    '<!doctype html>',
+    '<html lang="en">',
+    '  <head>',
+    '    <meta charset="utf-8" />',
+    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
+    '    <title>Home</title>',
+    '  </head>',
+    '  <body>',
+    '    <h1>Home</h1>',
+    '    <p>Update app/routes.ts and app/controllers/home to keep building your app.</p>',
+    '  </body>',
+    '</html>',
+  ].join('\\n')
+
+  if (extension === '.js' || extension === '.jsx') {
+    return [
+      'export const home = {',
+      '  handler() {',
+      `    return new Response(${JSON.stringify(html)}, {`,
+      "      headers: { 'content-type': 'text/html; charset=utf-8' },",
+      '    })',
+      '  },',
+      '}',
+      '',
+    ].join('\n')
+  }
+
+  return [
+    `import type { BuildAction } from 'remix/fetch-router'`,
+    '',
+    `import type { routes } from '../routes.ts'`,
+    '',
+    `export const home: BuildAction<'ANY', typeof routes.home> = {`,
+    '  handler() {',
+    `    return new Response(${JSON.stringify(html)}, {`,
+    "      headers: { 'content-type': 'text/html; charset=utf-8' },",
+    '    })',
+    '  },',
+    '}',
+    '',
+  ].join('\n')
 }

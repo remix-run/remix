@@ -27,7 +27,7 @@ export type DoctorFindingCode =
   | 'orphan-controller'
   | 'orphan-route-directory'
 
-export type DoctorFixKind = 'create-directory' | 'create-file'
+export type DoctorFixKind = 'create-directory' | 'create-file' | 'update-file'
 
 export interface DoctorFinding {
   actualPath?: string

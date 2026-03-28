@@ -20,6 +20,12 @@ export async function applyDoctorFixPlans(
 
     await fs.mkdir(path.dirname(absolutePath), { recursive: true })
 
+    if (fixPlan.kind === 'update-file') {
+      await fs.writeFile(absolutePath, fixPlan.contents ?? '', { encoding: 'utf8' })
+      appliedFixes.push(toAppliedDoctorFix(fixPlan))
+      continue
+    }
+
     try {
       await fs.writeFile(absolutePath, fixPlan.contents ?? '', { encoding: 'utf8', flag: 'wx' })
     } catch (error) {
