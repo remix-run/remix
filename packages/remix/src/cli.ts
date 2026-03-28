@@ -4,10 +4,17 @@ import * as process from 'node:process'
 
 import { run as runCli } from '@remix-run/cli'
 
-const remixVersion = '3.0.0-alpha.4'
+const remixVersion = "3.0.0-alpha.4"
 
 export async function run(argv?: string[]): Promise<number> {
-  return runCli(argv, { remixVersion })
+  let previousCliVersion = process.env.REMIX_CLI_VERSION
+  process.env.REMIX_CLI_VERSION = remixVersion
+
+  try {
+    return await runCli(argv)
+  } finally {
+    restoreEnvironmentVariable('REMIX_CLI_VERSION', previousCliVersion)
+  }
 }
 
 if (import.meta.main) {
@@ -25,4 +32,12 @@ if (import.meta.main) {
 function setExitCode(exitCode: number) {
   let runtimeProcess = process
   Reflect.set(runtimeProcess, 'exitCode', exitCode)
+}
+
+function restoreEnvironmentVariable(name: string, value: string | undefined) {
+  if (value == null) {
+    delete process.env[name]
+  } else {
+    process.env[name] = value
+  }
 }
