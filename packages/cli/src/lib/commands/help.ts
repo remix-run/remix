@@ -9,7 +9,6 @@ import {
   getSkillsCommandHelpText,
   getSkillsInstallCommandHelpText,
   getSkillsListCommandHelpText,
-  getSkillsStatusCommandHelpText,
 } from './skills.ts'
 import { getVersionCommandHelpText } from './version.ts'
 
@@ -136,10 +135,6 @@ function getSkillsHelpText(argv: string[]): string {
 
   if (subcommand === 'list') {
     return getSkillsListCommandHelpText()
-  }
-
-  if (subcommand === 'status') {
-    return getSkillsStatusCommandHelpText()
   }
 
   throw unknownHelpTopic(`skills ${argv.join(' ')}`)

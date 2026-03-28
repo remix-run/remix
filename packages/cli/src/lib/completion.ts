@@ -6,7 +6,7 @@ export interface CompletionResult {
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
 const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'skills', 'version'] as const
 const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'skills', 'version'] as const
-const SKILLS_COMMANDS = ['install', 'list', 'status'] as const
+const SKILLS_COMMANDS = ['install', 'list'] as const
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -344,10 +344,6 @@ function completeSkills(
     return completeSkillsList(rest, currentWord, usedGlobalFlags)
   }
 
-  if (subcommand === 'status') {
-    return completeSkillsStatus(rest, currentWord, usedGlobalFlags)
-  }
-
   return completeValues([], currentWord)
 }
 
@@ -387,14 +383,6 @@ function completeSkillsInstall(
 }
 
 function completeSkillsList(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  return completeSkillsDirectoryCommand(tokens, currentWord, usedGlobalFlags)
-}
-
-function completeSkillsStatus(
   tokens: string[],
   currentWord: string,
   usedGlobalFlags: Set<string>,

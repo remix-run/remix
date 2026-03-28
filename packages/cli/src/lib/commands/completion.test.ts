@@ -40,7 +40,7 @@ describe('completion command', () => {
     let result = await captureOutput(() => run(['completion', '--', '2', 'remix', 'skills', '']))
 
     assert.equal(result.exitCode, 0)
-    assert.equal(result.stdout, 'mode:values\ninstall\nlist\nstatus\n-h\n--help\n--no-color\n')
+    assert.equal(result.stdout, 'mode:values\ninstall\nlist\n-h\n--help\n--no-color\n')
     assert.equal(result.stderr, '')
   })
 })

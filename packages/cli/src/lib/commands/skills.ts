@@ -41,10 +41,6 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
       return runSkillsListCommand(rest)
     }
 
-    if (subcommand === 'status') {
-      return runSkillsStatusCommand(rest)
-    }
-
     throw unknownSkillsCommand(subcommand)
   } catch (error) {
     process.stderr.write(
@@ -62,16 +58,13 @@ Manage Remix skills for the current project.
 
 Commands:
   install [--dir <path>]           Install Remix skills into a local directory
-  list [--dir <path>] [--json]     List available Remix skills and local state
-  status [--dir <path>] [--json]   Show what remix skills install would change
+  list [--dir <path>] [--json]     List Remix skills and local status
 
 Examples:
   remix skills install
   remix skills install --dir custom/skills
   remix skills list --dir custom/skills
   remix skills list --json
-  remix skills status --dir custom/skills
-  remix skills status --json
 `
 }
 
@@ -94,7 +87,7 @@ export function getSkillsListCommandHelpText(): string {
   return `Usage:
   remix skills list [--dir <path>] [--json]
 
-List installed Remix skills and show their local state.
+List Remix skills and show whether each one is installed, outdated, or missing locally.
 
 Options:
   --dir <path>  Read local skills from a custom directory relative to the project root
@@ -104,23 +97,6 @@ Examples:
   remix skills list
   remix skills list --dir custom/skills
   remix skills list --json
-`
-}
-
-export function getSkillsStatusCommandHelpText(): string {
-  return `Usage:
-  remix skills status [--dir <path>] [--json]
-
-Show what remix skills install would add or replace.
-
-Options:
-  --dir <path>  Read local skills from a custom directory relative to the project root
-  --json        Print pending changes as JSON
-
-Examples:
-  remix skills status
-  remix skills status --dir custom/skills
-  remix skills status --json
 `
 }
 
@@ -195,13 +171,12 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     let result = await getSkillsOverview(cwd, globalThis.fetch, {
       skillsDir: options.dir ?? undefined,
     })
-    let entries = result.entries.filter((entry) => entry.state !== 'missing')
 
     if (options.json) {
       process.stdout.write(
         `${JSON.stringify(
           {
-            entries,
+            entries: result.entries,
             projectRoot: result.projectRoot,
             skillsDir: result.skillsDir,
           },
@@ -213,58 +188,7 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     }
 
     reporter.out.line(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:`)
-    reporter.out.bullets(entries.map((entry) => `${entry.state} ${entry.name}`))
-    reporter.finish()
-    return 0
-  })
-}
-
-async function runSkillsStatusCommand(argv: string[]): Promise<number> {
-  if (argv.includes('-h') || argv.includes('--help')) {
-    process.stdout.write(getSkillsStatusCommandHelpText())
-    return 0
-  }
-
-  let options: { dir: string | null; json: boolean }
-  try {
-    options = parseSkillsDirArgs(argv, { allowJson: true })
-  } catch (error) {
-    process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsStatusCommandHelpText() }),
-    )
-    return 1
-  }
-
-  let cwd = process.cwd()
-  let reporter = createCommandReporter()
-
-  return runSkillsAction([], getSkillsStatusCommandHelpText(), async () => {
-    let result = await getSkillsOverview(cwd, globalThis.fetch, {
-      skillsDir: options.dir ?? undefined,
-    })
-    if (options.json) {
-      process.stdout.write(
-        `${JSON.stringify(
-          {
-            changes: result.changes,
-            projectRoot: result.projectRoot,
-            skillsDir: result.skillsDir,
-          },
-          null,
-          2,
-        )}\n`,
-      )
-      return 0
-    }
-
-    if (result.changes.length === 0) {
-      reporter.out.line(`No changes. ${getDisplayPath(result.skillsDir, cwd)} is up to date.`)
-      reporter.finish()
-      return 0
-    }
-
-    reporter.out.line(`Remix skills to sync into ${getDisplayPath(result.skillsDir, cwd)}:`)
-    reporter.out.bullets(result.changes.map((change) => `${change.action} ${change.name}`))
+    reporter.out.bullets(result.entries.map((entry) => formatSkillListEntry(reporter, entry)))
     reporter.finish()
     return 0
   })
@@ -308,6 +232,18 @@ function formatAppliedChanges(
   return changes.map((change) =>
     showAction ? `${toPastTense(change.action)} ${change.name}` : change.name,
   )
+}
+
+function formatSkillListEntry(
+  reporter: CommandReporter,
+  entry: { name: string; state: 'installed' | 'missing' | 'outdated' },
+): string {
+  if (entry.state === 'installed') {
+    return entry.name
+  }
+
+  let tone: 'error' | 'warn' = entry.state === 'missing' ? 'error' : 'warn'
+  return `${entry.name} ${reporter.out.label(entry.state, '', { tone })}`
 }
 
 function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {

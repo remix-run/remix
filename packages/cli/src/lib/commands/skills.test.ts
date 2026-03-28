@@ -18,21 +18,16 @@ describe('skills command', () => {
     assert.match(result.stdout, /Usage:\s+remix skills <command>/)
     assert.match(result.stdout, /install \[--dir <path>\]/)
     assert.match(result.stdout, /list \[--dir <path>\] \[--json\]/)
-    assert.match(result.stdout, /status \[--dir <path>\] \[--json\]/)
     assert.match(result.stdout, /remix skills install --dir custom\/skills/)
     assert.match(result.stdout, /remix skills list --dir custom\/skills/)
     assert.match(result.stdout, /remix skills list --json/)
-    assert.match(result.stdout, /remix skills status --dir custom\/skills/)
-    assert.match(result.stdout, /remix skills status --json/)
     assert.match(result.stdout, /list/)
-    assert.match(result.stdout, /status/)
     assert.equal(result.stderr, '')
   })
 
   it('prints skills subcommand help', async () => {
     let installHelp = await captureOutput(() => run(['skills', 'install', '--help']))
     let listHelp = await captureOutput(() => run(['skills', 'list', '--help']))
-    let statusHelp = await captureOutput(() => run(['skills', 'status', '--help']))
 
     assert.equal(installHelp.exitCode, 0)
     assert.match(installHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
@@ -44,12 +39,6 @@ describe('skills command', () => {
     assert.match(listHelp.stdout, /--json/)
     assert.match(listHelp.stdout, /remix skills list --dir custom\/skills/)
     assert.match(listHelp.stdout, /remix skills list --json/)
-    assert.equal(statusHelp.exitCode, 0)
-    assert.match(statusHelp.stdout, /Usage:\s+remix skills status \[--dir <path>\] \[--json\]/)
-    assert.match(statusHelp.stdout, /--dir <path>/)
-    assert.match(statusHelp.stdout, /--json/)
-    assert.match(statusHelp.stdout, /remix skills status --dir custom\/skills/)
-    assert.match(statusHelp.stdout, /remix skills status --json/)
   })
 
   it('does not treat help as a skills subcommand', async () => {
@@ -278,15 +267,15 @@ describe('skills command', () => {
     assert.match(result.stderr, /Usage:\s+remix skills list \[--dir <path>\]/)
   })
 
-  it('fails when skills status --dir is missing a value', async () => {
-    let result = await captureOutput(() => run(['skills', 'status', '--dir']))
+  it('fails for the removed skills status command', async () => {
+    let result = await captureOutput(() => run(['skills', 'status']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /--dir requires a value\./)
-    assert.match(result.stderr, /Usage:\s+remix skills status \[--dir <path>\]/)
+    assert.match(result.stderr, /Unknown skills command: status/)
+    assert.match(result.stderr, /Usage:\s+remix skills <command>/)
   })
 
-  it('lists only installed Remix skills from a nested directory', async () => {
+  it('lists Remix skills from a nested directory with inline status tags', async () => {
     let remoteSkills = {
       'remix-auth': {
         'SKILL.md': '# Auth\n',
@@ -317,9 +306,9 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /• installed remix-project-layout/)
-      assert.match(result.stdout, /• outdated remix-ui/)
-      assert.doesNotMatch(result.stdout, /remix-auth/)
+      assert.match(result.stdout, /• remix-project-layout/)
+      assert.match(result.stdout, /• remix-ui \[outdated\]/)
+      assert.match(result.stdout, /• remix-auth \[missing\]/)
       assert.doesNotMatch(result.stdout, /custom-helper/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -354,8 +343,40 @@ describe('skills command', () => {
 
       assert.equal(result.exitCode, 0)
       assert.match(result.stdout, new RegExp(`Remix skills in ${escapeRegExp(displayPath)}:`))
-      assert.match(result.stdout, /• installed remix-project-layout/)
-      assert.doesNotMatch(result.stdout, /remix-auth/)
+      assert.match(result.stdout, /• remix-project-layout/)
+      assert.match(result.stdout, /• remix-auth \[missing\]/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('colors missing and outdated tags in list output when stdout is a tty', async () => {
+    let remoteSkills = {
+      'remix-auth': {
+        'SKILL.md': '# Auth\n',
+      },
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
+        'remix-ui/SKILL.md': '# Old UI\n',
+      })
+
+      let result = await withStdoutIsTTY(true, () =>
+        withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        ),
+      )
+
+      assert.equal(result.exitCode, 0)
+      assert.match(result.stdout, /• remix-auth \u001B\[91m\[missing\]\u001B\[0m/)
+      assert.match(result.stdout, /• remix-ui \u001B\[93m\[outdated\]\u001B\[0m/)
+      assert.equal(result.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -394,136 +415,16 @@ describe('skills command', () => {
 
       assert.equal(payload.projectRoot, realProjectRoot)
       assert.equal(payload.skillsDir, path.join(realProjectRoot, '.agents', 'skills'))
-      assert.deepEqual(payload.entries, [{ name: 'remix-project-layout', state: 'installed' }])
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true })
-    }
-  })
-
-  it('shows only pending changes in skills status', async () => {
-    let remoteSkills = {
-      'remix-auth': {
-        'SKILL.md': '# Auth\n',
-      },
-      'remix-project-layout': {
-        'SKILL.md': '# Layout\n',
-      },
-      'remix-ui': {
-        'SKILL.md': '# UI\n',
-      },
-    }
-
-    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
-    try {
-      await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-        'remix-ui/SKILL.md': '# Old UI\n',
-      })
-
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'status']))),
-      )
-
-      assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /add remix-auth/)
-      assert.match(result.stdout, /replace remix-ui/)
-      assert.doesNotMatch(result.stdout, /remix-project-layout/)
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true })
-    }
-  })
-
-  it('shows pending changes from a custom directory relative to the project root', async () => {
-    let remoteSkills = {
-      'remix-auth': {
-        'SKILL.md': '# Auth\n',
-      },
-      'remix-project-layout': {
-        'SKILL.md': '# Layout\n',
-      },
-      'remix-ui': {
-        'SKILL.md': '# UI\n',
-      },
-    }
-
-    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
-    try {
-      await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, 'custom', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-        'remix-ui/SKILL.md': '# Old UI\n',
-      })
-      let nestedDir = path.join(tmpDir, 'app', 'routes')
-      await fs.mkdir(nestedDir, { recursive: true })
-
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(nestedDir, () =>
-          captureOutput(() => run(['skills', 'status', '--dir', 'custom/skills'])),
-        ),
-      )
-      let displayPath = path.relative(nestedDir, path.join(tmpDir, 'custom', 'skills'))
-
-      assert.equal(result.exitCode, 0)
-      assert.match(
-        result.stdout,
-        new RegExp(`Remix skills to sync into ${escapeRegExp(displayPath)}:`),
-      )
-      assert.match(result.stdout, /add remix-auth/)
-      assert.match(result.stdout, /replace remix-ui/)
-      assert.doesNotMatch(result.stdout, /remix-project-layout/)
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true })
-    }
-  })
-
-  it('prints status output as json', async () => {
-    let remoteSkills = {
-      'remix-auth': {
-        'SKILL.md': '# Auth\n',
-      },
-      'remix-project-layout': {
-        'SKILL.md': '# Layout\n',
-      },
-      'remix-ui': {
-        'SKILL.md': '# UI\n',
-      },
-    }
-
-    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
-    try {
-      await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-        'remix-ui/SKILL.md': '# Old UI\n',
-      })
-      let realProjectRoot = await fs.realpath(tmpDir)
-
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'status', '--json']))),
-      )
-
-      assert.equal(result.exitCode, 0)
-      assert.equal(result.stderr, '')
-
-      let payload = JSON.parse(result.stdout) as {
-        changes: Array<{ action: string; name: string }>
-        projectRoot: string
-        skillsDir: string
-      }
-
-      assert.equal(payload.projectRoot, realProjectRoot)
-      assert.equal(payload.skillsDir, path.join(realProjectRoot, '.agents', 'skills'))
-      assert.deepEqual(payload.changes, [
-        { action: 'add', name: 'remix-auth' },
-        { action: 'replace', name: 'remix-ui' },
+      assert.deepEqual(payload.entries, [
+        { name: 'remix-auth', state: 'missing' },
+        { name: 'remix-project-layout', state: 'installed' },
       ])
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
   })
 
-  it('reports when skills are up to date', async () => {
+  it('lists installed skills without status tags when everything is up to date', async () => {
     let remoteSkills = {
       'remix-project-layout': {
         'SKILL.md': '# Layout\n',
@@ -542,16 +443,14 @@ describe('skills command', () => {
       })
 
       let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'status']))),
+        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
       )
 
       assert.equal(result.exitCode, 0)
-      assert.match(
-        result.stdout,
-        new RegExp(
-          `No changes\\. ${escapeRegExp(path.join('.agents', 'skills'))} is up to date\\.`,
-        ),
-      )
+      assert.match(result.stdout, /• remix-project-layout/)
+      assert.match(result.stdout, /• remix-ui/)
+      assert.doesNotMatch(result.stdout, /\[outdated\]/)
+      assert.doesNotMatch(result.stdout, /\[missing\]/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -561,7 +460,7 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       let result = await withFetchMock(createGitHubSkillsFetchMock({}), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'status']))),
+        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
       )
 
       assert.equal(result.exitCode, 1)
@@ -651,6 +550,41 @@ async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise
     return await callback()
   } finally {
     globalThis.fetch = originalFetch
+  }
+}
+
+async function withStdoutIsTTY<T>(isTTY: boolean, callback: () => Promise<T>): Promise<T> {
+  let originalIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY')
+  let originalTerm = process.env.TERM
+  let originalNoColor = process.env.NO_COLOR
+
+  Object.defineProperty(process.stdout, 'isTTY', {
+    configurable: true,
+    value: isTTY,
+  })
+  process.env.TERM = 'xterm-256color'
+  delete process.env.NO_COLOR
+
+  try {
+    return await callback()
+  } finally {
+    if (originalIsTTY == null) {
+      Reflect.deleteProperty(process.stdout as object, 'isTTY')
+    } else {
+      Object.defineProperty(process.stdout, 'isTTY', originalIsTTY)
+    }
+
+    if (originalTerm == null) {
+      delete process.env.TERM
+    } else {
+      process.env.TERM = originalTerm
+    }
+
+    if (originalNoColor == null) {
+      delete process.env.NO_COLOR
+    } else {
+      process.env.NO_COLOR = originalNoColor
+    }
   }
 }
 

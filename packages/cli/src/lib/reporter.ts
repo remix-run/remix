@@ -182,7 +182,7 @@ class ReporterTextChannel implements TextChannel {
   }
 
   label(tag: string, text: string, options?: LabelOptions): string {
-    let line = `${formatLabel(tag)} ${text}`
+    let line = text.length === 0 ? formatLabel(tag) : `${formatLabel(tag)} ${text}`
 
     if (options?.tone === 'warn') {
       return lightYellow(line, this.#stream)

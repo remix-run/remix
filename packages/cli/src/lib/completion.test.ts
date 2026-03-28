@@ -43,14 +43,14 @@ describe('completion engine', () => {
     ])
 
     assert.equal(skillsResult.mode, 'values')
-    assert.deepEqual(skillsResult.values, ['install', 'list', 'status', '-h', '--help', '--no-color'])
+    assert.deepEqual(skillsResult.values, ['install', 'list', '-h', '--help', '--no-color'])
   })
 
   it('completes skills subcommands', () => {
     let result = getCompletionResult(['remix', 'skills', ''], 2)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['install', 'list', 'status', '-h', '--help', '--no-color'])
+    assert.deepEqual(result.values, ['install', 'list', '-h', '--help', '--no-color'])
   })
 
   it('uses file completion for new target directories and --dir values', () => {
