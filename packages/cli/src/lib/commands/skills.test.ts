@@ -314,7 +314,9 @@ describe('skills command', () => {
       assert.match(result.stderr, /✓ Compare local skills\n\n$/)
       assert.match(
         result.stdout,
-        /Checked Remix skills against \.\.\/\.\.\/\.agents\/skills: 1 installed, 1 outdated, 1 missing\./,
+        new RegExp(
+          `Checked Remix skills against ${escapeRegExp(path.join('..', '..', '.agents', 'skills'))}: 1 installed, 1 outdated, 1 missing\\.`,
+        ),
       )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-ui \[outdated\]/)
@@ -426,8 +428,11 @@ describe('skills command', () => {
         skillsDir: string
       }
 
-      assert.equal(payload.projectRoot, realProjectRoot)
-      assert.equal(payload.skillsDir, path.join(realProjectRoot, '.agents', 'skills'))
+      assert.equal(await fs.realpath(payload.projectRoot), realProjectRoot)
+      assert.equal(
+        await fs.realpath(payload.skillsDir),
+        await fs.realpath(path.join(realProjectRoot, '.agents', 'skills')),
+      )
       assert.deepEqual(payload.entries, [
         { name: 'remix-auth', state: 'missing' },
         { name: 'remix-project-layout', state: 'installed' },
@@ -462,7 +467,9 @@ describe('skills command', () => {
       assert.equal(result.exitCode, 0)
       assert.match(
         result.stdout,
-        /Checked Remix skills against \.agents\/skills: 2 installed\./,
+        new RegExp(
+          `Checked Remix skills against ${escapeRegExp(path.join('.agents', 'skills'))}: 2 installed\\.`,
+        ),
       )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-ui/)

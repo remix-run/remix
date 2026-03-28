@@ -251,15 +251,15 @@ class ReporterTextChannel implements TextChannel {
     }
   }
 
-  protected getStream(): NodeJS.WriteStream {
+  getStream(): NodeJS.WriteStream {
     return this.#stream
   }
 
-  protected writeImmediate(text: string): void {
+  writeImmediate(text: string): void {
     this.#state.writeImmediate(text)
   }
 
-  protected getIndentText(): string {
+  getIndentText(): string {
     return this.#getIndent()
   }
 
