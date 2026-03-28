@@ -361,7 +361,7 @@ describe('skills command', () => {
         await withFetchMock(fetchMock.fetch, () =>
           withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
         )
-        let cacheFile = getSkillsCacheFilePath(await fs.realpath(skillsDir))
+        let cacheFile = await findWrittenSkillsCacheFile(skillsDir)
         await fs.rm(cacheFile, { force: true })
 
         fetchMock.requests.archive = 0
@@ -385,7 +385,7 @@ describe('skills command', () => {
         let repaired = await withFetchMock(fetchMock.fetch, () =>
           withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
         )
-        await assertPathExists(cacheFile)
+        await assertPathExists(await findWrittenSkillsCacheFile(skillsDir))
         return repaired
       })
 
@@ -413,7 +413,7 @@ describe('skills command', () => {
         await withFetchMock(fetchMock.fetch, () =>
           withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
         )
-        let cacheFile = getSkillsCacheFilePath(await fs.realpath(skillsDir))
+        let cacheFile = await findWrittenSkillsCacheFile(skillsDir)
         await fs.writeFile(cacheFile, '{not valid json', 'utf8')
 
         fetchMock.requests.archive = 0
@@ -948,6 +948,14 @@ async function withTtyState<T>(
       process.env.NO_COLOR = originalNoColor
     }
   }
+}
+
+async function findWrittenSkillsCacheFile(skillsDir: string): Promise<string> {
+  let cacheDir = path.dirname(getSkillsCacheFilePath(skillsDir))
+  let entries = (await fs.readdir(cacheDir)).filter((entry) => entry.endsWith('.json'))
+
+  assert.equal(entries.length, 1)
+  return path.join(cacheDir, entries[0]!)
 }
 
 function createGitHubSkillsFetchMock(
