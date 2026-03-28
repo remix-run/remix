@@ -233,7 +233,7 @@ jobs:
             - concise bullets for the checks you ran or wanted to run
 
             If you find no meaningful issues, say that explicitly under `Findings`.
-          sandbox: read-only
+          sandbox: workspace-write
           safety-strategy: drop-sudo
 
   post-review:
