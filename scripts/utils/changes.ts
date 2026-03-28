@@ -14,10 +14,9 @@ import { fileExists, readFile, readJson } from './fs.ts'
 import { inc, major, prerelease, type ReleaseType } from './semver.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
-type BumpType = (typeof bumpTypes)[number]
+export type BumpType = (typeof bumpTypes)[number]
 
-// Changes configuration (from packages/remix/.changes/config.json)
-// Only the remix package supports changes config.
+// Changes configuration (from packages/*/.changes/config.json)
 export interface ChangesConfig {
   prereleaseChannel: string
 }
@@ -87,7 +86,7 @@ function getPrereleaseIdentifier(version: string): string | null {
 /**
  * Calculates the next version based on current version, bump type, and changes config.
  */
-function getNextVersion(
+export function getNextVersion(
   currentVersion: string,
   bumpType: BumpType,
   changesConfig: ChangesConfig | null,
@@ -195,34 +194,19 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
-  // Handle .changes/config.json - only supported for remix package
+  // Handle .changes/config.json for packages in prerelease mode
   let changesConfig: ChangesConfig | null = null
-  let configJsonPath = path.join(changesDir, 'config.json')
-
-  if (packageDirName === 'remix') {
-    // For remix, read and validate the changes config
-    let parsedChangesConfig = readChangesConfig(packageDirName)
-    if (parsedChangesConfig.exists) {
-      if (!parsedChangesConfig.valid) {
-        errors.push({
-          packageDirName,
-          file: '.changes/config.json',
-          error: parsedChangesConfig.error,
-        })
-        return { valid: false, errors }
-      }
-      changesConfig = parsedChangesConfig.config
-    }
-  } else {
-    // For non-remix packages, error if config.json exists
-    if (fs.existsSync(configJsonPath)) {
+  let parsedChangesConfig = readChangesConfig(packageDirName)
+  if (parsedChangesConfig.exists) {
+    if (!parsedChangesConfig.valid) {
       errors.push({
         packageDirName,
         file: '.changes/config.json',
-        error: '.changes/config.json is only supported for the "remix" package. Remove this file.',
+        error: parsedChangesConfig.error,
       })
       return { valid: false, errors }
     }
+    changesConfig = parsedChangesConfig.config
   }
 
   // Read all files in .changes directory
@@ -433,13 +417,6 @@ export function parseAllChangeFiles(): ParsedChanges {
   }
   let parsedPackages: ParsedPackageInfo[] = []
 
-  // Read the remix changes config once (only remix supports changes config)
-  let remixChangesConfig = readChangesConfig('remix')
-  let validRemixChangesConfig: ChangesConfig | null = null
-  if (remixChangesConfig.exists && remixChangesConfig.valid) {
-    validRemixChangesConfig = remixChangesConfig.config
-  }
-
   for (let packageDirName of packageDirNames) {
     let parsed = parsePackageChanges(packageDirName)
 
@@ -456,19 +433,12 @@ export function parseAllChangeFiles(): ParsedChanges {
     dirNameToPackageName.set(packageDirName, packageName)
     packageNameToDirName.set(packageName, packageDirName)
 
-    // For remix package, use the changes config even if there are no change files
-    // (to correctly bump prerelease counter for dependency-triggered releases)
-    let changesConfig = parsed.changesConfig
-    if (packageDirName === 'remix' && changesConfig === null && validRemixChangesConfig) {
-      changesConfig = validRemixChangesConfig
-    }
-
     parsedPackages.push({
       packageDirName,
       packageName,
       currentVersion,
       changes: parsed.changes,
-      changesConfig,
+      changesConfig: parsed.changesConfig,
     })
   }
 

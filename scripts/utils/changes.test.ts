@@ -1,7 +1,7 @@
 import assert from '@remix-run/assert'
 import { test } from '@remix-run/test'
 import type { PackageRelease } from './changes.ts'
-import { generateChangelogContent } from './changes.ts'
+import { generateChangelogContent, getNextVersion } from './changes.ts'
 
 function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
   return {
@@ -84,4 +84,15 @@ test('generateChangelogContent keeps stable releases grouped by bump type', () =
   assert.match(content, /^### Minor Changes$/m)
   assert.match(content, /^### Patch Changes$/m)
   assert.doesNotMatch(content, /^### Pre-release Changes$/m)
+})
+
+test('getNextVersion starts create-remix prereleases from the next major version', () => {
+  assert.equal(getNextVersion('2.17.4', 'major', { prereleaseChannel: 'alpha' }), '3.0.0-alpha.0')
+})
+
+test('getNextVersion increments prereleases within the same channel', () => {
+  assert.equal(
+    getNextVersion('3.0.0-alpha.0', 'patch', { prereleaseChannel: 'alpha' }),
+    '3.0.0-alpha.1',
+  )
 })

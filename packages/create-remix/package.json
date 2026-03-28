@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "0.0.0",
+  "version": "2.17.4",
   "description": "Zero-install entrypoint for scaffolding Remix projects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

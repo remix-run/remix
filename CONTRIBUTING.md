@@ -126,9 +126,9 @@ pnpm changes:version --no-commit
 
 Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.
 
-### Prerelease Mode for `remix`
+### Prerelease Mode
 
-The `remix` package supports prerelease mode via an optional `.changes/config.json` file:
+Packages can opt into prerelease mode via an optional `.changes/config.json` file:
 
 ```json
 {
@@ -136,13 +136,13 @@ The `remix` package supports prerelease mode via an optional `.changes/config.js
 }
 ```
 
-The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
+The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is currently used for `remix` and `create-remix`.
 
-#### Bumping `remix` prerelease versions
+#### Bumping prerelease versions
 
 While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections, but the bump type is otherwise ignored—only the prerelease counter is bumped.
 
-#### Transitioning between `remix` prerelease channels
+#### Transitioning between prerelease channels
 
 To transition between channels (e.g. `alpha` → `beta`):
 
@@ -151,7 +151,7 @@ To transition between channels (e.g. `alpha` → `beta`):
 
 Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
 
-#### Graduating `remix` to stable
+#### Graduating a prerelease package to stable
 
 To release the stable version:
 
