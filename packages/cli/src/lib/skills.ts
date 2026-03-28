@@ -1,12 +1,23 @@
+import { parseTar } from '@remix-run/tar-parser'
+import * as crypto from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
+import { gunzipSync } from 'node:zlib'
 
 import { fetchUnavailable, projectRootNotFound, remoteSkillDataMissing } from './errors.ts'
 import { runProgressStep, type StepProgressReporter } from './reporter.ts'
+import {
+  createSkillsCacheManifest,
+  readSkillsCache,
+  type SkillsCacheManifest,
+  type SkillsCacheSkillEntry,
+  writeSkillsCache,
+} from './skills-cache.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
+const REMIX_GITHUB_ARCHIVE_URL = 'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
 const REMIX_SKILLS_PATH = 'skills/'
 
 export interface SkillChange {
@@ -38,21 +49,18 @@ export interface SkillsOptions {
 
 export type SkillsInstallPhase =
   | 'resolve-project-root'
-  | 'fetch-remix-skills'
+  | 'fetch-remix-skills-metadata'
+  | 'read-local-skills-cache'
   | 'compare-local-skills'
+  | 'download-remix-skills-archive'
   | 'write-updated-skills'
 
 export type SkillsProgressReporter = StepProgressReporter<SkillsInstallPhase>
 
-interface GitHubBlobResponse {
-  content?: unknown
-  encoding?: unknown
-}
-
 interface GitHubTreeEntry {
   path: string
+  sha: string
   type: 'blob' | 'tree'
-  url: string
 }
 
 interface GitHubTreeResponse {
@@ -62,7 +70,7 @@ interface GitHubTreeResponse {
 
 interface LocalSkillSnapshot {
   exists: boolean
-  files: Map<string, string>
+  fileHashes: Map<string, string>
   isDirectory: boolean
 }
 
@@ -71,9 +79,19 @@ interface RemoteSkill {
   name: string
 }
 
-interface RemoteSkillFile {
+interface RemoteSkillContent {
+  files: RemoteSkillContentFile[]
+  name: string
+}
+
+interface RemoteSkillContentFile {
   content: string
   path: string
+}
+
+interface RemoteSkillFile {
+  path: string
+  sha: string
 }
 
 interface SkillsPlan extends SkillsResult {
@@ -113,10 +131,16 @@ export async function installRemixSkills(
     }
   }
 
+  let targetSkillNames = new Set(plan.pendingChanges.map((change) => change.name))
+  let downloadedSkills = await runProgressStep(options.progress, 'download-remix-skills-archive', () =>
+    downloadRemoteSkillsArchive(fetchImpl, plan.remoteSkills, targetSkillNames),
+  )
+
   await runProgressStep(options.progress, 'write-updated-skills', async () => {
     await fs.mkdir(plan.skillsDir, { recursive: true })
+
     for (let change of plan.pendingChanges) {
-      let remoteSkill = plan.remoteSkills.find((skill) => skill.name === change.name)
+      let remoteSkill = downloadedSkills.get(change.name)
       if (remoteSkill == null) {
         throw remoteSkillDataMissing(change.name)
       }
@@ -125,6 +149,9 @@ export async function installRemixSkills(
       await fs.rm(skillDir, { recursive: true, force: true })
       await writeRemoteSkill(skillDir, remoteSkill)
     }
+
+    let manifest = await buildSkillsCacheManifest(plan.skillsDir, plan.remoteSkills)
+    await writeSkillsCache(plan.skillsDir, manifest)
   })
 
   return {
@@ -148,8 +175,11 @@ async function loadSkillsPlan(
     findProjectRoot(cwd),
   )
   let skillsDir = resolveSkillsDir(projectRoot, options.skillsDir)
-  let remoteSkills = await runProgressStep(options.progress, 'fetch-remix-skills', () =>
+  let remoteSkills = await runProgressStep(options.progress, 'fetch-remix-skills-metadata', () =>
     fetchRemoteSkills(fetchImpl),
+  )
+  let cacheManifest = await runProgressStep(options.progress, 'read-local-skills-cache', () =>
+    readSkillsCache(skillsDir),
   )
   let entries = await runProgressStep(options.progress, 'compare-local-skills', async () =>
     Promise.all(
@@ -157,7 +187,7 @@ async function loadSkillsPlan(
         let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
         return {
           name: remoteSkill.name,
-          state: getSkillState(remoteSkill, localSkill),
+          state: getSkillState(remoteSkill, localSkill, cacheManifest),
         } satisfies SkillStatusEntry
       }),
     ),
@@ -183,7 +213,7 @@ async function fetchRemoteSkills(fetchImpl: FetchImpl): Promise<RemoteSkill[]> {
   let treeResponse = await fetchGitHubJson<GitHubTreeResponse>(
     fetchImpl,
     REMIX_GITHUB_TREE_URL,
-    'Could not fetch Remix skills from GitHub.',
+    'Could not fetch Remix skills metadata from GitHub.',
   )
 
   if (treeResponse.truncated === true) {
@@ -194,7 +224,7 @@ async function fetchRemoteSkills(fetchImpl: FetchImpl): Promise<RemoteSkill[]> {
     throw new Error('Received an invalid Remix skills listing from GitHub.')
   }
 
-  let groupedFiles = new Map<string, GitHubTreeEntry[]>()
+  let groupedFiles = new Map<string, RemoteSkillFile[]>()
 
   for (let entry of treeResponse.tree) {
     if (!isGitHubTreeEntry(entry)) {
@@ -218,35 +248,108 @@ async function fetchRemoteSkills(fetchImpl: FetchImpl): Promise<RemoteSkill[]> {
     let existing = groupedFiles.get(skillName) ?? []
     existing.push({
       path: pathParts.slice(2).join('/'),
-      type: entry.type,
-      url: entry.url,
+      sha: entry.sha,
     })
     groupedFiles.set(skillName, existing)
   }
 
-  let remoteSkills = await Promise.all(
-    [...groupedFiles.entries()]
-      .filter(([, files]) => files.some((file) => file.path === 'SKILL.md'))
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(async ([skillName, files]) => ({
-        files: await Promise.all(
-          files
-            .slice()
-            .sort((left, right) => left.path.localeCompare(right.path))
-            .map(async (file) => ({
-              content: await fetchGitHubBlob(fetchImpl, file.url, file.path),
-              path: file.path,
-            })),
-        ),
-        name: skillName,
-      })),
-  )
+  let remoteSkills = [...groupedFiles.entries()]
+    .filter(([, files]) => files.some((file) => file.path === 'SKILL.md'))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([skillName, files]) => ({
+      files: files.slice().sort((left, right) => left.path.localeCompare(right.path)),
+      name: skillName,
+    }))
 
   if (remoteSkills.length === 0) {
     throw new Error('Could not find any Remix skills on GitHub.')
   }
 
   return remoteSkills
+}
+
+async function downloadRemoteSkillsArchive(
+  fetchImpl: FetchImpl,
+  remoteSkills: RemoteSkill[],
+  targetSkillNames: ReadonlySet<string>,
+): Promise<Map<string, RemoteSkillContent>> {
+  let compressedArchive = await fetchGitHubBytes(
+    fetchImpl,
+    REMIX_GITHUB_ARCHIVE_URL,
+    'Could not download the Remix skills archive from GitHub.',
+  )
+  let archive = gunzipSync(compressedArchive)
+  let downloadedFiles = new Map<string, Map<string, string>>()
+
+  await parseTar(archive, async (entry) => {
+    if (entry.header.type !== 'file') {
+      return
+    }
+
+    let archivePath = getArchiveSkillPath(entry.name)
+    if (archivePath == null) {
+      return
+    }
+
+    let [skillName, ...fileParts] = archivePath.split('/')
+    if (skillName == null || skillName.length === 0 || fileParts.length === 0) {
+      return
+    }
+
+    if (!targetSkillNames.has(skillName)) {
+      return
+    }
+
+    let files = downloadedFiles.get(skillName)
+    if (files == null) {
+      files = new Map<string, string>()
+      downloadedFiles.set(skillName, files)
+    }
+
+    files.set(fileParts.join('/'), new TextDecoder().decode(await entry.bytes()))
+  })
+
+  let downloadedSkills = new Map<string, RemoteSkillContent>()
+  for (let remoteSkill of remoteSkills) {
+    if (!targetSkillNames.has(remoteSkill.name)) {
+      continue
+    }
+
+    let files = downloadedFiles.get(remoteSkill.name)
+    if (files == null || files.size !== remoteSkill.files.length) {
+      throw new Error(
+        `GitHub returned incomplete archive data for Remix skill: ${remoteSkill.name}.`,
+      )
+    }
+
+    let validatedFiles = remoteSkill.files.map((file) => {
+      let content = files.get(file.path)
+      if (content == null) {
+        throw new Error(
+          `GitHub returned incomplete archive data for Remix skill file: ${remoteSkill.name}/${file.path}.`,
+        )
+      }
+
+      let bytes = Buffer.from(content, 'utf8')
+      if (computeGitBlobSha(bytes) !== file.sha) {
+        throw new Error(
+          `GitHub returned Remix skill content that did not match the metadata listing for ${remoteSkill.name}/${file.path}. Please try again.`,
+        )
+      }
+
+      return {
+        content,
+        path: file.path,
+      }
+    })
+
+    downloadedSkills.set(remoteSkill.name, {
+      files: validatedFiles,
+      name: remoteSkill.name,
+    })
+  }
+
+  return downloadedSkills
 }
 
 async function fetchGitHubJson<T>(
@@ -256,28 +359,23 @@ async function fetchGitHubJson<T>(
 ): Promise<T> {
   let response = await fetchImpl(url, { headers: createGitHubHeaders() })
   if (!response.ok) {
-    throw new Error(`${failureMessage} ${response.status} ${response.statusText}`.trim())
+    throw createGitHubRequestError(response, failureMessage)
   }
 
   return (await response.json()) as T
 }
 
-async function fetchGitHubBlob(
+async function fetchGitHubBytes(
   fetchImpl: FetchImpl,
   url: string,
-  filePath: string,
-): Promise<string> {
-  let blobResponse = await fetchGitHubJson<GitHubBlobResponse>(
-    fetchImpl,
-    url,
-    `Could not download Remix skill file from GitHub: ${filePath}.`,
-  )
-
-  if (blobResponse.encoding !== 'base64' || typeof blobResponse.content !== 'string') {
-    throw new Error(`Received invalid content for Remix skill file from GitHub: ${filePath}.`)
+  failureMessage: string,
+): Promise<Uint8Array> {
+  let response = await fetchImpl(url, { headers: createGitHubHeaders() })
+  if (!response.ok) {
+    throw createGitHubRequestError(response, failureMessage)
   }
 
-  return Buffer.from(blobResponse.content, 'base64').toString('utf8')
+  return new Uint8Array(await response.arrayBuffer())
 }
 
 function createGitHubHeaders(): HeadersInit {
@@ -290,13 +388,33 @@ function createGitHubHeaders(): HeadersInit {
   }
 }
 
+function createGitHubRequestError(response: Response, failureMessage: string): Error {
+  if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
+    let resetText = getGitHubRateLimitResetText(response)
+    return new Error(
+      `${failureMessage} GitHub API rate limit exceeded.${resetText} Set GITHUB_TOKEN or GH_TOKEN to use a higher authenticated GitHub rate limit.`,
+    )
+  }
+
+  return new Error(`${failureMessage} ${response.status} ${response.statusText}`.trim())
+}
+
+function getGitHubRateLimitResetText(response: Response): string {
+  let reset = Number(response.headers.get('x-ratelimit-reset'))
+  if (!Number.isFinite(reset)) {
+    return ''
+  }
+
+  return ` The rate limit resets at ${new Date(reset * 1000).toISOString()}.`
+}
+
 function isGitHubTreeEntry(value: unknown): value is GitHubTreeEntry {
   return (
     typeof value === 'object' &&
     value != null &&
     typeof Reflect.get(value, 'path') === 'string' &&
-    (Reflect.get(value, 'type') === 'blob' || Reflect.get(value, 'type') === 'tree') &&
-    typeof Reflect.get(value, 'url') === 'string'
+    typeof Reflect.get(value, 'sha') === 'string' &&
+    (Reflect.get(value, 'type') === 'blob' || Reflect.get(value, 'type') === 'tree')
   )
 }
 
@@ -355,14 +473,14 @@ async function readLocalSkill(skillDir: string): Promise<LocalSkillSnapshot> {
     if (!stats.isDirectory()) {
       return {
         exists: true,
-        files: new Map(),
+        fileHashes: new Map(),
         isDirectory: false,
       }
     }
 
     return {
       exists: true,
-      files: await readLocalFiles(skillDir),
+      fileHashes: await readLocalFiles(skillDir),
       isDirectory: true,
     }
   } catch (error) {
@@ -370,7 +488,7 @@ async function readLocalSkill(skillDir: string): Promise<LocalSkillSnapshot> {
     if (nodeError.code === 'ENOENT') {
       return {
         exists: false,
-        files: new Map(),
+        fileHashes: new Map(),
         isDirectory: false,
       }
     }
@@ -394,14 +512,14 @@ async function readLocalFiles(
 
     if (entry.isDirectory()) {
       let nestedFiles = await readLocalFiles(rootDir, relativePath)
-      for (let [nestedPath, content] of nestedFiles) {
-        files.set(nestedPath, content)
+      for (let [nestedPath, hash] of nestedFiles) {
+        files.set(nestedPath, hash)
       }
       continue
     }
 
     if (entry.isFile()) {
-      files.set(relativePath, await fs.readFile(entryPath, 'utf8'))
+      files.set(relativePath, computeLocalContentHash(await fs.readFile(entryPath)))
       continue
     }
 
@@ -414,17 +532,39 @@ async function readLocalFiles(
 function getSkillState(
   remoteSkill: RemoteSkill,
   localSkill: LocalSkillSnapshot,
+  cacheManifest: SkillsCacheManifest | null,
 ): SkillStatusEntry['state'] {
   if (!localSkill.exists) {
     return 'missing'
   }
 
-  if (!localSkill.isDirectory || localSkill.files.size !== remoteSkill.files.length) {
+  if (!localSkill.isDirectory) {
+    return 'outdated'
+  }
+
+  let cachedSkill = cacheManifest?.skills[remoteSkill.name]
+  if (cachedSkill == null) {
+    return 'outdated'
+  }
+
+  let cachedFiles = new Map(Object.entries(cachedSkill.files))
+  if (
+    localSkill.fileHashes.size !== remoteSkill.files.length ||
+    cachedFiles.size !== remoteSkill.files.length
+  ) {
     return 'outdated'
   }
 
   for (let file of remoteSkill.files) {
-    if (localSkill.files.get(file.path) !== file.content) {
+    let localHash = localSkill.fileHashes.get(file.path)
+    let cachedFile = cachedFiles.get(file.path)
+
+    if (
+      localHash == null ||
+      cachedFile == null ||
+      cachedFile.localHash !== localHash ||
+      cachedFile.remoteSha !== file.sha
+    ) {
       return 'outdated'
     }
   }
@@ -432,7 +572,42 @@ function getSkillState(
   return 'installed'
 }
 
-async function writeRemoteSkill(skillDir: string, remoteSkill: RemoteSkill): Promise<void> {
+async function buildSkillsCacheManifest(
+  skillsDir: string,
+  remoteSkills: RemoteSkill[],
+): Promise<SkillsCacheManifest> {
+  let cachedSkills: Record<string, SkillsCacheSkillEntry> = {}
+
+  for (let remoteSkill of remoteSkills) {
+    let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
+    if (!localSkill.exists || !localSkill.isDirectory) {
+      throw remoteSkillDataMissing(remoteSkill.name)
+    }
+
+    let cachedFiles: SkillsCacheSkillEntry['files'] = {}
+    for (let file of remoteSkill.files) {
+      let localHash = localSkill.fileHashes.get(file.path)
+      if (localHash == null) {
+        throw new Error(
+          `Installed Remix skill is missing file data for ${remoteSkill.name}/${file.path}.`,
+        )
+      }
+
+      cachedFiles[file.path] = {
+        localHash,
+        remoteSha: file.sha,
+      }
+    }
+
+    cachedSkills[remoteSkill.name] = {
+      files: cachedFiles,
+    }
+  }
+
+  return createSkillsCacheManifest(skillsDir, cachedSkills)
+}
+
+async function writeRemoteSkill(skillDir: string, remoteSkill: RemoteSkillContent): Promise<void> {
   await fs.mkdir(skillDir, { recursive: true })
 
   for (let file of remoteSkill.files) {
@@ -440,4 +615,26 @@ async function writeRemoteSkill(skillDir: string, remoteSkill: RemoteSkill): Pro
     await fs.mkdir(path.dirname(filePath), { recursive: true })
     await fs.writeFile(filePath, file.content, 'utf8')
   }
+}
+
+function getArchiveSkillPath(entryName: string): string | null {
+  let marker = `/${REMIX_SKILLS_PATH}`
+  let markerIndex = entryName.indexOf(marker)
+  if (markerIndex === -1) {
+    return null
+  }
+
+  return entryName.slice(markerIndex + marker.length)
+}
+
+function computeLocalContentHash(bytes: Uint8Array): string {
+  return crypto.createHash('sha256').update(bytes).digest('hex')
+}
+
+function computeGitBlobSha(bytes: Uint8Array): string {
+  return crypto
+    .createHash('sha1')
+    .update(`blob ${bytes.length}\0`)
+    .update(bytes)
+    .digest('hex')
 }

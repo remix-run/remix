@@ -36,6 +36,7 @@
     "remix": "./dist/index.js"
   },
   "dependencies": {
+    "@remix-run/tar-parser": "workspace:^",
     "semver": "^7.7.4"
   },
   "devDependencies": {

@@ -1,14 +1,18 @@
 import * as assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
+import { gzipSync } from 'node:zlib'
 import { describe, it } from 'node:test'
 
 import { run } from '../../index.ts'
+import { getSkillsCacheFilePath } from '../skills-cache.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
+const REMIX_GITHUB_ARCHIVE_URL = 'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
 
 describe('skills command', () => {
   it('prints skills command help', async () => {
@@ -63,21 +67,30 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
       )
 
       assert.equal(result.exitCode, 0)
       assert.match(result.stderr, /• Resolve project root\.\.\./)
       assert.match(result.stderr, /✓ Resolve project root/)
-      assert.match(result.stderr, /• Fetch Remix skills from GitHub\.\.\./)
-      assert.match(result.stderr, /✓ Fetch Remix skills from GitHub/)
+      assert.match(result.stderr, /• Fetch Remix skills metadata from GitHub\.\.\./)
+      assert.match(result.stderr, /✓ Fetch Remix skills metadata from GitHub/)
+      assert.match(result.stderr, /• Read local skills cache\.\.\./)
+      assert.match(result.stderr, /✓ Read local skills cache/)
       assert.match(result.stderr, /• Compare local skills\.\.\./)
       assert.match(result.stderr, /✓ Compare local skills/)
+      assert.match(result.stderr, /• Download Remix skills archive\.\.\./)
+      assert.match(result.stderr, /✓ Download Remix skills archive/)
       assert.match(result.stderr, /• Write updated skills\.\.\./)
       assert.match(result.stderr, /✓ Write updated skills/)
       assert.match(result.stderr, /✓ Write updated skills\n\n$/)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
       assert.match(
         result.stdout,
         new RegExp(`Synced Remix skills into ${escapeRegExp(path.join('.agents', 'skills'))}:`),
@@ -113,12 +126,17 @@ describe('skills command', () => {
         'custom/SKILL.md': '# Local skill\n',
         'remix-ui/SKILL.md': '# Old UI\n',
       })
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
       )
 
       assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
       assert.match(result.stderr, /• Write updated skills\.\.\./)
       assert.match(result.stdout, /• replaced remix-ui/)
       assert.equal(
@@ -149,15 +167,20 @@ describe('skills command', () => {
       await fs.mkdir(path.join(tmpDir, '.git'))
       let nestedDir = path.join(tmpDir, 'app', 'routes')
       await fs.mkdir(nestedDir, { recursive: true })
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(nestedDir, () =>
-          captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(nestedDir, () =>
+            captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
+          ),
         ),
       )
       let displayPath = path.relative(nestedDir, path.join(tmpDir, 'custom', 'skills'))
 
       assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
       assert.match(result.stderr, /✓ Resolve project root/)
       assert.match(
         result.stdout,
@@ -196,13 +219,18 @@ describe('skills command', () => {
         path.join(demoDir, 'package.json'),
         JSON.stringify({ name: 'bookstore-demo', private: true, type: 'module' }, null, 2),
       )
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(nestedDir, () => captureOutput(() => run(['skills', 'install']))),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(nestedDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
       )
       let displayPath = path.relative(nestedDir, path.join(demoDir, '.agents', 'skills'))
 
       assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
       assert.match(result.stderr, /✓ Resolve project root/)
       assert.match(
         result.stdout,
@@ -238,15 +266,24 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+
+        return withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
       })
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
-      )
-
       assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 0)
+      assert.match(result.stderr, /• Read local skills cache\.\.\./)
       assert.match(result.stderr, /• Write updated skills \(skipped: No changes\.\)\n\n$/)
       assert.match(
         result.stdout,
@@ -254,6 +291,148 @@ describe('skills command', () => {
           `No changes\\. ${escapeRegExp(path.join('.agents', 'skills'))} is up to date\\.`,
         ),
       )
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('uses a deterministic cache file path for each skills directory', () => {
+    let firstPath = path.join('/tmp', 'app-one', '.agents', 'skills')
+    let secondPath = path.join('/tmp', 'app-two', '.agents', 'skills')
+
+    assert.equal(getSkillsCacheFilePath(firstPath), getSkillsCacheFilePath(firstPath))
+    assert.notEqual(getSkillsCacheFilePath(firstPath), getSkillsCacheFilePath(secondPath))
+  })
+
+  it('marks manually edited skills as outdated even when the remote metadata is unchanged', async () => {
+    let remoteSkills = {
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        await fs.writeFile(path.join(tmpDir, '.agents', 'skills', 'remix-ui', 'SKILL.md'), '# Edited UI\n')
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+
+        return withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
+      })
+
+      assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 0)
+      assert.match(
+        result.stdout,
+        new RegExp(
+          `Checked Remix skills against ${escapeRegExp(path.join('.agents', 'skills'))}: 1 outdated\\.`,
+        ),
+      )
+      assert.match(result.stdout, /• remix-ui \[outdated\]/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rebuilds a missing cache manifest on install', async () => {
+    let remoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+      let skillsDir = path.join(tmpDir, '.agents', 'skills')
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        let cacheFile = getSkillsCacheFilePath(await fs.realpath(skillsDir))
+        await fs.rm(cacheFile, { force: true })
+
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        let beforeRepair = await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
+        assert.match(beforeRepair.stdout, /1 outdated\./)
+
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        let installResult = await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        assert.equal(installResult.exitCode, 0)
+        assert.equal(fetchMock.requests.metadata, 1)
+        assert.equal(fetchMock.requests.archive, 1)
+
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        let repaired = await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
+        await assertPathExists(cacheFile)
+        return repaired
+      })
+
+      assert.equal(result.exitCode, 0)
+      assert.match(result.stdout, /1 installed\./)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores a corrupted cache manifest and rebuilds it on install', async () => {
+    let remoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+      let skillsDir = path.join(tmpDir, '.agents', 'skills')
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        let cacheFile = getSkillsCacheFilePath(await fs.realpath(skillsDir))
+        await fs.writeFile(cacheFile, '{not valid json', 'utf8')
+
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        let beforeRepair = await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
+        assert.match(beforeRepair.stdout, /1 outdated\./)
+
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        return withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+      })
+
+      assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -276,7 +455,16 @@ describe('skills command', () => {
   })
 
   it('lists Remix skills from a nested directory with inline status tags', async () => {
-    let remoteSkills = {
+    let initialRemoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+        'templates/route.md': 'Route template\n',
+      },
+      'remix-ui': {
+        'SKILL.md': '# Old UI\n',
+      },
+    }
+    let currentRemoteSkills = {
       'remix-auth': {
         'SKILL.md': '# Auth\n',
       },
@@ -292,26 +480,34 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'custom-helper/SKILL.md': '# Custom helper\n',
-        'remix-project-layout/SKILL.md': '# Layout\n',
-        'remix-project-layout/templates/route.md': 'Route template\n',
-        'remix-ui/SKILL.md': '# Old UI\n',
-      })
       let nestedDir = path.join(tmpDir, 'app', 'routes')
       await fs.mkdir(nestedDir, { recursive: true })
+      let installFetchMock = createGitHubSkillsFetchMock(initialRemoteSkills)
+      let listFetchMock = createGitHubSkillsFetchMock(currentRemoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(nestedDir, () => captureOutput(() => run(['skills', 'list']))),
-      )
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(installFetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
+          'custom-helper/SKILL.md': '# Custom helper\n',
+        })
+        return withFetchMock(listFetchMock.fetch, () =>
+          withCwd(nestedDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
+      })
 
       assert.equal(result.exitCode, 0)
       assert.match(result.stderr, /• Resolve project root\.\.\./)
       assert.match(result.stderr, /✓ Resolve project root/)
-      assert.match(result.stderr, /• Fetch Remix skills from GitHub\.\.\./)
-      assert.match(result.stderr, /✓ Fetch Remix skills from GitHub/)
+      assert.match(result.stderr, /• Fetch Remix skills metadata from GitHub\.\.\./)
+      assert.match(result.stderr, /✓ Fetch Remix skills metadata from GitHub/)
+      assert.match(result.stderr, /• Read local skills cache\.\.\./)
+      assert.match(result.stderr, /✓ Read local skills cache/)
       assert.match(result.stderr, /• Compare local skills\.\.\./)
       assert.match(result.stderr, /✓ Compare local skills\n\n$/)
+      assert.equal(listFetchMock.requests.metadata, 1)
+      assert.equal(listFetchMock.requests.archive, 0)
       assert.match(
         result.stdout,
         new RegExp(
@@ -328,7 +524,12 @@ describe('skills command', () => {
   })
 
   it('lists local skill state from a custom directory relative to the project root', async () => {
-    let remoteSkills = {
+    let initialRemoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+    }
+    let currentRemoteSkills = {
       'remix-auth': {
         'SKILL.md': '# Auth\n',
       },
@@ -340,20 +541,29 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, 'custom', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-      })
       let nestedDir = path.join(tmpDir, 'app', 'routes')
       await fs.mkdir(nestedDir, { recursive: true })
+      let installFetchMock = createGitHubSkillsFetchMock(initialRemoteSkills)
+      let listFetchMock = createGitHubSkillsFetchMock(currentRemoteSkills)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(nestedDir, () =>
-          captureOutput(() => run(['skills', 'list', '--dir', 'custom/skills'])),
-        ),
-      )
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(installFetchMock.fetch, () =>
+          withCwd(
+            nestedDir,
+            () => captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
+          ),
+        )
+        return withFetchMock(listFetchMock.fetch, () =>
+          withCwd(nestedDir, () =>
+            captureOutput(() => run(['skills', 'list', '--dir', 'custom/skills'])),
+          ),
+        )
+      })
       let displayPath = path.relative(nestedDir, path.join(tmpDir, 'custom', 'skills'))
 
       assert.equal(result.exitCode, 0)
+      assert.equal(listFetchMock.requests.metadata, 1)
+      assert.equal(listFetchMock.requests.archive, 0)
       assert.match(
         result.stdout,
         new RegExp(`Checked Remix skills against ${escapeRegExp(displayPath)}: 1 installed, 1 missing\\.`),
@@ -366,7 +576,12 @@ describe('skills command', () => {
   })
 
   it('colors missing and outdated tags in list output when stdout is a tty', async () => {
-    let remoteSkills = {
+    let initialRemoteSkills = {
+      'remix-ui': {
+        'SKILL.md': '# Old UI\n',
+      },
+    }
+    let currentRemoteSkills = {
       'remix-auth': {
         'SKILL.md': '# Auth\n',
       },
@@ -378,19 +593,25 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-ui/SKILL.md': '# Old UI\n',
+      let installFetchMock = createGitHubSkillsFetchMock(initialRemoteSkills)
+      let listFetchMock = createGitHubSkillsFetchMock(currentRemoteSkills)
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(installFetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        return withTtyState({ stdout: true, stderr: true }, () =>
+          withFetchMock(listFetchMock.fetch, () =>
+            withCwd(tmpDir, () =>
+              captureOutput(() => run(['skills', 'list'], { remixVersion: '9.9.9' })),
+            ),
+          ),
+        )
       })
 
-      let result = await withTtyState({ stdout: true, stderr: true }, () =>
-        withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-          withCwd(tmpDir, () =>
-            captureOutput(() => run(['skills', 'list'], { remixVersion: '9.9.9' })),
-          ),
-        ),
-      )
-
       assert.equal(result.exitCode, 0)
+      assert.equal(listFetchMock.requests.metadata, 1)
+      assert.equal(listFetchMock.requests.archive, 0)
       assert.match(result.stderr, /v9\.9\.9 - skills list/)
       assert.match(result.stdout, /• remix-auth \u001B\[91m\[missing\]\u001B\[0m/)
       assert.match(result.stdout, /• remix-ui \u001B\[93m\[outdated\]\u001B\[0m/)
@@ -400,7 +621,12 @@ describe('skills command', () => {
   })
 
   it('prints list output as json', async () => {
-    let remoteSkills = {
+    let initialRemoteSkills = {
+      'remix-project-layout': {
+        'SKILL.md': '# Layout\n',
+      },
+    }
+    let currentRemoteSkills = {
       'remix-auth': {
         'SKILL.md': '# Auth\n',
       },
@@ -412,17 +638,23 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-      })
+      let installFetchMock = createGitHubSkillsFetchMock(initialRemoteSkills)
+      let listFetchMock = createGitHubSkillsFetchMock(currentRemoteSkills)
       let realProjectRoot = await fs.realpath(tmpDir)
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list', '--json']))),
-      )
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(installFetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        return withFetchMock(listFetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list', '--json']))),
+        )
+      })
 
       assert.equal(result.exitCode, 0)
       assert.equal(result.stderr, '')
+      assert.equal(listFetchMock.requests.metadata, 1)
+      assert.equal(listFetchMock.requests.archive, 0)
 
       let payload = JSON.parse(result.stdout) as {
         entries: Array<{ name: string; state: string }>
@@ -457,16 +689,22 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
-      await writeFiles(path.join(tmpDir, '.agents', 'skills'), {
-        'remix-project-layout/SKILL.md': '# Layout\n',
-        'remix-ui/SKILL.md': '# UI\n',
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+
+      let result = await withIsolatedSkillsCache(async () => {
+        await withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        )
+        fetchMock.requests.archive = 0
+        fetchMock.requests.metadata = 0
+        return withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        )
       })
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
-      )
-
       assert.equal(result.exitCode, 0)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 0)
       assert.match(
         result.stdout,
         new RegExp(
@@ -485,8 +723,11 @@ describe('skills command', () => {
   it('fails when no project root can be found', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
-      let result = await withFetchMock(createGitHubSkillsFetchMock({}), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+      let fetchMock = createGitHubSkillsFetchMock({})
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        ),
       )
 
       assert.equal(result.exitCode, 1)
@@ -500,13 +741,16 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock({}, { treeStatus: 500 })
 
-      let result = await withFetchMock(createGitHubSkillsFetchMock({}, { treeStatus: 500 }), () =>
-        withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        ),
       )
 
       assert.equal(result.exitCode, 1)
-      assert.match(result.stderr, /Could not fetch Remix skills from GitHub\./)
+      assert.match(result.stderr, /Could not fetch Remix skills metadata from GitHub\./)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -516,14 +760,53 @@ describe('skills command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
     try {
       await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock({}, { malformedTree: true })
 
-      let result = await withFetchMock(
-        createGitHubSkillsFetchMock({}, { malformedTree: true }),
-        () => withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        ),
       )
 
       assert.equal(result.exitCode, 1)
       assert.match(result.stderr, /Received an invalid Remix skills listing from GitHub\./)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('shows a rate-limit-specific GitHub error when the metadata request is rejected', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+
+      let fetchMock = {
+        fetch: (async (input: RequestInfo | URL) => {
+          if (toUrlString(input) === REMIX_GITHUB_TREE_URL) {
+            return new Response('rate limited', {
+              headers: {
+                'x-ratelimit-remaining': '0',
+                'x-ratelimit-reset': '1711600000',
+              },
+              status: 403,
+              statusText: 'Forbidden',
+            })
+          }
+
+          return new Response('Not found', { status: 404, statusText: 'Not Found' })
+        }) as typeof fetch,
+      }
+
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+        ),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /GitHub API rate limit exceeded/)
+      assert.match(result.stderr, /GITHUB_TOKEN or GH_TOKEN/)
+      assert.match(result.stderr, /2024-03-28T04:26:40\.000Z/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -579,6 +862,45 @@ async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise
   }
 }
 
+async function withIsolatedSkillsCache<T>(callback: () => Promise<T>): Promise<T> {
+  let tempHome = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-cache-'))
+  let originalHome = process.env.HOME
+  let originalLocalAppData = process.env.LOCALAPPDATA
+  let originalXdgCacheHome = process.env.XDG_CACHE_HOME
+
+  if (process.platform === 'win32') {
+    process.env.LOCALAPPDATA = path.join(tempHome, 'AppData', 'Local')
+  } else if (process.platform === 'darwin') {
+    process.env.HOME = tempHome
+  } else {
+    process.env.XDG_CACHE_HOME = path.join(tempHome, '.cache')
+  }
+
+  try {
+    return await callback()
+  } finally {
+    if (originalHome == null) {
+      delete process.env.HOME
+    } else {
+      process.env.HOME = originalHome
+    }
+
+    if (originalLocalAppData == null) {
+      delete process.env.LOCALAPPDATA
+    } else {
+      process.env.LOCALAPPDATA = originalLocalAppData
+    }
+
+    if (originalXdgCacheHome == null) {
+      delete process.env.XDG_CACHE_HOME
+    } else {
+      process.env.XDG_CACHE_HOME = originalXdgCacheHome
+    }
+
+    await fs.rm(tempHome, { recursive: true, force: true })
+  }
+}
+
 async function withTtyState<T>(
   options: { stderr?: boolean; stdout?: boolean },
   callback: () => Promise<T>,
@@ -630,25 +952,28 @@ async function withTtyState<T>(
 
 function createGitHubSkillsFetchMock(
   remoteSkills: Record<string, Record<string, string>>,
-  options: { malformedTree?: boolean; treeStatus?: number } = {},
-): typeof fetch {
-  let blobResponses = new Map<string, string>()
+  options: { archiveStatus?: number; malformedTree?: boolean; treeStatus?: number } = {},
+): {
+  fetch: typeof fetch
+  requests: { archive: number; metadata: number }
+} {
+  let requests = { archive: 0, metadata: 0 }
   let treeEntries = Object.entries(remoteSkills).flatMap(([skillName, files]) =>
     Object.entries(files).map(([filePath, content]) => {
-      let blobUrl = `https://api.github.com/repos/remix-run/remix/git/blobs/${encodeURIComponent(`${skillName}/${filePath}`)}`
-      blobResponses.set(blobUrl, content)
-
       return {
         path: `skills/${skillName}/${filePath}`,
+        sha: computeGitBlobSha(Buffer.from(content, 'utf8')),
         type: 'blob',
-        url: blobUrl,
       }
     }),
   )
+  let archive = buildTarGzArchive(remoteSkills)
 
-  return (async (input: RequestInfo | URL) => {
+  let fetchMock = (async (input: RequestInfo | URL) => {
     let url = toUrlString(input)
     if (url === REMIX_GITHUB_TREE_URL) {
+      requests.metadata += 1
+
       if (options.treeStatus != null) {
         return new Response('boom', { status: options.treeStatus, statusText: 'Server Error' })
       }
@@ -660,16 +985,23 @@ function createGitHubSkillsFetchMock(
       return jsonResponse({ tree: treeEntries, truncated: false })
     }
 
-    let blobContent = blobResponses.get(url)
-    if (blobContent != null) {
-      return jsonResponse({
-        content: Buffer.from(blobContent, 'utf8').toString('base64'),
-        encoding: 'base64',
+    if (url === REMIX_GITHUB_ARCHIVE_URL) {
+      requests.archive += 1
+
+      if (options.archiveStatus != null) {
+        return new Response('boom', { status: options.archiveStatus, statusText: 'Server Error' })
+      }
+
+      return new Response(Buffer.from(archive), {
+        headers: { 'Content-Type': 'application/gzip' },
+        status: 200,
       })
     }
 
     return new Response('Not found', { status: 404, statusText: 'Not Found' })
   }) as typeof fetch
+
+  return { fetch: fetchMock, requests }
 }
 
 function jsonResponse(value: unknown): Response {
@@ -689,6 +1021,66 @@ function toUrlString(input: RequestInfo | URL): string {
   }
 
   return input.url
+}
+
+function buildTarGzArchive(remoteSkills: Record<string, Record<string, string>>): Uint8Array {
+  let chunks: Buffer[] = []
+
+  for (let [skillName, files] of Object.entries(remoteSkills).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    for (let [filePath, content] of Object.entries(files).sort(([left], [right]) =>
+      left.localeCompare(right),
+    )) {
+      let name = `remix-run-remix-main/skills/${skillName}/${filePath}`
+      let body = Buffer.from(content, 'utf8')
+      chunks.push(createTarHeader(name, body.length), body, createTarPadding(body.length))
+    }
+  }
+
+  chunks.push(Buffer.alloc(1024))
+  return gzipSync(Buffer.concat(chunks))
+}
+
+function createTarHeader(name: string, size: number): Buffer {
+  let header = Buffer.alloc(512)
+  writeTarString(header, 0, 100, name)
+  writeTarOctal(header, 100, 8, 0o644)
+  writeTarOctal(header, 108, 8, 0)
+  writeTarOctal(header, 116, 8, 0)
+  writeTarOctal(header, 124, 12, size)
+  writeTarOctal(header, 136, 12, 0)
+  header.fill(0x20, 148, 156)
+  header[156] = '0'.charCodeAt(0)
+  writeTarString(header, 257, 6, 'ustar')
+  writeTarString(header, 263, 2, '00')
+
+  let checksum = header.reduce((sum, byte) => sum + byte, 0)
+  let encoded = checksum.toString(8).padStart(6, '0')
+  header.write(encoded, 148, 6, 'ascii')
+  header[154] = 0
+  header[155] = 0x20
+
+  return header
+}
+
+function createTarPadding(size: number): Buffer {
+  let remainder = size % 512
+  return remainder === 0 ? Buffer.alloc(0) : Buffer.alloc(512 - remainder)
+}
+
+function writeTarOctal(buffer: Buffer, offset: number, size: number, value: number): void {
+  let encoded = value.toString(8).padStart(size - 1, '0')
+  buffer.write(encoded.slice(-(size - 1)), offset, size - 1, 'ascii')
+  buffer[offset + size - 1] = 0
+}
+
+function writeTarString(buffer: Buffer, offset: number, size: number, value: string): void {
+  buffer.write(value.slice(0, size), offset, 'utf8')
+}
+
+function computeGitBlobSha(bytes: Uint8Array): string {
+  return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
 }
 
 async function writeFiles(rootDir: string, files: Record<string, string>): Promise<void> {

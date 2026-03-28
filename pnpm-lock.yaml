@@ -426,6 +426,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@remix-run/tar-parser':
+        specifier: workspace:^
+        version: link:../tar-parser
       semver:
         specifier: ^7.7.4
         version: 7.7.4

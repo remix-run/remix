@@ -17,7 +17,9 @@ import {
 
 const SKILLS_PROGRESS_LABELS = {
   'compare-local-skills': 'Compare local skills',
-  'fetch-remix-skills': 'Fetch Remix skills from GitHub',
+  'download-remix-skills-archive': 'Download Remix skills archive',
+  'fetch-remix-skills-metadata': 'Fetch Remix skills metadata from GitHub',
+  'read-local-skills-cache': 'Read local skills cache',
   'resolve-project-root': 'Resolve project root',
   'write-updated-skills': 'Write updated skills',
 } satisfies Record<SkillsInstallPhase, string>
