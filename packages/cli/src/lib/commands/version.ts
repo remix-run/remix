@@ -1,7 +1,8 @@
 import * as process from 'node:process'
 
 import { readRemixVersion } from '../remix-version.ts'
-import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
+import { renderCliError, toCliError } from '../errors.ts'
+import { parseArgs } from '../parse-args.ts'
 
 export async function runVersionCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -10,15 +11,7 @@ export async function runVersionCommand(argv: string[]): Promise<number> {
   }
 
   try {
-    if (argv.length > 0) {
-      let [arg] = argv
-
-      if (arg.startsWith('-')) {
-        throw unknownArgument(arg)
-      }
-
-      throw unexpectedExtraArgument(arg)
-    }
+    parseArgs(argv, {}, { maxPositionals: 0 })
 
     process.stdout.write(`${readRemixVersion()}\n`)
     return 0

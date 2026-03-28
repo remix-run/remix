@@ -2,13 +2,11 @@ import * as process from 'node:process'
 
 import { getDisplayPath } from '../display-path.ts'
 import {
-  missingOptionValue,
   renderCliError,
   toCliError,
-  unknownArgument,
   unknownSkillsCommand,
-  unexpectedExtraArgument,
 } from '../errors.ts'
+import { parseArgs } from '../parse-args.ts'
 import type { SkillChange, SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
 import {
@@ -257,38 +255,34 @@ function parseSkillsDirArgs(
   argv: string[],
   options: { allowJson?: boolean } = {},
 ): { dir: string | null; json: boolean } {
-  let dir: string | null = null
-  let json = false
-  let index = 0
+  if (options.allowJson) {
+    let parsed = parseArgs(
+      argv,
+      {
+        dir: { flag: '--dir', type: 'string' },
+        json: { flag: '--json', type: 'boolean' },
+      },
+      { maxPositionals: 0 },
+    )
 
-  while (index < argv.length) {
-    let arg = argv[index]
-
-    if (arg === '--dir') {
-      let next = argv[index + 1]
-      if (!next) {
-        throw missingOptionValue('--dir')
-      }
-
-      dir = next
-      index += 2
-      continue
+    return {
+      dir: parsed.options.dir ?? null,
+      json: parsed.options.json,
     }
-
-    if (arg === '--json' && options.allowJson) {
-      json = true
-      index += 1
-      continue
-    }
-
-    if (arg.startsWith('-')) {
-      throw unknownArgument(arg)
-    }
-
-    throw unexpectedExtraArgument(arg)
   }
 
-  return { dir, json }
+  let parsed = parseArgs(
+    argv,
+    {
+      dir: { flag: '--dir', type: 'string' },
+    },
+    { maxPositionals: 0 },
+  )
+
+  return {
+    dir: parsed.options.dir ?? null,
+    json: false,
+  }
 }
 
 function toPastTense(action: 'add' | 'replace'): string {

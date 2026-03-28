@@ -4,9 +4,8 @@ import {
   invalidFlagCombination,
   renderCliError,
   toCliError,
-  unknownArgument,
-  unexpectedExtraArgument,
 } from '../errors.ts'
+import { parseArgs } from '../parse-args.ts'
 import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
 import { lightRed } from '../terminal.ts'
@@ -70,38 +69,21 @@ interface RoutesCommandOptions {
 }
 
 function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
-  let json = false
-  let noHeaders = false
-  let table = false
-  let verbose = false
+  let parsed = parseArgs(
+    argv,
+    {
+      json: { flag: '--json', type: 'boolean' },
+      noHeaders: { flag: '--no-headers', type: 'boolean' },
+      table: { flag: '--table', type: 'boolean' },
+      verbose: { flag: '--verbose', type: 'boolean' },
+    },
+    { maxPositionals: 0 },
+  )
 
-  for (let arg of argv) {
-    if (arg === '--json') {
-      json = true
-      continue
-    }
-
-    if (arg === '--table') {
-      table = true
-      continue
-    }
-
-    if (arg === '--no-headers') {
-      noHeaders = true
-      continue
-    }
-
-    if (arg === '--verbose') {
-      verbose = true
-      continue
-    }
-
-    if (arg.startsWith('-')) {
-      throw unknownArgument(arg)
-    }
-
-    throw unexpectedExtraArgument(arg)
-  }
+  let json = parsed.options.json
+  let noHeaders = parsed.options.noHeaders
+  let table = parsed.options.table
+  let verbose = parsed.options.verbose
 
   if (json && table) {
     throw invalidFlagCombination('Cannot combine --json with --table.')

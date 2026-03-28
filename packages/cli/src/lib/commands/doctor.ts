@@ -14,7 +14,8 @@ import {
   type DoctorSuiteName,
   type DoctorSuiteResult,
 } from '../doctor/types.ts'
-import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
+import { renderCliError, toCliError } from '../errors.ts'
+import { parseArgs } from '../parse-args.ts'
 import {
   createCommandReporter,
   createStepProgressReporter,
@@ -109,34 +110,21 @@ Examples:
 }
 
 function parseDoctorCommandArgs(argv: string[]): DoctorCommandOptions {
-  let fix = false
-  let json = false
-  let strict = false
+  let parsed = parseArgs(
+    argv,
+    {
+      fix: { flag: '--fix', type: 'boolean' },
+      json: { flag: '--json', type: 'boolean' },
+      strict: { flag: '--strict', type: 'boolean' },
+    },
+    { maxPositionals: 0 },
+  )
 
-  for (let arg of argv) {
-    if (arg === '--json') {
-      json = true
-      continue
-    }
-
-    if (arg === '--strict') {
-      strict = true
-      continue
-    }
-
-    if (arg === '--fix') {
-      fix = true
-      continue
-    }
-
-    if (arg.startsWith('-')) {
-      throw unknownArgument(arg)
-    }
-
-    throw unexpectedExtraArgument(arg)
+  return {
+    fix: parsed.options.fix,
+    json: parsed.options.json,
+    strict: parsed.options.strict,
   }
-
-  return { fix, json, strict }
 }
 
 async function collectDoctorReport(

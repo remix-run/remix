@@ -11,8 +11,8 @@ import {
   renderCliError,
   toCliError,
   unknownCompletionShell,
-  unexpectedExtraArgument,
 } from '../errors.ts'
+import { parseArgs } from '../parse-args.ts'
 
 export async function runCompletionCommand(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help') {
@@ -27,9 +27,7 @@ export async function runCompletionCommand(argv: string[]): Promise<number> {
   let [shell, ...rest] = argv
 
   try {
-    if (rest.length > 0) {
-      throw unexpectedExtraArgument(rest[0]!)
-    }
+    parseArgs(rest, {}, { maxPositionals: 0 })
 
     if (!isCompletionShell(shell)) {
       throw unknownCompletionShell(shell)

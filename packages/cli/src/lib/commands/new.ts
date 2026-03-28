@@ -8,13 +8,11 @@ import type {
 import { bootstrapProject } from '../bootstrap-project.ts'
 import {
   renderCliError,
-  missingOptionValue,
   missingTargetDirectory,
   toCliError,
-  unknownArgument,
-  unexpectedExtraArgument,
 } from '../errors.ts'
 import { getDisplayPath } from '../display-path.ts'
+import { parseArgs } from '../parse-args.ts'
 import {
   createCommandReporter,
   createStepProgressReporter,
@@ -66,48 +64,25 @@ Examples:
 }
 
 function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
-  let appName: string | null = null
-  let force = false
-  let targetDir: string | null = null
-  let index = 0
-
-  while (index < argv.length) {
-    let arg = argv[index]
-
-    if (arg === '--app-name') {
-      let next = argv[index + 1]
-      if (!next) {
-        throw missingOptionValue('--app-name')
-      }
-
-      appName = next
-      index += 2
-      continue
-    }
-
-    if (arg === '--force') {
-      force = true
-      index++
-      continue
-    }
-
-    if (arg.startsWith('--')) {
-      throw unknownArgument(arg)
-    }
-
-    if (targetDir != null) {
-      throw unexpectedExtraArgument(arg)
-    }
-
-    targetDir = arg
-    index++
-  }
+  let parsed = parseArgs(
+    argv,
+    {
+      appName: { flag: '--app-name', type: 'string' },
+      force: { flag: '--force', type: 'boolean' },
+    },
+    { maxPositionals: 1 },
+  )
+  let targetDir = parsed.positionals[0] ?? null
 
   if (targetDir == null) {
     throw missingTargetDirectory()
   }
 
-  return { appName, force, targetDir }
+  return {
+    appName: parsed.options.appName ?? null,
+    force: parsed.options.force,
+    targetDir,
+  }
 }
 
 function createNewProgressReporter(reporter: CommandReporter): BootstrapProgressReporter {
