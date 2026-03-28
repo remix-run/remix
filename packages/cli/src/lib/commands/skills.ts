@@ -17,7 +17,7 @@ import {
   type CommandReporter,
 } from '../reporter.ts'
 
-const SKILLS_INSTALL_PROGRESS_LABELS = {
+const SKILLS_PROGRESS_LABELS = {
   'compare-local-skills': 'Compare local skills',
   'fetch-remix-skills': 'Fetch Remix skills from GitHub',
   'resolve-project-root': 'Resolve project root',
@@ -117,7 +117,7 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
   }
 
   let reporter = createCommandReporter()
-  let progress = createSkillsInstallProgressReporter(reporter)
+  let progress = createSkillsProgressReporter(reporter)
   let cwd = process.cwd()
 
   try {
@@ -166,9 +166,15 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
 
   let cwd = process.cwd()
   let reporter = createCommandReporter()
+  let progress: SkillsProgressReporter | null = null
+  try {
+    progress = options.json ? null : createSkillsProgressReporter(reporter)
+    if (progress != null) {
+      await reporter.status.commandHeader('skills list')
+    }
 
-  return runSkillsAction([], getSkillsListCommandHelpText(), async () => {
     let result = await getSkillsOverview(cwd, globalThis.fetch, {
+      progress: progress ?? undefined,
       skillsDir: options.dir ?? undefined,
     })
 
@@ -187,42 +193,23 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
       return 0
     }
 
-    reporter.out.line(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:`)
+    progress?.writeSummaryGap()
+    reporter.out.line(formatSkillsListSummary(result.entries, getDisplayPath(result.skillsDir, cwd)))
     reporter.out.bullets(result.entries.map((entry) => formatSkillListEntry(reporter, entry)))
     reporter.finish()
     return 0
-  })
-}
-
-async function runSkillsAction(
-  argv: string[],
-  helpText: string,
-  callback: () => Promise<number>,
-): Promise<number> {
-  try {
-    ensureNoExtraArgs(argv)
-    return await callback()
   } catch (error) {
-    process.stderr.write(renderCliError(toCliError(error), { helpText }))
+    progress?.writeSummaryGap()
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText() }),
+    )
+    reporter.finish()
     return 1
   }
 }
 
-function ensureNoExtraArgs(argv: string[]): void {
-  if (argv.length === 0) {
-    return
-  }
-
-  let [arg] = argv
-  if (arg.startsWith('-')) {
-    throw unknownArgument(arg)
-  }
-
-  throw unexpectedExtraArgument(arg)
-}
-
-function createSkillsInstallProgressReporter(reporter: CommandReporter): SkillsProgressReporter {
-  return createStepProgressReporter(reporter.status, SKILLS_INSTALL_PROGRESS_LABELS)
+function createSkillsProgressReporter(reporter: CommandReporter): SkillsProgressReporter {
+  return createStepProgressReporter(reporter.status, SKILLS_PROGRESS_LABELS)
 }
 
 function formatAppliedChanges(
@@ -244,6 +231,23 @@ function formatSkillListEntry(
 
   let tone: 'error' | 'warn' = entry.state === 'missing' ? 'error' : 'warn'
   return `${entry.name} ${reporter.out.label(entry.state, '', { tone })}`
+}
+
+function formatSkillsListSummary(
+  entries: Array<{ name: string; state: 'installed' | 'missing' | 'outdated' }>,
+  skillsDir: string,
+): string {
+  let installedCount = entries.filter((entry) => entry.state === 'installed').length
+  let outdatedCount = entries.filter((entry) => entry.state === 'outdated').length
+  let missingCount = entries.filter((entry) => entry.state === 'missing').length
+  let detailParts = [
+    installedCount > 0 ? `${installedCount} installed` : null,
+    outdatedCount > 0 ? `${outdatedCount} outdated` : null,
+    missingCount > 0 ? `${missingCount} missing` : null,
+  ].filter((part) => part != null)
+
+  let detail = detailParts.length === 0 ? '0 installed' : detailParts.join(', ')
+  return `Checked Remix skills against ${skillsDir}: ${detail}.`
 }
 
 function parseSkillsInstallCommandArgs(argv: string[]): { dir: string | null } {

@@ -36,6 +36,7 @@ export interface SkillsInstallOptions {
 }
 
 export interface SkillsOverviewOptions {
+  progress?: SkillsProgressReporter
   skillsDir?: string
 }
 

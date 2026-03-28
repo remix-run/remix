@@ -177,6 +177,38 @@ describe('reporter', () => {
     )
   })
 
+  it('does not add a second preamble when progress is on stderr and the summary is on stdout', async () => {
+    await withEnv('NO_COLOR', undefined, async () =>
+      withEnv('TERM', 'xterm-256color', async () =>
+        withTTY(process.stderr, false, async () =>
+          withCapturedWrites(process.stdout, async (stdoutWrites) =>
+            withCapturedWrites(process.stderr, async (stderrWrites) => {
+              configureColors({ disabled: false })
+              let reporter = createCommandReporter()
+
+              reporter.status.startStep('Checking skills')
+              reporter.status.succeedStep()
+              reporter.status.summaryGap()
+              reporter.out.line('Checked Remix skills against .agents/skills: 2 installed.')
+              reporter.finish()
+
+              assert.deepEqual(stderrWrites, [
+                '\n',
+                '• Checking skills...\n',
+                '✓ Checking skills\n',
+                '\n',
+              ])
+              assert.deepEqual(stdoutWrites, [
+                'Checked Remix skills against .agents/skills: 2 installed.\n',
+                '\n',
+              ])
+            }),
+          ),
+        ),
+      ),
+    )
+  })
+
   it('keeps bullet formatting centralized in the reporter', async () => {
     let commandDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'commands')
     let files = ['doctor.ts', 'new.ts', 'routes.ts', 'skills.ts']

@@ -306,6 +306,16 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
+      assert.match(result.stderr, /• Resolve project root\.\.\./)
+      assert.match(result.stderr, /✓ Resolve project root/)
+      assert.match(result.stderr, /• Fetch Remix skills from GitHub\.\.\./)
+      assert.match(result.stderr, /✓ Fetch Remix skills from GitHub/)
+      assert.match(result.stderr, /• Compare local skills\.\.\./)
+      assert.match(result.stderr, /✓ Compare local skills\n\n$/)
+      assert.match(
+        result.stdout,
+        /Checked Remix skills against \.\.\/\.\.\/\.agents\/skills: 1 installed, 1 outdated, 1 missing\./,
+      )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-ui \[outdated\]/)
       assert.match(result.stdout, /• remix-auth \[missing\]/)
@@ -342,7 +352,10 @@ describe('skills command', () => {
       let displayPath = path.relative(nestedDir, path.join(tmpDir, 'custom', 'skills'))
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, new RegExp(`Remix skills in ${escapeRegExp(displayPath)}:`))
+      assert.match(
+        result.stdout,
+        new RegExp(`Checked Remix skills against ${escapeRegExp(displayPath)}: 1 installed, 1 missing\\.`),
+      )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-auth \[missing\]/)
     } finally {
@@ -367,16 +380,16 @@ describe('skills command', () => {
         'remix-ui/SKILL.md': '# Old UI\n',
       })
 
-      let result = await withStdoutIsTTY(true, () =>
+      let result = await withTtyState({ stdout: true, stderr: true }, () =>
         withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
           withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
         ),
       )
 
       assert.equal(result.exitCode, 0)
+      assert.match(result.stderr, /v[\w.-]+ - skills list/)
       assert.match(result.stdout, /• remix-auth \u001B\[91m\[missing\]\u001B\[0m/)
       assert.match(result.stdout, /• remix-ui \u001B\[93m\[outdated\]\u001B\[0m/)
-      assert.equal(result.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -447,6 +460,10 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
+      assert.match(
+        result.stdout,
+        /Checked Remix skills against \.agents\/skills: 2 installed\./,
+      )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-ui/)
       assert.doesNotMatch(result.stdout, /\[outdated\]/)
@@ -553,14 +570,22 @@ async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise
   }
 }
 
-async function withStdoutIsTTY<T>(isTTY: boolean, callback: () => Promise<T>): Promise<T> {
+async function withTtyState<T>(
+  options: { stderr?: boolean; stdout?: boolean },
+  callback: () => Promise<T>,
+): Promise<T> {
   let originalIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY')
+  let originalStderrIsTTY = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY')
   let originalTerm = process.env.TERM
   let originalNoColor = process.env.NO_COLOR
 
   Object.defineProperty(process.stdout, 'isTTY', {
     configurable: true,
-    value: isTTY,
+    value: options.stdout ?? false,
+  })
+  Object.defineProperty(process.stderr, 'isTTY', {
+    configurable: true,
+    value: options.stderr ?? false,
   })
   process.env.TERM = 'xterm-256color'
   delete process.env.NO_COLOR
@@ -572,6 +597,12 @@ async function withStdoutIsTTY<T>(isTTY: boolean, callback: () => Promise<T>): P
       Reflect.deleteProperty(process.stdout as object, 'isTTY')
     } else {
       Object.defineProperty(process.stdout, 'isTTY', originalIsTTY)
+    }
+
+    if (originalStderrIsTTY == null) {
+      Reflect.deleteProperty(process.stderr as object, 'isTTY')
+    } else {
+      Object.defineProperty(process.stderr, 'isTTY', originalStderrIsTTY)
     }
 
     if (originalTerm == null) {

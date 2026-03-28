@@ -78,6 +78,7 @@ export interface StepProgressReporter<step extends string> {
 export function createCommandReporter(options: CreateCommandReporterOptions = {}): CommandReporter {
   let stdout = options.stdout ?? process.stdout
   let stderr = options.stderr ?? process.stderr
+  let session = new ReporterSessionState()
   let states = new Map<NodeJS.WriteStream, ReporterStreamState>()
   let getState = (stream: NodeJS.WriteStream) => {
     let state = states.get(stream)
@@ -85,7 +86,7 @@ export function createCommandReporter(options: CreateCommandReporterOptions = {}
       return state
     }
 
-    state = new ReporterStreamState(stream)
+    state = new ReporterStreamState(stream, session)
     states.set(stream, state)
     return state
   }
@@ -407,12 +408,13 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
 
 class ReporterStreamState {
   #hasWrittenContent = false
-  #hasWrittenPreamble = false
   #pendingBlank = false
+  #session: ReporterSessionState
   #stream: NodeJS.WriteStream
   #trailingNewlineCount = 0
 
-  constructor(stream: NodeJS.WriteStream) {
+  constructor(stream: NodeJS.WriteStream, session: ReporterSessionState) {
+    this.#session = session
     this.#stream = stream
   }
 
@@ -447,9 +449,9 @@ class ReporterStreamState {
   }
 
   write(text: string): void {
-    if (!this.#hasWrittenPreamble) {
+    if (!this.#session.hasWrittenPreamble()) {
       this.#writeRaw('\n')
-      this.#hasWrittenPreamble = true
+      this.#session.markPreambleWritten()
     }
 
     this.#writeRaw(text)
@@ -457,9 +459,9 @@ class ReporterStreamState {
   }
 
   writeImmediate(text: string): void {
-    if (!this.#hasWrittenPreamble) {
+    if (!this.#session.hasWrittenPreamble()) {
       this.#writeRaw('\n')
-      this.#hasWrittenPreamble = true
+      this.#session.markPreambleWritten()
     }
 
     this.#writeRaw(text)
@@ -494,6 +496,18 @@ class ReporterStreamState {
     }
 
     this.#trailingNewlineCount = trailingNewlines
+  }
+}
+
+class ReporterSessionState {
+  #hasWrittenPreamble = false
+
+  hasWrittenPreamble(): boolean {
+    return this.#hasWrittenPreamble
+  }
+
+  markPreambleWritten(): void {
+    this.#hasWrittenPreamble = true
   }
 }
 
