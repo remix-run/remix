@@ -283,14 +283,7 @@ import { run as runCli } from '${reExportFrom}'
 const remixVersion = ${JSON.stringify(remixVersion)}
 
 export async function run(argv?: string[]): Promise<number> {
-  let previousCliVersion = process.env.REMIX_CLI_VERSION
-  process.env.REMIX_CLI_VERSION = remixVersion
-
-  try {
-    return await runCli(argv)
-  } finally {
-    restoreEnvironmentVariable('REMIX_CLI_VERSION', previousCliVersion)
-  }
+  return await runCli(argv, { remixVersion })
 }
 
 if (import.meta.main) {
@@ -310,13 +303,6 @@ function setExitCode(exitCode: number) {
   Reflect.set(runtimeProcess, 'exitCode', exitCode)
 }
 
-function restoreEnvironmentVariable(name: string, value: string | undefined) {
-  if (value == null) {
-    delete process.env[name]
-  } else {
-    process.env[name] = value
-  }
-}
 `
 }
 
