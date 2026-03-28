@@ -1,6 +1,15 @@
 name: Codex PR review
 
 on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+    branches-ignore:
+      - release-v2
+      - v2
   pull_request_target:
     types:
       - opened
@@ -19,7 +28,17 @@ jobs:
   review:
     if: |
       github.repository == 'remix-run/remix' &&
-      !github.event.pull_request.draft
+      !github.event.pull_request.draft &&
+      (
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        (
+          github.event_name == 'pull_request_target' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

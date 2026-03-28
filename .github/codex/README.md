@@ -23,6 +23,10 @@ in `.github/workflows/`.
 
 - Automatic review runs on `opened`, `reopened`, `ready_for_review`, and
   `synchronize` pull request events.
+- Same-repo pull requests use `pull_request`, so the review workflow can run
+  immediately from the PR branch before the workflow is merged to `main`.
+- Fork pull requests use `pull_request_target`, so they can still be reviewed
+  safely after the workflow exists on `main`.
 - To ask Codex to edit a PR branch, add a PR conversation comment such as:
 
   ```text
