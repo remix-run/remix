@@ -80,6 +80,13 @@ jobs:
           node-version-file: 'package.json'
           cache: pnpm
 
+      - name: Capture repo toolchain
+        if: steps.config.outputs.enabled == 'true'
+        id: toolchain
+        run: |
+          echo "repo_node_bin=$(dirname "$(command -v node)")" >> "$GITHUB_OUTPUT"
+          echo "repo_pnpm_path=$(command -v pnpm)" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
         if: |
           steps.config.outputs.enabled == 'true' &&
@@ -98,6 +105,8 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          REPO_NODE_BIN: ${{ steps.toolchain.outputs.repo_node_bin }}
+          REPO_PNPM_PATH: ${{ steps.toolchain.outputs.repo_pnpm_path }}
         with:
           script: |
             const fs = require('fs')
@@ -120,6 +129,8 @@ jobs:
                 `- Node.js available: yes`,
                 `- pnpm available: yes`,
                 `- Dependencies installed: ${process.env.GITHUB_EVENT_NAME === 'pull_request' ? 'yes' : 'no (fork-safe review mode)'}`,
+                `- Preferred Node.js bin dir for repo commands: ${process.env.REPO_NODE_BIN}`,
+                `- Preferred pnpm path for repo commands: ${process.env.REPO_PNPM_PATH}`,
                 '',
                 '## Pull Request Title',
                 '',
@@ -193,6 +204,12 @@ jobs:
 
             Review only the pull request diff. Use the base and head SHAs from the
             context file to inspect the changes.
+
+            If you run Node.js or pnpm commands, use the repo toolchain described
+            in the context file rather than the Codex action's internal default
+            Node runtime. Prepend the preferred Node.js bin dir from the context
+            file to PATH before invoking repo commands so validations run under
+            the repo-supported Node version.
 
             Focus on high-signal feedback:
             - correctness bugs and regressions

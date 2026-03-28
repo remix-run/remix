@@ -288,6 +288,12 @@ jobs:
           node-version-file: 'package.json'
           cache: pnpm
 
+      - name: Capture repo toolchain
+        id: toolchain
+        run: |
+          echo "repo_node_bin=$(dirname "$(command -v node)")" >> "$GITHUB_OUTPUT"
+          echo "repo_pnpm_path=$(command -v pnpm)" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -302,6 +308,8 @@ jobs:
           COMMAND: ${{ needs.authorize.outputs.command }}
           COMMENT_URL: ${{ needs.authorize.outputs.comment_url }}
           SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
+          REPO_NODE_BIN: ${{ steps.toolchain.outputs.repo_node_bin }}
+          REPO_PNPM_PATH: ${{ steps.toolchain.outputs.repo_pnpm_path }}
         with:
           script: |
             const fs = require('fs')
@@ -354,6 +362,8 @@ jobs:
                 `- Base sha: ${pr.base.sha}`,
                 `- Head ref: ${process.env.PR_HEAD_REF}`,
                 `- Head sha: ${pr.head.sha}`,
+                `- Preferred Node.js bin dir for repo commands: ${process.env.REPO_NODE_BIN}`,
+                `- Preferred pnpm path for repo commands: ${process.env.REPO_PNPM_PATH}`,
                 '',
                 '## Maintainer Command',
                 '',
@@ -424,6 +434,12 @@ jobs:
             set of high-value changes needed to satisfy the maintainer request.
 
             Do not modify `.github/workflows/` unless the maintainer request explicitly requires it.
+
+            If you run Node.js or pnpm commands, use the repo toolchain described
+            in the context file rather than the Codex action's internal default
+            Node runtime. Prepend the preferred Node.js bin dir from the context
+            file to PATH before invoking repo commands so validations run under
+            the repo-supported Node version.
 
             After editing, run the smallest validation that gives useful signal.
             Prefer package-scoped commands when the change is narrow. If the
