@@ -4,6 +4,11 @@ on:
   issue_comment:
     types:
       - created
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+      - ready_for_review
   workflow_dispatch:
     inputs:
       pr_number:
@@ -22,9 +27,13 @@ on:
         description: Source PR comment URL
         required: false
         type: string
+      comment_id:
+        description: Source PR comment ID
+        required: false
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.pr_number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.event.inputs.pr_number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -33,7 +42,8 @@ jobs:
       github.repository == 'remix-run/remix' &&
       (
         github.event_name == 'workflow_dispatch' ||
-        github.event.issue.pull_request
+        github.event.issue.pull_request ||
+        github.event.pull_request
       )
     runs-on: ubuntu-latest
     permissions:
@@ -52,6 +62,7 @@ jobs:
       requester: ${{ steps.authorize.outputs.requester }}
       command: ${{ steps.authorize.outputs.command }}
       comment_url: ${{ steps.authorize.outputs.comment_url }}
+      source_comment_id: ${{ steps.authorize.outputs.source_comment_id }}
     steps:
       - name: Authorize comment command
         id: authorize
@@ -65,6 +76,7 @@ jobs:
             let requester = context.actor
             let command = ''
             let commentUrl = ''
+            let sourceCommentId = ''
             let recognized = false
 
             if (context.eventName === 'workflow_dispatch') {
@@ -72,7 +84,47 @@ jobs:
               requester = (inputs.requested_by || context.actor || '').trim()
               command = (inputs.command || '').trim()
               commentUrl = (inputs.comment_url || '').trim()
+              sourceCommentId = (inputs.comment_id || '').trim()
               recognized = command.length > 0 && Number.isInteger(prNumber)
+            } else if (context.eventName === 'pull_request') {
+              prNumber = context.payload.pull_request.number
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 100,
+              })
+
+              const handledCommentIds = new Set(
+                comments.flatMap((comment) => {
+                  return [...(comment.body || '').matchAll(/<!--\s*codex-pr-fix:(\d+)\s*-->/g)].map(
+                    (match) => match[1]
+                  )
+                })
+              )
+
+              const latestUnhandledCommand = [...comments].reverse().find((comment) => {
+                if (comment.user?.type === 'Bot') {
+                  return false
+                }
+
+                const match = (comment.body || '').match(commandPattern)
+                if (!match) {
+                  return false
+                }
+
+                return !handledCommentIds.has(String(comment.id))
+              })
+
+              if (latestUnhandledCommand) {
+                const match = latestUnhandledCommand.body.match(commandPattern)
+                requester = latestUnhandledCommand.user.login
+                command = match ? match[1].trim() : ''
+                commentUrl = latestUnhandledCommand.html_url || ''
+                sourceCommentId = String(latestUnhandledCommand.id)
+                recognized = command.length > 0
+              }
             } else {
               const body = context.payload.comment.body || ''
               const match = body.match(commandPattern)
@@ -80,6 +132,7 @@ jobs:
               requester = context.actor
               command = match ? match[1].trim() : ''
               commentUrl = context.payload.comment.html_url || ''
+              sourceCommentId = String(context.payload.comment.id)
               recognized = Boolean(match)
             }
 
@@ -89,6 +142,7 @@ jobs:
             core.setOutput('requester', requester)
             core.setOutput('command', command)
             core.setOutput('comment_url', commentUrl)
+            core.setOutput('source_comment_id', sourceCommentId)
 
             if (!recognized) {
               return
@@ -179,18 +233,25 @@ jobs:
           BLOCKED_REASON: ${{ needs.authorize.outputs.blocked_reason }}
           REQUESTER: ${{ needs.authorize.outputs.requester }}
           PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
+          SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
         with:
           github-token: ${{ github.token }}
           script: |
+            const lines = []
+            if (process.env.SOURCE_COMMENT_ID) {
+              lines.push(`<!-- codex-pr-fix:${process.env.SOURCE_COMMENT_ID} -->`, '')
+            }
+            lines.push(
+              `@${process.env.REQUESTER} I could not run the Codex fix workflow for this request.`,
+              '',
+              process.env.BLOCKED_REASON
+            )
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: Number(process.env.PR_NUMBER),
-              body: [
-                `@${process.env.REQUESTER} I could not run the Codex fix workflow for this request.`,
-                '',
-                process.env.BLOCKED_REASON,
-              ].join('\n'),
+              body: lines.join('\n'),
             })
 
   act:
@@ -240,6 +301,7 @@ jobs:
           REQUESTER: ${{ needs.authorize.outputs.requester }}
           COMMAND: ${{ needs.authorize.outputs.command }}
           COMMENT_URL: ${{ needs.authorize.outputs.comment_url }}
+          SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
         with:
           script: |
             const fs = require('fs')
@@ -266,12 +328,16 @@ jobs:
               per_page: 100,
             })
 
+            const latestCodexReview = [...comments]
+              .reverse()
+              .find((comment) => comment.body?.includes('<!-- codex-pr-review -->'))
+
             const recentHumanComments = comments
               .filter((comment) => {
                 return (
-                  comment.id !== context.payload.comment.id &&
+                  String(comment.id) !== process.env.SOURCE_COMMENT_ID &&
                   comment.user?.type !== 'Bot' &&
-                  !comment.body?.includes('<!-- codex-pr-review -->')
+                  !comment.body?.includes('<!-- codex-pr-fix:')
                 )
               })
               .slice(-8)
@@ -315,6 +381,17 @@ jobs:
                         ].join('\n')
                       })
                       .join('\n'),
+                '',
+                '## Latest Codex Review',
+                '',
+                latestCodexReview
+                  ? [
+                      `### @${latestCodexReview.user.login} on ${latestCodexReview.created_at}`,
+                      '',
+                      sanitize(latestCodexReview.body) || '(empty)',
+                      '',
+                    ].join('\n')
+                  : '- None',
                 '',
               ].join('\n')
             )
@@ -398,14 +475,19 @@ jobs:
           COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
           PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
           REQUESTER: ${{ needs.authorize.outputs.requester }}
+          SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
         with:
           github-token: ${{ github.token }}
           script: |
-            const lines = [
+            const lines = []
+            if (process.env.SOURCE_COMMENT_ID) {
+              lines.push(`<!-- codex-pr-fix:${process.env.SOURCE_COMMENT_ID} -->`, '')
+            }
+            lines.push(
               `@${process.env.REQUESTER} Codex finished processing your request.`,
               '',
-              process.env.CODEX_FINAL_MESSAGE || 'Codex did not return a summary.',
-            ]
+              process.env.CODEX_FINAL_MESSAGE || 'Codex did not return a summary.'
+            )
 
             if (process.env.CHANGED === 'true' && process.env.COMMIT_SHA) {
               lines.push(
@@ -443,6 +525,7 @@ jobs:
           HAS_REMIX_PAT: ${{ needs.authorize.outputs.has_remix_pat }}
           REQUESTER: ${{ needs.authorize.outputs.requester }}
           PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
+          SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
         with:
           github-token: ${{ github.token }}
           script: |
@@ -454,13 +537,19 @@ jobs:
               missing.push('`GH_REMIX_PAT`')
             }
 
+            const lines = []
+            if (process.env.SOURCE_COMMENT_ID) {
+              lines.push(`<!-- codex-pr-fix:${process.env.SOURCE_COMMENT_ID} -->`, '')
+            }
+            lines.push(
+              `@${process.env.REQUESTER} the Codex fix workflow is configured in the repo, but it is missing required secrets: ${missing.join(', ')}.`,
+              '',
+              'Add the missing repository secrets and comment again with `/codex ...` or `@codex ...`.'
+            )
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: Number(process.env.PR_NUMBER),
-              body: [
-                `@${process.env.REQUESTER} the Codex fix workflow is configured in the repo, but it is missing required secrets: ${missing.join(', ')}.`,
-                '',
-                'Add the missing repository secrets and comment again with `/codex ...` or `@codex ...`.',
-              ].join('\n'),
+              body: lines.join('\n'),
             })

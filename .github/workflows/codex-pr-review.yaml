@@ -69,6 +69,23 @@ jobs:
             "$PR_BASE_REF" \
             "+refs/pull/$PR_NUMBER/head"
 
+      - name: Install pnpm
+        if: steps.config.outputs.enabled == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        if: |
+          steps.config.outputs.enabled == 'true' &&
+          github.event_name == 'pull_request'
+        run: pnpm install --frozen-lockfile
+
       - name: Write review context
         if: steps.config.outputs.enabled == 'true'
         uses: actions/github-script@v7
@@ -99,6 +116,10 @@ jobs:
                 `- Base sha: ${process.env.PR_BASE_SHA}`,
                 `- Head ref: ${process.env.PR_HEAD_REF}`,
                 `- Head sha: ${process.env.PR_HEAD_SHA}`,
+                `- Review event: ${process.env.GITHUB_EVENT_NAME}`,
+                `- Node.js available: yes`,
+                `- pnpm available: yes`,
+                `- Dependencies installed: ${process.env.GITHUB_EVENT_NAME === 'pull_request' ? 'yes' : 'no (fork-safe review mode)'}`,
                 '',
                 '## Pull Request Title',
                 '',
