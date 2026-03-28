@@ -300,17 +300,13 @@ jobs:
       - name: Prepare Codex validation wrappers
         id: validation
         env:
-          RUNNER_TEMP: ${{ runner.temp }}
           REPO_NODE_PATH: ${{ steps.toolchain.outputs.repo_node_bin }}/node
           REPO_PNPM_PATH: ${{ steps.toolchain.outputs.repo_pnpm_path }}
         run: |
           set -eu
 
-          shim_dir="$RUNNER_TEMP/codex-toolchain-bin"
-          log_path="$RUNNER_TEMP/codex-validation-log.jsonl"
-
-          rm -rf "$shim_dir"
-          mkdir -p "$shim_dir"
+          shim_dir="$(mktemp -d /tmp/codex-toolchain-bin.XXXXXX)"
+          log_path="$shim_dir/codex-validation-log.jsonl"
           : > "$log_path"
 
           write_shim() {
