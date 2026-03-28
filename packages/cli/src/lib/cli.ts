@@ -9,12 +9,7 @@ import { runSkillsCommand } from './commands/skills.ts'
 import { runVersionCommand } from './commands/version.ts'
 import { renderCliError, unknownCommand } from './errors.ts'
 import { setCliRuntimeContext, type CliRuntimeContext } from './runtime-context.ts'
-import {
-  configureColors,
-  restoreTerminalFormatting,
-  writeCommandEpilogue,
-  writeCommandPreamble,
-} from './terminal.ts'
+import { configureColors, restoreTerminalFormatting } from './terminal.ts'
 
 export async function run(
   argv: string[] = process.argv.slice(2),
@@ -24,7 +19,6 @@ export async function run(
     cwd: process.cwd(),
     ...context,
   })
-  let shouldWriteCommandSpacing = false
 
   try {
     while (argv[0] === '--') {
@@ -34,12 +28,8 @@ export async function run(
     let globalOptions = extractGlobalOptions(argv)
     argv = globalOptions.argv
     configureColors({ disabled: globalOptions.noColor })
-    shouldWriteCommandSpacing = shouldWriteCommandPreambleForArgs(argv)
 
     if (argv.length === 0) {
-      if (shouldWriteCommandSpacing) {
-        writeCommandPreamble()
-      }
       process.stdout.write(getCliHelpText())
       return 0
     }
@@ -47,24 +37,14 @@ export async function run(
     let [command, ...rest] = argv
 
     if (command === '-h' || command === '--help') {
-      if (shouldWriteCommandSpacing) {
-        writeCommandPreamble()
-      }
       process.stdout.write(getCliHelpText())
       return 0
-    }
-
-    if (shouldWriteCommandSpacing) {
-      writeCommandPreamble()
     }
 
     return await runCommand(command, rest)
   } finally {
     setCliRuntimeContext(previousContext)
     restoreTerminalFormatting()
-    if (shouldWriteCommandSpacing) {
-      writeCommandEpilogue()
-    }
   }
 }
 
@@ -103,35 +83,6 @@ async function runCommand(command: string, argv: string[]): Promise<number> {
 
   process.stderr.write(renderCliError(unknownCommand(command), { helpText: getCliHelpText() }))
   return 1
-}
-
-function shouldWriteCommandPreambleForArgs(argv: string[]): boolean {
-  if (argv.length === 0) {
-    return true
-  }
-
-  let [command, ...rest] = argv
-
-  if (command === '-v' || command === '--version') {
-    return false
-  }
-
-  if (command === 'completion' || command === 'version') {
-    return rest.includes('-h') || rest.includes('--help')
-  }
-
-  if (command === 'doctor' || command === 'routes') {
-    return !rest.includes('--json')
-  }
-
-  if (command === 'skills') {
-    let [subcommand, ...subcommandArgs] = rest
-    if ((subcommand === 'list' || subcommand === 'status') && subcommandArgs.includes('--json')) {
-      return false
-    }
-  }
-
-  return true
 }
 
 function extractGlobalOptions(argv: string[]): { argv: string[]; noColor: boolean } {

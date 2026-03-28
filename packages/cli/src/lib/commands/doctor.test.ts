@@ -17,7 +17,10 @@ describe('doctor command', () => {
     let result = runDoctorCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/)
+    assert.match(
+      result.stdout,
+      /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/,
+    )
     assert.match(result.stdout, /Check project environment and Remix app conventions/)
     assert.match(result.stdout, /--fix\s+Create missing low-risk controller owner files/)
     assert.equal(result.stderr, '')
@@ -28,27 +31,25 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✓ environment/)
-    assert.match(result.stdout, /✓ project/)
-    assert.match(result.stdout, /✓ controllers/)
+    assert.match(result.stderr, /✓ environment/)
+    assert.match(result.stderr, /✓ project/)
+    assert.match(result.stderr, /✓ controllers/)
     assert.match(result.stdout, /Doctor found no issues\./)
-    assert.equal(result.stderr, '')
   })
 
   it('reports no findings for a clean fixture', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-clean'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✓ environment/)
-    assert.match(result.stdout, /✓ project/)
-    assert.match(result.stdout, /✓ controllers/)
+    assert.match(result.stderr, /✓ environment/)
+    assert.match(result.stderr, /✓ project/)
+    assert.match(result.stderr, /✓ controllers/)
     assert.match(
-      result.stdout,
-      /✓ environment\n\n• Checking project\.\.\.\n✓ project\n\n• Checking controllers\.\.\.\n✓ controllers\n\nDoctor found no issues\./,
+      result.stderr,
+      /✓ environment\n\n• Checking project\.\.\.\n✓ project\n\n• Checking controllers\.\.\.\n✓ controllers\n\n$/,
     )
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.match(result.stdout, /Summary: 0 warnings, 0 advice\./)
-    assert.equal(result.stderr, '')
   })
 
   it('applies no fixes for a clean fixture', async () => {
@@ -57,7 +58,7 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /Applied fixes:/)
     assert.match(result.stdout, /Doctor found no issues\./)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✓ controllers/)
   })
 
   it('does not print color when output is not a tty', async () => {
@@ -65,7 +66,7 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /\u001B\[/)
-    assert.equal(result.stderr, '')
+    assert.doesNotMatch(result.stderr, /\u001B\[/)
   })
 
   it('reports environment warnings and skips later suites when package.json is missing', async () => {
@@ -75,10 +76,10 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /• \[WARN\] Could not find package\.json/)
-      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
-      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /✗ environment/)
+      assert.match(result.stderr, /• project \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stdout, /environment:\n  • \[WARN\] Could not find package\.json\./)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -93,10 +94,10 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /• \[WARN\] package\.json is not valid JSON\./)
-      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
-      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /✗ environment/)
+      assert.match(result.stderr, /• project \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stdout, /environment:\n  • \[WARN\] package\.json is not valid JSON\./)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -131,13 +132,13 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /✗ environment/)
+      assert.match(result.stderr, /✗ environment/)
       assert.match(
         result.stdout,
-        /• \[WARN\] Project requires Node\.js >=99\.0\.0, but the current runtime is v\d+\.\d+\.\d+\./,
+        /environment:\n  • \[WARN\] Project requires Node\.js >=99\.0\.0, but the current runtime is v\d+\.\d+\.\d+\./,
       )
-      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
-      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /• project \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /• controllers \(skipped: Blocked by environment warnings\.\)/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -147,10 +148,13 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-env-missing-remix-dependency'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ environment/)
-    assert.match(result.stdout, /• \[WARN\] package\.json does not declare a remix dependency\./)
-    assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+    assert.match(result.stderr, /✗ environment/)
+    assert.match(result.stderr, /• project \(skipped: Blocked by environment warnings\.\)/)
+    assert.match(result.stderr, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+    assert.match(
+      result.stdout,
+      /environment:\n  • \[WARN\] package\.json does not declare a remix dependency\./,
+    )
   })
 
   it('reports unresolved remix installs and skips later suites', async () => {
@@ -176,10 +180,13 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /✗ environment/)
-      assert.match(result.stdout, /• \[WARN\] Could not resolve remix from this project\./)
-      assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
-      assert.match(result.stdout, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /✗ environment/)
+      assert.match(result.stderr, /• project \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(result.stderr, /• controllers \(skipped: Blocked by environment warnings\.\)/)
+      assert.match(
+        result.stdout,
+        /environment:\n  • \[WARN\] Could not resolve remix from this project\./,
+      )
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -214,11 +221,10 @@ describe('doctor command', () => {
       let result = runDoctorCommand([], tmpDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /✓ environment/)
-      assert.match(result.stdout, /✗ project/)
-      assert.match(result.stdout, /• \[WARN\] Project is missing app\/routes\.ts\./)
-      assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-      assert.equal(result.stderr, '')
+      assert.match(result.stderr, /✓ environment/)
+      assert.match(result.stderr, /✗ project/)
+      assert.match(result.stderr, /• controllers \(skipped: Blocked by project warnings\.\)/)
+      assert.match(result.stdout, /project:\n  • \[WARN\] Project is missing app\/routes\.ts\./)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -228,16 +234,16 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-missing'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
-      /• \[WARN\] Route "home" is missing action app\/controllers\/home\.tsx\./,
+      /controllers:\n  • \[WARN\] Route "home" is missing action app\/controllers\/home\.tsx\./,
     )
     assert.match(
       result.stdout,
       /• \[WARN\] Route "contact" is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
     assert.match(result.stdout, /controller\.tsx\.\n\nSummary: 2 warnings, 0 advice\./)
-    assert.equal(result.stderr, '')
   })
 
   it('creates runnable placeholder owners for missing routes and leaves the project clean', async () => {
@@ -247,10 +253,10 @@ describe('doctor command', () => {
       let fixResult = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(fixResult.status, 0, fixResult.stderr)
-      assert.match(fixResult.stdout, /✓ controllers/)
+      assert.match(fixResult.stderr, /✓ controllers/)
       assert.match(fixResult.stdout, /Applied fixes:/)
-      assert.match(fixResult.stdout, /• Created app\/controllers\/home\.js/)
-      assert.match(fixResult.stdout, /• Created app\/controllers\/contact\/controller\.js/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/home\.js/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/contact\/controller\.js/)
       assert.match(fixResult.stdout, /Applied 2 fixes\./)
       assert.match(fixResult.stdout, /Doctor found no issues\./)
 
@@ -291,6 +297,7 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-duplicate-owner'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Route "home" has multiple action files: app\/controllers\/home\.ts, app\/controllers\/home\.tsx\. Keep only one action owner file\./,
@@ -299,19 +306,18 @@ describe('doctor command', () => {
       result.stdout,
       /• \[WARN\] Route "contact" has multiple controller files: app\/controllers\/contact\/controller\.ts, app\/controllers\/contact\/controller\.jsx\. Keep only one controller owner file\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('reports incomplete controllers when a controller folder is missing its entry file', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-incomplete-controller'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Route "contact" has files under app\/controllers\/contact, but is missing controller app\/controllers\/contact\/controller\.tsx\./,
     )
     assert.doesNotMatch(result.stdout, /Route "contact" is missing controller/)
-    assert.equal(result.stderr, '')
   })
 
   it('creates a typed controller placeholder for incomplete controllers from local tsx evidence', async () => {
@@ -321,8 +327,8 @@ describe('doctor command', () => {
       let fixResult = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(fixResult.status, 0, fixResult.stderr)
-      assert.match(fixResult.stdout, /✓ controllers/)
-      assert.match(fixResult.stdout, /• Created app\/controllers\/contact\/controller\.tsx/)
+      assert.match(fixResult.stderr, /✓ controllers/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/contact\/controller\.tsx/)
 
       let contactSource = await fs.readFile(
         path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'),
@@ -347,6 +353,7 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-wrong-kind'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Route "home" expects action app\/controllers\/home\.tsx, but found controller app\/controllers\/home\/controller\.js\./,
@@ -355,7 +362,6 @@ describe('doctor command', () => {
       result.stdout,
       /• \[WARN\] Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('does not change non-fixable controller warnings', async () => {
@@ -375,7 +381,9 @@ describe('doctor command', () => {
       )
       assert.doesNotMatch(result.stdout, /Applied fixes:/)
       await assertPathMissing(path.join(projectDir, 'app', 'controllers', 'home.tsx'))
-      await assertPathMissing(path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'))
+      await assertPathMissing(
+        path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'),
+      )
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -385,17 +393,18 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('doctor-promotion-drift'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Route "home" uses action app\/controllers\/home\.js, but also has files under app\/controllers\/home\. Promote it to controller app\/controllers\/home\/controller\.tsx or keep the route in app\/controllers\/home\.js\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('reports ambiguous owner mappings', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-ambiguous'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Route "home" has both action app\/controllers\/home\.js and controller app\/controllers\/home\/controller\.ts\./,
@@ -404,13 +413,13 @@ describe('doctor command', () => {
       result.stdout,
       /• \[WARN\] Route "contact" has both controller app\/controllers\/contact\/controller\.jsx and standalone action app\/controllers\/contact\.ts\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('reports orphan actions and controller folders', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-orphans'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Standalone action app\/controllers\/about\.jsx does not match any top-level route\./,
@@ -419,24 +428,24 @@ describe('doctor command', () => {
       result.stdout,
       /• \[WARN\] Controller app\/controllers\/unused\/controller\.js does not match any route group\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('reports extraneous route directories outside any controller route', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-orphan-route-local-file'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Directory app\/controllers\/unused does not match any route subtree\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('reports extraneous route directories from the controller tree shape', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-generic-buckets'))
 
     assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /✗ controllers/)
     assert.match(
       result.stdout,
       /• \[WARN\] Directory app\/controllers\/components does not match any route subtree\./,
@@ -449,26 +458,23 @@ describe('doctor command', () => {
       result.stdout,
       /Route-local file app\/controllers\/components\/example\.jsx does not live under any controller route\./,
     )
-    assert.equal(result.stderr, '')
   })
 
   it('allows route names like shared and common when the route map declares them', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-route-names'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✓ controllers/)
+    assert.match(result.stderr, /✓ controllers/)
     assert.doesNotMatch(result.stdout, /shared-bucket/)
-    assert.equal(result.stderr, '')
   })
 
   it('uses kebab-case controller paths for camelCase route keys', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-camel-case-keys'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✓ controllers/)
+    assert.match(result.stderr, /✓ controllers/)
     assert.doesNotMatch(result.stdout, /forgotPassword/)
     assert.doesNotMatch(result.stdout, /resetPassword/)
-    assert.equal(result.stderr, '')
   })
 
   it('creates nested controller placeholders with kebab-case paths and camelCase actions', async () => {
@@ -516,14 +522,15 @@ describe('doctor command', () => {
       let fixResult = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(fixResult.status, 0, fixResult.stderr)
-      assert.match(fixResult.stdout, /• Created app\/controllers\/auth\/controller\.tsx/)
+      assert.match(fixResult.stderr, /✓ controllers/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/auth\/controller\.tsx/)
       assert.match(
         fixResult.stdout,
-        /• Created app\/controllers\/auth\/forgot-password\/controller\.tsx/,
+        /Created app\/controllers\/auth\/forgot-password\/controller\.tsx/,
       )
       assert.match(
         fixResult.stdout,
-        /• Created app\/controllers\/auth\/reset-password\/controller\.tsx/,
+        /Created app\/controllers\/auth\/reset-password\/controller\.tsx/,
       )
 
       let authSource = await fs.readFile(
@@ -535,8 +542,14 @@ describe('doctor command', () => {
         'utf8',
       )
 
-      assert.match(authSource, /import forgotPasswordController from '\.\/forgot-password\/controller\.tsx'/)
-      assert.match(authSource, /import resetPasswordController from '\.\/reset-password\/controller\.tsx'/)
+      assert.match(
+        authSource,
+        /import forgotPasswordController from '\.\/forgot-password\/controller\.tsx'/,
+      )
+      assert.match(
+        authSource,
+        /import resetPasswordController from '\.\/reset-password\/controller\.tsx'/,
+      )
       assert.match(authSource, /forgotPassword: forgotPasswordController/)
       assert.match(authSource, /resetPassword: resetPasswordController/)
       assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.index/)
@@ -586,7 +599,8 @@ describe('doctor command', () => {
       let result = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /• Created app\/controllers\/home\.ts/)
+      assert.match(result.stderr, /✓ controllers/)
+      assert.match(result.stdout, /Created app\/controllers\/home\.ts/)
       await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home.ts'))
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -628,7 +642,8 @@ describe('doctor command', () => {
       let result = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(result.status, 0, result.stderr)
-      assert.match(result.stdout, /• Created app\/controllers\/home\.jsx/)
+      assert.match(result.stderr, /✓ controllers/)
+      assert.match(result.stdout, /Created app\/controllers\/home\.jsx/)
       await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home.jsx'))
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -639,30 +654,33 @@ describe('doctor command', () => {
     let result = runDoctorCommand([], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project/)
-    assert.match(result.stdout, /• \[WARN\] app\/routes\.ts must export a named "routes" value\./)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✗ project/)
+    assert.match(result.stderr, /• controllers \(skipped: Blocked by project warnings\.\)/)
+    assert.match(
+      result.stdout,
+      /project:\n  • \[WARN\] app\/routes\.ts must export a named "routes" value\./,
+    )
   })
 
   it('reports project warnings when the route map is invalid', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-invalid-value'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project/)
-    assert.match(result.stdout, /• \[WARN\] Invalid route map value at "broken"/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✗ project/)
+    assert.match(result.stderr, /• controllers \(skipped: Blocked by project warnings\.\)/)
+    assert.match(result.stdout, /project:\n  • \[WARN\] Invalid route map value at "broken"/)
   })
 
   it('reports project warnings when importing routes throws', async () => {
     let result = runDoctorCommand([], getFixturePath('routes-import-error'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /✗ project/)
-    assert.match(result.stdout, /• \[WARN\] Failed to load app\/routes\.ts: boom from routes fixture/)
-    assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✗ project/)
+    assert.match(result.stderr, /• controllers \(skipped: Blocked by project warnings\.\)/)
+    assert.match(
+      result.stdout,
+      /project:\n  • \[WARN\] Failed to load app\/routes\.ts: boom from routes fixture/,
+    )
   })
 
   it('prints machine-readable findings as json', async () => {
@@ -735,7 +753,7 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 1)
     assert.match(result.stdout, /Summary: 2 warnings, 0 advice\./)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✗ controllers/)
   })
 
   it('fails strict mode when project warnings are present', async () => {
@@ -743,7 +761,7 @@ describe('doctor command', () => {
 
     assert.equal(result.status, 1)
     assert.match(result.stdout, /must export a named "routes" value/)
-    assert.equal(result.stderr, '')
+    assert.match(result.stderr, /✗ project/)
   })
 })
 
@@ -813,9 +831,7 @@ interface DoctorSuite {
 }
 
 interface DoctorAppliedFix {
-  code:
-    | 'incomplete-controller'
-    | 'missing-owner'
+  code: 'incomplete-controller' | 'missing-owner'
   kind: 'create-directory' | 'create-file'
   path: string
   routeName?: string

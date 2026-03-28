@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { fetchUnavailable, projectRootNotFound, remoteSkillDataMissing } from './errors.ts'
-import { runProgressStep, type StepProgressReporter } from './progress.ts'
+import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'

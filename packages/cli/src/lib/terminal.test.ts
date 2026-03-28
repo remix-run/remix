@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 
 import {
   bold,
+  clearCurrentLine,
   configureColors,
   lightBlue,
   lightGreen,
@@ -12,8 +13,6 @@ import {
   remixWordmark,
   reset,
   restoreTerminalFormatting,
-  writeCommandEpilogue,
-  writeCommandPreamble,
 } from './terminal.ts'
 
 describe('terminal', () => {
@@ -152,50 +151,6 @@ describe('terminal', () => {
     )
   })
 
-  it('writes a leading blank line to stdout when stdout is a tty', async () => {
-    withTTY(process.stdout, true, () =>
-      withCapturedWrites(process.stdout, (writes) => {
-        writeCommandPreamble()
-
-        assert.deepEqual(writes, ['\n'])
-      }),
-    )
-  })
-
-  it('writes a leading blank line to stderr when only stderr is a tty', async () => {
-    withTTY(process.stdout, false, () =>
-      withTTY(process.stderr, true, () =>
-        withCapturedWrites(process.stderr, (writes) => {
-          writeCommandPreamble()
-
-          assert.deepEqual(writes, ['\n'])
-        }),
-      ),
-    )
-  })
-
-  it('writes a trailing blank line to stdout when stdout is a tty', async () => {
-    withTTY(process.stdout, true, () =>
-      withCapturedWrites(process.stdout, (writes) => {
-        writeCommandEpilogue()
-
-        assert.deepEqual(writes, ['\n'])
-      }),
-    )
-  })
-
-  it('writes a trailing blank line to stderr when only stderr is a tty', async () => {
-    withTTY(process.stdout, false, () =>
-      withTTY(process.stderr, true, () =>
-        withCapturedWrites(process.stderr, (writes) => {
-          writeCommandEpilogue()
-
-          assert.deepEqual(writes, ['\n'])
-        }),
-      ),
-    )
-  })
-
   it('renders the Remix wordmark with one color per letter when colors are enabled', async () => {
     withEnv('NO_COLOR', undefined, () =>
       withEnv('TERM', 'xterm-256color', () =>
@@ -219,6 +174,10 @@ describe('terminal', () => {
         assert.equal(remixWordmark(), 'REMIX')
       }),
     )
+  })
+
+  it('returns the ansi sequence to clear the current line', async () => {
+    assert.equal(clearCurrentLine(), '\r\u001B[2K')
   })
 })
 

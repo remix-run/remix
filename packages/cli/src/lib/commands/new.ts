@@ -15,7 +15,11 @@ import {
   unexpectedExtraArgument,
 } from '../errors.ts'
 import { getDisplayPath } from '../display-path.ts'
-import { createStepProgressReporter, writeProgressCommandHeader } from '../progress.ts'
+import {
+  createCommandReporter,
+  createStepProgressReporter,
+  type CommandReporter,
+} from '../reporter.ts'
 
 const NEW_PROGRESS_LABELS = {
   'finalize-package-json': 'Finalize package.json',
@@ -29,16 +33,15 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let progress = createNewProgressReporter()
+  let reporter = createCommandReporter()
+  let progress = createNewProgressReporter(reporter)
 
   try {
     let options = parseNewCommandArgs(argv)
-    await writeProgressCommandHeader('new', process.stdout)
+    await reporter.status.commandHeader('new')
     let result = await bootstrapProject(options, progress)
     progress.writeSummaryGap()
-    process.stdout.write(
-      `Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir)}\n`,
-    )
+    reporter.out.line(`Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir)}`)
     return 0
   } catch (error) {
     progress.writeSummaryGap()
@@ -105,6 +108,6 @@ function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {
   return { appName, force, targetDir }
 }
 
-function createNewProgressReporter(): BootstrapProgressReporter {
-  return createStepProgressReporter(NEW_PROGRESS_LABELS, process.stdout)
+function createNewProgressReporter(reporter: CommandReporter): BootstrapProgressReporter {
+  return createStepProgressReporter(reporter.status, NEW_PROGRESS_LABELS)
 }

@@ -2,6 +2,8 @@ import * as process from 'node:process'
 
 const ANSI_RESET = '\u001B[0m'
 const ANSI_BOLD = '\u001B[1m'
+const ANSI_CLEAR_LINE = '\u001B[2K'
+const ANSI_CURSOR_TO_START = '\r'
 const ANSI_LIGHT_BLUE = '\u001B[94m'
 const ANSI_LIGHT_GREEN = '\u001B[92m'
 const ANSI_LIGHT_GRAY = '\u001B[90m'
@@ -61,26 +63,8 @@ export function remixWordmark(target: NodeJS.WriteStream = process.stdout): stri
   ].join('')
 }
 
-export function writeCommandPreamble(): void {
-  if (process.stdout.isTTY) {
-    process.stdout.write('\n')
-    return
-  }
-
-  if (process.stderr.isTTY) {
-    process.stderr.write('\n')
-  }
-}
-
-export function writeCommandEpilogue(): void {
-  if (process.stdout.isTTY) {
-    process.stdout.write('\n')
-    return
-  }
-
-  if (process.stderr.isTTY) {
-    process.stderr.write('\n')
-  }
+export function clearCurrentLine(): string {
+  return `${ANSI_CURSOR_TO_START}${ANSI_CLEAR_LINE}`
 }
 
 export function restoreTerminalFormatting(): void {

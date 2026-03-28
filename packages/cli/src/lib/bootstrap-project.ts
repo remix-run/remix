@@ -9,8 +9,8 @@ import {
   targetDirectoryNotEmpty,
   targetPathNotDirectory,
 } from './errors.ts'
-import { runProgressStep, type StepProgressReporter } from './progress.ts'
 import { getRuntimeRemixVersion } from './runtime-context.ts'
+import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 
 const BOOTSTRAP_DIRECTORY = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

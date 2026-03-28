@@ -80,19 +80,18 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /• Resolve project root\.\.\./)
-      assert.match(result.stdout, /✓ Resolve project root/)
-      assert.match(result.stdout, /• Fetch Remix skills from GitHub\.\.\./)
-      assert.match(result.stdout, /✓ Fetch Remix skills from GitHub/)
-      assert.match(result.stdout, /• Compare local skills\.\.\./)
-      assert.match(result.stdout, /✓ Compare local skills/)
-      assert.match(result.stdout, /• Write updated skills\.\.\./)
-      assert.match(result.stdout, /✓ Write updated skills/)
+      assert.match(result.stderr, /• Resolve project root\.\.\./)
+      assert.match(result.stderr, /✓ Resolve project root/)
+      assert.match(result.stderr, /• Fetch Remix skills from GitHub\.\.\./)
+      assert.match(result.stderr, /✓ Fetch Remix skills from GitHub/)
+      assert.match(result.stderr, /• Compare local skills\.\.\./)
+      assert.match(result.stderr, /✓ Compare local skills/)
+      assert.match(result.stderr, /• Write updated skills\.\.\./)
+      assert.match(result.stderr, /✓ Write updated skills/)
+      assert.match(result.stderr, /✓ Write updated skills\n\n$/)
       assert.match(
         result.stdout,
-        new RegExp(
-          `✓ Write updated skills\\n\\nSynced Remix skills into ${escapeRegExp(path.join('.agents', 'skills'))}:`,
-        ),
+        new RegExp(`Synced Remix skills into ${escapeRegExp(path.join('.agents', 'skills'))}:`),
       )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-ui/)
@@ -131,7 +130,7 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /• Write updated skills\.\.\./)
+      assert.match(result.stderr, /• Write updated skills\.\.\./)
       assert.match(result.stdout, /• replaced remix-ui/)
       assert.equal(
         await fs.readFile(path.join(tmpDir, '.agents', 'skills', 'remix-ui', 'SKILL.md'), 'utf8'),
@@ -170,7 +169,7 @@ describe('skills command', () => {
       let displayPath = path.relative(nestedDir, path.join(tmpDir, 'custom', 'skills'))
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /✓ Resolve project root/)
+      assert.match(result.stderr, /✓ Resolve project root/)
       assert.match(
         result.stdout,
         new RegExp(`Synced Remix skills into ${escapeRegExp(displayPath)}:`),
@@ -215,6 +214,7 @@ describe('skills command', () => {
       let displayPath = path.relative(nestedDir, path.join(demoDir, '.agents', 'skills'))
 
       assert.equal(result.exitCode, 0)
+      assert.match(result.stderr, /✓ Resolve project root/)
       assert.match(
         result.stdout,
         new RegExp(`Synced Remix skills into ${escapeRegExp(displayPath)}:`),
@@ -258,10 +258,11 @@ describe('skills command', () => {
       )
 
       assert.equal(result.exitCode, 0)
+      assert.match(result.stderr, /• Write updated skills \(skipped: No changes\.\)\n\n$/)
       assert.match(
         result.stdout,
         new RegExp(
-          `• Write updated skills \\(skipped: No changes\\.\\)\\n\\nNo changes\\. ${escapeRegExp(path.join('.agents', 'skills'))} is up to date\\.`,
+          `No changes\\. ${escapeRegExp(path.join('.agents', 'skills'))} is up to date\\.`,
         ),
       )
     } finally {

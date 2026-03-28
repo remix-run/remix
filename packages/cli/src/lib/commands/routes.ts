@@ -7,8 +7,9 @@ import {
   unknownArgument,
   unexpectedExtraArgument,
 } from '../errors.ts'
+import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
-import { bold, lightRed } from '../terminal.ts'
+import { lightRed } from '../terminal.ts'
 
 const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
 
@@ -21,17 +22,20 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
   try {
     let options = parseRoutesCommandArgs(argv)
     let routeMap = await loadRouteMap()
+    let reporter = createCommandReporter()
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
-      process.stdout.write(renderRouteMap(routeMap, options))
+      writeRouteMap(reporter.out, routeMap, options)
     }
 
     return 0
   } catch (error) {
     let cliError = toCliError(error)
-    process.stderr.write(lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), process.stderr))
+    process.stderr.write(
+      lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), process.stderr),
+    )
     return 1
   }
 }
@@ -113,19 +117,26 @@ function parseRoutesCommandArgs(argv: string[]): RoutesCommandOptions {
   return { json, noHeaders, table, verbose }
 }
 
-function renderRouteMap(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
+function writeRouteMap(
+  out: TextChannel,
+  routeMap: LoadedRouteMap,
+  options: RoutesCommandOptions,
+): void {
   if (routeMap.tree.length === 0) {
-    return 'No routes.\n'
+    out.line('No routes.')
+    return
   }
 
   if (options.table) {
-    return renderRouteTable(routeMap, options)
+    writeRouteTable(out, routeMap, options)
+    return
   }
 
   let lines: string[] = []
   renderRouteNodes(lines, routeMap.tree, '', true, null, options)
-
-  return `${lines.join('\n')}\n`
+  for (let line of lines) {
+    out.line(line)
+  }
 }
 
 function renderRouteNodes(
@@ -201,7 +212,11 @@ function formatRouteNode(
   return leaf
 }
 
-function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOptions): string {
+function writeRouteTable(
+  out: TextChannel,
+  routeMap: LoadedRouteMap,
+  options: RoutesCommandOptions,
+): void {
   let rows = flattenRoutes(routeMap.tree).map((node) => ({
     method: node.method!,
     node,
@@ -209,36 +224,14 @@ function renderRouteTable(routeMap: LoadedRouteMap, options: RoutesCommandOption
     path: node.pattern!,
     route: node.name,
   }))
-  let routeWidth = rows.reduce((width, row) => Math.max(width, row.route.length), 'Route'.length)
-  let methodWidth = rows.reduce((width, row) => Math.max(width, row.method.length), 'Method'.length)
-  let pathWidth = rows.reduce((width, row) => Math.max(width, row.path.length), 'Path'.length)
-  let lines =
-    options.noHeaders
-      ? []
-      : [
-          [
-            bold('Route'.padEnd(routeWidth)),
-            bold('Method'.padEnd(methodWidth)),
-            bold('Path'.padEnd(pathWidth)),
-            bold('Owner'),
-          ].join('  '),
-        ]
-
-  for (let row of rows) {
-    lines.push(
-      colorRouteLine(
-        [
-          row.route.padEnd(routeWidth),
-          row.method.padEnd(methodWidth),
-          row.path.padEnd(pathWidth),
-          row.owner,
-        ].join('  '),
-        row.node,
-      ),
-    )
-  }
-
-  return `${lines.join('\n')}\n`
+  out.table({
+    formatRow(line, rowIndex) {
+      return colorRouteLine(line, rows[rowIndex]!.node)
+    },
+    headers: ['Route', 'Method', 'Path', 'Owner'],
+    noHeaders: options.noHeaders,
+    rows: rows.map((row) => [row.route, row.method, row.path, row.owner]),
+  })
 }
 
 function flattenRoutes(nodes: RouteTreeNode[], routes: RouteTreeNode[] = []): RouteTreeNode[] {

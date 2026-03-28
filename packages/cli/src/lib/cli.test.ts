@@ -165,13 +165,13 @@ describe('run', () => {
       let result = await captureOutput(() => run(['new', appDir, '--app-name', 'My App']))
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stdout, /• Prepare target directory\.\.\./)
-      assert.match(result.stdout, /✓ Prepare target directory/)
-      assert.match(result.stdout, /• Generate scaffold files\.\.\./)
-      assert.match(result.stdout, /✓ Generate scaffold files/)
-      assert.match(result.stdout, /• Finalize package\.json\.\.\./)
-      assert.match(result.stdout, /✓ Finalize package\.json/)
-      assert.match(result.stdout, /✓ Finalize package\.json\n\nCreated My App at/)
+      assert.match(result.stderr, /• Prepare target directory\.\.\./)
+      assert.match(result.stderr, /✓ Prepare target directory/)
+      assert.match(result.stderr, /• Generate scaffold files\.\.\./)
+      assert.match(result.stderr, /✓ Generate scaffold files/)
+      assert.match(result.stderr, /• Finalize package\.json\.\.\./)
+      assert.match(result.stderr, /✓ Finalize package\.json/)
+      assert.match(result.stderr, /✓ Finalize package\.json\n\n$/)
       assert.match(
         result.stdout,
         new RegExp(`Created My App at ${escapeRegExp(path.relative(process.cwd(), appDir))}`),
@@ -240,11 +240,12 @@ describe('run', () => {
       let result = await captureOutput(() => run(['new', appDir, '--force']))
 
       assert.equal(result.exitCode, 1)
-      assert.match(result.stdout, /• Prepare target directory\.\.\./)
-      assert.match(result.stdout, /✓ Prepare target directory/)
-      assert.match(result.stdout, /• Generate scaffold files\.\.\./)
-      assert.match(result.stdout, /✗ Generate scaffold files/)
-      assert.match(result.stdout, /✗ Generate scaffold files\n\n$/)
+      assert.equal(result.stdout, '')
+      assert.match(result.stderr, /• Prepare target directory\.\.\./)
+      assert.match(result.stderr, /✓ Prepare target directory/)
+      assert.match(result.stderr, /• Generate scaffold files\.\.\./)
+      assert.match(result.stderr, /✗ Generate scaffold files/)
+      assert.match(result.stderr, /✗ Generate scaffold files\n\n/)
       assert.match(result.stderr, /Target path is not a directory|EEXIST|ENOTDIR/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })

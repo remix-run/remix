@@ -11,7 +11,11 @@ import {
 } from '../errors.ts'
 import type { SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
-import { createStepProgressReporter, writeProgressCommandHeader } from '../progress.ts'
+import {
+  createCommandReporter,
+  createStepProgressReporter,
+  type CommandReporter,
+} from '../reporter.ts'
 
 const SKILLS_INSTALL_PROGRESS_LABELS = {
   'compare-local-skills': 'Compare local skills',
@@ -136,11 +140,12 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     return 1
   }
 
-  let progress = createSkillsInstallProgressReporter()
+  let reporter = createCommandReporter()
+  let progress = createSkillsInstallProgressReporter(reporter)
   let cwd = process.cwd()
 
   try {
-    await writeProgressCommandHeader('skills install', process.stdout)
+    await reporter.status.commandHeader('skills install')
     let result = await installRemixSkills(cwd, globalThis.fetch, {
       progress,
       skillsDir: options.dir ?? undefined,
@@ -148,14 +153,12 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     let skillsDir = getDisplayPath(result.skillsDir, cwd)
     progress.writeSummaryGap()
     if (result.appliedChanges.length === 0) {
-      process.stdout.write(`No changes. ${skillsDir} is up to date.\n`)
+      reporter.out.line(`No changes. ${skillsDir} is up to date.`)
       return 0
     }
 
-    process.stdout.write(`Synced Remix skills into ${skillsDir}:\n`)
-    for (let line of formatAppliedChanges(result.appliedChanges)) {
-      process.stdout.write(`${line}\n`)
-    }
+    reporter.out.line(`Synced Remix skills into ${skillsDir}:`)
+    reporter.out.bullets(formatAppliedChanges(result.appliedChanges))
     return 0
   } catch (error) {
     progress.writeSummaryGap()
@@ -183,6 +186,7 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
   }
 
   let cwd = process.cwd()
+  let reporter = createCommandReporter()
 
   return runSkillsAction([], getSkillsListCommandHelpText(), async () => {
     let result = await getSkillsOverview(cwd, globalThis.fetch, {
@@ -205,10 +209,8 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
       return 0
     }
 
-    process.stdout.write(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:\n`)
-    for (let entry of entries) {
-      process.stdout.write(`${BULLET} ${entry.state} ${entry.name}\n`)
-    }
+    reporter.out.line(`Remix skills in ${getDisplayPath(result.skillsDir, cwd)}:`)
+    reporter.out.bullets(entries.map((entry) => `${entry.state} ${entry.name}`))
     return 0
   })
 }
@@ -230,6 +232,7 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
   }
 
   let cwd = process.cwd()
+  let reporter = createCommandReporter()
 
   return runSkillsAction([], getSkillsStatusCommandHelpText(), async () => {
     let result = await getSkillsOverview(cwd, globalThis.fetch, {
@@ -251,14 +254,12 @@ async function runSkillsStatusCommand(argv: string[]): Promise<number> {
     }
 
     if (result.changes.length === 0) {
-      process.stdout.write(`No changes. ${getDisplayPath(result.skillsDir, cwd)} is up to date.\n`)
+      reporter.out.line(`No changes. ${getDisplayPath(result.skillsDir, cwd)} is up to date.`)
       return 0
     }
 
-    process.stdout.write(`Remix skills to sync into ${getDisplayPath(result.skillsDir, cwd)}:\n`)
-    for (let change of result.changes) {
-      process.stdout.write(`${change.action} ${change.name}\n`)
-    }
+    reporter.out.line(`Remix skills to sync into ${getDisplayPath(result.skillsDir, cwd)}:`)
+    reporter.out.bullets(result.changes.map((change) => `${change.action} ${change.name}`))
     return 0
   })
 }
@@ -290,8 +291,8 @@ function ensureNoExtraArgs(argv: string[]): void {
   throw unexpectedExtraArgument(arg)
 }
 
-function createSkillsInstallProgressReporter(): SkillsProgressReporter {
-  return createStepProgressReporter(SKILLS_INSTALL_PROGRESS_LABELS, process.stdout)
+function createSkillsInstallProgressReporter(reporter: CommandReporter): SkillsProgressReporter {
+  return createStepProgressReporter(reporter.status, SKILLS_INSTALL_PROGRESS_LABELS)
 }
 
 function formatAppliedChanges(
@@ -299,9 +300,7 @@ function formatAppliedChanges(
 ): string[] {
   let showAction = changes.some((change) => change.action !== 'add')
   return changes.map((change) =>
-    showAction
-      ? `${BULLET} ${toPastTense(change.action)} ${change.name}`
-      : `${BULLET} ${change.name}`,
+    showAction ? `${toPastTense(change.action)} ${change.name}` : change.name,
   )
 }
 
@@ -351,5 +350,3 @@ function parseSkillsDirArgs(
 function toPastTense(action: 'add' | 'replace'): string {
   return action === 'add' ? 'added' : 'replaced'
 }
-
-const BULLET = '•'

@@ -10,18 +10,18 @@ import {
   createSkippedDoctorSuite,
   type DoctorAppliedFix,
   type DoctorFinding,
-  type DoctorFixPlan,
   type DoctorReport,
   type DoctorSuiteName,
   type DoctorSuiteResult,
 } from '../doctor/types.ts'
 import { renderCliError, toCliError, unknownArgument, unexpectedExtraArgument } from '../errors.ts'
 import {
+  createCommandReporter,
   createStepProgressReporter,
+  type CommandReporter,
   type StepProgressReporter,
-  writeProgressCommandHeader,
-} from '../progress.ts'
-import { lightRed, lightYellow } from '../terminal.ts'
+} from '../reporter.ts'
+import { lightRed } from '../terminal.ts'
 
 const DOCTOR_SUITE_LABELS = {
   controllers: {
@@ -50,13 +50,14 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   }
 
+  let reporter = createCommandReporter()
   let progress: StepProgressReporter<DoctorSuiteName> | null = null
 
   try {
     let options = parseDoctorCommandArgs(argv)
-    progress = options.json ? null : createStepProgressReporter(DOCTOR_SUITE_LABELS, process.stdout)
+    progress = options.json ? null : createDoctorProgressReporter(reporter)
     if (!options.json) {
-      await writeProgressCommandHeader('doctor', process.stdout)
+      await reporter.status.commandHeader('doctor')
     }
 
     let report = await collectDoctorReport(progress, options)
@@ -64,7 +65,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
     } else {
-      process.stdout.write(renderDoctorSummary(report))
+      writeDoctorReport(reporter, report)
     }
 
     if ((options.fix || options.strict) && hasWarningFindings(report.findings)) {
@@ -144,12 +145,7 @@ async function collectDoctorReport(
     environment.projectRoot == null
       ? undefined
       : path.join(environment.projectRoot, 'app', 'routes.ts')
-
-  if (progress != null) {
-    writeSuiteFindings(environment.suite)
-    writeSuiteAppliedFixes(environment.suite)
-    writeSuiteGap(progress)
-  }
+  progress?.writeSummaryGap()
 
   if (hasWarningFindings(environment.suite.findings)) {
     let projectSuite = createSkippedDoctorSuite('project', 'Blocked by environment warnings.')
@@ -159,9 +155,9 @@ async function collectDoctorReport(
     )
     suites.push(projectSuite, controllersSuite)
     progress?.skip(projectSuite.name, projectSuite.reason)
-    writeSuiteGap(progress)
+    progress?.writeSummaryGap()
     progress?.skip(controllersSuite.name, controllersSuite.reason)
-    writeSuiteGap(progress)
+    progress?.writeSummaryGap()
 
     return {
       appRoot: environment.projectRoot,
@@ -173,22 +169,19 @@ async function collectDoctorReport(
     }
   }
 
-  let project = await runDoctorSuite(progress, 'project', () => checkProject(environment.projectRoot!))
+  let project = await runDoctorSuite(progress, 'project', () =>
+    checkProject(environment.projectRoot!),
+  )
   findings.push(...project.suite.findings)
   routesFile = project.routesFile
   suites.push(project.suite)
-
-  if (progress != null) {
-    writeSuiteFindings(project.suite)
-    writeSuiteAppliedFixes(project.suite)
-    writeSuiteGap(progress)
-  }
+  progress?.writeSummaryGap()
 
   if (hasWarningFindings(project.suite.findings)) {
     let controllersSuite = createSkippedDoctorSuite('controllers', 'Blocked by project warnings.')
     suites.push(controllersSuite)
     progress?.skip(controllersSuite.name, controllersSuite.reason)
-    writeSuiteGap(progress)
+    progress?.writeSummaryGap()
 
     return {
       appRoot: environment.projectRoot,
@@ -227,12 +220,7 @@ async function collectDoctorReport(
   findings.push(...controllers.suite.findings)
   appliedFixes.push(...(controllers.appliedFixes ?? []))
   suites.push(controllers.suite)
-
-  if (progress != null) {
-    writeSuiteFindings(controllers.suite)
-    writeSuiteAppliedFixes(controllers.suite)
-    writeSuiteGap(progress)
-  }
+  progress?.writeSummaryGap()
 
   let report: DoctorReport = {
     appRoot: environment.projectRoot,
@@ -262,53 +250,12 @@ function getRemainingFindings(
   )
 }
 
-function renderDoctorSummary(report: DoctorReport): string {
-  let lines: string[] = []
-  let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
-  let adviceCount = report.findings.length - warningCount
-
-  if ((report.appliedFixes?.length ?? 0) > 0) {
-    let fixCount = report.appliedFixes!.length
-    lines.push(`Applied ${fixCount} ${fixCount === 1 ? 'fix' : 'fixes'}.`)
-  }
-
-  if (report.findings.length === 0) {
-    lines.push('Doctor found no issues.')
-  }
-
-  lines.push(`Summary: ${warningCount} warnings, ${adviceCount} advice.`)
-
-  return `${lines.join('\n')}\n`
-}
-
 function hasWarningFindings(findings: DoctorFinding[]): boolean {
   return findings.some((finding) => finding.severity === 'warn')
 }
 
-function formatFinding(finding: DoctorFinding): string {
-  let line = `  • [${finding.severity.toUpperCase()}] ${finding.message}`
-
-  if (finding.severity === 'warn') {
-    return lightYellow(line)
-  }
-
-  return line
-}
-
 function formatAppliedFix(appliedFix: DoctorAppliedFix): string {
-  if (appliedFix.kind === 'create-file') {
-    return `  • Created ${appliedFix.path}`
-  }
-
-  return `  • Created ${appliedFix.path}`
-}
-
-function writeSuiteGap(progress: StepProgressReporter<DoctorSuiteName> | null): void {
-  if (progress == null) {
-    return
-  }
-
-  process.stdout.write('\n')
+  return `Created ${appliedFix.path}`
 }
 
 async function runDoctorSuite<
@@ -338,24 +285,43 @@ async function runDoctorSuite<
   }
 }
 
-function writeSuiteFindings(suite: DoctorSuiteResult): void {
-  if (suite.status !== 'issues') {
-    return
-  }
-
-  for (let finding of suite.findings) {
-    process.stdout.write(`${formatFinding(finding)}\n`)
-  }
+function createDoctorProgressReporter(
+  reporter: CommandReporter,
+): StepProgressReporter<DoctorSuiteName> {
+  return createStepProgressReporter(reporter.status, DOCTOR_SUITE_LABELS)
 }
 
-function writeSuiteAppliedFixes(suite: DoctorSuiteResult): void {
-  if ((suite.appliedFixes?.length ?? 0) === 0) {
-    return
+function writeDoctorReport(reporter: CommandReporter, report: DoctorReport): void {
+  for (let suite of report.suites) {
+    if (suite.status !== 'issues' && (suite.appliedFixes?.length ?? 0) === 0) {
+      continue
+    }
+
+    reporter.out.section(`${suite.name}:`, () => {
+      for (let finding of suite.findings) {
+        reporter.out.bullet(reporter.out.label(finding.severity.toUpperCase(), finding.message))
+      }
+
+      if ((suite.appliedFixes?.length ?? 0) > 0) {
+        reporter.out.section('Applied fixes:', () => {
+          reporter.out.bullets((suite.appliedFixes ?? []).map(formatAppliedFix))
+        })
+      }
+    })
+    reporter.out.blank()
   }
 
-  process.stdout.write('  Applied fixes:\n')
+  let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
+  let adviceCount = report.findings.length - warningCount
 
-  for (let appliedFix of suite.appliedFixes ?? []) {
-    process.stdout.write(`${formatAppliedFix(appliedFix)}\n`)
+  if ((report.appliedFixes?.length ?? 0) > 0) {
+    let fixCount = report.appliedFixes!.length
+    reporter.out.line(`Applied ${fixCount} ${fixCount === 1 ? 'fix' : 'fixes'}.`)
   }
+
+  if (report.findings.length === 0) {
+    reporter.out.line('Doctor found no issues.')
+  }
+
+  reporter.out.line(`Summary: ${warningCount} warnings, ${adviceCount} advice.`)
 }
