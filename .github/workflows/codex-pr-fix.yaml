@@ -297,6 +297,52 @@ jobs:
           echo "repo_node_bin=$(dirname "$(command -v node)")" >> "$GITHUB_OUTPUT"
           echo "repo_pnpm_path=$(command -v pnpm)" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare Codex validation wrappers
+        id: validation
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+          REPO_NODE_PATH: ${{ steps.toolchain.outputs.repo_node_bin }}/node
+          REPO_PNPM_PATH: ${{ steps.toolchain.outputs.repo_pnpm_path }}
+        run: |
+          set -eu
+
+          shim_dir="$RUNNER_TEMP/codex-toolchain-bin"
+          log_path="$RUNNER_TEMP/codex-validation-log.jsonl"
+
+          rm -rf "$shim_dir"
+          mkdir -p "$shim_dir"
+          : > "$log_path"
+
+          write_shim() {
+            local tool_name="$1"
+            local actual_path="$2"
+            local child_mode="$3"
+            {
+              printf '%s\n' '#!/usr/bin/env bash' 'set -u' ''
+              printf 'actual_path=%q\n' "$actual_path"
+              printf 'log_path=%q\n' "$log_path"
+              printf 'tool_name=%q\n' "$tool_name"
+              printf '%s\n' 'cwd="$(pwd)"' 'started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"' ''
+              printf 'if [ %q = "skip-child-node" ] && [ "${CODEX_RECORD_COMMANDS_CHILD:-}" = "1" ]; then\n' "$child_mode"
+              printf '%s\n' '  exec "$actual_path" "$@"' 'fi' ''
+              printf 'if [ %q = "mark-children" ]; then\n' "$child_mode"
+              printf '%s\n' '  CODEX_RECORD_COMMANDS_CHILD=1 "$actual_path" "$@"' '  status=$?' 'else' '  "$actual_path" "$@"' '  status=$?' 'fi' ''
+              printf '%s\n' 'finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"' ''
+              printf '%s\n' 'python3 -c '"'"'import json, pathlib, sys; log_path, tool_name, cwd, started_at, finished_at, status, *args = sys.argv[1:]; pathlib.Path(log_path).parent.mkdir(parents=True, exist_ok=True); open(log_path, "a", encoding="utf-8").write(json.dumps({"tool": tool_name, "cwd": cwd, "started_at": started_at, "finished_at": finished_at, "exit_code": int(status), "argv": [tool_name, *args]}) + "\n")'"'"' "$log_path" "$tool_name" "$cwd" "$started_at" "$finished_at" "$status" "$@"'
+              printf '%s\n' '' 'exit "$status"'
+            } > "$shim_dir/$tool_name"
+
+            chmod +x "$shim_dir/$tool_name"
+          }
+
+          write_shim node "$REPO_NODE_PATH" "skip-child-node"
+          write_shim pnpm "$REPO_PNPM_PATH" "mark-children"
+          write_shim npm "$(dirname "$REPO_NODE_PATH")/npm" "mark-children"
+          write_shim npx "$(dirname "$REPO_NODE_PATH")/npx" "mark-children"
+
+          echo "wrapper_bin_dir=$shim_dir" >> "$GITHUB_OUTPUT"
+          echo "validation_log_path=$log_path" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -311,6 +357,8 @@ jobs:
           COMMAND: ${{ needs.authorize.outputs.command }}
           COMMENT_URL: ${{ needs.authorize.outputs.comment_url }}
           SOURCE_COMMENT_ID: ${{ needs.authorize.outputs.source_comment_id }}
+          WRAPPER_BIN_DIR: ${{ steps.validation.outputs.wrapper_bin_dir }}
+          VALIDATION_LOG_PATH: ${{ steps.validation.outputs.validation_log_path }}
           REPO_NODE_BIN: ${{ steps.toolchain.outputs.repo_node_bin }}
           REPO_PNPM_PATH: ${{ steps.toolchain.outputs.repo_pnpm_path }}
         with:
@@ -366,8 +414,10 @@ jobs:
                 `- Base sha: ${pr.base.sha}`,
                 `- Head ref: ${process.env.PR_HEAD_REF}`,
                 `- Head sha: ${pr.head.sha}`,
-                `- Preferred Node.js bin dir for repo commands: ${process.env.REPO_NODE_BIN}`,
-                `- Preferred pnpm path for repo commands: ${process.env.REPO_PNPM_PATH}`,
+                `- Preferred wrapper bin dir for repo commands: ${process.env.WRAPPER_BIN_DIR}`,
+                `- Validation log path: ${process.env.VALIDATION_LOG_PATH}`,
+                `- Actual repo Node.js bin dir: ${process.env.REPO_NODE_BIN}`,
+                `- Actual repo pnpm path: ${process.env.REPO_PNPM_PATH}`,
                 '',
                 '## Maintainer Command',
                 '',
@@ -439,11 +489,16 @@ jobs:
 
             Do not modify `.github/workflows/` unless the maintainer request explicitly requires it.
 
-            If you run Node.js or pnpm commands, use the repo toolchain described
-            in the context file rather than the Codex action's internal default
-            Node runtime. Prepend the preferred Node.js bin dir from the context
-            file to PATH before invoking repo commands so validations run under
-            the repo-supported Node version.
+            If you run Node.js or pnpm commands, use the repo toolchain wrapper
+            described in the context file rather than the Codex action's internal
+            default Node runtime. Prepend the preferred wrapper bin dir from the
+            context file to PATH and invoke `node`, `pnpm`, `npm`, or `npx` by
+            name instead of by absolute path.
+
+            Any validation command you want to rely on in your final update must
+            be executed through that wrapper path so the workflow can record the
+            exact command and exit code. Do not claim a validation passed unless
+            it was actually recorded.
 
             After editing, run the smallest validation that gives useful signal.
             Prefer package-scoped commands when the change is narrow. If the
@@ -468,6 +523,22 @@ jobs:
           sandbox: workspace-write
           safety-strategy: drop-sudo
 
+      - name: Summarize recorded Codex validations
+        id: summarize_validation
+        env:
+          VALIDATION_LOG_PATH: ${{ steps.validation.outputs.validation_log_path }}
+        run: |
+          {
+            echo 'evidence<<EOF'
+            echo 'Machine-recorded validation evidence:'
+            if [ ! -s "$VALIDATION_LOG_PATH" ]; then
+              echo '- No `node`/`pnpm` validation commands were recorded from the Codex session.'
+            else
+              node -e 'const fs=require("fs"); const path=process.argv[1]; const entries=fs.readFileSync(path,"utf8").split(/\n/).map((line)=>line.trim()).filter(Boolean).map((line)=>JSON.parse(line)); const limit=12; for (const entry of entries.slice(0, limit)) { const command=(entry.argv || []).map((part)=>`\`${part}\``).join(" "); console.log(`- ${command} in \`${entry.cwd || ""}\` exited \`${entry.exit_code}\``) } if (entries.length > limit) { console.log(`- ... plus ${entries.length - limit} more recorded command(s)`) }' "$VALIDATION_LOG_PATH"
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Commit changes
         id: commit
         run: |
@@ -491,6 +562,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           CODEX_FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
+          VALIDATION_EVIDENCE: ${{ steps.summarize_validation.outputs.evidence }}
           CHANGED: ${{ steps.commit.outputs.changed }}
           COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
           PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
@@ -508,6 +580,10 @@ jobs:
               '',
               process.env.CODEX_FINAL_MESSAGE || 'Codex did not return a summary.'
             )
+
+            if ((process.env.VALIDATION_EVIDENCE || '').trim()) {
+              lines.push('', process.env.VALIDATION_EVIDENCE.trim())
+            }
 
             if (process.env.CHANGED === 'true' && process.env.COMMIT_SHA) {
               lines.push(
