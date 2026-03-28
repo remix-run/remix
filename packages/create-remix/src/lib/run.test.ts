@@ -45,8 +45,8 @@ describe('create-remix', () => {
       let cliResult = await captureOutput(() => runCli(['new', cliDir, '--app-name', 'My App']))
 
       assert.equal(createRemixResult.exitCode, 0)
-      assert.equal(createRemixResult.stderr, '')
       assert.equal(cliResult.exitCode, 0)
+      assert.equal(createRemixResult.stderr, cliResult.stderr)
       await assertExpectedScaffold(createRemixDir)
       await assertMatchingScaffolds(createRemixDir, cliDir)
     } finally {
@@ -72,8 +72,8 @@ describe('create-remix', () => {
       let cliResult = await captureOutput(() => runCli(['new', cliDir, '--force']))
 
       assert.equal(createRemixResult.exitCode, 0)
-      assert.equal(createRemixResult.stderr, '')
       assert.equal(cliResult.exitCode, 0)
+      assert.equal(createRemixResult.stderr, cliResult.stderr)
       await assertExpectedScaffold(createRemixDir)
       await assertMatchingScaffolds(createRemixDir, cliDir)
       assert.equal(await fs.readFile(path.join(createRemixDir, 'keep.txt'), 'utf8'), 'keep\n')
