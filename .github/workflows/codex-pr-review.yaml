@@ -1,15 +1,6 @@
-name: Codex PR review
+name: Codex PR review (forks)
 
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - ready_for_review
-      - synchronize
-    branches-ignore:
-      - release-v2
-      - v2
   pull_request_target:
     types:
       - opened
@@ -28,19 +19,160 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  review:
+  wait_for_green_checks:
+    name: Wait for required PR checks
     if: |
       github.repository == 'remix-run/remix' &&
-      (
-        (
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        ) ||
-        (
-          github.event_name == 'pull_request_target' &&
-          github.event.pull_request.head.repo.full_name != github.repository
-        )
-      )
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      checks: read
+      pull-requests: read
+    outputs:
+      should_review: ${{ steps.wait.outputs.should_review }}
+    steps:
+      - name: Wait for required PR checks
+        id: wait
+        uses: actions/github-script@v7
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const baseChecks = [
+              'build (ubuntu-latest)',
+              'build (windows-latest)',
+              'test (ubuntu-latest)',
+              'test (windows-latest, changed packages)',
+              'Lint',
+              'Typecheck',
+              'Validate change files',
+            ]
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            })
+
+            const changedFiles = files.map((file) => file.filename)
+            const runAllIntegrations = changedFiles.some((file) =>
+              ['.github/workflows/check-pr.yaml', '.github/workflows/check-main.yaml'].includes(
+                file,
+              ),
+            )
+
+            function includesAny({ exact = [], prefixes = [] }) {
+              if (runAllIntegrations) return true
+
+              return changedFiles.some((file) => {
+                if (exact.includes(file)) return true
+                return prefixes.some((prefix) => file.startsWith(prefix))
+              })
+            }
+
+            const requiredChecks = [...baseChecks]
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/session-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: [
+                  'packages/session/',
+                  'packages/session-storage-memcache/',
+                  'packages/session-storage-redis/',
+                ],
+              })
+            ) {
+              requiredChecks.push('Memcache Integration', 'Redis Integration')
+            }
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/data-table-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: [
+                  'packages/data-table/',
+                  'packages/data-table-postgres/',
+                  'packages/data-table-mysql/',
+                  'packages/data-table-sqlite/',
+                ],
+              })
+            ) {
+              requiredChecks.push(
+                'Data Table Unit and Build',
+                'Postgres Integration',
+                'MySQL Integration',
+                'SQLite Integration',
+              )
+            }
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/file-storage-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: ['packages/file-storage/', 'packages/file-storage-s3/'],
+              })
+            ) {
+              requiredChecks.push('File Storage Unit and Build', 'S3 Integration')
+            }
+
+            const passingConclusions = new Set(['success', 'skipped'])
+            const deadline = Date.now() + 25 * 60 * 1000
+
+            while (Date.now() < deadline) {
+              const checkRuns = await github.paginate(github.rest.checks.listForRef, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: process.env.PR_HEAD_SHA,
+                per_page: 100,
+                filter: 'latest',
+              })
+
+              const byName = new Map(
+                checkRuns
+                  .filter((checkRun) => requiredChecks.includes(checkRun.name))
+                  .map((checkRun) => [checkRun.name, checkRun]),
+              )
+
+              const missing = requiredChecks.filter((name) => !byName.has(name))
+              const pending = requiredChecks.filter((name) => {
+                return byName.has(name) && byName.get(name)?.status !== 'completed'
+              })
+
+              core.info(
+                `Observed ${byName.size}/${requiredChecks.length} required checks; missing=${missing.length}, pending=${pending.length}`,
+              )
+
+              if (missing.length === 0 && pending.length === 0) {
+                const failing = requiredChecks.filter((name) => {
+                  const conclusion = byName.get(name)?.conclusion ?? ''
+                  return !passingConclusions.has(conclusion)
+                })
+
+                core.setOutput('should_review', failing.length === 0 ? 'true' : 'false')
+                return
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 30000))
+            }
+
+            core.setFailed('Timed out waiting for required PR checks to complete.')
+
+  review:
+    name: Codex PR review
+    needs: wait_for_green_checks
+    if: needs.wait_for_green_checks.outputs.should_review == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -78,7 +210,7 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         uses: actions/github-script@v7
         env:
-          GITHUB_RUN_ID: ${{ github.run_id }}
+          CURRENT_CHECK_NAME: Codex PR review
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -116,20 +248,109 @@ jobs:
               }
             }
 
-            const owner = context.repo.owner
-            const repo = context.repo.repo
-            const currentRunFragment = `/actions/runs/${process.env.GITHUB_RUN_ID}`
+            const baseChecks = [
+              'build (ubuntu-latest)',
+              'build (windows-latest)',
+              'test (ubuntu-latest)',
+              'test (windows-latest, changed packages)',
+              'Lint',
+              'Typecheck',
+              'Validate change files',
+            ]
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            })
+
+            const changedFiles = files.map((file) => file.filename)
+            const runAllIntegrations = changedFiles.some((file) =>
+              ['.github/workflows/check-pr.yaml', '.github/workflows/check-main.yaml'].includes(
+                file,
+              ),
+            )
+
+            function includesAny({ exact = [], prefixes = [] }) {
+              if (runAllIntegrations) return true
+
+              return changedFiles.some((file) => {
+                if (exact.includes(file)) return true
+                return prefixes.some((prefix) => file.startsWith(prefix))
+              })
+            }
+
+            const includedChecks = new Set(baseChecks)
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/session-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: [
+                  'packages/session/',
+                  'packages/session-storage-memcache/',
+                  'packages/session-storage-redis/',
+                ],
+              })
+            ) {
+              includedChecks.add('Memcache Integration')
+              includedChecks.add('Redis Integration')
+            }
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/data-table-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: [
+                  'packages/data-table/',
+                  'packages/data-table-postgres/',
+                  'packages/data-table-mysql/',
+                  'packages/data-table-sqlite/',
+                ],
+              })
+            ) {
+              includedChecks.add('Data Table Unit and Build')
+              includedChecks.add('Postgres Integration')
+              includedChecks.add('MySQL Integration')
+              includedChecks.add('SQLite Integration')
+            }
+
+            if (
+              includesAny({
+                exact: [
+                  '.github/workflows/file-storage-integration.yaml',
+                  'package.json',
+                  'pnpm-workspace.yaml',
+                ],
+                prefixes: ['packages/file-storage/', 'packages/file-storage-s3/'],
+              })
+            ) {
+              includedChecks.add('File Storage Unit and Build')
+              includedChecks.add('S3 Integration')
+            }
 
             const checkRuns = await github.paginate(github.rest.checks.listForRef, {
-              owner,
-              repo,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               ref: process.env.PR_HEAD_SHA,
               per_page: 100,
               filter: 'latest',
             })
 
             const summarizedChecks = checkRuns
-              .filter((checkRun) => !checkRun.details_url?.includes(currentRunFragment))
+              .filter((checkRun) => {
+                return (
+                  checkRun.name !== process.env.CURRENT_CHECK_NAME &&
+                  includedChecks.has(checkRun.name)
+                )
+              })
               .sort((left, right) => {
                 let weightDiff = sortWeight(left) - sortWeight(right)
                 if (weightDiff !== 0) return weightDiff
@@ -144,13 +365,6 @@ jobs:
                 let url = checkRun.details_url ? ` (${checkRun.details_url})` : ''
                 return `- ${checkRun.name}: ${state}${url}`
               })
-
-            const displayedChecks = summarizedChecks.slice(0, 40)
-            if (summarizedChecks.length > displayedChecks.length) {
-              displayedChecks.push(
-                `- ... plus ${summarizedChecks.length - displayedChecks.length} more checks`,
-              )
-            }
 
             fs.writeFileSync(
               `${process.env.RUNNER_TEMP}/codex-pr-review-context.md`,
@@ -178,11 +392,11 @@ jobs:
                 `- \`git diff --unified=3 ${process.env.PR_BASE_SHA}...${process.env.PR_HEAD_SHA}\``,
                 `- \`git log --oneline ${process.env.PR_BASE_SHA}...${process.env.PR_HEAD_SHA}\``,
                 '',
-                '## Current CI Check Status',
+                '## Final CI Check Status',
                 '',
-                ...(displayedChecks.length > 0
-                  ? displayedChecks
-                  : ['- No existing CI checks found for this head SHA.']),
+                ...(summarizedChecks.length > 0
+                  ? summarizedChecks
+                  : ['- No relevant CI checks found for this head SHA.']),
                 '',
               ].join('\n'),
             )
@@ -274,9 +488,10 @@ jobs:
           sandbox: read-only
           safety-strategy: drop-sudo
 
-  post-review:
+  post_review:
+    name: Post Codex PR review
     needs: review
-    if: needs.review.outputs.final_message != ''
+    if: always() && needs.review.outputs.final_message != ''
     runs-on: ubuntu-latest
     permissions:
       issues: write
