@@ -9,7 +9,7 @@ import {
   unknownSkillsCommand,
   unexpectedExtraArgument,
 } from '../errors.ts'
-import type { SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
+import type { SkillChange, SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
 import {
   createCommandReporter,
@@ -212,9 +212,7 @@ function createSkillsProgressReporter(reporter: CommandReporter): SkillsProgress
   return createStepProgressReporter(reporter.status, SKILLS_PROGRESS_LABELS)
 }
 
-function formatAppliedChanges(
-  changes: Array<{ action: 'add' | 'replace'; name: string }>,
-): string[] {
+function formatAppliedChanges(changes: SkillChange[]): string[] {
   let showAction = changes.some((change) => change.action !== 'add')
   return changes.map((change) =>
     showAction ? `${toPastTense(change.action)} ${change.name}` : change.name,

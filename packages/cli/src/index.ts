@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { run } from './lib/cli.ts'
+import { readDevRemixVersion } from './lib/dev-remix-version.ts'
 import { renderCliError } from './lib/errors.ts'
 
 if (import.meta.main) {
-  void run().then(
+  void run(undefined, { remixVersion: readDevRemixVersion() }).then(
     (exitCode) => {
       setExitCode(exitCode)
     },

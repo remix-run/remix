@@ -384,12 +384,14 @@ describe('skills command', () => {
 
       let result = await withTtyState({ stdout: true, stderr: true }, () =>
         withFetchMock(createGitHubSkillsFetchMock(remoteSkills), () =>
-          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'list']))),
+          withCwd(tmpDir, () =>
+            captureOutput(() => run(['skills', 'list'], { remixVersion: '9.9.9' })),
+          ),
         ),
       )
 
       assert.equal(result.exitCode, 0)
-      assert.match(result.stderr, /v[\w.-]+ - skills list/)
+      assert.match(result.stderr, /v9\.9\.9 - skills list/)
       assert.match(result.stdout, /• remix-auth \u001B\[91m\[missing\]\u001B\[0m/)
       assert.match(result.stdout, /• remix-ui \u001B\[93m\[outdated\]\u001B\[0m/)
     } finally {

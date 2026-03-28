@@ -11,6 +11,7 @@ import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'index.ts')
+const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
 describe('doctor command', () => {
   it('prints doctor command help', async () => {
@@ -255,8 +256,11 @@ describe('doctor command', () => {
         dependencies: Record<string, string>
         engines: Record<string, string>
       }
+      let remixPackageJson = JSON.parse(await fs.readFile(REMIX_PACKAGE_JSON_PATH, 'utf8')) as {
+        version: string
+      }
 
-      assert.equal(packageJson.dependencies.remix, 'latest')
+      assert.equal(packageJson.dependencies.remix, remixPackageJson.version)
       assert.equal(packageJson.engines.node, '>=24.3.0')
 
       let checkResult = runDoctorCommand([], projectDir)

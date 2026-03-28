@@ -19,23 +19,19 @@ export interface SkillStatusEntry {
   state: 'installed' | 'missing' | 'outdated'
 }
 
-export interface SkillsOverview {
-  changes: SkillChange[]
+interface SkillsResult {
   entries: SkillStatusEntry[]
   projectRoot: string
   skillsDir: string
 }
 
-export interface SkillsInstallResult extends SkillsOverview {
+export interface SkillsOverview extends SkillsResult {}
+
+export interface SkillsInstallResult extends SkillsResult {
   appliedChanges: SkillChange[]
 }
 
-export interface SkillsInstallOptions {
-  progress?: SkillsProgressReporter
-  skillsDir?: string
-}
-
-export interface SkillsOverviewOptions {
+export interface SkillsOptions {
   progress?: SkillsProgressReporter
   skillsDir?: string
 }
@@ -80,7 +76,8 @@ interface RemoteSkillFile {
   path: string
 }
 
-interface SkillsPlan extends SkillsOverview {
+interface SkillsPlan extends SkillsResult {
+  pendingChanges: SkillChange[]
   remoteSkills: RemoteSkill[]
 }
 
@@ -89,11 +86,10 @@ type FetchImpl = typeof fetch
 export async function getSkillsOverview(
   cwd: string = process.cwd(),
   fetchImpl: FetchImpl = globalThis.fetch,
-  options: SkillsOverviewOptions = {},
+  options: SkillsOptions = {},
 ): Promise<SkillsOverview> {
   let plan = await loadSkillsPlan(cwd, fetchImpl, options)
   return {
-    changes: plan.changes,
     entries: plan.entries,
     projectRoot: plan.projectRoot,
     skillsDir: plan.skillsDir,
@@ -103,15 +99,14 @@ export async function getSkillsOverview(
 export async function installRemixSkills(
   cwd: string = process.cwd(),
   fetchImpl: FetchImpl = globalThis.fetch,
-  options: SkillsInstallOptions = {},
+  options: SkillsOptions = {},
 ): Promise<SkillsInstallResult> {
   let plan = await loadSkillsPlan(cwd, fetchImpl, options)
 
-  if (plan.changes.length === 0) {
+  if (plan.pendingChanges.length === 0) {
     options.progress?.skip('write-updated-skills', 'No changes.')
     return {
-      appliedChanges: plan.changes,
-      changes: plan.changes,
+      appliedChanges: [],
       entries: plan.entries,
       projectRoot: plan.projectRoot,
       skillsDir: plan.skillsDir,
@@ -120,7 +115,7 @@ export async function installRemixSkills(
 
   await runProgressStep(options.progress, 'write-updated-skills', async () => {
     await fs.mkdir(plan.skillsDir, { recursive: true })
-    for (let change of plan.changes) {
+    for (let change of plan.pendingChanges) {
       let remoteSkill = plan.remoteSkills.find((skill) => skill.name === change.name)
       if (remoteSkill == null) {
         throw remoteSkillDataMissing(change.name)
@@ -133,8 +128,7 @@ export async function installRemixSkills(
   })
 
   return {
-    appliedChanges: plan.changes,
-    changes: plan.changes,
+    appliedChanges: plan.pendingChanges,
     entries: plan.entries,
     projectRoot: plan.projectRoot,
     skillsDir: plan.skillsDir,
@@ -144,7 +138,7 @@ export async function installRemixSkills(
 async function loadSkillsPlan(
   cwd: string,
   fetchImpl: FetchImpl,
-  options: SkillsInstallOptions = {},
+  options: SkillsOptions = {},
 ): Promise<SkillsPlan> {
   if (typeof fetchImpl !== 'function') {
     throw fetchUnavailable()
@@ -172,13 +166,13 @@ async function loadSkillsPlan(
   entries.sort((left, right) => left.name.localeCompare(right.name))
 
   return {
-    changes: entries
+    entries,
+    pendingChanges: entries
       .filter((entry) => entry.state !== 'installed')
       .map((entry) => ({
         action: entry.state === 'missing' ? 'add' : 'replace',
         name: entry.name,
       })),
-    entries,
     projectRoot,
     remoteSkills,
     skillsDir,
