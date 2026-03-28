@@ -28,7 +28,6 @@ jobs:
   review:
     if: |
       github.repository == 'remix-run/remix' &&
-      !github.event.pull_request.draft &&
       (
         (
           github.event_name == 'pull_request' &&
