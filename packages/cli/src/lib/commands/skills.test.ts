@@ -958,15 +958,13 @@ function createGitHubSkillsFetchMock(
   requests: { archive: number; metadata: number }
 } {
   let requests = { archive: 0, metadata: 0 }
-  let treeEntries = Object.entries(remoteSkills).flatMap(([skillName, files]) =>
-    Object.entries(files).map(([filePath, content]) => {
-      return {
-        path: `skills/${skillName}/${filePath}`,
-        sha: computeGitBlobSha(Buffer.from(content, 'utf8')),
-        type: 'blob',
-      }
-    }),
-  )
+      let treeEntries = Object.entries(remoteSkills).flatMap(([skillName, files]) =>
+        Object.entries(files).map(([filePath, content]) => ({
+          path: `skills/${skillName}/${filePath}`,
+          sha: computeGitBlobSha(Buffer.from(content, 'utf8')),
+          type: 'blob',
+        })),
+      )
   let archive = buildTarGzArchive(remoteSkills)
 
   let fetchMock = (async (input: RequestInfo | URL) => {
