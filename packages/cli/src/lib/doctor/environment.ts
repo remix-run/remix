@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { createRequire } from 'node:module'
+import * as semver from 'semver'
 
 import { MINIMUM_SUPPORTED_NODE_VERSION } from '../bootstrap-project.ts'
 import { getRuntimeRemixVersion } from '../runtime-context.ts'
@@ -253,122 +254,18 @@ function canResolveRemix(projectRoot: string): boolean {
 }
 
 function satisfiesNodeRange(version: string, range: string): boolean | null {
-  let parsedVersion = parseSemver(version)
-  if (parsedVersion == null) {
+  let parsedVersion = semver.valid(version)
+  let trimmedRange = range.trim()
+  if (parsedVersion == null || trimmedRange === '') {
     return null
   }
 
-  let groups = range
-    .split('||')
-    .map((group) => group.trim())
-    .filter(Boolean)
-
-  if (groups.length === 0) {
+  let parsedRange = semver.validRange(trimmedRange)
+  if (parsedRange == null) {
     return null
   }
 
-  let foundSupportedGroup = false
-
-  for (let group of groups) {
-    let comparators = group.split(/\s+/).filter(Boolean)
-    if (comparators.length === 0) {
-      return null
-    }
-
-    let isMatch = true
-
-    for (let comparator of comparators) {
-      let parsedComparator = parseComparator(comparator)
-      if (parsedComparator == null) {
-        return null
-      }
-
-      if (
-        !compareWithComparator(parsedVersion, parsedComparator.operator, parsedComparator.version)
-      ) {
-        isMatch = false
-        break
-      }
-    }
-
-    if (isMatch) {
-      foundSupportedGroup = true
-      break
-    }
-  }
-
-  return foundSupportedGroup
-}
-
-function parseComparator(
-  value: string,
-): { operator: '<' | '<=' | '=' | '>' | '>='; version: Semver } | null {
-  let match = /^(<=|>=|<|>|=)?(v?\d+(?:\.\d+){0,2})$/.exec(value)
-  if (match == null) {
-    return null
-  }
-
-  let version = parseSemver(match[2])
-  if (version == null) {
-    return null
-  }
-
-  return {
-    operator: (match[1] as '<' | '<=' | '=' | '>' | '>=' | undefined) ?? '=',
-    version,
-  }
-}
-
-interface Semver {
-  major: number
-  minor: number
-  patch: number
-}
-
-function parseSemver(value: string): Semver | null {
-  let match = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$/.exec(value.trim())
-  if (match == null) {
-    return null
-  }
-
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2] ?? '0'),
-    patch: Number(match[3] ?? '0'),
-  }
-}
-
-function compareWithComparator(
-  left: Semver,
-  operator: '<' | '<=' | '=' | '>' | '>=',
-  right: Semver,
-): boolean {
-  let comparison = compareSemver(left, right)
-
-  switch (operator) {
-    case '<':
-      return comparison < 0
-    case '<=':
-      return comparison <= 0
-    case '=':
-      return comparison === 0
-    case '>':
-      return comparison > 0
-    case '>=':
-      return comparison >= 0
-  }
-}
-
-function compareSemver(left: Semver, right: Semver): number {
-  if (left.major !== right.major) {
-    return left.major - right.major
-  }
-
-  if (left.minor !== right.minor) {
-    return left.minor - right.minor
-  }
-
-  return left.patch - right.patch
+  return semver.satisfies(parsedVersion, parsedRange)
 }
 
 async function pathExists(filePath: string): Promise<boolean> {

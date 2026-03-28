@@ -198,6 +198,70 @@ describe('doctor command', () => {
     }
   })
 
+  it('accepts standard npm semver range syntax for engines.node', async () => {
+    for (let { label, range } of getSupportedNodeRangeCases()) {
+      let projectDir = await createTempProject(
+        {
+          'app/controllers/home.js': [
+            'export const home = {',
+            '  handler() {',
+            "    return new Response('ok')",
+            '  },',
+            '}',
+          ].join('\n'),
+          'app/routes.ts': [
+            "import { route } from 'remix/fetch-router/routes'",
+            '',
+            'export const routes = route({',
+            "  home: '/',",
+            '})',
+          ].join('\n'),
+          'package.json': JSON.stringify(
+            {
+              dependencies: {
+                remix: 'latest',
+              },
+              engines: {
+                node: range,
+              },
+              name: `doctor-env-${label}-range-fixture`,
+              private: true,
+              type: 'module',
+            },
+            null,
+            2,
+          ),
+        },
+        { linkRemix: true },
+      )
+
+      try {
+        let checkResult = runDoctorCommand([], projectDir)
+
+        assert.equal(checkResult.status, 0, `${label}: ${checkResult.stderr}`)
+        assert.match(checkResult.stdout, /Doctor found no issues\./, label)
+        assert.equal(checkResult.stderr, '', label)
+
+        let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+        assert.equal(fixResult.status, 0, `${label}: ${fixResult.stderr}`)
+        assert.doesNotMatch(fixResult.stdout, /Applied fixes:/, label)
+        assert.match(fixResult.stdout, /Doctor found no issues\./, label)
+        assert.equal(fixResult.stderr, '', label)
+
+        let packageJson = JSON.parse(
+          await fs.readFile(path.join(projectDir, 'package.json'), 'utf8'),
+        ) as {
+          engines: Record<string, string>
+        }
+
+        assert.equal(packageJson.engines.node, range, label)
+      } finally {
+        await fs.rm(projectDir, { recursive: true, force: true })
+      }
+    }
+  })
+
   it('reports missing remix dependencies and skips later suites', async () => {
     let result = runDoctorCommand([], getFixturePath('doctor-env-missing-remix-dependency'))
 
@@ -1118,6 +1182,16 @@ async function linkRemix(projectDir: string): Promise<void> {
     path.join(ROOT_DIR, 'packages', 'remix'),
     path.join(projectDir, 'node_modules', 'remix'),
   )
+}
+
+function getSupportedNodeRangeCases(): Array<{ label: string; range: string }> {
+  let [major, minor, patch] = process.versions.node.split('.').map(Number)
+
+  return [
+    { label: 'caret', range: `^${major}.${minor}.${patch}` },
+    { label: 'tilde', range: `~${major}.${minor}.${patch}` },
+    { label: 'x-range', range: `${major}.x` },
+  ]
 }
 
 async function assertPathExists(filePath: string): Promise<void> {
