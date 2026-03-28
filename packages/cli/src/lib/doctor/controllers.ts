@@ -20,6 +20,54 @@ import {
 } from './types.ts'
 
 const OWNER_EXTENSION_PRIORITY: OwnerFileExtension[] = ['.tsx', '.ts', '.jsx', '.js']
+const RESERVED_BINDING_IDENTIFIERS = new Set([
+  'await',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'implements',
+  'import',
+  'in',
+  'instanceof',
+  'interface',
+  'let',
+  'new',
+  'null',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'return',
+  'static',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+])
 
 export interface ControllerDoctorResult {
   fixPlans: DoctorFixPlan[]
@@ -325,10 +373,11 @@ function getMostCommonOwnerExtension(filePaths: string[]): OwnerFileExtension | 
 function renderActionPlaceholder(routeNode: OwnershipRouteNode, entryPath: string): string {
   let routeMessage = `TODO: implement routes.${routeNode.name}`
   let extension = getOwnerFileExtension(entryPath)
+  let exportName = getActionExportName(routeNode.key)
 
   if (extension === '.js' || extension === '.jsx') {
     return [
-      `export const ${routeNode.key} = {`,
+      `export const ${exportName} = {`,
       `  handler() {`,
       `    return new Response(${JSON.stringify(routeMessage)})`,
       `  },`,
@@ -346,7 +395,7 @@ function renderActionPlaceholder(routeNode: OwnershipRouteNode, entryPath: strin
     '',
     `import type { routes } from '${routesImportPath}'`,
     '',
-    `export const ${routeNode.key}: BuildAction<'${method}', typeof ${routeExpression}> = {`,
+    `export const ${exportName}: BuildAction<'${method}', typeof ${routeExpression}> = {`,
     `  handler() {`,
     `    return new Response(${JSON.stringify(routeMessage)})`,
     `  },`,
@@ -455,6 +504,10 @@ function getControllerImportName(key: string): string {
   return `${toIdentifier(key)}Controller`
 }
 
+function getActionExportName(key: string): string {
+  return toIdentifier(key)
+}
+
 function getRouteNodesByName(tree: OwnershipRouteNode[]): Map<string, OwnershipRouteNode> {
   let routeNodesByName = new Map<string, OwnershipRouteNode>()
 
@@ -502,6 +555,10 @@ function toIdentifier(value: string): string {
     .join('')
 
   if (!/^[A-Za-z_$]/.test(identifier)) {
+    return `route${capitalize(identifier)}`
+  }
+
+  if (RESERVED_BINDING_IDENTIFIERS.has(identifier)) {
     return `route${capitalize(identifier)}`
   }
 

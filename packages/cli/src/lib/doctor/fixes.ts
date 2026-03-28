@@ -10,7 +10,7 @@ export async function applyDoctorFixPlans(
   let appliedFixes: DoctorAppliedFix[] = []
 
   for (let fixPlan of dedupeDoctorFixPlans(fixPlans)) {
-    let absolutePath = path.join(appRoot, fixPlan.path)
+    let absolutePath = resolveDoctorFixPath(appRoot, fixPlan.path)
 
     if (fixPlan.kind === 'create-directory') {
       await fs.mkdir(absolutePath, { recursive: true })
@@ -66,4 +66,16 @@ function toAppliedDoctorFix(fixPlan: DoctorFixPlan): DoctorAppliedFix {
     routeName: fixPlan.routeName,
     suite: fixPlan.suite,
   }
+}
+
+function resolveDoctorFixPath(appRoot: string, fixPath: string): string {
+  let resolvedAppRoot = path.resolve(appRoot)
+  let resolvedPath = path.resolve(resolvedAppRoot, fixPath)
+  let relativePath = path.relative(resolvedAppRoot, resolvedPath)
+
+  if (relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))) {
+    return resolvedPath
+  }
+
+  throw new Error(`Doctor fix path resolves outside the app root: ${fixPath}`)
 }

@@ -40,10 +40,17 @@ export function getOwnerFileExtension(filePath: string): OwnerFileExtension | nu
 }
 
 export function toDiskSegment(segment: string): string {
-  return segment
+  let diskSegment = segment
+    .replace(/[\\/]+/g, '-')
+    .replace(/\.+/g, '-')
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
     .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return diskSegment.length === 0 ? 'route' : diskSegment
 }
 
 export function isControllerEntryFileName(fileName: string): boolean {

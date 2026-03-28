@@ -589,6 +589,107 @@ describe('doctor command', () => {
     }
   })
 
+  it('creates a safe placeholder export name for non-identifier route keys', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  'sales-report': '/sales-report',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'latest',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-non-identifier-route-key-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /Created app\/controllers\/sales-report\.js/)
+
+      let actionSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'sales-report.js'),
+        'utf8',
+      )
+
+      assert.match(actionSource, /export const salesReport = \{/)
+      assert.doesNotMatch(actionSource, /export const sales-report = \{/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+      assert.equal(checkResult.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('sanitizes traversal route keys before generating doctor fix paths', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/routes.ts': [
+          "import { route } from 'remix/fetch-router/routes'",
+          '',
+          'export const routes = route({',
+          "  '../../../escape': '/escape',",
+          '})',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'latest',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-traversal-route-key-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let outsidePath = path.join(path.dirname(projectDir), 'escape.js')
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /Created app\/controllers\/escape\.js/)
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'escape.js'))
+      await assertPathMissing(outsidePath)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+      assert.equal(checkResult.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('creates a jsx home action placeholder when the project uses tsx', async () => {
     let projectDir = await createTempProject(
       {
