@@ -7,17 +7,10 @@ in `.github/workflows/`.
 
 - `codex-pr-review.yaml` posts an automatic Codex review comment on new or
   updated pull requests.
-- `codex-pr-fix.yaml` lets maintainers ask Codex to make changes on a pull
-  request branch by leaving a top-level PR comment that starts with `/codex` or
-  `@codex`.
 
 ## Required Secrets
 
 - `OPENAI_API_KEY`: API key used by `openai/codex-action`.
-- `GH_REMIX_PAT`: existing PAT already used by other Remix workflows to push
-  commits back to branches and re-trigger CI. The Codex fix workflow reuses this
-  secret. If you want Codex-authored commits to be able to update workflow
-  files, this token also needs workflow-writing permission.
 
 ## Usage
 
@@ -28,21 +21,15 @@ in `.github/workflows/`.
   immediately from the PR branch before the workflow is merged to `main`.
 - Fork pull requests use `pull_request_target`, so they can still be reviewed
   safely after the workflow exists on `main`.
-- To ask Codex to edit a PR branch, add a PR conversation comment such as:
-
-  ```text
-  /codex add the missing tests for the new loader behavior
-  ```
-
-  ```text
-  @codex tighten the docs and fix the failing typecheck
-  ```
+- The review workflow is read-only. It reviews the diff and may reference the
+  current CI check state, but it does not run repository validations or push
+  commits back to the PR.
+- If a review comment needs follow-up work, address it locally with Codex or
+  through the normal development workflow, then push the resulting commit(s).
 
 ## Limitations
 
 - The review workflow can evaluate PRs from forks because it only needs read
   access.
-- The fix workflow only pushes changes for PRs whose head branch lives in
-  `remix-run/remix`. It intentionally skips fork-based PRs.
-- These workflows use the OpenAI API through `openai/codex-action`, so a Codex
+- This workflow uses the OpenAI API through `openai/codex-action`, so a Codex
   or ChatGPT subscription alone is not enough to power the GitHub Actions runs.
