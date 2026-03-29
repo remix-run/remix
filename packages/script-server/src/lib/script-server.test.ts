@@ -1358,6 +1358,130 @@ describe('script-server', () => {
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
   })
 
+  it('removes side-effect-free unused imports after define-based dead code elimination', async () => {
+    await writeJson(dir, 'app/node_modules/example/package.json', {
+      exports: {
+        '.': './index.ts',
+      },
+      name: 'example',
+      sideEffects: false,
+    })
+    await write(dir, 'app/node_modules/example/index.ts', 'export const devOnly = "dev"')
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { devOnly } from "example"\nif (process.env.NODE_ENV !== "production") {\n  console.log(devOnly)\n}\nexport const entry = true\n',
+    )
+    let scriptServer = createTestServer(dir, {
+      define: {
+        'process.env.NODE_ENV': '"production"',
+      },
+      minify: true,
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.doesNotMatch(body, /example\/index\.ts/)
+
+    let preloads = await scriptServer.getPreloads('app/entry.ts')
+    assert.ok(!preloads.some((url) => url.includes('example/index.ts')))
+  })
+
+  it('keeps unused imports when sideEffects metadata is not present', async () => {
+    await writeJson(dir, 'app/node_modules/example/package.json', {
+      exports: {
+        '.': './index.ts',
+      },
+      name: 'example',
+    })
+    await write(dir, 'app/node_modules/example/index.ts', 'export const devOnly = "dev"')
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { devOnly } from "example"\nif (process.env.NODE_ENV !== "production") {\n  console.log(devOnly)\n}\nexport const entry = true\n',
+    )
+    let scriptServer = createTestServer(dir, {
+      define: {
+        'process.env.NODE_ENV': '"production"',
+      },
+      minify: true,
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /example\/index\.ts/)
+
+    let preloads = await scriptServer.getPreloads('app/entry.ts')
+    assert.ok(preloads.some((url) => url.includes('example/index.ts')))
+  })
+
+  it('picks up sideEffects metadata changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+        exports: {
+          '.': './index.ts',
+        },
+        name: 'example',
+        sideEffects: false,
+      })
+      await write(caseDir, 'app/node_modules/example/index.ts', 'export const devOnly = "dev"')
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { devOnly } from "example"\nif (process.env.NODE_ENV !== "production") {\n  console.log(devOnly)\n}\nexport const entry = true\n',
+      )
+
+      let scriptServer = createWatchedTestServer(caseDir, {
+        define: {
+          'process.env.NODE_ENV': '"production"',
+        },
+        minify: true,
+      })
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let firstBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => !body.includes('example/index.ts'),
+        )
+        assert.doesNotMatch(firstBody, /example\/index\.ts/)
+
+        await writeJson(caseDir, 'app/node_modules/example/package.json', {
+          exports: {
+            '.': './index.ts',
+          },
+          name: 'example',
+          sideEffects: true,
+        })
+
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => body.includes('example/index.ts'),
+        )
+
+        assert.match(secondBody, /example\/index\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('rejects fingerprinting without a buildId string', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     assert.throws(

@@ -34,12 +34,12 @@
   "dependencies": {
     "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
-    "@swc/core": "^1.15.18",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.25.0",
     "get-tsconfig": "^4.13.6",
     "magic-string": "^0.30.21",
+    "oxc-parser": "^0.121.0",
     "source-map-js": "^1.2.1"
   },
   "devDependencies": {

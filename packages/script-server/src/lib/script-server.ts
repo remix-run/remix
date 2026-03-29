@@ -73,6 +73,11 @@ export interface ScriptServerOptions {
    * Minify emitted modules.
    */
   minify?: boolean
+  /**
+   * Replace global expressions with constant values during transform, e.g.
+   * `{ 'process.env.NODE_ENV': '"production"' }`
+   */
+  define?: Record<string, string>
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
@@ -156,6 +161,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let external = options.external ?? []
   let fingerprintModules = fingerprintOptions.enabled
   let buildId = fingerprintOptions.buildId
+  let define = options.define
   let minify = options.minify ?? false
   let onError = options.onError ?? defaultErrorHandler
   let routes = compileRoutes({
@@ -166,6 +172,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let denyMatchers = (options.deny ?? []).map((pattern) => createFileMatcher(pattern, root))
   let moduleCompiler = createModuleCompiler({
     buildId,
+    define,
     external,
     fingerprintModules,
     isAllowed,

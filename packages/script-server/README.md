@@ -185,6 +185,35 @@ let scriptServer = createScriptServer({
 })
 ```
 
+## Define
+
+Use `define` to replace global expressions with constant values during transform.
+
+```ts
+import { createScriptServer } from 'remix/script-server'
+
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
+  minify: true,
+})
+```
+
+Values are injected exactly as defined, so string literals must include their own quotes, e.g. `process.env.NODE_ENV` must be `"production"` rather than `production`.
+
+When `define` and `minify` make an import unused, `script-server` removes the leftover import if the resolved module is marked side-effect free in its enclosing `package.json` using the `sideEffects` field.
+
+```json
+{
+  "name": "example",
+  "sideEffects": false
+}
+```
+
 ## Source Maps
 
 Enable sourcemaps with either `'external'` or `'inline'`:
@@ -253,11 +282,6 @@ let scriptServer = createScriptServer({
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `script-server`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
-
-## Related Work
-
-- [esbuild](https://esbuild.github.io/) - Fast ESM transform and resolution engine used internally by `script-server`
-- [Import Maps](https://wicg.github.io/import-maps/) - A complementary browser-native way to control module specifier resolution
 
 ## License
 
