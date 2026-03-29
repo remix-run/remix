@@ -81,6 +81,7 @@ To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxF
 
 ```ts
 import {
+  FormDataParseError,
   MaxFilesExceededError,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
@@ -99,6 +100,7 @@ try {
     maxTotalSize: 12 * oneMb,
   })
 } catch (error) {
+  // Errors are wrapped in FormDataParseError with the specific error as the cause
   if (error instanceof MaxFilesExceededError) {
     console.error(`Request may not contain more than 5 files`)
   } else if (error instanceof MaxHeaderSizeExceededError) {
@@ -109,6 +111,21 @@ try {
     console.error(`Request may not contain more than 25 multipart parts`)
   } else if (error instanceof MaxTotalSizeExceededError) {
     console.error(`Multipart request may not exceed 12 MiB of total content`)
+  } else if (error instanceof FormDataParseError && error.cause) {
+    // Check the cause for specific error types
+    if (error.cause instanceof MaxFilesExceededError) {
+      console.error(`Request may not contain more than 5 files`)
+    } else if (error.cause instanceof MaxHeaderSizeExceededError) {
+      console.error(`Multipart headers may not exceed the configured size limit`)
+    } else if (error.cause instanceof MaxFileSizeExceededError) {
+      console.error(`Files may not be larger than 10 MiB`)
+    } else if (error.cause instanceof MaxPartsExceededError) {
+      console.error(`Request may not contain more than 25 multipart parts`)
+    } else if (error.cause instanceof MaxTotalSizeExceededError) {
+      console.error(`Multipart request may not exceed 12 MiB of total content`)
+    } else {
+      console.error(`A parsing error occurred:`, error.cause)
+    }
   } else {
     console.error(`An unknown error occurred:`, error)
   }
