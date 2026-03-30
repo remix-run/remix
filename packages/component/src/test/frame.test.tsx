@@ -222,8 +222,12 @@ describe('run', () => {
     let app = run({ loadModule: vi.fn().mockResolvedValue(TogglePreload) })
     await app.ready()
 
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/a.js"]')).toBeTruthy()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]')).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/a.js"]'),
+    ).toBeTruthy()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]'),
+    ).toBeNull()
     expect(document.body.querySelector('link[rel="modulepreload"]')).toBeNull()
 
     let button = document.getElementById('toggle-preload')
@@ -231,8 +235,12 @@ describe('run', () => {
     button.click()
     app.flush()
 
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/a.js"]')).toBeNull()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]')).toBeTruthy()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/a.js"]'),
+    ).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]'),
+    ).toBeTruthy()
     expect(document.body.querySelector('link[rel="modulepreload"]')).toBeNull()
 
     app.dispose()
@@ -1685,7 +1693,10 @@ describe('run', () => {
 
     let app = run({
       loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-modulepreloads.js' && exportName === 'ReloadModulepreloads') {
+        if (
+          moduleUrl === '/assets/reload-modulepreloads.js' &&
+          exportName === 'ReloadModulepreloads'
+        ) {
           return ReloadButton
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
@@ -1696,25 +1707,41 @@ describe('run', () => {
     await app.ready()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-a.js"]')).toBeTruthy()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-a.js"]')).toBeTruthy()
-    expect(document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared-a.js"]')).toHaveLength(
-      1,
-    )
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-b.js"]')).toBeNull()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-b.js"]')).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-a.js"]'),
+    ).toBeTruthy()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-a.js"]'),
+    ).toBeTruthy()
+    expect(
+      document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared-a.js"]'),
+    ).toHaveLength(1)
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-b.js"]'),
+    ).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-b.js"]'),
+    ).toBeNull()
 
     invariant(reload)
     await reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-a.js"]')).toBeNull()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-a.js"]')).toBeNull()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-b.js"]')).toBeTruthy()
-    expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-b.js"]')).toBeTruthy()
-    expect(document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared-b.js"]')).toHaveLength(
-      1,
-    )
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-a.js"]'),
+    ).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-a.js"]'),
+    ).toBeNull()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared-b.js"]'),
+    ).toBeTruthy()
+    expect(
+      document.head.querySelector('link[rel="modulepreload"][href="/scripts/client-b.js"]'),
+    ).toBeTruthy()
+    expect(
+      document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared-b.js"]'),
+    ).toHaveLength(1)
 
     app.dispose()
   })
@@ -1777,9 +1804,9 @@ describe('run', () => {
     expect(
       document.head.querySelector('link[rel="modulepreload"][href="/scripts/shared.js"]'),
     ).not.toBe(null)
-    expect(document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared.js"]')).toHaveLength(
-      1,
-    )
+    expect(
+      document.head.querySelectorAll('link[rel="modulepreload"][href="/scripts/shared.js"]'),
+    ).toHaveLength(1)
 
     resolveModule(Counter)
     await clientFrame.ready()

@@ -7,7 +7,11 @@ import { performance } from 'node:perf_hooks'
 import { getBasicFixture, getDeepGraphFixture } from './fixture.ts'
 import { createScriptServer } from '../src/index.ts'
 import type { BenchFixture } from './fixture.ts'
-import type { ScriptServer, ScriptServerOptions } from '../src/index.ts'
+import type {
+  ScriptServer,
+  ScriptServerOptions,
+  ScriptServerTemporaryEnginePhases,
+} from '../src/index.ts'
 
 interface Benchmark {
   id: string
@@ -17,6 +21,7 @@ interface Benchmark {
 
 interface ParsedOptions {
   benchmarkId?: string
+  engine?: ScriptServerOptions['temporary_engine']
   times: number
   warmupTimes: number
 }
@@ -72,12 +77,39 @@ const benchmarks: Benchmark[] = [
     },
   },
   {
+    id: 'basic-cold-entry-minified',
+    name: 'basic fixture / cold entry (minified)',
+    async prepare() {
+      let fixture = await getBasicFixture()
+      return async function run() {
+        let scriptServer = createBenchScriptServer(fixture, { minify: true })
+        let source = await readHandledResponseText(
+          scriptServer,
+          await scriptServer.getHref(fixture.entryPoint),
+        )
+        assertContainsSubstrings(source, fixture.expectedEntryUrlSubstrings, fixture.label)
+      }
+    },
+  },
+  {
     id: 'deep-graph-cold-preloads',
     name: 'deep-graph fixture / cold preloads',
     async prepare() {
       let fixture = await getDeepGraphFixture()
       return async function run() {
         let scriptServer = createBenchScriptServer(fixture)
+        let urls = await scriptServer.getPreloads(fixture.entryPoint)
+        assertPreloadUrls(urls, fixture)
+      }
+    },
+  },
+  {
+    id: 'deep-graph-cold-preloads-minified',
+    name: 'deep-graph fixture / cold preloads (minified)',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      return async function run() {
+        let scriptServer = createBenchScriptServer(fixture, { minify: true })
         let urls = await scriptServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }
@@ -163,6 +195,7 @@ function createBenchScriptServer(
       buildId: String(Date.now()),
     },
     root,
+    temporary_engine: benchOptions.engine,
     ...fixture.scriptServer,
     ...overrides,
   }
@@ -270,6 +303,9 @@ function parseArgOptions(): ParsedOptions {
   }
 
   let warmupTimes = 3
+  let engine: ScriptServerOptions['temporary_engine']
+  let phaseOverrides: ScriptServerTemporaryEnginePhases = {}
+  let hasPhaseOverrides = false
   for (let arg of optionArgs) {
     if (arg.startsWith('--warmup=')) {
       let parsedWarmupTimes = Number.parseInt(arg.slice('--warmup='.length), 10)
@@ -280,10 +316,60 @@ function parseArgOptions(): ParsedOptions {
       continue
     }
 
-    throw new Error(`Unknown option "${arg}". Supported options: --warmup=<count>`)
+    if (arg.startsWith('--engine=')) {
+      engine = parsePipelineEngine(arg.slice('--engine='.length))
+      continue
+    }
+
+    if (arg.startsWith('--transform=')) {
+      phaseOverrides.transform = parseStageEngine(
+        arg.slice('--transform='.length),
+        ['esbuild', 'oxc-transform'],
+        '--transform',
+      ) as ScriptServerTemporaryEnginePhases['transform']
+      hasPhaseOverrides = true
+      continue
+    }
+
+    if (arg.startsWith('--resolver=')) {
+      phaseOverrides.resolver = parseStageEngine(
+        arg.slice('--resolver='.length),
+        ['esbuild', 'oxc-resolver'],
+        '--resolver',
+      ) as ScriptServerTemporaryEnginePhases['resolver']
+      hasPhaseOverrides = true
+      continue
+    }
+
+    if (arg.startsWith('--minify-engine=')) {
+      phaseOverrides.minify = parseStageEngine(
+        arg.slice('--minify-engine='.length),
+        ['esbuild', 'oxc-minify'],
+        '--minify-engine',
+      ) as ScriptServerTemporaryEnginePhases['minify']
+      hasPhaseOverrides = true
+      continue
+    }
+
+    throw new Error(
+      'Unknown option "' +
+        arg +
+        '". Supported options: --warmup=<count>, --engine=<oxc|esbuild>, ' +
+        '--transform=<esbuild|oxc-transform>, --resolver=<esbuild|oxc-resolver>, ' +
+        '--minify-engine=<esbuild|oxc-minify>',
+    )
   }
 
-  return { benchmarkId, times, warmupTimes }
+  if (hasPhaseOverrides) {
+    engine = {
+      minify: engine === 'esbuild' ? 'esbuild' : 'oxc-minify',
+      resolver: engine === 'esbuild' ? 'esbuild' : 'oxc-resolver',
+      transform: engine === 'esbuild' ? 'esbuild' : 'oxc-transform',
+      ...phaseOverrides,
+    }
+  }
+
+  return { benchmarkId, engine, times, warmupTimes }
 }
 
 async function runBenchmark(
@@ -328,6 +414,7 @@ function printResults(results: BenchmarkResults, options: ParsedOptions): void {
   console.log(`Node.js ${process.version}`)
   console.log(`Iterations: ${options.times}`)
   console.log(`Warmups: ${options.warmupTimes}`)
+  console.log(`Engine: ${formatEngineOption(options.engine)}`)
 
   let summaryResults: Record<string, string> = {}
   for (let benchmarkName of Object.keys(results)) {
@@ -341,7 +428,27 @@ function formatFixtureStats(fixture: BenchFixture): string {
   return fixture.stats.map((stat) => `${stat.label}=${stat.value}`).join(', ')
 }
 
-const options = parseArgOptions()
+function parsePipelineEngine(value: string): 'esbuild' | 'oxc' {
+  if (value === 'esbuild') return 'esbuild'
+  if (value === 'oxc') return 'oxc'
+  throw new Error(`Invalid engine "${value}". Expected "oxc" or "esbuild"`)
+}
+
+function parseStageEngine(value: string, allowed: readonly string[], optionName: string): string {
+  if (allowed.includes(value)) return value
+  throw new Error(`Invalid value for ${optionName}: "${value}". Expected ${allowed.join(' or ')}`)
+}
+
+function formatEngineOption(engine: ScriptServerOptions['temporary_engine']): string {
+  if (engine === undefined) return 'default (oxc)'
+  if (typeof engine === 'string') {
+    return engine
+  }
+
+  return JSON.stringify(engine)
+}
+
+const benchOptions = parseArgOptions()
 
 const [basicFixture, deepGraphFixture] = await Promise.all([
   getBasicFixture(),
@@ -350,9 +457,9 @@ const [basicFixture, deepGraphFixture] = await Promise.all([
 console.log(`Fixture ${basicFixture.label}: ${formatFixtureStats(basicFixture)}`)
 console.log(`Fixture ${deepGraphFixture.label}: ${formatFixtureStats(deepGraphFixture)}`)
 
-runBenchmarks(options).then(
+runBenchmarks(benchOptions).then(
   (results) => {
-    printResults(results, options)
+    printResults(results, benchOptions)
   },
   (error: unknown) => {
     console.error(error)

@@ -157,7 +157,11 @@ function walkPatternForCommonJS(
   return false
 }
 
-function collectScopeBindings(node: AstNode, currentScope: Scope, nodeScopes: WeakMap<object, Scope>) {
+function collectScopeBindings(
+  node: AstNode,
+  currentScope: Scope,
+  nodeScopes: WeakMap<object, Scope>,
+) {
   switch (node.type) {
     case 'Program':
       forEachChildNode(node, (child) => collectScopeBindings(child, currentScope, nodeScopes))
@@ -325,11 +329,7 @@ function collectPatternScopeBindings(
   }
 }
 
-function isCommonJSReference(
-  node: IdentifierNode,
-  parent: AstNode | null,
-  key?: string,
-): boolean {
+function isCommonJSReference(node: IdentifierNode, parent: AstNode | null, key?: string): boolean {
   if (parent === null) return false
 
   if (node.name === 'require') {
@@ -422,10 +422,7 @@ function getChildNodes(node: AstNode): Array<{ key: string; node: AstNode }> {
   return children
 }
 
-function forEachChildNode(
-  node: AstNode,
-  callback: (child: AstNode, key: string) => void,
-): void {
+function forEachChildNode(node: AstNode, callback: (child: AstNode, key: string) => void): void {
   for (let key of visitorKeys[node.type] ?? []) {
     let value = node[key]
     if (Array.isArray(value)) {

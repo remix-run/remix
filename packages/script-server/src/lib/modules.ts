@@ -4,7 +4,10 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
 import { getTsconfig } from 'get-tsconfig'
+import { minify as oxcMinify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
+import { ResolverFactory } from 'oxc-resolver'
+import { transform as oxcTransform } from 'oxc-transform'
 import { IfNoneMatch } from '@remix-run/headers'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
@@ -19,21 +22,29 @@ import {
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 
-const lexerReady = lexerInit
 const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
+type OxcSourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
+type MinifyEngine = 'esbuild' | 'oxc'
+type ResolverEngine = 'esbuild' | 'oxc'
+type TransformEngine = 'esbuild' | 'oxc'
 const scriptModuleTypes = [
-  { extension: '.js', loader: 'js' },
-  { extension: '.jsx', loader: 'jsx' },
-  { extension: '.mjs', loader: 'js' },
-  { extension: '.mts', loader: 'ts' },
-  { extension: '.ts', loader: 'ts' },
-  { extension: '.tsx', loader: 'tsx' },
-] as const satisfies ReadonlyArray<{ extension: string; loader: esbuild.Loader }>
+  { extension: '.js', lang: 'js' },
+  { extension: '.jsx', lang: 'jsx' },
+  { extension: '.mjs', lang: 'js' },
+  { extension: '.mts', lang: 'ts' },
+  { extension: '.ts', lang: 'ts' },
+  { extension: '.tsx', lang: 'tsx' },
+] as const satisfies ReadonlyArray<{ extension: string; lang: OxcSourceLanguage }>
 const supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const transformLoaderByExtension = new Map<string, esbuild.Loader>(
-  scriptModuleTypes.map(({ extension, loader }) => [extension, loader] as const),
+  scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
+const sourceLanguageByExtension = new Map<string, OxcSourceLanguage>(
+  scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
+)
+const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs', '.json']
+const lexerReady = lexerInit
 
 export type ModuleCompileResult = {
   compiledCode: string
@@ -85,12 +96,15 @@ type ModuleCompilerOptions = {
   fingerprintModules: boolean
   isAllowed(absolutePath: string): boolean
   minify: boolean
+  removeUnusedImports: boolean
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
+  temporaryEngine?: TemporaryEngineOptions
 }
 
 type ResolvedOptions = ModuleCompilerOptions & {
+  engines: CompilerEngines
   externalSet: Set<string>
 }
 
@@ -143,10 +157,58 @@ type OxcStaticImport = {
     }
   }>
   moduleRequest: {
+    end: number
+    start: number
     value: string
   }
   start: number
 }
+
+type OxcStaticExport = {
+  entries: Array<{
+    moduleRequest?: {
+      end: number
+      start: number
+      value: string
+    } | null
+  }>
+}
+
+type OxcDynamicImport = {
+  moduleRequest: {
+    end: number
+    start: number
+  }
+}
+
+type RewriteBuffer = {
+  generateMap(): string
+  overwrite(start: number, end: number, content: string): void
+  remove(start: number, end: number): void
+  toString(): string
+}
+
+type CompilerEngines = {
+  minify: MinifyEngine
+  resolver: ResolverEngine
+  transform: TransformEngine
+}
+
+type OxcParseResult = ReturnType<typeof parseSync>
+
+type RemovedRange = {
+  end: number
+  start: number
+}
+
+type TemporaryEngineOptions =
+  | 'esbuild'
+  | 'oxc'
+  | {
+      minify?: 'esbuild' | 'oxc-minify'
+      resolver?: 'esbuild' | 'oxc-resolver'
+      transform?: 'esbuild' | 'oxc-transform'
+    }
 
 type Scope = {
   bindings: Map<string, 'import' | 'local'>
@@ -157,6 +219,21 @@ type Scope = {
 type ExtensionlessImport = {
   candidateBasePath: string
   specifier: string
+}
+
+function createOxcResolverFactory() {
+  return new ResolverFactory({
+    tsconfig: 'auto',
+    aliasFields: [['browser']],
+    conditionNames: ['browser', 'import', 'module', 'default'],
+    extensionAlias: {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.jsx': ['.tsx', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    },
+    extensions: resolverExtensions,
+    mainFields: ['browser', 'module', 'main'],
+  })
 }
 
 type TrackedResolution = ExtensionlessImport & {
@@ -179,6 +256,16 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let importersByDependency = new Map<string, Set<string>>()
   let modulesByTrackedFile = new Map<string, Set<string>>()
   let tsconfigTransformOptions = createTsconfigTransformOptionsResolver()
+  let resolverFactory = createOxcResolverFactory()
+
+  function resolveSpecifiers(specifiers: string[], importerPath: string) {
+    return batchResolveSpecifiers(
+      specifiers,
+      importerPath,
+      resolvedOptions.engines,
+      resolverFactory,
+    )
+  }
 
   return {
     resolveServedPath(absolutePath) {
@@ -239,6 +326,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     },
     async handleFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
+      resolverFactory.clearCache()
 
       if (isTsconfigPath(normalizedFilePath)) {
         tsconfigTransformOptions.clear()
@@ -327,7 +415,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function rewriteImports(
     resolvedModule: ResolvedModule,
   ): Promise<{ code: string; sourcemap: string | null }> {
-    let rewrittenSource = new MagicString(resolvedModule.rawCode)
+    let rewrittenSource = createRewriteBuffer(resolvedModule.rawCode)
 
     for (let imported of resolvedModule.imports) {
       let url = await getServedUrl(imported.depPath)
@@ -341,10 +429,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let code = rewrittenSource.toString()
     let sourcemap =
       resolvedModule.sourcemap && resolvedModule.imports.length > 0
-        ? composeSourceMaps(
-            rewrittenSource.generateMap({ hires: true }).toString(),
-            resolvedModule.sourcemap,
-          )
+        ? composeSourceMaps(rewrittenSource.generateMap(), resolvedModule.sourcemap)
         : resolvedModule.sourcemap
 
     return { code, sourcemap }
@@ -423,7 +508,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let mayContainCommonJS = mayContainCommonJSModuleGlobals(sourceText)
     let analysis = await analyzeModuleSource(sourceText, nextResolvedPath, transformOptions, {
       define: resolvedOptions.define,
+      engines: resolvedOptions.engines,
       minify: resolvedOptions.minify,
+      removeUnusedImports: resolvedOptions.removeUnusedImports,
+      resolveSpecifiers,
       sourceMaps: resolvedOptions.sourceMaps,
     })
     analysis.unresolvedImports = analysis.unresolvedImports.filter(
@@ -450,8 +538,9 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         },
       )
     }
-    let sourcemap = analysis.sourcemap
-      ? rewriteSourceMap(analysis.sourcemap, nextResolvedPath, stableUrlPathname)
+    let sourceMapText = analysis.sourcemap
+    let sourcemap = sourceMapText
+      ? rewriteSourceMap(sourceMapText, nextResolvedPath, stableUrlPathname)
       : null
 
     return cacheTransformedModule(
@@ -468,7 +557,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         resolvedPath: nextResolvedPath,
         sourcemap,
         stableUrlPathname,
-        trackedFiles: [nextResolvedPath, ...transformOptions.trackedFiles, ...analysis.trackedFiles],
+        trackedFiles: [
+          nextResolvedPath,
+          ...transformOptions.trackedFiles,
+          ...analysis.trackedFiles,
+        ],
         unresolvedImports: analysis.unresolvedImports,
       },
       generation,
@@ -483,39 +576,47 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let resolvedImports =
       transformedModule.unresolvedImports.length > 0
-        ? await batchResolveSpecifiers(
+        ? await resolveSpecifiers(
             getUniqueSpecifiers(transformedModule.unresolvedImports),
-            transformedModule.importerDir,
+            transformedModule.resolvedPath,
           )
-        : new Map<string, string>()
+        : new Map<string, ResolvedSpec>()
     return buildResolvedModule(transformedModule, resolvedImports, generation)
   }
 
   async function resolveTransformedModules(
     transformedModules: Array<ResolvedModule | TransformedModule>,
   ): Promise<ResolvedModule[]> {
-    let groupedSpecifiers = new Map<string, Set<string>>()
+    let groupedSpecifiers = new Map<string, { importerPath: string; specifiers: Set<string> }>()
 
     for (let transformedModule of transformedModules) {
       if (isResolvedModule(transformedModule) || transformedModule.unresolvedImports.length === 0) {
         continue
       }
 
-      let existing = groupedSpecifiers.get(transformedModule.importerDir) ?? new Set<string>()
+      let existing = groupedSpecifiers.get(transformedModule.importerDir) ?? {
+        importerPath: transformedModule.resolvedPath,
+        specifiers: new Set<string>(),
+      }
       for (let specifier of getUniqueSpecifiers(transformedModule.unresolvedImports)) {
-        existing.add(specifier)
+        existing.specifiers.add(specifier)
       }
       groupedSpecifiers.set(transformedModule.importerDir, existing)
     }
 
-    let resolvedByDirectory = new Map<string, Map<string, string>>()
+    let resolvedByDirectory = new Map<string, Map<string, ResolvedSpec>>()
     await mapWithConcurrency(
       [...groupedSpecifiers.entries()],
       preloadTraversalConcurrency,
-      async ([importerDir, specifiers]) => {
+      async ([importerDir, group]) => {
         resolvedByDirectory.set(
           importerDir,
-          await batchResolveSpecifiers([...specifiers], importerDir),
+          await batchResolveSpecifiers(
+            [...group.specifiers],
+            group.importerPath,
+            resolvedOptions.engines,
+            resolverFactory,
+          ),
         )
       },
     )
@@ -525,7 +626,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         if (isResolvedModule(transformedModule)) return transformedModule
         return buildResolvedModule(
           transformedModule,
-          resolvedByDirectory.get(transformedModule.importerDir) ?? new Map<string, string>(),
+          resolvedByDirectory.get(transformedModule.importerDir) ?? new Map<string, ResolvedSpec>(),
           getModuleCacheEntry(transformedModule.identityPath).generation,
         )
       }),
@@ -534,7 +635,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
   async function buildResolvedModule(
     transformedModule: TransformedModule,
-    resolvedImports: Map<string, string>,
+    resolvedImports: Map<string, ResolvedSpec>,
     generation: number,
   ): Promise<ResolvedModule> {
     let importsWithPaths: ResolvedImport[] = []
@@ -543,8 +644,8 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let trackedResolutions: TrackedResolution[] = []
 
     for (let unresolved of transformedModule.unresolvedImports) {
-      let resolvedImportPath = resolvedImports.get(unresolved.specifier)
-      if (!resolvedImportPath) {
+      let resolvedSpec = resolvedImports.get(unresolved.specifier)
+      if (!resolvedSpec?.absolutePath) {
         throw createScriptServerCompilationError(
           `Failed to resolve import "${unresolved.specifier}" in ${transformedModule.resolvedPath}.\n\n` +
             `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
@@ -554,7 +655,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         )
       }
 
-      let resolvedImport = resolveModulePath(resolvedImportPath)
+      let resolvedImport = resolveModulePath(resolvedSpec.absolutePath)
       if (!resolvedImport) {
         throw createScriptServerCompilationError(
           `Resolved import "${unresolved.specifier}" in ${transformedModule.resolvedPath} is not a supported script module.\n\n` +
@@ -587,7 +688,8 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       deps.add(resolvedImport.identityPath)
       if (transformedModule.packageSpecifiers.includes(unresolved.specifier)) {
-        let packageJsonPath = findNearestPackageJsonPath(resolvedImport.resolvedPath)
+        let packageJsonPath =
+          resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
         if (packageJsonPath) trackedFiles.add(packageJsonPath)
       }
       if (!path.extname(unresolved.specifier) && isRelativeImportSpecifier(unresolved.specifier)) {
@@ -777,12 +879,16 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     identityPath: string,
   ): Promise<string | null> {
     let entry = getModuleCacheEntry(identityPath)
-    let importerDir =
-      entry.transformed?.importerDir ?? path.dirname(entry.resolvedPath ?? identityPath)
-    let resolved = await batchResolveSpecifiers([trackedResolution.specifier], importerDir)
-    let resolvedPath = resolved.get(trackedResolution.specifier)
-    if (!resolvedPath) return null
-    let resolvedModule = resolveModulePath(resolvedPath)
+    let importerPath = entry.transformed?.resolvedPath ?? entry.resolvedPath ?? identityPath
+    let resolved = await batchResolveSpecifiers(
+      [trackedResolution.specifier],
+      importerPath,
+      resolvedOptions.engines,
+      resolverFactory,
+    )
+    let resolvedSpec = resolved.get(trackedResolution.specifier)
+    if (!resolvedSpec?.absolutePath) return null
+    let resolvedModule = resolveModulePath(resolvedSpec.absolutePath)
     return resolvedModule?.identityPath ?? null
   }
 
@@ -834,6 +940,7 @@ function dedupeIdentityPaths(resolvedModules: readonly ResolveModuleResult[]): s
 function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {
   return {
     ...options,
+    engines: getCompilerEngines(options.temporaryEngine),
     externalSet: new Set(options.external),
   }
 }
@@ -1077,13 +1184,120 @@ async function analyzeModuleSource(
   transformOptions: TsconfigTransformOptions,
   options: {
     define?: Record<string, string>
+    engines: CompilerEngines
     minify: boolean
+    removeUnusedImports: boolean
+    resolveSpecifiers(
+      specifiers: string[],
+      importerPath: string,
+    ): Promise<Map<string, ResolvedSpec>>
     sourceMaps?: 'external' | 'inline'
   },
 ): Promise<ModuleAnalysisResult> {
-  let transformResult: esbuild.TransformResult
+  let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
-    transformResult = await esbuild.transform(sourceText, {
+    transformResult = await (options.engines.transform === 'esbuild'
+      ? transformWithEsbuild(sourceText, resolvedPath, transformOptions, {
+          define: options.define,
+          minify: options.minify && options.engines.minify === 'esbuild',
+          sourceMaps: options.sourceMaps,
+        })
+      : transformWithOxc(sourceText, resolvedPath, transformOptions, {
+          define: options.define,
+          sourceMaps: options.sourceMaps,
+        }))
+  } catch (error) {
+    if (isScriptServerCompilationError(error)) {
+      throw error
+    }
+    throw createScriptServerCompilationError(
+      `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'MODULE_TRANSFORM_FAILED',
+      },
+    )
+  }
+
+  let rawCode = transformResult.code.trimEnd()
+  let sourcemap = stringifySourceMap(transformResult.map)
+
+  if (
+    options.minify &&
+    !(options.engines.transform === 'esbuild' && options.engines.minify === 'esbuild')
+  ) {
+    let minifyResult =
+      options.engines.minify === 'esbuild'
+        ? await minifyWithEsbuild(rawCode, resolvedPath, options.sourceMaps)
+        : await minifyWithOxc(rawCode, resolvedPath, options.sourceMaps)
+    rawCode = minifyResult.code.trimEnd()
+    let minifyMap = stringifySourceMap(minifyResult.map)
+    sourcemap =
+      minifyMap == null
+        ? sourcemap
+        : sourcemap == null
+          ? minifyMap
+          : composeSourceMaps(minifyMap, sourcemap)
+  }
+
+  if (!options.removeUnusedImports) {
+    await lexerReady
+    return {
+      rawCode,
+      sourcemap,
+      trackedFiles: [],
+      unresolvedImports: getUnresolvedImportsFromLexer(rawCode),
+    }
+  }
+
+  let pruned = await pruneUnusedImports(
+    rawCode,
+    resolvedPath,
+    sourceText,
+    sourcemap,
+    options.engines,
+    options.resolveSpecifiers,
+  )
+
+  return {
+    rawCode: pruned.rawCode,
+    sourcemap: pruned.sourcemap,
+    trackedFiles: pruned.trackedFiles,
+    unresolvedImports: pruned.unresolvedImports,
+  }
+}
+
+async function transformWithOxc(
+  sourceText: string,
+  resolvedPath: string,
+  transformOptions: TsconfigTransformOptions,
+  options: {
+    define?: Record<string, string>
+    sourceMaps?: 'external' | 'inline'
+  },
+) {
+  let result = await oxcTransform(
+    resolvedPath,
+    sourceText,
+    getOxcTransformOptions(resolvedPath, transformOptions, options),
+  )
+  assertNoOxcErrors(result.errors, resolvedPath, 'transform')
+  return result
+}
+
+async function transformWithEsbuild(
+  sourceText: string,
+  resolvedPath: string,
+  transformOptions: TsconfigTransformOptions,
+  options: {
+    define?: Record<string, string>
+    minify: boolean
+    sourceMaps?: 'external' | 'inline'
+  },
+) {
+  let result: esbuild.TransformResult
+  try {
+    result = await esbuild.transform(sourceText, {
       define: options.define,
       format: 'esm',
       loader: transformLoaderByExtension.get(path.extname(resolvedPath).toLowerCase()) ?? 'js',
@@ -1103,44 +1317,337 @@ async function analyzeModuleSource(
     )
   }
 
-  let rawCode = transformResult.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd()
-  let sourcemap: string | null = transformResult.map || null
-  let pruned = await pruneUnusedImports(rawCode, resolvedPath, sourceText, sourcemap)
-  rawCode = pruned.rawCode
-  sourcemap = pruned.sourcemap
-  await lexerReady
-  let unresolvedImports = getUnresolvedImportsFromCode(rawCode)
+  return {
+    code: result.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd(),
+    map: result.map || null,
+  }
+}
+
+async function minifyWithOxc(
+  rawCode: string,
+  resolvedPath: string,
+  sourceMaps?: 'external' | 'inline',
+) {
+  try {
+    let result = await oxcMinify(resolvedPath, rawCode, {
+      compress: true,
+      mangle: true,
+      module: true,
+      sourcemap: sourceMaps != null,
+    })
+    assertNoOxcErrors(result.errors, resolvedPath, 'minify')
+    return result
+  } catch (error) {
+    if (isScriptServerCompilationError(error)) {
+      throw error
+    }
+    throw createScriptServerCompilationError(
+      `Failed to minify module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'MODULE_TRANSFORM_FAILED',
+      },
+    )
+  }
+}
+
+async function minifyWithEsbuild(
+  rawCode: string,
+  resolvedPath: string,
+  sourceMaps?: 'external' | 'inline',
+) {
+  let result: esbuild.TransformResult
+  try {
+    result = await esbuild.transform(rawCode, {
+      format: 'esm',
+      loader: 'js',
+      logLevel: 'silent',
+      minify: true,
+      sourcefile: resolvedPath,
+      sourcemap: sourceMaps ? 'external' : false,
+    })
+  } catch (error) {
+    throw createScriptServerCompilationError(
+      `Failed to minify module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'MODULE_TRANSFORM_FAILED',
+      },
+    )
+  }
 
   return {
-    rawCode,
-    sourcemap,
-    trackedFiles: pruned.trackedFiles,
-    unresolvedImports,
+    code: result.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd(),
+    map: result.map || null,
   }
+}
+
+function getOxcTransformOptions(
+  resolvedPath: string,
+  transformOptions: TsconfigTransformOptions,
+  options: {
+    define?: Record<string, string>
+    sourceMaps?: 'external' | 'inline'
+  },
+) {
+  let compilerOptions = transformOptions.tsconfigRaw?.compilerOptions as
+    | Record<string, unknown>
+    | undefined
+  let useDefineForClassFields = getBooleanOption(compilerOptions, 'useDefineForClassFields')
+  let jsxFactory = getStringOption(compilerOptions, 'jsxFactory')
+  let jsxFragmentFactory = getStringOption(compilerOptions, 'jsxFragmentFactory')
+
+  return {
+    assumptions:
+      useDefineForClassFields === false
+        ? {
+            setPublicClassFields: true,
+          }
+        : undefined,
+    define: options.define,
+    jsx: getOxcJsxOptions(resolvedPath, compilerOptions),
+    lang: getOxcSourceLanguageForPath(resolvedPath),
+    sourceType: 'module' as const,
+    sourcemap: options.sourceMaps != null,
+    target: getOxcTarget(compilerOptions),
+    typescript: {
+      allowNamespaces: getBooleanOption(compilerOptions, 'allowNamespaces'),
+      emitDecoratorMetadata: getBooleanOption(compilerOptions, 'emitDecoratorMetadata'),
+      experimentalDecorators: getBooleanOption(compilerOptions, 'experimentalDecorators'),
+      jsxPragma: jsxFactory,
+      jsxPragmaFrag: jsxFragmentFactory,
+      removeClassFieldsWithoutInitializer: useDefineForClassFields === false ? true : undefined,
+    },
+  }
+}
+
+function getOxcJsxOptions(
+  resolvedPath: string,
+  compilerOptions?: Record<string, unknown>,
+): 'preserve' | Record<string, unknown> | undefined {
+  let language = getOxcSourceLanguageForPath(resolvedPath)
+  if (language !== 'jsx' && language !== 'tsx') return undefined
+
+  let jsx = getStringOption(compilerOptions, 'jsx')
+  let importSource = getStringOption(compilerOptions, 'jsxImportSource')
+  let pragma = getStringOption(compilerOptions, 'jsxFactory')
+  let pragmaFrag = getStringOption(compilerOptions, 'jsxFragmentFactory')
+
+  if (jsx === 'preserve' || jsx === 'react-native') {
+    return 'preserve'
+  }
+
+  if (jsx === 'react-jsx' || jsx === 'react-jsxdev') {
+    return {
+      development: jsx === 'react-jsxdev',
+      importSource,
+      runtime: 'automatic',
+    }
+  }
+
+  return {
+    pragma,
+    pragmaFrag,
+    runtime: 'classic',
+  }
+}
+
+function getOxcTarget(compilerOptions?: Record<string, unknown>): string | undefined {
+  let target = getStringOption(compilerOptions, 'target')
+  if (!target) return undefined
+
+  switch (target.toLowerCase()) {
+    case 'es3':
+    case 'es5':
+    case 'es6':
+      return 'es2015'
+    case 'es7':
+      return 'es2016'
+    case 'es8':
+      return 'es2017'
+    case 'es9':
+      return 'es2018'
+    case 'es10':
+      return 'es2019'
+    case 'es11':
+      return 'es2020'
+    case 'es12':
+      return 'es2021'
+    default:
+      return target.toLowerCase()
+  }
+}
+
+function getBooleanOption(
+  compilerOptions: Record<string, unknown> | undefined,
+  key: string,
+): boolean | undefined {
+  let value = compilerOptions?.[key]
+  return typeof value === 'boolean' ? value : undefined
+}
+
+function getStringOption(
+  compilerOptions: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  let value = compilerOptions?.[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+function stringifySourceMap(map: unknown): string | null {
+  if (!map) return null
+  if (typeof map === 'string') {
+    return map
+  }
+  if (typeof map === 'object' && map !== null) {
+    return JSON.stringify(map)
+  }
+  return String(map)
+}
+
+function createRewriteBuffer(sourceText: string): RewriteBuffer {
+  let magicString = new MagicString(sourceText)
+
+  return {
+    generateMap() {
+      return magicString.generateMap({ hires: true }).toString()
+    },
+    overwrite(start, end, content) {
+      magicString.overwrite(start, end, content)
+    },
+    remove(start, end) {
+      magicString.remove(start, end)
+    },
+    toString() {
+      return magicString.toString()
+    },
+  }
+}
+
+function getCompilerEngines(temporaryEngine?: TemporaryEngineOptions): CompilerEngines {
+  let explicitEngines = getExplicitCompilerEngines(temporaryEngine)
+  if (explicitEngines) {
+    return explicitEngines
+  }
+
+  return {
+    minify: getCompilerEngine(process.env.SCRIPT_SERVER_MINIFY_ENGINE, ['esbuild', 'oxc'], 'oxc'),
+    resolver: getCompilerEngine(
+      process.env.SCRIPT_SERVER_RESOLVER_ENGINE,
+      ['esbuild', 'oxc'],
+      'oxc',
+    ),
+    transform: getCompilerEngine(
+      process.env.SCRIPT_SERVER_TRANSFORM_ENGINE,
+      ['esbuild', 'oxc'],
+      'oxc',
+    ),
+  }
+}
+
+function getExplicitCompilerEngines(
+  temporaryEngine: TemporaryEngineOptions | undefined,
+): CompilerEngines | null {
+  if (temporaryEngine === undefined) {
+    return null
+  }
+
+  if (typeof temporaryEngine === 'string') {
+    return temporaryEngine === 'esbuild' ? getEsbuildCompilerEngines() : getOxcCompilerEngines()
+  }
+
+  return {
+    minify:
+      temporaryEngine.minify === 'esbuild'
+        ? 'esbuild'
+        : temporaryEngine.minify === 'oxc-minify' || temporaryEngine.minify === undefined
+          ? 'oxc'
+          : unreachableEngineOption(temporaryEngine.minify),
+    resolver:
+      temporaryEngine.resolver === 'esbuild'
+        ? 'esbuild'
+        : temporaryEngine.resolver === 'oxc-resolver' || temporaryEngine.resolver === undefined
+          ? 'oxc'
+          : unreachableEngineOption(temporaryEngine.resolver),
+    transform:
+      temporaryEngine.transform === 'esbuild'
+        ? 'esbuild'
+        : temporaryEngine.transform === 'oxc-transform' || temporaryEngine.transform === undefined
+          ? 'oxc'
+          : unreachableEngineOption(temporaryEngine.transform),
+  }
+}
+
+function getEsbuildCompilerEngines(): CompilerEngines {
+  return {
+    minify: 'esbuild',
+    resolver: 'esbuild',
+    transform: 'esbuild',
+  }
+}
+
+function getOxcCompilerEngines(): CompilerEngines {
+  return {
+    minify: 'oxc',
+    resolver: 'oxc',
+    transform: 'oxc',
+  }
+}
+
+function getCompilerEngine<value extends string>(
+  input: string | undefined,
+  allowed: readonly value[],
+  fallback: value,
+): value {
+  if (input == null || input === '') return fallback
+  if ((allowed as readonly string[]).includes(input)) {
+    return input as value
+  }
+  throw new Error(`Invalid compiler engine "${input}". Expected one of: ${allowed.join(', ')}`)
+}
+
+function unreachableEngineOption(value: never): never {
+  throw new Error(`Unexpected engine option: ${String(value)}`)
+}
+
+function assertNoOxcErrors(
+  errors: Array<{ message?: string }> | undefined,
+  resolvedPath: string,
+  operation: 'transform' | 'minify',
+) {
+  if (!errors || errors.length === 0) return
+
+  throw createScriptServerCompilationError(
+    `Failed to ${operation} module ${resolvedPath}.\n\n${errors[0].message ?? 'Unknown error'}`,
+    {
+      code: 'MODULE_TRANSFORM_FAILED',
+    },
+  )
 }
 
 async function batchResolveSpecifiers(
   specifiers: string[],
-  importerDir: string,
-): Promise<Map<string, string>> {
-  let resolvedPathsBySpecifier = new Map<string, string>()
-  if (specifiers.length === 0) return resolvedPathsBySpecifier
+  importerPath: string,
+  engines: CompilerEngines,
+  resolverFactory: ResolverFactory,
+): Promise<Map<string, ResolvedSpec>> {
+  let resolvedBySpecifier = new Map<string, ResolvedSpec>()
+  if (specifiers.length === 0) return resolvedBySpecifier
 
-  let resolvedSpecs = await resolveWithEsbuild(specifiers, importerDir)
+  let resolvedSpecs =
+    engines.resolver === 'esbuild'
+      ? await resolveWithEsbuild(specifiers, path.dirname(importerPath))
+      : await resolveWithOxc(specifiers, importerPath, resolverFactory)
   for (let resolvedSpec of resolvedSpecs) {
-    if (resolvedSpec.absolutePath) {
-      resolvedPathsBySpecifier.set(
-        resolvedSpec.specifier,
-        normalizeFilePath(resolvedSpec.absolutePath),
-      )
-    }
+    resolvedBySpecifier.set(resolvedSpec.specifier, resolvedSpec)
   }
 
-  return resolvedPathsBySpecifier
+  return resolvedBySpecifier
 }
 
 type ResolvedSpec = {
   absolutePath: string | null
+  packageJsonPath: string | null
   specifier: string
 }
 
@@ -1162,20 +1669,13 @@ function getUniqueSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
 
 type ParsedImportRecord = ReturnType<typeof parseImports>[0][number]
 
-function getUnresolvedImportsFromCode(rawCode: string): UnresolvedImport[] {
+function getUnresolvedImportsFromLexer(rawCode: string): UnresolvedImport[] {
   let [imports] = parseImports(rawCode)
   let unresolvedImports: UnresolvedImport[] = []
 
   for (let imported of imports) {
     let specifier = getStaticImportSpecifier(rawCode, imported)
-    if (specifier == null) continue
-    if (
-      specifier.startsWith('data:') ||
-      specifier.startsWith('http://') ||
-      specifier.startsWith('https://')
-    ) {
-      continue
-    }
+    if (specifier == null || shouldSkipImportSpecifier(specifier)) continue
     unresolvedImports.push({
       specifier,
       start: imported.s,
@@ -1208,6 +1708,43 @@ function isStaticTemplateLiteral(specifier: string): boolean {
   return specifier.startsWith('`') && specifier.endsWith('`') && !specifier.includes('${')
 }
 
+function shouldSkipImportSpecifier(specifier: string): boolean {
+  return (
+    specifier.startsWith('data:') ||
+    specifier.startsWith('http://') ||
+    specifier.startsWith('https://')
+  )
+}
+
+function getDynamicImportSpecifier(
+  rawCode: string,
+  imported: OxcDynamicImport,
+): UnresolvedImport | null {
+  let rawSpecifier = rawCode.slice(imported.moduleRequest.start, imported.moduleRequest.end)
+  if (
+    (rawSpecifier.startsWith('"') && rawSpecifier.endsWith('"')) ||
+    (rawSpecifier.startsWith("'") && rawSpecifier.endsWith("'"))
+  ) {
+    return {
+      specifier: rawSpecifier.slice(1, -1),
+      start: imported.moduleRequest.start,
+      end: imported.moduleRequest.end,
+      quote: getImportQuote(rawCode, imported.moduleRequest.start),
+    }
+  }
+
+  if (isStaticTemplateLiteral(rawSpecifier)) {
+    return {
+      specifier: rawSpecifier.slice(1, -1),
+      start: imported.moduleRequest.start,
+      end: imported.moduleRequest.end,
+      quote: '"',
+    }
+  }
+
+  return null
+}
+
 function getImportQuote(source: string, start: number): '"' | "'" | '`' | undefined {
   let firstCharacter = source[start]
   if (firstCharacter === '"' || firstCharacter === "'" || firstCharacter === '`') {
@@ -1221,8 +1758,17 @@ async function pruneUnusedImports(
   resolvedPath: string,
   sourceText: string,
   sourcemap: string | null,
-): Promise<{ rawCode: string; sourcemap: string | null; trackedFiles: string[] }> {
-  let importerDir = path.dirname(resolvedPath)
+  engines: CompilerEngines,
+  resolveSpecifiers: (
+    specifiers: string[],
+    importerPath: string,
+  ) => Promise<Map<string, ResolvedSpec>>,
+): Promise<{
+  rawCode: string
+  sourcemap: string | null
+  trackedFiles: string[]
+  unresolvedImports: UnresolvedImport[]
+}> {
   let parseResult = parseJavaScriptWithOxc(rawCode, resolvedPath)
   let staticImports = parseResult.module.staticImports as OxcStaticImport[]
   let originalImportSpecifiers = getOriginalNonBareImportSpecifiers(sourceText, resolvedPath)
@@ -1235,6 +1781,7 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [],
+      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
     }
   }
 
@@ -1252,37 +1799,38 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [],
+      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
     }
   }
 
-  let resolvedSpecifiers = await resolveWithEsbuild(
+  let resolvedSpecifiers = await resolveSpecifiers(
     getUniqueImportSpecifiers(unusedImports),
-    importerDir,
+    resolvedPath,
   )
-  let resolvedPathsBySpecifier = new Map<string, string>()
-  for (let resolved of resolvedSpecifiers) {
-    if (resolved.absolutePath) {
-      resolvedPathsBySpecifier.set(resolved.specifier, normalizeFilePath(resolved.absolutePath))
-    }
-  }
 
-  let rewrittenSource = new MagicString(rawCode)
+  let rewrittenSource = createRewriteBuffer(rawCode)
   let trackedFiles = new Set<string>()
   let didPrune = false
+  let removedImports = new Set<OxcStaticImport>()
+  let removedRanges: RemovedRange[] = []
 
   for (let imported of unusedImports) {
-    let resolvedImportPath = resolvedPathsBySpecifier.get(imported.moduleRequest.value)
-    if (!resolvedImportPath) continue
+    let resolvedSpec = resolvedSpecifiers.get(imported.moduleRequest.value)
+    if (!resolvedSpec?.absolutePath) continue
 
-    let resolvedImport = resolveModulePath(resolvedImportPath)
+    let resolvedImport = resolveModulePath(resolvedSpec.absolutePath)
     if (!resolvedImport) continue
 
-    let packageJsonPath = findNearestPackageJsonPath(resolvedImport.resolvedPath)
+    let packageJsonPath =
+      resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
     if (!packageJsonPath) continue
+
     if (!isSideEffectFreeModule(packageJsonPath, resolvedImport.resolvedPath)) continue
 
     let removableEnd = getImportRemovalEnd(rawCode, imported.end)
     rewrittenSource.remove(imported.start, removableEnd)
+    removedImports.add(imported)
+    removedRanges.push({ start: imported.start, end: removableEnd })
     trackedFiles.add(packageJsonPath)
     didPrune = true
   }
@@ -1292,24 +1840,94 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [...trackedFiles],
+      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
     }
   }
 
   let prunedCode = rewrittenSource.toString().trimEnd()
   let prunedSourcemap =
-    sourcemap !== null
-      ? composeSourceMaps(rewrittenSource.generateMap({ hires: true }).toString(), sourcemap)
-      : null
+    sourcemap !== null ? composeSourceMaps(rewrittenSource.generateMap(), sourcemap) : null
 
   return {
     rawCode: prunedCode,
     sourcemap: prunedSourcemap,
     trackedFiles: [...trackedFiles],
+    unresolvedImports: getUnresolvedImportsFromParsedOxcModule(prunedCode, parseResult, {
+      removedImports,
+      remapPosition: createPositionRemapper(removedRanges),
+    }),
   }
 }
 
 function getUniqueImportSpecifiers(imports: OxcStaticImport[]): string[] {
   return [...new Set(imports.map((imported) => imported.moduleRequest.value))]
+}
+
+function getUnresolvedImportsFromParsedOxcModule(
+  rawCode: string,
+  parseResult: OxcParseResult,
+  options: {
+    removedImports?: Set<OxcStaticImport>
+    remapPosition?: (position: number) => number
+  } = {},
+): UnresolvedImport[] {
+  let unresolvedImports: UnresolvedImport[] = []
+  let removedImports = options.removedImports ?? new Set<OxcStaticImport>()
+  let remapPosition = options.remapPosition ?? ((position: number) => position)
+
+  for (let imported of parseResult.module.staticImports as OxcStaticImport[]) {
+    if (removedImports.has(imported) || shouldSkipImportSpecifier(imported.moduleRequest.value))
+      continue
+    unresolvedImports.push({
+      specifier: imported.moduleRequest.value,
+      start: remapPosition(imported.moduleRequest.start),
+      end: remapPosition(imported.moduleRequest.end),
+      quote: getImportQuote(rawCode, remapPosition(imported.moduleRequest.start)),
+    })
+  }
+
+  for (let exported of parseResult.module.staticExports as OxcStaticExport[]) {
+    for (let entry of exported.entries) {
+      let moduleRequest = entry.moduleRequest
+      if (!moduleRequest || shouldSkipImportSpecifier(moduleRequest.value)) continue
+      let start = remapPosition(moduleRequest.start)
+      unresolvedImports.push({
+        specifier: moduleRequest.value,
+        start,
+        end: remapPosition(moduleRequest.end),
+        quote: getImportQuote(rawCode, start),
+      })
+    }
+  }
+
+  for (let imported of parseResult.module.dynamicImports as OxcDynamicImport[]) {
+    let start = remapPosition(imported.moduleRequest.start)
+    let end = remapPosition(imported.moduleRequest.end)
+    let dynamicImport = getDynamicImportSpecifier(rawCode, {
+      moduleRequest: { start, end },
+    })
+    if (dynamicImport && !shouldSkipImportSpecifier(dynamicImport.specifier)) {
+      unresolvedImports.push(dynamicImport)
+    }
+  }
+
+  return unresolvedImports
+}
+
+function createPositionRemapper(removedRanges: RemovedRange[]): (position: number) => number {
+  if (removedRanges.length === 0) {
+    return (position) => position
+  }
+
+  let sortedRanges = [...removedRanges].sort((left, right) => left.start - right.start)
+  return (position: number) => {
+    let offset = 0
+    for (let range of sortedRanges) {
+      if (position < range.start) break
+      offset += range.end - range.start
+    }
+    return position - offset
+  }
 }
 
 function getImportRemovalEnd(source: string, end: number): number {
@@ -1341,10 +1959,7 @@ function getOxcOutputLanguageForPath(resolvedPath: string): 'js' | 'jsx' {
 
 function getOxcSourceLanguageForPath(resolvedPath: string): 'js' | 'jsx' | 'ts' | 'tsx' {
   let extension = path.extname(resolvedPath).toLowerCase()
-  if (extension === '.ts' || extension === '.mts') return 'ts'
-  if (extension === '.tsx') return 'tsx'
-  if (extension === '.jsx') return 'jsx'
-  return 'js'
+  return sourceLanguageByExtension.get(extension) ?? 'js'
 }
 
 function getOriginalNonBareImportSpecifiers(sourceText: string, resolvedPath: string): Set<string> {
@@ -1363,7 +1978,10 @@ function getOriginalNonBareImportSpecifiers(sourceText: string, resolvedPath: st
   )
 }
 
-function getUsedImportedBindings(program: OxcAstNode, staticImports: OxcStaticImport[]): Set<string> {
+function getUsedImportedBindings(
+  program: OxcAstNode,
+  staticImports: OxcStaticImport[],
+): Set<string> {
   let importedBindingNames = new Set<string>()
   for (let imported of staticImports) {
     for (let entry of imported.entries) {
@@ -1390,7 +2008,11 @@ function getUsedImportedBindings(program: OxcAstNode, staticImports: OxcStaticIm
   return usedBindings
 }
 
-function collectScopeBindings(node: OxcAstNode, currentScope: Scope, nodeScopes: WeakMap<object, Scope>) {
+function collectScopeBindings(
+  node: OxcAstNode,
+  currentScope: Scope,
+  nodeScopes: WeakMap<object, Scope>,
+) {
   switch (node.type) {
     case 'Program': {
       forEachChildNode(node, (child) => {
@@ -1719,11 +2341,7 @@ function isReferenceIdentifier(
   key?: string,
 ): boolean {
   if (parent === null) return false
-  if (
-    parent.type === 'Property' &&
-    key === 'key' &&
-    !parent.computed
-  ) {
+  if (parent.type === 'Property' && key === 'key' && !parent.computed) {
     return false
   }
   if (
@@ -1799,7 +2417,9 @@ function readPackageSideEffects(packageJsonPath: string): boolean | string[] | n
       return packageJson.sideEffects
     }
     if (Array.isArray(packageJson.sideEffects)) {
-      return packageJson.sideEffects.filter((pattern): pattern is string => typeof pattern === 'string')
+      return packageJson.sideEffects.filter(
+        (pattern): pattern is string => typeof pattern === 'string',
+      )
     }
   } catch {
     // Invalid package metadata should conservatively keep imports in place.
@@ -1835,6 +2455,54 @@ async function mapWithConcurrency<item, result>(
   return results
 }
 
+async function resolveWithOxc(
+  specifiers: string[],
+  importerPath: string,
+  resolverFactory: ResolverFactory,
+): Promise<ResolvedSpec[]> {
+  let resolvedSpecs: ResolvedSpec[] = []
+
+  try {
+    for (let specifier of specifiers) {
+      let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
+      if (resolutionResult.error) {
+        throw createScriptServerCompilationError(
+          `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
+            `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        )
+      }
+
+      resolvedSpecs.push({
+        absolutePath:
+          resolutionResult.path && path.isAbsolute(resolutionResult.path)
+            ? normalizeFilePath(resolutionResult.path)
+            : null,
+        packageJsonPath: resolutionResult.packageJsonPath
+          ? normalizeFilePath(resolutionResult.packageJsonPath)
+          : null,
+        specifier,
+      })
+    }
+  } catch (error) {
+    if (isScriptServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
+      throw error
+    }
+
+    throw createScriptServerCompilationError(
+      `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'IMPORT_RESOLUTION_FAILED',
+      },
+    )
+  }
+
+  return resolvedSpecs
+}
+
 async function resolveWithEsbuild(
   specifiers: string[],
   importerDir: string,
@@ -1852,7 +2520,7 @@ async function resolveWithEsbuild(
       plugins: [
         {
           name: 'batch-resolver',
-          setup(build) {
+          setup(build: esbuild.PluginBuild) {
             build.onStart(async () => {
               let resolutionResults = await Promise.all(
                 specifiers.map((specifier) =>
@@ -1883,11 +2551,15 @@ async function resolveWithEsbuild(
                     ? resolutionResult.path
                     : null
 
-                resolvedSpecs.push({ absolutePath, specifier: specifiers[index] })
+                resolvedSpecs.push({
+                  absolutePath,
+                  packageJsonPath: null,
+                  specifier: specifiers[index],
+                })
               }
             })
 
-            build.onResolve({ filter: /.*/ }, (args) => {
+            build.onResolve({ filter: /.*/ }, (args: esbuild.OnResolveArgs) => {
               if (args.importer) return { external: true }
               return undefined
             })

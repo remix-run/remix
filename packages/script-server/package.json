@@ -39,7 +39,10 @@
     "esbuild": "^0.25.0",
     "get-tsconfig": "^4.13.6",
     "magic-string": "^0.30.21",
+    "oxc-minify": "^0.121.0",
     "oxc-parser": "^0.121.0",
+    "oxc-resolver": "^11.19.1",
+    "oxc-transform": "^0.121.0",
     "source-map-js": "^1.2.1"
   },
   "devDependencies": {
@@ -48,10 +51,14 @@
   },
   "scripts": {
     "bench": "pnpm --dir ./bench run bench",
+    "bench:esbuild": "pnpm --dir ./bench run bench -- --engine=esbuild",
+    "bench:oxc": "pnpm --dir ./bench run bench -- --engine=oxc",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test": "pnpm run test:oxc && pnpm run test:esbuild",
+    "test:esbuild": "SCRIPT_SERVER_TEST_ENGINE=esbuild node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test:oxc": "SCRIPT_SERVER_TEST_ENGINE=oxc node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
@@ -59,7 +66,6 @@
     "scripts",
     "script-server",
     "transform",
-    "esbuild",
     "server"
   ]
 }

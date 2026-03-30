@@ -1,13 +1,10 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { transformSync } from 'esbuild'
+import { transformSync } from 'oxc-transform'
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 
 function compile(source: string, loader: 'js' | 'ts' | 'tsx' = 'js'): string {
-  let result = transformSync(source, {
-    loader,
-    sourcemap: false,
-  })
+  let result = transformSync(`test.${loader}`, source, { lang: loader, sourceType: 'module' })
 
   return result.code.trim()
 }

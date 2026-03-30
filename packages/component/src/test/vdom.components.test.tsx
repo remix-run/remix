@@ -215,21 +215,33 @@ describe('vnode rendering', () => {
 
       expect(document.head.querySelector('link[rel="preload"][href="/scripts/a.js"]')).toBeTruthy()
       expect(container.querySelector('link[rel="preload"]')).toBeNull()
-      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe('/styles/a.css')
+      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe(
+        '/styles/a.css',
+      )
 
       rerender()
       root.flush()
 
-      expect(document.head.querySelectorAll('link[rel="preload"], link[rel="modulepreload"]')).toHaveLength(2)
-      expect(document.head.querySelectorAll('link[rel="preload"][href="/scripts/a.js"]')).toHaveLength(1)
-      expect(document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]')).toBeTruthy()
-      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe('/styles/b.css')
+      expect(
+        document.head.querySelectorAll('link[rel="preload"], link[rel="modulepreload"]'),
+      ).toHaveLength(2)
+      expect(
+        document.head.querySelectorAll('link[rel="preload"][href="/scripts/a.js"]'),
+      ).toHaveLength(1)
+      expect(
+        document.head.querySelector('link[rel="modulepreload"][href="/scripts/b.js"]'),
+      ).toBeTruthy()
+      expect(container.querySelector('link[rel="stylesheet"]')?.getAttribute('href')).toBe(
+        '/styles/b.css',
+      )
       expect(container.querySelector('link[rel="preload"], link[rel="modulepreload"]')).toBeNull()
 
       rerender()
       root.flush()
 
-      expect(document.head.querySelector('link[rel="preload"], link[rel="modulepreload"]')).toBeNull()
+      expect(
+        document.head.querySelector('link[rel="preload"], link[rel="modulepreload"]'),
+      ).toBeNull()
       expect(container.innerHTML).toBe('<div>Phase C</div>')
       root.dispose()
     })

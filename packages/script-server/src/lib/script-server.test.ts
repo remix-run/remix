@@ -15,6 +15,19 @@ import {
   waitForInternalScriptServerWatcher,
 } from './script-server.ts'
 
+const testEngineOption: Parameters<typeof createScriptServer>[0]['temporary_engine'] =
+  process.env.SCRIPT_SERVER_TEST_ENGINE === 'esbuild' ? 'esbuild' : 'oxc'
+const watchTestTimeoutMs = 15000
+
+function createScriptServerForTest(
+  options: Parameters<typeof createScriptServer>[0],
+): ReturnType<typeof createScriptServer> {
+  return createScriptServer({
+    ...options,
+    temporary_engine: options.temporary_engine ?? testEngineOption,
+  })
+}
+
 async function makeTmpDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'script-server-test-'))
 }
@@ -45,7 +58,7 @@ function createTestServer(
   root: string,
   overrides: Partial<Parameters<typeof createScriptServer>[0]> = {},
 ) {
-  return createScriptServer({
+  return createScriptServerForTest({
     allow: ['app/**', 'app/node_modules/**'],
     routes: [
       { urlPattern: '/scripts/app/*path', filePattern: 'app/*path' },
@@ -106,6 +119,60 @@ function fingerprintingOptions(
   }
 }
 
+async function getCompiledCodeAndSourceMap(
+  scriptServer: ReturnType<typeof createScriptServer>,
+  filePath: string,
+): Promise<{ compiledCode: string; sourceMap: RawSourceMap }> {
+  let entryResponse = await getByFile(scriptServer, filePath)
+  assert.ok(entryResponse)
+  let compiledCode = await entryResponse.text()
+
+  let sourceMapResponse = await get(scriptServer, `${await scriptServer.getHref(filePath)}.map`)
+  assert.ok(sourceMapResponse)
+
+  return {
+    compiledCode,
+    sourceMap: JSON.parse(await sourceMapResponse.text()) as RawSourceMap,
+  }
+}
+
+async function assertCharacterAccurateImportRewriteSourceMap(
+  root: string,
+  options: Partial<Parameters<typeof createScriptServer>[0]> = {},
+  sourceText = 'import { dep } from "./dep.ts"\nexport function value() {\n  return dep + 1\n}\n',
+) {
+  await write(root, 'app/dep.ts', 'export const dep = 1')
+  await write(root, 'app/entry.ts', sourceText)
+
+  let scriptServer = createTestServer(root, {
+    ...fingerprintingOptions(),
+    minify: true,
+    sourceMaps: 'external',
+    ...options,
+  })
+  try {
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+      scriptServer,
+      'app/entry.ts',
+    )
+    let consumer = new SourceMapConsumer(sourceMap)
+
+    let rewrittenImport = getLineAndColumn(compiledCode, '/scripts/app/dep.ts.@')
+    let originalImport = consumer.originalPositionFor(rewrittenImport)
+    let expectedImport = getLineAndColumn(sourceText, '"./dep.ts"')
+    assert.equal(originalImport.line, expectedImport.line)
+    assert.equal(originalImport.column, expectedImport.column)
+
+    let generatedReturn = getLineAndColumn(compiledCode, 'return')
+    let originalReturn = consumer.originalPositionFor(generatedReturn)
+    let expectedReturn = getLineAndColumn(sourceText, 'return')
+    assert.equal(originalReturn.line, expectedReturn.line)
+    assert.equal(originalReturn.column, expectedReturn.column)
+  } finally {
+    await scriptServer.close()
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -140,6 +207,7 @@ async function waitForWatchedTestServerReady(
   await waitFor(
     async () => Object.keys(watcher.getWatched()).map(normalizeWindowsPath),
     (watchedDirectories) => watchedDirectories.includes(watchedRoot),
+    watchTestTimeoutMs,
   )
 }
 
@@ -478,7 +546,24 @@ describe('script-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\("\/scripts\/app\/dep\.ts\.@[A-Za-z0-9_-]+"\)/)
+    assert.match(body, /import\((["`])\/scripts\/app\/dep\.ts\.@[A-Za-z0-9_-]+\1\)/)
+  })
+
+  it('rewrites re-exported package specifiers', async () => {
+    await writeJson(dir, 'app/node_modules/example/package.json', {
+      name: 'example',
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(dir, 'app/node_modules/example/index.ts', 'export const value = 1')
+    await write(dir, 'app/bridge.ts', 'export * from "example"')
+    let scriptServer = createTestServer(dir)
+
+    let response = await getByFile(scriptServer, 'app/bridge.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /export \* from "\/scripts\/app\/node_modules\/example\/index\.ts"/)
   })
 
   it('leaves variable dynamic imports unchanged', async () => {
@@ -555,6 +640,61 @@ describe('script-server', () => {
     let originalThen = consumer.originalPositionFor(generatedThen)
     assert.equal(originalThen.line, 1)
     assert.equal(originalThen.column, 43)
+  })
+
+  it('keeps source map mappings character-accurate with OXC minify', async () => {
+    await assertCharacterAccurateImportRewriteSourceMap(dir, {
+      temporary_engine: 'oxc',
+    })
+  })
+
+  it('keeps source map mappings character-accurate with esbuild minify', async () => {
+    await assertCharacterAccurateImportRewriteSourceMap(dir, {
+      temporary_engine: 'esbuild',
+    })
+  })
+
+  it('keeps source map mappings character-accurate with mixed OXC transform and esbuild minify', async () => {
+    await assertCharacterAccurateImportRewriteSourceMap(dir, {
+      temporary_engine: {
+        minify: 'esbuild',
+        resolver: 'oxc-resolver',
+        transform: 'oxc-transform',
+      },
+    })
+  })
+
+  it('keeps source map mappings character-accurate after unused import pruning', async () => {
+    await writeJson(dir, 'app/node_modules/example/package.json', {
+      exports: {
+        '.': './index.ts',
+      },
+      name: 'example',
+      sideEffects: false,
+    })
+    await write(dir, 'app/node_modules/example/index.ts', 'export const devOnly = "dev"')
+
+    await assertCharacterAccurateImportRewriteSourceMap(
+      dir,
+      {
+        define: {
+          'process.env.NODE_ENV': '"production"',
+        },
+        removeUnusedImports: true,
+        temporary_engine: 'oxc',
+      },
+      [
+        'import { dep } from "./dep.ts"',
+        'import { devOnly } from "example"',
+        'if (process.env.NODE_ENV !== "production") {',
+        '  console.log(devOnly)',
+        '}',
+        'export function value() {',
+        '  return dep + 1',
+        '}',
+        '',
+      ].join('\n'),
+    )
   })
 
   it('supports HEAD requests for source map URLs', async () => {
@@ -744,7 +884,7 @@ describe('script-server', () => {
 
   it('getPreloads rejects denied modules', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
-    let scriptServer = createScriptServer({
+    let scriptServer = createScriptServerForTest({
       allow: ['app/**'],
       deny: ['app/entry.ts'],
       root: dir,
@@ -959,6 +1099,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => /value = 2/.test(body),
+          watchTestTimeoutMs,
         )
 
         assert.match(secondBody, /value = 2/)
@@ -997,6 +1138,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => /\/scripts\/app\/missing\.ts/.test(body),
+          watchTestTimeoutMs,
         )
 
         assert.match(afterBody, /\/scripts\/app\/missing\.ts/)
@@ -1050,6 +1192,7 @@ describe('script-server', () => {
         let after = await waitFor(
           async () => scriptServer.getPreloads('app/entry.tsx'),
           (urls) => urls.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')),
+          watchTestTimeoutMs,
         )
 
         assert.ok(after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
@@ -1098,6 +1241,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => /example\/b\.ts/.test(body),
+          watchTestTimeoutMs,
         )
 
         assert.match(secondBody, /example\/b\.ts/)
@@ -1134,6 +1278,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => /\/scripts\/app\/dep\.ts/.test(body),
+          watchTestTimeoutMs,
         )
 
         assert.match(afterBody, /\/scripts\/app\/dep\.ts/)
@@ -1170,6 +1315,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => /\/scripts\/app\/dep\.js/.test(body),
+          watchTestTimeoutMs,
         )
 
         assert.match(afterBody, /\/scripts\/app\/dep\.js/)
@@ -1248,7 +1394,7 @@ describe('script-server', () => {
   it('rethrows unexpected realpath errors for exact file matchers', async () => {
     assert.throws(
       () =>
-        createScriptServer({
+        createScriptServerForTest({
           allow: ['app/\0allowed-realpath.ts'],
           root: dir,
           routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
@@ -1261,7 +1407,7 @@ describe('script-server', () => {
     await write(dir, 'app/entry.ts', 'export const abs = true')
     assert.throws(
       () =>
-        createScriptServer({
+        createScriptServerForTest({
           allow: [path.join(dir, 'app')],
           root: dir,
           routes: [
@@ -1280,7 +1426,7 @@ describe('script-server', () => {
     let allowedPath = await write(dir, 'app/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     await write(dir, 'app/.hidden.ts', 'export const hidden = true')
-    let scriptServer = createScriptServer({
+    let scriptServer = createScriptServerForTest({
       allow: [allowedPath, path.join(dir, 'app')],
       deny: [path.join(dir, 'app/blocked.ts')],
       root: dir,
@@ -1300,7 +1446,7 @@ describe('script-server', () => {
   it('rejects unnamed route wildcards because routes must be reversible', async () => {
     assert.throws(
       () =>
-        createScriptServer({
+        createScriptServerForTest({
           allow: ['app/**'],
           root: dir,
           routes: [{ urlPattern: '/scripts/app/*', filePattern: 'app/*path' }],
@@ -1312,7 +1458,7 @@ describe('script-server', () => {
   it('supports glob-style allow and deny rules', async () => {
     await write(dir, 'app/features/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/features/private/blocked.ts', 'export const blocked = true')
-    let scriptServer = createScriptServer({
+    let scriptServer = createScriptServerForTest({
       allow: ['app/**/*.ts'],
       deny: ['app/**/private/**'],
       root: dir,
@@ -1329,7 +1475,7 @@ describe('script-server', () => {
   it('does not call onError for denied direct requests', async () => {
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     let receivedError: unknown
-    let scriptServer = createScriptServer({
+    let scriptServer = createScriptServerForTest({
       allow: ['app/**'],
       deny: ['app/blocked.ts'],
       root: dir,
@@ -1358,6 +1504,60 @@ describe('script-server', () => {
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
   })
 
+  it('minifies output when using OXC transform with esbuild minify', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      'export function greet(name: string) {\n  const greeting = "Hello " + name\n  return greeting.toUpperCase()\n}\n',
+    )
+    let scriptServer = createTestServer(dir, {
+      minify: true,
+      temporary_engine: {
+        minify: 'esbuild',
+        resolver: 'oxc-resolver',
+        transform: 'oxc-transform',
+      },
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+    assert.ok(body.length < 80, `expected minified output, got:\n${body}`)
+    assert.ok(!body.includes('\n'), `expected single-line output, got:\n${body}`)
+    assert.doesNotMatch(body, /\bgreeting\b/)
+  })
+
+  it('keeps side-effect-free unused imports by default', async () => {
+    await writeJson(dir, 'app/node_modules/example/package.json', {
+      exports: {
+        '.': './index.ts',
+      },
+      name: 'example',
+      sideEffects: false,
+    })
+    await write(dir, 'app/node_modules/example/index.ts', 'export const devOnly = "dev"')
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { devOnly } from "example"\nif (process.env.NODE_ENV !== "production") {\n  console.log(devOnly)\n}\nexport const entry = true\n',
+    )
+    let scriptServer = createTestServer(dir, {
+      define: {
+        'process.env.NODE_ENV': '"production"',
+      },
+      minify: true,
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /example\/index\.ts/)
+
+    let preloads = await scriptServer.getPreloads('app/entry.ts')
+    assert.ok(preloads.some((url) => url.includes('example/index.ts')))
+  })
+
   it('removes side-effect-free unused imports after define-based dead code elimination', async () => {
     await writeJson(dir, 'app/node_modules/example/package.json', {
       exports: {
@@ -1377,6 +1577,7 @@ describe('script-server', () => {
         'process.env.NODE_ENV': '"production"',
       },
       minify: true,
+      removeUnusedImports: true,
     })
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
@@ -1407,6 +1608,7 @@ describe('script-server', () => {
         'process.env.NODE_ENV': '"production"',
       },
       minify: true,
+      removeUnusedImports: true,
     })
 
     let response = await get(scriptServer, '/scripts/app/entry.ts')
@@ -1441,6 +1643,7 @@ describe('script-server', () => {
           'process.env.NODE_ENV': '"production"',
         },
         minify: true,
+        removeUnusedImports: true,
       })
 
       try {
@@ -1453,6 +1656,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => !body.includes('example/index.ts'),
+          watchTestTimeoutMs,
         )
         assert.doesNotMatch(firstBody, /example\/index\.ts/)
 
@@ -1471,6 +1675,7 @@ describe('script-server', () => {
             return response.text()
           },
           (body) => body.includes('example/index.ts'),
+          watchTestTimeoutMs,
         )
 
         assert.match(secondBody, /example\/index\.ts/)

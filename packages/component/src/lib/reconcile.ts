@@ -326,7 +326,10 @@ function isResourceHintHostNode(node: HostNode, props = getHostProps(node)): boo
 
 function canReuseHostNodeForDiff(curr: HostNode | CommittedHostNode, next: HostNode): boolean {
   if (curr.type !== next.type) return false
-  return isResourceHintHostNode(curr, getHostProps(curr)) === isResourceHintHostNode(next, getHostProps(next))
+  return (
+    isResourceHintHostNode(curr, getHostProps(curr)) ===
+    isResourceHintHostNode(next, getHostProps(next))
+  )
 }
 
 function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
@@ -750,7 +753,14 @@ function insert(
     let adopted = adoptResourceHintIntoHead(node, hostProps, domParent, dom)
     if (adopted) {
       node._dom = adopted
-      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, adopted.parentNode as ParentNode)
+      bindNodeMixRuntime(
+        node as CommittedHostNode,
+        frame,
+        scheduler,
+        styles,
+        false,
+        adopted.parentNode as ParentNode,
+      )
     } else {
       bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
       doInsert(dom)
@@ -1516,7 +1526,9 @@ function diffChildren(
           candidate &&
           (candidateFlags & MATCHED) === 0 &&
           candidate.type === type &&
-          (!isCommittedHostNode(candidate) || !isHostNode(childVNode) || canReuseHostNodeForDiff(candidate, childVNode))
+          (!isCommittedHostNode(candidate) ||
+            !isHostNode(childVNode) ||
+            canReuseHostNodeForDiff(candidate, childVNode))
         ) {
           matchingIndex = mapIndex
         }
@@ -1767,7 +1779,13 @@ function adoptResourceHintIntoHead(
 
 function getResourceHintPropsKey(props: ElementProps): string {
   return Object.entries(props)
-    .filter(([key, value]) => !isResourceHintFrameworkProp(key) && value !== undefined && value !== null && value !== false)
+    .filter(
+      ([key, value]) =>
+        !isResourceHintFrameworkProp(key) &&
+        value !== undefined &&
+        value !== null &&
+        value !== false,
+    )
     .map(([key, value]) => {
       let attrName = resourceHintPropToAttrName(key)
       let attrValue = value === true ? '' : String(value)
