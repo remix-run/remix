@@ -20,7 +20,6 @@ export const scriptServer = createScriptServer({
   allow: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts', 'packages/*/src/**'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  temporary_engine: 'oxc',
   fingerprint: isDevelopment
     ? undefined
     : {

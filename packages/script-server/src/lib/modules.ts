@@ -2,14 +2,13 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as esbuild from 'esbuild'
 import { getTsconfig } from 'get-tsconfig'
 import { minify as oxcMinify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
 import { ResolverFactory } from 'oxc-resolver'
 import { transform as oxcTransform } from 'oxc-transform'
 import { IfNoneMatch } from '@remix-run/headers'
-import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
+import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import MagicString from 'magic-string'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
@@ -25,9 +24,6 @@ import type { ScriptServerTarget } from './script-server.ts'
 
 const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
 type OxcSourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
-type MinifyEngine = 'esbuild' | 'oxc'
-type ResolverEngine = 'esbuild' | 'oxc'
-type TransformEngine = 'esbuild' | 'oxc'
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
   { extension: '.jsx', lang: 'jsx' },
@@ -38,14 +34,10 @@ const scriptModuleTypes = [
 ] as const satisfies ReadonlyArray<{ extension: string; lang: OxcSourceLanguage }>
 const supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
-const transformLoaderByExtension = new Map<string, esbuild.Loader>(
-  scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
-)
 const sourceLanguageByExtension = new Map<string, OxcSourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
 const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs', '.json']
-const lexerReady = lexerInit
 
 export type ModuleCompileResult = {
   compiledCode: string
@@ -102,11 +94,9 @@ type ModuleCompilerOptions = {
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
   target?: ScriptServerTarget
-  temporaryEngine?: TemporaryEngineOptions
 }
 
 type ResolvedOptions = ModuleCompilerOptions & {
-  engines: CompilerEngines
   externalSet: Set<string>
 }
 
@@ -190,27 +180,12 @@ type RewriteBuffer = {
   toString(): string
 }
 
-type CompilerEngines = {
-  minify: MinifyEngine
-  resolver: ResolverEngine
-  transform: TransformEngine
-}
-
 type OxcParseResult = ReturnType<typeof parseSync>
 
 type RemovedRange = {
   end: number
   start: number
 }
-
-type TemporaryEngineOptions =
-  | 'esbuild'
-  | 'oxc'
-  | {
-      minify?: 'esbuild' | 'oxc-minify'
-      resolver?: 'esbuild' | 'oxc-resolver'
-      transform?: 'esbuild' | 'oxc-transform'
-    }
 
 type Scope = {
   bindings: Map<string, 'import' | 'local'>
@@ -261,12 +236,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let resolverFactory = createOxcResolverFactory()
 
   function resolveSpecifiers(specifiers: string[], importerPath: string) {
-    return batchResolveSpecifiers(
-      specifiers,
-      importerPath,
-      resolvedOptions.engines,
-      resolverFactory,
-    )
+    return batchResolveSpecifiers(specifiers, importerPath, resolverFactory)
   }
 
   return {
@@ -510,7 +480,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let mayContainCommonJS = mayContainCommonJSModuleGlobals(sourceText)
     let analysis = await analyzeModuleSource(sourceText, nextResolvedPath, transformOptions, {
       define: resolvedOptions.define,
-      engines: resolvedOptions.engines,
       minify: resolvedOptions.minify,
       removeUnusedImports: resolvedOptions.removeUnusedImports,
       resolveSpecifiers,
@@ -614,12 +583,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       async ([importerDir, group]) => {
         resolvedByDirectory.set(
           importerDir,
-          await batchResolveSpecifiers(
-            [...group.specifiers],
-            group.importerPath,
-            resolvedOptions.engines,
-            resolverFactory,
-          ),
+          await batchResolveSpecifiers([...group.specifiers], group.importerPath, resolverFactory),
         )
       },
     )
@@ -886,7 +850,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let resolved = await batchResolveSpecifiers(
       [trackedResolution.specifier],
       importerPath,
-      resolvedOptions.engines,
       resolverFactory,
     )
     let resolvedSpec = resolved.get(trackedResolution.specifier)
@@ -943,7 +906,6 @@ function dedupeIdentityPaths(resolvedModules: readonly ResolveModuleResult[]): s
 function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {
   return {
     ...options,
-    engines: getCompilerEngines(options.temporaryEngine),
     externalSet: new Set(options.external),
   }
 }
@@ -1187,7 +1149,6 @@ async function analyzeModuleSource(
   transformOptions: TsconfigTransformOptions,
   options: {
     define?: Record<string, string>
-    engines: CompilerEngines
     minify: boolean
     removeUnusedImports: boolean
     resolveSpecifiers(
@@ -1201,18 +1162,11 @@ async function analyzeModuleSource(
   let target = options.target
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
-    transformResult = await (options.engines.transform === 'esbuild'
-      ? transformWithEsbuild(sourceText, resolvedPath, transformOptions, {
-          define: options.define,
-          minify: options.minify && options.engines.minify === 'esbuild',
-          sourceMaps: options.sourceMaps,
-          target,
-        })
-      : transformWithOxc(sourceText, resolvedPath, transformOptions, {
-          define: options.define,
-          sourceMaps: options.sourceMaps,
-          target,
-        }))
+    transformResult = await transformWithOxc(sourceText, resolvedPath, transformOptions, {
+      define: options.define,
+      sourceMaps: options.sourceMaps,
+      target,
+    })
   } catch (error) {
     if (isScriptServerCompilationError(error)) {
       throw error
@@ -1229,14 +1183,8 @@ async function analyzeModuleSource(
   let rawCode = transformResult.code.trimEnd()
   let sourcemap = stringifySourceMap(transformResult.map)
 
-  if (
-    options.minify &&
-    !(options.engines.transform === 'esbuild' && options.engines.minify === 'esbuild')
-  ) {
-    let minifyResult =
-      options.engines.minify === 'esbuild'
-        ? await minifyWithEsbuild(rawCode, resolvedPath, target, options.sourceMaps)
-        : await minifyWithOxc(rawCode, resolvedPath, target, options.sourceMaps)
+  if (options.minify) {
+    let minifyResult = await minifyWithOxc(rawCode, resolvedPath, target, options.sourceMaps)
     rawCode = minifyResult.code.trimEnd()
     let minifyMap = stringifySourceMap(minifyResult.map)
     sourcemap =
@@ -1248,12 +1196,11 @@ async function analyzeModuleSource(
   }
 
   if (!options.removeUnusedImports) {
-    await lexerReady
     return {
       rawCode,
       sourcemap,
       trackedFiles: [],
-      unresolvedImports: getUnresolvedImportsFromLexer(rawCode),
+      unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
     }
   }
 
@@ -1262,7 +1209,6 @@ async function analyzeModuleSource(
     resolvedPath,
     sourceText,
     sourcemap,
-    options.engines,
     options.resolveSpecifiers,
   )
 
@@ -1293,46 +1239,6 @@ async function transformWithOxc(
   return result
 }
 
-async function transformWithEsbuild(
-  sourceText: string,
-  resolvedPath: string,
-  transformOptions: TsconfigTransformOptions,
-  options: {
-    define?: Record<string, string>
-    minify: boolean
-    sourceMaps?: 'external' | 'inline'
-    target?: string
-  },
-) {
-  let result: esbuild.TransformResult
-  try {
-    result = await esbuild.transform(sourceText, {
-      define: options.define,
-      format: 'esm',
-      loader: transformLoaderByExtension.get(path.extname(resolvedPath).toLowerCase()) ?? 'js',
-      logLevel: 'silent',
-      minify: options.minify,
-      sourcefile: resolvedPath,
-      sourcemap: options.sourceMaps ? 'external' : false,
-      target: options.target,
-      tsconfigRaw: transformOptions.tsconfigRaw,
-    })
-  } catch (error) {
-    throw createScriptServerCompilationError(
-      `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
-      {
-        cause: error,
-        code: 'MODULE_TRANSFORM_FAILED',
-      },
-    )
-  }
-
-  return {
-    code: result.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd(),
-    map: result.map || null,
-  }
-}
-
 async function minifyWithOxc(
   rawCode: string,
   resolvedPath: string,
@@ -1359,39 +1265,6 @@ async function minifyWithOxc(
         code: 'MODULE_TRANSFORM_FAILED',
       },
     )
-  }
-}
-
-async function minifyWithEsbuild(
-  rawCode: string,
-  resolvedPath: string,
-  target: string | undefined,
-  sourceMaps?: 'external' | 'inline',
-) {
-  let result: esbuild.TransformResult
-  try {
-    result = await esbuild.transform(rawCode, {
-      format: 'esm',
-      loader: 'js',
-      logLevel: 'silent',
-      minify: true,
-      sourcefile: resolvedPath,
-      sourcemap: sourceMaps ? 'external' : false,
-      target,
-    })
-  } catch (error) {
-    throw createScriptServerCompilationError(
-      `Failed to minify module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
-      {
-        cause: error,
-        code: 'MODULE_TRANSFORM_FAILED',
-      },
-    )
-  }
-
-  return {
-    code: result.code.replace(/^\/\/# sourceMappingURL=.+$/m, '').trimEnd(),
-    map: result.map || null,
   }
 }
 
@@ -1512,92 +1385,6 @@ function createRewriteBuffer(sourceText: string): RewriteBuffer {
   }
 }
 
-function getCompilerEngines(temporaryEngine?: TemporaryEngineOptions): CompilerEngines {
-  let explicitEngines = getExplicitCompilerEngines(temporaryEngine)
-  if (explicitEngines) {
-    return explicitEngines
-  }
-
-  return {
-    minify: getCompilerEngine(process.env.SCRIPT_SERVER_MINIFY_ENGINE, ['esbuild', 'oxc'], 'oxc'),
-    resolver: getCompilerEngine(
-      process.env.SCRIPT_SERVER_RESOLVER_ENGINE,
-      ['esbuild', 'oxc'],
-      'oxc',
-    ),
-    transform: getCompilerEngine(
-      process.env.SCRIPT_SERVER_TRANSFORM_ENGINE,
-      ['esbuild', 'oxc'],
-      'oxc',
-    ),
-  }
-}
-
-function getExplicitCompilerEngines(
-  temporaryEngine: TemporaryEngineOptions | undefined,
-): CompilerEngines | null {
-  if (temporaryEngine === undefined) {
-    return null
-  }
-
-  if (typeof temporaryEngine === 'string') {
-    return temporaryEngine === 'esbuild' ? getEsbuildCompilerEngines() : getOxcCompilerEngines()
-  }
-
-  return {
-    minify:
-      temporaryEngine.minify === 'esbuild'
-        ? 'esbuild'
-        : temporaryEngine.minify === 'oxc-minify' || temporaryEngine.minify === undefined
-          ? 'oxc'
-          : unreachableEngineOption(temporaryEngine.minify),
-    resolver:
-      temporaryEngine.resolver === 'esbuild'
-        ? 'esbuild'
-        : temporaryEngine.resolver === 'oxc-resolver' || temporaryEngine.resolver === undefined
-          ? 'oxc'
-          : unreachableEngineOption(temporaryEngine.resolver),
-    transform:
-      temporaryEngine.transform === 'esbuild'
-        ? 'esbuild'
-        : temporaryEngine.transform === 'oxc-transform' || temporaryEngine.transform === undefined
-          ? 'oxc'
-          : unreachableEngineOption(temporaryEngine.transform),
-  }
-}
-
-function getEsbuildCompilerEngines(): CompilerEngines {
-  return {
-    minify: 'esbuild',
-    resolver: 'esbuild',
-    transform: 'esbuild',
-  }
-}
-
-function getOxcCompilerEngines(): CompilerEngines {
-  return {
-    minify: 'oxc',
-    resolver: 'oxc',
-    transform: 'oxc',
-  }
-}
-
-function getCompilerEngine<value extends string>(
-  input: string | undefined,
-  allowed: readonly value[],
-  fallback: value,
-): value {
-  if (input == null || input === '') return fallback
-  if ((allowed as readonly string[]).includes(input)) {
-    return input as value
-  }
-  throw new Error(`Invalid compiler engine "${input}". Expected one of: ${allowed.join(', ')}`)
-}
-
-function unreachableEngineOption(value: never): never {
-  throw new Error(`Unexpected engine option: ${String(value)}`)
-}
-
 function assertNoOxcErrors(
   errors: Array<{ message?: string }> | undefined,
   resolvedPath: string,
@@ -1616,16 +1403,12 @@ function assertNoOxcErrors(
 async function batchResolveSpecifiers(
   specifiers: string[],
   importerPath: string,
-  engines: CompilerEngines,
   resolverFactory: ResolverFactory,
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
   if (specifiers.length === 0) return resolvedBySpecifier
 
-  let resolvedSpecs =
-    engines.resolver === 'esbuild'
-      ? await resolveWithEsbuild(specifiers, path.dirname(importerPath))
-      : await resolveWithOxc(specifiers, importerPath, resolverFactory)
+  let resolvedSpecs = await resolveWithOxc(specifiers, importerPath, resolverFactory)
   for (let resolvedSpec of resolvedSpecs) {
     resolvedBySpecifier.set(resolvedSpec.specifier, resolvedSpec)
   }
@@ -1655,10 +1438,11 @@ function getUniqueSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
   return [...new Set(unresolvedImports.map((unresolved) => unresolved.specifier))]
 }
 
-type ParsedImportRecord = ReturnType<typeof parseImports>[0][number]
+type ParsedImportRecord = ReturnType<typeof esModuleLexer>[0][number]
 
-function getUnresolvedImportsFromLexer(rawCode: string): UnresolvedImport[] {
-  let [imports] = parseImports(rawCode)
+async function getUnresolvedImportsFromLexer(rawCode: string): Promise<UnresolvedImport[]> {
+  await esModuleLexerInit
+  let [imports] = esModuleLexer(rawCode)
   let unresolvedImports: UnresolvedImport[] = []
 
   for (let imported of imports) {
@@ -1746,7 +1530,6 @@ async function pruneUnusedImports(
   resolvedPath: string,
   sourceText: string,
   sourcemap: string | null,
-  engines: CompilerEngines,
   resolveSpecifiers: (
     specifiers: string[],
     importerPath: string,
@@ -2481,87 +2264,6 @@ async function resolveWithOxc(
 
     throw createScriptServerCompilationError(
       `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
-      {
-        cause: error,
-        code: 'IMPORT_RESOLUTION_FAILED',
-      },
-    )
-  }
-
-  return resolvedSpecs
-}
-
-async function resolveWithEsbuild(
-  specifiers: string[],
-  importerDir: string,
-): Promise<ResolvedSpec[]> {
-  let resolvedSpecs: ResolvedSpec[] = []
-
-  try {
-    await esbuild.build({
-      stdin: { contents: '', loader: 'js', resolveDir: importerDir },
-      write: false,
-      bundle: true,
-      platform: 'browser',
-      format: 'esm',
-      logLevel: 'silent',
-      plugins: [
-        {
-          name: 'batch-resolver',
-          setup(build: esbuild.PluginBuild) {
-            build.onStart(async () => {
-              let resolutionResults = await Promise.all(
-                specifiers.map((specifier) =>
-                  build.resolve(specifier, {
-                    kind: 'import-statement',
-                    resolveDir: importerDir,
-                  }),
-                ),
-              )
-
-              for (let index = 0; index < specifiers.length; index++) {
-                let resolutionResult = resolutionResults[index]
-                if (resolutionResult?.errors.length) {
-                  throw createScriptServerCompilationError(
-                    `Failed to resolve import "${specifiers[index]}" in ${importerDir}.\n\n` +
-                      `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
-                    {
-                      code: 'IMPORT_RESOLUTION_FAILED',
-                    },
-                  )
-                }
-
-                let absolutePath =
-                  resolutionResult &&
-                  !resolutionResult.external &&
-                  resolutionResult.path &&
-                  path.isAbsolute(resolutionResult.path)
-                    ? resolutionResult.path
-                    : null
-
-                resolvedSpecs.push({
-                  absolutePath,
-                  packageJsonPath: null,
-                  specifier: specifiers[index],
-                })
-              }
-            })
-
-            build.onResolve({ filter: /.*/ }, (args: esbuild.OnResolveArgs) => {
-              if (args.importer) return { external: true }
-              return undefined
-            })
-          },
-        },
-      ],
-    })
-  } catch (error) {
-    if (isScriptServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
-      throw error
-    }
-
-    throw createScriptServerCompilationError(
-      `Failed to resolve imports in ${importerDir}.\n\n${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'IMPORT_RESOLUTION_FAILED',

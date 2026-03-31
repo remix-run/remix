@@ -35,23 +35,6 @@ export interface ScriptServerFingerprintOptions {
   buildId: string
 }
 
-export interface ScriptServerTemporaryEnginePhases {
-  /**
-   * Select the transform implementation.
-   */
-  transform?: 'esbuild' | 'oxc-transform'
-  /**
-   * Select the resolver implementation.
-   */
-  resolver?: 'esbuild' | 'oxc-resolver'
-  /**
-   * Select the minifier implementation.
-   */
-  minify?: 'esbuild' | 'oxc-minify'
-}
-
-export type ScriptServerTemporaryEngine = 'esbuild' | 'oxc' | ScriptServerTemporaryEnginePhases
-
 const scriptServerTargets = [
   'es2015',
   'es2016',
@@ -124,15 +107,6 @@ export interface ScriptServerOptions {
    * side-effect free by `package.json#sideEffects`. Defaults to `false`.
    */
   removeUnusedImports?: boolean
-  /**
-   * Temporary engine override for validation and benchmarking.
-   *
-   * Omit this option to keep the default OXC pipeline. Pass `'esbuild'` to use
-   * the `esbuild` transform/resolver/minifier pipeline, `'oxc'` to force the
-   * default OXC pipeline, or an object to select the implementation for
-   * individual phases.
-   */
-  temporary_engine?: ScriptServerTemporaryEngine
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
@@ -220,7 +194,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let target = normalizeTarget(options.target)
   let minify = options.minify ?? false
   let removeUnusedImports = options.removeUnusedImports ?? false
-  let temporaryEngine = options.temporary_engine
   let onError = options.onError ?? defaultErrorHandler
   let routes = compileRoutes({
     root,
@@ -240,7 +213,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     sourceMapSourcePaths,
     sourceMaps,
     target,
-    temporaryEngine,
   })
   let watchTargets = watchOptions ? getWatchTargets(root, options.routes) : []
   let watcher =

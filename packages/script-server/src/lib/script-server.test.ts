@@ -15,17 +15,12 @@ import {
   waitForInternalScriptServerWatcher,
 } from './script-server.ts'
 
-const testEngineOption: Parameters<typeof createScriptServer>[0]['temporary_engine'] =
-  process.env.SCRIPT_SERVER_TEST_ENGINE === 'esbuild' ? 'esbuild' : 'oxc'
 const watchTestTimeoutMs = 15000
 
 function createScriptServerForTest(
   options: Parameters<typeof createScriptServer>[0],
 ): ReturnType<typeof createScriptServer> {
-  return createScriptServer({
-    ...options,
-    temporary_engine: options.temporary_engine ?? testEngineOption,
-  })
+  return createScriptServer(options)
 }
 
 async function makeTmpDir(): Promise<string> {
@@ -642,26 +637,8 @@ describe('script-server', () => {
     assert.equal(originalThen.column, 43)
   })
 
-  it('keeps source map mappings character-accurate with OXC minify', async () => {
-    await assertCharacterAccurateImportRewriteSourceMap(dir, {
-      temporary_engine: 'oxc',
-    })
-  })
-
-  it('keeps source map mappings character-accurate with esbuild minify', async () => {
-    await assertCharacterAccurateImportRewriteSourceMap(dir, {
-      temporary_engine: 'esbuild',
-    })
-  })
-
-  it('keeps source map mappings character-accurate with mixed OXC transform and esbuild minify', async () => {
-    await assertCharacterAccurateImportRewriteSourceMap(dir, {
-      temporary_engine: {
-        minify: 'esbuild',
-        resolver: 'oxc-resolver',
-        transform: 'oxc-transform',
-      },
-    })
+  it('keeps source map mappings character-accurate with minify enabled', async () => {
+    await assertCharacterAccurateImportRewriteSourceMap(dir)
   })
 
   it('keeps source map mappings character-accurate after unused import pruning', async () => {
@@ -681,7 +658,6 @@ describe('script-server', () => {
           'process.env.NODE_ENV': '"production"',
         },
         removeUnusedImports: true,
-        temporary_engine: 'oxc',
       },
       [
         'import { dep } from "./dep.ts"',
@@ -1502,29 +1478,6 @@ describe('script-server', () => {
     assert.ok(response)
     let body = await response.text()
     assert.ok(body.length < 60, `expected minified output, got:\n${body}`)
-  })
-
-  it('minifies output when using OXC transform with esbuild minify', async () => {
-    await write(
-      dir,
-      'app/entry.ts',
-      'export function greet(name: string) {\n  const greeting = "Hello " + name\n  return greeting.toUpperCase()\n}\n',
-    )
-    let scriptServer = createTestServer(dir, {
-      minify: true,
-      temporary_engine: {
-        minify: 'esbuild',
-        resolver: 'oxc-resolver',
-        transform: 'oxc-transform',
-      },
-    })
-
-    let response = await get(scriptServer, '/scripts/app/entry.ts')
-    assert.ok(response)
-    let body = await response.text()
-    assert.ok(body.length < 80, `expected minified output, got:\n${body}`)
-    assert.ok(!body.includes('\n'), `expected single-line output, got:\n${body}`)
-    assert.doesNotMatch(body, /\bgreeting\b/)
   })
 
   it('lowers syntax to the configured ECMAScript target', async () => {

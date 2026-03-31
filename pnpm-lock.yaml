@@ -1264,9 +1264,6 @@ importers:
       es-module-lexer:
         specifier: ^2.0.0
         version: 2.0.0
-      esbuild:
-        specifier: ^0.25.0
-        version: 0.25.12
       get-tsconfig:
         specifier: ^4.13.6
         version: 4.13.6
