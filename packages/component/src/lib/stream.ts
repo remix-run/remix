@@ -900,7 +900,7 @@ function validateClientEntriesForHydration(context: RenderContext): void {
     let [hydrationId, unresolvedHydrationData] = context.unresolvedHydrationData.entries().next()
       .value as [string, UnresolvedHydrationData]
     throw new Error(
-      `Resolved client entry is missing an exportName. Received "${unresolvedHydrationData.entryId}" (${hydrationId}).`,
+      `Client entry was not resolved for hydration. Received "${unresolvedHydrationData.entryId}" (${hydrationId}).`,
     )
   }
 }
