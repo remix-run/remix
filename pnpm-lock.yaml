@@ -1414,7 +1414,7 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       tsx:
-        specifier: ^4.0.0
+        specifier: ^4.21.0
         version: 4.21.0
       v8-to-istanbul:
         specifier: ^9.3.0
