@@ -215,6 +215,36 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts[0].text, 'File content')
   })
 
+  it('parses file uploads with non-ASCII filenames', async () => {
+    let filename = 'テスト画像.png'
+    let body = [
+      `--${boundary}`,
+      `Content-Disposition: form-data; name="file1"; filename="${filename}"`,
+      'Content-Type: image/png',
+      '',
+      'PNGDATA',
+      `--${boundary}--`,
+    ].join(CRLF)
+
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'file1')
+    assert.equal(parts[0].filename, filename)
+    assert.equal(parts[0].mediaType, 'image/png')
+  })
+
   it('parses multiple fields and a file upload', async () => {
     let request = new Request('https://example.com', {
       method: 'POST',

@@ -511,6 +511,7 @@ export class MultipartPart {
   readonly content: Uint8Array[]
 
   #header: Uint8Array
+  #decodedHeader?: string
   #headers?: Headers
 
   /**
@@ -550,7 +551,13 @@ export class MultipartPart {
    */
   get headers(): Headers {
     if (!this.#headers) {
-      this.#headers = parseRawHeaders(decoder.decode(this.#header))
+      try {
+        this.#headers = parseRawHeaders(this.#headerText)
+      } catch {
+        // Some runtimes reject non ISO-8859-1 header values in Headers.append().
+        // Fall back to latin1 to keep header parsing non-throwing.
+        this.#headers = parseRawHeaders(decodeLatin1(this.#header))
+      }
     }
 
     return this.#headers
@@ -574,21 +581,21 @@ export class MultipartPart {
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | undefined {
-    return ContentDisposition.from(this.headers.get('content-disposition')).preferredFilename
+    return ContentDisposition.from(this.getHeader('content-disposition')).preferredFilename
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | undefined {
-    return ContentType.from(this.headers.get('content-type')).mediaType
+    return ContentType.from(this.getHeader('content-type')).mediaType
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | undefined {
-    return ContentDisposition.from(this.headers.get('content-disposition')).name
+    return ContentDisposition.from(this.getHeader('content-disposition')).name
   }
 
   /**
@@ -613,4 +620,32 @@ export class MultipartPart {
   get text(): string {
     return decoder.decode(this.bytes)
   }
+
+  get #headerText(): string {
+    this.#decodedHeader ??= decoder.decode(this.#header)
+    return this.#decodedHeader
+  }
+
+  private getHeader(headerName: string): string | null {
+    let target = headerName.toLowerCase()
+
+    for (let line of this.#headerText.split('\r\n')) {
+      let match = line.match(/^([^:]+):(.*)$/)
+      if (match && match[1].trim().toLowerCase() === target) {
+        return match[2].trim()
+      }
+    }
+
+    return null
+  }
+}
+
+function decodeLatin1(bytes: Uint8Array): string {
+  let result = ''
+
+  for (let byte of bytes) {
+    result += String.fromCharCode(byte)
+  }
+
+  return result
 }
