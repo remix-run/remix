@@ -9,10 +9,6 @@ const entryFilePath = path.resolve(import.meta.dirname, '../../client/entry.ts')
 export const homeController = {
   async handler() {
     let entryUrl = await scriptServer.getHref(entryFilePath)
-    let preloadUrls = await scriptServer.getPreloads(entryFilePath)
-    let preloadLinks = preloadUrls
-      .map((url) => `<link rel="modulepreload" href="${escapeHtml(url)}">`)
-      .join('\n')
 
     let html = `<!doctype html>
 <html lang="en">
@@ -20,26 +16,25 @@ export const homeController = {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>script-server demo</title>
-    ${preloadLinks}
     <style>
       :root {
-        color-scheme: dark;
+        color-scheme: light;
         font-family: ui-sans-serif, system-ui, sans-serif;
       }
 
       body {
         margin: 0;
-        background: #0b1020;
-        color: #f8fafc;
+        background: #f8fafc;
+        color: #0f172a;
       }
 
       main {
-        max-width: 60rem;
+        max-width: 42rem;
         margin: 0 auto;
-        padding: 3rem 1.5rem 4rem;
+        padding: 3rem 1.5rem;
       }
 
-      h1, h2 {
+      h1 {
         margin: 0 0 1rem;
       }
 
@@ -47,86 +42,34 @@ export const homeController = {
         line-height: 1.6;
       }
 
-      .panel {
-        background: #11182b;
-        border: 1px solid #24304d;
-        border-radius: 1rem;
-        padding: 1rem 1.25rem;
+      .app {
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        padding: 1rem;
         margin-top: 1rem;
-      }
-
-      .grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-        margin-top: 1.5rem;
-      }
-
-      .eyebrow {
-        color: #7dd3fc;
-        font-size: 0.9rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
       }
 
       code {
         font-family: ui-monospace, SFMono-Regular, monospace;
         font-size: 0.95em;
       }
-
-      button {
-        appearance: none;
-        border: 0;
-        border-radius: 999px;
-        background: #38bdf8;
-        color: #082f49;
-        cursor: pointer;
-        font: inherit;
-        font-weight: 700;
-        padding: 0.7rem 1rem;
-      }
-
-      button:hover {
-        background: #7dd3fc;
-      }
-
-      ul {
-        padding-left: 1.25rem;
-      }
     </style>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Client-only demo</p>
       <h1>script-server watch mode</h1>
       <p>
-        This page is rendered once on the server and then hydrated entirely by browser
-        modules served through <code>remix/script-server</code>. The Node process stays
-        alive in development so you can manually test watch-mode invalidation.
+        This server stays running while <code>remix/script-server</code> watches client files.
+        Edit a client module, refresh the page, and the updated code is served without
+        restarting the server.
       </p>
-
-      <div id="app-root" class="panel" aria-live="polite">
+      <p>
+        Try editing <code>app/client/entry.ts</code> or <code>app/client/content.ts</code>.
+      </p>
+      <div id="app-root" class="app" aria-live="polite">
         Loading client app...
       </div>
-
-      <section class="grid" aria-label="Manual test ideas">
-        <article class="panel">
-          <h2>Edit a source file</h2>
-          <p>Update <code>app/client/entry.ts</code> or <code>app/client/lazy-panel.ts</code>, then refresh.</p>
-        </article>
-
-        <article class="panel">
-          <h2>Test extensionless resolution</h2>
-          <p>
-            The client imports <code>./live-copy</code> without an extension. Start with
-            <code>app/client/live-copy.js</code>, then add <code>app/client/live-copy.ts</code>
-            and refresh to see the higher-priority file win.
-          </p>
-        </article>
-
-      </section>
-
-      <script type="module" src="${entryUrl}"></script>
+      <script type="module" src="${escapeHtml(entryUrl)}"></script>
     </main>
   </body>
 </html>`
