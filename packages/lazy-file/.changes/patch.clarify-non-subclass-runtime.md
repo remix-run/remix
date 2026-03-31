@@ -1,0 +1,1 @@
+Clarify in lazy-file README that LazyFile/LazyBlob are API-compatible but not native File/Blob subclasses, and document when to use `.toFile()`/`.toBlob()`.

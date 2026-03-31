@@ -68,6 +68,8 @@ lazyFile.type // "text/plain"
 
 All file contents are read on-demand and nothing is ever buffered unless you explicitly call `.toFile()` or `.toBlob()`.
 
+Note: `LazyFile` and `LazyBlob` are API-compatible with native `File`/`Blob`, but they are not subclasses of the native implementations. Use `.toFile()`/`.toBlob()` when an API requires a real `File` or `Blob` instance.
+
 ### Streaming Content
 
 Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs:
