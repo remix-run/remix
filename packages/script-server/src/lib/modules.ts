@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { getTsconfig } from 'get-tsconfig'
-import { minify as oxcMinify } from 'oxc-minify'
+import { minify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
 import { ResolverFactory } from 'oxc-resolver'
 import { transform as oxcTransform } from 'oxc-transform'
@@ -23,7 +23,7 @@ import type { CompiledRoutes } from './routes.ts'
 import type { ScriptServerTarget } from './script-server.ts'
 
 const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
-type OxcSourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
+type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
   { extension: '.jsx', lang: 'jsx' },
@@ -31,10 +31,10 @@ const scriptModuleTypes = [
   { extension: '.mts', lang: 'ts' },
   { extension: '.ts', lang: 'ts' },
   { extension: '.tsx', lang: 'tsx' },
-] as const satisfies ReadonlyArray<{ extension: string; lang: OxcSourceLanguage }>
+] as const satisfies ReadonlyArray<{ extension: string; lang: SourceLanguage }>
 const supportedScriptExtensions = scriptModuleTypes.map(({ extension }) => extension)
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
-const sourceLanguageByExtension = new Map<string, OxcSourceLanguage>(
+const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
 const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs', '.json']
@@ -131,16 +131,16 @@ type UnresolvedImport = {
   start: number
 }
 
-type OxcAstNode = {
+type AstNode = {
   type: string
   [key: string]: unknown
 }
 
-type OxcIdentifier = OxcAstNode & {
+type Identifier = AstNode & {
   name: string
 }
 
-type OxcStaticImport = {
+type StaticImport = {
   end: number
   entries: Array<{
     isType: boolean
@@ -156,7 +156,7 @@ type OxcStaticImport = {
   start: number
 }
 
-type OxcStaticExport = {
+type StaticExport = {
   entries: Array<{
     moduleRequest?: {
       end: number
@@ -166,7 +166,7 @@ type OxcStaticExport = {
   }>
 }
 
-type OxcDynamicImport = {
+type DynamicImport = {
   moduleRequest: {
     end: number
     start: number
@@ -180,7 +180,7 @@ type RewriteBuffer = {
   toString(): string
 }
 
-type OxcParseResult = ReturnType<typeof parseSync>
+type ParseResult = ReturnType<typeof parseSync>
 
 type RemovedRange = {
   end: number
@@ -198,7 +198,7 @@ type ExtensionlessImport = {
   specifier: string
 }
 
-function createOxcResolverFactory() {
+function createResolverFactory() {
   return new ResolverFactory({
     tsconfig: 'auto',
     aliasFields: [['browser']],
@@ -233,7 +233,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let importersByDependency = new Map<string, Set<string>>()
   let modulesByTrackedFile = new Map<string, Set<string>>()
   let tsconfigTransformOptions = createTsconfigTransformOptionsResolver()
-  let resolverFactory = createOxcResolverFactory()
+  let resolverFactory = createResolverFactory()
 
   function resolveSpecifiers(specifiers: string[], importerPath: string) {
     return batchResolveSpecifiers(specifiers, importerPath, resolverFactory)
@@ -1162,7 +1162,7 @@ async function analyzeModuleSource(
   let target = options.target
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
-    transformResult = await transformWithOxc(sourceText, resolvedPath, transformOptions, {
+    transformResult = await transformModule(sourceText, resolvedPath, transformOptions, {
       define: options.define,
       sourceMaps: options.sourceMaps,
       target,
@@ -1184,7 +1184,7 @@ async function analyzeModuleSource(
   let sourcemap = stringifySourceMap(transformResult.map)
 
   if (options.minify) {
-    let minifyResult = await minifyWithOxc(rawCode, resolvedPath, target, options.sourceMaps)
+    let minifyResult = await minifyModule(rawCode, resolvedPath, target, options.sourceMaps)
     rawCode = minifyResult.code.trimEnd()
     let minifyMap = stringifySourceMap(minifyResult.map)
     sourcemap =
@@ -1220,7 +1220,7 @@ async function analyzeModuleSource(
   }
 }
 
-async function transformWithOxc(
+async function transformModule(
   sourceText: string,
   resolvedPath: string,
   transformOptions: TsconfigTransformOptions,
@@ -1233,26 +1233,26 @@ async function transformWithOxc(
   let result = await oxcTransform(
     resolvedPath,
     sourceText,
-    getOxcTransformOptions(resolvedPath, transformOptions, options),
+    getTransformOptions(resolvedPath, transformOptions, options),
   )
-  assertNoOxcErrors(result.errors, resolvedPath, 'transform')
+  assertNoCompilerErrors(result.errors, resolvedPath, 'transform')
   return result
 }
 
-async function minifyWithOxc(
+async function minifyModule(
   rawCode: string,
   resolvedPath: string,
   target: string | undefined,
   sourceMaps?: 'external' | 'inline',
 ) {
   try {
-    let result = await oxcMinify(resolvedPath, rawCode, {
+    let result = await minify(resolvedPath, rawCode, {
       compress: target ? { target } : true,
       mangle: true,
       module: true,
       sourcemap: sourceMaps != null,
     })
-    assertNoOxcErrors(result.errors, resolvedPath, 'minify')
+    assertNoCompilerErrors(result.errors, resolvedPath, 'minify')
     return result
   } catch (error) {
     if (isScriptServerCompilationError(error)) {
@@ -1268,7 +1268,7 @@ async function minifyWithOxc(
   }
 }
 
-function getOxcTransformOptions(
+function getTransformOptions(
   resolvedPath: string,
   transformOptions: TsconfigTransformOptions,
   options: {
@@ -1292,8 +1292,8 @@ function getOxcTransformOptions(
           }
         : undefined,
     define: options.define,
-    jsx: getOxcJsxOptions(resolvedPath, compilerOptions),
-    lang: getOxcSourceLanguageForPath(resolvedPath),
+    jsx: getJsxOptions(resolvedPath, compilerOptions),
+    lang: getSourceLanguageForPath(resolvedPath),
     sourceType: 'module' as const,
     sourcemap: options.sourceMaps != null,
     target: options.target,
@@ -1308,11 +1308,11 @@ function getOxcTransformOptions(
   }
 }
 
-function getOxcJsxOptions(
+function getJsxOptions(
   resolvedPath: string,
   compilerOptions?: Record<string, unknown>,
 ): 'preserve' | Record<string, unknown> | undefined {
-  let language = getOxcSourceLanguageForPath(resolvedPath)
+  let language = getSourceLanguageForPath(resolvedPath)
   if (language !== 'jsx' && language !== 'tsx') return undefined
 
   let jsx = getStringOption(compilerOptions, 'jsx')
@@ -1385,7 +1385,7 @@ function createRewriteBuffer(sourceText: string): RewriteBuffer {
   }
 }
 
-function assertNoOxcErrors(
+function assertNoCompilerErrors(
   errors: Array<{ message?: string }> | undefined,
   resolvedPath: string,
   operation: 'transform' | 'minify',
@@ -1408,7 +1408,7 @@ async function batchResolveSpecifiers(
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
   if (specifiers.length === 0) return resolvedBySpecifier
 
-  let resolvedSpecs = await resolveWithOxc(specifiers, importerPath, resolverFactory)
+  let resolvedSpecs = await resolveSpecifiersWithResolver(specifiers, importerPath, resolverFactory)
   for (let resolvedSpec of resolvedSpecs) {
     resolvedBySpecifier.set(resolvedSpec.specifier, resolvedSpec)
   }
@@ -1490,7 +1490,7 @@ function shouldSkipImportSpecifier(specifier: string): boolean {
 
 function getDynamicImportSpecifier(
   rawCode: string,
-  imported: OxcDynamicImport,
+  imported: DynamicImport,
 ): UnresolvedImport | null {
   let rawSpecifier = rawCode.slice(imported.moduleRequest.start, imported.moduleRequest.end)
   if (
@@ -1540,8 +1540,8 @@ async function pruneUnusedImports(
   trackedFiles: string[]
   unresolvedImports: UnresolvedImport[]
 }> {
-  let parseResult = parseJavaScriptWithOxc(rawCode, resolvedPath)
-  let staticImports = parseResult.module.staticImports as OxcStaticImport[]
+  let parseResult = parseJavaScript(rawCode, resolvedPath)
+  let staticImports = parseResult.module.staticImports as StaticImport[]
   let originalImportSpecifiers = getOriginalNonBareImportSpecifiers(sourceText, resolvedPath)
   let removableImports = staticImports.filter(
     (imported) =>
@@ -1552,12 +1552,12 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [],
-      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
+      unresolvedImports: getUnresolvedImportsFromParsedModule(rawCode, parseResult),
     }
   }
 
   let usedImportedBindings = getUsedImportedBindings(
-    parseResult.program as unknown as OxcAstNode,
+    parseResult.program as unknown as AstNode,
     removableImports,
   )
   let unusedImports = removableImports.filter((imported) =>
@@ -1570,7 +1570,7 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [],
-      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
+      unresolvedImports: getUnresolvedImportsFromParsedModule(rawCode, parseResult),
     }
   }
 
@@ -1582,7 +1582,7 @@ async function pruneUnusedImports(
   let rewrittenSource = createRewriteBuffer(rawCode)
   let trackedFiles = new Set<string>()
   let didPrune = false
-  let removedImports = new Set<OxcStaticImport>()
+  let removedImports = new Set<StaticImport>()
   let removedRanges: RemovedRange[] = []
 
   for (let imported of unusedImports) {
@@ -1611,7 +1611,7 @@ async function pruneUnusedImports(
       rawCode,
       sourcemap,
       trackedFiles: [...trackedFiles],
-      unresolvedImports: getUnresolvedImportsFromParsedOxcModule(rawCode, parseResult),
+      unresolvedImports: getUnresolvedImportsFromParsedModule(rawCode, parseResult),
     }
   }
 
@@ -1623,30 +1623,30 @@ async function pruneUnusedImports(
     rawCode: prunedCode,
     sourcemap: prunedSourcemap,
     trackedFiles: [...trackedFiles],
-    unresolvedImports: getUnresolvedImportsFromParsedOxcModule(prunedCode, parseResult, {
+    unresolvedImports: getUnresolvedImportsFromParsedModule(prunedCode, parseResult, {
       removedImports,
       remapPosition: createPositionRemapper(removedRanges),
     }),
   }
 }
 
-function getUniqueImportSpecifiers(imports: OxcStaticImport[]): string[] {
+function getUniqueImportSpecifiers(imports: StaticImport[]): string[] {
   return [...new Set(imports.map((imported) => imported.moduleRequest.value))]
 }
 
-function getUnresolvedImportsFromParsedOxcModule(
+function getUnresolvedImportsFromParsedModule(
   rawCode: string,
-  parseResult: OxcParseResult,
+  parseResult: ParseResult,
   options: {
-    removedImports?: Set<OxcStaticImport>
+    removedImports?: Set<StaticImport>
     remapPosition?: (position: number) => number
   } = {},
 ): UnresolvedImport[] {
   let unresolvedImports: UnresolvedImport[] = []
-  let removedImports = options.removedImports ?? new Set<OxcStaticImport>()
+  let removedImports = options.removedImports ?? new Set<StaticImport>()
   let remapPosition = options.remapPosition ?? ((position: number) => position)
 
-  for (let imported of parseResult.module.staticImports as OxcStaticImport[]) {
+  for (let imported of parseResult.module.staticImports as StaticImport[]) {
     if (removedImports.has(imported) || shouldSkipImportSpecifier(imported.moduleRequest.value))
       continue
     unresolvedImports.push({
@@ -1657,7 +1657,7 @@ function getUnresolvedImportsFromParsedOxcModule(
     })
   }
 
-  for (let exported of parseResult.module.staticExports as OxcStaticExport[]) {
+  for (let exported of parseResult.module.staticExports as StaticExport[]) {
     for (let entry of exported.entries) {
       let moduleRequest = entry.moduleRequest
       if (!moduleRequest || shouldSkipImportSpecifier(moduleRequest.value)) continue
@@ -1671,7 +1671,7 @@ function getUnresolvedImportsFromParsedOxcModule(
     }
   }
 
-  for (let imported of parseResult.module.dynamicImports as OxcDynamicImport[]) {
+  for (let imported of parseResult.module.dynamicImports as DynamicImport[]) {
     let start = remapPosition(imported.moduleRequest.start)
     let end = remapPosition(imported.moduleRequest.end)
     let dynamicImport = getDynamicImportSpecifier(rawCode, {
@@ -1707,9 +1707,9 @@ function getImportRemovalEnd(source: string, end: number): number {
   return end
 }
 
-function parseJavaScriptWithOxc(sourceText: string, resolvedPath: string) {
+function parseJavaScript(sourceText: string, resolvedPath: string) {
   let result = parseSync(resolvedPath, sourceText, {
-    lang: getOxcOutputLanguageForPath(resolvedPath),
+    lang: getOutputLanguageForPath(resolvedPath),
     sourceType: 'module',
   })
   if (result.errors.length > 0) {
@@ -1723,19 +1723,19 @@ function parseJavaScriptWithOxc(sourceText: string, resolvedPath: string) {
   return result
 }
 
-function getOxcOutputLanguageForPath(resolvedPath: string): 'js' | 'jsx' {
+function getOutputLanguageForPath(resolvedPath: string): 'js' | 'jsx' {
   let extension = path.extname(resolvedPath).toLowerCase()
   return extension === '.jsx' || extension === '.tsx' ? 'jsx' : 'js'
 }
 
-function getOxcSourceLanguageForPath(resolvedPath: string): 'js' | 'jsx' | 'ts' | 'tsx' {
+function getSourceLanguageForPath(resolvedPath: string): 'js' | 'jsx' | 'ts' | 'tsx' {
   let extension = path.extname(resolvedPath).toLowerCase()
   return sourceLanguageByExtension.get(extension) ?? 'js'
 }
 
 function getOriginalNonBareImportSpecifiers(sourceText: string, resolvedPath: string): Set<string> {
   let result = parseSync(resolvedPath, sourceText, {
-    lang: getOxcSourceLanguageForPath(resolvedPath),
+    lang: getSourceLanguageForPath(resolvedPath),
     sourceType: 'module',
   })
   if (result.errors.length > 0) {
@@ -1743,16 +1743,13 @@ function getOriginalNonBareImportSpecifiers(sourceText: string, resolvedPath: st
   }
 
   return new Set(
-    (result.module.staticImports as OxcStaticImport[])
+    (result.module.staticImports as StaticImport[])
       .filter((imported) => imported.entries.length > 0)
       .map((imported) => imported.moduleRequest.value),
   )
 }
 
-function getUsedImportedBindings(
-  program: OxcAstNode,
-  staticImports: OxcStaticImport[],
-): Set<string> {
+function getUsedImportedBindings(program: AstNode, staticImports: StaticImport[]): Set<string> {
   let importedBindingNames = new Set<string>()
   for (let imported of staticImports) {
     for (let entry of imported.entries) {
@@ -1780,7 +1777,7 @@ function getUsedImportedBindings(
 }
 
 function collectScopeBindings(
-  node: OxcAstNode,
+  node: AstNode,
   currentScope: Scope,
   nodeScopes: WeakMap<object, Scope>,
 ) {
@@ -1972,11 +1969,11 @@ function collectPatternReferenceBindings(
 }
 
 function walkReferences(
-  node: OxcAstNode,
+  node: AstNode,
   nodeScopes: WeakMap<object, Scope>,
   currentScope: Scope,
   onReference: (name: string, scope: Scope) => void,
-  parent: OxcAstNode | null = null,
+  parent: AstNode | null = null,
   key?: string,
 ): void {
   let nextScope = nodeScopes.get(node) ?? currentScope
@@ -2106,11 +2103,7 @@ function getFunctionScope(scope: Scope): Scope {
   return current
 }
 
-function isReferenceIdentifier(
-  node: OxcIdentifier,
-  parent: OxcAstNode | null,
-  key?: string,
-): boolean {
+function isReferenceIdentifier(node: Identifier, parent: AstNode | null, key?: string): boolean {
   if (parent === null) return false
   if (parent.type === 'Property' && key === 'key' && !parent.computed) {
     return false
@@ -2137,10 +2130,7 @@ function isReferenceIdentifier(
   return true
 }
 
-function forEachChildNode(
-  node: OxcAstNode,
-  callback: (child: OxcAstNode, key: string) => void,
-): void {
+function forEachChildNode(node: AstNode, callback: (child: AstNode, key: string) => void): void {
   for (let key of visitorKeys[node.type] ?? []) {
     let value = node[key]
     if (Array.isArray(value)) {
@@ -2157,15 +2147,15 @@ function forEachChildNode(
   }
 }
 
-function getNodeArray(value: unknown): OxcAstNode[] {
+function getNodeArray(value: unknown): AstNode[] {
   return Array.isArray(value) ? value.filter(isAstNode) : []
 }
 
-function isAstNode(node: unknown): node is OxcAstNode {
+function isAstNode(node: unknown): node is AstNode {
   return !!node && typeof node === 'object' && 'type' in node && typeof node.type === 'string'
 }
 
-function isIdentifier(node: unknown): node is OxcIdentifier {
+function isIdentifier(node: unknown): node is Identifier {
   return isAstNode(node) && node.type === 'Identifier' && typeof node.name === 'string'
 }
 
@@ -2226,7 +2216,7 @@ async function mapWithConcurrency<item, result>(
   return results
 }
 
-async function resolveWithOxc(
+async function resolveSpecifiersWithResolver(
   specifiers: string[],
   importerPath: string,
   resolverFactory: ResolverFactory,
