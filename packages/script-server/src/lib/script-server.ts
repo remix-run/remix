@@ -102,11 +102,6 @@ export interface ScriptServerOptions {
    * modern syntax unless project configuration already requests a lower target.
    */
   target?: ScriptServerTarget
-  /**
-   * Remove unused static imports after transform/minify when their resolved modules are marked
-   * side-effect free by `package.json#sideEffects`. Defaults to `false`.
-   */
-  removeUnusedImports?: boolean
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
   /**
@@ -193,7 +188,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let define = options.define
   let target = normalizeTarget(options.target)
   let minify = options.minify ?? false
-  let removeUnusedImports = options.removeUnusedImports ?? false
   let onError = options.onError ?? defaultErrorHandler
   let routes = compileRoutes({
     root,
@@ -208,7 +202,6 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     fingerprintModules,
     isAllowed,
     minify,
-    removeUnusedImports,
     routes,
     sourceMapSourcePaths,
     sourceMaps,

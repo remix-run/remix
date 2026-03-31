@@ -222,36 +222,6 @@ let scriptServer = createScriptServer({
 
 Values are injected exactly as defined, so string literals must include their own quotes, e.g. `process.env.NODE_ENV` must be `"production"` rather than `production`.
 
-## Remove Unused Imports
-
-Use `removeUnusedImports` to remove unused static imports when the resolved module is marked side-effect free in its enclosing `package.json`.
-
-```ts
-import { createScriptServer } from 'remix/script-server'
-
-let scriptServer = createScriptServer({
-  root,
-  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
-  define: {
-    'process.env.NODE_ENV': '"production"',
-  },
-  minify: true,
-  removeUnusedImports: true,
-})
-```
-
-This is useful when `define` and `minify` make an import unreachable, and it can also remove unused imports that were already present in the source. `removeUnusedImports` defaults to `false` because it adds extra analysis work.
-
-When enabled, `script-server` only removes an unused import if the resolved module is marked side-effect free using the `sideEffects` field:
-
-```json
-{
-  "name": "example",
-  "sideEffects": false
-}
-```
-
 ## Source Maps
 
 Enable sourcemaps with either `'external'` or `'inline'`:
