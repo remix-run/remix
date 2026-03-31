@@ -1,0 +1,1 @@
+Add a `StoredFile` type (`File | LazyFile`) to file-storage so API types match backend runtime behavior.

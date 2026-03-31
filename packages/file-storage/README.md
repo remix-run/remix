@@ -2,6 +2,8 @@
 
 Key/value storage interfaces for server-side [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File). `file-storage` gives Remix apps one consistent API across local disk and memory backends.
 
+Note: Backends may return either native `File` instances or `LazyFile` instances that are compatible with file APIs like `.stream()`, `.arrayBuffer()`, and `.text()`.
+
 ## Features
 
 - **Simple API** - Intuitive key/value API (like [Web Storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API), but for `File`s instead of strings)

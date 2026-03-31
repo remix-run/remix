@@ -1,3 +1,10 @@
+import type { LazyFile } from '@remix-run/lazy-file'
+
+/**
+ * The file-like object stored and returned by file-storage backends.
+ */
+export type StoredFile = File | LazyFile
+
 /**
  * A key/value interface for storing `File` objects.
  */
@@ -8,7 +15,7 @@ export interface FileStorage {
    * @param key The key to look up
    * @returns The file with the given key, or `null` if no such key exists
    */
-  get(key: string): File | null | Promise<File | null>
+  get(key: string): StoredFile | null | Promise<StoredFile | null>
   /**
    * Check if a file with the given key exists.
    *
@@ -84,7 +91,7 @@ export interface FileStorage {
    * @param file The file to store
    * @returns A new `File` object backed by this storage
    */
-  put(key: string, file: File): File | Promise<File>
+  put(key: string, file: StoredFile): StoredFile | Promise<StoredFile>
   /**
    * Remove the file with the given key from storage.
    *
@@ -98,7 +105,7 @@ export interface FileStorage {
    * @param key The key to store the file under
    * @param file The file to store
    */
-  set(key: string, file: File): void | Promise<void>
+  set(key: string, file: StoredFile): void | Promise<void>
 }
 
 /**

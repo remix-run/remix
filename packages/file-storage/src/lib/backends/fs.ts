@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { openLazyFile, writeFile } from '@remix-run/fs'
 
-import type { FileStorage, FileMetadata, ListOptions, ListResult } from '../file-storage.ts'
+import type { FileStorage, FileMetadata, ListOptions, ListResult, StoredFile } from '../file-storage.ts'
 
 type MetadataJson = Omit<FileMetadata, 'size'>
 
@@ -51,7 +51,7 @@ export function createFsFileStorage(directory: string): FileStorage {
     }
   }
 
-  async function putFile(key: string, file: File): Promise<File> {
+  async function putFile(key: string, file: StoredFile): Promise<StoredFile> {
     let { directory, filePath, metaPath } = await getPaths(key)
 
     // Ensure directory exists
@@ -77,7 +77,7 @@ export function createFsFileStorage(directory: string): FileStorage {
   }
 
   return {
-    async get(key: string): Promise<File | null> {
+    async get(key: string): Promise<StoredFile | null> {
       let { filePath, metaPath } = await getPaths(key)
 
       try {
@@ -153,7 +153,7 @@ export function createFsFileStorage(directory: string): FileStorage {
         files,
       }
     },
-    put(key: string, file: File): Promise<File> {
+    put(key: string, file: StoredFile): Promise<StoredFile> {
       return putFile(key, file)
     },
     async remove(key: string): Promise<void> {
@@ -173,7 +173,7 @@ export function createFsFileStorage(directory: string): FileStorage {
         }
       }
     },
-    async set(key: string, file: File): Promise<void> {
+    async set(key: string, file: StoredFile): Promise<void> {
       await putFile(key, file)
     },
   }
