@@ -291,6 +291,51 @@ describe('script-server', () => {
     assert.equal(response.status, 200)
   })
 
+  it('resolves explicit .js imports to TypeScript files when needed', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = "ts"')
+    let scriptServer = createTestServer(dir)
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    assert.match(await response.text(), /\/scripts\/app\/dep\.ts/)
+  })
+
+  it('resolves explicit .js imports to directory indexes when needed', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+      await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
+      let scriptServer = createTestServer(caseDir)
+
+      let response = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(response)
+      assert.match(await response.text(), /\/scripts\/app\/dep\.js\/index\.js/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('resolves explicit .jsx imports to TSX files when needed', async () => {
+    await write(dir, 'app/entry.tsx', 'import "./dep.jsx"\nexport const entry = <div />')
+    await write(dir, 'app/dep.tsx', 'export const dep = <div />')
+    let scriptServer = createTestServer(dir)
+
+    let response = await get(scriptServer, '/scripts/app/entry.tsx')
+    assert.ok(response)
+    assert.match(await response.text(), /\/scripts\/app\/dep\.tsx/)
+  })
+
+  it('resolves explicit .mjs imports to .mts files when needed', async () => {
+    await write(dir, 'app/entry.mts', 'import "./dep.mjs"\nexport const entry = true')
+    await write(dir, 'app/dep.mts', 'export const dep = "mts"')
+    let scriptServer = createTestServer(dir)
+
+    let response = await get(scriptServer, '/scripts/app/entry.mts')
+    assert.ok(response)
+    assert.match(await response.text(), /\/scripts\/app\/dep\.mts/)
+  })
+
   it('ignores unsupported direct requests like .json files', async () => {
     await write(dir, 'app/data.json', '{"ok":true}')
     let scriptServer = createTestServer(dir)
@@ -1316,6 +1361,218 @@ describe('script-server', () => {
       let afterBody = await after.text()
       assert.match(afterBody, /\/scripts\/app\/dep\/index\.js\.@/)
       assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.ts\.@/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up aliased import resolution changes after restart', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let firstServer = createTestServer(caseDir)
+
+      let before = await get(firstServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+
+      let secondServer = createTestServer(caseDir)
+      let afterRestart = await get(secondServer, '/scripts/app/entry.ts')
+      assert.ok(afterRestart)
+      let afterRestartBody = await afterRestart.text()
+      assert.doesNotMatch(afterRestartBody, /\/scripts\/app\/dep\.ts/)
+      assert.match(afterRestartBody, /\/scripts\/app\/dep\.js/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up aliased directory resolution changes after restart', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let firstServer = createTestServer(caseDir)
+
+      let before = await get(firstServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+      await fs.rm(path.join(caseDir, 'app/dep.ts'))
+      await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
+
+      let secondServer = createTestServer(caseDir)
+      let afterRestart = await get(secondServer, '/scripts/app/entry.ts')
+      assert.ok(afterRestart)
+      let afterRestartBody = await afterRestart.text()
+      assert.doesNotMatch(afterRestartBody, /\/scripts\/app\/dep\.ts/)
+      assert.match(afterRestartBody, /\/scripts\/app\/dep\.js\/index\.js/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps cached aliased import resolution stable until restart', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir)
+
+      let before = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+
+      let after = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/dep\.ts/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.js/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('switches aliased imports to an exact-match file in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+        await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep\.js/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep\.js/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to the next valid aliased candidate in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep\.js/)
+
+        await fs.rm(path.join(caseDir, 'app/dep.js'))
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep\.ts/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep\.ts/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.js/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to an aliased directory candidate in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep\.ts/)
+
+        await fs.rm(path.join(caseDir, 'app/dep.ts'))
+        await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep\.js\/index\.js/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep\.js\/index\.js/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps aliased import resolution stable within a fingerprinted build', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./dep.js"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir, fingerprintingOptions('build'))
+
+      let before = await getByFile(scriptServer, 'app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/dep\.ts\.@/)
+
+      await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+
+      let after = await getByFile(scriptServer, 'app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/dep\.ts\.@/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.js\.@/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }

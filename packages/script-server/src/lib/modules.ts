@@ -35,6 +35,11 @@ const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
+const resolverExtensionAlias = {
+  '.js': ['.js', '.ts', '.tsx', '.jsx'],
+  '.jsx': ['.jsx', '.tsx'],
+  '.mjs': ['.mjs', '.mts'],
+} satisfies Record<string, string[]>
 const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 const preloadTraversalConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 
@@ -47,7 +52,6 @@ export type ModuleCompileResult = {
 }
 
 type TransformedModule = {
-  extensionlessImports: ExtensionlessImport[]
   fingerprint: string
   identityPath: string
   importerDir: string
@@ -125,12 +129,13 @@ type UnresolvedImport = {
   start: number
 }
 
-type ExtensionlessImport = {
-  candidateBasePath: string
+type RelativeImportResolution = {
+  candidatePaths: readonly string[]
+  candidatePrefixes: readonly string[]
   specifier: string
 }
 
-type TrackedResolution = ExtensionlessImport & {
+type TrackedResolution = RelativeImportResolution & {
   resolvedIdentityPath: string
 }
 
@@ -156,11 +161,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let resolverFactory = new ResolverFactory({
     aliasFields: [['browser']],
     conditionNames: ['browser', 'import', 'module', 'default'],
-    extensionAlias: {
-      '.js': ['.ts', '.tsx', '.js', '.jsx'],
-      '.jsx': ['.tsx', '.jsx'],
-      '.mjs': ['.mts', '.mjs'],
-    },
+    extensionAlias: resolverExtensionAlias,
     extensions: resolverExtensions,
     mainFields: ['browser', 'module', 'main'],
   })
@@ -448,15 +449,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     return cacheTransformedModule(
       {
-        extensionlessImports: analysis.unresolvedImports
-          .filter((unresolved) => isTrackedExtensionlessImport(unresolved.specifier))
-          .map((unresolved) => ({
-            candidateBasePath: resolveCandidateBasePath(
-              path.dirname(nextResolvedPath),
-              unresolved.specifier,
-            ),
-            specifier: unresolved.specifier,
-          })),
         fingerprint: await hashContent(sourceText + '\0' + (resolvedOptions.buildId ?? '')),
         identityPath,
         importerDir: path.dirname(nextResolvedPath),
@@ -594,14 +586,14 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
           resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
         if (packageJsonPath) trackedFiles.add(packageJsonPath)
       }
-      if (!path.extname(unresolved.specifier) && isRelativeImportSpecifier(unresolved.specifier)) {
+      let trackedResolution = getTrackedRelativeImportResolution(
+        transformedModule.importerDir,
+        unresolved.specifier,
+      )
+      if (trackedResolution) {
         trackedResolutions.push({
-          candidateBasePath: resolveCandidateBasePath(
-            transformedModule.importerDir,
-            unresolved.specifier,
-          ),
+          ...trackedResolution,
           resolvedIdentityPath: resolvedImport.identityPath,
-          specifier: unresolved.specifier,
         })
       }
       importsWithPaths.push({
@@ -987,9 +979,39 @@ function isRelativeImportSpecifier(specifier: string): boolean {
   return specifier.startsWith('./') || specifier.startsWith('../')
 }
 
-function isTrackedExtensionlessImport(specifier: string): boolean {
-  if (!isRelativeImportSpecifier(specifier)) return false
-  return path.extname(specifier) === ''
+function getTrackedRelativeImportResolution(
+  importerDir: string,
+  specifier: string,
+): RelativeImportResolution | null {
+  if (!isRelativeImportSpecifier(specifier)) return null
+
+  let candidatePath = resolveCandidateBasePath(importerDir, specifier)
+  let extension = path.extname(specifier)
+  if (extension === '') {
+    return {
+      candidatePaths: [
+        candidatePath,
+        ...supportedScriptExtensions.map((extension) => `${candidatePath}${extension}`),
+      ],
+      candidatePrefixes: [`${candidatePath}/`],
+      specifier,
+    }
+  }
+
+  let candidateExtensions = resolverExtensionAlias[extension as keyof typeof resolverExtensionAlias]
+  if (!candidateExtensions) return null
+
+  return {
+    candidatePaths: [
+      candidatePath,
+      ...candidateExtensions.map(
+        (candidateExtension) =>
+          `${candidatePath.slice(0, candidatePath.length - extension.length)}${candidateExtension}`,
+      ),
+    ],
+    candidatePrefixes: [`${candidatePath}/`],
+    specifier,
+  }
 }
 
 function resolveCandidateBasePath(importerDir: string, specifier: string): string {
@@ -1001,9 +1023,8 @@ function mayAffectTrackedResolution(
   filePath: string,
 ): boolean {
   return (
-    filePath === trackedResolution.candidateBasePath ||
-    filePath.startsWith(`${trackedResolution.candidateBasePath}/`) ||
-    filePath.startsWith(`${trackedResolution.candidateBasePath}.`)
+    trackedResolution.candidatePaths.includes(filePath) ||
+    trackedResolution.candidatePrefixes.some((prefix) => filePath.startsWith(prefix))
   )
 }
 
