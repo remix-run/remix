@@ -18,6 +18,32 @@ import { customMimeTypeByExtension } from './define-mime-type.ts'
  */
 export function detectMimeType(extension: string): string | undefined {
   let ext = extension.trim().toLowerCase()
+
+  // For custom types, support multi-part extensions (e.g. "be.pit") by
+  // checking dot-separated suffixes from longest to shortest.
+  if (customMimeTypeByExtension != null) {
+    let slashIndex = Math.max(ext.lastIndexOf('/'), ext.lastIndexOf('\\'))
+    let baseName = slashIndex >= 0 ? ext.slice(slashIndex + 1) : ext
+    baseName = baseName.replace(/^\.+/, '')
+
+    if (baseName.length > 0) {
+      let customMimeType = customMimeTypeByExtension.get(baseName)
+      if (customMimeType !== undefined) {
+        return customMimeType
+      }
+
+      let dotIndex = baseName.indexOf('.')
+      while (dotIndex !== -1) {
+        customMimeType = customMimeTypeByExtension.get(baseName.slice(dotIndex + 1))
+        if (customMimeType !== undefined) {
+          return customMimeType
+        }
+
+        dotIndex = baseName.indexOf('.', dotIndex + 1)
+      }
+    }
+  }
+
   let idx = ext.lastIndexOf('.')
   // If no dot found (~idx === -1, so !~idx === true), use ext as-is.
   // Otherwise, skip past the dot (++idx) and extract the extension.
