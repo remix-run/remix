@@ -403,7 +403,7 @@ export const mimeTypes: Record<string, string> = {
   icc: 'application/vnd.iccprofile',
   ice: 'x-conference/x-cooltalk',
   icm: 'application/vnd.iccprofile',
-  ico: 'image/vnd.microsoft.icon',
+  ico: 'image/x-icon',
   ics: 'text/calendar',
   ief: 'image/ief',
   ifb: 'text/calendar',

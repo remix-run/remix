@@ -72,6 +72,7 @@ describe('detectMimeType()', () => {
     assert.equal(detectMimeType('jpg'), 'image/jpeg')
     assert.equal(detectMimeType('jpeg'), 'image/jpeg')
     assert.equal(detectMimeType('gif'), 'image/gif')
+    assert.equal(detectMimeType('ico'), 'image/x-icon')
     assert.equal(detectMimeType('svg'), 'image/svg+xml')
     assert.equal(detectMimeType('webp'), 'image/webp')
   })
