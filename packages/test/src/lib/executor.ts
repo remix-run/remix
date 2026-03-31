@@ -1,6 +1,5 @@
 import type { Browser, BrowserContextOptions } from 'playwright'
 import { createTestContext } from './context.ts'
-import type { render } from './render.ts'
 import type { CreateServerFunction } from './e2e-server.ts'
 
 export interface TestResult {
@@ -24,7 +23,6 @@ export interface TestResults {
 }
 
 export async function runTests(options?: {
-  render?: typeof render
   createServer?: CreateServerFunction
   browser?: Browser
   open?: boolean
@@ -110,7 +108,6 @@ export async function runTests(options?: {
       }
 
       let { testContext, cleanup } = createTestContext({
-        render: options?.render,
         createServer: options?.createServer,
         browser: options?.browser,
         open: options?.open,

@@ -1,7 +1,5 @@
-import type { render } from './render.ts'
 import type { Browser, BrowserContextOptions, Page } from 'playwright'
 import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 
 import type { CreateServerFunction } from './e2e-server.ts'
@@ -49,19 +47,6 @@ export interface TestContext {
   spyOn<T extends object, K extends keyof T>(obj: T, method: K, impl?: Function): MockFunction
 
   /**
-   * Activates fake timers for testing time-dependent code.
-   *
-   * @returns {FakeTimers} A fake timers instance for controlling time
-   */
-  useFakeTimers(): FakeTimers
-
-  /**
-   * Renders a component for testing purposes.
-   * Alias to the {@link render} function.
-   */
-  render: typeof render
-
-  /**
    * Starts a test server with the provided request handler.
    *
    * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
@@ -71,7 +56,6 @@ export interface TestContext {
 }
 
 export function createTestContext(options: {
-  render?: typeof render
   createServer?: CreateServerFunction
   browser?: Browser
   coverage?: boolean
@@ -90,20 +74,6 @@ export function createTestContext(options: {
     },
     after(fn) {
       cleanups.push(fn)
-    },
-    useFakeTimers() {
-      let timers = createFakeTimers()
-      cleanups.push(timers.restore)
-      return timers
-    },
-    render(node, opts) {
-      if (!options.render) {
-        throw new Error('t.render() is only available in browser test suites')
-      }
-
-      let result = options.render(node, opts)
-      cleanups.push(result.cleanup)
-      return result
     },
     async serve(handler) {
       if (!options.createServer || !options.browser) {
