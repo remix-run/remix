@@ -1071,6 +1071,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
@@ -1182,6 +1185,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
