@@ -1,8 +1,7 @@
 import type { ComponentHandle, FrameHandle, Key, RemixNode } from './component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from './jsx.ts'
+import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
 import { isEntry, type EntryComponent } from './client-entries.ts'
-import { isResourceHintRel } from './resource-hints.ts'
 import { normalizeSvgAttribute } from './svg-attributes.ts'
 
 interface VNode {
@@ -40,17 +39,6 @@ export interface RenderToStreamOptions {
     entryId: string,
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry
-  /**
-   * Callback used to resolve resource hint descriptors for client entry modules during SSR.
-   */
-  resolveClientEntryResourceHints?: (options: {
-    clientEntryIds: string[]
-    clientEntryHrefs: string[]
-  }) =>
-    | Promise<readonly ResourceHintDescriptor[]>
-    | readonly ResourceHintDescriptor[]
-    | Promise<ResourceHintDescriptor[]>
-    | ResourceHintDescriptor[]
 }
 
 /**
@@ -74,40 +62,6 @@ interface ResolvedClientEntry {
   exportName: string
 }
 
-type ResourceHintRel =
-  | 'dns-prefetch'
-  | 'modulepreload'
-  | 'preconnect'
-  | 'prefetch'
-  | 'preload'
-  | 'prerender'
-
-/**
- * Describes a resource hint `<link>` element returned from `resolveClientEntryResourceHints()`.
- */
-export interface ResourceHintDescriptor
-  extends Pick<
-    Props<'link'>,
-    | 'as'
-    | 'crossOrigin'
-    | 'fetchPriority'
-    | 'href'
-    | 'imageSizes'
-    | 'imageSrcSet'
-    | 'integrity'
-    | 'media'
-    | 'nonce'
-    | 'referrerPolicy'
-    | 'type'
-  > {
-  /** The resource URL. */
-  href: string
-  /** The resource hint relationship for the generated `<link>` element. */
-  rel: ResourceHintRel
-  /** Additional `data-*` attributes to include on the generated `<link>` element. */
-  [key: `data-${string}`]: string | boolean | undefined
-}
-
 interface FrameData {
   status: 'pending' | 'resolved'
   name?: string
@@ -128,11 +82,7 @@ interface RenderContext {
   hydrationData: Map<string, HydrationData>
   hydrationEntryIds: Map<string, string>
   hydrationComponents: Map<string, EntryComponent>
-  hydratedClientEntryIds: Set<string>
-  hydratedClientEntryHrefs: Set<string>
   unresolvedClientEntryIds: Set<string>
-  resourceHints: string[]
-  blockingFrameStyleTags: string[]
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -142,11 +92,6 @@ interface RenderContext {
 interface ResolvedFrameHtml {
   html: string
   tail?: ReadableStream<Uint8Array>
-}
-
-interface RmxDataPayload {
-  h?: Record<string, HydrationData>
-  f?: Record<string, FrameData>
 }
 
 interface SsrFrameState {
@@ -202,10 +147,6 @@ const NUMERIC_CSS_PROPS = new Set([
 
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
 const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
-const RMX_RESOURCE_HINT_BLOCK_PATTERN = /<!-- rmx:rh -->([\s\S]*?)<!-- \/rmx:rh -->/gi
-const RMX_STYLE_TAG_PATTERN = /<style(?=[^>]*\bdata-rmx-styles\b)[^>]*>[\s\S]*?<\/style>/gi
-const LINK_TAG_PATTERN = /<link\b[\s\S]*?\/?>/gi
-const LINK_ATTR_PATTERN = /([^\s=/>]+)(?:="([^"]*)")?/g
 
 function createSsrSignalError() {
   return new Error('handle.signal is not available during SSR.')
@@ -253,11 +194,7 @@ export function renderToStream(
     hydrationData: new Map(),
     hydrationEntryIds: new Map(),
     hydrationComponents: new Map(),
-    hydratedClientEntryIds: new Set(),
-    hydratedClientEntryHrefs: new Set(),
     unresolvedClientEntryIds: new Set(),
-    resourceHints: [],
-    blockingFrameStyleTags: [],
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -271,16 +208,6 @@ export function renderToStream(
         await resolveBlocking(root)
         await resolveClientEntries(context, options?.resolveClientEntry)
         validateClientEntriesForHydration(context)
-        if (options?.resolveClientEntryResourceHints && context.hydratedClientEntryIds.size > 0) {
-          let resourceHints = await Promise.resolve(
-            options.resolveClientEntryResourceHints({
-              clientEntryIds: [...context.hydratedClientEntryIds],
-              clientEntryHrefs: [...context.hydratedClientEntryHrefs],
-            }),
-          )
-          validateResolvedClientEntryResourceHints(resourceHints)
-          context.resourceHints.push(...renderResolvedClientEntryResourceHints(resourceHints))
-        }
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
         let bytes = encoder.encode(finalHtml)
@@ -444,14 +371,6 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
         return buildHeadElementSegment(tag, props, context, frameState)
       }
 
-      if (isResourceHintElement(tag, props)) {
-        let resourceHint = buildResourceHintHtml(tag, props, context, frameState)
-        if (resourceHint) {
-          context.resourceHints.push(resourceHint)
-        }
-        return staticSeg('')
-      }
-
       return buildElementSegment(tag, props, context, frameState)
     }
 
@@ -504,7 +423,7 @@ function buildFrameSegment(props: any, context: RenderContext, frameState: SsrFr
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
-      seg.content = staticSeg(mergeResolvedFrameRmxData(html, context))
+      seg.content = staticSeg(html)
       if (tail) {
         context.blockingFrameTails.push(tail)
       }
@@ -891,7 +810,6 @@ function buildEntrySegment(
   })
   context.hydrationEntryIds.set(instanceId, type.$entryId)
   context.hydrationComponents.set(instanceId, type)
-  context.hydratedClientEntryIds.add(type.$entryId)
   context.unresolvedClientEntryIds.add(type.$entryId)
 
   let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
@@ -960,14 +878,13 @@ async function resolveClientEntries(
         ? await Promise.resolve(resolveClientEntry(entryId, component))
         : resolveDefaultClientEntry(entryId, component)
       validateResolvedClientEntry(entryId, resolvedEntry)
-
       resolvedEntries.set(entryId, resolvedEntry)
-      context.hydratedClientEntryHrefs.add(resolvedEntry.href)
     }
 
     hydrationData.exportName = resolvedEntry.exportName
     hydrationData.moduleUrl = resolvedEntry.href
   }
+
   context.unresolvedClientEntryIds.clear()
 }
 
@@ -1067,15 +984,9 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
 
-  let headContent = renderResourceHintBlock(dedupeHtmlFragments(context.resourceHints))
-  headContent += dedupeHtmlFragments(context.blockingFrameStyleTags).join('')
-
   let css = collectAllStyles(context)
   if (css) {
-    headContent += `<style data-rmx-styles>${css}</style>`
-  }
-
-  if (headContent.length > 0) {
+    let headContent = `<style data-rmx-styles>${css}</style>`
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -1160,16 +1071,7 @@ function buildRmxDataScript(context: RenderContext): string {
   } = {}
 
   if (context.hydrationData.size > 0) {
-    data.h = Object.fromEntries(
-      [...context.hydrationData].map(([id, hydrationData]) => [
-        id,
-        {
-          exportName: hydrationData.exportName,
-          moduleUrl: hydrationData.moduleUrl,
-          props: hydrationData.props,
-        },
-      ]),
-    )
+    data.h = Object.fromEntries(context.hydrationData)
   }
 
   if (context.frameData.size > 0) {
@@ -1180,252 +1082,9 @@ function buildRmxDataScript(context: RenderContext): string {
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
-function mergeResolvedFrameRmxData(html: string, context: RenderContext): string {
-  return html
-    .replace(/<head\b[^>]*>([\s\S]*?)<\/head>/gi, (_match, headContent: string) => {
-      mergeResolvedFrameHeadContent(headContent, context)
-      return ''
-    })
-    .replace(
-      /<script(?=[^>]*\bid=(["'])rmx-data\1)(?=[^>]*\btype=(["'])application\/json\2)[^>]*>([\s\S]*?)<\/script>/gi,
-      (_match, _idQuote, _typeQuote, jsonText: string) => {
-        mergeRmxDataPayload(context, parseRmxDataPayload(jsonText))
-        return ''
-      },
-    )
-    .replace(/<head>\s*<\/head>/gi, '')
-}
-
-function mergeResolvedFrameHeadContent(headContent: string, context: RenderContext): void {
-  let extractedResourceHints = extractResourceHintLinks(headContent)
-  context.resourceHints.push(...extractedResourceHints.links)
-
-  let extractedStyles = extractServerStyleTags(extractedResourceHints.html)
-  context.blockingFrameStyleTags.push(...extractedStyles.styleTags)
-}
-
 function escapeScriptJson(json: string): string {
   // Avoid prematurely closing the script tag when serialized data contains "</script>".
   return json.replace(/</g, '\\u003c')
-}
-
-function parseRmxDataPayload(jsonText: string): RmxDataPayload {
-  try {
-    return JSON.parse(jsonText || '{}')
-  } catch {
-    return {}
-  }
-}
-
-function mergeRmxDataPayload(context: RenderContext, payload: RmxDataPayload): void {
-  if (payload.h) {
-    for (let [id, hydrationData] of Object.entries(payload.h)) {
-      context.hydrationData.set(id, hydrationData)
-    }
-  }
-
-  if (payload.f) {
-    for (let [id, frameData] of Object.entries(payload.f)) {
-      context.frameData.set(id, frameData)
-    }
-  }
-}
-
-function renderClientEntryLink(link: ResourceHintDescriptor): string {
-  return `<link${renderLinkAttributes(link)} />`
-}
-
-function renderResourceHintBlock(links: readonly string[]): string {
-  if (links.length === 0) return ''
-  return `<!-- rmx:rh -->${links.join('')}<!-- /rmx:rh -->`
-}
-
-function dedupeHtmlFragments(fragments: readonly string[]): string[] {
-  let deduped: string[] = []
-  let seen = new Set<string>()
-
-  for (let fragment of fragments) {
-    if (!fragment || seen.has(fragment)) continue
-    seen.add(fragment)
-    deduped.push(fragment)
-  }
-
-  return deduped
-}
-
-function extractResourceHintLinks(html: string): {
-  html: string
-  links: string[]
-} {
-  let links: string[] = []
-  let strippedHtml = html.replace(RMX_RESOURCE_HINT_BLOCK_PATTERN, (_match, linksHtml: string) => {
-    let matches = linksHtml.match(LINK_TAG_PATTERN) ?? []
-    links.push(...matches)
-    return ''
-  })
-
-  return {
-    html: strippedHtml,
-    links,
-  }
-}
-
-function extractServerStyleTags(html: string): { html: string; styleTags: string[] } {
-  let styleTags: string[] = []
-  let strippedHtml = html.replace(RMX_STYLE_TAG_PATTERN, (styleTag) => {
-    styleTags.push(styleTag)
-    return ''
-  })
-
-  return {
-    html: strippedHtml,
-    styleTags,
-  }
-}
-
-function parseClientEntryResourceHint(html: string): ResourceHintDescriptor | null {
-  let descriptor: Partial<ResourceHintDescriptor> = {}
-  let mutableDescriptor = descriptor as Record<string, unknown>
-  let attrSource = html
-    .replace(/^<link\b/i, '')
-    .replace(/\/?>$/i, '')
-    .trim()
-  LINK_ATTR_PATTERN.lastIndex = 0
-  let match: RegExpExecArray | null
-
-  while ((match = LINK_ATTR_PATTERN.exec(attrSource))) {
-    if (match[2] === undefined) {
-      mutableDescriptor[match[1]] = true
-      continue
-    }
-
-    mutableDescriptor[match[1]] = unescapeHtml(match[2])
-  }
-
-  return Object.keys(descriptor).length === 0 ? null : (descriptor as ResourceHintDescriptor)
-}
-
-function renderResolvedClientEntryResourceHints(
-  links: readonly ResourceHintDescriptor[],
-): string[] {
-  let resourceHints: string[] = []
-  for (let link of links) {
-    let normalized = normalizeResourceHintLink(link)
-    if (!normalized) continue
-    resourceHints.push(renderClientEntryLink(normalized))
-  }
-  return resourceHints
-}
-
-function validateResolvedClientEntryResourceHints(
-  resourceHints: readonly ResourceHintDescriptor[],
-): void {
-  for (let resourceHint of resourceHints) {
-    if (!isResourceHintRel(resourceHint.rel)) {
-      throw new Error(
-        `resolveClientEntryResourceHints only supports resource hint rel values. Received "${resourceHint.rel}".`,
-      )
-    }
-    if (typeof resourceHint.href !== 'string' || resourceHint.href.length === 0) {
-      throw new Error(
-        'resolveClientEntryResourceHints requires a non-empty "href" on resource hint descriptors.',
-      )
-    }
-
-    for (let key of Object.keys(resourceHint)) {
-      if (FRAMEWORK_PROPS.has(key)) {
-        throw new Error(
-          `resolveClientEntryResourceHints does not support the "${key}" prop on resource hint descriptors.`,
-        )
-      }
-    }
-  }
-}
-
-function isResourceHintElement(tag: string, props: ElementProps): boolean {
-  return tag === 'link' && typeof props.rel === 'string' && isResourceHintRel(props.rel)
-}
-
-function buildResourceHintHtml(
-  tag: string,
-  props: ElementProps,
-  context: RenderContext,
-  frameState: SsrFrameState,
-): string {
-  let elementSeg = buildElementSegment(tag, props, context, frameState)
-  return normalizeResourceHintHtml(serializeSegment(elementSeg)) ?? ''
-}
-
-function normalizeResourceHintLink(
-  link: ResourceHintDescriptor | null | undefined,
-): ResourceHintDescriptor | null {
-  if (!link) return null
-
-  let normalized: Partial<ResourceHintDescriptor> = {}
-  let mutableNormalized = normalized as Record<string, unknown>
-  let hasHref = false
-
-  for (let [key, value] of Object.entries(link)) {
-    if (value === undefined || value === null || value === false) continue
-
-    if (key.toLowerCase() === 'rel') {
-      if (typeof value !== 'string' || !isResourceHintRel(value)) return null
-      normalized.rel = value.toLowerCase() as ResourceHintRel
-      continue
-    }
-
-    if (key.toLowerCase() === 'href') {
-      if (typeof value !== 'string' || value.length === 0) return null
-      normalized.href = value
-      hasHref = true
-      continue
-    }
-
-    mutableNormalized[key] = value
-  }
-
-  return hasHref && typeof normalized.rel === 'string'
-    ? (normalized as ResourceHintDescriptor)
-    : null
-}
-
-function normalizeResourceHintHtml(html: string): string | null {
-  let link = parseClientEntryResourceHint(html)
-  let normalized = normalizeResourceHintLink(link)
-  if (!normalized) return null
-  return renderClientEntryLink(normalized)
-}
-
-function renderLinkAttributes(link: ResourceHintDescriptor): string {
-  let entries = Object.entries(link)
-    .filter(
-      ([key, value]) =>
-        !FRAMEWORK_PROPS.has(key) && value !== undefined && value !== null && value !== false,
-    )
-    .map(([key, value]) => ({
-      attrName: transformAttributeName(key, false),
-      value,
-    }))
-    .sort((a, b) => a.attrName.localeCompare(b.attrName))
-
-  let attrs = ''
-  for (let entry of entries) {
-    if (entry.value === true) {
-      attrs += ` ${entry.attrName}`
-    } else {
-      attrs += ` ${entry.attrName}="${escapeHtml(String(entry.value))}"`
-    }
-  }
-  return attrs
-}
-
-function unescapeHtml(str: string): string {
-  return str
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&gt;/g, '>')
-    .replace(/&lt;/g, '<')
-    .replace(/&amp;/g, '&')
 }
 
 function serializeStyleObject(style: Record<string, any>): string {

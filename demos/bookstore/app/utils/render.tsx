@@ -1,6 +1,5 @@
 import * as path from 'node:path'
 import type { RemixNode } from 'remix/component'
-import type { ResourceHintDescriptor } from 'remix/component/server'
 import { renderToStream } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
 import type { RequestContext, Router } from 'remix/fetch-router'
@@ -22,12 +21,6 @@ export function render(node: RemixNode, init?: ResponseInit) {
         href: await scriptServer.getHref(entryId),
         exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
       }
-    },
-    async resolveClientEntryResourceHints({ clientEntryIds }) {
-      let preloads = await scriptServer.getPreloads(clientEntryIds).catch(() => [])
-      return preloads.map(
-        (href) => ({ rel: 'modulepreload', href }) satisfies ResourceHintDescriptor,
-      )
     },
     onError(error) {
       console.error(error)

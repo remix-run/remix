@@ -28,7 +28,6 @@ import { diffHostProps } from './diff-props.ts'
 import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
-import { isResourceHintRel } from './resource-hints.ts'
 import type { Scheduler } from './scheduler.ts'
 import { toVNode } from './to-vnode.ts'
 import {
@@ -316,22 +315,6 @@ function isHeadHostNode(node: HostNode): boolean {
   return node.type.toLowerCase() === 'head'
 }
 
-function isResourceHintHostNode(node: HostNode, props = getHostProps(node)): boolean {
-  return (
-    node.type.toLowerCase() === 'link' &&
-    typeof props.rel === 'string' &&
-    isResourceHintRel(props.rel)
-  )
-}
-
-function canReuseHostNodeForDiff(curr: HostNode | CommittedHostNode, next: HostNode): boolean {
-  if (curr.type !== next.type) return false
-  return (
-    isResourceHintHostNode(curr, getHostProps(curr)) ===
-    isResourceHintHostNode(next, getHostProps(next))
-  )
-}
-
 function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
   if (domParent instanceof Document) {
     return domParent.head
@@ -383,10 +366,6 @@ export function diffVNodes(
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
-    if (!canReuseHostNodeForDiff(curr, next)) {
-      replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
-      return rootCursor
-    }
     diffHost(curr, next, frame, scheduler, styles, vParent, rootTarget)
     return rootCursor
   }
@@ -444,11 +423,7 @@ function replace(
     return
   }
 
-  let replacementAnchor: Node | undefined = findNextSiblingDomAnchor(curr, vParent) ?? undefined
-  if (replacementAnchor && replacementAnchor.parentNode !== domParent) {
-    replacementAnchor = undefined
-  }
-  replacementAnchor ??= anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr, vParent) ?? anchor
   remove(curr, domParent, scheduler, styles)
   insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replacementAnchor)
 }
@@ -637,30 +612,6 @@ function insert(
       return cursor
     }
 
-    // Resource hints are hoisted into document.head, so hydrating them from a body cursor
-    // would incorrectly consume or mismatch the next in-flow node.
-    if (cursor !== undefined && isResourceHintHostNode(node, hostProps)) {
-      let targetHead = getDocumentHead(domParent)
-      if (targetHead && domParent !== targetHead) {
-        let dom = document.createElement(node.type)
-        diffHostProps({}, hostProps, dom)
-        setupHostNode(node, dom, scheduler)
-        let adopted = adoptResourceHintIntoHead(node, hostProps, domParent, dom)
-        if (adopted) {
-          node._dom = adopted
-          bindNodeMixRuntime(
-            node as CommittedHostNode,
-            frame,
-            scheduler,
-            styles,
-            false,
-            adopted.parentNode as ParentNode,
-          )
-          return cursor
-        }
-      }
-    }
-
     if (cursor instanceof Element) {
       // SVG elements have case-sensitive tag names (e.g. linearGradient, clipPath)
       // HTML elements are case-insensitive, so we lowercase for comparison
@@ -689,10 +640,6 @@ function insert(
         }
 
         setupHostNode(node, cursor, scheduler)
-        let adopted = adoptResourceHintIntoHead(node, hostProps, domParent, cursor)
-        if (adopted) {
-          node._dom = adopted
-        }
         bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
         return nextCursor
       } else {
@@ -724,10 +671,6 @@ function insert(
             }
 
             setupHostNode(node, nextSibling, scheduler)
-            let adopted = adoptResourceHintIntoHead(node, hostProps, domParent, nextSibling)
-            if (adopted) {
-              node._dom = adopted
-            }
             bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
             return nextCursor
           }
@@ -750,21 +693,8 @@ function insert(
     }
 
     setupHostNode(node, dom, scheduler)
-    let adopted = adoptResourceHintIntoHead(node, hostProps, domParent, dom)
-    if (adopted) {
-      node._dom = adopted
-      bindNodeMixRuntime(
-        node as CommittedHostNode,
-        frame,
-        scheduler,
-        styles,
-        false,
-        adopted.parentNode as ParentNode,
-      )
-    } else {
-      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
-      doInsert(dom)
-    }
+    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
+    doInsert(dom)
     return cursor
   }
 
@@ -1522,14 +1452,7 @@ function diffChildren(
       if (mapIndex !== undefined) {
         let candidate = oldChildren[mapIndex]
         let candidateFlags = candidate?._flags ?? 0
-        if (
-          candidate &&
-          (candidateFlags & MATCHED) === 0 &&
-          candidate.type === type &&
-          (!isCommittedHostNode(candidate) ||
-            !isHostNode(childVNode) ||
-            canReuseHostNodeForDiff(candidate, childVNode))
-        ) {
+        if (candidate && (candidateFlags & MATCHED) === 0 && candidate.type === type) {
           matchingIndex = mapIndex
         }
       }
@@ -1538,14 +1461,7 @@ function diffChildren(
       let searchVNode = oldChildren[skewedIndex]
       let searchFlags = searchVNode?._flags ?? 0
       let available = searchVNode != null && (searchFlags & MATCHED) === 0
-      if (
-        available &&
-        searchVNode.key == null &&
-        type === searchVNode.type &&
-        (!isCommittedHostNode(searchVNode) ||
-          !isHostNode(childVNode) ||
-          canReuseHostNodeForDiff(searchVNode, childVNode))
-      ) {
+      if (available && searchVNode.key == null && type === searchVNode.type) {
         matchingIndex = skewedIndex
       }
     }
@@ -1734,86 +1650,6 @@ export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | n
     if (dom) return dom
   }
   return null
-}
-
-function findMatchingResourceHintLink(
-  targetHead: HTMLHeadElement,
-  props: ElementProps,
-): HTMLLinkElement | null {
-  let expectedKey = getResourceHintPropsKey(props)
-  let links = Array.from(targetHead.querySelectorAll('link[rel]')).filter(
-    (link): link is HTMLLinkElement =>
-      link instanceof HTMLLinkElement && isResourceHintRel(link.rel),
-  )
-  for (let link of links) {
-    if (getResourceHintElementKey(link) === expectedKey) {
-      return link
-    }
-  }
-  return null
-}
-
-function adoptResourceHintIntoHead(
-  node: HostNode,
-  props: ElementProps,
-  domParent: ParentNode,
-  dom: Element,
-): Element | null {
-  if (!isResourceHintHostNode(node, props)) return null
-
-  let targetHead = getDocumentHead(domParent)
-  if (!targetHead) return null
-
-  let existing = findMatchingResourceHintLink(targetHead, props)
-  if (existing && existing !== dom) {
-    dom.parentNode?.removeChild(dom)
-    return existing
-  }
-
-  if (dom.parentNode !== targetHead) {
-    targetHead.appendChild(dom)
-  }
-
-  return dom
-}
-
-function getResourceHintPropsKey(props: ElementProps): string {
-  return Object.entries(props)
-    .filter(
-      ([key, value]) =>
-        !isResourceHintFrameworkProp(key) &&
-        value !== undefined &&
-        value !== null &&
-        value !== false,
-    )
-    .map(([key, value]) => {
-      let attrName = resourceHintPropToAttrName(key)
-      let attrValue = value === true ? '' : String(value)
-      return `${attrName}=${attrValue}`
-    })
-    .sort()
-    .join('|')
-}
-
-function getResourceHintElementKey(link: HTMLLinkElement): string {
-  return Array.from(link.attributes)
-    .map((attribute) => `${attribute.name}=${attribute.value}`)
-    .sort()
-    .join('|')
-}
-
-function isResourceHintFrameworkProp(key: string): boolean {
-  return key === 'children' || key === 'innerHTML' || key === 'on' || key === 'key' || key === 'mix'
-}
-
-function resourceHintPropToAttrName(name: string): string {
-  if (name.startsWith('aria-') || name.startsWith('data-')) return name
-  if (name === 'className') return 'class'
-  if (name === 'htmlFor') return 'for'
-  if (name === 'tabIndex') return 'tabindex'
-  if (name === 'acceptCharset') return 'accept-charset'
-  if (name === 'httpEquiv') return 'http-equiv'
-  return name.toLowerCase()
 }
 
 function reclaimPersistedMixinNode(

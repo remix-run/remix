@@ -1,1 +1,0 @@
-Resource hint `link` elements (`modulepreload`, `preload`, `prefetch`, `preconnect`, `dns-prefetch`, and `prerender`) are now hoisted and deduped across document renders, blocking frames, and client-entry resource hint resolution.

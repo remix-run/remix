@@ -8,7 +8,6 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import type { StyleManager } from './style/index.ts'
-import { isResourceHintRel } from './resource-hints.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -39,9 +38,6 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
-const RESOURCE_HINT_BLOCK_START = 'rmx:rh'
-const RESOURCE_HINT_BLOCK_END = '/rmx:rh'
-
 /**
  * Loads a client entry module for hydration.
  */
@@ -62,10 +58,6 @@ type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
-const managedResourceHintOwnership = new WeakMap<
-  HTMLHeadElement,
-  Map<string, { count: number; external: boolean }>
->()
 
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {
@@ -151,11 +143,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let subscriptions: Array<() => void> = []
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
-  let ownedServerResourceHints = new Set<string>()
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
-  stripResourceHintMarkers(container.doc.head)
 
   let runtime = createFrameRuntime(init)
 
@@ -255,10 +245,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(content, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
-      stripResourceHintMarkers(parsed.head)
-      stripResourceHintMarkers(container.doc.head)
-      releaseManagedResourceHints(container.doc.head, ownedServerResourceHints)
-      ownedServerResourceHints = new Set()
 
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
       syncElementAttributes(container.doc.head, parsed.head)
@@ -284,11 +270,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    ownedServerResourceHints = moveServerResourceHintsAndStylesToHead(
-      container.doc,
-      fragment,
-      ownedServerResourceHints,
-    )
+    moveServerStylesToHead(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -338,8 +320,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   function clearFrameContent() {
-    releaseManagedResourceHints(container.doc.head, ownedServerResourceHints)
-    ownedServerResourceHints = new Set()
     for (let node of getContentNodes()) {
       node.parentNode?.removeChild(node)
     }
@@ -355,11 +335,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
+        moveServerStylesToHead(container.doc, early)
+        mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
+          moveServerStylesToHead(container.doc, fragment)
+          mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
         })
@@ -367,6 +351,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
+          moveServerStylesToHead(container.doc, buffered)
+          mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
         }
@@ -393,9 +379,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       unsubscribe()
     }
     subscriptions.length = 0
-
-    releaseManagedResourceHints(container.doc.head, ownedServerResourceHints)
-    ownedServerResourceHints = new Set()
 
     // Remove hydrated virtual roots in this frame's region.
     removeVirtualRoots(container.childNodes)
@@ -512,156 +495,22 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function moveServerResourceHintsAndStylesToHead(
-  doc: Document,
-  fragment: DocumentFragment,
-  previousResourceHintKeys: ReadonlySet<string>,
-): Set<string> {
+function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void {
   let target = doc.head
-  if (!target) return new Set()
-
-  stripResourceHintMarkers(fragment)
-  let nextResourceHints = moveServerResourceHintsToHead(target, fragment, previousResourceHintKeys)
+  if (!target) return
 
   let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
   for (let style of styles) {
-    if (style instanceof HTMLStyleElement && style.parentNode !== target) {
+    if (style instanceof HTMLStyleElement) {
       target.appendChild(style)
     }
   }
 
   let heads = Array.from(fragment.querySelectorAll('head'))
   for (let head of heads) {
-    head.remove()
-  }
-  return nextResourceHints
-}
-
-function moveServerResourceHintsToHead(
-  target: HTMLHeadElement,
-  fragment: DocumentFragment,
-  previousKeys: ReadonlySet<string>,
-): Set<string> {
-  let nextKeys = new Set<string>()
-  let links = Array.from(fragment.querySelectorAll('link[rel]')).filter(
-    (link): link is HTMLLinkElement =>
-      link instanceof HTMLLinkElement && isResourceHintRel(link.rel),
-  )
-  for (let link of links) {
-    nextKeys.add(getResourceHintLinkKey(link))
-  }
-
-  releaseManagedResourceHints(target, previousKeys, nextKeys)
-
-  let existingLinks = new Map(
-    Array.from(target.querySelectorAll('link[rel]'))
-      .filter(
-        (link): link is HTMLLinkElement =>
-          link instanceof HTMLLinkElement && isResourceHintRel(link.rel),
-      )
-      .map((link) => [getResourceHintLinkKey(link), link]),
-  )
-  let processedKeys = new Set<string>()
-
-  for (let link of links) {
-    let key = getResourceHintLinkKey(link)
-    if (processedKeys.has(key)) {
-      link.remove()
-      continue
+    if (!head.childNodes.length) {
+      head.remove()
     }
-    processedKeys.add(key)
-    let existing = existingLinks.get(key)
-    claimManagedResourceHint(target, key, existing != null)
-    if (existing) {
-      link.remove()
-      continue
-    }
-    existingLinks.set(key, link)
-    if (link.parentNode !== target) {
-      target.appendChild(link)
-    }
-  }
-
-  return nextKeys
-}
-
-function getResourceHintLinkKey(link: HTMLLinkElement): string {
-  return Array.from(link.attributes)
-    .map((attribute) => `${attribute.name}=${attribute.value}`)
-    .sort()
-    .join('|')
-}
-
-function getManagedResourceHintRegistry(
-  target: HTMLHeadElement,
-): Map<string, { count: number; external: boolean }> {
-  let registry = managedResourceHintOwnership.get(target)
-  if (!registry) {
-    registry = new Map()
-    managedResourceHintOwnership.set(target, registry)
-  }
-  return registry
-}
-
-function claimManagedResourceHint(target: HTMLHeadElement, key: string, external: boolean): void {
-  let registry = getManagedResourceHintRegistry(target)
-  let existing = registry.get(key)
-  if (existing) {
-    existing.count++
-    return
-  }
-  registry.set(key, { count: 1, external })
-}
-
-function releaseManagedResourceHints(
-  target: HTMLHeadElement,
-  previousKeys: ReadonlySet<string>,
-  nextKeys: ReadonlySet<string> = new Set(),
-): void {
-  let registry = managedResourceHintOwnership.get(target)
-  if (!registry) return
-
-  for (let key of previousKeys) {
-    if (nextKeys.has(key)) continue
-    let existing = registry.get(key)
-    if (!existing) continue
-    existing.count--
-    if (existing.count > 0) continue
-    registry.delete(key)
-    if (existing.external) continue
-
-    let link = Array.from(target.querySelectorAll('link[rel]')).find(
-      (candidate) =>
-        candidate instanceof HTMLLinkElement &&
-        isResourceHintRel(candidate.rel) &&
-        getResourceHintLinkKey(candidate) === key,
-    )
-    link?.remove()
-  }
-
-  if (registry.size === 0) {
-    managedResourceHintOwnership.delete(target)
-  }
-}
-
-function stripResourceHintMarkers(root: ParentNode | null | undefined): void {
-  if (!root) return
-
-  let walker = root.ownerDocument?.createTreeWalker(root, NodeFilter.SHOW_COMMENT)
-  if (!walker) return
-
-  let comments: Comment[] = []
-  while (walker.nextNode()) {
-    let comment = walker.currentNode
-    if (!(comment instanceof Comment)) continue
-    let trimmed = comment.data.trim()
-    if (trimmed === RESOURCE_HINT_BLOCK_START || trimmed === RESOURCE_HINT_BLOCK_END) {
-      comments.push(comment)
-    }
-  }
-
-  for (let comment of comments) {
-    comment.remove()
   }
 }
 

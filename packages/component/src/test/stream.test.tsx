@@ -862,21 +862,6 @@ describe('stream', () => {
       expect(html).toBe('<div><link rel="stylesheet" href="/styles.css" /><p>Content</p></div>')
     })
 
-    it('hoists modulepreload links into head', async () => {
-      let stream = renderToStream(
-        <html>
-          <body>
-            <link rel="modulepreload" href="/scripts/app.js" />
-            <div>Content</div>
-          </body>
-        </html>,
-      )
-      let html = await drain(stream)
-      expect(html).toBe(
-        '<html><head><!-- rmx:rh --><link href="/scripts/app.js" rel="modulepreload" /><!-- /rmx:rh --></head><body><div>Content</div></body></html>',
-      )
-    })
-
     it('renders multiple head-like elements in place', async () => {
       let stream = renderToStream(
         <div>
@@ -923,7 +908,6 @@ describe('stream', () => {
           </head>
           <body>
             <title>Body Title</title>
-            <link rel="modulepreload" href="/build/app.js" />
             <link rel="stylesheet" href="/app.css" />
             <div>Content</div>
           </body>
@@ -931,7 +915,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<html><head><meta charset="utf-8" /><!-- rmx:rh --><link href="/build/app.js" rel="modulepreload" /><!-- /rmx:rh --></head><body><title>Body Title</title><link rel="stylesheet" href="/app.css" /><div>Content</div></body></html>',
+        '<html><head><meta charset="utf-8" /></head><body><title>Body Title</title><link rel="stylesheet" href="/app.css" /><div>Content</div></body></html>',
       )
     })
 
@@ -1024,609 +1008,6 @@ describe('stream', () => {
       expect(startIdx).toBeGreaterThanOrEqual(0)
       expect(contentIdx).toBeGreaterThan(startIdx)
       expect(endIdx).toBeGreaterThan(contentIdx)
-    })
-
-    it('dedupes authored and resolved modulepreloads before the first chunk', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let receivedEntryIds: string[] = []
-      let receivedEntryHrefs: string[] = []
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>App</title>
-            <link rel="modulepreload" href="/scripts/shared.js" data-source="shared" />
-          </head>
-          <body>
-            <Counter initialCount={42} />
-            <Counter initialCount={43} />
-          </body>
-        </html>,
-        {
-          async resolveClientEntryResourceHints({ clientEntryIds, clientEntryHrefs }) {
-            receivedEntryIds = clientEntryIds
-            receivedEntryHrefs = clientEntryHrefs
-            return [
-              { rel: 'modulepreload', href: '/scripts/counter.js' },
-              {
-                rel: 'modulepreload',
-                href: '/scripts/shared.js',
-                'data-source': 'shared',
-              },
-              {
-                rel: 'modulepreload',
-                href: '/scripts/shared.js',
-                'data-source': 'shared',
-              },
-              {
-                rel: 'modulepreload',
-                href: '/scripts/experimental.js',
-                as: 'script',
-              },
-            ]
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(receivedEntryIds).toEqual(['/js/counter.js#Counter'])
-      expect(receivedEntryHrefs).toEqual(['/js/counter.js'])
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(html).toContain('<link href="/scripts/counter.js" rel="modulepreload" />')
-      expect(html).toContain(
-        '<link data-source="shared" href="/scripts/shared.js" rel="modulepreload" />',
-      )
-      expect(html).toContain(
-        '<link as="script" href="/scripts/experimental.js" rel="modulepreload" />',
-      )
-      expect(html.indexOf('<link href="/scripts/counter.js" rel="modulepreload" />')).toBeLessThan(
-        html.indexOf('</head>'),
-      )
-      expect(
-        html.match(
-          /<link data-source="shared" href="\/scripts\/shared\.js" rel="modulepreload" \/>/g,
-        )?.length,
-      ).toBe(1)
-    })
-
-    it('preserves escaped modulepreload attributes when deduping authored and resolved links', async () => {
-      let stream = renderToStream(
-        <html>
-          <head>
-            <link
-              rel="modulepreload"
-              href="/scripts/shared.js"
-              data-note={'x > y'}
-              data-label={'a "quote" & more'}
-            />
-          </head>
-          <body />
-        </html>,
-        {
-          async resolveClientEntryResourceHints() {
-            return [
-              {
-                rel: 'modulepreload',
-                href: '/scripts/shared.js',
-                'data-note': 'x > y',
-                'data-label': 'a "quote" & more',
-              },
-            ]
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(html).toContain(
-        '<link data-label="a &quot;quote&quot; &amp; more" data-note="x &gt; y" href="/scripts/shared.js" rel="modulepreload" />',
-      )
-      expect(
-        html.match(
-          /<link data-label="a &quot;quote&quot; &amp; more" data-note="x &gt; y" href="\/scripts\/shared\.js" rel="modulepreload" \/>/g,
-        )?.length,
-      ).toBe(1)
-    })
-
-    it('dedupes preload resource hints across authored and resolved links', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => (
-          <>
-            <link rel="preload" href="/scripts/shared.js" as="script" />
-            <div>Count: {initialCount}</div>
-          </>
-        )
-      })
-
-      let html = await drain(
-        renderToStream(<Counter initialCount={42} />, {
-          async resolveClientEntryResourceHints() {
-            return [{ rel: 'preload', href: '/scripts/shared.js', as: 'script' }]
-          },
-        }),
-      )
-
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(
-        html.match(/<link as="script" href="\/scripts\/shared\.js" rel="preload" \/>/g)?.length,
-      ).toBe(1)
-    })
-
-    it('does not dedupe different resource hint rel types with the same href', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => (
-          <>
-            <link rel="preload" href="/scripts/shared.js" as="script" />
-            <div>Count: {initialCount}</div>
-          </>
-        )
-      })
-
-      let html = await drain(
-        renderToStream(<Counter initialCount={42} />, {
-          async resolveClientEntryResourceHints() {
-            return [{ rel: 'modulepreload', href: '/scripts/shared.js' }]
-          },
-        }),
-      )
-
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(html).toContain('<link as="script" href="/scripts/shared.js" rel="preload" />')
-      expect(html).toContain('<link href="/scripts/shared.js" rel="modulepreload" />')
-      expect(html.match(/href="\/scripts\/shared\.js"/g)?.length).toBe(2)
-    })
-
-    it('supports data attributes in resolved client-entry resource hint descriptors', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>App</title>
-          </head>
-          <body>
-            <Counter initialCount={42} />
-          </body>
-        </html>,
-        {
-          async resolveClientEntryResourceHints() {
-            return [
-              {
-                rel: 'modulepreload',
-                href: '/scripts/counter.js',
-                'data-source': 'client-entry',
-              },
-            ]
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(html).toContain(
-        '<link data-source="client-entry" href="/scripts/counter.js" rel="modulepreload" />',
-      )
-    })
-
-    it('supports curated link attributes in resolved client-entry resource hint descriptors', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>App</title>
-          </head>
-          <body>
-            <Counter initialCount={42} />
-          </body>
-        </html>,
-        {
-          async resolveClientEntryResourceHints() {
-            return [
-              {
-                rel: 'preload',
-                href: '/images/hero.avif',
-                as: 'image',
-                fetchPriority: 'high',
-                imageSizes: '(max-width: 800px) 100vw, 800px',
-                imageSrcSet: '/images/hero.avif 1x, /images/hero@2x.avif 2x',
-                nonce: 'abc123',
-              },
-            ]
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(html).toContain(
-        '<link as="image" fetchpriority="high" href="/images/hero.avif" imagesizes="(max-width: 800px) 100vw, 800px" imagesrcset="/images/hero.avif 1x, /images/hero@2x.avif 2x" nonce="abc123" rel="preload" />',
-      )
-    })
-
-    it('throws when resolved client-entry resource hint descriptors include framework props', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveClientEntryResourceHints() {
-          return [
-            {
-              rel: 'modulepreload',
-              href: '/scripts/counter.js',
-              mix: [],
-            } as any,
-          ]
-        },
-      })
-
-      await expect(drain(stream)).rejects.toThrow(
-        'resolveClientEntryResourceHints does not support the "mix" prop on resource hint descriptors.',
-      )
-    })
-
-    it('throws when resolved client-entry resource hint descriptors use a non-resource-hint rel', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveClientEntryResourceHints() {
-          return [{ rel: 'icon', href: '/favicon.ico' } as any]
-        },
-      })
-
-      await expect(drain(stream)).rejects.toThrow(
-        'resolveClientEntryResourceHints only supports resource hint rel values. Received "icon".',
-      )
-    })
-
-    it('renders hydration client-entry modulepreloads as fragment head content', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveClientEntryResourceHints() {
-          return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
-        },
-      })
-
-      let html = await drain(stream)
-
-      expect(html).toContain('<head>')
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(html).toContain('<link href="/scripts/counter.js" rel="modulepreload" />')
-      expect(html).toContain('<script type="application/json" id="rmx-data">')
-    })
-
-    it('hoists resolved preload resource hints into head content', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let html = await drain(
-        renderToStream(<Counter initialCount={42} />, {
-          async resolveClientEntryResourceHints() {
-            return [{ rel: 'preload', href: '/styles/counter.css', as: 'style' }]
-          },
-        }),
-      )
-
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(html).toContain('<link as="style" href="/styles/counter.css" rel="preload" />')
-    })
-
-    it('hoists resolved client-entry resource hints from blocking frames without exposing entry ids', async () => {
-      let Counter = clientEntry(
-        'file:///app/components/counter.tsx',
-        function BlockingFrameCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-        },
-      )
-
-      let parentResolveClientEntryResourceHintsCalled = false
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>App</title>
-          </head>
-          <body>
-            <Frame src="/child" />
-          </body>
-        </html>,
-        {
-          resolveFrame: async () =>
-            drain(
-              renderToStream(
-                <html>
-                  <body>
-                    <Counter initialCount={42} />
-                  </body>
-                </html>,
-                {
-                  async resolveClientEntry(entryId, component) {
-                    expect(entryId).toBe('file:///app/components/counter.tsx')
-                    expect(component.name).toBe('BlockingFrameCounter')
-                    return {
-                      href: '/js/counter.js',
-                      exportName: 'Counter',
-                    }
-                  },
-                  async resolveClientEntryResourceHints() {
-                    return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
-                  },
-                },
-              ),
-            ),
-          async resolveClientEntryResourceHints() {
-            parentResolveClientEntryResourceHintsCalled = true
-            return []
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(parentResolveClientEntryResourceHintsCalled).toBe(false)
-      expect(html).toContain('<!-- rmx:rh -->')
-      expect(html).toContain('<link href="/scripts/counter.js" rel="modulepreload" />')
-      expect(html).not.toContain('<body><link rel="modulepreload"')
-      expect(html).not.toContain('<body><head>')
-      expect(html).toContain('<div>Count: 42</div>')
-      expect(html.match(/<script type="application\/json" id="rmx-data">/g)?.length).toBe(1)
-
-      let data = parseRmxDataFromHtml(html)
-      let entries = Object.values<any>(data.h)
-      expect(entries).toHaveLength(1)
-      expect(entries[0].entryId).toBeUndefined()
-      expect(entries[0]).toEqual({
-        moduleUrl: '/js/counter.js',
-        exportName: 'Counter',
-        props: { initialCount: 42 },
-      })
-    })
-
-    it('passes original client-entry ids and resolved hrefs to client-entry resource hint resolution', async () => {
-      let Counter = clientEntry(
-        'file:///app/components/counter.tsx',
-        function ResolverCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-        },
-      )
-
-      let receivedEntryIds: string[] = []
-      let receivedEntryHrefs: string[] = []
-      let stream = renderToStream(<Counter initialCount={42} />, {
-        async resolveClientEntryResourceHints({ clientEntryIds, clientEntryHrefs }) {
-          receivedEntryIds = clientEntryIds
-          receivedEntryHrefs = clientEntryHrefs
-          return [{ rel: 'modulepreload', href: '/scripts/counter.js' }]
-        },
-        async resolveClientEntry(entryId, component) {
-          expect(entryId).toBe('file:///app/components/counter.tsx')
-          expect(component.name).toBe('ResolverCounter')
-          return {
-            href: '/scripts/counter.js',
-            exportName: 'Counter',
-          }
-        },
-      })
-
-      let html = await drain(stream)
-
-      expect(receivedEntryIds).toEqual(['file:///app/components/counter.tsx'])
-      expect(receivedEntryHrefs).toEqual(['/scripts/counter.js'])
-      expect(html).toContain('<link href="/scripts/counter.js" rel="modulepreload" />')
-
-      let data = parseRmxDataFromHtml(html)
-      let entries = Object.values<any>(data.h)
-      expect(entries).toHaveLength(1)
-      expect(entries[0]).toEqual({
-        moduleUrl: '/scripts/counter.js',
-        exportName: 'Counter',
-        props: { initialCount: 42 },
-      })
-    })
-
-    it('calls resolveClientEntry only once per unique entry id during SSR', async () => {
-      let Counter = clientEntry(
-        'file:///app/components/counter.tsx',
-        function DedupedResolverCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-        },
-      )
-
-      let resolveCalls: Array<{ entryId: string; componentName: string }> = []
-      let html = await drain(
-        renderToStream(
-          <div>
-            <Counter initialCount={1} />
-            <Counter initialCount={2} />
-            <Counter initialCount={3} />
-          </div>,
-          {
-            async resolveClientEntry(entryId, component) {
-              resolveCalls.push({ entryId, componentName: component.name })
-              return {
-                href: '/js/counter.js',
-                exportName: 'Counter',
-              }
-            },
-          },
-        ),
-      )
-
-      expect(resolveCalls).toEqual([
-        {
-          entryId: 'file:///app/components/counter.tsx',
-          componentName: 'DedupedResolverCounter',
-        },
-      ])
-      expect(html).toContain('<div>Count: 1</div>')
-      expect(html).toContain('<div>Count: 2</div>')
-      expect(html).toContain('<div>Count: 3</div>')
-
-      let data = parseRmxDataFromHtml(html)
-      let entries = Object.values<any>(data.h)
-      expect(entries).toHaveLength(3)
-      expect(entries.every((entry) => entry.moduleUrl === '/js/counter.js')).toBe(true)
-      expect(entries.every((entry) => entry.exportName === 'Counter')).toBe(true)
-    })
-
-    it('dedupes blocking-frame modulepreloads against document and client-entry modulepreloads', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>App</title>
-            <link rel="modulepreload" href="/js/counter.js" />
-          </head>
-          <body>
-            <Counter initialCount={1} />
-            <Frame src="/child" />
-          </body>
-        </html>,
-        {
-          async resolveClientEntryResourceHints({ clientEntryHrefs }) {
-            return clientEntryHrefs.map((href) => ({ rel: 'modulepreload', href }))
-          },
-          async resolveFrame() {
-            return drain(
-              renderToStream(
-                <html>
-                  <body>
-                    <link rel="modulepreload" href="/js/counter.js" />
-                    <Counter initialCount={2} />
-                  </body>
-                </html>,
-                {
-                  async resolveClientEntryResourceHints({ clientEntryHrefs }) {
-                    return clientEntryHrefs.map((href) => ({ rel: 'modulepreload', href }))
-                  },
-                },
-              ),
-            )
-          },
-        },
-      )
-
-      let html = await drain(stream)
-
-      expect(html.match(/<link href="\/js\/counter\.js" rel="modulepreload" \/>/g)?.length).toBe(1)
-    })
-
-    it('uses the component name as the default export name during SSR', async () => {
-      let Counter = clientEntry('/js/counter.js', function NamedCounter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      let html = await drain(renderToStream(<Counter initialCount={42} />))
-      let data = parseRmxDataFromHtml(html)
-      let entries = Object.values<any>(data.h)
-
-      expect(entries).toHaveLength(1)
-      expect(entries[0]).toEqual({
-        moduleUrl: '/js/counter.js',
-        exportName: 'NamedCounter',
-        props: { initialCount: 42 },
-      })
-    })
-
-    it('throws during SSR when an entry still has no export name after resolution', async () => {
-      let anonymousComponent = function () {
-        return () => <div>Test</div>
-      }
-      Object.defineProperty(anonymousComponent, 'name', { value: '' })
-
-      let EntryComponent = clientEntry('/js/test.js', anonymousComponent)
-
-      await expect(async () => {
-        await drain(renderToStream(<EntryComponent />))
-      }).rejects.toThrow(
-        'clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one.',
-      )
-    })
-
-    it('throws during SSR when resolveClientEntry returns an empty exportName', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      await expect(async () => {
-        await drain(
-          renderToStream(<EntryComponent initialCount={42} />, {
-            async resolveClientEntry() {
-              return {
-                href: '/scripts/counter.js',
-                exportName: '',
-              }
-            },
-          }),
-        )
-      }).rejects.toThrow('resolveClientEntry must return a non-empty exportName')
-    })
-
-    it('throws during SSR when resolveClientEntry returns an empty href', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      await expect(async () => {
-        await drain(
-          renderToStream(<EntryComponent initialCount={42} />, {
-            async resolveClientEntry() {
-              return {
-                href: '',
-                exportName: 'Counter',
-              }
-            },
-          }),
-        )
-      }).rejects.toThrow('resolveClientEntry must return a non-empty href')
-    })
-
-    it('throws during SSR when resolveClientEntry returns an invalid value', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      await expect(async () => {
-        await drain(
-          renderToStream(<EntryComponent initialCount={42} />, {
-            async resolveClientEntry() {
-              return null as any
-            },
-          }),
-        )
-      }).rejects.toThrow('resolveClientEntry must return an object with href and exportName')
-    })
-
-    it('throws during SSR when resolveClientEntry throws', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
-
-      await expect(async () => {
-        await drain(
-          renderToStream(<EntryComponent initialCount={42} />, {
-            async resolveClientEntry() {
-              throw new Error('resolver failed')
-            },
-          }),
-        )
-      }).rejects.toThrow('resolver failed')
     })
 
     it('escapes rmx-data payloads that contain script end tags', async () => {
@@ -1895,6 +1276,247 @@ describe('stream', () => {
       expect(
         entries.some((entry) => entry.moduleUrl === '/button.js' && entry.exportName === 'Button'),
       ).toBe(true)
+    })
+
+    it('resolves opaque client-entry ids during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function ResolverCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(<Counter initialCount={42} />, {
+          async resolveClientEntry(entryId, component) {
+            expect(entryId).toBe('file:///app/components/counter.tsx')
+            expect(component.name).toBe('ResolverCounter')
+            return {
+              href: '/scripts/counter.js',
+              exportName: 'Counter',
+            }
+          },
+        }),
+      )
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0].entryId).toBeUndefined()
+      expect(entries[0]).toEqual({
+        moduleUrl: '/scripts/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('resolves opaque client-entry ids inside blocking frames during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function BlockingFrameCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <Frame src="/child" />
+            </body>
+          </html>,
+          {
+            resolveFrame: async () =>
+              drain(
+                renderToStream(
+                  <html>
+                    <body>
+                      <Counter initialCount={42} />
+                    </body>
+                  </html>,
+                  {
+                    async resolveClientEntry(entryId, component) {
+                      expect(entryId).toBe('file:///app/components/counter.tsx')
+                      expect(component.name).toBe('BlockingFrameCounter')
+                      return {
+                        href: '/js/counter.js',
+                        exportName: 'Counter',
+                      }
+                    },
+                  },
+                ),
+              ),
+          },
+        ),
+      )
+
+      expect(html).toContain('<div>Count: 42</div>')
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let data = Array.from(shelf.content.querySelectorAll(rmxDataScriptSelector)).reduce<any>(
+        (merged, script) => {
+          let next = JSON.parse(script.textContent || '{}')
+          if (next.h) merged.h = { ...(merged.h ?? {}), ...next.h }
+          if (next.f) merged.f = { ...(merged.f ?? {}), ...next.f }
+          return merged
+        },
+        {},
+      )
+
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('calls resolveClientEntry only once per unique entry id during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function DedupedResolverCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let resolveCalls: Array<{ entryId: string; componentName: string }> = []
+      let html = await drain(
+        renderToStream(
+          <div>
+            <Counter initialCount={1} />
+            <Counter initialCount={2} />
+            <Counter initialCount={3} />
+          </div>,
+          {
+            async resolveClientEntry(entryId, component) {
+              resolveCalls.push({ entryId, componentName: component.name })
+              return {
+                href: '/js/counter.js',
+                exportName: 'Counter',
+              }
+            },
+          },
+        ),
+      )
+
+      expect(resolveCalls).toEqual([
+        {
+          entryId: 'file:///app/components/counter.tsx',
+          componentName: 'DedupedResolverCounter',
+        },
+      ])
+      expect(html).toContain('<div>Count: 1</div>')
+      expect(html).toContain('<div>Count: 2</div>')
+      expect(html).toContain('<div>Count: 3</div>')
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(3)
+      expect(entries.every((entry) => entry.moduleUrl === '/js/counter.js')).toBe(true)
+      expect(entries.every((entry) => entry.exportName === 'Counter')).toBe(true)
+    })
+
+    it('uses the component name as the default export name during SSR', async () => {
+      let Counter = clientEntry('/js/counter.js', function NamedCounter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      let html = await drain(renderToStream(<Counter initialCount={42} />))
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'NamedCounter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('throws during SSR when an entry still has no export name after resolution', async () => {
+      let anonymousComponent = function () {
+        return () => <div>Test</div>
+      }
+      Object.defineProperty(anonymousComponent, 'name', { value: '' })
+
+      let EntryComponent = clientEntry('/js/test.js', anonymousComponent)
+
+      await expect(async () => {
+        await drain(renderToStream(<EntryComponent />))
+      }).rejects.toThrow(
+        'clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one.',
+      )
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty exportName', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '/scripts/counter.js',
+                exportName: '',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty href', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '',
+                exportName: 'Counter',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty href')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an invalid value', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return null as any
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return an object with href and exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry throws', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              throw new Error('resolver failed')
+            },
+          }),
+        )
+      }).rejects.toThrow('resolver failed')
     })
   })
 
