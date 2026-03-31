@@ -12,6 +12,10 @@ interface MimeDbEntry {
 
 type MimeDb = Record<string, MimeDbEntry>
 
+const extensionMimeTypeOverrides: Record<string, string> = {
+  mp4: 'video/mp4',
+}
+
 // Generates the content for compressible-mime-types.ts from mime-db
 export function generateCompressibleMimeTypesContent(): string {
   let mimeDbPath = fileURLToPath(import.meta.resolve('mime-db/db.json'))
@@ -79,6 +83,11 @@ export function generateMimeTypesContent(): string {
         }
       }
     }
+  }
+
+  // Sort by extension for consistent output
+  for (let [extension, mimeType] of Object.entries(extensionMimeTypeOverrides)) {
+    extensionMap[extension] = mimeType
   }
 
   // Sort by extension for consistent output

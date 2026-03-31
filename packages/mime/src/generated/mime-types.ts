@@ -598,7 +598,7 @@ export const mimeTypes: Record<string, string> = {
   mp21: 'application/mp21',
   mp2a: 'audio/mpeg',
   mp3: 'audio/mpeg',
-  mp4: 'application/mp4',
+  mp4: 'video/mp4',
   mp4a: 'audio/mp4',
   mp4s: 'application/mp4',
   mp4v: 'video/mp4',
