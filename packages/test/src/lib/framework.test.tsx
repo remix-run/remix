@@ -1,11 +1,4 @@
-import * as http from 'node:http'
 import * as assert from '@remix-run/assert'
-import { renderToString } from '@remix-run/component/server'
-import { createRouter, type Router } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
-import { createRequestListener } from '@remix-run/node-fetch-server'
-import { chromium } from 'playwright'
-import type { TestContext } from './context.ts'
 import {
   afterAll,
   afterEach,
@@ -324,61 +317,3 @@ describe.skip('skip: Skipped Test Suite', () => {
 })
 
 describe.todo('todo: Test Suite')
-
-describe('manual e2e', () => {
-  it('runs playwright against a fetch-router instance', async (t) => {
-    let router = createApp()
-    let page = await serve(t, router)
-    await page.goto('/')
-    assert.equal(await page.innerHTML('body'), '<h1>Hello Remix</h1>')
-
-    function App() {
-      return () => (
-        <html>
-          <head>
-            <title>Test</title>
-          </head>
-          <body>
-            <h1>Hello Remix</h1>
-          </body>
-        </html>
-      )
-    }
-
-    function createApp() {
-      let routes = route({ home: '/' })
-      let router = createRouter()
-      router.get(
-        routes.home,
-        async () =>
-          new Response(await renderToString(<App />), {
-            headers: { 'Content-Type': 'text/html' },
-          }),
-      )
-      return router
-    }
-
-    async function serve(t: TestContext, router: Router) {
-      let browser = await chromium.launch({ headless: true })
-      let server: { baseUrl: string; close(): Promise<void> } = await new Promise(
-        (resolve, reject) => {
-          let server = http.createServer(createRequestListener((r) => router.fetch(r)))
-          server.listen(0, 'localhost', () => {
-            let addr = server.address() as { port: number }
-            resolve({
-              baseUrl: `http://localhost:${addr.port}`,
-              close: () => new Promise((r, rj) => server.close((e) => (e ? rj(e) : r()))),
-            })
-          })
-          server.on('error', reject)
-        },
-      )
-
-      t.after(() => {
-        server.close()
-        browser.close()
-      })
-      return browser.newPage({ baseURL: server.baseUrl })
-    }
-  })
-})

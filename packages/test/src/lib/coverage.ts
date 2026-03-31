@@ -24,8 +24,11 @@ function getIstanbul() {
     let require = createRequire(import.meta.url)
     _istanbul = {
       V8ToIstanbul: require('v8-to-istanbul'),
-      createCoverageMap: (require('istanbul-lib-coverage') as { createCoverageMap: typeof CreateCoverageMap }).createCoverageMap,
-      createContext: (require('istanbul-lib-report') as { createContext: typeof CreateContext }).createContext,
+      createCoverageMap: (
+        require('istanbul-lib-coverage') as { createCoverageMap: typeof CreateCoverageMap }
+      ).createCoverageMap,
+      createContext: (require('istanbul-lib-report') as { createContext: typeof CreateContext })
+        .createContext,
       reports: require('istanbul-reports') as typeof IstanbulReports,
     }
   }
@@ -86,7 +89,13 @@ function filterCoverageMap(
 
 function checkThresholds(coverageMap: CoverageMap, config: CoverageConfig): boolean {
   let { statements, lines, branches, functions } = config
-  if (statements === undefined && lines === undefined && branches === undefined && functions === undefined) return true
+  if (
+    statements === undefined &&
+    lines === undefined &&
+    branches === undefined &&
+    functions === undefined
+  )
+    return true
 
   let summary = coverageMap.getCoverageSummary()
   let passed = true
@@ -95,7 +104,9 @@ function checkThresholds(coverageMap: CoverageMap, config: CoverageConfig): bool
     let pct = summary.statements.pct
     if (pct < statements) {
       console.error(
-        colors.red(`\nError: Coverage threshold not met (statements ${pct.toFixed(2)}% < ${statements}%)`),
+        colors.red(
+          `\nError: Coverage threshold not met (statements ${pct.toFixed(2)}% < ${statements}%)`,
+        ),
       )
       passed = false
     }
@@ -195,72 +206,6 @@ export async function collectServerCoverageMap(
 
   // Clean up raw V8 coverage JSON files now that we've processed them
   await Promise.all(files.map((f) => fsp.rm(path.join(coverageDataDir, f), { force: true })))
-
-  return converted > 0 ? coverageMap : null
-}
-
-export async function collectE2EBrowserCoverageMap(
-  data: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>,
-  cwd: string,
-): Promise<CoverageMap | null> {
-  let { V8ToIstanbul, createCoverageMap } = getIstanbul()
-  let coverageMap = createCoverageMap({})
-  let converted = 0
-
-  for (let { entries } of data) {
-    for (let entry of entries) {
-      if (!entry.source) continue
-      // Use the URL as a stand-in path; v8-to-istanbul will use inline sourcemaps to remap
-      let fakePath = entry.url.replace(/^https?:\/\/[^/]+/, cwd)
-      try {
-        let converter = new V8ToIstanbul(fakePath, 0, { source: entry.source })
-        await converter.load()
-        converter.applyCoverage(entry.functions)
-        coverageMap.merge(converter.toIstanbul())
-        converted++
-      } catch {
-        // Skip entries that can't be converted
-      }
-    }
-  }
-
-  return converted > 0 ? coverageMap : null
-}
-
-export async function collectBrowserCoverageMap(
-  entries: V8CoverageEntry[],
-  baseUrl: string,
-  cwd: string,
-  testFileUrls: Set<string>,
-): Promise<CoverageMap | null> {
-  let { V8ToIstanbul, createCoverageMap } = getIstanbul()
-  let coverageMap = createCoverageMap({})
-  let testUrlPrefix = `${baseUrl}/scripts/@test/`
-  let converted = 0
-
-  for (let entry of entries) {
-    if (!entry.url.startsWith(testUrlPrefix) || !entry.source) continue
-
-    let relativePath = decodeURIComponent(entry.url.slice(testUrlPrefix.length))
-    // Strip query strings (e.g. ?t=...)
-    let queryIndex = relativePath.indexOf('?')
-    if (queryIndex !== -1) relativePath = relativePath.slice(0, queryIndex)
-
-    let scriptPath = `/scripts/@test/${relativePath}`
-    if (testFileUrls.has(scriptPath)) continue
-
-    let filePath = path.join(cwd, relativePath)
-
-    try {
-      let converter = new V8ToIstanbul(filePath, 0, { source: entry.source })
-      await converter.load()
-      converter.applyCoverage(entry.functions)
-      coverageMap.merge(converter.toIstanbul())
-      converted++
-    } catch {
-      // Skip files that can't be converted (e.g. framework internals bundled in)
-    }
-  }
 
   return converted > 0 ? coverageMap : null
 }

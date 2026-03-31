@@ -3,16 +3,10 @@ import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import * as util from 'node:util'
 import { tsImport } from 'tsx/esm/api'
-import type { PlaywrightTestConfig } from 'playwright/test'
 
 export const defaultTestGlob = '**/*.test?(.browser)?(.e2e).{ts,tsx}'
 
 const cliOptions = {
-  'browser.echo': { type: 'boolean' },
-  'browser.open': { type: 'boolean' },
-  'browser.port': { type: 'string', short: 'p' },
-  'glob.browser': { type: 'string' },
-  'glob.e2e': { type: 'string' },
   'glob.test': { type: 'string' },
   concurrency: { type: 'string', short: 'c' },
   config: { type: 'string' },
@@ -25,29 +19,15 @@ const cliOptions = {
   'coverage.branches': { type: 'string' },
   'coverage.functions': { type: 'string' },
   setup: { type: 'string' },
-  playwrightConfig: { type: 'string' },
-  project: { type: 'string' },
   reporter: { type: 'string', short: 'r' },
   type: { type: 'string', short: 't' },
   watch: { type: 'boolean', short: 'w' },
 } as const
 
 export interface RemixTestConfig {
-  browser?: {
-    /** Log browser console output to stdout (--browser.echo) */
-    echo?: boolean
-    /** Open browser window during tests (--browser.open) */
-    open?: boolean
-    /** Port for the browser test server (--browser.port) */
-    port?: number | string
-  }
   glob?: {
     /** Glob pattern for all test files (--glob.test) */
     test?: string
-    /** Glob pattern for browser test files (--glob.browser) */
-    browser?: string
-    /** Glob pattern for e2e test files (--glob.e2e) */
-    e2e?: string
   }
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
@@ -71,27 +51,13 @@ export interface RemixTestConfig {
    * called once before and after the test run respectively. (--setup)
    */
   setup?: string
-  /**
-   * Playwright configuration — either a path to a playwright config file or an inline
-   * PlaywrightTestConfig object. CLI `--playwrightConfig` only accepts a file path.
-   */
-  playwrightConfig?: string | PlaywrightTestConfig
-  /** Filter tests to a specific playwright project (--project) */
-  project?: string
   /** Test reporter (--reporter) */
   reporter?: string
-  /** Comma-separated list of test types to run: server,browser,e2e (--type) */
-  type?: string
   /** Watch mode — re-run tests on file changes (--watch) */
   watch?: boolean
 }
 
 export interface ResolvedRemixTestConfig {
-  browser: {
-    echo?: boolean
-    open?: boolean
-    port: number
-  }
   concurrency: number
   coverage:
     | {
@@ -106,14 +72,9 @@ export interface ResolvedRemixTestConfig {
     | undefined
   glob: {
     test: string
-    browser: string
-    e2e: string
   }
   setup?: string
-  playwrightConfig?: string | PlaywrightTestConfig
-  project?: string
   reporter: string
-  type: string
   watch?: boolean
 }
 
@@ -152,14 +113,6 @@ function resolveConfig(
   return {
     glob: {
       test: positionals[0] ?? cliValues['glob.test'] ?? fileConfig.glob?.test ?? defaultTestGlob,
-      browser:
-        cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? '**/*.test.browser.{ts,tsx}',
-      e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? '**/*.test.e2e.{ts,tsx}',
-    },
-    browser: {
-      echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo,
-      open: cliValues['browser.open'] ?? fileConfig.browser?.open,
-      port: Number(cliValues['browser.port'] ?? fileConfig.browser?.port ?? 44101),
     },
     concurrency: Number(
       cliValues.concurrency ?? fileConfig.concurrency ?? os.availableParallelism(),
@@ -196,10 +149,7 @@ function resolveConfig(
         }
       : undefined,
     setup: cliValues.setup ?? fileConfig.setup,
-    playwrightConfig: cliValues.playwrightConfig ?? fileConfig.playwrightConfig,
-    project: cliValues.project ?? fileConfig.project,
     reporter: cliValues.reporter ?? fileConfig.reporter ?? 'spec',
-    type: cliValues.type ?? fileConfig.type ?? 'server,browser,e2e',
     watch: cliValues.watch ?? fileConfig.watch,
   }
 }

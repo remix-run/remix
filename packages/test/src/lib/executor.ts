@@ -1,8 +1,5 @@
-import type { Browser, BrowserContextOptions } from 'playwright'
 import { createTestContext } from './context.ts'
-import type { render } from './render.ts'
 import type { V8CoverageEntry } from './coverage.ts'
-import type { CreateServerFunction } from './e2e-server.ts'
 
 export interface TestResult {
   name: string
@@ -25,14 +22,7 @@ export interface TestResults {
   e2eBrowserCoverageEntries?: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>
 }
 
-export async function runTests(options?: {
-  render?: typeof render
-  createServer?: CreateServerFunction
-  browser?: Browser
-  coverage?: boolean
-  open?: boolean
-  playwrightPageOptions?: BrowserContextOptions
-}): Promise<TestResults> {
+export async function runTests(options?: { coverage?: boolean }): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
   let allE2ECoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
@@ -114,13 +104,7 @@ export async function runTests(options?: {
       }
 
       let ctx = createTestContext({
-        render: options?.render,
-        createServer: options?.createServer,
-        browser: options?.browser,
         coverage: options?.coverage,
-        open: options?.open,
-        playwrightPageOptions: options?.playwrightPageOptions,
-        e2eBrowserCoverageEntries: allE2ECoverageEntries,
       })
       try {
         if (suite.beforeEach) {
