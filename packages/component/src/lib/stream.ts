@@ -57,6 +57,12 @@ interface HydrationData {
   props: Record<string, unknown>
 }
 
+interface UnresolvedHydrationData {
+  entryId: string
+  component: EntryComponent
+  props: Record<string, unknown>
+}
+
 interface ResolvedClientEntry {
   href: string
   exportName: string
@@ -80,9 +86,7 @@ interface RenderContext {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
-  hydrationEntryIds: Map<string, string>
-  hydrationComponents: Map<string, EntryComponent>
-  unresolvedClientEntryIds: Set<string>
+  unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -192,9 +196,7 @@ export function renderToStream(
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
-    hydrationEntryIds: new Map(),
-    hydrationComponents: new Map(),
-    unresolvedClientEntryIds: new Set(),
+    unresolvedHydrationData: new Map(),
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -803,14 +805,11 @@ function buildEntrySegment(
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
-  context.hydrationData.set(instanceId, {
-    moduleUrl: '',
-    exportName: '',
+  context.unresolvedHydrationData.set(instanceId, {
+    entryId: type.$entryId,
+    component: type,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
-  context.hydrationEntryIds.set(instanceId, type.$entryId)
-  context.hydrationComponents.set(instanceId, type)
-  context.unresolvedClientEntryIds.add(type.$entryId)
 
   let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
   let end = staticSeg('<!-- /rmx:h -->')
@@ -856,24 +855,14 @@ async function resolveClientEntries(
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
 ): Promise<void> {
-  if (context.unresolvedClientEntryIds.size === 0) return
+  if (context.unresolvedHydrationData.size === 0) return
 
-  let unresolvedEntryIds = new Set(context.unresolvedClientEntryIds)
   let resolvedEntries = new Map<string, ResolvedClientEntry>()
 
-  for (let [hydrationId, entryId] of context.hydrationEntryIds) {
-    if (!unresolvedEntryIds.has(entryId)) continue
-
-    let hydrationData = context.hydrationData.get(hydrationId)
-    if (!hydrationData) continue
-
+  for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
+    let { entryId, component, props } = unresolvedHydrationData
     let resolvedEntry = resolvedEntries.get(entryId)
     if (!resolvedEntry) {
-      let component = context.hydrationComponents.get(hydrationId)
-      if (!component) {
-        throw new Error(`Missing component metadata for clientEntry "${entryId}".`)
-      }
-
       resolvedEntry = resolveClientEntry
         ? await Promise.resolve(resolveClientEntry(entryId, component))
         : resolveDefaultClientEntry(entryId, component)
@@ -881,11 +870,14 @@ async function resolveClientEntries(
       resolvedEntries.set(entryId, resolvedEntry)
     }
 
-    hydrationData.exportName = resolvedEntry.exportName
-    hydrationData.moduleUrl = resolvedEntry.href
+    context.hydrationData.set(hydrationId, {
+      exportName: resolvedEntry.exportName,
+      moduleUrl: resolvedEntry.href,
+      props,
+    })
   }
 
-  context.unresolvedClientEntryIds.clear()
+  context.unresolvedHydrationData.clear()
 }
 
 function validateResolvedClientEntry(
@@ -908,14 +900,12 @@ function validateResolvedClientEntry(
 }
 
 function validateClientEntriesForHydration(context: RenderContext): void {
-  for (let [hydrationId, hydrationData] of context.hydrationData) {
-    if (hydrationData.exportName) continue
-
-    let entryId =
-      context.hydrationEntryIds.get(hydrationId) ??
-      `${hydrationData.moduleUrl}#${hydrationData.exportName}`
-
-    throw new Error(`Resolved client entry is missing an exportName. Received "${entryId}".`)
+  if (context.unresolvedHydrationData.size > 0) {
+    let [hydrationId, unresolvedHydrationData] = context.unresolvedHydrationData.entries().next()
+      .value as [string, UnresolvedHydrationData]
+    throw new Error(
+      `Resolved client entry is missing an exportName. Received "${unresolvedHydrationData.entryId}" (${hydrationId}).`,
+    )
   }
 }
 
