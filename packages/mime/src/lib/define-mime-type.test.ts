@@ -83,6 +83,22 @@ describe('defineMimeType()', () => {
       assert.equal(detectMimeType('jpeg'), 'image/jpeg')
       assert.equal(detectMimeType('jpe'), 'image/jpeg')
     })
+
+    it('matches multi-part custom extensions from filenames', () => {
+      defineMimeType({
+        extensions: ['tow'],
+        mimeType: 'application/x-tow-document',
+      })
+      defineMimeType({
+        extensions: ['be.pit', 'fr.pit'],
+        mimeType: 'application/x-pit-document',
+      })
+
+      assert.equal(detectMimeType('filename.tow'), 'application/x-tow-document')
+      assert.equal(detectMimeType('filename.be.pit'), 'application/x-pit-document')
+      assert.equal(detectMimeType('filename.fr.pit'), 'application/x-pit-document')
+      assert.equal(detectMimeType('/path/to/filename.be.pit'), 'application/x-pit-document')
+    })
   })
 
   describe('custom compressibility', () => {
