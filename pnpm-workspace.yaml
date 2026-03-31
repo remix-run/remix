@@ -1,7 +1,8 @@
 catalog:
+  '@playwright/test': '^1.59.0'
   '@types/node': ^24.6.0
   '@typescript/native-preview': 7.0.0-dev.20251125.1
-  playwright: ^1.53.1
+  playwright: ^1.59.0
   tsx: ^4.20.6
   typescript: ^5.9.3
   typescript-language-server: ^5.1.3

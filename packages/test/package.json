@@ -54,7 +54,7 @@
     "tsx": "^4.21.0"
   },
   "peerDependencies": {
-    "playwright": "catalog:"
+    "playwright": "^1.59.0"
   },
   "peerDependenciesMeta": {
     "playwright": {
@@ -62,10 +62,10 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@remix-run/assert": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "decamelize": "^6.0.1"
+    "@typescript/native-preview": "catalog:"
   },
   "keywords": [
     "testing",

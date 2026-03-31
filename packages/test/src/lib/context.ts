@@ -1,8 +1,8 @@
 import type { Browser, BrowserContextOptions, Page } from 'playwright'
 import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
-import type { V8CoverageEntry } from './coverage.ts'
 
 import type { CreateServerFunction } from './e2e-server.ts'
+import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -58,10 +58,8 @@ export interface TestContext {
 export function createTestContext(options: {
   createServer?: CreateServerFunction
   browser?: Browser
-  coverage?: boolean
   open?: boolean
-  playwrightPageOptions?: BrowserContextOptions
-  e2eBrowserCoverageEntries?: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>
+  playwrightPageOptions?: ReturnType<typeof getPlaywrightPageOptions>
 }): { testContext: TestContext; cleanup(): Promise<void> } {
   let cleanups: Array<() => void | Promise<void>> = []
 
@@ -85,17 +83,11 @@ export function createTestContext(options: {
         ...options.playwrightPageOptions,
         baseURL: server.baseUrl,
       })
-
-      let coverageEnabled = options.coverage && options.browser.browserType().name() === 'chromium'
-      if (coverageEnabled) {
-        await page.coverage.startJSCoverage({ resetOnNavigation: false })
-        cleanups.push(async () => {
-          let entries = await page.coverage.stopJSCoverage()
-          options.e2eBrowserCoverageEntries?.push({
-            entries: entries as unknown as V8CoverageEntry[],
-            baseUrl: server.baseUrl,
-          })
-        })
+      if (options.playwrightPageOptions?.navigationTimeout != null) {
+        page.setDefaultNavigationTimeout(options.playwrightPageOptions.navigationTimeout)
+      }
+      if (options.playwrightPageOptions?.actionTimeout != null) {
+        page.setDefaultTimeout(options.playwrightPageOptions.actionTimeout)
       }
 
       cleanups.push(async () => {

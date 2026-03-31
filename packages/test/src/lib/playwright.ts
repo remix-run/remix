@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 import { chromium, firefox, webkit } from 'playwright'
-import type { PlaywrightTestConfig } from 'playwright/test'
+import type { BrowserContextOptions, LaunchOptions, PlaywrightTestConfig } from 'playwright/test'
 import { tsImport } from 'tsx/esm/api'
 
 export type PlaywrightUseOpts = PlaywrightTestConfig['use']
@@ -65,31 +65,37 @@ export function resolveProjects(
   ]
 }
 
-export function getPlaywrightLaunchOptions(playwrightUseOpts?: PlaywrightUseOpts) {
+export function getPlaywrightLaunchOptions(playwrightUseOpts?: PlaywrightUseOpts): LaunchOptions {
   return {
     headless: playwrightUseOpts?.headless,
     channel: playwrightUseOpts?.channel,
   }
 }
 
-export function getPlaywrightPageOptions(playwrightUseOpts?: PlaywrightUseOpts) {
+export function getPlaywrightPageOptions(
+  playwrightUseOpts?: PlaywrightUseOpts,
+): BrowserContextOptions & { navigationTimeout?: number; actionTimeout?: number } {
   return {
-    viewport: playwrightUseOpts?.viewport,
-    userAgent: playwrightUseOpts?.userAgent,
-    locale: playwrightUseOpts?.locale,
-    timezoneId: playwrightUseOpts?.timezoneId,
-    geolocation: playwrightUseOpts?.geolocation,
-    permissions: playwrightUseOpts?.permissions,
-    extraHTTPHeaders: playwrightUseOpts?.extraHTTPHeaders,
-    colorScheme: playwrightUseOpts?.colorScheme,
-    isMobile: playwrightUseOpts?.isMobile,
-    hasTouch: playwrightUseOpts?.hasTouch,
-    deviceScaleFactor: playwrightUseOpts?.deviceScaleFactor,
-    ignoreHTTPSErrors: playwrightUseOpts?.ignoreHTTPSErrors,
-    httpCredentials: playwrightUseOpts?.httpCredentials,
-    storageState: playwrightUseOpts?.storageState,
+    // Context options passed to browser.newPage()
     bypassCSP: playwrightUseOpts?.bypassCSP,
-    offline: playwrightUseOpts?.offline,
+    colorScheme: playwrightUseOpts?.colorScheme,
+    deviceScaleFactor: playwrightUseOpts?.deviceScaleFactor,
+    extraHTTPHeaders: playwrightUseOpts?.extraHTTPHeaders,
+    geolocation: playwrightUseOpts?.geolocation,
+    hasTouch: playwrightUseOpts?.hasTouch,
+    httpCredentials: playwrightUseOpts?.httpCredentials,
+    ignoreHTTPSErrors: playwrightUseOpts?.ignoreHTTPSErrors,
+    isMobile: playwrightUseOpts?.isMobile,
     javaScriptEnabled: playwrightUseOpts?.javaScriptEnabled,
+    locale: playwrightUseOpts?.locale,
+    offline: playwrightUseOpts?.offline,
+    permissions: playwrightUseOpts?.permissions,
+    storageState: playwrightUseOpts?.storageState,
+    timezoneId: playwrightUseOpts?.timezoneId,
+    userAgent: playwrightUseOpts?.userAgent,
+    viewport: playwrightUseOpts?.viewport,
+    // Additional options set on the page instance
+    navigationTimeout: playwrightUseOpts?.navigationTimeout,
+    actionTimeout: playwrightUseOpts?.actionTimeout,
   }
 }
