@@ -52,6 +52,25 @@ export interface ScriptServerTemporaryEnginePhases {
 
 export type ScriptServerTemporaryEngine = 'esbuild' | 'oxc' | ScriptServerTemporaryEnginePhases
 
+const scriptServerTargets = [
+  'es2015',
+  'es2016',
+  'es2017',
+  'es2018',
+  'es2019',
+  'es2020',
+  'es2021',
+  'es2022',
+  'es2023',
+  'es2024',
+  'es2025',
+  'es2026',
+  'esnext',
+] as const
+const scriptServerTargetSet = new Set<string>(scriptServerTargets)
+
+export type ScriptServerTarget = (typeof scriptServerTargets)[number]
+
 export interface ScriptServerOptions {
   /** Routes that map public URL patterns to file-space patterns. */
   routes: ReadonlyArray<ScriptRouteDefinition>
@@ -95,6 +114,11 @@ export interface ScriptServerOptions {
    * `{ 'process.env.NODE_ENV': '"production"' }`
    */
   define?: Record<string, string>
+  /**
+   * Lower emitted syntax to a specific ECMAScript target. Omit this option to preserve
+   * modern syntax unless project configuration already requests a lower target.
+   */
+  target?: ScriptServerTarget
   /**
    * Remove unused static imports after transform/minify when their resolved modules are marked
    * side-effect free by `package.json#sideEffects`. Defaults to `false`.
@@ -193,6 +217,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   let fingerprintModules = fingerprintOptions.enabled
   let buildId = fingerprintOptions.buildId
   let define = options.define
+  let target = normalizeTarget(options.target)
   let minify = options.minify ?? false
   let removeUnusedImports = options.removeUnusedImports ?? false
   let temporaryEngine = options.temporary_engine
@@ -214,6 +239,7 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     routes,
     sourceMapSourcePaths,
     sourceMaps,
+    target,
     temporaryEngine,
   })
   let watchTargets = watchOptions ? getWatchTargets(root, options.routes) : []
@@ -391,6 +417,18 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
   })
 
   return scriptServer
+}
+
+function normalizeTarget(target: ScriptServerOptions['target']): ScriptServerTarget | undefined {
+  if (target == null) return undefined
+
+  if (typeof target !== 'string' || !scriptServerTargetSet.has(target)) {
+    throw new TypeError(
+      `Expected target to be one of ${scriptServerTargets.map((value) => `"${value}"`).join(', ')}. Received "${target}".`,
+    )
+  }
+
+  return target
 }
 
 function createWatcherReadyPromise(watcher: FSWatcher | null): Promise<void> {

@@ -185,6 +185,23 @@ let scriptServer = createScriptServer({
 })
 ```
 
+## Target
+
+Use `target` to lower emitted syntax to a specific ECMAScript version.
+
+```ts
+import { createScriptServer } from 'remix/script-server'
+
+let scriptServer = createScriptServer({
+  root,
+  routes: [{ urlPattern: '/scripts/app/*path', filePattern: 'app/*path' }],
+  allow: ['app/client/**', 'app/shared/**'],
+  target: 'es2019',
+})
+```
+
+The default target is `esnext`, which means all syntax is preserved.
+
 ## Define
 
 Use `define` to replace global identifiers with constant expressions.

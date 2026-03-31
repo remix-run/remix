@@ -1527,6 +1527,47 @@ describe('script-server', () => {
     assert.doesNotMatch(body, /\bgreeting\b/)
   })
 
+  it('lowers syntax to the configured ECMAScript target', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
+    )
+    let scriptServer = createTestServer(dir, {
+      minify: true,
+      target: 'es2019',
+    })
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    // ?? and ?. are not supported by the specified target
+    assert.doesNotMatch(body, /\?\?|\?\./)
+    assert.match(body, /void 0/)
+  })
+
+  it('does not inherit target from tsconfig', async () => {
+    await writeJson(dir, 'app/tsconfig.json', {
+      compilerOptions: {
+        target: 'es2019',
+      },
+    })
+    await write(
+      dir,
+      'app/entry.ts',
+      'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
+    )
+    let scriptServer = createTestServer(dir)
+
+    let response = await get(scriptServer, '/scripts/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /\?\?/)
+    assert.match(body, /\?\./)
+  })
+
   it('keeps side-effect-free unused imports by default', async () => {
     await writeJson(dir, 'app/node_modules/example/package.json', {
       exports: {

@@ -21,6 +21,7 @@ import {
 } from './compilation-error.ts'
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
+import type { ScriptServerTarget } from './script-server.ts'
 
 const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
 type OxcSourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
@@ -100,6 +101,7 @@ type ModuleCompilerOptions = {
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
+  target?: ScriptServerTarget
   temporaryEngine?: TemporaryEngineOptions
 }
 
@@ -513,6 +515,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       removeUnusedImports: resolvedOptions.removeUnusedImports,
       resolveSpecifiers,
       sourceMaps: resolvedOptions.sourceMaps,
+      target: resolvedOptions.target,
     })
     analysis.unresolvedImports = analysis.unresolvedImports.filter(
       (unresolved) => !resolvedOptions.externalSet.has(unresolved.specifier),
@@ -1192,8 +1195,10 @@ async function analyzeModuleSource(
       importerPath: string,
     ): Promise<Map<string, ResolvedSpec>>
     sourceMaps?: 'external' | 'inline'
+    target?: ScriptServerTarget
   },
 ): Promise<ModuleAnalysisResult> {
+  let target = options.target
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
     transformResult = await (options.engines.transform === 'esbuild'
@@ -1201,10 +1206,12 @@ async function analyzeModuleSource(
           define: options.define,
           minify: options.minify && options.engines.minify === 'esbuild',
           sourceMaps: options.sourceMaps,
+          target,
         })
       : transformWithOxc(sourceText, resolvedPath, transformOptions, {
           define: options.define,
           sourceMaps: options.sourceMaps,
+          target,
         }))
   } catch (error) {
     if (isScriptServerCompilationError(error)) {
@@ -1228,8 +1235,8 @@ async function analyzeModuleSource(
   ) {
     let minifyResult =
       options.engines.minify === 'esbuild'
-        ? await minifyWithEsbuild(rawCode, resolvedPath, options.sourceMaps)
-        : await minifyWithOxc(rawCode, resolvedPath, options.sourceMaps)
+        ? await minifyWithEsbuild(rawCode, resolvedPath, target, options.sourceMaps)
+        : await minifyWithOxc(rawCode, resolvedPath, target, options.sourceMaps)
     rawCode = minifyResult.code.trimEnd()
     let minifyMap = stringifySourceMap(minifyResult.map)
     sourcemap =
@@ -1274,6 +1281,7 @@ async function transformWithOxc(
   options: {
     define?: Record<string, string>
     sourceMaps?: 'external' | 'inline'
+    target?: string
   },
 ) {
   let result = await oxcTransform(
@@ -1293,6 +1301,7 @@ async function transformWithEsbuild(
     define?: Record<string, string>
     minify: boolean
     sourceMaps?: 'external' | 'inline'
+    target?: string
   },
 ) {
   let result: esbuild.TransformResult
@@ -1305,6 +1314,7 @@ async function transformWithEsbuild(
       minify: options.minify,
       sourcefile: resolvedPath,
       sourcemap: options.sourceMaps ? 'external' : false,
+      target: options.target,
       tsconfigRaw: transformOptions.tsconfigRaw,
     })
   } catch (error) {
@@ -1326,11 +1336,12 @@ async function transformWithEsbuild(
 async function minifyWithOxc(
   rawCode: string,
   resolvedPath: string,
+  target: string | undefined,
   sourceMaps?: 'external' | 'inline',
 ) {
   try {
     let result = await oxcMinify(resolvedPath, rawCode, {
-      compress: true,
+      compress: target ? { target } : true,
       mangle: true,
       module: true,
       sourcemap: sourceMaps != null,
@@ -1354,6 +1365,7 @@ async function minifyWithOxc(
 async function minifyWithEsbuild(
   rawCode: string,
   resolvedPath: string,
+  target: string | undefined,
   sourceMaps?: 'external' | 'inline',
 ) {
   let result: esbuild.TransformResult
@@ -1365,6 +1377,7 @@ async function minifyWithEsbuild(
       minify: true,
       sourcefile: resolvedPath,
       sourcemap: sourceMaps ? 'external' : false,
+      target,
     })
   } catch (error) {
     throw createScriptServerCompilationError(
@@ -1388,6 +1401,7 @@ function getOxcTransformOptions(
   options: {
     define?: Record<string, string>
     sourceMaps?: 'external' | 'inline'
+    target?: string
   },
 ) {
   let compilerOptions = transformOptions.tsconfigRaw?.compilerOptions as
@@ -1409,7 +1423,7 @@ function getOxcTransformOptions(
     lang: getOxcSourceLanguageForPath(resolvedPath),
     sourceType: 'module' as const,
     sourcemap: options.sourceMaps != null,
-    target: getOxcTarget(compilerOptions),
+    target: options.target,
     typescript: {
       allowNamespaces: getBooleanOption(compilerOptions, 'allowNamespaces'),
       emitDecoratorMetadata: getBooleanOption(compilerOptions, 'emitDecoratorMetadata'),
@@ -1449,32 +1463,6 @@ function getOxcJsxOptions(
     pragma,
     pragmaFrag,
     runtime: 'classic',
-  }
-}
-
-function getOxcTarget(compilerOptions?: Record<string, unknown>): string | undefined {
-  let target = getStringOption(compilerOptions, 'target')
-  if (!target) return undefined
-
-  switch (target.toLowerCase()) {
-    case 'es3':
-    case 'es5':
-    case 'es6':
-      return 'es2015'
-    case 'es7':
-      return 'es2016'
-    case 'es8':
-      return 'es2017'
-    case 'es9':
-      return 'es2018'
-    case 'es10':
-      return 'es2019'
-    case 'es11':
-      return 'es2020'
-    case 'es12':
-      return 'es2021'
-    default:
-      return target.toLowerCase()
   }
 }
 
