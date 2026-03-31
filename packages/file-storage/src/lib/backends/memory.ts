@@ -1,4 +1,4 @@
-import type { FileStorage, ListOptions, ListResult } from '../file-storage.ts'
+import type { FileStorage, ListOptions, ListResult, StoredFile } from '../file-storage.ts'
 
 /**
  * Creates a simple, in-memory implementation of the {@link FileStorage} interface.
@@ -8,7 +8,7 @@ import type { FileStorage, ListOptions, ListResult } from '../file-storage.ts'
 export function createMemoryFileStorage(): FileStorage {
   let map = new Map<string, File>()
 
-  async function putFile(key: string, file: File): Promise<File> {
+  async function putFile(key: string, file: StoredFile): Promise<File> {
     let buffer = await file.arrayBuffer()
     let newFile = new File([buffer], file.name, {
       lastModified: file.lastModified,
@@ -64,13 +64,13 @@ export function createMemoryFileStorage(): FileStorage {
         files,
       }
     },
-    put(key: string, file: File): Promise<File> {
+    put(key: string, file: StoredFile): Promise<File> {
       return putFile(key, file)
     },
     remove(key: string): void {
       map.delete(key)
     },
-    async set(key: string, file: File): Promise<void> {
+    async set(key: string, file: StoredFile): Promise<void> {
       await putFile(key, file)
     },
   }
