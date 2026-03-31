@@ -19,7 +19,7 @@
     "dev:server": "NODE_ENV=development tsx watch server.ts",
     "dev:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --minify --splitting --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
     "start": "tsx server.ts",
-    "test": "NODE_ENV=test node --import tsx --test --test-global-setup ./test/setup.ts \"app/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test": "NODE_ENV=test remix-test",
     "typecheck": "tsc --noEmit"
   }
 }
