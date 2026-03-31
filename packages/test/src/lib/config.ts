@@ -47,7 +47,7 @@ export interface RemixTestConfig {
         functions?: number | string
       }
   /**
-   * Path to a module that exports `setup` and/or `teardown` functions,
+   * Path to a module that exports `globalSetup` and/or `globalTeardown` functions,
    * called once before and after the test run respectively. (--setup)
    */
   setup?: string
