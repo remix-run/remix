@@ -1,8 +1,19 @@
+/**
+ * Thrown when an assertion fails. Mirrors the shape of Node.js's built-in
+ * `assert.AssertionError` so that test reporters can treat them uniformly.
+ */
 export class AssertionError extends Error {
   actual: any
   expected: any
   operator: string
 
+  /**
+   * Creates a new AssertionError with the given message, actual/expected values, and operator.
+   * @param options.message - The error message to display when the assertion fails.
+   * @param options.actual - The actual value that was tested.
+   * @param options.expected - The expected value that the actual value was compared against.
+   * @param options.operator - A string describing the assertion operator (e.g. '==', '===', 'deepEqual').
+   */
   constructor(options: { message?: string; actual?: any; expected?: any; operator: string }) {
     super(options.message)
     this.name = 'AssertionError'
@@ -32,6 +43,16 @@ function isDeepEqual(a: any, b: any): boolean {
   return false
 }
 
+/**
+ * Asserts that `value` is truthy. Narrows the type of `value` after the call.
+ *
+ * @example
+ * const cookie = getSessionCookie(response)
+ * assert.ok(cookie) // cookie is now `string` (not `string | null`)
+ *
+ * @param value - The value to test for truthiness.
+ * @param message - Optional failure message.
+ */
 export function ok(value: unknown, message?: string): asserts value {
   if (!value) {
     throw new AssertionError({
@@ -43,6 +64,16 @@ export function ok(value: unknown, message?: string): asserts value {
   }
 }
 
+/**
+ * Asserts strict equality (`===`) between `actual` and `expected`.
+ *
+ * @example
+ * assert.equal(response.status, 200)
+ *
+ * @param actual - The value produced by the code under test.
+ * @param expected - The value to compare against.
+ * @param message - Optional failure message.
+ */
 export function equal<T>(actual: T, expected: T, message?: string): void {
   if (actual !== expected) {
     throw new AssertionError({
@@ -54,6 +85,16 @@ export function equal<T>(actual: T, expected: T, message?: string): void {
   }
 }
 
+/**
+ * Asserts strict inequality (`!==`) between `actual` and `expected`.
+ *
+ * @example
+ * assert.notEqual(response.status, 404)
+ *
+ * @param actual - The value produced by the code under test.
+ * @param expected - The value that `actual` must not equal.
+ * @param message - Optional failure message.
+ */
 export function notEqual<T>(actual: T, expected: T, message?: string): void {
   if (actual === expected) {
     throw new AssertionError({
@@ -65,6 +106,17 @@ export function notEqual<T>(actual: T, expected: T, message?: string): void {
   }
 }
 
+/**
+ * Asserts deep strict equality between `actual` and `expected`. Recursively
+ * compares object properties using `===` at primitive leaves (no type coercion).
+ *
+ * @example
+ * assert.deepEqual(result, { id: 1, name: 'Alice' })
+ *
+ * @param actual - The value produced by the code under test.
+ * @param expected - The value to compare against.
+ * @param message - Optional failure message.
+ */
 export function deepEqual<T>(actual: T, expected: T, message?: string): void {
   if (!isDeepEqual(actual, expected)) {
     throw new AssertionError({
@@ -76,6 +128,16 @@ export function deepEqual<T>(actual: T, expected: T, message?: string): void {
   }
 }
 
+/**
+ * Asserts that `actual` and `expected` are **not** deeply equal.
+ *
+ * @example
+ * assert.notDeepEqual(result, { id: 1, name: 'Alice' })
+ *
+ * @param actual - The value produced by the code under test.
+ * @param expected - The value that `actual` must not deeply equal.
+ * @param message - Optional failure message.
+ */
 export function notDeepEqual<T>(actual: T, expected: T, message?: string): void {
   if (isDeepEqual(actual, expected)) {
     throw new AssertionError({
@@ -87,6 +149,14 @@ export function notDeepEqual<T>(actual: T, expected: T, message?: string): void 
   }
 }
 
+/**
+ * Unconditionally fails the test with an optional message.
+ *
+ * @example
+ * assert.fail('this branch should never be reached')
+ *
+ * @param message - Optional failure message.
+ */
 export function fail(message?: string): never {
   throw new AssertionError({
     message: message || 'Test failed',
@@ -94,6 +164,16 @@ export function fail(message?: string): never {
   })
 }
 
+/**
+ * Asserts that `string` matches the given `regexp`.
+ *
+ * @example
+ * assert.match(html, /Welcome Back/)
+ *
+ * @param string - The string to test.
+ * @param regexp - The pattern to match against.
+ * @param message - Optional failure message.
+ */
 export function match(string: string, regexp: RegExp, message?: string): void {
   if (!regexp.test(string)) {
     throw new AssertionError({
@@ -105,6 +185,16 @@ export function match(string: string, regexp: RegExp, message?: string): void {
   }
 }
 
+/**
+ * Asserts that `string` does **not** match the given `regexp`.
+ *
+ * @example
+ * assert.doesNotMatch(html, /Error/)
+ *
+ * @param string - The string to test.
+ * @param regexp - The pattern that must not match.
+ * @param message - Optional failure message.
+ */
 export function doesNotMatch(string: string, regexp: RegExp, message?: string): void {
   if (regexp.test(string)) {
     throw new AssertionError({
@@ -116,6 +206,20 @@ export function doesNotMatch(string: string, regexp: RegExp, message?: string): 
   }
 }
 
+/**
+ * Asserts that `fn` throws. Optionally validates the thrown error against
+ * `expectedError`, which may be an `Error` constructor, an `Error` instance
+ * (matched by message), a `RegExp` (matched against the error message), or a
+ * validator function that returns `true` for a valid error.
+ *
+ * @example
+ * assert.throws(() => JSON.parse('invalid'))
+ * assert.throws(() => riskyOp(), SyntaxError)
+ *
+ * @param fn - The function expected to throw.
+ * @param expectedError - Optional error constructor, instance, RegExp, or validator.
+ * @param message - Optional failure message.
+ */
 export function throws(fn: () => any, expectedError?: any, message?: string): void {
   let thrown = false
   let error: any
@@ -139,6 +243,15 @@ export function throws(fn: () => any, expectedError?: any, message?: string): vo
   }
 }
 
+/**
+ * Asserts that `fn` does **not** throw.
+ *
+ * @example
+ * assert.doesNotThrow(() => JSON.parse('{}'))
+ *
+ * @param fn - The function expected not to throw.
+ * @param message - Optional failure message.
+ */
 export function doesNotThrow(fn: () => any, message?: string): void {
   try {
     fn()
@@ -152,6 +265,17 @@ export function doesNotThrow(fn: () => any, message?: string): void {
   }
 }
 
+/**
+ * Asserts that the promise returned by `fn` (or the promise itself) rejects.
+ * Accepts the same `expectedError` shapes as {@link throws}.
+ *
+ * @example
+ * await assert.rejects(fetch('/missing'), (err) => err.status === 404)
+ *
+ * @param fn - A function returning a promise, or a promise directly.
+ * @param expectedError - Optional error constructor, instance, RegExp, or validator.
+ * @param message - Optional failure message.
+ */
 export async function rejects(
   fn: (() => Promise<any>) | Promise<any>,
   expectedError?: any,
@@ -179,6 +303,15 @@ export async function rejects(
   }
 }
 
+/**
+ * Asserts that the promise returned by `fn` does **not** reject.
+ *
+ * @example
+ * await assert.doesNotReject(() => fetch('/healthy'))
+ *
+ * @param fn - A function returning a promise.
+ * @param message - Optional failure message.
+ */
 export async function doesNotReject(fn: () => Promise<any>, message?: string): Promise<void> {
   try {
     await fn()
@@ -239,5 +372,5 @@ function checkError(error: any, expectedError: any, operator: string): void {
   }
 }
 
-// assert() is an alias of assert.ok()
+/** Alias for {@link ok}. */
 export const assert = ok

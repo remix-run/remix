@@ -77,6 +77,24 @@ function registerDescribe(
   }
 }
 
+/**
+ * Groups related tests into a named suite. Suites can be nested snd will be displayed
+ * as such or joined with ` > ` in reporter output. Lifecycle hooks registered inside
+ * a `describe` block apply only to tests within that block.
+ *
+ * @example
+ * describe('auth', () => {
+ *   it('logs in', async () => { ... })
+ * })
+ *
+ * // Modifiers
+ * describe.skip('skipped suite', () => { ... })
+ * describe.only('focused suite', () => { ... })
+ * describe.todo('planned suite')
+ *
+ * @param name - The suite name shown in reporter output.
+ * @param fn - A function that registers the tests and lifecycle hooks in this suite.
+ */
 export const describe = Object.assign(
   (name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void) => {
     let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
@@ -102,6 +120,24 @@ function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: b
   suite.tests.push({ name, fn, suite, ...flags })
 }
 
+/**
+ * Defines a single test case. The optional `TestContext` argument `t` provides
+ * mock helpers and per-test cleanup registration.
+ *
+ * @example
+ * it('returns 200 for the home route', async () => {
+ *   const res = await router.fetch('/')
+ *   assert.equal(res.status, 200)
+ * })
+ *
+ * // Modifiers
+ * it.skip('not ready yet', () => { ... })
+ * it.only('focused test', () => { ... })
+ * it.todo('coming soon')
+ *
+ * @param name - The test name shown in reporter output.
+ * @param fn - The test body, receiving a {@link TestContext} as its first argument.
+ */
 export const it = Object.assign(
   (name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn) => {
     let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
@@ -118,7 +154,9 @@ export const it = Object.assign(
   },
 )
 
+/** Alias for {@link describe}. */
 export const suite = describe
+/** Alias for {@link it}. */
 export const test = it
 
 function chainBefore(
@@ -146,26 +184,56 @@ function chainAfter(
     : fn
 }
 
+/**
+ * Registers a hook that runs before **each** test in the current suite (or
+ * globally if called outside a `describe`). Multiple calls are chained in
+ * registration order.
+ *
+ * @param fn - The setup function to run before each test.
+ */
 export function beforeEach(fn: () => void | Promise<void>) {
   let target = currentSuite ?? rootHooks
   target.beforeEach = chainBefore(target.beforeEach, fn)
 }
 
+/**
+ * Registers a hook that runs after **each** test in the current suite (or
+ * globally if called outside a `describe`). Multiple calls are chained in
+ * reverse registration order.  To run logic after a singular test, use
+ * `t.after()` from the {@link TestContext}
+ *
+ * @param fn - The teardown function to run after each test.
+ */
 export function afterEach(fn: () => void | Promise<void>) {
   let target = currentSuite ?? rootHooks
   target.afterEach = chainAfter(target.afterEach, fn)
 }
 
+/**
+ * Registers a hook that runs once before **all** tests in the current suite
+ * (or globally if called outside a `describe`). Multiple calls are chained in
+ * registration order.
+ *
+ * @param fn - The setup function to run once before all tests in the suite.
+ */
 export function beforeAll(fn: () => void | Promise<void>) {
   let target = currentSuite ?? rootHooks
   target.beforeAll = chainBefore(target.beforeAll, fn)
 }
 
+/**
+ * Registers a hook that runs once after **all** tests in the current suite (or
+ * globally if called outside a `describe`). Multiple calls are chained in
+ * reverse registration order.
+ *
+ * @param fn - The teardown function to run once after all tests in the suite.
+ */
 export function afterAll(fn: () => void | Promise<void>) {
   let target = currentSuite ?? rootHooks
   target.afterAll = chainAfter(target.afterAll, fn)
 }
 
-// Aliases matching node:test API
+/** Alias for {@link beforeAll} — matches the `node:test` API. */
 export const before = beforeAll
+/** Alias for {@link afterAll} — matches the `node:test` API. */
 export const after = afterAll
