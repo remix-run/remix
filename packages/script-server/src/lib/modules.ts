@@ -21,7 +21,6 @@ import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 import type { ScriptServerTarget } from './script-server.ts'
 
-const preloadTraversalConcurrency = getPreloadTraversalConcurrency()
 type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
@@ -36,7 +35,8 @@ const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
-const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs', '.json']
+const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
+const preloadTraversalConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 
 export type ModuleCompileResult = {
   compiledCode: string
@@ -94,10 +94,6 @@ type ModuleCompilerOptions = {
   target?: ScriptServerTarget
 }
 
-type ResolvedOptions = ModuleCompilerOptions & {
-  externalSet: Set<string>
-}
-
 type ModuleCacheEntry = {
   compileInFlight?: Promise<ModuleCompileResult>
   emitted?: EmittedModule
@@ -129,30 +125,9 @@ type UnresolvedImport = {
   start: number
 }
 
-type RewriteBuffer = {
-  generateMap(): string
-  overwrite(start: number, end: number, content: string): void
-  toString(): string
-}
-
 type ExtensionlessImport = {
   candidateBasePath: string
   specifier: string
-}
-
-function createResolverFactory() {
-  return new ResolverFactory({
-    tsconfig: 'auto',
-    aliasFields: [['browser']],
-    conditionNames: ['browser', 'import', 'module', 'default'],
-    extensionAlias: {
-      '.js': ['.ts', '.tsx', '.js', '.jsx'],
-      '.jsx': ['.tsx', '.jsx'],
-      '.mjs': ['.mts', '.mjs'],
-    },
-    extensions: resolverExtensions,
-    mainFields: ['browser', 'module', 'main'],
-  })
 }
 
 type TrackedResolution = ExtensionlessImport & {
@@ -170,16 +145,25 @@ export type ModuleCompiler = {
 }
 
 export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
-  let resolvedOptions = resolveOptions(options)
+  let resolvedOptions = {
+    ...options,
+    externalSet: new Set(options.external),
+  }
   let moduleCache = new Map<string, ModuleCacheEntry>()
   let importersByDependency = new Map<string, Set<string>>()
   let modulesByTrackedFile = new Map<string, Set<string>>()
   let tsconfigTransformOptions = createTsconfigTransformOptionsResolver()
-  let resolverFactory = createResolverFactory()
-
-  function resolveSpecifiers(specifiers: string[], importerPath: string) {
-    return batchResolveSpecifiers(specifiers, importerPath, resolverFactory)
-  }
+  let resolverFactory = new ResolverFactory({
+    aliasFields: [['browser']],
+    conditionNames: ['browser', 'import', 'module', 'default'],
+    extensionAlias: {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.jsx': ['.tsx', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    },
+    extensions: resolverExtensions,
+    mainFields: ['browser', 'module', 'main'],
+  })
 
   return {
     resolveServedPath(absolutePath) {
@@ -205,11 +189,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       }
     },
     async getPreloadUrls(absolutePath) {
-      let resolvedEntries = dedupeIdentityPaths(
-        (Array.isArray(absolutePath) ? absolutePath : [absolutePath]).map((path) =>
-          resolveServedPathOrThrow(path),
-        ),
-      )
+      let resolvedEntries: string[] = []
+      let seen = new Set<string>()
+      for (let resolvedModule of (Array.isArray(absolutePath) ? absolutePath : [absolutePath]).map(
+        (path) => resolveServedPathOrThrow(path),
+      )) {
+        if (seen.has(resolvedModule.identityPath)) continue
+        seen.add(resolvedModule.identityPath)
+        resolvedEntries.push(resolvedModule.identityPath)
+      }
 
       let visited = new Set(resolvedEntries)
       let queue = [...resolvedEntries]
@@ -295,7 +283,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       resolvedModule.resolvedPath,
       generation,
     )
-    let existing = getCachedEmittedModule(resolvedSourceModule.identityPath)
+    let existing = getModuleCacheEntry(resolvedSourceModule.identityPath).emitted
     if (existing) return toModuleCompileResult(resolvedSourceModule, existing)
 
     let importUrls = await Promise.all(
@@ -329,7 +317,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function rewriteImports(
     resolvedModule: ResolvedModule,
   ): Promise<{ code: string; sourcemap: string | null }> {
-    let rewrittenSource = createRewriteBuffer(resolvedModule.rawCode)
+    let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
     for (let imported of resolvedModule.imports) {
       let url = await getServedUrl(imported.depPath)
@@ -343,7 +331,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let code = rewrittenSource.toString()
     let sourcemap =
       resolvedModule.sourcemap && resolvedModule.imports.length > 0
-        ? composeSourceMaps(rewrittenSource.generateMap(), resolvedModule.sourcemap)
+        ? composeSourceMaps(
+            rewrittenSource.generateMap({ hires: true }).toString(),
+            resolvedModule.sourcemap,
+          )
         : resolvedModule.sourcemap
 
     return { code, sourcemap }
@@ -390,7 +381,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     generation = getModuleCacheEntry(identityPath).generation,
   ): Promise<ResolvedModule | TransformedModule> {
     let entry = getModuleCacheEntry(identityPath)
-    let cachedResolvedModule = getCachedResolvedModule(identityPath)
+    let cachedResolvedModule = entry.resolved
     if (cachedResolvedModule) {
       return cachedResolvedModule
     }
@@ -457,23 +448,26 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     return cacheTransformedModule(
       {
-        extensionlessImports: getExtensionlessImports(
-          analysis.unresolvedImports,
-          path.dirname(nextResolvedPath),
-        ),
+        extensionlessImports: analysis.unresolvedImports
+          .filter((unresolved) => isTrackedExtensionlessImport(unresolved.specifier))
+          .map((unresolved) => ({
+            candidateBasePath: resolveCandidateBasePath(
+              path.dirname(nextResolvedPath),
+              unresolved.specifier,
+            ),
+            specifier: unresolved.specifier,
+          })),
         fingerprint: await hashContent(sourceText + '\0' + (resolvedOptions.buildId ?? '')),
         identityPath,
         importerDir: path.dirname(nextResolvedPath),
-        packageSpecifiers: getPackageSpecifiers(analysis.unresolvedImports),
+        packageSpecifiers: analysis.unresolvedImports
+          .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
+          .map((unresolved) => unresolved.specifier),
         rawCode: analysis.rawCode,
         resolvedPath: nextResolvedPath,
         sourcemap,
         stableUrlPathname,
-        trackedFiles: [
-          nextResolvedPath,
-          ...transformOptions.trackedFiles,
-          ...analysis.trackedFiles,
-        ],
+        trackedFiles: [nextResolvedPath, ...transformOptions.trackedFiles],
         unresolvedImports: analysis.unresolvedImports,
       },
       generation,
@@ -488,9 +482,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let resolvedImports =
       transformedModule.unresolvedImports.length > 0
-        ? await resolveSpecifiers(
+        ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformedModule.unresolvedImports),
             transformedModule.resolvedPath,
+            resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
     return buildResolvedModule(transformedModule, resolvedImports, generation)
@@ -641,18 +636,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     entry = { generation: 0 }
     moduleCache.set(identityPath, entry)
     return entry
-  }
-
-  function getCachedEmittedModule(identityPath: string): EmittedModule | null {
-    let entry = getModuleCacheEntry(identityPath)
-    if (entry.emitted) return entry.emitted
-    return null
-  }
-
-  function getCachedResolvedModule(identityPath: string): ResolvedModule | null {
-    let entry = getModuleCacheEntry(identityPath)
-    if (entry.resolved) return entry.resolved
-    return null
   }
 
   function cacheEmittedModule(
@@ -830,26 +813,6 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 }
 
-function dedupeIdentityPaths(resolvedModules: readonly ResolveModuleResult[]): string[] {
-  let deduped: string[] = []
-  let seen = new Set<string>()
-
-  for (let resolvedModule of resolvedModules) {
-    if (seen.has(resolvedModule.identityPath)) continue
-    seen.add(resolvedModule.identityPath)
-    deduped.push(resolvedModule.identityPath)
-  }
-
-  return deduped
-}
-
-function resolveOptions(options: ModuleCompilerOptions): ResolvedOptions {
-  return {
-    ...options,
-    externalSet: new Set(options.external),
-  }
-}
-
 function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   let resolvedPath: string
 
@@ -860,7 +823,7 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
     throw error
   }
 
-  if (!isSupportedScriptPath(resolvedPath)) {
+  if (!supportedScriptExtensionSet.has(path.extname(resolvedPath).toLowerCase())) {
     return null
   }
 
@@ -877,10 +840,6 @@ function resolveActualPath(identityPath: string): string | null {
     if (isNoEntityError(error)) return null
     throw error
   }
-}
-
-function isSupportedScriptPath(filePath: string): boolean {
-  return supportedScriptExtensionSet.has(path.extname(filePath).toLowerCase())
 }
 
 function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
@@ -928,13 +887,6 @@ function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string)
   return JSON.stringify(generator.toJSON())
 }
 
-type ModuleAnalysisResult = {
-  rawCode: string
-  sourcemap: string | null
-  trackedFiles: string[]
-  unresolvedImports: UnresolvedImport[]
-}
-
 type TsconfigTransformOptions = {
   trackedFiles: string[]
   tsconfigRaw?: TsConfigJsonResolved
@@ -969,7 +921,10 @@ function createTsconfigTransformOptionsResolver() {
       }
 
       let transformOptions: TsconfigTransformOptions = {
-        trackedFiles: getTrackedTsconfigFiles(directory),
+        trackedFiles: (() => {
+          let tsconfigPath = findNearestTsconfigPath(directory)
+          return tsconfigPath ? [tsconfigPath] : []
+        })(),
         tsconfigRaw: tsconfig.config,
       }
 
@@ -1024,29 +979,6 @@ function findNearestTsconfigPath(directory: string): string | null {
   }
 }
 
-function getTrackedTsconfigFiles(directory: string): string[] {
-  let tsconfigPath = findNearestTsconfigPath(directory)
-  return tsconfigPath ? [tsconfigPath] : []
-}
-
-function getExtensionlessImports(
-  unresolvedImports: UnresolvedImport[],
-  importerDir: string,
-): ExtensionlessImport[] {
-  return unresolvedImports
-    .filter((unresolved) => isTrackedExtensionlessImport(unresolved.specifier))
-    .map((unresolved) => ({
-      candidateBasePath: resolveCandidateBasePath(importerDir, unresolved.specifier),
-      specifier: unresolved.specifier,
-    }))
-}
-
-function getPackageSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
-  return unresolvedImports
-    .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
-    .map((unresolved) => unresolved.specifier)
-}
-
 function isPackageImportSpecifier(specifier: string): boolean {
   return !isRelativeImportSpecifier(specifier) && !specifier.startsWith('/')
 }
@@ -1093,7 +1025,7 @@ async function analyzeModuleSource(
     sourceMaps?: 'external' | 'inline'
     target?: ScriptServerTarget
   },
-): Promise<ModuleAnalysisResult> {
+) {
   let target = options.target
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
@@ -1133,7 +1065,6 @@ async function analyzeModuleSource(
   return {
     rawCode,
     sourcemap,
-    trackedFiles: [],
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
   }
 }
@@ -1284,22 +1215,6 @@ function stringifySourceMap(map: unknown): string | null {
   return String(map)
 }
 
-function createRewriteBuffer(sourceText: string): RewriteBuffer {
-  let magicString = new MagicString(sourceText)
-
-  return {
-    generateMap() {
-      return magicString.generateMap({ hires: true }).toString()
-    },
-    overwrite(start, end, content) {
-      magicString.overwrite(start, end, content)
-    },
-    toString() {
-      return magicString.toString()
-    },
-  }
-}
-
 function assertNoCompilerErrors(
   errors: Array<{ message?: string }> | undefined,
   resolvedPath: string,
@@ -1323,9 +1238,42 @@ async function batchResolveSpecifiers(
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
   if (specifiers.length === 0) return resolvedBySpecifier
 
-  let resolvedSpecs = await resolveSpecifiersWithResolver(specifiers, importerPath, resolverFactory)
-  for (let resolvedSpec of resolvedSpecs) {
-    resolvedBySpecifier.set(resolvedSpec.specifier, resolvedSpec)
+  try {
+    for (let specifier of specifiers) {
+      let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
+      if (resolutionResult.error) {
+        throw createScriptServerCompilationError(
+          `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
+            `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        )
+      }
+
+      resolvedBySpecifier.set(specifier, {
+        absolutePath:
+          resolutionResult.path && path.isAbsolute(resolutionResult.path)
+            ? normalizeFilePath(resolutionResult.path)
+            : null,
+        packageJsonPath: resolutionResult.packageJsonPath
+          ? normalizeFilePath(resolutionResult.packageJsonPath)
+          : null,
+        specifier,
+      })
+    }
+  } catch (error) {
+    if (isScriptServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
+      throw error
+    }
+
+    throw createScriptServerCompilationError(
+      `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
+      {
+        cause: error,
+        code: 'IMPORT_RESOLUTION_FAILED',
+      },
+    )
   }
 
   return resolvedBySpecifier
@@ -1337,23 +1285,9 @@ type ResolvedSpec = {
   specifier: string
 }
 
-function getPreloadTraversalConcurrency(): number {
-  let override = process.env.SCRIPT_SERVER_PRELOAD_CONCURRENCY
-  if (override !== undefined) {
-    let parsed = Number.parseInt(override, 10)
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed
-    }
-  }
-
-  return Math.max(1, Math.min(8, os.availableParallelism() - 1))
-}
-
 function getUniqueSpecifiers(unresolvedImports: UnresolvedImport[]): string[] {
   return [...new Set(unresolvedImports.map((unresolved) => unresolved.specifier))]
 }
-
-type ParsedImportRecord = ReturnType<typeof esModuleLexer>[0][number]
 
 async function getUnresolvedImportsFromLexer(rawCode: string): Promise<UnresolvedImport[]> {
   await esModuleLexerInit
@@ -1374,7 +1308,10 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
   return unresolvedImports
 }
 
-function getStaticImportSpecifier(source: string, imported: ParsedImportRecord): string | null {
+function getStaticImportSpecifier(
+  source: string,
+  imported: ReturnType<typeof esModuleLexer>[0][number],
+): string | null {
   if (imported.n != null) {
     return imported.n
   }
@@ -1411,7 +1348,7 @@ function getImportQuote(source: string, start: number): '"' | "'" | '`' | undefi
   return undefined
 }
 
-function getSourceLanguageForPath(resolvedPath: string): 'js' | 'jsx' | 'ts' | 'tsx' {
+function getSourceLanguageForPath(resolvedPath: string): SourceLanguage {
   let extension = path.extname(resolvedPath).toLowerCase()
   return sourceLanguageByExtension.get(extension) ?? 'js'
 }
@@ -1435,54 +1372,6 @@ async function mapWithConcurrency<item, result>(
 
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()))
   return results
-}
-
-async function resolveSpecifiersWithResolver(
-  specifiers: string[],
-  importerPath: string,
-  resolverFactory: ResolverFactory,
-): Promise<ResolvedSpec[]> {
-  let resolvedSpecs: ResolvedSpec[] = []
-
-  try {
-    for (let specifier of specifiers) {
-      let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
-      if (resolutionResult.error) {
-        throw createScriptServerCompilationError(
-          `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
-            `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
-          {
-            code: 'IMPORT_RESOLUTION_FAILED',
-          },
-        )
-      }
-
-      resolvedSpecs.push({
-        absolutePath:
-          resolutionResult.path && path.isAbsolute(resolutionResult.path)
-            ? normalizeFilePath(resolutionResult.path)
-            : null,
-        packageJsonPath: resolutionResult.packageJsonPath
-          ? normalizeFilePath(resolutionResult.packageJsonPath)
-          : null,
-        specifier,
-      })
-    }
-  } catch (error) {
-    if (isScriptServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
-      throw error
-    }
-
-    throw createScriptServerCompilationError(
-      `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
-      {
-        cause: error,
-        code: 'IMPORT_RESOLUTION_FAILED',
-      },
-    )
-  }
-
-  return resolvedSpecs
 }
 
 function formatUnknownError(error: unknown): string {
