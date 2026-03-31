@@ -1,4 +1,7 @@
+import type { Browser, BrowserContextOptions } from 'playwright'
 import { createTestContext } from './context.ts'
+import type { render } from './render.ts'
+import type { CreateServerFunction } from './e2e-server.ts'
 
 export interface TestResult {
   name: string
@@ -20,7 +23,13 @@ export interface TestResults {
   tests: TestResult[]
 }
 
-export async function runTests(): Promise<TestResults> {
+export async function runTests(options?: {
+  render?: typeof render
+  createServer?: CreateServerFunction
+  browser?: Browser
+  open?: boolean
+  playwrightPageOptions?: BrowserContextOptions
+}): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
   let results: TestResults = {
     passed: 0,
@@ -100,7 +109,14 @@ export async function runTests(): Promise<TestResults> {
         duration: 0,
       }
 
-      let { testContext, cleanup } = createTestContext()
+      let { testContext, cleanup } = createTestContext({
+        render: options?.render,
+        createServer: options?.createServer,
+        browser: options?.browser,
+        open: options?.open,
+        playwrightPageOptions: options?.playwrightPageOptions,
+      })
+
       try {
         if (suite.beforeEach) {
           await suite.beforeEach()

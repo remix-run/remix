@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporter.ts'
+import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Counts } from './utils.ts'
 
 const ext = path.extname(import.meta.url)
@@ -13,9 +14,14 @@ export async function runServerTests(
   reporter: Reporter,
   concurrency: number,
   type: 'server' | 'e2e',
+  options: {
+    open?: boolean
+    playwrightUseOpts?: PlaywrightUseOpts
+    projectName?: string
+  } = {},
 ): Promise<Counts> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
-  let envLabel = type
+  let envLabel = options.projectName ? `${type}:${options.projectName}` : type
 
   function accumulate(results: TestResults, file: string) {
     reporter.onResult(
@@ -28,13 +34,29 @@ export async function runServerTests(
     counts.todo += results.todo
   }
 
-  await runInConcurrentWorkers(
-    files,
-    concurrency,
-    (file) => runFileInWorker(file, type),
-    accumulate,
-    () => counts.failed++,
-  )
+  if (type === 'e2e') {
+    await runInConcurrentWorkers(
+      files,
+      concurrency,
+      (file) =>
+        runFileInWorker(file, type, {
+          ...options,
+          playwrightUseOpts: options.playwrightUseOpts,
+        }),
+      (results, file) => {
+        accumulate(results, file)
+      },
+      () => counts.failed++,
+    )
+  } else {
+    await runInConcurrentWorkers(
+      files,
+      concurrency,
+      (file) => runFileInWorker(file, type),
+      accumulate,
+      () => counts.failed++,
+    )
+  }
 
   return { ...counts }
 }
@@ -84,12 +106,21 @@ async function runInConcurrentWorkers(
   })
 }
 
-function runFileInWorker(file: string, type: 'server' | 'e2e'): Promise<TestResults> {
+function runFileInWorker(
+  file: string,
+  type: 'server' | 'e2e',
+  options: {
+    open?: boolean
+    playwrightUseOpts?: PlaywrightUseOpts
+  } = {},
+): Promise<TestResults> {
   return new Promise((resolve, reject) => {
     let worker = new Worker(workerUrl, {
       workerData: {
         file: pathToFileURL(file).href,
         type,
+        open: options.open,
+        playwrightUseOpts: options.playwrightUseOpts,
       },
     })
     let results: TestResults | undefined
