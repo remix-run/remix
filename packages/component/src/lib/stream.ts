@@ -822,30 +822,26 @@ function resolveDefaultClientEntry(
 ): ResolvedClientEntry {
   let fallbackExportName = component.name || ''
   let hashIndex = entryId.lastIndexOf('#')
-  if (hashIndex === -1) {
-    if (!fallbackExportName) {
-      throw new Error(
-        `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
-      )
-    }
-
+  if (hashIndex === -1 && fallbackExportName) {
     return {
       exportName: fallbackExportName,
       href: entryId,
     }
   }
 
-  let exportName = entryId.slice(hashIndex + 1) || fallbackExportName || ''
-  if (!exportName) {
-    throw new Error(
-      `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
-    )
+  if (hashIndex !== -1) {
+    let exportName = entryId.slice(hashIndex + 1) || fallbackExportName
+    if (exportName) {
+      return {
+        exportName,
+        href: entryId.slice(0, hashIndex),
+      }
+    }
   }
 
-  return {
-    exportName,
-    href: entryId.slice(0, hashIndex),
-  }
+  throw new Error(
+    `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
+  )
 }
 
 async function resolveClientEntries(
