@@ -9,10 +9,10 @@ import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 import {
-  ScriptServerCompilationError,
   createScriptServerCompilationError,
   isScriptServerCompilationError,
 } from './compilation-error.ts'
+import type { ScriptServerCompilationError } from './compilation-error.ts'
 import { hashContent } from './fingerprint.ts'
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
