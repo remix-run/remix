@@ -13,7 +13,6 @@ import {
 import { emitResolvedModule } from './emit.ts'
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
 import {
-  isFailedResolutionError,
   resolveModule,
   resolverExtensionAlias,
   resolverExtensions,
@@ -241,19 +240,21 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let promise = (async () => {
       let startedAt = Date.now()
-      let transformed = await getOrCreateTransformedModule(record)
-      try {
-        let resolved = await resolveModule(record, transformed, resolveArgs)
+      let transformedModule = await getOrCreateTransformedModule(record)
+      let resolveModuleResult = await resolveModule(record, transformedModule, resolveArgs)
+
+      if (!resolveModuleResult.ok) {
         if (startedAt >= record.lastInvalidatedAt) {
-          store.setResolved(record.identityPath, resolved)
+          store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
         }
-        return resolved
-      } catch (error) {
-        if (isFailedResolutionError(error) && startedAt >= record.lastInvalidatedAt) {
-          store.setFailedResolution(record.identityPath, error.failedResolution)
-        }
-        throw error
+        throw resolveModuleResult.error
       }
+
+      if (startedAt >= record.lastInvalidatedAt) {
+        store.setResolved(record.identityPath, resolveModuleResult.value)
+      }
+
+      return resolveModuleResult.value
     })()
 
     resolveInFlightByIdentityPath.set(record.identityPath, promise)
@@ -271,11 +272,22 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     if (record.transformed) return record.transformed
 
     let startedAt = Date.now()
-    let transformed = await transformModule(record, transformArgs)
-    if (startedAt >= record.lastInvalidatedAt) {
-      store.setTransformed(record.identityPath, transformed)
+    let transformModuleResult = await transformModule(record, transformArgs)
+
+    if (!transformModuleResult.ok) {
+      if (startedAt >= record.lastInvalidatedAt) {
+        store.setTransformFailure(record.identityPath, {
+          trackedFiles: transformModuleResult.trackedFiles,
+        })
+      }
+      throw transformModuleResult.error
     }
-    return transformed
+
+    if (startedAt >= record.lastInvalidatedAt) {
+      store.setTransformed(record.identityPath, transformModuleResult.value)
+    }
+
+    return transformModuleResult.value
   }
 
   async function getOrCreateEmittedModule(record: ModuleRecord): Promise<EmittedModule> {
@@ -287,14 +299,20 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let promise = (async () => {
       let startedAt = Date.now()
       let resolvedModule = await getOrCreateResolvedModule(record)
-      let emitted = await emitResolvedModule(resolvedModule, {
+      let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
         getServedUrl,
         sourceMaps: resolvedOptions.sourceMaps,
       })
-      if (startedAt >= record.lastInvalidatedAt) {
-        store.setEmitted(record.identityPath, emitted)
+
+      if (!emitResolvedModuleResult.ok) {
+        throw emitResolvedModuleResult.error
       }
-      return emitted
+
+      if (startedAt >= record.lastInvalidatedAt) {
+        store.setEmitted(record.identityPath, emitResolvedModuleResult.value)
+      }
+
+      return emitResolvedModuleResult.value
     })()
 
     emitInFlightByIdentityPath.set(record.identityPath, promise)

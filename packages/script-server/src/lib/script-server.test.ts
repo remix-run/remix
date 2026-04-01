@@ -1137,6 +1137,122 @@ describe('script-server', () => {
     }
   })
 
+  it('recovers in watch mode when a previously broken transform is fixed', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
+      await write(caseDir, 'app/broken.ts', 'export const nope =')
+      let errorCodes: string[] = []
+      let scriptServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isScriptServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        await assertInternalServerError(before)
+        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+
+        await write(caseDir, 'app/broken.ts', 'export const nope = 1')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/broken\.ts/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/broken\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps serving healthy modules while another module fails and recovers through multiple watch-mode errors', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
+      await write(caseDir, 'app/healthy.ts', 'export const healthy = true')
+      await write(caseDir, 'app/broken.ts', 'export const nope =')
+      let errorCodes: string[] = []
+      let scriptServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isScriptServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let firstFailure = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(firstFailure)
+        await assertInternalServerError(firstFailure)
+        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+
+        let repeatedFailure = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(repeatedFailure)
+        await assertInternalServerError(repeatedFailure)
+        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+
+        let healthyResponse = await get(scriptServer, '/scripts/app/healthy.ts')
+        assert.ok(healthyResponse)
+        assert.equal(healthyResponse.status, 200)
+        assert.match(await healthyResponse.text(), /healthy = true/)
+
+        await write(caseDir, 'app/broken.ts', 'import "./missing.ts"\nexport const nope = true')
+
+        await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            let body = await response.text()
+            return {
+              body,
+              code: errorCodes.at(-1),
+              status: response.status,
+            }
+          },
+          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
+          watchTestTimeoutMs,
+        )
+
+        await write(caseDir, 'app/missing.ts', 'export const missing = true')
+
+        let recoveredBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/broken\.ts/.test(body) && /entry = true/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(recoveredBody, /\/scripts\/app\/broken\.ts/)
+        assert.ok(errorCodes.includes('MODULE_TRANSFORM_FAILED'))
+        assert.ok(errorCodes.includes('IMPORT_RESOLUTION_FAILED'))
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up tsconfig-driven transform changes in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {

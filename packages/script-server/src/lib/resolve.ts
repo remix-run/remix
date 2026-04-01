@@ -3,10 +3,10 @@ import * as path from 'node:path'
 import type { ResolverFactory } from 'oxc-resolver'
 
 import {
-  ScriptServerCompilationError,
   createScriptServerCompilationError,
   isScriptServerCompilationError,
 } from './compilation-error.ts'
+import type { ScriptServerCompilationError } from './compilation-error.ts'
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 import type { ModuleRecord } from './store.ts'
@@ -51,10 +51,21 @@ export type ResolvedModule = {
   stableUrlPathname: string
 }
 
-export type FailedResolution = {
+export type ResolutionFailureState = {
   trackedFiles: readonly string[]
   trackedResolutions: readonly TrackedResolution[]
 }
+
+type ResolveResult =
+  | {
+      ok: true
+      value: ResolvedModule
+    }
+  | {
+      ok: false
+      error: ScriptServerCompilationError
+      tracking: ResolutionFailureState
+    }
 
 export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
@@ -69,48 +80,30 @@ type ResolvedSpec = {
   specifier: string
 }
 
-export class FailedResolutionError extends ScriptServerCompilationError {
-  failedResolution: FailedResolution
-
-  constructor(
-    message: string,
-    options: {
-      cause?: unknown
-      code: 'IMPORT_RESOLUTION_FAILED' | 'IMPORT_NOT_SUPPORTED' | 'IMPORT_NOT_ALLOWED'
-      failedResolution: FailedResolution
-    },
-  ) {
-    super(message, {
-      cause: options.cause,
-      code: options.code,
-    })
-    this.name = 'FailedResolutionError'
-    this.failedResolution = options.failedResolution
-  }
-}
-
-export function isFailedResolutionError(error: unknown): error is FailedResolutionError {
-  return error instanceof FailedResolutionError
-}
-
 export async function resolveModule(
   record: ModuleRecord,
   transformed: TransformedModule,
   args: ResolveArgs,
-): Promise<ResolvedModule> {
-  let resolvedImports =
-    transformed.unresolvedImports.length > 0
-      ? await batchResolveSpecifiers(
-          getUniqueSpecifiers(transformed.unresolvedImports),
-          transformed.resolvedPath,
-          args.resolverFactory,
-        )
-      : new Map<string, ResolvedSpec>()
+): Promise<ResolveResult> {
+  let trackedFiles = new Set(transformed.trackedFiles)
+  let trackedResolutions: TrackedResolution[] = []
+  let resolvedImports: Map<string, ResolvedSpec>
+
+  try {
+    resolvedImports =
+      transformed.unresolvedImports.length > 0
+        ? await batchResolveSpecifiers(
+            getUniqueSpecifiers(transformed.unresolvedImports),
+            transformed.resolvedPath,
+            args.resolverFactory,
+          )
+        : new Map<string, ResolvedSpec>()
+  } catch (error) {
+    return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath)
+  }
 
   let importsWithPaths: ResolvedImport[] = []
   let deps = new Set<string>()
-  let trackedFiles = new Set(transformed.trackedFiles)
-  let trackedResolutions: TrackedResolution[] = []
 
   for (let unresolved of transformed.unresolvedImports) {
     let trackedResolution = getTrackedRelativeImportResolution(
@@ -120,84 +113,68 @@ export async function resolveModule(
 
     let resolvedSpec = resolvedImports.get(unresolved.specifier)
     if (!resolvedSpec?.absolutePath) {
-      if (trackedResolution) {
-        trackedResolutions.push({
-          ...trackedResolution,
-          resolvedIdentityPath: null,
-        })
-      }
-      throw new FailedResolutionError(
-        `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}.\n\n` +
-          `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
-        {
-          code: 'IMPORT_RESOLUTION_FAILED',
-          failedResolution: {
-            trackedFiles: [...trackedFiles],
-            trackedResolutions,
+      return failResolve(
+        createScriptServerCompilationError(
+          `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}.\n\n` +
+            `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
           },
-        },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        trackedResolution,
       )
     }
 
     let resolvedImport = args.resolveModulePath(resolvedSpec.absolutePath)
     if (!resolvedImport) {
-      if (trackedResolution) {
-        trackedResolutions.push({
-          ...trackedResolution,
-          resolvedIdentityPath: null,
-        })
-      }
-      throw new FailedResolutionError(
-        `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module.\n\n` +
-          `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
-        {
-          code: 'IMPORT_NOT_SUPPORTED',
-          failedResolution: {
-            trackedFiles: [...trackedFiles],
-            trackedResolutions,
+      return failResolve(
+        createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module.\n\n` +
+            `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
+          {
+            code: 'IMPORT_NOT_SUPPORTED',
           },
-        },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        trackedResolution,
       )
     }
 
     if (!args.isAllowed(resolvedImport.identityPath)) {
-      if (trackedResolution) {
-        trackedResolutions.push({
-          ...trackedResolution,
-          resolvedIdentityPath: null,
-        })
-      }
-      throw new FailedResolutionError(
-        `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
-          `Add a matching route and allow rule, or mark this import as external.`,
-        {
-          code: 'IMPORT_NOT_ALLOWED',
-          failedResolution: {
-            trackedFiles: [...trackedFiles],
-            trackedResolutions,
+      return failResolve(
+        createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+            `Add a matching route and allow rule, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
           },
-        },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        trackedResolution,
       )
     }
 
     let stableUrlPathname = args.routes.toUrlPathname(resolvedImport.identityPath)
     if (!stableUrlPathname) {
-      if (trackedResolution) {
-        trackedResolutions.push({
-          ...trackedResolution,
-          resolvedIdentityPath: null,
-        })
-      }
-      throw new FailedResolutionError(
-        `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
-          `Add a matching route and allow rule, or mark this import as external.`,
-        {
-          code: 'IMPORT_NOT_ALLOWED',
-          failedResolution: {
-            trackedFiles: [...trackedFiles],
-            trackedResolutions,
+      return failResolve(
+        createScriptServerCompilationError(
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+            `Add a matching route and allow rule, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
           },
-        },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        trackedResolution,
       )
     }
 
@@ -225,16 +202,19 @@ export async function resolveModule(
   }
 
   return {
-    deps: [...deps],
-    fingerprint: transformed.fingerprint,
-    identityPath: record.identityPath,
-    imports: importsWithPaths,
-    trackedFiles: [...trackedFiles],
-    trackedResolutions,
-    rawCode: transformed.rawCode,
-    resolvedPath: transformed.resolvedPath,
-    sourcemap: transformed.sourcemap,
-    stableUrlPathname: transformed.stableUrlPathname,
+    ok: true,
+    value: {
+      deps: [...deps],
+      fingerprint: transformed.fingerprint,
+      identityPath: record.identityPath,
+      imports: importsWithPaths,
+      trackedFiles: [...trackedFiles],
+      trackedResolutions,
+      rawCode: transformed.rawCode,
+      resolvedPath: transformed.resolvedPath,
+      sourcemap: transformed.sourcemap,
+      stableUrlPathname: transformed.stableUrlPathname,
+    },
   }
 }
 
@@ -353,4 +333,48 @@ function getUniqueSpecifiers(unresolvedImports: TransformedModule['unresolvedImp
 
 function formatUnknownError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function failResolve(
+  error: unknown,
+  trackedFiles: ReadonlySet<string>,
+  trackedResolutions: readonly TrackedResolution[],
+  importerPath: string,
+  trackedResolution?: RelativeImportResolution | null,
+): ResolveResult {
+  return {
+    ok: false,
+    error: toResolveError(error, importerPath),
+    tracking: {
+      trackedFiles: [...trackedFiles],
+      trackedResolutions: appendFailedTrackedResolution(trackedResolutions, trackedResolution),
+    },
+  }
+}
+
+function appendFailedTrackedResolution(
+  trackedResolutions: readonly TrackedResolution[],
+  trackedResolution: RelativeImportResolution | null | undefined,
+): TrackedResolution[] {
+  if (trackedResolution == null) return [...trackedResolutions]
+
+  return [
+    ...trackedResolutions,
+    {
+      ...trackedResolution,
+      resolvedIdentityPath: null,
+    },
+  ]
+}
+
+function toResolveError(error: unknown, importerPath: string): ScriptServerCompilationError {
+  if (isScriptServerCompilationError(error)) return error
+
+  return createScriptServerCompilationError(
+    `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
+    {
+      cause: error,
+      code: 'IMPORT_RESOLUTION_FAILED',
+    },
+  )
 }

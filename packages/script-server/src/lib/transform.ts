@@ -9,6 +9,7 @@ import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 import {
+  ScriptServerCompilationError,
   createScriptServerCompilationError,
   isScriptServerCompilationError,
 } from './compilation-error.ts'
@@ -58,6 +59,20 @@ export type TransformedModule = {
   trackedFiles: string[]
   unresolvedImports: UnresolvedImport[]
 }
+
+export type TransformFailureState = {
+  trackedFiles: readonly string[]
+}
+
+type TransformResult =
+  | {
+      ok: true
+      value: TransformedModule
+    }
+  | ({
+      ok: false
+      error: ScriptServerCompilationError
+    } & TransformFailureState)
 
 type TsconfigTransformOptions = {
   trackedFiles: string[]
@@ -117,82 +132,106 @@ export function createTsconfigTransformOptionsResolver() {
 export async function transformModule(
   record: ModuleRecord,
   args: TransformArgs,
-): Promise<TransformedModule> {
+): Promise<TransformResult> {
   let resolvedPath = args.resolveActualPath(record.identityPath)
   if (!resolvedPath) {
-    throw createScriptServerCompilationError(`Module not found: ${record.identityPath}`, {
-      code: 'MODULE_NOT_FOUND',
-    })
+    return {
+      ok: false,
+      error: createScriptServerCompilationError(`Module not found: ${record.identityPath}`, {
+        code: 'MODULE_NOT_FOUND',
+      }),
+      trackedFiles: [record.identityPath],
+    }
   }
 
   let transformOptions = args.tsconfigTransformOptionsResolver.getTransformOptions(resolvedPath)
+  let trackedFiles = [resolvedPath, ...transformOptions.trackedFiles]
   let sourceText: string
   try {
     sourceText = await fsp.readFile(resolvedPath, 'utf-8')
   } catch (error) {
     if (isNoEntityError(error)) {
-      throw createScriptServerCompilationError(`Module not found: ${resolvedPath}`, {
-        cause: error,
-        code: 'MODULE_NOT_FOUND',
-      })
+      return {
+        ok: false,
+        error: createScriptServerCompilationError(`Module not found: ${resolvedPath}`, {
+          cause: error,
+          code: 'MODULE_NOT_FOUND',
+        }),
+        trackedFiles,
+      }
     }
-    throw error
+    return {
+      ok: false,
+      error: toTransformFailedError(error, resolvedPath),
+      trackedFiles,
+    }
   }
 
-  let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
-    define: args.define ?? undefined,
-    minify: args.minify,
-    sourceMaps: args.sourceMaps ?? undefined,
-    target: args.target ?? undefined,
-  })
+  try {
+    let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
+      define: args.define ?? undefined,
+      minify: args.minify,
+      sourceMaps: args.sourceMaps ?? undefined,
+      target: args.target ?? undefined,
+    })
 
-  analysis.unresolvedImports = analysis.unresolvedImports.filter(
-    (unresolved) => !args.externalSet.has(unresolved.specifier),
-  )
-
-  if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
-    throw createScriptServerCompilationError(
-      `CommonJS module detected: ${resolvedPath}\n\n` +
-        `This module uses CommonJS (require/module.exports) which is not supported.\n` +
-        `Please use an ESM-compatible module.`,
-      {
-        code: 'MODULE_COMMONJS_NOT_SUPPORTED',
-      },
+    analysis.unresolvedImports = analysis.unresolvedImports.filter(
+      (unresolved) => !args.externalSet.has(unresolved.specifier),
     )
-  }
 
-  let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
-  if (!stableUrlPathname) {
-    throw createScriptServerCompilationError(
-      `Module ${record.identityPath} is outside all configured routes.`,
-      {
-        code: 'MODULE_OUTSIDE_ROUTES',
-      },
-    )
-  }
-
-  let sourcemap = analysis.sourcemap
-    ? rewriteSourceMapSources(
-        analysis.sourcemap,
-        resolvedPath,
-        stableUrlPathname,
-        args.sourceMapSourcePaths,
+    if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
+      throw createScriptServerCompilationError(
+        `CommonJS module detected: ${resolvedPath}\n\n` +
+          `This module uses CommonJS (require/module.exports) which is not supported.\n` +
+          `Please use an ESM-compatible module.`,
+        {
+          code: 'MODULE_COMMONJS_NOT_SUPPORTED',
+        },
       )
-    : null
+    }
 
-  return {
-    fingerprint: await hashContent(sourceText + '\0' + (args.buildId ?? '')),
-    identityPath: record.identityPath,
-    importerDir: path.dirname(resolvedPath),
-    packageSpecifiers: analysis.unresolvedImports
-      .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
-      .map((unresolved) => unresolved.specifier),
-    rawCode: analysis.rawCode,
-    resolvedPath,
-    sourcemap,
-    stableUrlPathname,
-    trackedFiles: [resolvedPath, ...transformOptions.trackedFiles],
-    unresolvedImports: analysis.unresolvedImports,
+    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
+    if (!stableUrlPathname) {
+      throw createScriptServerCompilationError(
+        `Module ${record.identityPath} is outside all configured routes.`,
+        {
+          code: 'MODULE_OUTSIDE_ROUTES',
+        },
+      )
+    }
+
+    let sourcemap = analysis.sourcemap
+      ? rewriteSourceMapSources(
+          analysis.sourcemap,
+          resolvedPath,
+          stableUrlPathname,
+          args.sourceMapSourcePaths,
+        )
+      : null
+
+    return {
+      ok: true,
+      value: {
+        fingerprint: await hashContent(sourceText + '\0' + (args.buildId ?? '')),
+        identityPath: record.identityPath,
+        importerDir: path.dirname(resolvedPath),
+        packageSpecifiers: analysis.unresolvedImports
+          .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
+          .map((unresolved) => unresolved.specifier),
+        rawCode: analysis.rawCode,
+        resolvedPath,
+        sourcemap,
+        stableUrlPathname,
+        trackedFiles,
+        unresolvedImports: analysis.unresolvedImports,
+      },
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      error: toTransformFailedError(error, resolvedPath),
+      trackedFiles,
+    }
   }
 }
 
@@ -462,6 +501,21 @@ function getSourceLanguageForPath(resolvedPath: string): SourceLanguage {
 
 function formatUnknownError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function toTransformFailedError(
+  error: unknown,
+  resolvedPath: string,
+): ScriptServerCompilationError {
+  if (isScriptServerCompilationError(error)) return error
+
+  return createScriptServerCompilationError(
+    `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+    {
+      cause: error,
+      code: 'MODULE_TRANSFORM_FAILED',
+    },
+  )
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
