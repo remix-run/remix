@@ -52,6 +52,9 @@ function registerDescribe(
 ) {
   // Nested describes are flattened: "Parent > Child"
   let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+  if (rootSuites.some((s) => s.name === fullName)) {
+    throw new Error(`Duplicate suite name: "${fullName}"`)
+  }
   let suite: TestSuite = { name: fullName, tests: [], ...flags }
 
   // Inherit lifecycle hooks from parent suite (or root hooks if at top level)
@@ -106,6 +109,9 @@ export const describe = Object.assign(
     only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
     todo: (name: string) => {
       let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+      if (rootSuites.some((s) => s.name === fullName)) {
+        throw new Error(`Duplicate suite name: "${fullName}"`)
+      }
       rootSuites.push({ name: fullName, tests: [], todo: true })
     },
   },
@@ -117,6 +123,9 @@ type TestFn = (t: TestContext) => void | Promise<void>
 
 function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: boolean }) {
   let suite = currentSuite ?? getImplicitRootSuite()
+  if (suite.tests.some((t) => t.name === name)) {
+    throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
+  }
   suite.tests.push({ name, fn, suite, ...flags })
 }
 
@@ -149,6 +158,9 @@ export const it = Object.assign(
     only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
     todo: (name: string) => {
       let suite = currentSuite ?? getImplicitRootSuite()
+      if (suite.tests.some((t) => t.name === name)) {
+        throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
+      }
       suite.tests.push({ name, fn: () => {}, suite, todo: true })
     },
   },

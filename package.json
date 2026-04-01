@@ -10,7 +10,8 @@
     "oxlint-tsgolint": "^0.17.4",
     "prettier": "^3.3.3",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "typescript-language-server": "catalog:"
   },
   "engines": {
     "node": ">=24.3.0"

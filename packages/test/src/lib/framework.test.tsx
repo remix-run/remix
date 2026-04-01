@@ -184,15 +184,77 @@ describe('it.todo', () => {
   })
 })
 
+// ── Duplicate detection ───────────────────────────────────────────────────────
+
+describe('duplicate detection', () => {
+  it('throws on duplicate suite name', () => {
+    let suites = (globalThis as any).__testSuites as any[]
+    let before = suites.length
+    try {
+      assert.throws(
+        () => {
+          describe('__dup-suite__', () => {})
+          describe('__dup-suite__', () => {})
+        },
+        /Duplicate suite name: "__dup-suite__"/,
+      )
+    } finally {
+      suites.splice(before)
+    }
+  })
+
+  it('throws on duplicate describe.todo name', () => {
+    let suites = (globalThis as any).__testSuites as any[]
+    let before = suites.length
+    try {
+      assert.throws(
+        () => {
+          describe.todo('__dup-todo-suite__')
+          describe.todo('__dup-todo-suite__')
+        },
+        /Duplicate suite name: "__dup-todo-suite__"/,
+      )
+    } finally {
+      suites.splice(before)
+    }
+  })
+
+  it('throws on duplicate test name within a suite', () => {
+    assert.throws(
+      () =>
+        captureRegistration(() =>
+          describe('suite', () => {
+            it('same name', () => {})
+            it('same name', () => {})
+          }),
+        ),
+      /Duplicate test name: "same name" in suite "suite"/,
+    )
+  })
+
+  it('throws on duplicate it.todo name within a suite', () => {
+    assert.throws(
+      () =>
+        captureRegistration(() =>
+          describe('suite', () => {
+            it.todo('same name')
+            it.todo('same name')
+          }),
+        ),
+      /Duplicate test name: "same name" in suite "suite"/,
+    )
+  })
+})
+
 // ── Aliases ───────────────────────────────────────────────────────────────────
 
-describe('suite', () => {
+describe('suite alias', () => {
   it('is an alias for describe', () => {
     assert.equal(suite, describe)
   })
 })
 
-describe('test', () => {
+describe('test alias', () => {
   it('is an alias for it', () => {
     assert.equal(test, it)
   })
