@@ -17,6 +17,10 @@ const cliOptions = {
     type: 'boolean',
     description: 'Open browser window and keep open after tests finish',
   },
+  'glob.browser': {
+    type: 'string',
+    description: 'Glob pattern for browser test files',
+  },
   'glob.e2e': {
     type: 'string',
     description: 'Glob pattern for E2E test files',
@@ -94,7 +98,7 @@ const cliOptions = {
   type: {
     type: 'string',
     short: 't',
-    description: 'Comma-separated test types to run (default: server,e2e)',
+    description: 'Comma-separated test types to run (default: server,browser,e2e)',
   },
   watch: {
     type: 'boolean',
@@ -119,12 +123,13 @@ const defaultValues: ResolvedRemixTestConfig = {
     functions: undefined,
   },
   glob: {
-    test: '**/*.test{,.e2e}.{ts,tsx}',
+    test: '**/*.test{,.e2e,.browser}.{ts,tsx}',
+    browser: '**/*.test.browser.{ts,tsx}',
     e2e: '**/*.test.e2e.{ts,tsx}',
     exclude: 'node_modules/**',
   },
   reporter: process.env.CI === 'true' ? 'dot' : 'spec',
-  type: 'server,e2e',
+  type: 'server,browser,e2e',
   setup: undefined,
   playwrightConfig: undefined,
   project: undefined,
@@ -144,11 +149,13 @@ export interface RemixTestConfig {
   /**
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
+   *  - `glob.browser`: Glob pattern for the subset of browser test files (--glob.browser)
    *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
    *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
     test?: string
+    browser?: string
     e2e?: string
     exclude?: string
   }
@@ -208,6 +215,7 @@ export interface ResolvedRemixTestConfig {
     | undefined
   glob: {
     test: string
+    browser: string
     e2e: string
     exclude: string
   }
@@ -268,6 +276,7 @@ function resolveConfig(
         cliValues['glob.test'] ??
         fileConfig.glob?.test ??
         defaultValues.glob.test,
+      browser: cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
       e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
       exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
     },
