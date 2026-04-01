@@ -8,14 +8,15 @@ import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isScriptServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
-import type { ScriptServerFingerprintOptions } from './script-server.ts'
 import {
   createScriptServer,
-  getInternalScriptServerWatcher,
+  getInternalScriptServerWatchedDirectories,
   waitForInternalScriptServerWatcher,
 } from './script-server.ts'
+import type { ScriptServerOptions } from './script-server.ts'
 
 const watchTestTimeoutMs = 15000
+type ScriptServerFingerprintOptions = NonNullable<ScriptServerOptions['fingerprint']>
 
 function createScriptServerForTest(
   options: Parameters<typeof createScriptServer>[0],
@@ -195,12 +196,9 @@ async function waitForWatchedTestServerReady(
 ): Promise<void> {
   await waitForInternalScriptServerWatcher(scriptServer)
 
-  let watcher = getInternalScriptServerWatcher(scriptServer)
-  if (!watcher) return
-
   let watchedRoot = normalizeWindowsPath(nodeFs.realpathSync(path.join(root, 'app')))
   await waitFor(
-    async () => Object.keys(watcher.getWatched()).map(normalizeWindowsPath),
+    async () => getInternalScriptServerWatchedDirectories(scriptServer).map(normalizeWindowsPath),
     (watchedDirectories) => watchedDirectories.includes(watchedRoot),
     watchTestTimeoutMs,
   )
@@ -1186,6 +1184,59 @@ describe('script-server', () => {
 
         assert.ok(after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
         assert.ok(!after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up tsconfig paths resolution changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.json', {
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            '#dep': ['./app/dep-a.ts'],
+          },
+        },
+      })
+      await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
+      await write(caseDir, 'app/dep-b.ts', 'export const dep = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/dep-a\.ts/)
+
+        await writeJson(caseDir, 'tsconfig.json', {
+          compilerOptions: {
+            baseUrl: '.',
+            paths: {
+              '#dep': ['./app/dep-b.ts'],
+            },
+          },
+        })
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/dep-b\.ts/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/dep-b\.ts/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/dep-a\.ts/)
       } finally {
         await scriptServer.close()
       }

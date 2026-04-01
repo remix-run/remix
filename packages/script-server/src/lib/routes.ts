@@ -80,7 +80,7 @@ function compileRoute(
     root: string
   },
 ): CompiledRoute {
-  let urlPatternSource = createUrlPatternSource(route.urlPattern)
+  let urlPatternSource = normalizePathname(route.urlPattern)
   let filePatternSource = normalizeFilePattern(route.filePattern)
 
   let urlPattern = new RoutePattern(urlPatternSource)
@@ -91,10 +91,6 @@ function compileRoute(
   validateRoutePatterns(urlPattern, filePattern)
 
   return { root: normalizeFilePath(options.root).replace(/\/+$/, ''), urlPattern, filePattern }
-}
-
-function createUrlPatternSource(pattern: string): string {
-  return normalizePathname(pattern)
 }
 
 function getRelativeFilePath(filePath: string, root: string): string | null {

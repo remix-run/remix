@@ -1,18 +1,15 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import type { FSWatcher } from 'chokidar'
-import chokidar from 'chokidar'
-import {
-  createScriptServerCompilationError,
-  isScriptServerCompilationError,
-} from './compilation-error.ts'
-import { createModuleCompiler, createResponseForModule } from './modules.ts'
-import { normalizeFilePath, resolveFilePath } from './paths.ts'
+import { isScriptServerCompilationError } from './compilation-error.ts'
+import { createAccessPolicy } from './access.ts'
+import { createModuleCompiler, createResponseForModule } from './compiler.ts'
+import { normalizeFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
-import type { ScriptRouteDefinition } from './routes.ts'
+import type { CompiledRoutes, ScriptRouteDefinition } from './routes.ts'
+import { createScriptServerWatcher } from './watch.ts'
+import type { ScriptServerWatcher } from './watch.ts'
 
-export interface ScriptServerWatchOptions {
+interface ScriptServerWatchOptions {
   /**
    * Ignore matching file paths.
    */
@@ -27,7 +24,7 @@ export interface ScriptServerWatchOptions {
   pollInterval?: number
 }
 
-export interface ScriptServerFingerprintOptions {
+interface ScriptServerFingerprintOptions {
   /**
    * Per-build invalidation token that must change whenever fingerprinted module URLs
    * should be invalidated together.
@@ -138,20 +135,37 @@ export interface ScriptServer {
 }
 
 type ScriptServerInternals = {
-  watcher: FSWatcher | null
-  watcherReady: Promise<void>
+  watcher: ScriptServerWatcher | null
 }
 
 const internalStateByScriptServer = new WeakMap<ScriptServer, ScriptServerInternals>()
 
+type ResolvedScriptServerOptions = {
+  allow: readonly string[]
+  buildId?: string
+  define?: Record<string, string>
+  deny?: readonly string[]
+  external: string[]
+  fingerprintModules: boolean
+  minify: boolean
+  onError: NonNullable<ScriptServerOptions['onError']>
+  root: string
+  routeDefinitions: readonly ScriptRouteDefinition[]
+  routes: CompiledRoutes
+  sourceMapSourcePaths: 'url' | 'absolute'
+  sourceMaps?: 'inline' | 'external'
+  target?: ScriptServerTarget
+  watchOptions: ScriptServerWatchOptions | null
+}
+
 // Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
-export function getInternalScriptServerWatcher(scriptServer: ScriptServer): FSWatcher | null {
-  return internalStateByScriptServer.get(scriptServer)?.watcher ?? null
+export function getInternalScriptServerWatchedDirectories(scriptServer: ScriptServer): string[] {
+  return internalStateByScriptServer.get(scriptServer)?.watcher?.getWatchedDirectories() ?? []
 }
 
 // Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
 export function waitForInternalScriptServerWatcher(scriptServer: ScriptServer): Promise<void> {
-  return internalStateByScriptServer.get(scriptServer)?.watcherReady ?? Promise.resolve()
+  return internalStateByScriptServer.get(scriptServer)?.watcher?.whenReady() ?? Promise.resolve()
 }
 
 /**
@@ -174,76 +188,37 @@ export function waitForInternalScriptServerWatcher(scriptServer: ScriptServer): 
  * ```
  */
 export function createScriptServer(options: ScriptServerOptions): ScriptServer {
-  let root = normalizeFilePath(fs.realpathSync(path.resolve(options.root ?? process.cwd())))
-  let sourceMaps = options.sourceMaps
-  let sourceMapSourcePaths = options.sourceMapSourcePaths ?? 'url'
-  let watchOptions = normalizeWatchOptions(options.watch)
-  let fingerprintOptions = normalizeFingerprintOptions({
-    fingerprint: options.fingerprint,
-    watch: options.watch,
+  let resolvedOptions = resolveScriptServerOptions(options)
+  let accessPolicy = createAccessPolicy({
+    allow: resolvedOptions.allow,
+    deny: resolvedOptions.deny,
+    root: resolvedOptions.root,
   })
-  let external = options.external ?? []
-  let fingerprintModules = fingerprintOptions.enabled
-  let buildId = fingerprintOptions.buildId
-  let define = options.define
-  let target = normalizeTarget(options.target)
-  let minify = options.minify ?? false
-  let onError = options.onError ?? defaultErrorHandler
-  let routes = compileRoutes({
-    root,
-    routes: options.routes,
-  })
-  let allowMatchers = options.allow.map((pattern) => createFileMatcher(pattern, root))
-  let denyMatchers = (options.deny ?? []).map((pattern) => createFileMatcher(pattern, root))
   let moduleCompiler = createModuleCompiler({
-    buildId,
-    define,
-    external,
-    fingerprintModules,
-    isAllowed,
-    minify,
-    routes,
-    sourceMapSourcePaths,
-    sourceMaps,
-    target,
+    buildId: resolvedOptions.buildId,
+    define: resolvedOptions.define,
+    external: resolvedOptions.external,
+    fingerprintModules: resolvedOptions.fingerprintModules,
+    isAllowed: accessPolicy.isAllowed,
+    minify: resolvedOptions.minify,
+    root: resolvedOptions.root,
+    routes: resolvedOptions.routes,
+    sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
+    sourceMaps: resolvedOptions.sourceMaps,
+    target: resolvedOptions.target,
   })
-  let watchTargets = watchOptions ? getWatchTargets(root, options.routes) : []
-  let watcher =
-    watchOptions !== null
-      ? chokidar.watch(watchTargets, {
-          ignoreInitial: true,
-          ignorePermissionErrors: true,
-          ...watchOptions,
-        })
-      : null
-  let watcherReady = createWatcherReadyPromise(watcher)
-
-  if (watcher) {
-    watcher.on('add', (filePath) => {
-      void handleWatchEvent(filePath, 'add')
-    })
-    watcher.on('change', (filePath) => {
-      void handleWatchEvent(filePath, 'change')
-    })
-    watcher.on('unlink', (filePath) => {
-      void handleWatchEvent(filePath, 'unlink')
-    })
-  }
-
-  function internalServerError(): Response {
-    return new Response('Internal Server Error', {
-      status: 500,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  }
-
-  function defaultErrorHandler(error: unknown): void {
-    console.error(error)
-  }
+  let watcher = resolvedOptions.watchOptions
+    ? createScriptServerWatcher({
+        ...resolvedOptions.watchOptions,
+        onFileEvent: handleWatchEvent,
+        root: resolvedOptions.root,
+        routes: resolvedOptions.routeDefinitions,
+      })
+    : null
 
   async function responseForError(error: unknown): Promise<Response> {
     try {
-      return (await onError(error)) ?? internalServerError()
+      return (await resolvedOptions.onError(error)) ?? internalServerError()
     } catch (error) {
       console.error(`There was an error in the script server error handler: ${error}`)
       return internalServerError()
@@ -258,86 +233,25 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     }
   }
 
-  function isAllowed(filePath: string): boolean {
-    if (!allowMatchers.some((matcher) => matcher(filePath))) return false
-    if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
-    return true
-  }
-
-  function createOutsideRoutesError(modulePathname: string) {
-    return createScriptServerCompilationError(
-      `Module "${modulePathname}" is outside all configured routes.`,
-      {
-        code: 'MODULE_OUTSIDE_ROUTES',
-      },
-    )
-  }
-
-  function resolveInputFilePath(filePath: string): string {
-    if (filePath.startsWith('file://')) {
-      return normalizeFilePath(fileURLToPath(new URL(filePath)))
-    }
-
-    if (filePath.includes('://')) {
-      throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
-    }
-
-    return resolveFilePath(root, filePath)
-  }
-
-  function resolveRequestedModule(filePath: string) {
-    let resolvedFilePath = resolveInputFilePath(filePath)
-    let resolvedModule = moduleCompiler.resolveRequestPath(resolvedFilePath)
-    if (!resolvedModule) {
-      throw createScriptServerCompilationError(`Module not found: ${resolvedFilePath}`, {
-        code: 'MODULE_NOT_FOUND',
-      })
-    }
-
-    if (!isAllowed(resolvedModule.identityPath)) {
-      throw createScriptServerCompilationError(
-        `Module is not allowed: ${resolvedModule.identityPath}`,
-        {
-          code: 'MODULE_NOT_ALLOWED',
-        },
-      )
-    }
-
-    return resolvedModule
-  }
-
   let scriptServer: ScriptServer = {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
-      let pathname = new URL(request.url).pathname
-      let isSourceMapRequest = pathname.endsWith('.map')
-      let withoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
-      let tokenMatch = withoutMap.match(/\.@([A-Za-z0-9_-]+)$/)
-      let requestedToken = tokenMatch ? tokenMatch[1] : null
-      let normalizedPath = tokenMatch ? withoutMap.slice(0, -tokenMatch[0].length) : withoutMap
-      let resolvedPath = routes.resolveUrlPathname(normalizedPath)
-      if (!resolvedPath) return null
+      let parsedRequestPathname = moduleCompiler.parseRequestPathname(new URL(request.url).pathname)
+      if (!parsedRequestPathname) return null
 
       try {
-        if (fingerprintModules && requestedToken === null) {
-          return null
-        }
-
-        let resolvedModule = moduleCompiler.resolveServedPath(resolvedPath)
         let ifNoneMatch = request.headers.get('If-None-Match')
+        let compiledModule = await moduleCompiler.compileModule(parsedRequestPathname.filePath)
 
-        let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
-
-        if (requestedToken !== null) {
-          if (compiledModule.fingerprint !== requestedToken) return null
+        if (parsedRequestPathname.requestedFingerprint !== null) {
+          if (compiledModule.fingerprint !== parsedRequestPathname.requestedFingerprint) return null
         }
 
         return createResponseForModule(compiledModule, {
-          cacheControl:
-            requestedToken === null ? 'no-cache' : 'public, max-age=31536000, immutable',
+          cacheControl: parsedRequestPathname.cacheControl,
           ifNoneMatch,
-          isSourceMapRequest,
+          isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           method: request.method,
         })
       } catch (error) {
@@ -356,20 +270,10 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
     },
 
     async getHref(filePath) {
-      let resolvedModule = resolveRequestedModule(filePath)
-      let href = routes.toUrlPathname(resolvedModule.identityPath)
-      if (!href) throw createOutsideRoutesError(resolvedModule.identityPath)
-      if (!fingerprintModules) return href
-      let compiledModule = await moduleCompiler.compileModule(resolvedModule.resolvedPath)
-      return `${href}.@${compiledModule.fingerprint}`
+      return moduleCompiler.getHref(filePath)
     },
     async getPreloads(filePath) {
-      let filePaths = Array.isArray(filePath) ? filePath : [filePath]
-      if (filePaths.length === 0) return []
-      let identityPaths = filePaths.map(
-        (nextFilePath) => resolveRequestedModule(nextFilePath).identityPath,
-      )
-      return moduleCompiler.getPreloadUrls(identityPaths)
+      return moduleCompiler.getPreloadUrls(filePath)
     },
     async close() {
       await watcher?.close()
@@ -378,10 +282,49 @@ export function createScriptServer(options: ScriptServerOptions): ScriptServer {
 
   internalStateByScriptServer.set(scriptServer, {
     watcher,
-    watcherReady,
   })
 
   return scriptServer
+}
+
+function internalServerError(): Response {
+  return new Response('Internal Server Error', {
+    status: 500,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
+
+function defaultErrorHandler(error: unknown): void {
+  console.error(error)
+}
+
+function resolveScriptServerOptions(options: ScriptServerOptions): ResolvedScriptServerOptions {
+  let root = normalizeFilePath(fs.realpathSync(path.resolve(options.root ?? process.cwd())))
+  let fingerprintOptions = normalizeFingerprintOptions({
+    fingerprint: options.fingerprint,
+    watch: options.watch,
+  })
+
+  return {
+    allow: options.allow,
+    buildId: fingerprintOptions.buildId,
+    define: options.define,
+    deny: options.deny,
+    external: options.external ?? [],
+    fingerprintModules: fingerprintOptions.enabled,
+    minify: options.minify ?? false,
+    onError: options.onError ?? defaultErrorHandler,
+    root,
+    routeDefinitions: options.routes,
+    routes: compileRoutes({
+      root,
+      routes: options.routes,
+    }),
+    sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
+    sourceMaps: options.sourceMaps,
+    target: normalizeTarget(options.target),
+    watchOptions: normalizeWatchOptions(options.watch),
+  }
 }
 
 function normalizeTarget(target: ScriptServerOptions['target']): ScriptServerTarget | undefined {
@@ -393,87 +336,7 @@ function normalizeTarget(target: ScriptServerOptions['target']): ScriptServerTar
     )
   }
 
-  return target
-}
-
-function createWatcherReadyPromise(watcher: FSWatcher | null): Promise<void> {
-  if (!watcher) return Promise.resolve()
-
-  let activeWatcher = watcher
-
-  return new Promise<void>((resolve, reject) => {
-    function handleReady() {
-      activeWatcher.off('error', handleError)
-      resolve()
-    }
-
-    function handleError(error: unknown) {
-      activeWatcher.off('ready', handleReady)
-      reject(error)
-    }
-
-    activeWatcher.once('ready', handleReady)
-    activeWatcher.once('error', handleError)
-  })
-}
-
-type FileMatcher = (filePath: string) => boolean
-
-function createFileMatcher(
-  pattern: string,
-  root: string,
-  options: {
-    allowDirectories?: boolean
-    allowMissing?: boolean
-  } = {},
-): FileMatcher {
-  let resolvedPatternPath = resolveFilePath(root, pattern)
-  let allowDirectories = options.allowDirectories ?? true
-  let allowMissing = options.allowMissing ?? true
-
-  if (!containsGlobSyntax(pattern)) {
-    try {
-      resolvedPatternPath = normalizeFilePath(fs.realpathSync(resolvedPatternPath))
-    } catch (error) {
-      if (!allowMissing || !isPathNotFoundError(error)) throw error
-      // Keep unresolved exact paths when the target is not on disk yet.
-    }
-
-    if (allowDirectories) {
-      try {
-        if (fs.statSync(resolveFilePath(root, pattern)).isDirectory()) {
-          return (filePath) => isSameOrDescendantPath(filePath, resolvedPatternPath)
-        }
-      } catch {
-        // Missing exact paths fall back to exact-file matching until they exist on disk.
-      }
-    }
-
-    return (filePath) => filePath === resolvedPatternPath
-  }
-
-  return (filePath) => path.posix.matchesGlob(filePath, resolvedPatternPath)
-}
-
-function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
-  let normalizedDirectoryPath = directoryPath.replace(/\/+$/, '')
-
-  return filePath === normalizedDirectoryPath || filePath.startsWith(`${normalizedDirectoryPath}/`)
-}
-
-function containsGlobSyntax(pattern: string): boolean {
-  return /[*?[\]{}()!+@]/.test(pattern)
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
+  return target as ScriptServerTarget
 }
 
 function normalizeFingerprintOptions(options: {
@@ -513,94 +376,8 @@ function normalizeFingerprintOptions(options: {
 }
 
 function normalizeWatchOptions(
-  options: boolean | ScriptServerWatchOptions | undefined,
-): Exclude<Parameters<typeof chokidar.watch>[1], undefined> | null {
+  options: ScriptServerOptions['watch'],
+): ScriptServerWatchOptions | null {
   if (!options) return null
-  let watchOptions: ScriptServerWatchOptions = options === true ? {} : options
-  return {
-    ignored: ['**/.git/**', ...(watchOptions.ignore ?? [])],
-    interval: watchOptions.pollInterval ?? 100,
-    usePolling: watchOptions.poll ?? false,
-  }
-}
-
-function getWatchTargets(root: string, routes: readonly ScriptRouteDefinition[]): string[] {
-  let targets = new Set<string>()
-  let configRoots = new Set<string>()
-
-  for (let route of routes) {
-    let resolvedPatternPath = resolveFilePath(root, route.filePattern)
-    let watchTarget = containsGlobSyntax(route.filePattern)
-      ? getGlobParentPath(resolvedPatternPath)
-      : resolvedPatternPath
-    targets.add(watchTarget)
-
-    let configRoot = getWatchConfigRoot(watchTarget)
-    if (configRoot) {
-      configRoots.add(configRoot)
-    }
-  }
-
-  for (let configRoot of configRoots) {
-    for (let ancestor of getAncestorPaths(configRoot, root)) {
-      for (let configPath of getExistingConfigFileTargets(ancestor)) {
-        targets.add(configPath)
-      }
-    }
-  }
-
-  return [...targets]
-}
-
-function getAncestorPaths(directoryPath: string, root: string): string[] {
-  let ancestors: string[] = []
-  let currentDirectory = directoryPath
-
-  while (isSameOrDescendantPath(currentDirectory, root)) {
-    ancestors.push(currentDirectory)
-    if (currentDirectory === root) break
-    let parentDirectory = path.posix.dirname(currentDirectory)
-    if (parentDirectory === currentDirectory) break
-    currentDirectory = parentDirectory
-  }
-
-  return ancestors
-}
-
-function getGlobParentPath(pattern: string): string {
-  let firstGlobIndex = pattern.search(/[*?[\]{}()!+@]/)
-  if (firstGlobIndex === -1) return pattern
-
-  let prefix = pattern.slice(0, firstGlobIndex)
-  return prefix.replace(/\/+$/, '') || '/'
-}
-
-function getWatchConfigRoot(filePath: string): string | null {
-  try {
-    if (fs.statSync(filePath).isDirectory()) {
-      return filePath
-    }
-  } catch {
-    // Missing exact paths fall back to parent directory watch roots.
-  }
-
-  return path.posix.dirname(filePath)
-}
-
-function getExistingConfigFileTargets(directoryPath: string): string[] {
-  let targets: string[] = []
-
-  try {
-    let entries = fs.readdirSync(directoryPath, { withFileTypes: true })
-    for (let entry of entries) {
-      if (!entry.isFile()) continue
-      if (entry.name === 'package.json' || /^tsconfig(?:\..+)?\.json$/.test(entry.name)) {
-        targets.push(`${directoryPath}/${entry.name}`)
-      }
-    }
-  } catch {
-    // Ignore missing or unreadable directories when building watch targets.
-  }
-
-  return targets
+  return options === true ? {} : options
 }
