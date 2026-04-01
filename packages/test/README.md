@@ -7,6 +7,7 @@ A test framework for Remix applications
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
+- In-browser component testing via `t.render()`
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -68,9 +69,11 @@ export default {
   concurrency: 2,
 
   glob: {
-    // Glob pattern identifying all test files (default: "**/*.test?(.e2e).{ts,tsx}")
-    test: '**/*.test?(.e2e).ts',
-    // Global pattern identifying the subset of E2E test files{ts,tsx}")
+    // Glob pattern identifying all test files (default: "**/*.test?(.browser)?(.e2e).{ts,tsx}")
+    test: '**/*.test?(.browser)?(.e2e).ts',
+    // Glob pattern identifying browser test files (default: "**/*.test.browser.{ts,tsx}")
+    browser: '**/*.test.browser.ts',
+    // Glob pattern identifying E2E test files (default: "**/*.test.e2e.{ts,tsx}")
     e2e: '**/*.test.e2e.ts',
   },
 
@@ -97,7 +100,7 @@ export default {
   setup: './test/setup.ts',
 
   // Comma-separated list of test types to run ("server", "e2e")
-  type: 'server,e2e',
+  type: 'server,browser,e2e',
 
   // Watch for file changes and re-run
   watch: false,
@@ -120,6 +123,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--browser.open`            |       |
 | `--concurrency <n>`         | `-c`  |
 | `--glob.test`               |       |
+| `--glob.browser`            |       |
 | `--glob.e2e`                |       |
 | `--playwrightConfig <path>` |       |
 | `--project <name>`          | `-p`  |
@@ -194,6 +198,12 @@ interface TestContext {
     ): MockFunction
   }
 
+  // Browser only: render a component into the DOM
+  render(node: RemixNode, opts?: RenderOptions): RenderResult
+
+  // Browser only: replace global timer functions with fake implementations
+  useFakeTimers(): FakeTimers
+
   // E2E only: start a server with the given request handler, returns a Playwright Page
   serve(handler: (req: Request) => Promise<Response>): Promise<Page>
 }
@@ -230,6 +240,33 @@ it('cleanup', (t) => {
 })
 ```
 
+#### Browser Testing (`render`)
+
+In browser test files, `t.render()` mounts a component into the DOM and returns scoped utilities for querying and interacting with it. The rendered component is automatically removed from the DOM after the test. See [Browser Testing](#browser-testing) for details.
+
+```ts
+it('increments on click', async (t) => {
+  let { $, act } = t.render(<Counter />)
+  await act(() => $('[data-action="increment"]')?.click())
+  assert.equal($('[data-count]')?.textContent, '1')
+})
+```
+
+#### Fake Timers
+
+In browser test files, `t.useFakeTimers()` replaces the global timer functions with controllable fakes which are are automatically cleaned up after each test. See [Browser Testing](#browser-testing) for details.
+
+```ts
+it('debounces search', async (t) => {
+  let timers = t.useFakeTimers()
+  let { $, act } = t.render(<SearchInput />)
+  await act(() => $('input')?.dispatchEvent(new InputEvent('input')))
+  assert.equal($('[data-results]')?.childElementCount, 0)
+  timers.advance(300)
+  assert.equal($('[data-results]')?.childElementCount, 5)
+})
+```
+
 #### E2E
 
 In E2E test files, `t.serve()` starts an HTTP server and returns a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
@@ -253,6 +290,63 @@ let spy = mock.method(console, 'log')
 // ...
 spy.mock.restore?.()
 ```
+
+### Browser Testing
+
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to a it's own `document` instance.
+
+#### `t.render()`
+
+Mounts a component into the DOM and returns a `RenderContext`:
+
+```ts
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+import { Counter } from './counter.tsx'
+
+describe('Counter', () => {
+  it('increments on click', async (t) => {
+    let { $, act } = t.render(<Counter />)
+
+    assert.equal($('[data-count]')?.textContent, '0')
+    await act(() => $('[data-action="increment"]')?.click())
+    assert.equal($('[data-count]')?.textContent, '1')
+  })
+})
+```
+
+`RenderContext` provides:
+
+| Property/Method | Description                                                               |
+| --------------- | ------------------------------------------------------------------------- |
+| `container`     | The `HTMLElement` the component is mounted into                           |
+| `root`          | The Remix `VirtualRoot` the component is rendered in                      |
+| `$(selector)`   | Alias for `container.querySelector()`                                     |
+| `$$(selector)`  | Alias for `container.querySelectorAll()`                                  |
+| `act(fn)`       | Runs `fn` and flushes pending component updates                           |
+| `cleanup()`     | Unmounts and removes the container (called automatically after each test) |
+
+#### `t.useFakeTimers()`
+
+Replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes, then restores them automatically after the test:
+
+```ts
+it('debounces input', async (t) => {
+  let timers = t.useFakeTimers()
+  let { $, act } = t.render(<SearchInput />)
+
+  await act(() => $('input')?.dispatchEvent(new InputEvent('input')))
+  timers.advance(300) // trigger the debounce
+  assert.equal($('[data-results]')?.childElementCount, 5)
+})
+```
+
+`FakeTimers` provides:
+
+| Method        | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
+| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `restore()`   | Restore the original timer functions (called automatically after each test) |
 
 ### E2E Testing
 

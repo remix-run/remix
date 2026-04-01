@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
+import * as http from 'node:http'
 import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
+import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
 import { createWatcher } from './lib/watcher.ts'
@@ -17,6 +19,8 @@ let watcher: ReturnType<typeof createWatcher> | undefined
 let running = false
 let queued = false
 let rerunTimer: NodeJS.Timeout | undefined
+let browserServer: http.Server | undefined
+let browserPort: number | undefined
 
 process.on('SIGINT', () => cleanupAndExit(latestExitCode))
 process.on('SIGTERM', () => cleanupAndExit(latestExitCode))
@@ -48,11 +52,21 @@ async function executeRun() {
       await globalSetup?.()
     }
 
-    let { files, serverFiles, e2eFiles } = await discoverTests(config)
+    let { files, serverFiles, browserFiles, e2eFiles } = await discoverTests(config)
 
     if (config.watch) {
       watcher ??= createWatcher((file) => queueRerun(file))
       watcher.update(files)
+    }
+
+    if (browserFiles.length > 0 && !browserServer) {
+      let { startServer } = await tsImport('./app/server.tsx', {
+        parentURL: import.meta.url,
+        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+      })
+      let result = await startServer(browserPort, browserFiles)
+      browserServer = result.server
+      browserPort = result.port
     }
 
     let playwrightConfig =
@@ -80,8 +94,8 @@ async function executeRun() {
       counts.todo += serverResult.todo
     }
 
-    // Run e2e tests for all browsers configured by the user
-    if (e2eFiles.length > 0) {
+    // Run browser/e2e tests for all browsers configured by the user
+    if (browserFiles.length > 0 || e2eFiles.length > 0) {
       let projects = resolveProjects(playwrightConfig)
       if (config.project) {
         let projectNames = config.project.split(',').map((p) => p.trim())
@@ -90,6 +104,8 @@ async function executeRun() {
           throw new Error(`No playwright projects found with name(s) "${config.project}"`)
         }
       }
+
+      let lastBrowserResult: Awaited<ReturnType<typeof runBrowserTests>> | null = null
 
       for (let project of projects) {
         reporter.onSectionStart(`\nRunning tests for project \`${project.name}\`:`)
@@ -105,19 +121,44 @@ async function executeRun() {
           }
         }
 
-        let e2eResult =
+        let [browserResult, e2eResult] = await Promise.all([
+          browserFiles.length > 0
+            ? runBrowserTests({
+                baseUrl: `http://localhost:${browserPort}`,
+                console: config.browser?.echo,
+                open: config.browser?.open,
+                playwrightUseOpts: project.playwrightUseOpts,
+                projectName: project.name,
+                reporter,
+              })
+            : null,
           e2eFiles.length > 0
-            ? await runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
+            ? runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
                 open: config.browser?.open,
                 playwrightUseOpts: project.playwrightUseOpts,
                 projectName: project.name,
               })
-            : null
+            : null,
+        ])
 
-        counts.passed += e2eResult?.passed ?? 0
-        counts.failed += e2eResult?.failed ?? 0
-        counts.skipped += e2eResult?.skipped ?? 0
-        counts.todo += e2eResult?.todo ?? 0
+        counts.passed += (browserResult?.results.passed ?? 0) + (e2eResult?.passed ?? 0)
+        counts.failed += (browserResult?.results.failed ?? 0) + (e2eResult?.failed ?? 0)
+        counts.skipped += (browserResult?.results.skipped ?? 0) + (e2eResult?.skipped ?? 0)
+        counts.todo += (browserResult?.results.todo ?? 0) + (e2eResult?.todo ?? 0)
+
+        if (browserResult) lastBrowserResult = browserResult
+      }
+
+      if (config.browser?.open && lastBrowserResult) {
+        console.log('\nBrowser is open. Press Ctrl+C to close.')
+        await Promise.race([
+          lastBrowserResult.disconnected,
+          new Promise<void>((resolve) => {
+            process.once('SIGINT', resolve)
+            process.once('SIGTERM', resolve)
+          }),
+        ])
+        await lastBrowserResult.close()
       }
     }
 
@@ -142,6 +183,7 @@ async function executeRun() {
 async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
   files: string[]
   serverFiles: string[]
+  browserFiles: string[]
   e2eFiles: string[]
 }> {
   async function findFiles(pattern: string) {
@@ -162,13 +204,17 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
     process.exit(1)
   }
 
+  let browserSet = new Set(await findFiles(config.glob.browser))
   let e2eSet = new Set(await findFiles(config.glob.e2e))
 
   let types = new Set(config.type.split(','))
+  let browserFiles = types.has('browser') ? files.filter((f) => browserSet.has(f)) : []
   let e2eFiles = types.has('e2e') ? files.filter((f) => e2eSet.has(f)) : []
-  let serverFiles = types.has('server') ? files.filter((f) => !e2eSet.has(f)) : []
+  let serverFiles = types.has('server')
+    ? files.filter((f) => !browserSet.has(f) && !e2eSet.has(f))
+    : []
 
-  let totalFiles = serverFiles.length + e2eFiles.length
+  let totalFiles = browserFiles.length + serverFiles.length + e2eFiles.length
 
   if (totalFiles === 0) {
     console.log(`No test files remain after filtering for type ${config.type}`)
@@ -176,12 +222,13 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
   }
 
   console.log(
-    `Found ${totalFiles} test file(s) (${serverFiles.length} server, ${e2eFiles.length} e2e)`,
+    `Found ${totalFiles} test file(s) (${serverFiles.length} server, ${browserFiles.length} browser, ${e2eFiles.length} e2e)`,
   )
 
   return {
     files,
     serverFiles,
+    browserFiles,
     e2eFiles,
   }
 }
@@ -206,5 +253,6 @@ function cleanupAndExit(code: number) {
   if (hasExited) return
   hasExited = true
   watcher?.close()
+  browserServer?.close()
   process.exit(code)
 }

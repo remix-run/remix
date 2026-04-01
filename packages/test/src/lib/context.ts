@@ -1,8 +1,11 @@
 import type { Browser, Page } from 'playwright'
+import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
+import type { render } from './render.ts'
 
 import type { CreateServerFunction } from './e2e-server.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
+import type { RemixNode, VirtualRoot, VirtualRootOptions } from '@remix-run/component'
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -58,6 +61,33 @@ export interface TestContext {
   }
 
   /**
+   * Activates fake timers for testing time-dependent code.
+   *
+   * @returns {FakeTimers} A fake timers instance for controlling time
+   */
+  useFakeTimers(): FakeTimers
+
+  /**
+   * Renders a component for testing purposes.
+   *
+   * @param node - The component node to render
+   * @param opts.container - An optional container element to render into (defaults to a new div appended to the document body)
+   * @returns An object containing the rendered container, root, and utility
+   * functions for querying and interacting with the rendered output
+   */
+  render(
+    node: RemixNode,
+    opts?: { container?: HTMLElement } & VirtualRootOptions,
+  ): {
+    container: HTMLElement
+    root: VirtualRoot
+    $: (s: string) => HTMLElement | null
+    $$: (s: string) => NodeListOf<HTMLElement>
+    act: (fn: () => unknown | Promise<unknown>) => Promise<void>
+    cleanup: () => void
+  }
+
+  /**
    * Starts a test server with the provided request handler.
    *
    * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
@@ -67,6 +97,7 @@ export interface TestContext {
 }
 
 export function createTestContext(options: {
+  render?: TestContext['render']
   createServer?: CreateServerFunction
   browser?: Browser
   open?: boolean
@@ -85,6 +116,20 @@ export function createTestContext(options: {
     },
     after(fn) {
       cleanups.push(fn)
+    },
+    useFakeTimers() {
+      let timers = createFakeTimers()
+      cleanups.push(timers.restore)
+      return timers
+    },
+    render(node, opts) {
+      if (!options.render) {
+        throw new Error('t.render() is only available in browser test suites')
+      }
+
+      let result = options.render(node, opts)
+      cleanups.push(result.cleanup)
+      return result
     },
     async serve(handler) {
       if (!options.createServer || !options.browser) {
@@ -123,4 +168,4 @@ export function createTestContext(options: {
   }
 }
 
-export type { MockFunction, MockCall, MockContext }
+export type { MockCall, MockContext, MockFunction }
