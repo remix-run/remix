@@ -1,17 +1,20 @@
 ---
 name: remix-ui
-description: Build the UI of a Remix app. Use when creating pages, layouts, client entries, interactions, stateful UI, navigation, hydration, styling, animations, reusable mixins, or UI tests.
+description: Build the UI behavior of a Remix app. Use when creating pages, layouts, client entries, interactions, stateful UI, navigation, hydration, animations, reusable mixins, or UI tests.
 ---
 
 # Remix UI
 
-Use this skill for the UI of a Remix app: pages, layouts, rendering, interactivity, styling,
+Use this skill for the UI behavior of a Remix app: pages, layouts, rendering, interactivity,
 frames, navigation behavior, client entries, animations, mixins, and UI tests.
 
 This skill uses Remix Component as the UI model behind the app's pages, layouts, interactions, and
 client behavior.
 
-## Procedure
+Use `../remix-styling/SKILL.md` when the task is primarily about styling, visual polish, or CSS
+structure rather than component behavior.
+
+## Defaults
 
 1. Follow the two-phase component shape:
    - setup runs once
@@ -24,10 +27,32 @@ client behavior.
    - `mix={[keysEvents()]}`
    - `mix={[pressEvents()]}`
    - `mix={[link(href, options)]}`
-4. Use `addEventListeners(target, handle.signal, listeners)` for global listeners.
-5. Use `queueTask(...)` for post-render DOM work, reactive effects, or hydration-sensitive setup.
-6. Keep `<head>` explicit in document or layout code.
-7. Test with real interactions and `root.flush()` when unit tests need synchronous assertions.
+4. Use `css(...)` for all static styles via `mix`. Only use `style` for dynamic values.
+5. Prefer inline JSX over render helper functions. If UI needs extraction, make it a proper
+   component, not a plain function that returns JSX.
+6. Use `addEventListeners(target, handle.signal, listeners)` for global listeners.
+7. Use `queueTask(...)` for post-render DOM work, reactive effects, or hydration-sensitive setup.
+8. Keep `<head>` explicit in document or layout code.
+
+## When Hydrating UI
+
+Use this section only when adding `clientEntry(...)` or browser-owned behavior.
+
+1. Check `../remix-project-layout/SKILL.md` before choosing a file location.
+2. Put hydrated entry modules and browser-owned behavior in `app/assets/`.
+3. Prefer a route-rendered `clientEntry(...)` island over adding route-specific logic to shared
+   boot files such as `app/assets/entry.tsx`.
+4. Pass server-derived initialization to hydrated islands through serializable `setup`.
+
+## Verify
+
+For interactive UI, validate runtime behavior and not just types:
+
+- check typecheck or tests
+- watch the dev server for script-server or hydration errors
+- verify one pointer path and one keyboard path
+- verify closed, hidden, and empty states after styling interactive UI
+- use `root.flush()` when unit tests need synchronous assertions
 
 ## Load These References As Needed
 

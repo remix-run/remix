@@ -1,6 +1,6 @@
 ---
 name: remix-project-layout
-description: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. When asked to bootstrap that layout in a new directory, run the bundled TypeScript script.
+description: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. When asked to bootstrap that layout in a new directory, run the repo-local Remix CLI.
 ---
 
 # Remix Project Layout
@@ -10,7 +10,7 @@ application.
 
 This skill is about structure and conventions. It defines where code belongs, how route ownership
 maps to files on disk, and how a Remix app should be organized as it grows. When the user wants a
-new app scaffolded, run the bundled script instead of recreating the starter files by hand.
+new app scaffolded, run the repo-local Remix CLI instead of recreating the starter files by hand.
 
 Use `../remix-routing/SKILL.md` when the question is about the shape of `app/routes.ts`, route
 nesting, or controller-to-route mapping rather than where those files live.
@@ -38,6 +38,22 @@ Inside `app/`, organize code by responsibility:
 - `utils/` for genuinely cross-layer runtime helpers
 - `routes.ts` for the route contract
 - `router.ts` for router setup and route wiring
+
+## Client Entries and Browser-Owned Modules
+
+Use `app/assets/` for modules whose primary job is to run in the browser.
+
+- Put `clientEntry(...)` modules in `app/assets/`, even when they are used by only one route.
+- Put browser-owned enhancement modules in `app/assets/`, not in `app/controllers/`.
+- Let route owners in `app/controllers/` render or import asset-owned client entries.
+- Keep server-rendered wrappers, page modules, and route ownership in `app/controllers/`.
+- If a module must be compiled by the script server or hydrated on the client, default to
+  `app/assets/`.
+
+Examples:
+
+- `app/controllers/books/index-page.tsx` renders `app/assets/books-search-form.tsx`
+- `app/controllers/account/settings/page.tsx` renders `app/assets/account-settings-form.tsx`
 
 ## Placement Precedence
 
@@ -119,6 +135,7 @@ Examples:
 
 - `app/controllers/contact/page.tsx`
 - `app/controllers/auth/login/page.tsx`
+- `app/controllers/account/settings/page.tsx`
 - `app/controllers/admin/books/form.tsx`
 - `app/controllers/books/index-page.tsx`
 
@@ -157,16 +174,15 @@ Do not invent one-off naming schemes when an existing convention already fits.
 When the user wants this layout scaffolded into a new directory, run:
 
 ```sh
-node skills/remix-project-layout/scripts/bootstrap_remix_application.ts <target-dir>
+pnpm --filter @remix-run/cli run cli -- new <target-dir>
 ```
 
 Optional flags:
 
 - `--app-name <name>` to override the generated app name
-- `--remix-version <version>` to override the default `remix` version
 - `--force` to write into a non-empty target directory
 
-The script generates the starter app, including `README.md`, route handlers, shared UI, test
+The CLI generates the starter app, including `README.md`, route handlers, shared UI, test
 helpers, and the root directory structure described in this skill.
 
 ## Anti-Patterns
@@ -181,5 +197,6 @@ helpers, and the root directory structure described in this skill.
 - Do not put schema, query, or database setup code in `app/utils/` when it belongs in `app/data/`.
 - Do not create folders for simple leaf actions unless they are real controllers.
 - Do not split solo actions across multiple files.
+- Do not define `clientEntry(...)` modules under `app/controllers/`, `app/ui/`, or `app/utils/`.
 - Do not create vague files like `helpers.ts`, `common.ts`, or `misc.ts` unless the name is truly
   accurate for the module's ownership.

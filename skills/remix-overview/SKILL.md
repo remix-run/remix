@@ -21,6 +21,8 @@ try to teach every subsystem in detail here.
   packages or one-off patterns.
 - When the app uses the `remix` package, prefer `remix/...` imports over reaching for
   `@remix-run/...` package names by default.
+- If a task introduces client-side enhancement plus a new module on disk, consult both the UI and
+  project-layout skills before editing.
 - Use this skill to orient and route; switch to narrower skills once the task is clearly about
   layout, UI, or another subsystem.
 
@@ -43,8 +45,11 @@ Use this as the default mental model:
   Use `../remix-project-layout/SKILL.md` for where code belongs on disk, route ownership, naming
   conventions, and how structure should evolve as the app grows.
 - UI rendering and client behavior
-  Use `../remix-ui/SKILL.md` for pages, layouts, rendering, interactions, styling, frames,
-  navigation behavior, client entries, and UI tests.
+  Use `../remix-ui/SKILL.md` for pages, layouts, rendering, interactions, frames, navigation
+  behavior, client entries, and UI tests.
+- Styling and visual states
+  Use `../remix-styling/SKILL.md` for layout, spacing, colors, typography, responsive behavior, and
+  visual polish.
 - Server and middleware
   Use `../remix-server/SKILL.md` for Fetch server setup, middleware composition, request context,
   and runtime wiring.
@@ -65,8 +70,13 @@ Use this as the default mental model:
 
 - If the task is "start a new app" or "where should this code live?", use
   `../remix-project-layout/SKILL.md`.
-- If the task is "build this screen", "add interactivity", "wire client behavior", or "style this
-  UI", use `../remix-ui/SKILL.md`.
+- If the task is "build this screen", "add interactivity", or "wire client behavior", use
+  `../remix-ui/SKILL.md`.
+- If the task is "style this UI", "polish this page", or "adjust spacing, colors, or responsive
+  behavior", use `../remix-styling/SKILL.md`.
+- If the task involves `clientEntry(...)`, hydration, browser-owned modules, or deciding where a
+  new interactive module should live, use both `../remix-ui/SKILL.md` and
+  `../remix-project-layout/SKILL.md`.
 - If the task is "how should I test this UI?" or "how do I verify this interaction?", use
   `../remix-ui/SKILL.md`.
 - If the task is "wire the request pipeline", "set up `server.ts`", "compose middleware", or
