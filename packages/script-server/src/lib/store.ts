@@ -17,7 +17,6 @@ type ModuleRecordState = {
 export type ModuleRecord = Readonly<ModuleRecordState>
 
 type MutableModuleRecord = {
-  depIdentityPaths: string[]
   identityPath: string
   lastInvalidatedAt: number
   transformed?: TransformedModule
@@ -38,9 +37,8 @@ type ModuleStore = {
   invalidateAll(): void
 }
 
-export function createModuleStore(options: { invalidateDirectImporters: boolean }): ModuleStore {
+export function createModuleStore(): ModuleStore {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord>()
-  let importersByDependency = new Map<string, Set<string>>()
   let recordsByTrackedFile = new Map<string, Set<string>>()
 
   return {
@@ -49,7 +47,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       if (existing) return existing
 
       let record: MutableModuleRecord = {
-        depIdentityPaths: [],
         identityPath,
         lastInvalidatedAt: 0,
         trackedFiles: new Set(),
@@ -65,7 +62,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       record.resolved = undefined
       record.emitted = undefined
       setTracking(record, {
-        depIdentityPaths: [],
         trackedFiles: failure.trackedFiles,
         trackedResolutions: [],
       })
@@ -77,7 +73,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       record.resolved = undefined
       record.emitted = undefined
       setTracking(record, {
-        depIdentityPaths: [],
         trackedFiles: transformed.trackedFiles,
         trackedResolutions: [],
       })
@@ -88,7 +83,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       record.resolved = resolved
       record.emitted = undefined
       setTracking(record, {
-        depIdentityPaths: resolved.deps,
         trackedFiles: resolved.trackedFiles,
         trackedResolutions: resolved.trackedResolutions,
       })
@@ -99,7 +93,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       record.resolved = undefined
       record.emitted = undefined
       setTracking(record, {
-        depIdentityPaths: [],
         trackedFiles: failure.trackedFiles,
         trackedResolutions: failure.trackedResolutions,
       })
@@ -125,7 +118,8 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
       }
 
       for (let identityPath of affected) {
-        invalidateIdentity(identityPath)
+        let record = recordsByIdentityPath.get(identityPath)
+        if (record) invalidateRecord(record)
       }
     },
 
@@ -141,7 +135,6 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
     if (existing) return existing
 
     let record: MutableModuleRecord = {
-      depIdentityPaths: [],
       identityPath,
       lastInvalidatedAt: 0,
       trackedFiles: new Set(),
@@ -151,21 +144,8 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
     return record
   }
 
-  function invalidateIdentity(identityPath: string) {
-    let record = recordsByIdentityPath.get(identityPath)
-    if (!record) return
-    invalidateRecord(record)
-
-    if (!options.invalidateDirectImporters) return
-    for (let importerIdentityPath of importersByDependency.get(identityPath) ?? []) {
-      let importer = recordsByIdentityPath.get(importerIdentityPath)
-      if (importer) invalidateRecord(importer)
-    }
-  }
-
   function invalidateRecord(record: MutableModuleRecord) {
     removeIndexes(record)
-    record.depIdentityPaths = []
     record.emitted = undefined
     record.resolved = undefined
     record.trackedFiles.clear()
@@ -177,31 +157,23 @@ export function createModuleStore(options: { invalidateDirectImporters: boolean 
   function setTracking(
     record: MutableModuleRecord,
     tracking: {
-      depIdentityPaths: readonly string[]
       trackedFiles: readonly string[]
       trackedResolutions: readonly TrackedResolution[]
     },
   ) {
     removeIndexes(record)
 
-    record.depIdentityPaths = [...tracking.depIdentityPaths]
     record.trackedFiles = new Set(tracking.trackedFiles)
     record.trackedResolutions = [...tracking.trackedResolutions]
 
     for (let trackedFile of record.trackedFiles) {
       addToIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
-    for (let depIdentityPath of record.depIdentityPaths) {
-      addToIndexedSet(importersByDependency, depIdentityPath, record.identityPath)
-    }
   }
 
   function removeIndexes(record: MutableModuleRecord) {
     for (let trackedFile of record.trackedFiles) {
       removeFromIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
-    }
-    for (let depIdentityPath of record.depIdentityPaths) {
-      removeFromIndexedSet(importersByDependency, depIdentityPath, record.identityPath)
     }
   }
 }

@@ -76,9 +76,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     ...options,
     externalSet: new Set(options.external),
   }
-  let store = createModuleStore({
-    invalidateDirectImporters: options.fingerprintModules,
-  })
+  let store = createModuleStore()
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
   let resolverFactory = new ResolverFactory({
     aliasFields: [['browser']],
