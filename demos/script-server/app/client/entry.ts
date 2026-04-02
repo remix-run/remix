@@ -1,5 +1,4 @@
 // Deliberately extensionless so the demo can show resolution winner changes in watch mode.
-// eslint-disable-next-line import/extensions
 import { getContent } from './content'
 
 const root = document.getElementById('app-root')
