@@ -2,8 +2,8 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import type { TestResults } from './executor.ts'
-import type { Reporter } from './reporter.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
+import type { Reporter } from './reporter.ts'
 import type { Counts } from './utils.ts'
 
 const ext = path.extname(import.meta.url)
