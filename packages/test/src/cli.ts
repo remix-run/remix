@@ -3,7 +3,6 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
-import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createReporter } from './lib/reporter.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
@@ -64,32 +63,20 @@ async function executeRun() {
       skipped: 0,
       todo: 0,
     }
-    let allCoverageMaps: Array<ReturnType<typeof Object.values>[number] | null | undefined> = []
 
     // Run server tests
     if (serverFiles.length > 0) {
       reporter.onSectionStart('\nRunning server tests:')
-      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server', {
-        coverage: config.coverage,
-      })
+      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server')
       counts.failed += serverResult.failed
       counts.passed += serverResult.passed
       counts.skipped += serverResult.skipped
       counts.todo += serverResult.todo
-      allCoverageMaps.push(serverResult.coverageMap)
     }
 
     reporter.onSummary(counts, performance.now() - startTime)
 
-    let thresholdsPassed = true
-    if (config.coverage) {
-      thresholdsPassed = await generateCombinedCoverageReport(
-        allCoverageMaps,
-        process.cwd(),
-        config.coverage,
-      )
-    }
-    latestExitCode = counts.failed > 0 || !thresholdsPassed ? 1 : 0
+    latestExitCode = counts.failed > 0 ? 1 : 0
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1

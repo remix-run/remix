@@ -1,5 +1,4 @@
 import { createTestContext } from './context.ts'
-import type { V8CoverageEntry } from './coverage.ts'
 
 export interface TestResult {
   name: string
@@ -19,12 +18,10 @@ export interface TestResults {
   skipped: number
   todo: number
   tests: TestResult[]
-  e2eBrowserCoverageEntries?: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>
 }
 
-export async function runTests(options?: { coverage?: boolean }): Promise<TestResults> {
+export async function runTests(): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
-  let allE2ECoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
     passed: 0,
     failed: 0,
@@ -147,10 +144,6 @@ export async function runTests(options?: { coverage?: boolean }): Promise<TestRe
   // Clear suites in-place so the shared framework module is reset
   // for the next test file (which reuses the same cached module instance)
   suites.length = 0
-
-  if (allE2ECoverageEntries.length > 0) {
-    results.e2eBrowserCoverageEntries = allE2ECoverageEntries
-  }
 
   return results
 }

@@ -10,14 +10,6 @@ const cliOptions = {
   'glob.test': { type: 'string' },
   concurrency: { type: 'string', short: 'c' },
   config: { type: 'string' },
-  coverage: { type: 'boolean' },
-  'coverage.dir': { type: 'string' },
-  'coverage.include': { type: 'string', multiple: true },
-  'coverage.exclude': { type: 'string', multiple: true },
-  'coverage.statements': { type: 'string' },
-  'coverage.lines': { type: 'string' },
-  'coverage.branches': { type: 'string' },
-  'coverage.functions': { type: 'string' },
   setup: { type: 'string' },
   reporter: { type: 'string', short: 'r' },
   type: { type: 'string', short: 't' },
@@ -35,21 +27,6 @@ export interface RemixTestConfig {
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
   /**
-   * Coverage configuration. `true` enables with defaults; an object enables with settings;
-   * `false` disables. CLI `--coverage` flag overrides the boolean aspect.
-   */
-  coverage?:
-    | boolean
-    | {
-        dir?: string
-        include?: string[]
-        exclude?: string[]
-        statements?: number | string
-        lines?: number | string
-        branches?: number | string
-        functions?: number | string
-      }
-  /**
    * Path to a module that exports `globalSetup` and/or `globalTeardown` functions,
    * called once before and after the test run respectively. (--setup)
    */
@@ -62,17 +39,6 @@ export interface RemixTestConfig {
 
 export interface ResolvedRemixTestConfig {
   concurrency: number
-  coverage:
-    | {
-        dir: string
-        include?: string[]
-        exclude?: string[]
-        statements?: number
-        lines?: number
-        branches?: number
-        functions?: number
-      }
-    | undefined
   glob: {
     test: string
   }
@@ -96,23 +62,6 @@ function resolveConfig(
   fileConfig: RemixTestConfig,
   { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
 ): ResolvedRemixTestConfig {
-  let fileCoverage = fileConfig.coverage
-  let fileCoverageSettings = typeof fileCoverage === 'object' ? fileCoverage : {}
-
-  let coverageEnabled =
-    cliValues.coverage ??
-    (cliValues['coverage.dir'] !== undefined ||
-    cliValues['coverage.include'] !== undefined ||
-    cliValues['coverage.exclude'] !== undefined ||
-    cliValues['coverage.statements'] !== undefined ||
-    cliValues['coverage.lines'] !== undefined ||
-    cliValues['coverage.branches'] !== undefined ||
-    cliValues['coverage.functions'] !== undefined
-      ? true
-      : fileCoverage !== undefined && fileCoverage !== false
-        ? Boolean(fileCoverage)
-        : false)
-
   return {
     glob: {
       test: positionals[0] ?? cliValues['glob.test'] ?? fileConfig.glob?.test ?? defaultTestGlob,
@@ -120,37 +69,6 @@ function resolveConfig(
     concurrency: Number(
       cliValues.concurrency ?? fileConfig.concurrency ?? os.availableParallelism(),
     ),
-    coverage: coverageEnabled
-      ? {
-          dir: cliValues['coverage.dir'] ?? fileCoverageSettings.dir ?? '.coverage',
-          include: cliValues['coverage.include'] ?? fileCoverageSettings.include,
-          exclude: cliValues['coverage.exclude'] ?? fileCoverageSettings.exclude,
-          statements:
-            cliValues['coverage.statements'] !== undefined
-              ? Number(cliValues['coverage.statements'])
-              : fileCoverageSettings.statements !== undefined
-                ? Number(fileCoverageSettings.statements)
-                : undefined,
-          lines:
-            cliValues['coverage.lines'] !== undefined
-              ? Number(cliValues['coverage.lines'])
-              : fileCoverageSettings.lines !== undefined
-                ? Number(fileCoverageSettings.lines)
-                : undefined,
-          branches:
-            cliValues['coverage.branches'] !== undefined
-              ? Number(cliValues['coverage.branches'])
-              : fileCoverageSettings.branches !== undefined
-                ? Number(fileCoverageSettings.branches)
-                : undefined,
-          functions:
-            cliValues['coverage.functions'] !== undefined
-              ? Number(cliValues['coverage.functions'])
-              : fileCoverageSettings.functions !== undefined
-                ? Number(fileCoverageSettings.functions)
-                : undefined,
-        }
-      : undefined,
     setup: cliValues.setup ?? fileConfig.setup,
     reporter:
       cliValues.reporter ?? fileConfig.reporter ?? (process.env.CI === 'true' ? 'dot' : 'spec'),

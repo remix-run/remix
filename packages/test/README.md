@@ -7,7 +7,6 @@ A test framework for Remix applications
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Mock functions and spies via `t.mock` / `t.spyOn`
-- Coverage reporting
 - Watch mode
 - Config file support (`remix-test.config.ts`)
 
@@ -58,22 +57,6 @@ export default {
   // Max number of concurrent test workers (default `os.availableParallelism()`)
   concurrency: 2,
 
-  // Code coverage options
-  coverage: {
-    // Enable coverage reporting
-    enabled: true,
-    // Output directory (default: ".coverage")
-    dir: '.coverage',
-    // Glob patterns to include/exclude
-    include: ['src/**'],
-    exclude: ['src/**/*.test.ts'],
-    // Minimum thresholds (%)
-    statements: 80,
-    lines: 80,
-    branches: 80,
-    functions: 80,
-  },
-
   glob: {
     // Test file glob pattern (default: "**/*.test.{ts,tsx}")
     test: '**/*.test.ts',
@@ -100,21 +83,13 @@ remix-test --config ./tests/config.ts
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
 
-| Flag                        | Short |
-| ----------------------- | ----- |
-| `--concurrency <n>`         | `-c`  |
-| `--coverage`                |       |
-| `--coverage.dir <path>`     |       |
-| `--coverage.include`        |       |
-| `--coverage.exclude`        |       |
-| `--coverage.statements`     |       |
-| `--coverage.lines`          |       |
-| `--coverage.branches`       |       |
-| `--coverage.functions`      |       |
-| `--glob.test`               |       |
-| `--reporter <name>`         | `-r`  |
-| `--setup <path>`            |       |
-| `--watch`                   | `-w`  |
+| Flag                | Short |
+| ------------------- | ----- |
+| `--concurrency <n>` | `-c`  |
+| `--glob.test`       |       |
+| `--reporter <name>` | `-r`  |
+| `--setup <path>`    |       |
+| `--watch`           | `-w`  |
 
 ### Setup
 

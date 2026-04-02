@@ -4,7 +4,6 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporter.ts'
-import { collectServerCoverageMap, type CoverageConfig, type CoverageMap } from './coverage.ts'
 import type { Counts } from './utils.ts'
 
 const workerUrl = new URL('./worker.ts', import.meta.url)
@@ -14,10 +13,7 @@ export async function runServerTests(
   reporter: Reporter,
   concurrency: number,
   type: 'server' | 'e2e',
-  options: {
-    coverage?: CoverageConfig
-  } = {},
-): Promise<Counts & { coverageMap: CoverageMap | null }> {
+): Promise<Counts> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
   let envLabel = type
 
@@ -32,13 +28,6 @@ export async function runServerTests(
     counts.todo += results.todo
   }
 
-  let coverageDataDir: string | undefined
-  if (options.coverage) {
-    coverageDataDir = path.resolve(options.coverage.dir)
-    await fsp.mkdir(coverageDataDir, { recursive: true })
-    process.env.NODE_V8_COVERAGE = coverageDataDir
-  }
-
   await runInConcurrentWorkers(
     files,
     concurrency,
@@ -47,14 +36,7 @@ export async function runServerTests(
     () => counts.failed++,
   )
 
-  let coverageMap: CoverageMap | null = null
-  if (coverageDataDir) {
-    delete process.env.NODE_V8_COVERAGE
-    let serverMap = await collectServerCoverageMap(coverageDataDir, process.cwd(), new Set(files))
-    coverageMap = serverMap
-  }
-
-  return { ...counts, coverageMap }
+  return { ...counts }
 }
 
 async function runInConcurrentWorkers(
@@ -102,19 +84,12 @@ async function runInConcurrentWorkers(
   })
 }
 
-function runFileInWorker(
-  file: string,
-  type: 'server' | 'e2e',
-  options: {
-    coverage?: CoverageConfig
-  } = {},
-): Promise<TestResults> {
+function runFileInWorker(file: string, type: 'server' | 'e2e'): Promise<TestResults> {
   return new Promise((resolve, reject) => {
     let worker = new Worker(workerUrl, {
       workerData: {
         file: pathToFileURL(file).href,
         type,
-        coverage: options.coverage,
       },
     })
     let results: TestResults | undefined
