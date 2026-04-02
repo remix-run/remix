@@ -6,7 +6,7 @@ import { books } from '../data/schema.ts'
 import { db } from '../data/setup.ts'
 import { uploadsStorage as uploads } from '../utils/uploads.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('uploads handler', () => {
   it('serves uploaded files from storage', async () => {

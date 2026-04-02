@@ -3,7 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { assertContains, createTestRouter, getSessionCookie } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('auth handlers', () => {
   it('POST /login with valid credentials sets session cookie and redirects', async () => {

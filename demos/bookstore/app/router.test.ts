@@ -3,7 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { createTestRouter } from '../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('router', () => {
   it('responds to basic GET request', async () => {

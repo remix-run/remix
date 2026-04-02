@@ -8,7 +8,7 @@ import {
   requestWithSession,
 } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('cart handlers', () => {
   it('POST /cart/api/add adds book to cart', async () => {

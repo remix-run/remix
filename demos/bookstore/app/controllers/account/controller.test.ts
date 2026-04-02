@@ -8,7 +8,7 @@ import {
   requestWithSession,
 } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('account handlers', () => {
   it('GET /account redirects to login when not authenticated', async () => {

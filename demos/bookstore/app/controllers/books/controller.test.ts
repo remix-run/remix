@@ -3,7 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { assertContains, createTestRouter } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('books handlers', () => {
   it('GET /books returns list of books', async () => {

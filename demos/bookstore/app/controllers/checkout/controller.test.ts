@@ -9,7 +9,7 @@ import {
   requestWithSession,
 } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
