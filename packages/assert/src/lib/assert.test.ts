@@ -165,7 +165,10 @@ describe('assert.doesNotThrow', () => {
 
   it('throws AssertionError when function throws', () => {
     nodeAssert.throws(
-      () => assert.doesNotThrow(() => { throw new Error('oops') }),
+      () =>
+        assert.doesNotThrow(() => {
+          throw new Error('oops')
+        }),
       assert.AssertionError,
     )
   })
@@ -337,7 +340,9 @@ describe('node:assert/strict compatibility', () => {
   })
 
   it('doesNotThrow — pass and fail cases', () => {
-    let throwing = () => { throw new Error('oops') }
+    let throwing = () => {
+      throw new Error('oops')
+    }
     let silent = () => {}
     assertCompatibleError(
       capture(() => assert.doesNotThrow(silent)),

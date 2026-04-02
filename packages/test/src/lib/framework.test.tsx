@@ -191,13 +191,10 @@ describe('duplicate detection', () => {
     let suites = (globalThis as any).__testSuites as any[]
     let before = suites.length
     try {
-      assert.throws(
-        () => {
-          describe('__dup-suite__', () => {})
-          describe('__dup-suite__', () => {})
-        },
-        /Duplicate suite name: "__dup-suite__"/,
-      )
+      assert.throws(() => {
+        describe('__dup-suite__', () => {})
+        describe('__dup-suite__', () => {})
+      }, /Duplicate suite name: "__dup-suite__"/)
     } finally {
       suites.splice(before)
     }
@@ -207,13 +204,10 @@ describe('duplicate detection', () => {
     let suites = (globalThis as any).__testSuites as any[]
     let before = suites.length
     try {
-      assert.throws(
-        () => {
-          describe.todo('__dup-todo-suite__')
-          describe.todo('__dup-todo-suite__')
-        },
-        /Duplicate suite name: "__dup-todo-suite__"/,
-      )
+      assert.throws(() => {
+        describe.todo('__dup-todo-suite__')
+        describe.todo('__dup-todo-suite__')
+      }, /Duplicate suite name: "__dup-todo-suite__"/)
     } finally {
       suites.splice(before)
     }
