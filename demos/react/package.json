@@ -1,0 +1,28 @@
+{
+  "name": "react-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-server-frame": "0.0.5",
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-rsc": "~0.5.21",
+    "typescript": "catalog:",
+    "vite": "^8.0.3",
+    "vite-plugin-devtools-json": "^1.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  }
+}
