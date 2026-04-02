@@ -1564,6 +1564,157 @@ describe('script-server', () => {
     }
   })
 
+  it('picks up dotted extensionless import resolution changes after restart', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles.css.js', 'export const styles = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
+
+      let firstServer = createTestServer(caseDir)
+
+      let before = await get(firstServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/styles\.css\.js/)
+
+      await fs.rm(path.join(caseDir, 'app/styles.css.js'))
+      await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+
+      let secondServer = createTestServer(caseDir)
+      let afterRestart = await get(secondServer, '/scripts/app/entry.ts')
+      assert.ok(afterRestart)
+      let afterRestartBody = await afterRestart.text()
+      assert.doesNotMatch(afterRestartBody, /\/scripts\/app\/styles\.css\.js/)
+      assert.match(afterRestartBody, /\/scripts\/app\/styles\.css\.ts/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps cached dotted extensionless import resolution stable until restart', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles.css.js', 'export const styles = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir)
+
+      let before = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/styles\.css\.js/)
+
+      await fs.rm(path.join(caseDir, 'app/styles.css.js'))
+      await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+
+      let after = await get(scriptServer, '/scripts/app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/styles\.css\.js/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.ts/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('switches dotted extensionless imports to a higher-priority file in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles.css.js', 'export const styles = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/styles\.css\.js/)
+
+        await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/styles\.css\.ts/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/styles\.css\.ts/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.js/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to the next valid dotted extensionless candidate in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles.css.js', 'export const styles = "js"')
+      await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+      await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
+
+      let scriptServer = createWatchedTestServer(caseDir)
+
+      try {
+        await waitForWatchedTestServerReady(scriptServer, caseDir)
+
+        let before = await get(scriptServer, '/scripts/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/scripts\/app\/styles\.css\.ts/)
+
+        await fs.rm(path.join(caseDir, 'app/styles.css.ts'))
+
+        let afterBody = await waitFor(
+          async () => {
+            let response = await get(scriptServer, '/scripts/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/scripts\/app\/styles\.css\.js/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(afterBody, /\/scripts\/app\/styles\.css\.js/)
+        assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.ts/)
+      } finally {
+        await scriptServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps dotted extensionless import resolution stable within a fingerprinted build', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles.css.js', 'export const styles = "js"')
+      await write(caseDir, 'app/entry.ts', 'import "./styles.css"\nexport const entry = true')
+
+      let scriptServer = createTestServer(caseDir, fingerprintingOptions('build'))
+
+      let before = await getByFile(scriptServer, 'app/entry.ts')
+      assert.ok(before)
+      assert.match(await before.text(), /\/scripts\/app\/styles\.css\.js\.@/)
+
+      await fs.rm(path.join(caseDir, 'app/styles.css.js'))
+      await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+
+      let after = await getByFile(scriptServer, 'app/entry.ts')
+      assert.ok(after)
+      let afterBody = await after.text()
+      assert.match(afterBody, /\/scripts\/app\/styles\.css\.js\.@/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.ts\.@/)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up aliased import resolution changes after restart', async () => {
     let caseDir = await makeTmpDir()
     try {

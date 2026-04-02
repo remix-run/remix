@@ -20,6 +20,7 @@ export const resolverExtensionAlias = {
 
 export const resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 export const supportedScriptExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
+const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
 type ResolvedImport = {
   depPath: string
@@ -259,6 +260,19 @@ function getTrackedRelativeImportResolution(
   }
 
   let candidateExtensions = resolverExtensionAlias[extension as keyof typeof resolverExtensionAlias]
+  if (!candidateExtensions && !supportedScriptExtensionSet.has(extension)) {
+    return {
+      candidatePaths: [
+        candidatePath,
+        ...supportedScriptExtensions.map(
+          (candidateExtension) => `${candidatePath}${candidateExtension}`,
+        ),
+      ],
+      candidatePrefixes: [`${candidatePath}/`],
+      specifier,
+    }
+  }
+
   if (!candidateExtensions) return null
 
   return {
