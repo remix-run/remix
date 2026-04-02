@@ -2,7 +2,6 @@ dist/
 node_modules/
 pnpm-publish-summary.json
 reference/
-.coverage/
 .tmp/
 /demos/tmp/
 *.db
