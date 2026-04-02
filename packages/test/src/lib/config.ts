@@ -23,19 +23,22 @@ const cliOptions = {
 } as const
 
 export interface RemixTestConfig {
+  /**
+   * Options for controlling the playwright browser
+   *  - `browser.echo`: Echo browser console output to stdout (--browser.echo)
+   *  - `browser.open`: Open browser window and keep open after test finish (--browser.open)
+   */
   browser?: {
-    /** Log browser console output to stdout (--browser.echo) */
     echo?: boolean
-    /** Open browser window during tests (--browser.open) */
     open?: boolean
   }
   /**
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
+   *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
    */
   glob?: {
     test?: string
-    /** Glob pattern for e2e test files (--glob.e2e) */
     e2e?: string
   }
   /** Max number of concurrent test workers (--concurrency) */
