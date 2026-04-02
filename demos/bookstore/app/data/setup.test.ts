@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 import { fileURLToPath } from 'node:url'
 import { sql } from 'remix/data-table'
 import { loadMigrations } from 'remix/data-table/migrations/node'

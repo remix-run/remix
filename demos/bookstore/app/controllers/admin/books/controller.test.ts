@@ -1,9 +1,9 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 
 import { createTestRouter, loginAsAdmin, requestWithSession } from '../../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('admin books handlers', () => {
   it('POST /admin/books creates new book when admin', async () => {

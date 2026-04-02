@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 
 import {
   assertContains,
@@ -8,7 +8,7 @@ import {
   requestWithSession,
 } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('cart handlers', () => {
   it('POST /cart/api/add adds book to cart', async () => {

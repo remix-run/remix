@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "tsx watch server.ts",
     "start": "tsx server.ts",
-    "test": "tsx --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   }
 }

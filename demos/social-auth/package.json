@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --import tsx --watch server.ts",
     "start": "node --env-file-if-exists=.env --import tsx server.ts",
-    "test": "NODE_ENV=test node --import tsx --test --test-global-setup ./test/setup.ts \"app/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test": "NODE_ENV=test remix-test",
     "typecheck": "tsc --noEmit"
   }
 }

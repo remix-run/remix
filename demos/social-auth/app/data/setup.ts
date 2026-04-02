@@ -12,15 +12,16 @@ import { authAccounts, passwordResetTokens, users } from './schema.ts'
 const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'
 const DEMO_USER_AVATAR_URL = 'https://randomuser.me/api/portraits/men/32.jpg'
 
-const dbDirectoryUrl = new URL('../../db/', import.meta.url)
-const migrationsDirectoryPath = fileURLToPath(new URL('migrations/', dbDirectoryUrl))
-const databaseFilePath = getDatabaseFilePath()
-
-fs.mkdirSync(fileURLToPath(dbDirectoryUrl), { recursive: true })
-
-if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
-  fs.unlinkSync(databaseFilePath)
+let databaseFilePath: string
+if (process.env.NODE_ENV === 'test') {
+  databaseFilePath = ':memory:'
+} else {
+  let dbDirectoryUrl = new URL('../../db/', import.meta.url)
+  databaseFilePath = fileURLToPath(new URL('social-auth.sqlite', dbDirectoryUrl))
+  fs.mkdirSync(fileURLToPath(dbDirectoryUrl), { recursive: true })
 }
+
+const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 
 const sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
@@ -46,15 +47,6 @@ async function initialize(): Promise<void> {
   if ((await db.count(users)) === 0) {
     await seedBaseData()
   }
-}
-
-function getDatabaseFilePath(): string {
-  let fileName =
-    process.env.NODE_ENV === 'test'
-      ? 'social-auth.test.' + process.pid + '.' + Date.now() + '.sqlite'
-      : 'social-auth.sqlite'
-
-  return fileURLToPath(new URL(fileName, dbDirectoryUrl))
 }
 
 export async function resetSocialAuthDatabase(): Promise<void> {

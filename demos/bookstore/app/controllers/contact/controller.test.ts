@@ -1,9 +1,9 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 
 import { assertContains, createTestRouter } from '../../../test/helpers.ts'
 
-const router = createTestRouter()
+const router = await createTestRouter()
 
 describe('contact controller', () => {
   it('POST /contact returns success message', async () => {
