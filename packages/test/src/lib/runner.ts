@@ -1,12 +1,13 @@
 import { Worker } from 'node:worker_threads'
 import { pathToFileURL } from 'node:url'
-import * as fsp from 'node:fs/promises'
-import * as path from 'node:path'
 import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporter.ts'
 import type { Counts } from './utils.ts'
 
-const workerUrl = new URL('./worker.ts', import.meta.url)
+const isInRemixMonorepo = import.meta.url.includes('packages/test')
+const workerUrl = isInRemixMonorepo
+  ? new URL('./worker.ts', import.meta.url)
+  : new URL('./worker.js', import.meta.url)
 
 export async function runServerTests(
   files: string[],
