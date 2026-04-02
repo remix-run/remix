@@ -168,7 +168,7 @@ let Event = s.variant('type', {
 
 ## Controller Pattern
 
-A complete form submission handler:
+A simple form submission handler that throws on invalid input:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -196,5 +196,90 @@ async function action({ get }) {
   })
 
   return redirect('/account')
+}
+```
+
+## Form Submission With Error Re-Rendering
+
+When a form should re-render with errors instead of throwing, use `parseSafe`, coercion, custom
+schemas, and cross-field checks:
+
+```ts
+import * as s from 'remix/data-schema'
+import { createSchema, fail } from 'remix/data-schema'
+import { min, max } from 'remix/data-schema/checks'
+import * as coerce from 'remix/data-schema/coerce'
+import * as f from 'remix/data-schema/form-data'
+
+const trimmedNonEmpty = createSchema(function validate(value, context) {
+  if (typeof value !== 'string') return fail('This field is required', context.path)
+  let trimmed = value.trim()
+  if (!trimmed) return fail('This field is required', context.path)
+  return { value: trimmed }
+})
+
+const optionalBoundedInt = createSchema(function validate(value, context) {
+  if (value === '' || value == null) return { value: null }
+  let num = Number.parseInt(String(value), 10)
+  if (!Number.isFinite(num) || num < 1 || num > 5) {
+    return fail('Must be between 1 and 5', context.path)
+  }
+  return { value: num }
+})
+
+const itemSchema = f.object({
+  name: f.field(trimmedNonEmpty),
+  quantity: f.field(coerce.number().pipe(min(1))),
+  rating: f.field(optionalBoundedInt),
+})
+
+const fieldLabels: Record<string, string> = {
+  name: 'Name',
+  quantity: 'Quantity',
+  rating: 'Rating',
+}
+```
+
+Parse with `parseSafe`, capture raw form values for re-rendering, and check cross-field constraints
+after the schema validates individual fields:
+
+```ts
+function parseItemForm(formData: FormData) {
+  let rawValues: Record<string, string> = {}
+  for (let key of ['name', 'quantity', 'rating']) {
+    rawValues[key] = (formData.get(key) as string) ?? ''
+  }
+
+  let result = s.parseSafe(itemSchema, formData)
+  if (!result.success) {
+    let errors = result.issues.map((issue) => {
+      let field = issue.path?.[0]
+      let label = typeof field === 'string' ? fieldLabels[field] : undefined
+      return label ? `${label}: ${issue.message}` : issue.message
+    })
+    return { success: false as const, errors, rawValues }
+  }
+
+  return { success: true as const, input: result.value }
+}
+```
+
+Use the helper in actions to keep them thin:
+
+```ts
+async action({ get }) {
+  let formData = get(FormData)
+  let parsed = parseItemForm(formData)
+
+  if (!parsed.success) {
+    let scripts = await getDocumentScripts()
+    return render(
+      <FormPage scripts={scripts} errors={parsed.errors} values={parsed.rawValues} />,
+      { status: 422 },
+    )
+  }
+
+  await db.create(items, parsed.input)
+  return redirect('/items')
 }
 ```

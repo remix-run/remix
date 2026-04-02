@@ -1,6 +1,6 @@
 ---
 name: remix-project-layout
-description: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. When asked to bootstrap that layout in a new directory, run the repo-local Remix CLI.
+description: Describe the ideal layout of a Remix application, including canonical directories, route ownership, naming conventions, and file locations on disk. When asked to bootstrap that layout in a new directory, run the bundled TypeScript script.
 ---
 
 # Remix Project Layout
@@ -10,7 +10,7 @@ application.
 
 This skill is about structure and conventions. It defines where code belongs, how route ownership
 maps to files on disk, and how a Remix app should be organized as it grows. When the user wants a
-new app scaffolded, run the repo-local Remix CLI instead of recreating the starter files by hand.
+new app scaffolded, run the bundled script instead of recreating the starter files by hand.
 
 Use `../remix-routing/SKILL.md` when the question is about the shape of `app/routes.ts`, route
 nesting, or controller-to-route mapping rather than where those files live.
@@ -174,15 +174,16 @@ Do not invent one-off naming schemes when an existing convention already fits.
 When the user wants this layout scaffolded into a new directory, run:
 
 ```sh
-pnpm --filter @remix-run/cli run cli -- new <target-dir>
+node skills/remix-project-layout/scripts/bootstrap_remix_application.ts <target-dir>
 ```
 
 Optional flags:
 
 - `--app-name <name>` to override the generated app name
+- `--remix-version <version>` to override the default `remix` version
 - `--force` to write into a non-empty target directory
 
-The CLI generates the starter app, including `README.md`, route handlers, shared UI, test
+The script generates the starter app, including `README.md`, route handlers, shared UI, test
 helpers, and the root directory structure described in this skill.
 
 ## Anti-Patterns

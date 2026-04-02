@@ -31,17 +31,17 @@ it.
 A typical write path through a controller action:
 
 ```ts
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
+import { Database } from "remix/data-table";
 
-import { books } from '../../data/schema.ts'
+import { books } from "../../data/schema.ts";
 
 async function create({ get }) {
-  let db = get(Database)
-  let formData = get(FormData)
-  let input = s.parse(bookSchema, formData)
-  await db.create(books, { ...input })
+  let db = get(Database);
+  let formData = get(FormData);
+  let input = s.parse(bookSchema, formData);
+  await db.create(books, { ...input });
 }
 ```
 
@@ -53,9 +53,9 @@ A typical read path:
 
 ```ts
 async function index({ get }) {
-  let db = get(Database)
-  let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
-  return render(<BooksPage books={allBooks} />)
+  let db = get(Database);
+  let allBooks = await db.findMany(books, { orderBy: ["id", "asc"] });
+  return render(<BooksPage books={allBooks} />);
 }
 ```
 
@@ -73,17 +73,23 @@ Wire the database into the request pipeline with a small middleware that sets th
 token:
 
 ```ts
-import type { Middleware } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
-import { db } from '../data/setup.ts'
+import type { Middleware } from "remix/fetch-router";
+import { Database } from "remix/data-table";
+import { db } from "../data/setup.ts";
 
-type SetDatabaseContextTransform = readonly [readonly [typeof Database, Database]]
+type SetDatabaseContextTransform = readonly [
+  readonly [typeof Database, Database],
+];
 
-export function loadDatabase(): Middleware<'ANY', {}, SetDatabaseContextTransform> {
+export function loadDatabase(): Middleware<
+  "ANY",
+  {},
+  SetDatabaseContextTransform
+> {
   return async (context, next) => {
-    context.set(Database, db)
-    return next()
-  }
+    context.set(Database, db);
+    return next();
+  };
 }
 ```
 
@@ -101,8 +107,12 @@ Register it in `app/router.ts` so every route action can call `get(Database)`. S
 4. Wire `loadDatabase()` middleware into the router.
 5. In controller actions, call `get(Database)` to access the database and import table handles from
    `app/data/schema.ts`.
-6. For form submissions, define a form schema with `f.object(...)` and `f.field(...)`, then parse
-   with `s.parse(schema, formData)` before writing to the database.
+6. For form submissions, define a form schema with `f.object(...)` and `f.field(...)`. Use
+   `coerce.number()` with `min()`/`max()` checks for numeric fields instead of parsing strings
+   to numbers manually. Use `createSchema`/`fail` for custom validation like optional nullable
+   fields or trimmed-non-empty strings. Use `s.parseSafe(schema, formData)` so you can
+   re-render the form with field-level errors on failure, and capture raw string values from
+   `FormData` before parsing so the form can be repopulated.
 
 ## Load These References As Needed
 
@@ -118,7 +128,10 @@ Register it in `app/router.ts` so every route action can call `get(Database)`. S
 
 ## Anti-Patterns
 
-- Do not validate form data manually when `data-schema/form-data` already handles it.
+- Do not validate form data manually when `data-schema/form-data` already handles it. Use
+  `coerce.number()`, `min()`/`max()` checks, and `createSchema`/`fail` instead of writing custom
+  `parseInt` + `if/else` validation functions. Use `parseSafe` instead of `parse` when the form
+  needs to re-render with errors.
 - Do not scatter table definitions across controller files. Keep them centralized in
   `app/data/schema.ts`.
 - Do not hardcode SQL strings when `data-table` CRUD helpers or query builder cover the operation.
