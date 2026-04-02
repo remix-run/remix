@@ -1,6 +1,6 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import * as net from 'node:net'
-import { afterEach, beforeEach, describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 
 import { createMemcacheClient } from './memcache-client.ts'
 

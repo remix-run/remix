@@ -1,9 +1,9 @@
-import assert from 'node:assert/strict'
+import assert from '@remix-run/assert'
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { test } from 'node:test'
+import { test } from '@remix-run/test'
 import { findVersionIntroductionCommit, getLocalTagTarget } from './git.ts'
 
 function execGit(args: string[], cwd: string): string {

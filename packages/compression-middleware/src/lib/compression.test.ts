@@ -1,7 +1,7 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import { gunzip } from 'node:zlib'
 import { promisify } from 'node:util'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 import { createRouter } from '@remix-run/fetch-router'
 import { isCompressibleMimeType } from '@remix-run/mime'
 
