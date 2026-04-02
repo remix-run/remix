@@ -110,21 +110,16 @@ A good middleware provider usually exports:
 ```ts
 import {
   createContextKey,
-  type MergeContext,
   type Middleware,
-  type RequestContext,
 } from 'remix/fetch-router'
 
 type CurrentUser = { id: string; role: 'admin' | 'user' } | null
 
 export const CurrentUserKey = createContextKey<CurrentUser>()
 
-export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
-  context,
-  [readonly [typeof CurrentUserKey, CurrentUser]]
->
+type SetCurrentUserTransform = readonly [readonly [typeof CurrentUserKey, CurrentUser]]
 
-export function loadCurrentUser(): Middleware {
+export function loadCurrentUser(): Middleware<'ANY', {}, SetCurrentUserTransform> {
   return async (context, next) => {
     let user = await resolveCurrentUser(context.request)
     context.set(CurrentUserKey, user)
@@ -132,6 +127,10 @@ export function loadCurrentUser(): Middleware {
   }
 }
 ```
+
+Use `Middleware<'ANY', {}, ContextTransform>` when middleware sets context values. The third type
+parameter declares the context entries the middleware provides. This lets `MiddlewareContext<>` in
+`app/middleware/context.ts` derive the full `AppContext` type from the `RootMiddleware` tuple.
 
 Downstream handlers can then read:
 

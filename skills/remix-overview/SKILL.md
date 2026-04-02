@@ -57,8 +57,8 @@ Use this as the default mental model:
   Use `../remix-routing/SKILL.md` for route contracts, nested route structure, controller mapping,
   and URL ownership.
 - Data and persistence
-  TODO: Add `remix-data` for schema validation, form-data decoding, query/persistence patterns,
-  migrations, and seeding.
+  Use `../remix-data/SKILL.md` for schema validation, form-data decoding, table definitions,
+  queries, relations, transactions, migrations, and seeding.
 - Authentication and sessions
   TODO: Add `remix-auth` and decide how `remix-sessions` should be represented.
 - Files, uploads, and asset delivery
@@ -85,5 +85,7 @@ Use this as the default mental model:
   contract", or "map controllers to routes", use `../remix-routing/SKILL.md`.
 - If the task is "how should I test this request flow?" or "where should runtime integration checks
   live?", use `../remix-server/SKILL.md`.
+- If the task is "define tables", "validate form data", "query the database", "write a migration",
+  "seed data", or "wire database access", use `../remix-data/SKILL.md`.
 - If the task spans multiple subsystems, use this overview to identify the main workstreams first,
   then hand off to narrower skills.

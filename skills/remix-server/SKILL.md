@@ -52,15 +52,21 @@ import { formData } from 'remix/form-data-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-export let router = createRouter({
-  middleware: [
-    staticFiles('./public'),
-    formData(),
-    session(sessionCookie, sessionStorage),
-    loadAuth(),
-  ],
-})
+let middleware = []
+middleware.push(staticFiles('./public'))
+middleware.push(formData())
+middleware.push(session(sessionCookie, sessionStorage))
+middleware.push(loadAuth())
+
+export let router = createRouter({ middleware })
 ```
+
+Build the middleware array dynamically with `.push()` instead of a static inline array. A static
+array lets TypeScript infer a precise tuple type from typed middleware like `formData()`, which
+propagates context requirements through `router.map` and forces every controller to carry the
+extended context type. A dynamically built array widens to `Middleware[]`, keeping `router.map`
+simple while the `AppContext` type in `app/middleware/context.ts` handles context typing
+independently.
 
 ## Default Ownership
 
