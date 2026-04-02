@@ -210,6 +210,37 @@ async function assertInternalServerError(response: Response): Promise<void> {
   assert.equal(await response.text(), 'Internal Server Error')
 }
 
+async function withTsconfigTransformCase(
+  files: Record<string, unknown>,
+  callback: (context: {
+    caseDir: string
+    scriptServer: ReturnType<typeof createScriptServer>
+  }) => Promise<void>,
+  serverOverrides: Partial<Parameters<typeof createScriptServer>[0]> = {},
+): Promise<void> {
+  let caseDir = await makeTmpDir()
+  let scriptServer: ReturnType<typeof createScriptServer> | null = null
+
+  try {
+    for (let [rel, value] of Object.entries(files)) {
+      if (typeof value === 'string') {
+        await write(caseDir, rel, value)
+      } else {
+        await writeJson(caseDir, rel, value)
+      }
+    }
+
+    scriptServer = createTestServer(caseDir, serverOverrides)
+    await callback({ caseDir, scriptServer })
+  } finally {
+    if (scriptServer) {
+      await scriptServer.close()
+    }
+
+    await fs.rm(caseDir, { recursive: true, force: true })
+  }
+}
+
 describe('script-server', () => {
   let dir: string
 
@@ -1911,6 +1942,313 @@ describe('script-server', () => {
 
     assert.match(body, /\?\?/)
     assert.match(body, /\?\./)
+  })
+
+  describe('tsconfig transform support', () => {
+    it('supports jsxImportSource with the automatic JSX runtime', async () => {
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              jsx: 'react-jsx',
+              jsxImportSource: '@remix-run/component',
+            },
+          },
+          'app/node_modules/@remix-run/component/jsx-runtime.ts':
+            'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("fragment")',
+          'app/entry.tsx': 'export let entry = <div />',
+        },
+        async ({ scriptServer }) => {
+          let urls = await scriptServer.getPreloads('app/entry.tsx')
+          assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.ts')))
+        },
+      )
+    })
+
+    it('supports the react-jsxdev runtime', async () => {
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              jsx: 'react-jsxdev',
+            },
+          },
+          'app/node_modules/react/jsx-dev-runtime.ts':
+            'export function jsxDEV() {}\nexport const Fragment = Symbol.for("fragment")',
+          'app/entry.tsx': 'export let entry = <div />',
+        },
+        async ({ scriptServer }) => {
+          let urls = await scriptServer.getPreloads('app/entry.tsx')
+          assert.ok(urls.some((url) => url.includes('react/jsx-dev-runtime.ts')))
+        },
+      )
+    })
+
+    it('supports classic JSX pragma options', async () => {
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              jsxFactory: 'h',
+              jsxFragmentFactory: 'Fragment',
+            },
+          },
+          'app/entry.tsx': 'export let entry = <><span /></>',
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.tsx')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+
+          let body = await response.text()
+          assert.match(body, /\bh\(/)
+          assert.match(body, /\bFragment\b/)
+          assert.doesNotMatch(body, /jsx-runtime/)
+        },
+      )
+    })
+
+    it('rejects unsupported JSX preserve mode', async () => {
+      let receivedError: unknown
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              jsx: 'preserve',
+            },
+          },
+          'app/entry.tsx': 'export let entry = <div />',
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.tsx')
+          assert.ok(response)
+          await assertInternalServerError(response)
+        },
+        {
+          onError(error) {
+            receivedError = error
+          },
+        },
+      )
+
+      assert.ok(isScriptServerCompilationError(receivedError))
+      assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+      assert.match(receivedError.message, /compilerOptions\.jsx = "preserve"/)
+    })
+
+    it('supports namespaces and respects allowNamespaces when it is disabled', async () => {
+      let source = 'namespace Example { export const value = 1 }\nexport let result = Example.value'
+      let receivedError: unknown
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              allowNamespaces: false,
+            },
+          },
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          await assertInternalServerError(response)
+        },
+        {
+          onError(error) {
+            receivedError = error
+          },
+        },
+      )
+
+      assert.ok(isScriptServerCompilationError(receivedError))
+      assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+
+      await withTsconfigTransformCase(
+        {
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          assert.match(await response.text(), /Example/)
+        },
+      )
+    })
+
+    it('passes experimentalDecorators through to Oxc', async () => {
+      let source =
+        'function applyExampleDecorator(value) { return value }\n' +
+        '@applyExampleDecorator\n' +
+        'export class Example {}'
+      let withoutDecoratorsBody = ''
+      let decorateHelperSpecifier = '@oxc-project/runtime/helpers/decorate'
+
+      await withTsconfigTransformCase(
+        {
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          withoutDecoratorsBody = await response.text()
+          assert.match(withoutDecoratorsBody, /@applyExampleDecorator/)
+        },
+        {
+          external: [decorateHelperSpecifier],
+        },
+      )
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              experimentalDecorators: true,
+            },
+          },
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+
+          let body = await response.text()
+          assert.doesNotMatch(body, /@applyExampleDecorator/)
+          assert.match(body, /applyExampleDecorator/)
+        },
+        {
+          external: [decorateHelperSpecifier],
+        },
+      )
+    })
+
+    it('emits decorator metadata only when tsconfig enables it', async () => {
+      let source = [
+        'function dec(value) { return value }',
+        'function meta(...args) { return args }',
+        '@dec',
+        'export class Example {',
+        '  @meta',
+        '  method(value) { return value }',
+        '}',
+      ].join('\n')
+      let withoutMetadataBody = ''
+      let withMetadataBody = ''
+      let decorateHelperSpecifier = '@oxc-project/runtime/helpers/decorate'
+      let decorateMetadataHelperSpecifier = '@oxc-project/runtime/helpers/decorateMetadata'
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              experimentalDecorators: true,
+            },
+          },
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          withoutMetadataBody = await response.text()
+        },
+        {
+          external: [decorateHelperSpecifier, decorateMetadataHelperSpecifier],
+        },
+      )
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              emitDecoratorMetadata: true,
+              experimentalDecorators: true,
+            },
+          },
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          withMetadataBody = await response.text()
+        },
+        {
+          external: [decorateHelperSpecifier, decorateMetadataHelperSpecifier],
+        },
+      )
+
+      assert.doesNotMatch(withoutMetadataBody, /design:type/)
+      assert.doesNotMatch(withoutMetadataBody, /design:paramtypes/)
+      assert.doesNotMatch(withoutMetadataBody, /design:returntype/)
+      assert.match(withMetadataBody, /design:type/)
+      assert.match(withMetadataBody, /design:paramtypes/)
+      assert.match(withMetadataBody, /design:returntype/)
+    })
+
+    it('supports useDefineForClassFields false when lowering class fields', async () => {
+      let source = [
+        'class Base {',
+        '  set value(next) {',
+        '    globalThis.setterCalls = (globalThis.setterCalls ?? 0) + next',
+        '  }',
+        '}',
+        'export class Derived extends Base {',
+        '  value = 1',
+        '  declared: number',
+        '}',
+      ].join('\n')
+      let defaultBody = ''
+      let assignBody = ''
+      let definePropertyHelperSpecifier = '@oxc-project/runtime/helpers/defineProperty'
+
+      await withTsconfigTransformCase(
+        {
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          defaultBody = await response.text()
+        },
+        {
+          external: [definePropertyHelperSpecifier],
+          target: 'es2015',
+        },
+      )
+
+      await withTsconfigTransformCase(
+        {
+          'tsconfig.json': {
+            compilerOptions: {
+              useDefineForClassFields: false,
+            },
+          },
+          'app/entry.ts': source,
+        },
+        async ({ scriptServer }) => {
+          let response = await get(scriptServer, '/scripts/app/entry.ts')
+          assert.ok(response)
+          assert.equal(response.status, 200)
+          assignBody = await response.text()
+        },
+        {
+          external: [definePropertyHelperSpecifier],
+          target: 'es2015',
+        },
+      )
+
+      assert.doesNotMatch(defaultBody, /this\.value = 1/)
+      assert.match(defaultBody, /["']value["']/)
+      assert.match(defaultBody, /["']declared["']/)
+      assert.match(assignBody, /this\.value = 1/)
+      assert.doesNotMatch(assignBody, /declared/)
+    })
   })
 
   it('rejects fingerprinting without a buildId string', async () => {

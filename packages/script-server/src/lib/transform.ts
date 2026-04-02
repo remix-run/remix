@@ -6,6 +6,7 @@ import { minify } from 'oxc-minify'
 import { transform as oxcTransform } from 'oxc-transform'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
+import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 import {
@@ -34,6 +35,17 @@ const scriptModuleTypes = [
 const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
+
+const supportedTsconfigTransformCompilerOptions = {
+  allowNamespaces: 'allowNamespaces',
+  emitDecoratorMetadata: 'emitDecoratorMetadata',
+  experimentalDecorators: 'experimentalDecorators',
+  jsx: 'jsx',
+  jsxFactory: 'jsxFactory',
+  jsxFragmentFactory: 'jsxFragmentFactory',
+  jsxImportSource: 'jsxImportSource',
+  useDefineForClassFields: 'useDefineForClassFields',
+} as const
 
 export type ResolveModuleResult = {
   identityPath: string
@@ -347,13 +359,22 @@ function getTransformOptions(
     sourceMaps?: 'external' | 'inline'
     target?: string
   },
-) {
+): OxcTransformOptions {
   let compilerOptions = transformOptions.tsconfigRaw?.compilerOptions as
     | Record<string, unknown>
     | undefined
-  let useDefineForClassFields = getBooleanOption(compilerOptions, 'useDefineForClassFields')
-  let jsxFactory = getStringOption(compilerOptions, 'jsxFactory')
-  let jsxFragmentFactory = getStringOption(compilerOptions, 'jsxFragmentFactory')
+  let useDefineForClassFields = getBooleanOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.useDefineForClassFields,
+  )
+  let jsxFactory = getStringOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.jsxFactory,
+  )
+  let jsxFragmentFactory = getStringOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
+  )
 
   return {
     assumptions:
@@ -362,6 +383,7 @@ function getTransformOptions(
             setPublicClassFields: true,
           }
         : undefined,
+    decorator: getDecoratorOptions(compilerOptions),
     define: options.define,
     jsx: getJsxOptions(resolvedPath, compilerOptions),
     lang: getSourceLanguageForPath(resolvedPath),
@@ -369,9 +391,10 @@ function getTransformOptions(
     sourcemap: options.sourceMaps != null,
     target: options.target,
     typescript: {
-      allowNamespaces: getBooleanOption(compilerOptions, 'allowNamespaces'),
-      emitDecoratorMetadata: getBooleanOption(compilerOptions, 'emitDecoratorMetadata'),
-      experimentalDecorators: getBooleanOption(compilerOptions, 'experimentalDecorators'),
+      allowNamespaces: getBooleanOption(
+        compilerOptions,
+        supportedTsconfigTransformCompilerOptions.allowNamespaces,
+      ),
       jsxPragma: jsxFactory,
       jsxPragmaFrag: jsxFragmentFactory,
       removeClassFieldsWithoutInitializer: useDefineForClassFields === false ? true : undefined,
@@ -382,17 +405,32 @@ function getTransformOptions(
 function getJsxOptions(
   resolvedPath: string,
   compilerOptions?: Record<string, unknown>,
-): 'preserve' | Record<string, unknown> | undefined {
+): OxcTransformOptions['jsx'] | undefined {
   let language = getSourceLanguageForPath(resolvedPath)
   if (language !== 'jsx' && language !== 'tsx') return undefined
 
-  let jsx = getStringOption(compilerOptions, 'jsx')
-  let importSource = getStringOption(compilerOptions, 'jsxImportSource')
-  let pragma = getStringOption(compilerOptions, 'jsxFactory')
-  let pragmaFrag = getStringOption(compilerOptions, 'jsxFragmentFactory')
+  let jsx = getStringOption(compilerOptions, supportedTsconfigTransformCompilerOptions.jsx)
+  let importSource = getStringOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.jsxImportSource,
+  )
+  let pragma = getStringOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.jsxFactory,
+  )
+  let pragmaFrag = getStringOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
+  )
 
   if (jsx === 'preserve' || jsx === 'react-native') {
-    return 'preserve'
+    throw createScriptServerCompilationError(
+      `Unsupported tsconfig compilerOptions.jsx = "${jsx}" for ${resolvedPath}. ` +
+        `script-server must compile JSX to browser-runnable JavaScript.`,
+      {
+        code: 'MODULE_TRANSFORM_FAILED',
+      },
+    )
   }
 
   if (jsx === 'react-jsx' || jsx === 'react-jsxdev') {
@@ -407,6 +445,26 @@ function getJsxOptions(
     pragma,
     pragmaFrag,
     runtime: 'classic',
+  }
+}
+
+function getDecoratorOptions(
+  compilerOptions?: Record<string, unknown>,
+): OxcTransformOptions['decorator'] | undefined {
+  let legacy = getBooleanOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.experimentalDecorators,
+  )
+  let emitDecoratorMetadata = getBooleanOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.emitDecoratorMetadata,
+  )
+
+  if (legacy !== true && emitDecoratorMetadata !== true) return undefined
+
+  return {
+    emitDecoratorMetadata,
+    legacy,
   }
 }
 
