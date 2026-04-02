@@ -146,15 +146,12 @@ router.match('https://example.com/search?q=hello')
 
 ## Benchmark
 
-To run benchmarks comparing `route-pattern` performance with comparable libraries:
-
-```sh
-pnpm bench bench/comparison.bench.ts
-```
+Benchmarks live in [`bench/`](./bench/).
 
 ## Related Work
 
 - [`path-to-regexp`](https://www.npmjs.com/package/path-to-regexp)
+- [`find-my-way`](https://github.com/delvedor/find-my-way)
 - [`URLPattern`](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern)
 
 ## License
