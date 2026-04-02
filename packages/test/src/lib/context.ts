@@ -47,11 +47,10 @@ export interface TestContext {
   ): MockFunction
 }
 
-export function createTestContext(options: { coverage?: boolean }): TestContext & {
-  cleanup(): Promise<void>
-} {
+export function createTestContext(): { testContext: TestContext; cleanup(): Promise<void> } {
   let cleanups: Array<() => void | Promise<void>> = []
-  return {
+
+  let testContext: TestContext = {
     mock: mock.fn,
     spyOn(obj, method, impl) {
       let mockFn = mock.spyOn(obj, method, impl as any)
@@ -61,6 +60,10 @@ export function createTestContext(options: { coverage?: boolean }): TestContext 
     after(fn) {
       cleanups.push(fn)
     },
+  }
+
+  return {
+    testContext,
     async cleanup() {
       for (let fn of cleanups) await fn()
       cleanups.length = 0

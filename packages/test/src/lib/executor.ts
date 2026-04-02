@@ -103,15 +103,13 @@ export async function runTests(options?: { coverage?: boolean }): Promise<TestRe
         duration: 0,
       }
 
-      let ctx = createTestContext({
-        coverage: options?.coverage,
-      })
+      let { testContext, cleanup } = createTestContext()
       try {
         if (suite.beforeEach) {
           await suite.beforeEach()
         }
 
-        await test.fn(ctx)
+        await test.fn(testContext)
 
         result.status = 'passed'
         results.passed++
@@ -123,7 +121,7 @@ export async function runTests(options?: { coverage?: boolean }): Promise<TestRe
         }
         results.failed++
       } finally {
-        await ctx.cleanup()
+        await cleanup()
         if (suite.afterEach) {
           try {
             await suite.afterEach()
