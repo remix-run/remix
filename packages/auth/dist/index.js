@@ -1,0 +1,13 @@
+export { completeAuth } from "./lib/complete-auth.js";
+export { createCredentialsAuthProvider } from "./lib/providers/credentials.js";
+export { createAuth0AuthProvider } from "./lib/providers/auth0.js";
+export { createFacebookAuthProvider } from "./lib/providers/facebook.js";
+export { finishExternalAuth } from "./lib/finish-external-auth.js";
+export { createGitHubAuthProvider } from "./lib/providers/github.js";
+export { createGoogleAuthProvider } from "./lib/providers/google.js";
+export { createMicrosoftAuthProvider } from "./lib/providers/microsoft.js";
+export { createOIDCAuthProvider } from "./lib/providers/oidc.js";
+export { createOktaAuthProvider } from "./lib/providers/okta.js";
+export { startExternalAuth } from "./lib/start-external-auth.js";
+export { verifyCredentials } from "./lib/verify-credentials.js";
+export { createXAuthProvider } from "./lib/providers/x.js";
