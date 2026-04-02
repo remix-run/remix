@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { describe, it, mock } from '@remix-run/test'
+import { describe, it } from '@remix-run/test'
 
 import { createCookieSessionStorage } from './cookie.ts'
 
@@ -143,8 +143,8 @@ describe('cookie session storage', () => {
     assert.equal(response4.session.get('count'), 2, 'old session data should still be in storage')
   })
 
-  it('logs a warning when the id is regenerated and the deleteOldSession option is true', async () => {
-    let consoleWarn = mock.method(console, 'warn', () => {})
+  it('logs a warning when the id is regenerated and the deleteOldSession option is true', async (t) => {
+    let consoleWarn = t.spyOn(console, 'warn', () => {})
 
     let storage = createCookieSessionStorage()
 
@@ -182,6 +182,5 @@ describe('cookie session storage', () => {
       /Session ID [\w-]+ was regenerated, but the old session cannot be deleted when using cookie storage/,
     )
 
-    consoleWarn.mock.restore()
   })
 })
