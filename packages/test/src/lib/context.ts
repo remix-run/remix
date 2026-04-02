@@ -37,14 +37,10 @@ export interface TestContext {
    * @template K - The method key of the object
    * @param {T} obj - The object to spy on
    * @param {K} method - The method name to spy on
-   * @param {T[K]} [impl] - Optional implementation override (must be a function)
+   * @param {Function} [impl] - Optional implementation override (must be a function)
    * @returns {MockFunction} A mock function instance for the spied method
    */
-  spyOn<T extends object, K extends keyof T>(
-    obj: T,
-    method: K,
-    impl?: T[K] extends (...args: any[]) => any ? T[K] : never,
-  ): MockFunction
+  spyOn<T extends object, K extends keyof T>(obj: T, method: K, impl?: Function): MockFunction
 }
 
 export function createTestContext(): { testContext: TestContext; cleanup(): Promise<void> } {

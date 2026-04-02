@@ -1,4 +1,4 @@
-import type { TestContext } from './context'
+import type { TestContext } from './context.ts'
 
 interface TestSuite {
   name: string
