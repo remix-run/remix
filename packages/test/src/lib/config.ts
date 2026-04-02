@@ -25,8 +25,11 @@ const cliOptions = {
 } as const
 
 export interface RemixTestConfig {
+  /**
+   * Glob patterns to identify test files
+   *  - `glob.test`: Glob pattern for all test files (--glob.test)
+   */
   glob?: {
-    /** Glob pattern for all test files (--glob.test) */
     test?: string
   }
   /** Max number of concurrent test workers (--concurrency) */

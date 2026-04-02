@@ -5,7 +5,8 @@ A test framework for Remix applications
 ## Features
 
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
-- Mock functions and spies via `mock.fn` / `mock.spyOn`
+- Server-side unit testing
+- Mock functions and spies via `t.mock` / `t.spyOn`
 - Coverage reporting
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -99,21 +100,21 @@ remix-test --config ./tests/config.ts
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
 
-| Flag                    | Short |
+| Flag                        | Short |
 | ----------------------- | ----- |
-| `--concurrency <n>`     | `-c`  |
-| `--coverage`            |       |
-| `--coverage.dir <path>` |       |
-| `--coverage.include`    |       |
-| `--coverage.exclude`    |       |
-| `--coverage.statements` |       |
-| `--coverage.lines`      |       |
-| `--coverage.branches`   |       |
-| `--coverage.functions`  |       |
-| `--glob.test`           |       |
-| `--reporter <name>`     | `-r`  |
-| `--setup <path>`        |       |
-| `--watch`               | `-w`  |
+| `--concurrency <n>`         | `-c`  |
+| `--coverage`                |       |
+| `--coverage.dir <path>`     |       |
+| `--coverage.include`        |       |
+| `--coverage.exclude`        |       |
+| `--coverage.statements`     |       |
+| `--coverage.lines`          |       |
+| `--coverage.branches`       |       |
+| `--coverage.functions`      |       |
+| `--glob.test`               |       |
+| `--reporter <name>`         | `-r`  |
+| `--setup <path>`            |       |
+| `--watch`                   | `-w`  |
 
 ### Setup
 
@@ -163,6 +164,19 @@ suite('My Test Suite', () => {
 
 Each test callback receives a `TestContext` (`t`) as its first argument with helpful test utilities.
 
+```ts
+interface TestContext {
+  // Register a cleanup function to run after the test completes
+  after(fn: () => void): void
+
+  // Create a mock function with an optional implementation
+  mock<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+
+  // Spy on an object method with an optional implementation override
+  spyOn<T extends object, K extends keyof T>(obj: T, method: K): MockFunction
+}
+```
+
 #### Mocks and Spies
 
 Use `t.mock()`/`t.spyOn()` to set up mocks and spies. This is preferred over the standalone `mock` import because TestContext mocks/spies wll be automatically cleaned up after the test runs.
@@ -194,7 +208,7 @@ it('cleanup', (t) => {
 })
 ```
 
-#### Standalone mocks (module scope)
+### Standalone mocks (module scope)
 
 When you need a mock outside of a test body, import `mock` directly and call `restore()` manually:
 
