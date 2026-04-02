@@ -60,7 +60,9 @@ export async function emitResolvedModule(
         code: await createEmittedAsset(finalCode),
         fingerprint: resolvedModule.fingerprint,
         importUrls,
-        sourceMap: rewriteResult.sourceMap ? await createEmittedAsset(rewriteResult.sourceMap) : null,
+        sourceMap: rewriteResult.sourceMap
+          ? await createEmittedAsset(rewriteResult.sourceMap)
+          : null,
       },
     }
   } catch (error) {
@@ -111,7 +113,7 @@ function toEmitError(error: unknown, identityPath: string): ScriptServerCompilat
   if (isScriptServerCompilationError(error)) return error
 
   return createScriptServerCompilationError(
-    `Failed to emit module ${identityPath}.\n\n${error instanceof Error ? error.message : String(error)}`,
+    `Failed to emit module ${identityPath}. ${error instanceof Error ? error.message : String(error)}`,
     {
       cause: error,
       code: 'MODULE_EMIT_FAILED',

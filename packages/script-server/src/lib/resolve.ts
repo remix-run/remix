@@ -115,7 +115,7 @@ export async function resolveModule(
     if (!resolvedSpec?.absolutePath) {
       return failResolve(
         createScriptServerCompilationError(
-          `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}.\n\n` +
+          `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}. ` +
             `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
@@ -132,7 +132,7 @@ export async function resolveModule(
     if (!resolvedImport) {
       return failResolve(
         createScriptServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module.\n\n` +
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module. ` +
             `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
           {
             code: 'IMPORT_NOT_SUPPORTED',
@@ -148,7 +148,7 @@ export async function resolveModule(
     if (!args.isAllowed(resolvedImport.identityPath)) {
       return failResolve(
         createScriptServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration. ` +
             `Add a matching route and allow rule, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
@@ -165,7 +165,7 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createScriptServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration.\n\n` +
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the script-server routing/allow configuration. ` +
             `Add a matching route and allow rule, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
@@ -291,7 +291,7 @@ async function batchResolveSpecifiers(
       let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
       if (resolutionResult.error) {
         throw createScriptServerCompilationError(
-          `Failed to resolve import "${specifier}" in ${importerPath}.\n\n` +
+          `Failed to resolve import "${specifier}" in ${importerPath}. ` +
             `Ensure it resolves to a file within the configured script-server routes, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
@@ -316,7 +316,7 @@ async function batchResolveSpecifiers(
     }
 
     throw createScriptServerCompilationError(
-      `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
+      `Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'IMPORT_RESOLUTION_FAILED',
@@ -371,7 +371,7 @@ function toResolveError(error: unknown, importerPath: string): ScriptServerCompi
   if (isScriptServerCompilationError(error)) return error
 
   return createScriptServerCompilationError(
-    `Failed to resolve imports in ${importerPath}.\n\n${formatUnknownError(error)}`,
+    `Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`,
     {
       cause: error,
       code: 'IMPORT_RESOLUTION_FAILED',

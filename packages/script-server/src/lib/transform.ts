@@ -181,8 +181,8 @@ export async function transformModule(
 
     if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
       throw createScriptServerCompilationError(
-        `CommonJS module detected: ${resolvedPath}\n\n` +
-          `This module uses CommonJS (require/module.exports) which is not supported.\n` +
+        `CommonJS module detected: ${resolvedPath}. ` +
+          `This module uses CommonJS (require/module.exports) which is not supported. ` +
           `Please use an ESM-compatible module.`,
         {
           code: 'MODULE_COMMONJS_NOT_SUPPORTED',
@@ -282,7 +282,7 @@ async function analyzeModuleSource(
   } catch (error) {
     if (isScriptServerCompilationError(error)) throw error
     throw createScriptServerCompilationError(
-      `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      `Failed to transform module ${resolvedPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'MODULE_TRANSFORM_FAILED',
@@ -330,7 +330,7 @@ async function minifyModule(
   } catch (error) {
     if (isScriptServerCompilationError(error)) throw error
     throw createScriptServerCompilationError(
-      `Failed to minify module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+      `Failed to minify module ${resolvedPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'MODULE_TRANSFORM_FAILED',
@@ -434,7 +434,7 @@ function assertNoCompilerErrors(
   if (!errors || errors.length === 0) return
 
   throw createScriptServerCompilationError(
-    `Failed to ${operation} module ${resolvedPath}.\n\n${errors[0].message ?? 'Unknown error'}`,
+    `Failed to ${operation} module ${resolvedPath}. ${errors[0].message ?? 'Unknown error'}`,
     {
       code: 'MODULE_TRANSFORM_FAILED',
     },
@@ -516,7 +516,7 @@ function toTransformFailedError(
   if (isScriptServerCompilationError(error)) return error
 
   return createScriptServerCompilationError(
-    `Failed to transform module ${resolvedPath}.\n\n${formatUnknownError(error)}`,
+    `Failed to transform module ${resolvedPath}. ${formatUnknownError(error)}`,
     {
       cause: error,
       code: 'MODULE_TRANSFORM_FAILED',
