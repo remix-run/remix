@@ -40,14 +40,14 @@ export type TrackedResolution = RelativeImportResolution & {
 
 export type ResolvedModule = {
   deps: string[]
-  fingerprint: string
+  fingerprint: string | null
   identityPath: string
   imports: ResolvedImport[]
   trackedFiles: string[]
   trackedResolutions: TrackedResolution[]
   rawCode: string
   resolvedPath: string
-  sourcemap: string | null
+  sourceMap: string | null
   stableUrlPathname: string
 }
 
@@ -212,7 +212,7 @@ export async function resolveModule(
       trackedResolutions,
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,
-      sourcemap: transformed.sourcemap,
+      sourceMap: transformed.sourceMap,
       stableUrlPathname: transformed.stableUrlPathname,
     },
   }

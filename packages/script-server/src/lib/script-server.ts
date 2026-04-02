@@ -73,7 +73,7 @@ export interface ScriptServerOptions {
    */
   sourceMaps?: 'inline' | 'external'
   /**
-   * Controls the source paths written into sourcemap `sources`.
+   * Controls the source paths written into source map `sources`.
    * - `'url'` (default): use the stable server path (e.g. `'/scripts/app/entry.ts'`)
    * - `'absolute'`: use the original filesystem path on disk
    */

@@ -27,14 +27,12 @@ import type { ModuleWatchEvent as StoreModuleWatchEvent } from './store.ts'
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
-import type { EmittedModule } from './emit.ts'
+import type { EmittedAsset, EmittedModule } from './emit.ts'
 
 type ModuleCompileResult = {
-  compiledCode: string
-  compiledHash: string
-  fingerprint: string
-  sourcemap: string | null
-  sourcemapHash: string | null
+  code: EmittedAsset
+  fingerprint: string | null
+  sourceMap: EmittedAsset | null
 }
 
 type ModuleCompilerOptions = {
@@ -375,11 +373,9 @@ async function mapWithConcurrency<item, result>(
 
 function toModuleCompileResult(emittedModule: EmittedModule): ModuleCompileResult {
   return {
-    compiledCode: emittedModule.compiledCode,
-    compiledHash: emittedModule.compiledHash,
+    code: emittedModule.code,
     fingerprint: emittedModule.fingerprint,
-    sourcemap: emittedModule.sourcemap,
-    sourcemapHash: emittedModule.sourcemapHash,
+    sourceMap: emittedModule.sourceMap,
   }
 }
 
@@ -445,15 +441,15 @@ export function createResponseForModule(
   let contentType: string
 
   if (options.isSourceMapRequest) {
-    if (!result.sourcemap) {
+    if (!result.sourceMap) {
       return new Response('Not found', { status: 404 })
     }
-    body = options.method === 'HEAD' ? null : result.sourcemap
-    etag = `W/"${result.sourcemapHash ?? result.compiledHash}"`
+    body = options.method === 'HEAD' ? null : result.sourceMap.content
+    etag = result.sourceMap.etag
     contentType = 'application/json; charset=utf-8'
   } else {
-    body = options.method === 'HEAD' ? null : result.compiledCode
-    etag = `W/"${result.compiledHash}"`
+    body = options.method === 'HEAD' ? null : result.code.content
+    etag = result.code.etag
     contentType = 'application/javascript; charset=utf-8'
   }
 

@@ -48,12 +48,12 @@ export function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: 
 }
 
 export function rewriteSourceMapSources(
-  sourcemap: string,
+  sourceMap: string,
   resolvedPath: string,
   stableUrlPathname: string,
   sourceMapSourcePaths: 'absolute' | 'url',
 ): string {
-  let json = JSON.parse(sourcemap) as { sources?: string[] }
+  let json = JSON.parse(sourceMap) as { sources?: string[] }
   json.sources = [
     sourceMapSourcePaths === 'absolute' ? normalizeFilePath(resolvedPath) : stableUrlPathname,
   ]

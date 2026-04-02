@@ -7,6 +7,13 @@ export async function hashContent(content: string): Promise<string> {
   return Buffer.from(hashBuffer).toString('base64url').slice(0, 6)
 }
 
+export async function generateFingerprint(options: {
+  buildId: string
+  content: string
+}): Promise<string> {
+  return hashContent(JSON.stringify([options.content, options.buildId]))
+}
+
 export function parseFingerprintSuffix(pathname: string): {
   pathname: string
   requestedFingerprint: string | null

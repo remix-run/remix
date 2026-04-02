@@ -13,7 +13,7 @@ import {
   isScriptServerCompilationError,
 } from './compilation-error.ts'
 import type { ScriptServerCompilationError } from './compilation-error.ts'
-import { hashContent } from './fingerprint.ts'
+import { generateFingerprint } from './fingerprint.ts'
 import { normalizeFilePath } from './paths.ts'
 import type { CompiledRoutes } from './routes.ts'
 import type { ScriptServerTarget } from './script-server.ts'
@@ -48,13 +48,13 @@ type UnresolvedImport = {
 }
 
 export type TransformedModule = {
-  fingerprint: string
+  fingerprint: string | null
   identityPath: string
   importerDir: string
   packageSpecifiers: string[]
   rawCode: string
   resolvedPath: string
-  sourcemap: string | null
+  sourceMap: string | null
   stableUrlPathname: string
   trackedFiles: string[]
   unresolvedImports: UnresolvedImport[]
@@ -200,9 +200,9 @@ export async function transformModule(
       )
     }
 
-    let sourcemap = analysis.sourcemap
+    let sourceMap = analysis.sourceMap
       ? rewriteSourceMapSources(
-          analysis.sourcemap,
+          analysis.sourceMap,
           resolvedPath,
           stableUrlPathname,
           args.sourceMapSourcePaths,
@@ -212,7 +212,13 @@ export async function transformModule(
     return {
       ok: true,
       value: {
-        fingerprint: await hashContent(sourceText + '\0' + (args.buildId ?? '')),
+        fingerprint:
+          args.buildId === null
+            ? null
+            : await generateFingerprint({
+                buildId: args.buildId,
+                content: sourceText,
+              }),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
@@ -220,7 +226,7 @@ export async function transformModule(
           .map((unresolved) => unresolved.specifier),
         rawCode: analysis.rawCode,
         resolvedPath,
-        sourcemap,
+        sourceMap,
         stableUrlPathname,
         trackedFiles,
         unresolvedImports: analysis.unresolvedImports,
@@ -285,23 +291,23 @@ async function analyzeModuleSource(
   }
 
   let rawCode = transformResult.code.trimEnd()
-  let sourcemap = stringifySourceMap(transformResult.map)
+  let sourceMap = stringifySourceMap(transformResult.map)
 
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)
     rawCode = minifyResult.code.trimEnd()
     let minifyMap = stringifySourceMap(minifyResult.map)
-    sourcemap =
+    sourceMap =
       minifyMap == null
-        ? sourcemap
-        : sourcemap == null
+        ? sourceMap
+        : sourceMap == null
           ? minifyMap
-          : composeSourceMaps(minifyMap, sourcemap)
+          : composeSourceMaps(minifyMap, sourceMap)
   }
 
   return {
     rawCode,
-    sourcemap,
+    sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
   }
 }

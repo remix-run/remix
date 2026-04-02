@@ -9,13 +9,16 @@ import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps } from './source-maps.ts'
 import type { ScriptServerCompilationError } from './compilation-error.ts'
 
+export type EmittedAsset = {
+  content: string
+  etag: string
+}
+
 export type EmittedModule = {
-  compiledCode: string
-  compiledHash: string
-  fingerprint: string
+  code: EmittedAsset
+  fingerprint: string | null
   importUrls: string[]
-  sourcemap: string | null
-  sourcemapHash: string | null
+  sourceMap: EmittedAsset | null
 }
 
 type EmitResult =
@@ -42,9 +45,9 @@ export async function emitResolvedModule(
     let rewriteResult = await rewriteImports(resolvedModule, options)
     let finalCode = rewriteResult.code
 
-    if (rewriteResult.sourcemap) {
+    if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
-        let encoded = Buffer.from(rewriteResult.sourcemap).toString('base64')
+        let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
         finalCode += `\n//# sourceMappingURL=${await options.getServedUrl(resolvedModule.identityPath)}.map`
@@ -54,12 +57,10 @@ export async function emitResolvedModule(
     return {
       ok: true,
       value: {
-        compiledCode: finalCode,
-        compiledHash: await hashContent(finalCode),
+        code: await createEmittedAsset(finalCode),
         fingerprint: resolvedModule.fingerprint,
         importUrls,
-        sourcemap: rewriteResult.sourcemap,
-        sourcemapHash: rewriteResult.sourcemap ? await hashContent(rewriteResult.sourcemap) : null,
+        sourceMap: rewriteResult.sourceMap ? await createEmittedAsset(rewriteResult.sourceMap) : null,
       },
     }
   } catch (error) {
@@ -75,7 +76,7 @@ async function rewriteImports(
   options: {
     getServedUrl(identityPath: string): Promise<string>
   },
-): Promise<{ code: string; sourcemap: string | null }> {
+): Promise<{ code: string; sourceMap: string | null }> {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
   for (let imported of resolvedModule.imports) {
@@ -88,15 +89,22 @@ async function rewriteImports(
   }
 
   let code = rewrittenSource.toString()
-  let sourcemap =
-    resolvedModule.sourcemap && resolvedModule.imports.length > 0
+  let sourceMap =
+    resolvedModule.sourceMap && resolvedModule.imports.length > 0
       ? composeSourceMaps(
           rewrittenSource.generateMap({ hires: true }).toString(),
-          resolvedModule.sourcemap,
+          resolvedModule.sourceMap,
         )
-      : resolvedModule.sourcemap
+      : resolvedModule.sourceMap
 
-  return { code, sourcemap }
+  return { code, sourceMap }
+}
+
+async function createEmittedAsset(content: string): Promise<EmittedAsset> {
+  return {
+    content,
+    etag: `W/"${await hashContent(content)}"`,
+  }
 }
 
 function toEmitError(error: unknown, identityPath: string): ScriptServerCompilationError {
