@@ -17,7 +17,7 @@ bench('href > complex route', () => {
 }).types([1252, 'instantiations'])
 
 bench('href > mediarss', async () => {
-  let { patterns } = await import('../patterns/mediarss.ts')
+  let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForHrefParams(patterns)
 }).types([13867, 'instantiations'])
 
@@ -25,7 +25,7 @@ bench('href > mediarss', async () => {
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('href > shopify', async () => {
-//   let { patterns } = await import('../patterns/shopify.ts')
+//   let { patterns } = await import('../../patterns/shopify.ts')
 //   eagerlyEvaluateTypesForHrefParams(patterns)
 // }).types([1540592, 'instantiations'])
 
