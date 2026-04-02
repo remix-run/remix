@@ -152,7 +152,8 @@ function resolveConfig(
         }
       : undefined,
     setup: cliValues.setup ?? fileConfig.setup,
-    reporter: cliValues.reporter ?? fileConfig.reporter ?? 'spec',
+    reporter:
+      cliValues.reporter ?? fileConfig.reporter ?? (process.env.CI === 'true' ? 'dot' : 'spec'),
     watch: cliValues.watch ?? fileConfig.watch,
   }
 }
