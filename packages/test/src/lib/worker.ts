@@ -1,9 +1,18 @@
+import { register } from 'node:module'
 import { workerData, parentPort } from 'node:worker_threads'
-import { tsImport } from 'tsx/esm/api'
 import { runTests, type TestResults } from './executor.ts'
 
+// Register our coverage-friendly TypeScript loader. It replaces tsx's minified
+// transformation with a non-minified esbuild transform so V8 coverage byte
+// offsets align with readable source lines. This hook runs before the
+// inherited tsx hook (hooks are LIFO), so it intercepts .ts imports and
+// short-circuits before tsx transforms them.
+if (workerData.coverage) {
+  register(new URL('./coverage-loader.ts', import.meta.url), import.meta.url)
+}
+
 try {
-  await tsImport(workerData.file, import.meta.url)
+  await import(workerData.file)
 
   let results = await runTests()
   parentPort!.postMessage(results)

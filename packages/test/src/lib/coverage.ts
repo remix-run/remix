@@ -6,6 +6,7 @@ import type { createCoverageMap as CreateCoverageMap } from 'istanbul-lib-covera
 import type { createContext as CreateContext } from 'istanbul-lib-report'
 import type IstanbulReports from 'istanbul-reports'
 import { colors } from './utils.ts'
+import { transformTypeScript } from './ts-transform.ts'
 
 // Istanbul packages are loaded lazily so that FORCE_COLOR can be set based on
 // the actual TTY state before supports-color caches its detection result.
@@ -193,7 +194,18 @@ export async function collectServerCoverageMap(
       if (testFiles.has(filePath)) continue
 
       try {
-        let converter = new V8ToIstanbul(filePath)
+        // When our coverage-loader transforms TypeScript files, V8 tracks coverage
+        // using byte offsets from the transformed (non-minified) JavaScript, not
+        // the TypeScript source. We re-transform with the same options used in
+        // coverage-loader.ts so byte offsets align, then pass the result with its
+        // inline source map to v8-to-istanbul to remap JS offsets → TS lines.
+        let sources: { source: string } | undefined
+        if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+          let tsSource = await fsp.readFile(filePath, 'utf-8')
+          let { code } = await transformTypeScript(tsSource, filePath)
+          sources = { source: code }
+        }
+        let converter = new V8ToIstanbul(filePath, undefined, sources)
         await converter.load()
         converter.applyCoverage(entry.functions)
         coverageMap.merge(converter.toIstanbul())

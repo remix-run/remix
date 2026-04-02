@@ -1422,6 +1422,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../node-fetch-server
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
       istanbul-lib-coverage:
         specifier: ^3.2.2
         version: 3.2.2

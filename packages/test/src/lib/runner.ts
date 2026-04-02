@@ -61,7 +61,7 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) => runFileInWorker(file, type, (results) => accumulate(results, file)),
+      (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
       () => counts.failed++,
     )
 
@@ -135,6 +135,7 @@ function runFileInWorker(
             workerData: {
               file: pathToFileURL(file).href,
               type,
+              coverage: options.coverage,
               open: options.open,
               playwrightUseOpts: options.playwrightUseOpts,
             },

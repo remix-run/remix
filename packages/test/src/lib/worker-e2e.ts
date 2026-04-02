@@ -20,6 +20,7 @@ try {
       createServer,
       open: workerData.open,
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
+      coverage: workerData.coverage,
     })
     parentPort!.postMessage(results)
     if (workerData.open) {
