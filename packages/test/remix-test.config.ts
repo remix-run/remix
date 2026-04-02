@@ -1,4 +1,3 @@
-import { devices } from '@playwright/test'
 import type { RemixTestConfig } from './src'
 
 export default {
@@ -6,11 +5,11 @@ export default {
     projects: [
       {
         name: 'chromium',
-        use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
+        use: { browserName: 'chromium' },
       },
       {
         name: 'firefox',
-        use: { ...devices['Desktop Firefox'], browserName: 'firefox' },
+        use: { browserName: 'firefox' },
       },
     ],
   },

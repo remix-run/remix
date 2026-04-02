@@ -51,6 +51,7 @@
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
+    "playwright": "^1.59.0",
     "tsx": "^4.21.0"
   },
   "peerDependencies": {
@@ -62,7 +63,6 @@
     }
   },
   "devDependencies": {
-    "@playwright/test": "catalog:",
     "@remix-run/assert": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
