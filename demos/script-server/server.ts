@@ -19,7 +19,7 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`script-server demo is running on http://localhost:${port}`)
-  console.log('Edit a client file and refresh to verify the server process stays running.')
+  console.log('Edit a client file and refresh to verify the client code updates.')
 })
 
 let shuttingDown = false
