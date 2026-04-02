@@ -57,6 +57,7 @@ async function loadTypedocJson(opts: {
         blockTags: [...typedoc.OptionDefaults.blockTags, '@alias'],
         // Tag to use in source code links
         gitRevision: opts.tag,
+        skipErrorChecking: true,
         // exclude test files via the build config
         tsconfig: 'tsconfig.build.json',
         validation: {
