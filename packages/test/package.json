@@ -66,6 +66,7 @@
     "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "decamelize": "^6.0.1",
     "playwright": "catalog:"
   },
   "keywords": [
