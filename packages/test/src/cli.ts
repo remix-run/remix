@@ -63,7 +63,7 @@ async function executeRun() {
         // TODO: Do we need this?
         tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
       })
-      let result = await startServer(browserPort, browserFiles)
+      let result = await startServer(browserFiles)
       browserServer = result.server
       browserPort = result.port
     }
