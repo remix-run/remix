@@ -98,30 +98,24 @@ function registerDescribe(
  * @param name - The suite name shown in reporter output.
  * @param fn - A function that registers the tests and lifecycle hooks in this suite.
  */
-export function describe(name: string, fn: () => void): void
-/**
- * @param name - The suite name shown in reporter output.
- * @param meta - Metadata for the suite, such as skip or only flags.
- * @param fn - A function that registers the tests and lifecycle hooks in this suite.
- */
-export function describe(name: string, meta: SuiteMeta, fn: () => void): void
-export function describe(name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void): void {
-  let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
-  let suiteFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
-  registerDescribe(name, suiteFn, meta)
-}
-
-Object.assign(describe, {
-  skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
-  only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
-  todo: (name: string) => {
-    let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
-    if (rootSuites.some((s) => s.name === fullName)) {
-      throw new Error(`Duplicate suite name: "${fullName}"`)
-    }
-    rootSuites.push({ name: fullName, tests: [], todo: true })
+export const describe = Object.assign(
+  (name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void) => {
+    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+    let suiteFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+    registerDescribe(name, suiteFn, meta)
   },
-})
+  {
+    skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
+    only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
+    todo: (name: string) => {
+      let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+      if (rootSuites.some((s) => s.name === fullName)) {
+        throw new Error(`Duplicate suite name: "${fullName}"`)
+      }
+      rootSuites.push({ name: fullName, tests: [], todo: true })
+    },
+  },
+)
 
 type SuiteMeta = { skip?: boolean; only?: boolean }
 type TestMeta = { skip?: boolean; only?: boolean }
@@ -153,30 +147,24 @@ function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: b
  * @param name - The test name shown in reporter output.
  * @param fn - The test body, receiving a {@link TestContext} as its first argument.
  */
-export function it(name: string, fn: TestFn): void
-/**
- * @param name - The test name shown in reporter output.
- * @param meta - Metadata for the test, such as skip or only flags.
- * @param fn - The test body, receiving a {@link TestContext} as its first argument.
- */
-export function it(name: string, meta: TestMeta, fn: TestFn): void
-export function it(name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn): void {
-  let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
-  let testFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
-  registerIt(name, testFn, meta)
-}
-
-Object.assign(it, {
-  skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
-  only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
-  todo: (name: string) => {
-    let suite = currentSuite ?? getImplicitRootSuite()
-    if (suite.tests.some((t) => t.name === name)) {
-      throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
-    }
-    suite.tests.push({ name, fn: () => {}, suite, todo: true })
+export const it = Object.assign(
+  (name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn) => {
+    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+    let testFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+    registerIt(name, testFn, meta)
   },
-})
+  {
+    skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
+    only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
+    todo: (name: string) => {
+      let suite = currentSuite ?? getImplicitRootSuite()
+      if (suite.tests.some((t) => t.name === name)) {
+        throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
+      }
+      suite.tests.push({ name, fn: () => {}, suite, todo: true })
+    },
+  },
+)
 
 /** Alias for {@link describe}. */
 export const suite = describe
