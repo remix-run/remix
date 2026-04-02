@@ -18,7 +18,7 @@ bench('match > complex route', () => {
 }).types([971, 'instantiations'])
 
 bench('match > mediarss', async () => {
-  let { patterns } = await import('../patterns/mediarss.ts')
+  let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForMatchParams(patterns)
 }).types([12253, 'instantiations'])
 
@@ -26,7 +26,7 @@ bench('match > mediarss', async () => {
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('match > shopify', async () => {
-//   let { patterns } = await import('../patterns/shopify.ts')
+//   let { patterns } = await import('../../patterns/shopify.ts')
 //   eagerlyEvaluateTypesForMatchParams(patterns)
 // }).types([1444090, 'instantiations'])
 

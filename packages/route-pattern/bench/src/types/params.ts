@@ -14,7 +14,7 @@ bench('complex > Params', () => {
 }).types([1083, 'instantiations'])
 
 bench('mediarss > Params', async () => {
-  let { patterns } = await import('../patterns/mediarss.ts')
+  let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForParams(patterns)
 }).types([12140, 'instantiations'])
 
@@ -22,7 +22,7 @@ bench('mediarss > Params', async () => {
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('shopify > Params', async () => {
-//   let { patterns } = await import('../patterns/shopify.ts')
+//   let { patterns } = await import('../../patterns/shopify.ts')
 //   eagerlyEvaluateTypesForParams(patterns)
 // }).types([1424185, 'instantiations'])
 
