@@ -1,5 +1,5 @@
-import { describe, it } from 'node:test'
-import assert from 'node:assert/strict'
+import { describe, it } from '@remix-run/test'
+import assert from '@remix-run/assert'
 import { createContextKey, RequestContext } from './request-context.ts'
 
 describe('new RequestContext()', () => {

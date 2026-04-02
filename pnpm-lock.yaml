@@ -259,6 +259,12 @@ importers:
         specifier: workspace:^
         version: link:../fetch-router
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -275,6 +281,9 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/auth-middleware':
         specifier: workspace:*
         version: link:../auth-middleware
@@ -290,6 +299,9 @@ importers:
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -306,12 +318,18 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -465,6 +483,12 @@ importers:
         specifier: workspace:^
         version: link:../response
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -478,6 +502,12 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -491,6 +521,12 @@ importers:
         specifier: workspace:^
         version: link:../fetch-router
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -507,6 +543,12 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -523,6 +565,9 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
@@ -532,6 +577,9 @@ importers:
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -545,6 +593,12 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -554,6 +608,12 @@ importers:
 
   packages/data-table:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -573,6 +633,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -589,6 +655,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -608,6 +680,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -627,6 +705,12 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -640,9 +724,15 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -767,9 +857,15 @@ importers:
         specifier: workspace:^
         version: link:../lazy-file
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/form-data-parser':
         specifier: workspace:*
         version: link:../form-data-parser
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -786,6 +882,12 @@ importers:
         specifier: ^1.0.20
         version: 1.0.20
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -802,6 +904,12 @@ importers:
         specifier: workspace:^
         version: link:../form-data-parser
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -815,9 +923,15 @@ importers:
         specifier: workspace:^
         version: link:../multipart-parser
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -856,6 +970,12 @@ importers:
         specifier: workspace:^
         version: link:../mime
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -865,6 +985,12 @@ importers:
 
   packages/headers:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -874,6 +1000,12 @@ importers:
 
   packages/html-template:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -887,6 +1019,12 @@ importers:
         specifier: workspace:^
         version: link:../mime
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -900,6 +1038,12 @@ importers:
         specifier: workspace:^
         version: link:../fetch-router
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -913,9 +1057,15 @@ importers:
         specifier: workspace:^
         version: link:../fetch-router
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -925,6 +1075,12 @@ importers:
 
   packages/mime:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -941,6 +1097,12 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1042,6 +1204,12 @@ importers:
 
   packages/node-fetch-server:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1217,9 +1385,15 @@ importers:
         specifier: workspace:^
         version: link:../mime
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../lazy-file
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1229,6 +1403,12 @@ importers:
 
   packages/route-pattern:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1260,6 +1440,12 @@ importers:
 
   packages/session:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1279,9 +1465,15 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1295,6 +1487,12 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1308,6 +1506,12 @@ importers:
         specifier: workspace:^
         version: link:../session
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1336,12 +1540,18 @@ importers:
         specifier: workspace:^
         version: link:../response
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1370,9 +1580,15 @@ importers:
 
   packages/tar-parser:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/fs':
         specifier: workspace:*
         version: link:../fs
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1429,6 +1645,12 @@ importers:
       '@octokit/request':
         specifier: ^9.1.3
         version: 9.1.3
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../packages/assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../packages/test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

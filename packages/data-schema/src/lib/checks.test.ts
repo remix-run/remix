@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { email, max, maxLength, min, minLength, url } from './checks.ts'
 import { number, string } from './schema.ts'

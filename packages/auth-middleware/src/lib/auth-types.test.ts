@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import {
   createRouter,

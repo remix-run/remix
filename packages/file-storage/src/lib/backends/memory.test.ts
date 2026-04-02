@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { parseFormData } from '@remix-run/form-data-parser'
 
 import { createMemoryFileStorage } from './memory.ts'

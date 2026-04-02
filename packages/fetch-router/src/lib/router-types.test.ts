@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import type { BuildAction, Controller } from './controller.ts'
 import type { Middleware } from './middleware.ts'
