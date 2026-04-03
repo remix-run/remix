@@ -55,6 +55,7 @@ export interface OAuthTransaction {
   state: string
   codeVerifier: string
   returnTo?: string
+  providerState?: string
 }
 
 export interface OAuthProviderRuntime<profile, provider extends string = string> {

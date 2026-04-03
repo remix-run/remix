@@ -2,9 +2,9 @@ import * as assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 
 import { createCookie } from '@remix-run/cookie'
-import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import { createRouter } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 
@@ -20,8 +20,7 @@ describe('atmosphere provider', () => {
 
   it('resolves a handle through DNS-over-HTTPS, performs PAR with DPoP, and completes the callback', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
-    let sessionStorage = createMemorySessionStorage()
-    let fileStorage = createMemoryFileStorage()
+    let sessionStorage = createCookieSessionStorage()
     let dnsRequests = 0
     let parRequests = 0
     let tokenRequests = 0
@@ -71,7 +70,9 @@ describe('atmosphere provider', () => {
       }
 
       if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
-        return Response.json(createAtmosphereAuthorizationServerMetadata('https://auth.example.com'))
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
       }
 
       if (url.toString() === 'https://auth.example.com/oauth/par') {
@@ -158,7 +159,7 @@ describe('atmosphere provider', () => {
         let provider = await createAtmosphereAuthProvider(identifier, {
           clientId: 'https://app.example.com/oauth/client-metadata.json',
           redirectUri: 'https://app.example.com/auth/atmosphere/callback',
-          fileStorage,
+          sessionSecret: 'atmosphere-session-secret',
           scopes: ['atproto', 'transition:generic'],
         })
 
@@ -170,7 +171,7 @@ describe('atmosphere provider', () => {
         let provider = await createAtmosphereAuthProvider(identifier, {
           clientId: 'https://app.example.com/oauth/client-metadata.json',
           redirectUri: 'https://app.example.com/auth/atmosphere/callback',
-          fileStorage,
+          sessionSecret: 'atmosphere-session-secret',
           scopes: ['atproto', 'transition:generic'],
         })
         let { result } = await finishExternalAuth(provider, context)
@@ -180,16 +181,34 @@ describe('atmosphere provider', () => {
       let loginResponse = await router.fetch(
         'https://app.example.com/login/atmosphere?account=alice.example.com',
       )
-      let inspectResponse = await router.fetch(createRequest('https://app.example.com/inspect', loginResponse))
+      let inspectResponse = await router.fetch(
+        createRequest('https://app.example.com/inspect', loginResponse),
+      )
       let transaction = await inspectResponse.json()
       let location = new URL(loginResponse.headers.get('Location')!)
-      let filesAfterStart = await fileStorage.list({ prefix: 'atmosphere/' })
+      let cookieHeader = loginResponse.headers
+        .getSetCookie()
+        .map((value) => value.split(';', 1)[0])
+        .join('; ')
+      let serializedSession = await cookie.parse(cookieHeader)
+      let storedSession = JSON.parse(serializedSession!) as {
+        i: string
+        d: [Record<string, unknown>, Record<string, unknown>]
+      }
+      let storedTransaction = storedSession.d[0].__auth as Record<string, unknown>
 
       assert.equal(loginResponse.status, 302)
-      assert.equal(location.toString(), 'https://auth.example.com/oauth/authorize?client_id=https%3A%2F%2Fapp.example.com%2Foauth%2Fclient-metadata.json&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Apar-1')
+      assert.equal(
+        location.toString(),
+        'https://auth.example.com/oauth/authorize?client_id=https%3A%2F%2Fapp.example.com%2Foauth%2Fclient-metadata.json&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Apar-1',
+      )
       assert.equal(transaction.provider, 'atmosphere')
       assert.equal(typeof transaction.codeVerifier, 'string')
-      assert.equal(filesAfterStart.files.length, 1)
+      assert.equal(typeof transaction.providerState, 'string')
+      assert.equal(typeof storedTransaction.providerState, 'string')
+      assert.equal(serializedSession!.includes('did:plc:alice'), false)
+      assert.equal(serializedSession!.includes('authorizationServerNonce'), false)
+      assert.equal(serializedSession!.includes('privateJwk'), false)
       assert.equal(dnsRequests, 1)
       assert.equal(parRequests, 2)
 
@@ -199,10 +218,8 @@ describe('atmosphere provider', () => {
           loginResponse,
         ),
       )
-      let filesAfterCallback = await fileStorage.list({ prefix: 'atmosphere/' })
 
       assert.equal(tokenRequests, 1)
-      assert.equal(filesAfterCallback.files.length, 0)
       assert.deepEqual(await callbackResponse.json(), {
         provider: 'atmosphere',
         account: {
@@ -230,7 +247,6 @@ describe('atmosphere provider', () => {
   it('supports loopback clients and falls back to HTTPS handle resolution when DNS does not return a DID', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let sessionStorage = createMemorySessionStorage()
-    let fileStorage = createMemoryFileStorage()
     let dnsRequests = 0
     let httpsHandleRequests = 0
     let parClientId: string | undefined
@@ -272,7 +288,9 @@ describe('atmosphere provider', () => {
       }
 
       if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
-        return Response.json(createAtmosphereAuthorizationServerMetadata('https://auth.example.com'))
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
       }
 
       if (url.toString() === 'https://auth.example.com/oauth/par') {
@@ -308,14 +326,16 @@ describe('atmosphere provider', () => {
         let provider = await createAtmosphereAuthProvider(identifier, {
           clientId: 'http://localhost',
           redirectUri: 'http://127.0.0.1:43123/callback',
-          fileStorage,
+          sessionSecret: 'atmosphere-session-secret',
           scopes: ['atproto', 'transition:generic'],
         })
 
         return startExternalAuth(provider, context)
       })
 
-      let response = await router.fetch('https://app.example.com/login/atmosphere?account=bob.example.com')
+      let response = await router.fetch(
+        'https://app.example.com/login/atmosphere?account=bob.example.com',
+      )
       let location = new URL(response.headers.get('Location')!)
 
       assert.equal(response.status, 302)
@@ -323,7 +343,10 @@ describe('atmosphere provider', () => {
       assert.equal(httpsHandleRequests, 1)
       assert.equal(location.origin, 'https://auth.example.com')
       assert.equal(location.pathname, '/oauth/authorize')
-      assert.equal(location.searchParams.get('request_uri'), 'urn:ietf:params:oauth:request_uri:par-loopback')
+      assert.equal(
+        location.searchParams.get('request_uri'),
+        'urn:ietf:params:oauth:request_uri:par-loopback',
+      )
 
       let normalizedClientId = new URL(parClientId!)
       assert.equal(normalizedClientId.origin, 'http://localhost')
@@ -337,14 +360,12 @@ describe('atmosphere provider', () => {
   })
 
   it('rejects localhost loopback redirect URIs', async () => {
-    let fileStorage = createMemoryFileStorage()
-
     await assert.rejects(
       () =>
         createAtmosphereAuthProvider('did:plc:alice', {
           clientId: 'http://localhost',
           redirectUri: 'http://localhost:3000/callback',
-          fileStorage,
+          sessionSecret: 'atmosphere-session-secret',
         }),
       /127\.0\.0\.1 or \[::1\], not localhost/,
     )
@@ -382,7 +403,10 @@ function toRequestUrl(input: RequestInfo | URL): URL {
   return new URL(input.url)
 }
 
-function decodeJwt(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
+function decodeJwt(token: string): {
+  header: Record<string, unknown>
+  payload: Record<string, unknown>
+} {
   let [header, payload] = token.split('.')
   return {
     header: JSON.parse(decodeBase64Url(header)),

@@ -5,7 +5,7 @@ import { createCookie } from 'remix/cookie'
 import { Session } from 'remix/session'
 import { createFsSessionStorage } from 'remix/session/fs-storage'
 
-const sessionSecret = process.env.SESSION_SECRET ?? 'social-auth-demo-secret'
+export const sessionSecret = process.env.SESSION_SECRET ?? 'social-auth-demo-secret'
 const demoRootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const sessionDirectoryPath = path.join(demoRootPath, 'tmp', 'sessions')
 

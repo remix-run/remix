@@ -264,6 +264,7 @@ When one of the built-in providers matches your auth provider, start there. Goog
 ```ts
 import {
   createAuth0AuthProvider,
+  createAtmosphereAuthProvider,
   createFacebookAuthProvider,
   createGitHubAuthProvider,
   createGoogleAuthProvider,
@@ -277,6 +278,12 @@ let auth0Provider = createAuth0AuthProvider({
   clientId: env.AUTH0_CLIENT_ID,
   clientSecret: env.AUTH0_CLIENT_SECRET,
   redirectUri: new URL('/auth/auth0/callback', env.APP_ORIGIN),
+})
+
+let atmosphereProvider = await createAtmosphereAuthProvider('alice.example.com', {
+  clientId: new URL('/oauth/client-metadata.json', env.APP_ORIGIN),
+  redirectUri: new URL('/auth/atmosphere/callback', env.APP_ORIGIN),
+  sessionSecret: env.SESSION_SECRET,
 })
 
 let facebookProvider = createFacebookAuthProvider({
@@ -327,6 +334,8 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
+- `createAtmosphereAuthProvider()` resolves the target atproto account before redirecting, so recreate it with the same handle or DID when you enter the callback route
+- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
 Default scopes for OAuth providers that don't use OIDC discovery:

@@ -1,12 +1,7 @@
-import type { FileStorage } from '@remix-run/file-storage'
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type { OAuthProvider, OAuthResult, OAuthTokens } from '../provider.ts'
-import {
-  createAuthorizationURL,
-  createOAuthProvider,
-  getAuthorizationCode,
-} from '../provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthTokens, OAuthTransaction } from '../provider.ts'
+import { createAuthorizationURL, createOAuthProvider, getAuthorizationCode } from '../provider.ts'
 import { createCodeChallenge, getRequiredSearchParam } from '../utils.ts'
 
 const ATMOSPHERE_PROVIDER_NAME = 'atmosphere'
@@ -27,8 +22,7 @@ const DISALLOWED_HANDLE_TLDS = new Set([
   'onion',
 ])
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
-const HANDLE_REGEX =
-  /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/
+const HANDLE_REGEX = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/
 
 /**
  * Profile returned by the built-in Atmosphere auth provider.
@@ -118,8 +112,8 @@ export interface AtmosphereAuthProviderOptions<
   clientId: string | URL
   /** Redirect URI registered for the client metadata document. */
   redirectUri: string | URL
-  /** Storage used to persist per-session DPoP state between redirect steps. */
-  fileStorage: FileStorage
+  /** Secret used to encrypt per-flow DPoP state stored in the OAuth transaction session value. */
+  sessionSecret: string
   /** Requested atproto OAuth scopes. Must include `atproto`. */
   scopes?: string[]
   /** Additional authorization parameters included in the pushed authorization request. */
@@ -190,7 +184,7 @@ interface AtmosphereTokenResponse {
  * same value in the callback route before calling `finishExternalAuth()`.
  *
  * @param handleOrDid The account handle or DID to resolve before starting auth.
- * @param options Atmosphere client configuration, storage, and optional profile mapping hooks.
+ * @param options Atmosphere client configuration, session encryption secret, and optional profile mapping hooks.
  * @returns A provider that can be passed to `startExternalAuth()` and `finishExternalAuth()`.
  */
 export async function createAtmosphereAuthProvider<
@@ -201,11 +195,8 @@ export async function createAtmosphereAuthProvider<
 ): Promise<OAuthProvider<profile, 'atmosphere'>> {
   let identifier = normalizeAtmosphereIdentifier(handleOrDid)
   let scopes = normalizeAtmosphereScopes(options.scopes)
-  let client = normalizeAtmosphereClientConfiguration(
-    options.clientId,
-    options.redirectUri,
-    scopes,
-  )
+  let sessionSecret = normalizeAtmosphereSessionSecret(options.sessionSecret)
+  let client = normalizeAtmosphereClientConfiguration(options.clientId, options.redirectUri, scopes)
   let identity = await resolveAtmosphereIdentity(identifier)
   let authorizationServer = await discoverAuthorizationServer(
     identity.pdsUrl,
@@ -264,12 +255,19 @@ export async function createAtmosphereAuthProvider<
         fallbackError: 'Atmosphere pushed authorization request failed.',
       })
 
-      if (typeof parResponse.json.request_uri !== 'string' || parResponse.json.request_uri.length === 0) {
+      if (
+        typeof parResponse.json.request_uri !== 'string' ||
+        parResponse.json.request_uri.length === 0
+      ) {
         throw new Error('Atmosphere PAR response did not include a request_uri.')
       }
 
       stateFile.authorizationServerNonce = parResponse.nonce
-      await writeAtmosphereSessionState(options.fileStorage, transaction.state, stateFile)
+      transaction.providerState = await writeAtmosphereSessionState(
+        sessionSecret,
+        transaction.state,
+        stateFile,
+      )
 
       return createAuthorizationURL(authorizationServer.authorization_endpoint, {
         client_id: client.clientId,
@@ -278,68 +276,64 @@ export async function createAtmosphereAuthProvider<
     },
     async handleCallback(context, transaction): Promise<OAuthResult<profile, 'atmosphere'>> {
       let callbackIssuer = getRequiredSearchParam(context, 'iss')
-      let sessionState = await readAtmosphereSessionState(options.fileStorage, transaction.state)
+      let sessionState = await readAtmosphereSessionState(sessionSecret, transaction)
 
-      try {
-        if (sessionState.did !== identity.did || sessionState.identifier !== identifier.input) {
-          throw new Error(
-            'Atmosphere callback must recreate the provider with the same handle or DID used to start the flow.',
-          )
-        }
+      if (sessionState.did !== identity.did || sessionState.identifier !== identifier.input) {
+        throw new Error(
+          'Atmosphere callback must recreate the provider with the same handle or DID used to start the flow.',
+        )
+      }
 
-        if (
-          callbackIssuer !== authorizationServer.issuer ||
-          sessionState.authorizationServer !== callbackIssuer
-        ) {
-          throw new Error(
-            'Atmosphere callback issuer did not match the resolved authorization server.',
-          )
-        }
+      if (
+        callbackIssuer !== authorizationServer.issuer ||
+        sessionState.authorizationServer !== callbackIssuer
+      ) {
+        throw new Error(
+          'Atmosphere callback issuer did not match the resolved authorization server.',
+        )
+      }
 
-        let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
-          endpoint: authorizationServer.token_endpoint,
-          body: await createAtmosphereTokenRequestBody({
-            clientId: client.clientId,
-            redirectUri: client.redirectUri,
-            code: getAuthorizationCode(context),
-            codeVerifier: transaction.codeVerifier,
-            clientAuthentication: options.clientAuthentication,
-            issuer: authorizationServer.issuer,
-          }),
-          dpopKeyPair: {
-            publicJwk: sessionState.publicJwk,
-            privateJwk: sessionState.privateJwk,
-          },
-          fallbackError: 'Atmosphere token exchange failed.',
-          nonce: sessionState.authorizationServerNonce,
-        })
-        let tokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
+      let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
+        endpoint: authorizationServer.token_endpoint,
+        body: await createAtmosphereTokenRequestBody({
+          clientId: client.clientId,
+          redirectUri: client.redirectUri,
+          code: getAuthorizationCode(context),
+          codeVerifier: transaction.codeVerifier,
+          clientAuthentication: options.clientAuthentication,
+          issuer: authorizationServer.issuer,
+        }),
+        dpopKeyPair: {
+          publicJwk: sessionState.publicJwk,
+          privateJwk: sessionState.privateJwk,
+        },
+        fallbackError: 'Atmosphere token exchange failed.',
+        nonce: sessionState.authorizationServerNonce,
+      })
+      let tokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
 
-        if (tokenResponse.json.sub !== sessionState.did) {
-          throw new Error('Atmosphere token response did not match the resolved account DID.')
-        }
+      if (tokenResponse.json.sub !== sessionState.did) {
+        throw new Error('Atmosphere token response did not match the resolved account DID.')
+      }
 
-        let profile = await mapAtmosphereProfile(options, {
-          identifier: sessionState.identifier,
-          did: sessionState.did,
-          handle: sessionState.handle,
-          pdsUrl: sessionState.pdsUrl,
-          authorizationServer,
-          tokens,
-          context,
-        })
+      let profile = await mapAtmosphereProfile(options, {
+        identifier: sessionState.identifier,
+        did: sessionState.did,
+        handle: sessionState.handle,
+        pdsUrl: sessionState.pdsUrl,
+        authorizationServer,
+        tokens,
+        context,
+      })
 
-        return {
+      return {
+        provider: ATMOSPHERE_PROVIDER_NAME,
+        account: {
           provider: ATMOSPHERE_PROVIDER_NAME,
-          account: {
-            provider: ATMOSPHERE_PROVIDER_NAME,
-            providerAccountId: sessionState.did,
-          },
-          profile,
-          tokens,
-        }
-      } finally {
-        await options.fileStorage.remove(getAtmosphereSessionKey(transaction.state))
+          providerAccountId: sessionState.did,
+        },
+        profile,
+        tokens,
       }
     },
   })
@@ -378,17 +372,10 @@ async function createAtmosphereTokenRequestBody(options: {
   })
 
   if (options.clientAuthentication != null) {
-    body.set(
-      'client_assertion_type',
-      'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-    )
+    body.set('client_assertion_type', 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
     body.set(
       'client_assertion',
-      await createClientAssertion(
-        options.clientId,
-        options.issuer,
-        options.clientAuthentication,
-      ),
+      await createClientAssertion(options.clientId, options.issuer, options.clientAuthentication),
     )
   }
 
@@ -519,11 +506,10 @@ function createJwtId(): string {
 }
 
 async function generateDpopKeyPair(): Promise<{ publicJwk: JsonWebKey; privateJwk: JsonWebKey }> {
-  let keyPair = (await crypto.subtle.generateKey(
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    true,
-    ['sign', 'verify'],
-  )) as CryptoKeyPair
+  let keyPair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair
   let publicJwk = (await crypto.subtle.exportKey('jwk', keyPair.publicKey)) as JsonWebKey
   let privateJwk = (await crypto.subtle.exportKey('jwk', keyPair.privateKey)) as JsonWebKey
 
@@ -534,13 +520,9 @@ async function generateDpopKeyPair(): Promise<{ publicJwk: JsonWebKey; privateJw
 }
 
 async function importPrivateEcKey(jwk: JsonWebKey): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign'],
-  )
+  return crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, [
+    'sign',
+  ])
 }
 
 function toPublicEcJwk(jwk: JsonWebKey): JsonWebKey {
@@ -587,11 +569,15 @@ async function discoverAuthorizationServer(
     'Failed to load Atmosphere protected resource metadata.',
   )
   let authorizationServers = Array.isArray(resourceMetadata.authorization_servers)
-    ? resourceMetadata.authorization_servers.filter((value): value is string => typeof value === 'string')
+    ? resourceMetadata.authorization_servers.filter(
+        (value): value is string => typeof value === 'string',
+      )
     : []
 
   if (authorizationServers.length === 0) {
-    throw new Error('Atmosphere protected resource metadata did not include an authorization server.')
+    throw new Error(
+      'Atmosphere protected resource metadata did not include an authorization server.',
+    )
   }
 
   let issuer = validateAuthorizationServerOrigin(authorizationServers[0])
@@ -814,7 +800,9 @@ function validateAtmosphereAuthorizationServerMetadata(
   confidential: boolean,
 ): AtmosphereAuthorizationServerMetadata {
   if (normalizeHttpsOrigin(metadata.issuer, 'Atmosphere authorization server issuer') !== issuer) {
-    throw new Error('Atmosphere authorization server metadata issuer did not match the resolved origin.')
+    throw new Error(
+      'Atmosphere authorization server metadata issuer did not match the resolved origin.',
+    )
   }
 
   ensureUrl(metadata.authorization_endpoint, issuer, 'Atmosphere authorization endpoint')
@@ -911,7 +899,9 @@ function normalizeAtmosphereClientConfiguration(
 
   if (client.origin === 'http://localhost' && client.port === '') {
     if (client.pathname !== '/' || client.hash.length > 0) {
-      throw new Error('Atmosphere loopback client_id must use http://localhost with no path or fragment.')
+      throw new Error(
+        'Atmosphere loopback client_id must use http://localhost with no path or fragment.',
+      )
     }
 
     if (!redirect.loopback) {
@@ -924,7 +914,9 @@ function normalizeAtmosphereClientConfiguration(
 
     let configuredRedirectUris = client.searchParams.getAll('redirect_uri')
     if (!configuredRedirectUris.some((value) => matchesLoopbackRedirect(value, redirect.url))) {
-      throw new Error('Atmosphere localhost client_id must declare the configured loopback redirect URI.')
+      throw new Error(
+        'Atmosphere localhost client_id must declare the configured loopback redirect URI.',
+      )
     }
 
     if (client.searchParams.get('scope') == null) {
@@ -981,12 +973,18 @@ function normalizeRedirectUri(value: string | URL): { url: URL; loopback: boolea
     }
   }
 
-  throw new Error('Atmosphere redirectUri must be https or an http loopback URL using 127.0.0.1 or [::1].')
+  throw new Error(
+    'Atmosphere redirectUri must be https or an http loopback URL using 127.0.0.1 or [::1].',
+  )
 }
 
 function matchesLoopbackRedirect(candidate: string, expected: URL): boolean {
   let url = new URL(candidate)
-  return url.protocol === expected.protocol && url.hostname === expected.hostname && url.pathname === expected.pathname
+  return (
+    url.protocol === expected.protocol &&
+    url.hostname === expected.hostname &&
+    url.pathname === expected.pathname
+  )
 }
 
 function normalizeAtmosphereScopes(scopes: string[] | undefined): string[] {
@@ -998,6 +996,16 @@ function normalizeAtmosphereScopes(scopes: string[] | undefined): string[] {
   }
 
   return Array.from(new Set(value))
+}
+
+function normalizeAtmosphereSessionSecret(secret: string): string {
+  let value = secret.trim()
+
+  if (value.length === 0) {
+    throw new Error('Atmosphere sessionSecret must not be empty.')
+  }
+
+  return value
 }
 
 function normalizeHandle(input: string): string {
@@ -1144,44 +1152,89 @@ function decodeDnsTxtRecord(value: string): string {
 }
 
 async function writeAtmosphereSessionState(
-  storage: FileStorage,
+  secret: string,
   state: string,
   value: AtmosphereSessionState,
-): Promise<void> {
-  await storage.set(
-    getAtmosphereSessionKey(state),
-    new File([JSON.stringify(value)], 'atmosphere-session.json', {
-      type: 'application/json',
-    }),
+): Promise<string> {
+  let iv = crypto.getRandomValues(new Uint8Array(12))
+  let key = await importAtmosphereSessionKey(secret)
+  let ciphertext = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv: toArrayBuffer(iv),
+      additionalData: getAtmosphereSessionAdditionalData(state),
+    },
+    key,
+    textEncoder.encode(JSON.stringify(value)),
   )
+
+  return `v1.${toBase64Url(iv)}.${toBase64Url(new Uint8Array(ciphertext))}`
 }
 
 async function readAtmosphereSessionState(
-  storage: FileStorage,
-  state: string,
+  secret: string,
+  transaction: OAuthTransaction,
 ): Promise<AtmosphereSessionState> {
-  let file = await storage.get(getAtmosphereSessionKey(state))
-
-  if (file == null) {
+  if (typeof transaction.providerState !== 'string' || transaction.providerState.length === 0) {
     throw new Error('Missing Atmosphere session state. Restart the login flow and try again.')
   }
 
-  return JSON.parse(await file.text()) as AtmosphereSessionState
+  let [version, encodedIv, encodedCiphertext, ...rest] = transaction.providerState.split('.')
+
+  if (version !== 'v1' || encodedIv == null || encodedCiphertext == null || rest.length > 0) {
+    throw new Error('Missing Atmosphere session state. Restart the login flow and try again.')
+  }
+
+  let key = await importAtmosphereSessionKey(secret)
+
+  try {
+    let plaintext = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: toArrayBuffer(fromBase64Url(encodedIv)),
+        additionalData: getAtmosphereSessionAdditionalData(transaction.state),
+      },
+      key,
+      toArrayBuffer(fromBase64Url(encodedCiphertext)),
+    )
+
+    return JSON.parse(textDecoder.decode(plaintext)) as AtmosphereSessionState
+  } catch {
+    throw new Error('Invalid Atmosphere session state. Restart the login flow and try again.')
+  }
 }
 
-function getAtmosphereSessionKey(state: string): string {
-  return `atmosphere/${state}.json`
+async function importAtmosphereSessionKey(secret: string): Promise<CryptoKey> {
+  let digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(secret))
+
+  return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt'])
+}
+
+function getAtmosphereSessionAdditionalData(state: string): ArrayBuffer {
+  return toArrayBuffer(textEncoder.encode(`atmosphere:${state}`))
 }
 
 function base64UrlEncodeJson(value: Record<string, unknown>): string {
   return toBase64Url(textEncoder.encode(JSON.stringify(value)))
 }
 
+function fromBase64Url(value: string): Uint8Array {
+  let padding = value.length % 4 === 0 ? '' : '='.repeat(4 - (value.length % 4))
+  let base64 = value.replace(/-/g, '+').replace(/_/g, '/') + padding
+
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
 function toBase64Url(bytes: Uint8Array): string {
   let text = ''
 
   for (let index = 0; index < bytes.length; index += 3) {
-    let chunk = ((bytes[index] ?? 0) << 16) | ((bytes[index + 1] ?? 0) << 8) | (bytes[index + 2] ?? 0)
+    let chunk =
+      ((bytes[index] ?? 0) << 16) | ((bytes[index + 1] ?? 0) << 8) | (bytes[index + 2] ?? 0)
 
     text += base64Chars[(chunk >> 18) & 0x3f]
     text += base64Chars[(chunk >> 12) & 0x3f]
@@ -1193,4 +1246,5 @@ function toBase64Url(bytes: Uint8Array): string {
 }
 
 const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'

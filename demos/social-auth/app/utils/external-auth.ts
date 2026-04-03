@@ -1,5 +1,3 @@
-import * as fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import {
   createAtmosphereAuthProvider,
   createGitHubAuthProvider,
@@ -14,10 +12,8 @@ import type {
   OAuthProvider,
   XAuthProfile,
 } from 'remix/auth'
-import type { FileStorage } from 'remix/file-storage'
-import { createFsFileStorage } from 'remix/file-storage/fs'
-import { createMemoryFileStorage } from 'remix/file-storage/memory'
 
+import { sessionSecret } from '../middleware/session.ts'
 import { routes } from '../routes.ts'
 
 export type ExternalProviderName = 'google' | 'github' | 'x' | 'atmosphere'
@@ -197,7 +193,7 @@ function createAtmosphereConfiguration(): AtmosphereProviderConfiguration {
   return {
     clientId: 'http://localhost',
     redirectUri: new URL(routes.auth.atmosphere.callback.href(), getDemoOrigin()),
-    fileStorage: createAtmosphereFileStorage(),
+    sessionSecret,
     scopes: ['atproto'],
   }
 }
@@ -243,14 +239,4 @@ function readProviderCredentials(
 
 function toOriginString(origin: string | URL): string {
   return typeof origin === 'string' ? origin : origin.toString()
-}
-
-function createAtmosphereFileStorage(): FileStorage {
-  if (process.env.NODE_ENV === 'test') {
-    return createMemoryFileStorage()
-  }
-
-  let directoryPath = fileURLToPath(new URL('../../tmp/atmosphere/', import.meta.url))
-  fs.mkdirSync(directoryPath, { recursive: true })
-  return createFsFileStorage(directoryPath)
 }

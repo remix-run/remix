@@ -242,7 +242,10 @@ describe('social-auth router', () => {
       if (url.href === 'https://auth.demo.example.com/oauth/par') {
         let body = new URLSearchParams(await request.text())
 
-        if (request.headers.get('DPoP-Nonce') == null && decodeJwt(request.headers.get('DPoP')).payload.nonce == null) {
+        if (
+          request.headers.get('DPoP-Nonce') == null &&
+          decodeJwt(request.headers.get('DPoP')).payload.nonce == null
+        ) {
           return Response.json(
             { error: 'use_dpop_nonce' },
             {
@@ -254,7 +257,10 @@ describe('social-auth router', () => {
           )
         }
 
-        assert.equal(body.get('client_id'), 'http://localhost/?redirect_uri=http%3A%2F%2F127.0.0.1%3A44100%2Fauth%2Fatmosphere%2Fcallback&scope=atproto')
+        assert.equal(
+          body.get('client_id'),
+          'http://localhost/?redirect_uri=http%3A%2F%2F127.0.0.1%3A44100%2Fauth%2Fatmosphere%2Fcallback&scope=atproto',
+        )
         assert.equal(body.get('login_hint'), 'demoalice.example.com')
         assert.equal(body.get('scope'), 'atproto')
 
@@ -307,9 +313,10 @@ describe('social-auth router', () => {
 
       let loginSessionCookie = getSessionCookie(loginResponse)
       assert.ok(loginSessionCookie)
-      let cookieHeader = requestWithSession('https://social-auth.test/', loginSessionCookie).headers.get(
-        'Cookie',
-      )
+      let cookieHeader = requestWithSession(
+        'https://social-auth.test/',
+        loginSessionCookie,
+      ).headers.get('Cookie')
       let sessionId = await sessionCookie.parse(cookieHeader)
       let transactionSession = await sessionStorage.read(sessionId)
       let transaction = transactionSession.get('__auth') as { state: string }
