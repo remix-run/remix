@@ -51,7 +51,7 @@ export const authAccounts = table({
       .notNull()
       .references('users', 'id', 'auth_accounts_user_id_fk')
       .onDelete('cascade'),
-    provider: c.enum(['google', 'github', 'x']).notNull(),
+    provider: c.enum(['google', 'github', 'x', 'atmosphere']).notNull(),
     provider_account_id: c.text().notNull(),
     email: c.text(),
     username: c.text(),

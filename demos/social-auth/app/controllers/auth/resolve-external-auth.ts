@@ -1,10 +1,17 @@
-import type { GitHubAuthProfile, GoogleAuthProfile, OAuthResult, XAuthProfile } from 'remix/auth'
+import type {
+  AtmosphereAuthProfile,
+  GitHubAuthProfile,
+  GoogleAuthProfile,
+  OAuthResult,
+  XAuthProfile,
+} from 'remix/auth'
 import type { Database } from 'remix/data-table'
 
 import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
 import type { AuthAccount, User } from '../../data/schema.ts'
 
 type ExternalAuthResult =
+  | OAuthResult<AtmosphereAuthProfile, 'atmosphere'>
   | OAuthResult<GoogleAuthProfile, 'google'>
   | OAuthResult<GitHubAuthProfile, 'github'>
   | OAuthResult<XAuthProfile, 'x'>
@@ -105,6 +112,19 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
           : result.profile.login,
       avatarUrl:
         typeof result.profile.avatar_url === 'string' ? result.profile.avatar_url : undefined,
+      profileJson: JSON.stringify(result.profile),
+    }
+  }
+
+  if (result.provider === 'atmosphere') {
+    let username =
+      typeof result.profile.handle === 'string' && result.profile.handle.trim() !== ''
+        ? result.profile.handle
+        : undefined
+
+    return {
+      username,
+      displayName: username ?? result.profile.did,
       profileJson: JSON.stringify(result.profile),
     }
   }

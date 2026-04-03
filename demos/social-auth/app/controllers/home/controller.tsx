@@ -32,6 +32,8 @@ export function createHomeController(
         formAction={routes.auth.login.href(undefined, returnToQuery)}
         signupHref={routes.auth.signup.index.href(undefined, returnToQuery)}
         forgotPasswordHref={routes.auth.forgotPassword.index.href(undefined, returnToQuery)}
+        atmosphereLoginHref={routes.auth.atmosphere.login.href()}
+        returnTo={returnToQuery.returnTo}
         providers={readExternalProviderLinks(returnToQuery, registry)}
         error={typeof error === 'string' ? error : undefined}
         success={typeof success === 'string' ? success : undefined}

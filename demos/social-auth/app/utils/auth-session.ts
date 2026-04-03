@@ -24,6 +24,7 @@ const authSessionSchema = s.object({
     s.literal('credentials'),
     s.literal('google'),
     s.literal('github'),
+    s.literal('atmosphere'),
     s.literal('x'),
   ]),
   authAccountId: s.optional(
@@ -62,5 +63,11 @@ export function parseProviderProfile(authAccount: AuthAccount | null): unknown |
 }
 
 function isAuthMethod(value: string): value is AuthMethod {
-  return value === 'credentials' || value === 'google' || value === 'github' || value === 'x'
+  return (
+    value === 'credentials' ||
+    value === 'google' ||
+    value === 'github' ||
+    value === 'atmosphere' ||
+    value === 'x'
+  )
 }

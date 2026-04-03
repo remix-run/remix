@@ -12,6 +12,8 @@ interface LoginPageProps {
   formAction: string
   signupHref: string
   forgotPasswordHref: string
+  atmosphereLoginHref: string
+  returnTo?: string
   providers: ExternalProviderLink[]
   error?: string
   success?: string
@@ -22,6 +24,8 @@ export function LoginPage() {
     formAction,
     signupHref,
     forgotPasswordHref,
+    atmosphereLoginHref,
+    returnTo,
     providers,
     error,
     success,
@@ -73,7 +77,11 @@ export function LoginPage() {
           </button>
         </form>
 
-        <ExternalAuthSection providers={providers} />
+        <ExternalAuthSection
+          atmosphereLoginHref={atmosphereLoginHref}
+          returnTo={returnTo}
+          providers={providers}
+        />
       </AuthCard>
     </Document>
   )

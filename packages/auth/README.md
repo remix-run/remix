@@ -5,7 +5,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 ## Features
 
 - Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
-- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
+- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, X, and Atmosphere
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
@@ -251,7 +251,7 @@ router.get(routes.app.dashboard, {
 
 A typical external auth flow looks like this:
 
-1. Create the provider once at module scope.
+1. Create the provider once at module scope, or recreate an Atmosphere provider per request using the same stored handle or DID.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
 4. Call `completeAuth(context)` and write your auth record into the returned session.

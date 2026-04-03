@@ -1,20 +1,43 @@
-import { createGitHubAuthProvider, createGoogleAuthProvider, createXAuthProvider } from 'remix/auth'
-import type { GitHubAuthProfile, GoogleAuthProfile, OAuthProvider, XAuthProfile } from 'remix/auth'
+import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import {
+  createAtmosphereAuthProvider,
+  createGitHubAuthProvider,
+  createGoogleAuthProvider,
+  createXAuthProvider,
+} from 'remix/auth'
+import type {
+  AtmosphereAuthProfile,
+  AtmosphereAuthProviderOptions,
+  GitHubAuthProfile,
+  GoogleAuthProfile,
+  OAuthProvider,
+  XAuthProfile,
+} from 'remix/auth'
+import type { FileStorage } from 'remix/file-storage'
+import { createFsFileStorage } from 'remix/file-storage/fs'
+import { createMemoryFileStorage } from 'remix/file-storage/memory'
 
 import { routes } from '../routes.ts'
 
-export type ExternalProviderName = 'google' | 'github' | 'x'
+export type ExternalProviderName = 'google' | 'github' | 'x' | 'atmosphere'
+export type ButtonProviderName = 'google' | 'github' | 'x'
+
+export type AtmosphereProviderConfiguration = AtmosphereAuthProviderOptions<AtmosphereAuthProfile>
 
 type ExternalProviderFor<name extends ExternalProviderName> = name extends 'google'
   ? OAuthProvider<GoogleAuthProfile, 'google'>
   : name extends 'github'
     ? OAuthProvider<GitHubAuthProfile, 'github'>
-    : OAuthProvider<XAuthProfile, 'x'>
+    : name extends 'x'
+      ? OAuthProvider<XAuthProfile, 'x'>
+      : AtmosphereProviderConfiguration
 
 export interface ExternalProviderRegistry {
   google: ExternalProviderFor<'google'> | null
   github: ExternalProviderFor<'github'> | null
   x: ExternalProviderFor<'x'> | null
+  atmosphere: ExternalProviderFor<'atmosphere'>
 }
 
 type ProviderEnvPrefix = 'GOOGLE' | 'GITHUB' | 'X'
@@ -26,7 +49,7 @@ interface ProviderCredentials {
 }
 
 export interface ExternalProviderLink {
-  name: ExternalProviderName
+  name: ButtonProviderName
   href?: string
   disabledReason?: string
 }
@@ -40,13 +63,14 @@ const providerLabels = {
   google: 'Google',
   github: 'GitHub',
   x: 'X',
+  atmosphere: 'Atmosphere',
 } satisfies Record<ExternalProviderName, string>
 
 const providerEnvPrefixes = {
   google: 'GOOGLE',
   github: 'GITHUB',
   x: 'X',
-} satisfies Record<ExternalProviderName, ProviderEnvPrefix>
+} satisfies Record<ButtonProviderName, ProviderEnvPrefix>
 
 export const externalProviderNames = ['google', 'github', 'x'] as const
 
@@ -65,7 +89,25 @@ export function createExternalProviderRegistry(
     google: createGoogleProvider(origin, env),
     github: createGitHubProvider(origin, env),
     x: createXProvider(origin, env),
+    atmosphere: createAtmosphereConfiguration(),
   }
+}
+
+/**
+ * Creates an Atmosphere provider for a handle or DID entered by the current user.
+ *
+ * The social-auth demo uses the localhost client-id workflow so it can run locally
+ * without additional Atmosphere-specific environment variables.
+ *
+ * @param handleOrDid The Bluesky handle or DID submitted by the user.
+ * @param registry Provider configuration registry for the demo.
+ * @returns An initialized Atmosphere provider for the requested account identifier.
+ */
+export function createAtmosphereProvider(
+  handleOrDid: string,
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+) {
+  return createAtmosphereAuthProvider(handleOrDid, registry.atmosphere)
 }
 
 export function getExternalProviderLabel(name: ExternalProviderName): string {
@@ -73,7 +115,7 @@ export function getExternalProviderLabel(name: ExternalProviderName): string {
 }
 
 export function getExternalProviderStatus(
-  name: ExternalProviderName,
+  name: ButtonProviderName,
   registry: ExternalProviderRegistry = externalProviderRegistry,
   env: ExternalProviderEnvironment = process.env,
 ): ProviderStatus {
@@ -151,6 +193,15 @@ function createXProvider(
   })
 }
 
+function createAtmosphereConfiguration(): AtmosphereProviderConfiguration {
+  return {
+    clientId: 'http://localhost',
+    redirectUri: new URL(routes.auth.atmosphere.callback.href(), getDemoOrigin()),
+    fileStorage: createAtmosphereFileStorage(),
+    scopes: ['atproto'],
+  }
+}
+
 function createDisabledReason(name: ExternalProviderName, status: ProviderStatus): string {
   if (status.missingEnvVars.length === 0) {
     return `${getExternalProviderLabel(name)} login is not configured.`
@@ -192,4 +243,14 @@ function readProviderCredentials(
 
 function toOriginString(origin: string | URL): string {
   return typeof origin === 'string' ? origin : origin.toString()
+}
+
+function createAtmosphereFileStorage(): FileStorage {
+  if (process.env.NODE_ENV === 'test') {
+    return createMemoryFileStorage()
+  }
+
+  let directoryPath = fileURLToPath(new URL('../../tmp/atmosphere/', import.meta.url))
+  fs.mkdirSync(directoryPath, { recursive: true })
+  return createFsFileStorage(directoryPath)
 }

@@ -17,6 +17,10 @@ export const routes = route({
       login: get('/login'),
       callback: get('/callback'),
     }),
+    atmosphere: route('/auth/atmosphere', {
+      login: get('/login'),
+      callback: get('/callback'),
+    }),
     x: route('/auth/x', {
       login: get('/login'),
       callback: get('/callback'),

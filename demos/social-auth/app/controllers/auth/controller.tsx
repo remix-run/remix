@@ -1,5 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
 
+import { createAtmosphereAuthController } from './atmosphere/controller.ts'
 import { forgotPasswordController } from './forgot-password/controller.tsx'
 import { createGitHubAuthController } from './github/controller.ts'
 import { createGoogleAuthController } from './google/controller.ts'
@@ -27,6 +28,7 @@ export function createAuthController(
       resetPassword: resetPasswordController,
       google: createGoogleAuthController(registry),
       github: createGitHubAuthController(registry),
+      atmosphere: createAtmosphereAuthController(registry),
       x: createXAuthController(registry),
     },
   } satisfies Controller<typeof routes.auth, AppContext>

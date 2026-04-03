@@ -5,6 +5,7 @@ import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
 import { createExternalProviderRegistry } from './utils/external-auth.ts'
 import {
   assertContains,
+  createTestApp,
   createTestRouter,
   getSessionCookie,
   requestWithSession,
@@ -20,6 +21,7 @@ describe('social-auth router', () => {
 
     assertContains(html, 'Welcome Back')
     assertContains(html, 'Sign in to your account')
+    assertContains(html, 'Bluesky handle or DID')
   })
 
   it('renders disabled social buttons when provider env vars are missing', async () => {
@@ -171,6 +173,189 @@ describe('social-auth router', () => {
     }
   })
 
+  it('completes Atmosphere login from a Bluesky handle and persists the linked account', async () => {
+    let originalFetch = globalThis.fetch
+    let { router, sessionCookie, sessionStorage } = await createTestApp({
+      externalProviderRegistry: createExternalProviderRegistry({
+        origin: 'https://social-auth.test',
+      }),
+    })
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      let request = input instanceof Request ? input : new Request(input, init)
+      let url = new URL(request.url)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        return Response.json({
+          Answer: [
+            {
+              type: 16,
+              data: '"did=did:plc:demoalice"',
+            },
+          ],
+        })
+      }
+
+      if (url.href === 'https://demoalice.example.com/.well-known/atproto-did') {
+        return new Response('Not found', { status: 404 })
+      }
+
+      if (url.href === 'https://plc.directory/did%3Aplc%3Ademoalice') {
+        return Response.json({
+          id: 'did:plc:demoalice',
+          alsoKnownAs: ['at://demoalice.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.demo.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.href === 'https://pds.demo.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.demo.example.com'],
+        })
+      }
+
+      if (url.href === 'https://auth.demo.example.com/.well-known/oauth-authorization-server') {
+        return Response.json({
+          issuer: 'https://auth.demo.example.com',
+          authorization_endpoint: 'https://auth.demo.example.com/oauth/authorize',
+          token_endpoint: 'https://auth.demo.example.com/oauth/token',
+          pushed_authorization_request_endpoint: 'https://auth.demo.example.com/oauth/par',
+          response_types_supported: ['code'],
+          grant_types_supported: ['authorization_code', 'refresh_token'],
+          code_challenge_methods_supported: ['S256'],
+          token_endpoint_auth_methods_supported: ['none', 'private_key_jwt'],
+          token_endpoint_auth_signing_alg_values_supported: ['ES256'],
+          scopes_supported: ['atproto'],
+          authorization_response_iss_parameter_supported: true,
+          require_pushed_authorization_requests: true,
+          client_id_metadata_document_supported: true,
+          dpop_signing_alg_values_supported: ['ES256'],
+        })
+      }
+
+      if (url.href === 'https://auth.demo.example.com/oauth/par') {
+        let body = new URLSearchParams(await request.text())
+
+        if (request.headers.get('DPoP-Nonce') == null && decodeJwt(request.headers.get('DPoP')).payload.nonce == null) {
+          return Response.json(
+            { error: 'use_dpop_nonce' },
+            {
+              status: 400,
+              headers: {
+                'DPoP-Nonce': 'atmosphere-par-nonce',
+              },
+            },
+          )
+        }
+
+        assert.equal(body.get('client_id'), 'http://localhost/?redirect_uri=http%3A%2F%2F127.0.0.1%3A44100%2Fauth%2Fatmosphere%2Fcallback&scope=atproto')
+        assert.equal(body.get('login_hint'), 'demoalice.example.com')
+        assert.equal(body.get('scope'), 'atproto')
+
+        return Response.json(
+          {
+            request_uri: 'urn:ietf:params:oauth:request_uri:atmosphere-demo',
+          },
+          {
+            headers: {
+              'DPoP-Nonce': 'atmosphere-token-nonce',
+            },
+          },
+        )
+      }
+
+      if (url.href === 'https://auth.demo.example.com/oauth/token') {
+        let body = new URLSearchParams(await request.text())
+        let dpop = decodeJwt(request.headers.get('DPoP'))
+
+        assert.equal(body.get('grant_type'), 'authorization_code')
+        assert.equal(body.get('code'), 'test-atmosphere-code')
+        assert.equal(body.get('redirect_uri'), 'http://127.0.0.1:44100/auth/atmosphere/callback')
+        assert.equal(dpop.payload.nonce, 'atmosphere-token-nonce')
+
+        return Response.json({
+          access_token: 'test-atmosphere-access-token',
+          refresh_token: 'test-atmosphere-refresh-token',
+          token_type: 'DPoP',
+          scope: 'atproto',
+          sub: 'did:plc:demoalice',
+        })
+      }
+
+      return originalFetch(input, init)
+    }
+
+    try {
+      let loginResponse = await router.fetch(
+        'https://social-auth.test/auth/atmosphere/login?handleOrDid=demoalice.example.com&returnTo=/account',
+      )
+
+      assert.equal(loginResponse.status, 302)
+
+      let authorizeUrl = new URL(loginResponse.headers.get('Location') ?? '')
+      assert.equal(authorizeUrl.origin, 'https://auth.demo.example.com')
+      assert.equal(authorizeUrl.pathname, '/oauth/authorize')
+
+      let state = authorizeUrl.searchParams.get('request_uri')
+      assert.equal(state, 'urn:ietf:params:oauth:request_uri:atmosphere-demo')
+
+      let loginSessionCookie = getSessionCookie(loginResponse)
+      assert.ok(loginSessionCookie)
+      let cookieHeader = requestWithSession('https://social-auth.test/', loginSessionCookie).headers.get(
+        'Cookie',
+      )
+      let sessionId = await sessionCookie.parse(cookieHeader)
+      let transactionSession = await sessionStorage.read(sessionId)
+      let transaction = transactionSession.get('__auth') as { state: string }
+      assert.ok(transaction)
+
+      let callbackResponse = await router.fetch(
+        requestWithSession(
+          'http://127.0.0.1:44100/auth/atmosphere/callback?code=test-atmosphere-code&state=' +
+            encodeURIComponent(transaction.state) +
+            '&iss=' +
+            encodeURIComponent('https://auth.demo.example.com'),
+          loginSessionCookie,
+        ),
+      )
+
+      assert.equal(callbackResponse.status, 302)
+      assert.equal(callbackResponse.headers.get('Location'), '/account')
+
+      let callbackSessionCookie = getSessionCookie(callbackResponse)
+      assert.ok(callbackSessionCookie)
+
+      let accountResponse = await router.fetch(
+        requestWithSession('https://social-auth.test/account', callbackSessionCookie),
+      )
+      let html = await accountResponse.text()
+
+      assert.equal(accountResponse.status, 200)
+      assertContains(html, 'Signed In')
+      assertContains(html, 'demoalice.example.com')
+      assertContains(html, 'Provider: Atmosphere')
+
+      let authAccount = await db.findOne(authAccounts, {
+        where: {
+          provider: 'atmosphere',
+          provider_account_id: 'did:plc:demoalice',
+        },
+      })
+
+      assert.ok(authAccount)
+      assert.equal(authAccount.username, 'demoalice.example.com')
+      assert.equal(authAccount.display_name, 'demoalice.example.com')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('creates a new user during signup and signs them in', async () => {
     let router = await createTestRouter()
     let response = await router.fetch('https://social-auth.test/auth/signup', {
@@ -262,3 +447,19 @@ describe('social-auth router', () => {
     assert.equal(accountResponse.headers.get('Location'), '/')
   })
 })
+
+function decodeJwt(value: string | null): { payload: Record<string, string | undefined> } {
+  assert.ok(value)
+  let [, payload] = value.split('.')
+  return {
+    payload: JSON.parse(decodeBase64Url(payload)) as Record<string, string | undefined>,
+  }
+}
+
+function decodeBase64Url(value: string): string {
+  let padding = value.length % 4 === 0 ? '' : '='.repeat(4 - (value.length % 4))
+  let base64 = value.replace(/-/g, '+').replace(/_/g, '/') + padding
+  let binary = atob(base64)
+  let bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
+}

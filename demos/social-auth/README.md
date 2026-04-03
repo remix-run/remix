@@ -3,7 +3,7 @@
 This demo shows how to combine `remix/auth`, `remix/auth-middleware`, `remix/data-schema`, and `remix/data-table` to build a small auth application with:
 
 - credentials login with email and password
-- external login with Google, GitHub, and X
+- external login with Google, GitHub, X, and Atmosphere
 - signup, forgot-password, and reset-password flows
 - session-backed route protection
 - a local SQLite database for users and linked provider accounts
@@ -38,7 +38,7 @@ The demo supports these environment variables:
 - `X_CLIENT_ID`
 - `X_CLIENT_SECRET`
 
-Only `SESSION_SECRET` is needed for the local credentials flow. The demo still starts if any social-provider variables are missing. In that case, the corresponding provider button stays visible but disabled on the login page.
+Only `SESSION_SECRET` is needed for the local credentials flow. Google, GitHub, and X remain optional and stay visible but disabled when their variables are missing. Atmosphere uses the localhost loopback client-id flow, so it works without additional Atmosphere-specific environment variables.
 
 ## Provider Callback URLs
 
@@ -46,6 +46,7 @@ If you configure the external providers locally, use these callback URLs:
 
 - `http://127.0.0.1:44100/auth/google/callback`
 - `http://127.0.0.1:44100/auth/github/callback`
+- `http://127.0.0.1:44100/auth/atmosphere/callback`
 - `http://127.0.0.1:44100/auth/x/callback`
 
 ## What This Demo Shows
@@ -53,6 +54,7 @@ If you configure the external providers locally, use these callback URLs:
 - request-time auth resolution with `remix/auth-middleware`
 - credentials login with `verifyCredentials()` and `completeAuth()`
 - external auth with `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
+- async external auth setup for Atmosphere using a user-supplied Bluesky handle or DID
 - module-scope provider configuration with a boot-time provider registry
 - form parsing with `remix/data-schema/form-data`
 - local persistence with `remix/data-table` and SQLite

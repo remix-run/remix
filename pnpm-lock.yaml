@@ -271,6 +271,9 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
+      '@remix-run/file-storage':
+        specifier: workspace:^
+        version: link:../file-storage
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
