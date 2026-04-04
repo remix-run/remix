@@ -1,4 +1,5 @@
 import * as assert from 'remix/assert'
+import type { AtmosphereAuthProfile, OAuthDpopTokens, OAuthResult } from 'remix/auth'
 import { beforeEach, describe, it } from 'remix/test'
 
 import { authAccounts } from '../../data/schema.ts'
@@ -64,4 +65,73 @@ describe('resolve external auth helper', () => {
     assert.equal(account.display_name, 'Demo User Renamed')
     assert.equal(account.avatar_url, 'https://example.com/new-avatar.png')
   })
+
+  it('relays Atmosphere DPoP nonce updates back onto the token bundle', async () => {
+    let originalFetch = globalThis.fetch
+    let dpop = await createDpopBinding()
+
+    globalThis.fetch = async () =>
+      Response.json(
+        {
+          value: {
+            displayName: 'Updated Atmosphere Name',
+          },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'DPoP-Nonce': 'updated-atmosphere-nonce',
+          },
+        },
+      )
+
+    try {
+      let tokens = {
+        accessToken: 'token',
+        refreshToken: 'refresh-token',
+        tokenType: 'DPoP' as const,
+        dpop,
+      }
+      let result: OAuthResult<AtmosphereAuthProfile, 'atmosphere', OAuthDpopTokens> = {
+        provider: 'atmosphere',
+        account: { provider: 'atmosphere', providerAccountId: 'did:plc:alice' },
+        profile: {
+          did: 'did:plc:alice',
+          handle: 'alice.example.com',
+          pdsUrl: 'https://pds.example.com',
+          authorizationServer: 'https://auth.example.com',
+        },
+        tokens,
+      }
+
+      await resolveExternalAuth(db, result)
+
+      assert.equal(tokens.dpop.nonce, 'updated-atmosphere-nonce')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
+
+async function createDpopBinding(): Promise<{
+  publicJwk: JsonWebKey
+  privateJwk: JsonWebKey
+  nonce?: string
+}> {
+  let keyPair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair
+  let publicJwk = (await crypto.subtle.exportKey('jwk', keyPair.publicKey)) as JsonWebKey
+  let privateJwk = (await crypto.subtle.exportKey('jwk', keyPair.privateKey)) as JsonWebKey
+
+  return {
+    publicJwk: {
+      crv: publicJwk.crv,
+      kty: publicJwk.kty,
+      x: publicJwk.x,
+      y: publicJwk.y,
+    },
+    privateJwk,
+  }
+}

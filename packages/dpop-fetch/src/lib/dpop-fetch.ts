@@ -25,6 +25,8 @@ export interface DpopFetchOptions {
   expiresAt?: Date
   /** DPoP binding state returned by the authorization flow. */
   dpop: DpopBinding
+  /** Called when the DPoP binding changes so callers can persist the latest nonce. */
+  onDpopChange?: (dpop: DpopBinding) => void | Promise<void>
   /** Fetch implementation used to send requests. */
   fetch?: typeof globalThis.fetch
 }
@@ -51,6 +53,7 @@ export function createFetch(options: DpopFetchOptions): DpopFetch {
     typeof options.refreshToken === 'string' && options.refreshToken.trim().length > 0
   let expiresAt = options.expiresAt
   let dpop = normalizeDpopBinding(options.dpop)
+  let onDpopChange = options.onDpopChange
   let localFetch = options.fetch ?? globalThis.fetch
   let privateKeyPromise = importPrivateEcKey(dpop.privateJwk)
 
@@ -75,7 +78,7 @@ export function createFetch(options: DpopFetchOptions): DpopFetch {
 
       if (response.ok) {
         if (nextNonce != null) {
-          dpop.nonce = nextNonce
+          await updateDpopBinding(dpop, nextNonce, onDpopChange)
         }
 
         return response
@@ -87,12 +90,12 @@ export function createFetch(options: DpopFetchOptions): DpopFetch {
         (response.status === 400 || response.status === 401) &&
         (await isUseDpopNonceResponse(response))
       ) {
-        dpop.nonce = nextNonce
+        await updateDpopBinding(dpop, nextNonce, onDpopChange)
         continue
       }
 
       if (nextNonce != null) {
-        dpop.nonce = nextNonce
+        await updateDpopBinding(dpop, nextNonce, onDpopChange)
       }
 
       return response
@@ -100,6 +103,19 @@ export function createFetch(options: DpopFetchOptions): DpopFetch {
 
     throw new Error('DPoP request retry failed.')
   }
+}
+
+async function updateDpopBinding(
+  dpop: DpopBinding,
+  nextNonce: string,
+  onDpopChange: DpopFetchOptions['onDpopChange'],
+): Promise<void> {
+  if (dpop.nonce === nextNonce) {
+    return
+  }
+
+  dpop.nonce = nextNonce
+  await onDpopChange?.({ ...dpop })
 }
 
 async function createSignedRequestInit(options: {

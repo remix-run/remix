@@ -119,7 +119,13 @@ async function extractProfile(result: ExternalAuthResult): Promise<ExternalProfi
   }
 
   if (result.provider === 'atmosphere') {
-    let fetchAtmosphere = createFetch(result.tokens)
+    let fetchAtmosphere = createFetch({
+      ...result.tokens,
+      onDpopChange(dpop) {
+        // TODO: Persist somewhere
+        result.tokens.dpop = dpop
+      },
+    })
 
     let url = new URL('/xrpc/com.atproto.repo.getRecord', result.profile.pdsUrl)
     url.searchParams.set('repo', result.profile.did)

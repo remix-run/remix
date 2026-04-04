@@ -46,11 +46,15 @@ describe('createFetch()', () => {
 
   it('retries once for DPoP nonce challenges and persists the latest nonce', async () => {
     let dpop = await createDpopBinding()
+    let persistedDpop: Array<JsonWebKey['x'] | string | undefined> = []
     let proofs: Array<{ payload: Record<string, unknown>; body: string }> = []
     let requestCount = 0
     let fetch = createFetch({
       accessToken: 'access-token',
       dpop,
+      onDpopChange(nextDpop) {
+        persistedDpop.push(nextDpop.nonce)
+      },
       fetch: async (input, init) => {
         requestCount += 1
 
@@ -99,6 +103,8 @@ describe('createFetch()', () => {
     assert.equal(proofs[0].payload.nonce, undefined)
     assert.equal(proofs[1].payload.nonce, 'nonce-1')
     assert.equal(proofs[2].payload.nonce, 'nonce-2')
+    assert.deepEqual(persistedDpop, ['nonce-1', 'nonce-2'])
+    assert.equal(dpop.nonce, undefined)
     assert.equal(proofs[0].body, '{"hello":"world"}')
     assert.equal(proofs[1].body, '{"hello":"world"}')
     assert.equal(proofs[2].body, '')
@@ -126,6 +132,7 @@ describe('createFetch()', () => {
 async function createDpopBinding(): Promise<{
   publicJwk: JsonWebKey
   privateJwk: JsonWebKey
+  nonce?: string
 }> {
   let keyPair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
     'sign',

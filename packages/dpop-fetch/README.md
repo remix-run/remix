@@ -22,7 +22,15 @@ import { finishExternalAuth } from 'remix/auth'
 import { createFetch } from 'remix/dpop-fetch'
 
 let { result } = await finishExternalAuth(atmosphereProvider, context)
-let atmosphereFetch = createFetch(result.tokens)
+let atmosphereFetch = createFetch({
+  ...result.tokens,
+  async onDpopChange(dpop) {
+    await saveAtmosphereTokens({
+      ...result.tokens,
+      dpop,
+    })
+  },
+})
 
 let response = await atmosphereFetch(
   'https://pds.example.com/xrpc/app.bsky.actor.getProfile?actor=alice.example.com',
@@ -30,7 +38,7 @@ let response = await atmosphereFetch(
 let profile = await response.json()
 ```
 
-`createFetch()` expects `accessToken`, and it also accepts `refreshToken` and `expiresAt` so you can pass the full token object returned by `remix/auth` directly. Refresh-token exchange remains app-owned because token refresh requirements are provider-specific.
+`createFetch()` expects `accessToken`, and it also accepts `refreshToken` and `expiresAt` so you can pass the full token object returned by `remix/auth` directly. Use `onDpopChange` when you need to persist a nonce learned from a DPoP challenge or response header. Refresh-token exchange remains app-owned because token refresh requirements are provider-specific.
 
 ## Related Packages
 
