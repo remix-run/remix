@@ -1,6 +1,11 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type { OAuthProvider, OAuthResult, OAuthTokens, OAuthTransaction } from '../provider.ts'
+import type {
+  OAuthDpopTokens,
+  OAuthProvider,
+  OAuthResult,
+  OAuthTransaction,
+} from '../provider.ts'
 import { createAuthorizationURL, createOAuthProvider, getAuthorizationCode } from '../provider.ts'
 import { createCodeChallenge, getRequiredSearchParam } from '../utils.ts'
 
@@ -97,7 +102,7 @@ export interface AtmosphereAuthProviderMapProfileInput {
   /** Authorization server metadata resolved for the authenticated account. */
   authorizationServer: AtmosphereAuthorizationServerMetadata
   /** OAuth tokens returned by the atproto authorization server. */
-  tokens: OAuthTokens
+  tokens: OAuthDpopTokens
   /** Request context for the callback currently being processed. */
   context: RequestContext
 }
@@ -192,7 +197,7 @@ export async function createAtmosphereAuthProvider<
 >(
   handleOrDid: string,
   options: AtmosphereAuthProviderOptions<profile>,
-): Promise<OAuthProvider<profile, 'atmosphere'>> {
+): Promise<OAuthProvider<profile, 'atmosphere', OAuthDpopTokens>> {
   let identifier = normalizeAtmosphereIdentifier(handleOrDid)
   let scopes = normalizeAtmosphereScopes(options.scopes)
   let sessionSecret = normalizeAtmosphereSessionSecret(options.sessionSecret)
@@ -274,7 +279,10 @@ export async function createAtmosphereAuthProvider<
         request_uri: parResponse.json.request_uri,
       })
     },
-    async handleCallback(context, transaction): Promise<OAuthResult<profile, 'atmosphere'>> {
+    async handleCallback(
+      context,
+      transaction,
+    ): Promise<OAuthResult<profile, 'atmosphere', OAuthDpopTokens>> {
       let callbackIssuer = getRequiredSearchParam(context, 'iss')
       let sessionState = await readAtmosphereSessionState(sessionSecret, transaction)
 
@@ -310,7 +318,14 @@ export async function createAtmosphereAuthProvider<
         fallbackError: 'Atmosphere token exchange failed.',
         nonce: sessionState.authorizationServerNonce,
       })
-      let tokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
+      let tokens = {
+        ...normalizeAtmosphereTokenResponse(tokenResponse.json),
+        dpop: {
+          publicJwk: sessionState.publicJwk,
+          privateJwk: sessionState.privateJwk,
+          nonce: tokenResponse.nonce,
+        },
+      } satisfies OAuthDpopTokens
 
       if (tokenResponse.json.sub !== sessionState.did) {
         throw new Error('Atmosphere token response did not match the resolved account DID.')
@@ -534,7 +549,9 @@ function toPublicEcJwk(jwk: JsonWebKey): JsonWebKey {
   }
 }
 
-function normalizeAtmosphereTokenResponse(json: AtmosphereTokenResponse): OAuthTokens {
+function normalizeAtmosphereTokenResponse(
+  json: AtmosphereTokenResponse,
+): Omit<OAuthDpopTokens, 'dpop'> {
   if (typeof json.access_token !== 'string' || json.access_token.length === 0) {
     throw new Error('Atmosphere token response did not include an access token.')
   }
@@ -548,10 +565,14 @@ function normalizeAtmosphereTokenResponse(json: AtmosphereTokenResponse): OAuthT
     throw new Error('Atmosphere token response did not include the required "atproto" scope.')
   }
 
+  if (json.token_type !== 'DPoP') {
+    throw new Error('Atmosphere token response did not include the required "DPoP" token type.')
+  }
+
   return {
     accessToken: json.access_token,
     refreshToken: typeof json.refresh_token === 'string' ? json.refresh_token : undefined,
-    tokenType: typeof json.token_type === 'string' ? json.token_type : undefined,
+    tokenType: 'DPoP',
     expiresAt:
       typeof json.expires_in === 'number'
         ? new Date(Date.now() + json.expires_in * 1000)

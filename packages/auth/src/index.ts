@@ -50,5 +50,13 @@ export type {
   FinishedExternalAuthResult,
   FinishExternalAuthOptions,
 } from './lib/finish-external-auth.ts'
-export type { OAuthAccount, OAuthProvider, OAuthResult, OAuthTokens } from './lib/provider.ts'
+export type {
+  OAuthAccount,
+  OAuthDpopBinding,
+  OAuthDpopTokens,
+  OAuthProvider,
+  OAuthResult,
+  OAuthStandardTokens,
+  OAuthTokens,
+} from './lib/provider.ts'
 export type { StartExternalAuthOptions } from './lib/start-external-auth.ts'

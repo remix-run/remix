@@ -220,25 +220,53 @@ describe('atmosphere provider', () => {
       )
 
       assert.equal(tokenRequests, 1)
-      assert.deepEqual(await callbackResponse.json(), {
-        provider: 'atmosphere',
-        account: {
+
+      let callbackBody = await callbackResponse.json()
+
+      assert.deepEqual(
+        {
+          provider: callbackBody.provider,
+          account: callbackBody.account,
+          profile: callbackBody.profile,
+          tokens: {
+            accessToken: callbackBody.tokens.accessToken,
+            refreshToken: callbackBody.tokens.refreshToken,
+            tokenType: callbackBody.tokens.tokenType,
+            scope: callbackBody.tokens.scope,
+          },
+        },
+        {
           provider: 'atmosphere',
-          providerAccountId: 'did:plc:alice',
+          account: {
+            provider: 'atmosphere',
+            providerAccountId: 'did:plc:alice',
+          },
+          profile: {
+            did: 'did:plc:alice',
+            handle: 'alice.example.com',
+            pdsUrl: 'https://pds.example.com',
+            authorizationServer: 'https://auth.example.com',
+          },
+          tokens: {
+            accessToken: 'atmosphere-access-token',
+            refreshToken: 'atmosphere-refresh-token',
+            tokenType: 'DPoP',
+            scope: ['atproto', 'transition:generic'],
+          },
         },
-        profile: {
-          did: 'did:plc:alice',
-          handle: 'alice.example.com',
-          pdsUrl: 'https://pds.example.com',
-          authorizationServer: 'https://auth.example.com',
-        },
-        tokens: {
-          accessToken: 'atmosphere-access-token',
-          refreshToken: 'atmosphere-refresh-token',
-          tokenType: 'DPoP',
-          scope: ['atproto', 'transition:generic'],
-        },
+      )
+      assert.deepEqual(callbackBody.tokens.dpop.publicJwk, {
+        crv: 'P-256',
+        kty: 'EC',
+        x: callbackBody.tokens.dpop.publicJwk.x,
+        y: callbackBody.tokens.dpop.publicJwk.y,
       })
+      assert.equal(typeof callbackBody.tokens.dpop.privateJwk.d, 'string')
+      assert.equal(callbackBody.tokens.dpop.privateJwk.crv, 'P-256')
+      assert.equal(callbackBody.tokens.dpop.privateJwk.kty, 'EC')
+      assert.equal(callbackBody.tokens.dpop.privateJwk.x, callbackBody.tokens.dpop.publicJwk.x)
+      assert.equal(callbackBody.tokens.dpop.privateJwk.y, callbackBody.tokens.dpop.publicJwk.y)
+      assert.equal(callbackBody.tokens.dpop.nonce, undefined)
     } finally {
       restoreFetch()
     }

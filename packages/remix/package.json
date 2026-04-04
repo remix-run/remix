@@ -44,6 +44,7 @@
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
     "./data-table/operators": "./src/data-table/operators.ts",
     "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
+    "./dpop-fetch": "./src/dpop-fetch.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
@@ -186,6 +187,10 @@
       "./data-table/sql-helpers": {
         "types": "./dist/data-table/sql-helpers.d.ts",
         "default": "./dist/data-table/sql-helpers.js"
+      },
+      "./dpop-fetch": {
+        "types": "./dist/dpop-fetch.d.ts",
+        "default": "./dist/dpop-fetch.js"
       },
       "./fetch-proxy": {
         "types": "./dist/fetch-proxy.d.ts",
@@ -353,6 +358,7 @@
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",
     "@remix-run/data-table-sqlite": "workspace:^",
+    "@remix-run/dpop-fetch": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/file-storage": "workspace:^",

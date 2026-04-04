@@ -1,8 +1,4 @@
-import {
-  completeAuth,
-  finishExternalAuth,
-  startExternalAuth,
-} from 'remix/auth'
+import { completeAuth, finishExternalAuth, startExternalAuth } from 'remix/auth'
 import { Database } from 'remix/data-table'
 import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'

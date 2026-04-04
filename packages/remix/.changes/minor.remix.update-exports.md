@@ -1,5 +1,6 @@
 Added `package.json` `exports`:
 
+ - `remix/dpop-fetch` to re-export APIs from `@remix-run/dpop-fetch`
 - `remix/assert` to re-export APIs from `@remix-run/assert`
 - `remix/test` to re-export APIs from `@remix-run/test`
 

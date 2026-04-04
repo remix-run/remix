@@ -1,0 +1,52 @@
+{
+  "name": "@remix-run/dpop-fetch",
+  "version": "0.0.0",
+  "description": "DPoP-aware fetch utilities for Remix",
+  "author": "Shopify Inc.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/dpop-fetch"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/dpop-fetch#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "keywords": [
+    "dpop",
+    "fetch",
+    "oauth",
+    "atproto",
+    "bluesky"
+  ]
+}

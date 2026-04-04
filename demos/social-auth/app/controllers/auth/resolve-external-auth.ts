@@ -2,6 +2,7 @@ import type {
   AtmosphereAuthProfile,
   GitHubAuthProfile,
   GoogleAuthProfile,
+  OAuthDpopTokens,
   OAuthResult,
   XAuthProfile,
 } from 'remix/auth'
@@ -9,9 +10,10 @@ import type { Database } from 'remix/data-table'
 
 import { authAccounts, normalizeEmail, users } from '../../data/schema.ts'
 import type { AuthAccount, User } from '../../data/schema.ts'
+import { createFetch } from 'remix/dpop-fetch'
 
 type ExternalAuthResult =
-  | OAuthResult<AtmosphereAuthProfile, 'atmosphere'>
+  | OAuthResult<AtmosphereAuthProfile, 'atmosphere', OAuthDpopTokens>
   | OAuthResult<GoogleAuthProfile, 'google'>
   | OAuthResult<GitHubAuthProfile, 'github'>
   | OAuthResult<XAuthProfile, 'x'>
@@ -35,7 +37,7 @@ export async function resolveExternalAuth(
       provider_account_id: result.account.providerAccountId,
     },
   })
-  let profile = extractProfile(result)
+  let profile = await extractProfile(result)
 
   if (existingAccount != null) {
     let user = await db.find(users, existingAccount.user_id)
@@ -80,7 +82,7 @@ export async function resolveExternalAuth(
   return { user, authAccount }
 }
 
-function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
+async function extractProfile(result: ExternalAuthResult): Promise<ExternalProfileDetails> {
   if (result.provider === 'google') {
     let email =
       typeof result.profile.email === 'string' ? normalizeEmail(result.profile.email) : undefined
@@ -117,10 +119,22 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
   }
 
   if (result.provider === 'atmosphere') {
+    let fetchAtmosphere = createFetch(result.tokens)
+
+    const url = new URL('/xrpc/com.atproto.repo.getRecord', result.profile.pdsUrl)
+    url.searchParams.set('repo', result.profile.did)
+    url.searchParams.set('collection', 'app.bsky.actor.profile')
+    url.searchParams.set('rkey', 'self')
+    const bskyDisplayName = await fetchAtmosphere(url)
+      .then((response) => response.json())
+      .then((res) => res?.value?.displayName?.trim())
+      .catch(() => null)
+
     let username =
-      typeof result.profile.handle === 'string' && result.profile.handle.trim() !== ''
+      bskyDisplayName ||
+      (typeof result.profile.handle === 'string' && result.profile.handle.trim() !== ''
         ? result.profile.handle
-        : undefined
+        : undefined)
 
     return {
       username,

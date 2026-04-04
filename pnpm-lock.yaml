@@ -621,6 +621,15 @@ importers:
         specifier: ^12.4.1
         version: 12.6.2
 
+  packages/dpop-fetch:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':
@@ -1122,6 +1131,9 @@ importers:
       '@remix-run/data-table-sqlite':
         specifier: workspace:^
         version: link:../data-table-sqlite
+      '@remix-run/dpop-fetch':
+        specifier: workspace:^
+        version: link:../dpop-fetch
       '@remix-run/fetch-proxy':
         specifier: workspace:^
         version: link:../fetch-proxy

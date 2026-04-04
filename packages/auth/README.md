@@ -23,7 +23,7 @@ npm i remix
 
 - `verifyCredentials(provider, context)` parses submitted credentials and returns the authenticated result or `null`
 - `startExternalAuth(provider, context, options?)` stores the in-progress OAuth transaction in the session and returns the provider redirect response
-- `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`
+- `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`, including any provider tokens in `result.tokens`
 - `completeAuth(context)` rotates the current session id and returns the session for auth writes
 
 The route owns redirects, flashes, and other app-specific behavior. `remix/auth` owns the protocol work.
@@ -336,6 +336,7 @@ Notes:
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
 - `createAtmosphereAuthProvider()` resolves the target atproto account before redirecting, so recreate it with the same handle or DID when you enter the callback route
 - `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
+- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, and `dpop` JWK state that can be passed directly to `remix/dpop-fetch`
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
 Default scopes for OAuth providers that don't use OIDC discovery:
