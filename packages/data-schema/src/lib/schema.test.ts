@@ -386,6 +386,16 @@ describe('modifiers', () => {
     assertFailure(result)
     assert.equal(result.issues[0].message, 'Must be positive')
   })
+
+  it('supports transform predicates', () => {
+    let shcmea = number().transform((n) => n.toString())
+
+    let ok = shcmea['~standard'].validate(42)
+    let bad = shcmea['~standard'].validate('not-a-number')
+
+    assertSuccess(ok)
+    assert.equal(ok.value, '42')
+  })
 })
 
 describe('tuple', () => {
@@ -795,6 +805,28 @@ describe('modifiers (additional)', () => {
     assertSuccess(schema['~standard'].validate('abc'))
     assertFailure(schema['~standard'].validate('bcd'))
     assertFailure(schema['~standard'].validate('ab'))
+  })
+
+  it('chains transform then refine', () => {
+    let schema = number()
+      .transform((n) => n.toString())
+      .refine((s) => s.length === 2, 'Must be two digits')
+
+    assertSuccess(schema['~standard'].validate(42))
+    assertFailure(schema['~standard'].validate(7))
+  })
+
+  it('chains refine then transform', () => {
+    let schema = number()
+      .refine((n) => n > 0, 'Must be positive')
+      .transform((n) => n.toString())
+
+    let ok = schema['~standard'].validate(42)
+    let bad = schema['~standard'].validate(-1)
+
+    assertSuccess(ok)
+    assert.equal(ok.value, '42')
+    assertFailure(bad)
   })
 })
 
