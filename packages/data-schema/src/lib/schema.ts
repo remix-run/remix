@@ -106,10 +106,10 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    * The transform function runs after the underlying schema has validated and produced an `output` value.
    * The returned schema has a different output type.
    *
-   * @param predicate A function that transforms the validated output
+   * @param transformer A function that transforms the validated output
    * @returns A new schema with the transformation applied
    */
-  transform: <newOutput>(predicate: (value: output) => newOutput) => Schema<input, newOutput>
+  transform: <newOutput>(transformer: (value: output) => newOutput) => Schema<input, newOutput>
   /**
    * Internal validator used to validate nested values while preserving `path`/`options`.
    */

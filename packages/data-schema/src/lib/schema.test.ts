@@ -388,13 +388,14 @@ describe('modifiers', () => {
   })
 
   it('supports transform predicates', () => {
-    let shcmea = number().transform((n) => n.toString())
+    let schema = number().transform((n) => n.toString())
 
-    let ok = shcmea['~standard'].validate(42)
-    let bad = shcmea['~standard'].validate('not-a-number')
+    let ok = schema['~standard'].validate(42)
+    let bad = schema['~standard'].validate('not-a-number')
 
     assertSuccess(ok)
     assert.equal(ok.value, '42')
+    assertFailure(bad)
   })
 })
 
