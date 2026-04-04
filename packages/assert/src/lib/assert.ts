@@ -95,7 +95,7 @@ export function equal<T>(actual: unknown, expected: T, message?: string): assert
  * @param expected - The value that `actual` must not equal.
  * @param message - Optional failure message.
  */
-export function notEqual<T>(actual: unknown, expected: unknown, message?: string): void {
+export function notEqual(actual: unknown, expected: unknown, message?: string): void {
   if (actual === expected) {
     throw new AssertionError({
       message: message || `${actual} === ${expected}`,
@@ -138,7 +138,7 @@ export function deepEqual<T>(actual: unknown, expected: T, message?: string): as
  * @param expected - The value that `actual` must not deeply equal.
  * @param message - Optional failure message.
  */
-export function notDeepEqual<T>(actual: unknown, expected: unknown, message?: string): void {
+export function notDeepEqual(actual: unknown, expected: unknown, message?: string): void {
   if (isDeepEqual(actual, expected)) {
     throw new AssertionError({
       message: message || `Objects are deeply equal`,

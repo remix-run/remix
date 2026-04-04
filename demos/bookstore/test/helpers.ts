@@ -3,7 +3,6 @@ import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
 import { createBookstoreRouter } from '../app/router.ts'
-import { beforeAll } from 'remix/test'
 import { initializeBookstoreDatabase } from '../app/data/setup.ts'
 
 export async function createTestRouter() {

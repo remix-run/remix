@@ -85,9 +85,9 @@ export interface OAuthResult<
  * Public shape for an OAuth or OIDC provider used by external auth request handlers.
  */
 export interface OAuthProvider<
-  profile,
+  _profile,
   provider extends string = string,
-  tokens extends OAuthTokens = OAuthTokens,
+  _tokens extends OAuthTokens = OAuthTokens,
 > {
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider

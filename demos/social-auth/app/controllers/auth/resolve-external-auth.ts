@@ -121,11 +121,11 @@ async function extractProfile(result: ExternalAuthResult): Promise<ExternalProfi
   if (result.provider === 'atmosphere') {
     let fetchAtmosphere = createFetch(result.tokens)
 
-    const url = new URL('/xrpc/com.atproto.repo.getRecord', result.profile.pdsUrl)
+    let url = new URL('/xrpc/com.atproto.repo.getRecord', result.profile.pdsUrl)
     url.searchParams.set('repo', result.profile.did)
     url.searchParams.set('collection', 'app.bsky.actor.profile')
     url.searchParams.set('rkey', 'self')
-    const bskyDisplayName = await fetchAtmosphere(url)
+    let bskyDisplayName = await fetchAtmosphere(url)
       .then((response) => response.json())
       .then((res) => res?.value?.displayName?.trim())
       .catch(() => null)
