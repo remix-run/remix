@@ -53,7 +53,7 @@ If you configure the external providers locally, use these callback URLs:
 
 - request-time auth resolution with `remix/auth-middleware`
 - credentials login with `verifyCredentials()` and `completeAuth()`
-- external auth with `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
+- external auth with `startExternalAuth()`, `finishExternalAuth()`, `completeAuth()`, and `refreshExternalAuth()`
 - async external auth setup for Atmosphere using a user-supplied Bluesky handle or DID
 - module-scope provider configuration with a boot-time provider registry
 - form parsing with `remix/data-schema/form-data`
@@ -69,4 +69,15 @@ On successful external login, the demo:
 - creates or updates a local `users` row
 - stores linked provider data in `auth_accounts`
 - persists a small session auth record
+- stores external provider token bundles server-side in SQLite as encrypted JSON
+- refreshes provider tokens later, on demand, when a follow-up request needs them
 - renders an account page showing the local user plus provider/account data
+
+To keep the example easy to follow, the demo uses a small app-owned recipe:
+
+1. persist provider tokens in the callback route
+2. load the stored tokens later for a follow-up request
+3. refresh them only if they are expired and a refresh token is available
+4. save the refreshed token bundle back to storage
+
+That recipe lives in `app/utils/auth-account-tokens.ts`, while provider-specific refresh behavior lives in `app/utils/external-auth.ts`. In a real app, you may also want a dedicated encryption secret, key rotation, and stronger token-management policies.

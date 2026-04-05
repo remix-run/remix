@@ -7,7 +7,7 @@ import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 import { hashPassword } from '../utils/password-hash.ts'
-import { authAccounts, passwordResetTokens, users } from './schema.ts'
+import { authAccounts, authAccountTokens, passwordResetTokens, users } from './schema.ts'
 
 const DEMO_ADMIN_AVATAR_URL = 'https://randomuser.me/api/portraits/women/44.jpg'
 const DEMO_USER_AVATAR_URL = 'https://randomuser.me/api/portraits/men/32.jpg'
@@ -53,6 +53,7 @@ export async function resetSocialAuthDatabase(): Promise<void> {
   await initializeSocialAuthDatabase()
 
   sqlite.exec('DELETE FROM password_reset_tokens')
+  sqlite.exec('DELETE FROM auth_account_tokens')
   sqlite.exec('DELETE FROM auth_accounts')
   sqlite.exec('DELETE FROM users')
   await seedBaseData()
@@ -77,4 +78,4 @@ async function seedBaseData(): Promise<void> {
   ])
 }
 
-export { sqlite, authAccounts, passwordResetTokens, users }
+export { sqlite, authAccounts, authAccountTokens, passwordResetTokens, users }

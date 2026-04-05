@@ -4,6 +4,7 @@ export { createAuth0AuthProvider } from './lib/providers/auth0.ts'
 export { createAtmosphereAuthProvider } from './lib/providers/atmosphere.ts'
 export { createFacebookAuthProvider } from './lib/providers/facebook.ts'
 export { finishExternalAuth } from './lib/finish-external-auth.ts'
+export { refreshExternalAuth } from './lib/refresh-external-auth.ts'
 export { createGitHubAuthProvider } from './lib/providers/github.ts'
 export { createGoogleAuthProvider } from './lib/providers/google.ts'
 export { createMicrosoftAuthProvider } from './lib/providers/microsoft.ts'
@@ -50,6 +51,7 @@ export type {
   FinishedExternalAuthResult,
   FinishExternalAuthOptions,
 } from './lib/finish-external-auth.ts'
+export type { RefreshedExternalAuthResult } from './lib/refresh-external-auth.ts'
 export type {
   OAuthAccount,
   OAuthDpopBinding,

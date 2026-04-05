@@ -4,7 +4,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 
 ## Features
 
-- Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
+- Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `completeAuth()`, and `refreshExternalAuth()`
 - Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, X, and Atmosphere
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
@@ -19,12 +19,13 @@ npm i remix
 
 ## Usage
 
-`remix/auth` exposes four primitives:
+`remix/auth` exposes five primitives:
 
 - `verifyCredentials(provider, context)` parses submitted credentials and returns the authenticated result or `null`
 - `startExternalAuth(provider, context, options?)` stores the in-progress OAuth transaction in the session and returns the provider redirect response
 - `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`, including any provider tokens in `result.tokens`
 - `completeAuth(context)` rotates the current session id and returns the session for auth writes
+- `refreshExternalAuth(provider, tokens)` exchanges a previously stored `refreshToken` for a fresh provider token bundle when the provider runtime supports refresh
 
 The route owns redirects, flashes, and other app-specific behavior. `remix/auth` owns the protocol work.
 
@@ -149,6 +150,7 @@ import {
   completeAuth,
   createGoogleAuthProvider,
   finishExternalAuth,
+  refreshExternalAuth,
   startExternalAuth,
 } from 'remix/auth'
 import { createCookie } from 'remix/cookie'
@@ -229,11 +231,27 @@ router.get(routes.auth.google.callback, async (context) => {
   let { result, returnTo } = await finishExternalAuth(googleProvider, context)
 
   let user = await users.upsertFromGoogle(result.profile)
+  await persistProviderTokens(user.id, result.tokens)
+
   let session = completeAuth(context)
   session.set('auth', { userId: user.id })
 
   return redirect(returnTo ?? routes.app.dashboard.href())
 })
+
+async function getGoogleAccessToken(userId: string) {
+  let tokens = await readStoredProviderTokens(userId)
+  if (tokens == null) {
+    return null
+  }
+
+  if (tokens.expiresAt != null && tokens.expiresAt.getTime() <= Date.now()) {
+    tokens = (await refreshExternalAuth(googleProvider, tokens)).tokens
+    await persistProviderTokens(userId, tokens)
+  }
+
+  return tokens.accessToken
+}
 
 router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
@@ -254,8 +272,10 @@ A typical external auth flow looks like this:
 1. Create the provider once at module scope, or recreate an Atmosphere provider per request using the same stored handle or DID.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
-4. Call `completeAuth(context)` and write your auth record into the returned session.
-5. Return your own redirect or other response.
+4. Persist any provider tokens you want to reuse later.
+5. Call `completeAuth(context)` and write your app-owned auth record into the returned session.
+6. On a later follow-up request, load the stored provider tokens, refresh them with `refreshExternalAuth()` only if needed, then save the refreshed bundle back to storage.
+7. Return your own redirect or other response.
 
 ## Built-in External Auth Providers
 
@@ -337,6 +357,7 @@ Notes:
 - `createAtmosphereAuthProvider()` resolves the target atproto account before redirecting, so recreate it with the same handle or DID when you enter the callback route
 - `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
 - `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, and `dpop` JWK state that can be passed directly to `remix/dpop-fetch`
+- `refreshExternalAuth()` currently supports the built-in OIDC providers, X, and Atmosphere
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
 Default scopes for OAuth providers that don't use OIDC discovery:

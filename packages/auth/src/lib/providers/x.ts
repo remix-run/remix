@@ -1,10 +1,12 @@
-import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult, OAuthStandardTokens } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
   exchangeAuthorizationCode,
+  exchangeRefreshToken,
   fetchJson,
   getAuthorizationCode,
+  mergeRefreshedStandardTokens,
 } from '../provider.ts'
 import { createCodeChallenge } from '../utils.ts'
 
@@ -60,7 +62,7 @@ interface XProfileResponse {
  */
 export function createXAuthProvider(
   options: XAuthProviderOptions,
-): OAuthProvider<XAuthProfile, 'x'> {
+): OAuthProvider<XAuthProfile, 'x', OAuthStandardTokens> {
   let scopes = options.scopes ?? DEFAULT_X_SCOPES
 
   return createOAuthProvider('x', {
@@ -77,7 +79,10 @@ export function createXAuthProvider(
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(context, transaction): Promise<OAuthResult<XAuthProfile, 'x'>> {
+    async handleCallback(
+      context,
+      transaction,
+    ): Promise<OAuthResult<XAuthProfile, 'x', OAuthStandardTokens>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: X_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -105,6 +110,21 @@ export function createXAuthProvider(
         profile,
         tokens,
       }
+    },
+    async refreshTokens(currentTokens): Promise<OAuthStandardTokens> {
+      if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+        throw new Error('X provider did not receive a refresh token.')
+      }
+
+      let refreshedTokens = await exchangeRefreshToken({
+        tokenEndpoint: X_TOKEN_ENDPOINT,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        refreshToken: currentTokens.refreshToken,
+        clientAuthentication: 'basic',
+      })
+
+      return mergeRefreshedStandardTokens(currentTokens, refreshedTokens)
     },
   })
 }

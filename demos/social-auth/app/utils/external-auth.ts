@@ -3,16 +3,21 @@ import {
   createGitHubAuthProvider,
   createGoogleAuthProvider,
   createXAuthProvider,
+  refreshExternalAuth,
 } from 'remix/auth'
 import type {
   AtmosphereAuthProfile,
   AtmosphereAuthProviderOptions,
   GitHubAuthProfile,
   GoogleAuthProfile,
+  OAuthDpopTokens,
   OAuthProvider,
+  OAuthStandardTokens,
+  OAuthTokens,
   XAuthProfile,
 } from 'remix/auth'
 
+import type { AuthAccount } from '../data/schema.ts'
 import { sessionSecret } from '../middleware/session.ts'
 import { routes } from '../routes.ts'
 
@@ -110,6 +115,42 @@ export function getExternalProviderLabel(name: ExternalProviderName): string {
   return providerLabels[name]
 }
 
+/**
+ * Refreshes a previously stored token bundle with the provider that issued it.
+ *
+ * This keeps provider-specific refresh behavior next to provider construction so
+ * app code can treat "load stored tokens, maybe refresh, then use them" as one
+ * small integration pattern.
+ */
+export async function refreshExternalProviderTokens(
+  authAccount: AuthAccount,
+  tokens: OAuthTokens,
+  registry: ExternalProviderRegistry = externalProviderRegistry,
+): Promise<OAuthTokens> {
+  if (authAccount.provider === 'google') {
+    if (registry.google == null) {
+      throw new Error('Google login is not configured.')
+    }
+
+    return (await refreshExternalAuth(registry.google, asStandardTokens(tokens, 'Google'))).tokens
+  }
+
+  if (authAccount.provider === 'x') {
+    if (registry.x == null) {
+      throw new Error('X login is not configured.')
+    }
+
+    return (await refreshExternalAuth(registry.x, asStandardTokens(tokens, 'X'))).tokens
+  }
+
+  if (authAccount.provider === 'atmosphere') {
+    let provider = await createAtmosphereProvider(authAccount.provider_account_id, registry)
+    return (await refreshExternalAuth(provider, asDpopTokens(tokens))).tokens
+  }
+
+  throw new Error('This provider does not support token refresh in the demo.')
+}
+
 export function getExternalProviderStatus(
   name: ButtonProviderName,
   registry: ExternalProviderRegistry = externalProviderRegistry,
@@ -154,6 +195,10 @@ function createGoogleProvider(
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
     redirectUri: new URL(routes.auth.google.callback.href(), toOriginString(origin)),
+    authorizationParams: {
+      access_type: 'offline',
+      prompt: 'consent',
+    },
   })
 }
 
@@ -186,6 +231,7 @@ function createXProvider(
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
     redirectUri: new URL(routes.auth.x.callback.href(), toOriginString(origin)),
+    scopes: ['tweet.read', 'users.read', 'offline.access'],
   })
 }
 
@@ -235,6 +281,28 @@ function readProviderCredentials(
   }
 
   return { clientId, clientSecret }
+}
+
+function asStandardTokens(tokens: OAuthTokens, providerLabel: string): OAuthStandardTokens {
+  if (isDpopTokens(tokens)) {
+    throw new Error(
+      `${providerLabel} tokens are not compatible with standard refresh-token exchange.`,
+    )
+  }
+
+  return tokens as OAuthStandardTokens
+}
+
+function asDpopTokens(tokens: OAuthTokens): OAuthDpopTokens {
+  if (!isDpopTokens(tokens)) {
+    throw new Error('Atmosphere tokens are missing required DPoP binding state.')
+  }
+
+  return tokens
+}
+
+function isDpopTokens(tokens: OAuthTokens): tokens is OAuthDpopTokens {
+  return tokens.tokenType === 'DPoP' && tokens.dpop != null
 }
 
 function toOriginString(origin: string | URL): string {

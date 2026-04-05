@@ -8,6 +8,7 @@ import { formatProviderLabel } from '../../ui/provider-presentation.tsx'
 import { designSystem } from '../../ui/design-system.ts'
 
 import * as styles from '../../ui/styles.ts'
+import type { ExternalTokenState } from '../../utils/auth-account-tokens.ts'
 import type { AuthIdentity } from '../../utils/auth-session.ts'
 
 const { tokens } = designSystem
@@ -15,10 +16,11 @@ const { tokens } = designSystem
 interface AccountPageProps {
   identity: AuthIdentity
   logoutAction: string
+  externalTokenState: ExternalTokenState | null
 }
 
 export function AccountPage() {
-  return ({ identity, logoutAction }: AccountPageProps) => {
+  return ({ identity, logoutAction, externalTokenState }: AccountPageProps) => {
     let displayName =
       identity.user.name ??
       identity.authAccount?.display_name ??
@@ -32,6 +34,7 @@ export function AccountPage() {
       user: identity.user,
       authAccount: identity.authAccount,
       providerProfile: identity.providerProfile,
+      externalTokenState,
     }
 
     return (

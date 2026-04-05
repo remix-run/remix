@@ -1,11 +1,6 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type {
-  OAuthDpopTokens,
-  OAuthProvider,
-  OAuthResult,
-  OAuthTransaction,
-} from '../provider.ts'
+import type { OAuthDpopTokens, OAuthProvider, OAuthResult, OAuthTransaction } from '../provider.ts'
 import { createAuthorizationURL, createOAuthProvider, getAuthorizationCode } from '../provider.ts'
 import { createCodeChallenge, getRequiredSearchParam } from '../utils.ts'
 
@@ -351,6 +346,45 @@ export async function createAtmosphereAuthProvider<
         tokens,
       }
     },
+    async refreshTokens(currentTokens): Promise<OAuthDpopTokens> {
+      if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+        throw new Error('Atmosphere provider did not receive a refresh token.')
+      }
+
+      let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
+        endpoint: authorizationServer.token_endpoint,
+        body: await createAtmosphereRefreshTokenRequestBody({
+          clientId: client.clientId,
+          refreshToken: currentTokens.refreshToken,
+          clientAuthentication: options.clientAuthentication,
+          issuer: authorizationServer.issuer,
+        }),
+        dpopKeyPair: {
+          publicJwk: currentTokens.dpop.publicJwk,
+          privateJwk: currentTokens.dpop.privateJwk,
+        },
+        fallbackError: 'Atmosphere refresh token exchange failed.',
+        nonce: currentTokens.dpop.nonce,
+      })
+      let refreshedTokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
+
+      if (tokenResponse.json.sub !== identity.did) {
+        throw new Error('Atmosphere token response did not match the resolved account DID.')
+      }
+
+      return {
+        ...currentTokens,
+        ...refreshedTokens,
+        refreshToken: refreshedTokens.refreshToken ?? currentTokens.refreshToken,
+        expiresAt: refreshedTokens.expiresAt ?? currentTokens.expiresAt,
+        scope: refreshedTokens.scope ?? currentTokens.scope,
+        dpop: {
+          publicJwk: currentTokens.dpop.publicJwk,
+          privateJwk: currentTokens.dpop.privateJwk,
+          nonce: tokenResponse.nonce ?? currentTokens.dpop.nonce,
+        },
+      }
+    },
   })
 }
 
@@ -384,6 +418,29 @@ async function createAtmosphereTokenRequestBody(options: {
     code_verifier: options.codeVerifier,
     grant_type: 'authorization_code',
     redirect_uri: options.redirectUri,
+  })
+
+  if (options.clientAuthentication != null) {
+    body.set('client_assertion_type', 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
+    body.set(
+      'client_assertion',
+      await createClientAssertion(options.clientId, options.issuer, options.clientAuthentication),
+    )
+  }
+
+  return body
+}
+
+async function createAtmosphereRefreshTokenRequestBody(options: {
+  clientId: string
+  refreshToken: string
+  issuer: string
+  clientAuthentication?: AtmosphereClientAuthentication
+}): Promise<URLSearchParams> {
+  let body = new URLSearchParams({
+    client_id: options.clientId,
+    grant_type: 'refresh_token',
+    refresh_token: options.refreshToken,
   })
 
   if (options.clientAuthentication != null) {

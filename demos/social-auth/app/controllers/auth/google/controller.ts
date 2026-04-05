@@ -13,6 +13,7 @@ import {
   getExternalProviderLabel,
   type ExternalProviderRegistry,
 } from '../../../utils/external-auth.ts'
+import { persistAuthAccountTokens } from '../../../utils/auth-account-tokens.ts'
 
 const label = getExternalProviderLabel('google')
 
@@ -53,6 +54,7 @@ export function createGoogleAuthController(
 
           let db = context.get(Database)
           let { user, authAccount } = await resolveExternalAuth(db, result)
+          await persistAuthAccountTokens(db, authAccount.id, result.tokens)
           let session = completeAuth(context)
           session.set('auth', {
             userId: user.id,

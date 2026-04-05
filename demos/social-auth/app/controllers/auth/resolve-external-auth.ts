@@ -122,7 +122,6 @@ async function extractProfile(result: ExternalAuthResult): Promise<ExternalProfi
     let fetchAtmosphere = createFetch({
       ...result.tokens,
       onDpopChange(dpop) {
-        // TODO: Persist somewhere
         result.tokens.dpop = dpop
       },
     })

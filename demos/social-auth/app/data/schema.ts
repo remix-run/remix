@@ -91,6 +91,34 @@ export const authAccounts = table({
   },
 })
 
+export const authAccountTokens = table({
+  name: 'auth_account_tokens',
+  columns: {
+    id: c.integer().primaryKey().autoIncrement(),
+    auth_account_id: c
+      .integer()
+      .notNull()
+      .references('auth_accounts', 'id', 'auth_account_tokens_auth_account_id_fk')
+      .onDelete('cascade'),
+    encrypted_token_json: c.text().notNull(),
+    expires_at: c.integer(),
+    created_at: c.integer().notNull(),
+    updated_at: c.integer().notNull(),
+  },
+  beforeWrite({ operation, value }) {
+    let next = { ...value }
+    let timestamp = Date.now()
+
+    if (operation === 'create' && next.created_at === undefined) {
+      next.created_at = timestamp
+    }
+
+    next.updated_at = timestamp
+
+    return { value: next }
+  },
+})
+
 export const passwordResetTokens = table({
   name: 'password_reset_tokens',
   primaryKey: ['token'],
@@ -107,6 +135,7 @@ export const passwordResetTokens = table({
 
 export type User = TableRow<typeof users>
 export type AuthAccount = TableRow<typeof authAccounts>
+export type AuthAccountToken = TableRow<typeof authAccountTokens>
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()

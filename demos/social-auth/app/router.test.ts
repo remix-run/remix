@@ -2,6 +2,10 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
+import {
+  persistAuthAccountTokens,
+  readStoredAuthAccountTokens,
+} from './utils/auth-account-tokens.ts'
 import { createExternalProviderRegistry } from './utils/external-auth.ts'
 import {
   assertContains,
@@ -168,6 +172,118 @@ describe('social-auth router', () => {
       assert.ok(authAccount)
       assert.equal(authAccount.email, 'google-user@example.com')
       assert.equal(authAccount.display_name, 'Google Test User')
+
+      let storedTokens = await readStoredAuthAccountTokens(db, authAccount.id)
+      assert.ok(storedTokens)
+      assert.equal(storedTokens.accessToken, 'test-google-access-token')
+      assert.equal(storedTokens.refreshToken, undefined)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('refreshes stored Google tokens on demand when they expire', async () => {
+    let originalFetch = globalThis.fetch
+    let refreshRequests = 0
+    let router = await createTestRouter({
+      externalProviderRegistry: createExternalProviderRegistry({
+        origin: 'https://social-auth.test',
+        env: {
+          GOOGLE_CLIENT_ID: 'test-google-client-id',
+          GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
+        },
+      }),
+    })
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      let request = input instanceof Request ? input : new Request(input, init)
+      let url = new URL(request.url)
+
+      if (url.href === 'https://oauth2.googleapis.com/token') {
+        let body = new URLSearchParams(await request.text())
+
+        if (body.get('grant_type') === 'authorization_code') {
+          return Response.json({
+            access_token: 'google-access-token-1',
+            refresh_token: 'google-refresh-token-1',
+            token_type: 'Bearer',
+            expires_in: 3600,
+            id_token: 'google-id-token-1',
+          })
+        }
+
+        refreshRequests += 1
+        assert.equal(body.get('grant_type'), 'refresh_token')
+        assert.equal(body.get('refresh_token'), 'google-refresh-token-1')
+
+        return Response.json({
+          access_token: 'google-access-token-2',
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'openid email profile',
+        })
+      }
+
+      if (url.href === 'https://openidconnect.googleapis.com/v1/userinfo') {
+        return Response.json({
+          sub: 'google-user-refresh',
+          email: 'google-refresh@example.com',
+          email_verified: true,
+          name: 'Google Refresh User',
+          picture: 'https://example.com/google-refresh-user.png',
+        })
+      }
+
+      return originalFetch(input, init)
+    }
+
+    try {
+      let loginResponse = await router.fetch('https://social-auth.test/auth/google/login')
+      let state = new URL(loginResponse.headers.get('Location') ?? '').searchParams.get('state')
+      assert.ok(state)
+
+      let loginSessionCookie = getSessionCookie(loginResponse)
+      assert.ok(loginSessionCookie)
+
+      let callbackResponse = await router.fetch(
+        requestWithSession(
+          `https://social-auth.test/auth/google/callback?code=test-google-code&state=${encodeURIComponent(state)}`,
+          loginSessionCookie,
+        ),
+      )
+      let callbackSessionCookie = getSessionCookie(callbackResponse)
+      assert.ok(callbackSessionCookie)
+
+      let authAccount = await db.findOne(authAccounts, {
+        where: {
+          provider: 'google',
+          provider_account_id: 'google-user-refresh',
+        },
+      })
+      assert.ok(authAccount)
+
+      await persistAuthAccountTokens(db, authAccount.id, {
+        accessToken: 'google-access-token-expired',
+        refreshToken: 'google-refresh-token-1',
+        tokenType: 'Bearer',
+        expiresAt: new Date(Date.now() - 5 * 60_000),
+        scope: ['openid', 'email', 'profile'],
+      })
+
+      let accountResponse = await router.fetch(
+        requestWithSession('https://social-auth.test/account', callbackSessionCookie),
+      )
+      let html = await accountResponse.text()
+
+      assert.equal(accountResponse.status, 200)
+      assertContains(html, 'Google Refresh User')
+      assertContains(html, '"refreshed": true')
+      assert.equal(refreshRequests, 1)
+
+      let refreshedTokens = await readStoredAuthAccountTokens(db, authAccount.id)
+      assert.ok(refreshedTokens)
+      assert.equal(refreshedTokens.accessToken, 'google-access-token-2')
+      assert.equal(refreshedTokens.refreshToken, 'google-refresh-token-1')
     } finally {
       globalThis.fetch = originalFetch
     }

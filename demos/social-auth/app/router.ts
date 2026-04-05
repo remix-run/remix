@@ -6,7 +6,7 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { accountAction } from './controllers/account/controller.tsx'
+import { createAccountAction } from './controllers/account/controller.tsx'
 import { createAuthController } from './controllers/auth/controller.tsx'
 import { createHomeController } from './controllers/home/controller.tsx'
 import { loadAuth, requireAuth } from './middleware/auth.ts'
@@ -61,7 +61,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   router.map(routes.home, createHomeController(providers))
   router.get(routes.account, {
     middleware: [requireAuth],
-    handler: accountAction.handler,
+    handler: createAccountAction(providers).handler,
   })
   router.map(routes.auth, createAuthController(providers))
 

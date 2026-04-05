@@ -14,6 +14,7 @@ import {
   externalProviderRegistry,
   type ExternalProviderRegistry,
 } from '../../../utils/external-auth.ts'
+import { persistAuthAccountTokens } from '../../../utils/auth-account-tokens.ts'
 
 const label = getExternalProviderLabel('atmosphere')
 const atmosphereIdentifierSessionKey = '__atmosphere_identifier'
@@ -66,6 +67,7 @@ export function createAtmosphereAuthController(
 
           let db = context.get(Database)
           let { user, authAccount } = await resolveExternalAuth(db, result)
+          await persistAuthAccountTokens(db, authAccount.id, result.tokens)
           let authSession = completeAuth(context)
           authSession.set('auth', {
             userId: user.id,

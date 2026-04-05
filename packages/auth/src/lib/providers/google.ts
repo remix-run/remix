@@ -1,4 +1,4 @@
-import type { OAuthProvider } from '../provider.ts'
+import type { OAuthProvider, OAuthStandardTokens } from '../provider.ts'
 
 import {
   createOIDCAuthProvider,
@@ -31,6 +31,8 @@ export interface GoogleAuthProviderOptions {
   redirectUri: string | URL
   /** Requested scopes for the Google login flow. */
   scopes?: string[]
+  /** Additional authorization parameters appended to the login redirect, such as `access_type=offline`. */
+  authorizationParams?: Record<string, string | undefined>
 }
 
 /**
@@ -46,7 +48,7 @@ export interface GoogleAuthProfile extends OIDCAuthProfile {}
  */
 export function createGoogleAuthProvider(
   options: GoogleAuthProviderOptions,
-): OAuthProvider<GoogleAuthProfile, 'google'> {
+): OAuthProvider<GoogleAuthProfile, 'google', OAuthStandardTokens> {
   return createOIDCAuthProvider({
     ...options,
     name: 'google',

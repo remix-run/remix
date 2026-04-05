@@ -18,27 +18,42 @@ npm i remix
 ## Usage
 
 ```ts
-import { finishExternalAuth } from 'remix/auth'
+import { finishExternalAuth, refreshExternalAuth } from 'remix/auth'
 import { createFetch } from 'remix/dpop-fetch'
 
 let { result } = await finishExternalAuth(atmosphereProvider, context)
-let atmosphereFetch = createFetch({
-  ...result.tokens,
-  async onDpopChange(dpop) {
-    await saveAtmosphereTokens({
-      ...result.tokens,
-      dpop,
-    })
-  },
-})
+await saveAtmosphereTokens(result.tokens)
 
+async function createAtmosphereApiFetch() {
+  let tokens = await readAtmosphereTokens()
+  if (tokens == null) {
+    throw new Error('Missing Atmosphere tokens')
+  }
+
+  if (tokens.expiresAt != null && tokens.expiresAt.getTime() <= Date.now()) {
+    tokens = (await refreshExternalAuth(atmosphereProvider, tokens)).tokens
+    await saveAtmosphereTokens(tokens)
+  }
+
+  return createFetch({
+    ...tokens,
+    async onDpopChange(dpop) {
+      await saveAtmosphereTokens({
+        ...tokens,
+        dpop,
+      })
+    },
+  })
+}
+
+let atmosphereFetch = await createAtmosphereApiFetch()
 let response = await atmosphereFetch(
   'https://pds.example.com/xrpc/app.bsky.actor.getProfile?actor=alice.example.com',
 )
 let profile = await response.json()
 ```
 
-`createFetch()` expects `accessToken`, and it also accepts `refreshToken` and `expiresAt` so you can pass the full token object returned by `remix/auth` directly. Use `onDpopChange` when you need to persist a nonce learned from a DPoP challenge or response header. Refresh-token exchange remains app-owned because token refresh requirements are provider-specific.
+`createFetch()` expects `accessToken`, and it also accepts `refreshToken` and `expiresAt` so you can pass the full token object returned by `remix/auth` directly. Use `onDpopChange` when you need to persist a nonce learned from a DPoP challenge or response header. `createFetch()` does not refresh tokens for you, so apps should persist the token bundle from `finishExternalAuth()` and recreate the fetch instance later after calling `refreshExternalAuth()` when a follow-up request needs a fresh access token.
 
 ## Related Packages
 
