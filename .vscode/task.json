@@ -1,6 +1,84 @@
-{
-  "version": "0.1.0",
-  "command": "./node_modules/.bin/tsc",
-  "args": ["-v"],
-  "echoCommand": true
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MJToken is ERC20, Ownable {
+
+    uint256 public maxTxAmount;
+    uint256 public maxWalletAmount;
+
+    uint256 public buyTax = 3;   // %
+    uint256 public sellTax = 5;  // %
+
+    address public liquidityPair;
+    bool public tradingEnabled = false;
+
+    mapping(address => bool) public isExcludedFromLimits;
+
+    constructor(uint256 initialSupply) ERC20("MJ TOKEN", "MJT") {
+        _mint(msg.sender, initialSupply * 10 ** decimals());
+
+        maxTxAmount = (initialSupply * 10 ** decimals()) / 100; // 1%
+        maxWalletAmount = (initialSupply * 10 ** decimals()) / 50; // 2%
+
+        isExcludedFromLimits[msg.sender] = true;
+    }
+
+    // Enable trading after liquidity is added
+    function enableTrading(address _pair) external onlyOwner {
+        liquidityPair = _pair;
+        tradingEnabled = true;
+    }
+
+    // Update limits
+    function setLimits(uint256 _maxTx, uint256 _maxWallet) external onlyOwner {
+        maxTxAmount = _maxTx;
+        maxWalletAmount = _maxWallet;
+    }
+
+    // Exclude wallets (like exchanges)
+    function excludeFromLimits(address account, bool status) external onlyOwner {
+        isExcludedFromLimits[account] = status;
+    }
+
+    // Internal transfer override
+    function _transfer(address from, address to, uint256 amount) internal override {
+
+        require(tradingEnabled || isExcludedFromLimits[from], "Trading not enabled");
+
+        // Anti-whale checks
+        if (!isExcludedFromLimits[from] && !isExcludedFromLimits[to]) {
+            require(amount <= maxTxAmount, "Exceeds max tx");
+
+            if (to != liquidityPair) {
+                require(balanceOf(to) + amount <= maxWalletAmount, "Exceeds max wallet");
+            }
+        }
+
+        uint256 taxAmount = 0;
+
+        // Apply tax only if interacting with liquidity pair
+        if (liquidityPair != address(0)) {
+            if (from == liquidityPair) {
+                taxAmount = (amount * buyTax) / 100;
+            } else if (to == liquidityPair) {
+                taxAmount = (amount * sellTax) / 100;
+            }
+        }
+
+        uint256 transferAmount = amount - taxAmount;
+
+        if (taxAmount > 0) {
+            _burn(from, taxAmount); // Auto burn
+        }
+
+        super._transfer(from, to, transferAmount);
+    }
+
+    // Burn manually
+    function burn(uint256 amount) external {
+        _burn(msg.sender, amount);
+    }
 }
