@@ -1,4 +1,4 @@
-import type { Browser, BrowserContextOptions, Page } from 'playwright'
+import type { Browser, Page } from 'playwright'
 import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
 
 import type { CreateServerFunction } from './e2e-server.ts'

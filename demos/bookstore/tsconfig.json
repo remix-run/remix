@@ -11,8 +11,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/component",
-    "preserveSymlinks": true
+    "jsxImportSource": "remix/component"
   },
   "exclude": ["dist"]
 }

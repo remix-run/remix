@@ -1,7 +1,8 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 import { chromium, firefox, webkit } from 'playwright'
-import type { BrowserContextOptions, LaunchOptions, PlaywrightTestConfig } from 'playwright/test'
+import type { BrowserContextOptions, LaunchOptions } from 'playwright'
+import type { PlaywrightTestConfig } from 'playwright/test'
 import { tsImport } from 'tsx/esm/api'
 
 export type PlaywrightUseOpts = PlaywrightTestConfig['use']

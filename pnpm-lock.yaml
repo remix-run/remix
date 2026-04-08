@@ -1422,9 +1422,6 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../node-fetch-server
-      playwright:
-        specifier: ^1.59.0
-        version: 1.59.0
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1438,6 +1435,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      playwright:
+        specifier: 'catalog:'
+        version: 1.59.0
 
   scripts:
     dependencies:
