@@ -5,8 +5,6 @@ import * as util from 'node:util'
 import { tsImport } from 'tsx/esm/api'
 import type { PlaywrightTestConfig } from 'playwright/test'
 
-export const defaultTestGlob = '**/*.test?(.e2e).{ts,tsx}'
-
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
 // we use for `--help`
@@ -67,6 +65,24 @@ const cliOptions = {
   },
 } as const
 
+const defaultValues: ResolvedRemixTestConfig = {
+  browser: {
+    echo: false,
+    open: false,
+  },
+  concurrency: os.availableParallelism(),
+  glob: {
+    test: '**/*.test?(.e2e).{ts,tsx}',
+    e2e: '**/*.test.e2e.{ts,tsx}',
+  },
+  reporter: process.env.CI === 'true' ? 'dot' : 'spec',
+  type: 'server,browser,e2e',
+  setup: undefined,
+  playwrightConfig: undefined,
+  project: undefined,
+  watch: false,
+} as const
+
 export interface RemixTestConfig {
   /**
    * Options for controlling the playwright browser
@@ -118,12 +134,12 @@ export interface ResolvedRemixTestConfig {
     test: string
     e2e: string
   }
-  setup?: string
-  playwrightConfig?: string | PlaywrightTestConfig
-  project?: string
+  playwrightConfig: string | PlaywrightTestConfig | undefined
+  project: string | undefined
   reporter: string
+  setup: string | undefined
   type: string
-  watch?: boolean
+  watch: boolean
 }
 
 export async function loadConfig() {
@@ -143,7 +159,7 @@ function generateHelp(): string {
     'Usage: remix-test [glob] [options]',
     '',
     'Arguments:',
-    `  glob                     Glob pattern for test files (default: "${defaultTestGlob}")`,
+    `  glob                     Glob pattern for test files (default: "${defaultValues.glob.test}")`,
     '',
     'Options:',
   ]
@@ -169,23 +185,27 @@ function resolveConfig(
 ): ResolvedRemixTestConfig {
   return {
     glob: {
-      test: positionals[0] ?? cliValues['glob.test'] ?? fileConfig.glob?.test ?? defaultTestGlob,
-      e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? '**/*.test.e2e.{ts,tsx}',
+      test:
+        positionals[0] ??
+        cliValues['glob.test'] ??
+        fileConfig.glob?.test ??
+        defaultValues.glob.test,
+      e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
     },
     browser: {
-      echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo,
-      open: cliValues['browser.open'] ?? fileConfig.browser?.open,
+      echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
+      open: cliValues['browser.open'] ?? fileConfig.browser?.open ?? defaultValues.browser.open,
     },
     concurrency: Number(
-      cliValues.concurrency ?? fileConfig.concurrency ?? os.availableParallelism(),
+      cliValues.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
     ),
-    setup: cliValues.setup ?? fileConfig.setup,
-    playwrightConfig: cliValues.playwrightConfig ?? fileConfig.playwrightConfig,
-    project: cliValues.project ?? fileConfig.project,
-    reporter:
-      cliValues.reporter ?? fileConfig.reporter ?? (process.env.CI === 'true' ? 'dot' : 'spec'),
-    type: cliValues.type ?? fileConfig.type ?? 'server,browser,e2e',
-    watch: cliValues.watch ?? fileConfig.watch,
+    setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
+    playwrightConfig:
+      cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
+    project: cliValues.project ?? fileConfig.project ?? defaultValues.project,
+    reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
+    type: cliValues.type ?? fileConfig.type ?? defaultValues.type,
+    watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
 }
 
