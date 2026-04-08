@@ -53,7 +53,7 @@ export function resolveProjects(
 ): Array<{ name?: string; playwrightUseOpts: PlaywrightUseOpts }> {
   if (config?.projects?.length) {
     return config.projects.map((p) => ({
-      name: p.name as string | undefined,
+      name: p.name,
       playwrightUseOpts: { ...config.use, ...p.use },
     }))
   }

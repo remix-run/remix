@@ -53,7 +53,7 @@ export interface RemixTestConfig {
    * PlaywrightTestConfig object. CLI `--playwrightConfig` only accepts a file path.
    */
   playwrightConfig?: string | PlaywrightTestConfig
-  /** Filter tests to a specific playwright project (--project) */
+  /** Filter tests to a specific playwright project or comma-separated list of projects (--project) */
   project?: string
   /** Test reporter (--reporter) */
   reporter?: string

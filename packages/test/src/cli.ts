@@ -85,9 +85,10 @@ async function executeRun() {
     if (e2eFiles.length > 0) {
       let projects = resolveProjects(playwrightConfig)
       if (config.project) {
-        projects = projects.filter((p) => p.name === config.project)
+        let projectNames = config.project.split(',').map((p) => p.trim())
+        projects = projects.filter((p) => p.name && projectNames.includes(p.name))
         if (projects.length === 0) {
-          throw new Error(`No playwright project found with name "${config.project}"`)
+          throw new Error(`No playwright projects found with name(s) "${config.project}"`)
         }
       }
 
