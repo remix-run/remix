@@ -1,4 +1,4 @@
-# testing
+# `test`
 
 A test framework for Remix applications
 
@@ -74,7 +74,8 @@ export default {
     e2e: '**/*.test.e2e.ts',
   },
 
-  // Playwright configuration for E2E tests
+  // Playwright configuration for E2E tests, or string path to an existing
+  // config file on disk
   playwrightConfig: {
     projects: [
       { name: 'chromium', use: { browserName: 'chromium' } },
@@ -86,14 +87,17 @@ export default {
     },
   },
 
-  // Filter E2E tests to a specific playwright project name
+  // Comma-separated list of playwright projects to run E2E tests for
   project: 'chromium',
 
-  // Test reporter ("spec", "tap", "dot")
+  // Test reporter ("spec", "files", "tap", "dot")
   reporter: 'spec',
 
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
+
+  // Comma-separated list of test types to run ("server", "e2e")
+  type: 'server,e2e',
 
   // Watch for file changes and re-run
   watch: false,
@@ -118,9 +122,10 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--glob.test`               |       |
 | `--glob.e2e`                |       |
 | `--playwrightConfig <path>` |       |
-| `--project <name>`          |       |
+| `--project <name>`          | `-p`  |
 | `--reporter <name>`         | `-r`  |
-| `--setup <path>`            |       |
+| `--setup <path>`            | `-s`  |
+| `--type <name>`             | `-t`  |
 | `--watch`                   | `-w`  |
 
 ### Setup
