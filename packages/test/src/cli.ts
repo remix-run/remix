@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
-import type * as http from 'node:http'
 import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
