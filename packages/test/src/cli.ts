@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
-import * as http from 'node:http'
+import type * as http from 'node:http'
 import * as path from 'node:path'
 import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
@@ -9,7 +9,7 @@ import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
-import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
+import { IS_RUNNING_FROM_SRC, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import { IS_BUN, type Counts } from './lib/utils.ts'
 
 const config = await loadConfig()
@@ -59,10 +59,12 @@ async function executeRun() {
     }
 
     if (browserFiles.length > 0 && !browserServer) {
-      let { startServer } = await importModule('./app/server.tsx', import.meta, {
-        // TODO: Do we need this?
-        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
-      })
+      let { startServer } = IS_RUNNING_FROM_SRC
+        ? await importModule('./app/server.tsx', import.meta, {
+            // TODO: Do we need this?
+            tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+          })
+        : await import(`./app/server.js`)
       let result = await startServer(browserFiles)
       browserServer = result.server
       browserPort = result.port

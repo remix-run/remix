@@ -5,6 +5,8 @@ import * as util from 'node:util'
 import type { PlaywrightTestConfig } from 'playwright/test'
 import { importModule } from './import-module.ts'
 
+export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
+
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
 // we use for `--help`

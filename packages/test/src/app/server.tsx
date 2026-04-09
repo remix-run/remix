@@ -1,23 +1,18 @@
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { createScriptServer, type ScriptServerOptions } from '@remix-run/script-server'
 import * as http from 'node:http'
 import * as path from 'node:path'
+import { IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { Tests } from './client/components.tsx'
-
-const routes = route({
-  home: '/',
-  iframe: '/iframe',
-  scripts: '/scripts/*path',
-})
+import { routes } from './client/routes.ts'
 
 export async function startServer(
-  absoluteFiles: string[],
+  browserFiles: string[],
 ): Promise<{ server: http.Server; port: number }> {
-  let router = getRouter(absoluteFiles)
+  let router = getRouter(browserFiles)
   let handler = createRequestListener(async (req) => await router.fetch(req))
   let port = 44101
 
@@ -45,22 +40,32 @@ export async function startServer(
   throw lastError
 }
 
-function getRouter(absoluteFiles: string[]) {
+function getRouter(browserFiles: string[]) {
   let router = createRouter()
 
-  let { scriptServer, testFiles } = getScriptServer(absoluteFiles)
+  let { scriptServer, testPaths } = getScriptServer(browserFiles)
 
   router.get(routes.scripts, async ({ request, params }) => {
     if (!params.path) return new Response('Not found', { status: 404 })
     let script = await scriptServer.fetch(request)
-    return script ?? new Response('Not found', { status: 404 })
+    if (script) {
+      return script
+    } else {
+      console.error(`[remix-test] Script not found: ${new URL(request.url).pathname}`)
+      return new Response('Not found', { status: 404 })
+    }
   })
 
   router.get(routes.home, async () =>
     html(
       <Doc title="Tests">
-        <Tests setup={{ testFiles, baseDir: process.cwd() }} />
-        <script type="module" src={routes.scripts.href({ path: 'app/entry.ts' })} />
+        <Tests setup={{ testPaths, baseDir: process.cwd() }} />
+        <script
+          type="module"
+          src={routes.scripts.href({
+            path: IS_RUNNING_FROM_SRC ? `app/entry.ts` : `app/entry.js`,
+          })}
+        />
       </Doc>,
     ),
   )
@@ -69,7 +74,12 @@ function getRouter(absoluteFiles: string[]) {
     let test = decodeURIComponent(new URL(request.url).searchParams.get('file') || '')
     return html(
       <Doc title={`Test: ${test}`}>
-        <script type="module" src={routes.scripts.href({ path: 'app/iframe.ts' })}></script>
+        <script
+          type="module"
+          src={routes.scripts.href({
+            path: IS_RUNNING_FROM_SRC ? `app/iframe.ts` : `app/iframe.js`,
+          })}
+        ></script>
       </Doc>,
     )
   })
@@ -77,33 +87,36 @@ function getRouter(absoluteFiles: string[]) {
   return router
 }
 
-function getScriptServer(absoluteFiles: string[]) {
-  let isInRemixMonoRepo = false
-  let rootDir = process.cwd()
+function getScriptServer(browserFiles: string[]) {
+  let resolvedRemixTestPath = import.meta.resolve('@remix-run/test').replace('file://', '')
+  let rootDir: string
+  let clientDir: string
 
-  try {
-    let resolvedRemixTestPath = import.meta.resolve('@remix-run/test')
-    if (resolvedRemixTestPath.includes('packages/test')) {
-      isInRemixMonoRepo = true
-      resolvedRemixTestPath = resolvedRemixTestPath.replace('file://', '')
-      rootDir = path.relative(
-        process.cwd(),
-        resolvedRemixTestPath.substring(0, resolvedRemixTestPath.indexOf('packages/test')),
-      )
+  if (IS_RUNNING_FROM_SRC) {
+    let idx = resolvedRemixTestPath.lastIndexOf(path.join('packages', 'test'))
+    if (idx === -1) {
+      throw new Error(`Could not determine root directory from path: ${resolvedRemixTestPath}`)
     }
-  } catch (e) {}
+    rootDir = resolvedRemixTestPath.substring(0, idx - 1)
+    let appDir = path.dirname(import.meta.url.replace('file://', ''))
+    clientDir = path.relative(rootDir, path.join(appDir, 'client'))
+  } else {
+    rootDir = process.cwd()
+    let remixTestDistPath = path.dirname(resolvedRemixTestPath)
+    clientDir = path.relative(process.cwd(), path.join(remixTestDistPath, 'app', 'client'))
+  }
 
-  let relativeFiles = absoluteFiles.map((f) => path.relative(rootDir, f))
-  let testFiles = relativeFiles.map((f) => `/scripts/test/${f}`)
+  let relativeFiles = browserFiles.map((f) => path.relative(rootDir, f))
+  let testPaths = relativeFiles.map((f) => `/scripts/test/${f}`)
   let opts: ScriptServerOptions = {
     root: rootDir,
     routes: [
       {
         urlPattern: `/scripts/app/*path`,
-        filePattern: isInRemixMonoRepo ? 'packages/test/src/app/client/*path' : 'client/*path',
+        filePattern: `${clientDir}/*path`,
       },
       ...relativeFiles.map((_, i) => ({
-        urlPattern: testFiles[i],
+        urlPattern: testPaths[i],
         filePattern: relativeFiles[i],
       })),
       {
@@ -115,7 +128,7 @@ function getScriptServer(absoluteFiles: string[]) {
     sourceMaps: 'inline',
   }
   let scriptServer = createScriptServer(opts)
-  return { scriptServer, testFiles }
+  return { scriptServer, testPaths }
 }
 
 async function html(node: RemixNode) {
