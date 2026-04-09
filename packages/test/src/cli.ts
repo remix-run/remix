@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
-import * as http from 'node:http'
+import type * as http from 'node:http'
 import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runBrowserTests } from './lib/runner-browser.ts'
@@ -8,7 +8,7 @@ import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
-import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
+import { IS_RUNNING_FROM_SRC, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import type { Counts } from './lib/utils.ts'
 
 const config = await loadConfig()
@@ -60,10 +60,12 @@ async function executeRun() {
     }
 
     if (browserFiles.length > 0 && !browserServer) {
-      let { startServer } = await tsImport('./app/server.tsx', {
-        parentURL: import.meta.url,
-        tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
-      })
+      let { startServer } = IS_RUNNING_FROM_SRC
+        ? await tsImport(`./app/server.tsx`, {
+            parentURL: import.meta.url,
+            tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+          })
+        : await import(`./app/server.js`)
       let result = await startServer(browserFiles)
       browserServer = result.server
       browserPort = result.port

@@ -5,10 +5,13 @@ import type { TestResults } from './executor.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts } from './utils.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 
-const ext = path.extname(import.meta.url)
-const workerUrl = new URL(`./worker${ext}`, import.meta.url)
-const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
+const workerUrl = new URL(IS_RUNNING_FROM_SRC ? `./worker.ts` : `./worker.js`, import.meta.url)
+const workerE2EUrl = new URL(
+  IS_RUNNING_FROM_SRC ? `./worker-e2e.ts` : `./worker-e2e.js `,
+  import.meta.url,
+)
 
 export async function runServerTests(
   files: string[],

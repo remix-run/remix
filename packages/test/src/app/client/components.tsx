@@ -11,7 +11,7 @@ type TestResult = {
   duration: number
 }
 
-let styles = {
+const styles = {
   container: css({ fontFamily: 'monospace', padding: '16px', maxWidth: '900px' }),
   summary: css({ marginBottom: '16px', lineHeight: '1.6' }),
   summaryRow: css({ display: 'block' }),
@@ -43,7 +43,7 @@ let styles = {
 
 export const Tests = clientEntry(
   'entry.js#Tests',
-  function Tests(handle: Handle, setup: { testFiles: string[]; baseDir: string }) {
+  function Tests(handle: Handle, setup: { testPaths: string[]; baseDir: string }) {
     let done = false
     let startTime = performance.now()
     let allResults = { passed: 0, failed: 0, skipped: 0, todo: 0, tests: [] as TestResult[] }
@@ -95,7 +95,7 @@ export const Tests = clientEntry(
     }
 
     async function run() {
-      for (let testFile of setup.testFiles) {
+      for (let testFile of setup.testPaths) {
         let fileResults = await runInIframe(testFile)
 
         await fetch('/file-results', {

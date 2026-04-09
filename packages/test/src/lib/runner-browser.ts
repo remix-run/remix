@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright'
+import type { Browser, Page, Request } from 'playwright'
 import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporters/index.ts'
 import { colors } from './utils.ts'
@@ -8,6 +8,7 @@ import {
   getPlaywrightPageOptions,
   type PlaywrightUseOpts,
 } from './playwright.ts'
+import { routes } from '../app/client/routes.ts'
 
 export interface TestRunOptions {
   baseUrl: string
@@ -25,12 +26,20 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 }> {
   let envLabel = options.projectName ? `browser:${options.projectName}` : 'browser'
   let browser: Browser | undefined
+  let page: Page | undefined
+  let close = async () => {
+    await page?.close()
+    await browser?.close()
+    browser = undefined
+    page = undefined
+  }
+  let results: TestResults
 
   try {
     browser = await getBrowserLauncher(options.playwrightUseOpts).launch(
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
-    let page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
+    page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
 
     if (options.console) {
       page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
@@ -51,37 +60,63 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       await route.fulfill({ status: 200 })
     })
 
-    await page.goto(options.baseUrl)
-    await page.waitForFunction('window.__testsDone', { timeout: 60000 }).catch(async (reason) => {
-      console.log(await page.content())
-      throw reason
+    // Fail the tests if any of our harness scripts or test modules fail to load
+    let errorPromise = new Promise((_, reject) => {
+      let isTestHarnessRequest = (request: Request) => {
+        let url = new URL(request.url())
+        let match = routes.scripts.match(url)
+        return (
+          match && (match.params.path?.startsWith('app/') || match.params.path?.startsWith('test/'))
+        )
+      }
+      page!.on('response', (response) => {
+        if (!response.ok() && isTestHarnessRequest(response.request())) {
+          reject(new Error(`Failed to load script: ${response.request().url()}`))
+        }
+      })
+      page!.on('requestfailed', (request) => {
+        if (isTestHarnessRequest(request)) {
+          reject(new Error(`Failed to load script: ${request.url()}`))
+        }
+      })
     })
 
-    let results: TestResults = {
+    // Prevent unhandled rejection if we fail before setting up the listener
+    errorPromise.catch(() => {})
+
+    await page.goto(options.baseUrl)
+    await Promise.race([page.waitForFunction('window.__testsDone'), errorPromise])
+
+    results = {
       passed: totalPassed,
       failed: totalFailed,
       skipped: 0,
       todo: 0,
       tests: [],
     }
-
-    if (options.open) {
-      let close = async () => {
-        await browser?.close()
-        browser = undefined
-      }
-      let disconnected = new Promise<void>((resolve) =>
-        browser!.on('disconnected', () => resolve()),
-      )
-      return { results, close, disconnected }
-    }
-
-    await page.close()
-    await browser.close()
-    browser = undefined
-    return { results, close: async () => {}, disconnected: Promise.resolve() }
   } catch (error) {
-    await browser?.close()
-    throw error
+    console.error('Browser tests failed to run:', error)
+    results = {
+      passed: 0,
+      failed: 1,
+      skipped: 0,
+      todo: 0,
+      tests: [],
+    }
+  }
+
+  if (options.open) {
+    return {
+      results,
+      close,
+      disconnected: new Promise((r) => browser!.on('disconnected', () => r())),
+    }
+  } else {
+    await close()
+    return {
+      results,
+      close,
+      disconnected: Promise.resolve(),
+    }
   }
 }

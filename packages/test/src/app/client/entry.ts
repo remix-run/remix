@@ -1,7 +1,7 @@
 import { run } from '@remix-run/component'
 import * as components from './components.tsx'
 
-let app = run({
+const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
     let Component = components[exportName as keyof typeof components]
     if (!Component) {
