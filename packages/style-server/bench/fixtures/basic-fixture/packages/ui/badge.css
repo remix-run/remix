@@ -1,0 +1,7 @@
+.badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 82%, white);
+  border-radius: 999px;
+  display: inline-flex;
+  padding: 4px 10px;
+}

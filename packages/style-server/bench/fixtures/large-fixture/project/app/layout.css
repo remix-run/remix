@@ -1,0 +1,8 @@
+@import '../../packages/shared/theme.css';
+@import '../../packages/ui/frame.css';
+
+.layout {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}

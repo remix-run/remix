@@ -30,8 +30,10 @@ import { uploads } from './controllers/uploads.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
+import { loadStyleEntry } from './middleware/style-entry.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
+import { styleServer } from './utils/style-server.ts'
 
 export type RootMiddleware = [
   ReturnType<typeof formData>,
@@ -72,10 +74,16 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(session(cookie, storage))
   middleware.push(asyncContext())
   middleware.push(loadDatabase())
+  middleware.push(loadStyleEntry())
   middleware.push(loadAuth())
 
   let router = createRouter({ middleware })
 
+  router.get(routes.styles, async ({ request, params }) => {
+    if (!params.path) return new Response('Not found', { status: 404 })
+    let style = await styleServer.fetch(request)
+    return style ?? new Response('Not found', { status: 404 })
+  })
   router.map(routes.uploads, uploads)
   router.map(routes.fragments, fragmentsController)
   router.map(routes.api, apiController)

@@ -1,0 +1,13 @@
+.card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--card-border);
+  border-radius: 1rem;
+  background: var(--card-background);
+  box-shadow: var(--card-shadow);
+}
+
+.card strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}

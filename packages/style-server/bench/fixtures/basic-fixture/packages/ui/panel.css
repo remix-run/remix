@@ -1,0 +1,9 @@
+@import './badge.css';
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}

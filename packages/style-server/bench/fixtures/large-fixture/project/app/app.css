@@ -1,0 +1,15 @@
+@import './layout.css';
+@import './summary.css';
+@import './features/feature-00/card.css';
+@import './features/feature-01/card.css';
+@import './features/feature-02/card.css';
+@import './features/feature-03/card.css';
+@import './features/feature-04/card.css';
+@import './features/feature-05/card.css';
+@import './features/feature-06/card.css';
+@import './features/feature-07/card.css';
+
+.app {
+  background: var(--page-background);
+  color: var(--page-text);
+}

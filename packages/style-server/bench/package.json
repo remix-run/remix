@@ -1,0 +1,12 @@
+{
+  "name": "style-server-bench",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "bench": "node --disable-warning=ExperimentalWarning runner.ts"
+  }
+}

@@ -1,0 +1,47 @@
+@import './tokens.css';
+@import './card.css';
+
+body {
+  margin: 0;
+  background: var(--page-background);
+  color: var(--page-foreground);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.layout {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.eyebrow {
+  margin-bottom: 1rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.lede {
+  max-width: 36rem;
+  margin: 0 0 1.5rem;
+  color: var(--muted-foreground);
+  font-size: 1.05rem;
+}
+
+.note {
+  margin-top: 1rem;
+  color: var(--muted-foreground);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.95em;
+}

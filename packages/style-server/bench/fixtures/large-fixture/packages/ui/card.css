@@ -1,0 +1,10 @@
+@import './badge.css';
+
+.card {
+  background: var(--panel-background);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}

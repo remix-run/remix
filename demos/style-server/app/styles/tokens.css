@@ -1,0 +1,10 @@
+:root {
+  color-scheme: light;
+  --page-background: #f8fafc;
+  --page-foreground: #0f172a;
+  --muted-foreground: #475569;
+  --accent: #2563eb;
+  --card-background: #ffffff;
+  --card-border: #cbd5e1;
+  --card-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}

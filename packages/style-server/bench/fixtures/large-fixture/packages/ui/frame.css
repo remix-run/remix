@@ -1,0 +1,5 @@
+.frame {
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 16px;
+}

@@ -1,0 +1,6 @@
+@import '../../packages/shared/tokens.css';
+
+.summary {
+  font: var(--font-body);
+  opacity: 0.88;
+}

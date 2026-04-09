@@ -1,0 +1,6 @@
+@import './model.css';
+@import '../../../../packages/ui/card.css';
+
+.feature-03-card {
+  font: var(--font-title);
+}

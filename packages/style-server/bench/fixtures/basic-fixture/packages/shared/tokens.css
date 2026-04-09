@@ -1,0 +1,6 @@
+:root {
+  --surface: #0f172a;
+  --text: #e2e8f0;
+  --border: rgba(255, 255, 255, 0.12);
+  --font-body: 500 14px/1.5 system-ui;
+}

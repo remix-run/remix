@@ -1,5 +1,6 @@
 import type { RemixNode } from 'remix/component'
 
+import { getStyleEntry } from '../middleware/style-entry.ts'
 import { routes } from '../routes.ts'
 
 export interface DocumentProps {
@@ -8,16 +9,20 @@ export interface DocumentProps {
 }
 
 export function Document() {
-  return ({ title = 'Bookstore', children }: DocumentProps) => (
-    <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{title}</title>
-        <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
-        <link rel="stylesheet" href="/app.css" />
-      </head>
-      <body>{children}</body>
-    </html>
-  )
+  return ({ title = 'Bookstore', children }: DocumentProps) => {
+    let { href } = getStyleEntry()
+
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>{title}</title>
+          <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
+          <link rel="stylesheet" href={href} />
+        </head>
+        <body>{children}</body>
+      </html>
+    )
+  }
 }

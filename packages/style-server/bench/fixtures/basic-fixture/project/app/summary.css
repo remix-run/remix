@@ -1,0 +1,6 @@
+@import '../../packages/shared/typography.css';
+
+.summary {
+  font: var(--font-body);
+  letter-spacing: 0.01em;
+}

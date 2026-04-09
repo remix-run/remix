@@ -1,0 +1,9 @@
+@import './summary.css';
+@import '../../packages/shared/tokens.css';
+@import '../../packages/ui/panel.css';
+
+.app {
+  background: var(--surface);
+  color: var(--text);
+  padding: 16px;
+}

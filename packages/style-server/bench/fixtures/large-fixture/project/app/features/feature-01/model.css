@@ -1,0 +1,5 @@
+@import '../../../../packages/shared/tokens.css';
+
+.feature-01-model {
+  color: var(--accent);
+}

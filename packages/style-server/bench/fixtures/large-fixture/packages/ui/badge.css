@@ -1,0 +1,5 @@
+.badge {
+  color: var(--accent);
+  font: var(--font-body);
+  text-transform: uppercase;
+}
