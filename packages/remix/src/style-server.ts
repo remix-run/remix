@@ -1,2 +1,2 @@
-export { createStyleServer } from '@remix-run/style-server'
-export type { StyleRouteDefinition, StyleServer, StyleServerOptions } from '@remix-run/style-server'
+// IMPORTANT: This file is auto-generated, please do not edit manually.
+export * from '@remix-run/style-server'
