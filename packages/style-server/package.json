@@ -19,17 +19,11 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "scripts": {
     "bench": "pnpm --dir ./bench run bench",
@@ -47,10 +41,10 @@
     "server"
   ],
   "dependencies": {
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/headers": "workspace:^",
-    "@remix-run/response": "workspace:^",
-    "@remix-run/route-pattern": "workspace:^",
+    "@remix-run/fs": "remix-run/remix#preview/pr-11243&path:packages/fs",
+    "@remix-run/headers": "remix-run/remix#preview/pr-11243&path:packages/headers",
+    "@remix-run/response": "remix-run/remix#preview/pr-11243&path:packages/response",
+    "@remix-run/route-pattern": "remix-run/remix#preview/pr-11243&path:packages/route-pattern",
     "browserslist": "^4.28.2",
     "chokidar": "^5.0.0",
     "lightningcss": "^1.32.0",
