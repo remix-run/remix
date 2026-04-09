@@ -166,7 +166,7 @@ let scriptServer = createScriptServer({
 })
 ```
 
-When fingerprinting is enabled, scripts use a `.@<fingerprint>` suffix and are served with `Cache-Control: public, max-age=31536000, immutable`.
+When fingerprinting is enabled, scripts use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
 Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted modules are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so it cannot be used together with `watch`.
 

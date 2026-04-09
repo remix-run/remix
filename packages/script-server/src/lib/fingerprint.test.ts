@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { generateFingerprint } from './fingerprint.ts'
+import {
+  formatFingerprintedPathname,
+  generateFingerprint,
+  parseFingerprintSuffix,
+} from './fingerprint.ts'
 
 describe('generateFingerprint', () => {
   it('changes when the buildId changes', async () => {
@@ -28,5 +32,45 @@ describe('generateFingerprint', () => {
     })
 
     assert.notEqual(fingerprintA, fingerprintB)
+  })
+})
+
+describe('formatFingerprintedPathname', () => {
+  it('inserts the fingerprint before the file extension', () => {
+    assert.equal(
+      formatFingerprintedPathname('/scripts/app/entry.ts', 'abc123'),
+      '/scripts/app/entry.@abc123.ts',
+    )
+    assert.equal(
+      formatFingerprintedPathname('/scripts/app/styles.css.js', 'abc123'),
+      '/scripts/app/styles.css.@abc123.js',
+    )
+  })
+
+  it('appends the fingerprint when there is no file extension', () => {
+    assert.equal(
+      formatFingerprintedPathname('/scripts/app/entry', 'abc123'),
+      '/scripts/app/entry.@abc123',
+    )
+  })
+})
+
+describe('parseFingerprintSuffix', () => {
+  it('parses fingerprints inserted before the file extension', () => {
+    assert.deepEqual(parseFingerprintSuffix('/scripts/app/entry.@abc123.ts'), {
+      pathname: '/scripts/app/entry.ts',
+      requestedFingerprint: 'abc123',
+    })
+    assert.deepEqual(parseFingerprintSuffix('/scripts/app/styles.css.@abc123.js'), {
+      pathname: '/scripts/app/styles.css.js',
+      requestedFingerprint: 'abc123',
+    })
+  })
+
+  it('parses fingerprints appended to extensionless paths', () => {
+    assert.deepEqual(parseFingerprintSuffix('/scripts/app/entry.@abc123'), {
+      pathname: '/scripts/app/entry',
+      requestedFingerprint: 'abc123',
+    })
   })
 })

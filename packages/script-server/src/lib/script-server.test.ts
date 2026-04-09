@@ -153,7 +153,7 @@ async function assertCharacterAccurateImportRewriteSourceMap(
     )
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/scripts/app/dep.ts.@')
+    let rewrittenImport = getLineAndColumn(compiledCode, '/scripts/app/dep.@')
     let originalImport = consumer.originalPositionFor(rewrittenImport)
     let expectedImport = getLineAndColumn(sourceText, '"./dep.ts"')
     assert.equal(originalImport.line, expectedImport.line)
@@ -365,12 +365,17 @@ describe('script-server', () => {
     assert.match(await response.text(), /\/scripts\/app\/dep\.mts/)
   })
 
-  it('ignores unsupported direct requests like .json files', async () => {
+  it('ignores unsupported direct requests for non-script files', async () => {
     await write(dir, 'app/data.json', '{"ok":true}')
+    await write(dir, 'app/styles.css', 'body { color: red; }')
+    await write(dir, 'app/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+    await write(dir, 'app/.env', 'SECRET=123')
     let scriptServer = createTestServer(dir)
 
-    let response = await get(scriptServer, '/scripts/app/data.json')
-    assert.equal(response, null)
+    assert.equal(await get(scriptServer, '/scripts/app/data.json'), null)
+    assert.equal(await get(scriptServer, '/scripts/app/styles.css'), null)
+    assert.equal(await get(scriptServer, '/scripts/app/logo.svg'), null)
+    assert.equal(await get(scriptServer, '/scripts/app/.env'), null)
   })
 
   it('uses immutable caching for fingerprinted module requests', async () => {
@@ -381,16 +386,16 @@ describe('script-server', () => {
     let entryResponse = await getByFile(scriptServer, 'app/entry.ts')
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
-    let depMatch = entryBody.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
+    let depMatch = entryBody.match(/\/scripts\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
-    let depResponse = await get(scriptServer, `/scripts/app/dep.ts.@${depMatch[1]}`)
+    let depResponse = await get(scriptServer, `/scripts/app/dep.@${depMatch[1]}.ts`)
     assert.ok(depResponse)
     assert.equal(entryResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
     assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
   })
 
-  it('fingerprints all modules with .@fingerprint URLs and returns null on mismatch', async () => {
+  it('fingerprints all modules with filename.@fingerprint.ext urls and returns null on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let scriptServer = createTestServer(dir, fingerprintingOptions())
@@ -399,11 +404,11 @@ describe('script-server', () => {
     let entryResponse = await get(scriptServer, entryHref)
     assert.ok(entryResponse)
     let body = await entryResponse.text()
-    let match = body.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
+    let match = body.match(/\/scripts\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(match, `expected fingerprinted dep import, got:\n${body}`)
-    assert.match(entryHref, /\/scripts\/app\/entry\.ts\.@/)
+    assert.match(entryHref, /\/scripts\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
 
-    let depResponse = await get(scriptServer, `/scripts/app/dep.ts.@${match[1]}`)
+    let depResponse = await get(scriptServer, `/scripts/app/dep.@${match[1]}.ts`)
     assert.ok(depResponse)
     assert.equal(depResponse.status, 200)
     assert.ok(depResponse.headers.get('ETag'))
@@ -411,7 +416,7 @@ describe('script-server', () => {
     let nonFingerprinted = await get(scriptServer, '/scripts/app/dep.ts')
     assert.equal(nonFingerprinted, null)
 
-    let mismatch = await get(scriptServer, '/scripts/app/dep.ts.@wronghash')
+    let mismatch = await get(scriptServer, '/scripts/app/dep.@wronghash.ts')
     assert.equal(mismatch, null)
   })
 
@@ -423,14 +428,14 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let before = await scriptServer.getPreloads('app/entry.ts')
-    let beforeMid = before.find((url) => url.includes('/scripts/app/mid.ts.@'))
-    let beforeLeaf = before.find((url) => url.includes('/scripts/app/leaf.ts.@'))
+    let beforeMid = before.find((url) => url.includes('/scripts/app/mid.@'))
+    let beforeLeaf = before.find((url) => url.includes('/scripts/app/leaf.@'))
 
     await write(dir, 'app/leaf.ts', 'export const leaf = 2')
 
     let after = await scriptServer.getPreloads('app/entry.ts')
-    let afterMid = after.find((url) => url.includes('/scripts/app/mid.ts.@'))
-    let afterLeaf = after.find((url) => url.includes('/scripts/app/leaf.ts.@'))
+    let afterMid = after.find((url) => url.includes('/scripts/app/mid.@'))
+    let afterLeaf = after.find((url) => url.includes('/scripts/app/leaf.@'))
 
     assert.equal(afterMid, beforeMid)
     assert.equal(afterLeaf, beforeLeaf)
@@ -445,8 +450,8 @@ describe('script-server', () => {
 
     let bodyA = await (await getByFile(serverA, 'app/entry.ts'))!.text()
     let bodyB = await (await getByFile(serverB, 'app/entry.ts'))!.text()
-    let matchA = bodyA.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
-    let matchB = bodyB.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
+    let matchA = bodyA.match(/\/scripts\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let matchB = bodyB.match(/\/scripts\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
 
     assert.ok(matchA && matchB)
     assert.notEqual(matchA[1], matchB[1])
@@ -502,7 +507,7 @@ describe('script-server', () => {
     let response = await getByFile(scriptServer, 'app/a.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/scripts/app/b.ts.@'))
+    assert.ok(body.includes('/scripts/app/b.@'))
   })
 
   it('supports external source maps for fingerprinted request URLs', async () => {
@@ -516,19 +521,19 @@ describe('script-server', () => {
     let entryResponse = await getByFile(scriptServer, 'app/entry.ts')
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
-    let entryMapMatch = entryBody.match(/\/scripts\/app\/entry\.ts\.@([A-Za-z0-9_-]+)\.map/)
+    let entryMapMatch = entryBody.match(/\/scripts\/app\/entry\.@([A-Za-z0-9_-]+)\.ts\.map/)
     assert.ok(entryMapMatch)
 
-    let depMatch = entryBody.match(/\/scripts\/app\/dep\.ts\.@([A-Za-z0-9_-]+)/)
+    let depMatch = entryBody.match(/\/scripts\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
-    let depResponse = await get(scriptServer, `/scripts/app/dep.ts.@${depMatch[1]}`)
+    let depResponse = await get(scriptServer, `/scripts/app/dep.@${depMatch[1]}.ts`)
     assert.ok(depResponse)
     let depBody = await depResponse.text()
-    assert.ok(depBody.includes(`/scripts/app/dep.ts.@${depMatch[1]}.map`))
+    assert.ok(depBody.includes(`/scripts/app/dep.@${depMatch[1]}.ts.map`))
 
-    let entryMap = await get(scriptServer, `/scripts/app/entry.ts.@${entryMapMatch[1]}.map`)
-    let depMap = await get(scriptServer, `/scripts/app/dep.ts.@${depMatch[1]}.map`)
+    let entryMap = await get(scriptServer, `/scripts/app/entry.@${entryMapMatch[1]}.ts.map`)
+    let depMap = await get(scriptServer, `/scripts/app/dep.@${depMatch[1]}.ts.map`)
     assert.ok(entryMap && depMap)
     assert.equal(entryMap.status, 200)
     assert.equal(depMap.status, 200)
@@ -599,7 +604,7 @@ describe('script-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\("\/scripts\/app\/dep\.ts\.@[A-Za-z0-9_-]+"\)/)
+    assert.match(body, /import\("\/scripts\/app\/dep\.@[A-Za-z0-9_-]+\.ts"\)/)
   })
 
   it('rewrites static template-literal dynamic imports', async () => {
@@ -615,7 +620,7 @@ describe('script-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\((["`])\/scripts\/app\/dep\.ts\.@[A-Za-z0-9_-]+\1\)/)
+    assert.match(body, /import\((["`])\/scripts\/app\/dep\.@[A-Za-z0-9_-]+\.ts\1\)/)
   })
 
   it('rewrites re-exported package specifiers', async () => {
@@ -700,7 +705,7 @@ describe('script-server', () => {
     let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/scripts/app/dep.ts.@')
+    let rewrittenImport = getLineAndColumn(compiledCode, '/scripts/app/dep.@')
     let originalImport = consumer.originalPositionFor(rewrittenImport)
     assert.equal(originalImport.line, 1)
     assert.equal(originalImport.column, 31)
@@ -778,22 +783,25 @@ describe('script-server', () => {
     let response = await getByFile(scriptServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/scripts/app/shared/value.ts.@'))
-    assert.ok(!body.includes('/scripts/app/alias/value.ts.@'))
+    assert.ok(body.includes('/scripts/app/shared/value.@'))
+    assert.ok(!body.includes('/scripts/app/alias/value.@'))
   })
 
   it('getHref returns fingerprinted URLs for served module files when fingerprinting is enabled', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
-    assert.match(await scriptServer.getHref('app/entry.ts'), /\/scripts\/app\/entry\.ts\.@/)
+    assert.match(
+      await scriptServer.getHref('app/entry.ts'),
+      /\/scripts\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+    )
     assert.match(
       await scriptServer.getHref(path.join(dir, 'app/entry.ts')),
-      /\/scripts\/app\/entry\.ts\.@/,
+      /\/scripts\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
     )
     assert.match(
       await scriptServer.getHref(new URL(`file://${path.join(dir, 'app/entry.ts')}`).href),
-      /\/scripts\/app\/entry\.ts\.@/,
+      /\/scripts\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
     )
   })
 
@@ -806,10 +814,10 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let urls = await scriptServer.getPreloads('app/entry.ts')
-    assert.match(urls[0] ?? '', /\/scripts\/app\/entry\.ts\.@/)
-    assert.match(urls[1], /\/scripts\/app\/a\.ts\.@/)
-    assert.match(urls[2], /\/scripts\/app\/b\.ts\.@/)
-    assert.match(urls[3], /\/scripts\/app\/c\.ts\.@/)
+    assert.match(urls[0] ?? '', /\/scripts\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1], /\/scripts\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[2], /\/scripts\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[3], /\/scripts\/app\/c\.@[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads accepts arbitrary file roots', async () => {
@@ -820,8 +828,8 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let urls = await scriptServer.getPreloads('app/a.ts')
-    assert.match(urls[0] ?? '', /\/scripts\/app\/a\.ts\.@/)
-    assert.match(urls[1], /\/scripts\/app\/b\.ts\.@/)
+    assert.match(urls[0] ?? '', /\/scripts\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1], /\/scripts\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads accepts multiple file paths and dedupes shared dependencies', async () => {
@@ -832,10 +840,13 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     let urls = await scriptServer.getPreloads(['app/a.ts', 'app/b.ts'])
-    assert.match(urls[0] ?? '', /\/scripts\/app\/a\.ts\.@/)
-    assert.match(urls[1] ?? '', /\/scripts\/app\/b\.ts\.@/)
-    assert.equal(urls.filter((url) => /\/scripts\/app\/shared\.ts\.@/.test(url)).length, 1)
-    assert.match(urls[2] ?? '', /\/scripts\/app\/shared\.ts\.@/)
+    assert.match(urls[0] ?? '', /\/scripts\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1] ?? '', /\/scripts\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
+    assert.equal(
+      urls.filter((url) => /\/scripts\/app\/shared\.@[A-Za-z0-9_-]+\.ts/.test(url)).length,
+      1,
+    )
+    assert.match(urls[2] ?? '', /\/scripts\/app\/shared\.@[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads stays shallowest-first across multiple roots', async () => {
@@ -854,7 +865,7 @@ describe('script-server', () => {
     let urls = await scriptServer.getPreloads(['app/a.ts', 'app/b.ts', 'app/c.ts'])
 
     assert.deepEqual(
-      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+$/, '')),
+      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+(?=\.)/, '')),
       [
         '/scripts/app/a.ts',
         '/scripts/app/b.ts',
@@ -876,7 +887,7 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     await assert.rejects(
-      () => scriptServer.getPreloads('/scripts/app/dep.ts.@abc123'),
+      () => scriptServer.getPreloads('/scripts/app/dep.@abc123.ts'),
       /Module not found:/,
     )
   })
@@ -888,7 +899,7 @@ describe('script-server', () => {
     let scriptServer = createTestServer(dir, fingerprintingOptions())
 
     await assert.rejects(
-      () => scriptServer.getPreloads(['app/entry.ts', '/scripts/app/dep.ts.@abc123']),
+      () => scriptServer.getPreloads(['app/entry.ts', '/scripts/app/dep.@abc123.ts']),
       /Module not found:/,
     )
   })
@@ -942,7 +953,7 @@ describe('script-server', () => {
       let scriptServer = createTestServer(caseDir, fingerprintingOptions('build'))
 
       let urls = await scriptServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.ts.@')))
+      assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1025,8 +1036,8 @@ describe('script-server', () => {
       let scriptServer = createTestServer(caseDir, fingerprintingOptions('build'))
 
       let before = await scriptServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
+      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.@')))
+      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.@')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -1036,8 +1047,8 @@ describe('script-server', () => {
       })
 
       let after = await scriptServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts.@')))
-      assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts.@')))
+      assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.@')))
+      assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1549,7 +1560,7 @@ describe('script-server', () => {
 
       let before = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/scripts\/app\/dep\/index\.js\.@/)
+      assert.match(await before.text(), /\/scripts\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -1557,8 +1568,8 @@ describe('script-server', () => {
       let after = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/scripts\/app\/dep\/index\.js\.@/)
-      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.ts\.@/)
+      assert.match(afterBody, /\/scripts\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\/index\.@[A-Za-z0-9_-]+\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1700,7 +1711,7 @@ describe('script-server', () => {
 
       let before = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/scripts\/app\/styles\.css\.js\.@/)
+      assert.match(await before.text(), /\/scripts\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -1708,8 +1719,8 @@ describe('script-server', () => {
       let after = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/scripts\/app\/styles\.css\.js\.@/)
-      assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.ts\.@/)
+      assert.match(afterBody, /\/scripts\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/styles\.css\.@[A-Za-z0-9_-]+\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1913,15 +1924,15 @@ describe('script-server', () => {
 
       let before = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/scripts\/app\/dep\.ts\.@/)
+      assert.match(await before.text(), /\/scripts\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
       let after = await getByFile(scriptServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/scripts\/app\/dep\.ts\.@/)
-      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.js\.@/)
+      assert.match(afterBody, /\/scripts\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
+      assert.doesNotMatch(afterBody, /\/scripts\/app\/dep\.@[A-Za-z0-9_-]+\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }

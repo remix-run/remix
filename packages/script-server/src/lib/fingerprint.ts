@@ -1,4 +1,5 @@
-const fingerprintSuffixRE = /\.@([A-Za-z0-9_-]+)$/
+const fingerprintedExtensionRE = /^(.+)\.@([A-Za-z0-9_-]+)(\.[^./]+)$/
+const fingerprintedBasenameRE = /^(.+)\.@([A-Za-z0-9_-]+)$/
 
 export async function hashContent(content: string): Promise<string> {
   let encoder = new TextEncoder()
@@ -18,17 +19,45 @@ export function parseFingerprintSuffix(pathname: string): {
   pathname: string
   requestedFingerprint: string | null
 } {
-  let fingerprintMatch = pathname.match(fingerprintSuffixRE)
-  let requestedFingerprint = fingerprintMatch ? fingerprintMatch[1] : null
+  let lastSlashIndex = pathname.lastIndexOf('/')
+  let directory = lastSlashIndex >= 0 ? pathname.slice(0, lastSlashIndex + 1) : ''
+  let basename = lastSlashIndex >= 0 ? pathname.slice(lastSlashIndex + 1) : pathname
+  let extensionMatch = basename.match(fingerprintedExtensionRE)
+
+  if (extensionMatch) {
+    return {
+      pathname: `${directory}${extensionMatch[1]}${extensionMatch[3]}`,
+      requestedFingerprint: extensionMatch[2],
+    }
+  }
+
+  let basenameMatch = basename.match(fingerprintedBasenameRE)
+  if (basenameMatch) {
+    return {
+      pathname: `${directory}${basenameMatch[1]}`,
+      requestedFingerprint: basenameMatch[2],
+    }
+  }
 
   return {
-    pathname: fingerprintMatch ? pathname.slice(0, -fingerprintMatch[0].length) : pathname,
-    requestedFingerprint,
+    pathname,
+    requestedFingerprint: null,
   }
 }
 
 export function formatFingerprintedPathname(pathname: string, fingerprint: string | null): string {
-  return fingerprint ? `${pathname}.@${fingerprint}` : pathname
+  if (fingerprint === null) return pathname
+
+  let lastSlashIndex = pathname.lastIndexOf('/')
+  let directory = lastSlashIndex >= 0 ? pathname.slice(0, lastSlashIndex + 1) : ''
+  let basename = lastSlashIndex >= 0 ? pathname.slice(lastSlashIndex + 1) : pathname
+  let lastDotIndex = basename.lastIndexOf('.')
+
+  if (lastDotIndex <= 0) {
+    return `${pathname}.@${fingerprint}`
+  }
+
+  return `${directory}${basename.slice(0, lastDotIndex)}.@${fingerprint}${basename.slice(lastDotIndex)}`
 }
 
 export function getFingerprintRequestCacheControl(requestedFingerprint: string | null): string {
