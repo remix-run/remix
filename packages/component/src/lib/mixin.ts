@@ -23,7 +23,7 @@ type RebindTuple<args extends unknown[], baseNode, boundNode> = {
 export type MixinProps<
   node extends EventTarget = Element,
   props extends ElementProps = ElementProps,
-> = props & {
+> = Omit<props, 'children' | 'innerHTML' | 'mix'> & {
   mix?: MixValue<node, props>
 }
 
@@ -70,6 +70,10 @@ type MixinHandleEventMap<node extends EventTarget = Element> = {
 
 /**
  * Runtime handle passed to mixin setup functions.
+ *
+ * Mixin render callbacks receive host props with `children` and `innerHTML` removed.
+ * Returned mixin elements may patch host attributes and nested `mix`, but cannot replace
+ * the host subtree.
  */
 export type MixinHandle<
   node extends EventTarget = Element,
@@ -240,7 +244,9 @@ export function createMixin<
   node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
->(type: MixinType<node, args, props>) {
+>(
+  type: MixinType<node, args, props>,
+) {
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({
@@ -267,6 +273,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
   let hostType = input.hostType
   let descriptors = resolveMixDescriptors(input.props)
   let composedProps = withoutMix(input.props)
+  let mixinProps = withoutMixinTreeProps(composedProps)
   let maxDescriptors = 1024
 
   for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
@@ -295,7 +302,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     }
 
     handle.setActiveScope(entry.scope)
-    let result = entry.runner(...descriptor.args, composedProps)
+    let result = entry.runner(...descriptor.args, mixinProps)
     handle.setActiveScope(undefined)
     if (!result) continue
     if (isMixinElement(result)) continue
@@ -326,9 +333,11 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       result = { ...result, type: resultType }
     }
 
-    let nestedDescriptors = resolveMixDescriptors(result.props)
+    let nextProps = sanitizeReturnedMixinProps(result.props)
+    let nestedDescriptors = resolveMixDescriptors(nextProps)
     for (let nested of nestedDescriptors) descriptors.push(nested)
-    composedProps = composeMixinProps(composedProps, withoutMix(result.props))
+    composedProps = composeMixinProps(composedProps, withoutMix(nextProps))
+    mixinProps = withoutMixinTreeProps(composedProps)
   }
 
   for (let index = descriptors.length; index < state.runners.length; index++) {
@@ -817,6 +826,20 @@ function withoutMix(props: ElementProps): ElementProps {
   let output = { ...props }
   delete output.mix
   return output
+}
+
+function withoutMixinTreeProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  let output = { ...props }
+  delete output.children
+  delete output.innerHTML
+  return output
+}
+
+function sanitizeReturnedMixinProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  console.error(new Error('mixins must not return children or innerHTML'))
+  return withoutMixinTreeProps(props)
 }
 
 function composeMixinProps(previous: ElementProps, next: ElementProps): ElementProps {

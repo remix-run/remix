@@ -498,6 +498,7 @@ function resolveSsrMixedProps(
   if (descriptors.length === 0) return initialProps
 
   let composedProps = withoutSsrMix(initialProps)
+  let mixinProps = withoutSsrMixinTreeProps(composedProps)
   let maxDescriptors = 1024
 
   for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
@@ -507,7 +508,7 @@ function resolveSsrMixedProps(
 
     let result: unknown
     try {
-      result = runner(...descriptor.args, composedProps)
+      result = runner(...descriptor.args, mixinProps)
     } catch (error) {
       console.error(error)
       continue
@@ -544,10 +545,11 @@ function resolveSsrMixedProps(
       remixResult = { ...remixResult, type: resultType }
     }
 
-    let nextProps = remixResult.props as ElementProps
+    let nextProps = sanitizeReturnedSsrMixinProps(remixResult.props as ElementProps)
     let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
     for (let nested of nestedDescriptors) descriptors.push(nested)
     composedProps = { ...composedProps, ...withoutSsrMix(nextProps) }
+    mixinProps = withoutSsrMixinTreeProps(composedProps)
   }
 
   let nextMix = initialProps.mix
@@ -650,6 +652,20 @@ function withoutSsrMix(props: ElementProps): ElementProps {
   let output = { ...props }
   delete output.mix
   return output
+}
+
+function withoutSsrMixinTreeProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  let output = { ...props }
+  delete output.children
+  delete output.innerHTML
+  return output
+}
+
+function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  console.error(new Error('mixins must not return children or innerHTML'))
+  return withoutSsrMixinTreeProps(props)
 }
 
 function resolveReturnedSsrMixDescriptors(

@@ -73,20 +73,6 @@ function syncElementAttributes(target: Element, source: Element) {
   }
 }
 
-function syncElementAttributes(target: Element, source: Element) {
-  for (let attribute of Array.from(target.attributes)) {
-    if (!source.hasAttribute(attribute.name)) {
-      target.removeAttribute(attribute.name)
-    }
-  }
-
-  for (let attribute of Array.from(source.attributes)) {
-    if (target.getAttribute(attribute.name) !== attribute.value) {
-      target.setAttribute(attribute.name, attribute.value)
-    }
-  }
-}
-
 export type FrameRuntime = {
   topFrame?: FrameHandle
   errorTarget: EventTarget

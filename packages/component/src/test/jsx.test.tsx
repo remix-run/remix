@@ -139,9 +139,10 @@ describe('jsx', () => {
 
   describe('mixins', () => {
     it('infers mixin usage from scoped callback annotations without top-level generics', () => {
+      type ButtonMixinProps = Omit<Props<'button'>, 'mix' | 'children' | 'innerHTML'>
       let buttonOnly = createMixin(
-        (handle: MixinHandle<HTMLButtonElement, Props<'button'>>) => (props: Props<'button'>) => {
-          type inferredButtonProps = Assert<Equal<typeof props, Props<'button'>>>
+        (handle: MixinHandle<HTMLButtonElement, Props<'button'>>) => (props: ButtonMixinProps) => {
+          type inferredButtonProps = Assert<Equal<typeof props, ButtonMixinProps>>
           return <handle.element {...props} />
         },
       )
@@ -184,7 +185,7 @@ describe('jsx', () => {
         />
       )
 
-      let withOnMixin = createMixin<HTMLElement>((handle) => (props: Props<'div'>) => (
+      let withOnMixin = createMixin<HTMLElement>((handle) => (props) => (
         <handle.element
           {...props}
           mix={[
@@ -233,7 +234,7 @@ describe('jsx', () => {
         let provider = handle.context.get(Provider)
         type inferredContext = Assert<Equal<typeof provider, { value: number }>>
 
-        return (props: Props<'div'>) => (
+        return (props) => (
           <handle.element {...props} data-value={String(provider.value)} />
         )
       })

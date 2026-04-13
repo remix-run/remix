@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
 import { createMixin, css, on } from '../index.ts'
 import { createElement } from '../lib/create-element.ts'
@@ -444,10 +444,63 @@ describe('stream', () => {
           createElement(handle.element, { ...props, 'data-mixed': value }),
       )
 
-      let stream = renderToStream(<div mix={[withData('created')]} />)
+      let stream = renderToStream(<div mix={[withData('created')]}>child</div>)
       let html = await drain(stream)
 
-      expect(html).toBe('<div data-mixed="created"></div>')
+      expect(html).toBe('<div data-mixed="created">child</div>')
+    })
+
+    it('strips children and innerHTML before passing props to SSR mixins', async () => {
+      let seenProps: Array<Record<string, unknown>> = []
+      let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
+        seenProps.push(props)
+      })
+
+      await drain(renderToStream(<div mix={[inspect()]}>child</div>))
+      await drain(renderToStream(<div innerHTML="<strong>html</strong>" mix={[inspect()]} />))
+
+      expect('children' in seenProps[0]!).toBe(false)
+      expect('innerHTML' in seenProps[0]!).toBe(false)
+      expect('children' in seenProps[1]!).toBe(false)
+      expect('innerHTML' in seenProps[1]!).toBe(false)
+    })
+
+    it('ignores children returned from mixins during SSR', async () => {
+      let withChildren = createMixin((handle) => () =>
+        createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
+      )
+
+      let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        let html = await drain(renderToStream(<div mix={[withChildren()]}>safe</div>))
+
+        expect(html).toBe('<div data-mode="children">safe</div>')
+        expect(errorSpy).toHaveBeenCalledTimes(1)
+        expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
+          'mixin elements must not receive children',
+        )
+      } finally {
+        errorSpy.mockRestore()
+      }
+    })
+
+    it('ignores innerHTML returned from mixins during SSR', async () => {
+      let withInnerHtml = createMixin((_handle) => () => (
+        <div data-mode="innerHTML" innerHTML="<strong>blocked</strong>" />
+      ))
+
+      let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        let html = await drain(renderToStream(<div mix={[withInnerHtml()]}>safe</div>))
+
+        expect(html).toBe('<div data-mode="innerHTML">safe</div>')
+        expect(errorSpy).toHaveBeenCalledTimes(1)
+        expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
+          'mixins must not return children or innerHTML',
+        )
+      } finally {
+        errorSpy.mockRestore()
+      }
     })
 
     it('supports mixins returning nested descriptors directly during SSR', async () => {
@@ -456,7 +509,7 @@ describe('stream', () => {
           <handle.element {...props} data-mixed={value} />
         ),
       )
-      let withReturnedMix = createMixin((_handle) => (value: string) => [
+      let withReturnedMix = createMixin<Element, [value: string]>((_handle) => (value) => [
         false,
         [withData(value)],
         undefined,
