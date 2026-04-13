@@ -439,8 +439,9 @@ describe('stream', () => {
     })
 
     it('supports createElement(handle.element, props) during SSR', async () => {
-      let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) =>
-        createElement(handle.element, { ...props, 'data-mixed': value }),
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) =>
+          createElement(handle.element, { ...props, 'data-mixed': value }),
       )
 
       let stream = renderToStream(<div mix={[withData('created')]} />)

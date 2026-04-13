@@ -45,8 +45,9 @@ describe('vnode mixins', () => {
   })
 
   it('supports createElement(handle.element, props) inside mixins', () => {
-    let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) =>
-      createElement(handle.element, { ...props, 'data-mixed': value }),
+    let withData = createMixin(
+      (handle) => (value: string, props: { ['data-mixed']?: string }) =>
+        createElement(handle.element, { ...props, 'data-mixed': value }),
     )
 
     let container = document.createElement('div')

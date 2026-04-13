@@ -99,11 +99,7 @@ type MixinRuntimeType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) =>
-  | ((
-      ...args: [...args, currentProps: props]
-    ) => MixinReturn<node, props>)
-  | void
+) => ((...args: [...args, currentProps: props]) => MixinReturn<node, props>) | void
 
 /**
  * Public mixin setup function signature.
@@ -115,11 +111,7 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, props>,
   type: string,
-) =>
-  | ((
-      ...args: [...args, currentProps: props]
-    ) => MixinReturn<node, props>)
-  | void
+) => ((...args: [...args, currentProps: props]) => MixinReturn<node, props>) | void
 
 /**
  * Serializable descriptor stored in the `mix` prop.
@@ -159,10 +151,12 @@ export type MixValue<
   props extends ElementProps = ElementProps,
 > = MixinDescriptor<node, any, props> | ReadonlyArray<MixinDescriptor<node, any, props>>
 
-type MixinReturn<
-  node extends EventTarget = Element,
-  props extends ElementProps = ElementProps,
-> = void | null | RemixElement | MixinElement<node, props> | MixInput<node, props>
+type MixinReturn<node extends EventTarget = Element, props extends ElementProps = ElementProps> =
+  | void
+  | null
+  | RemixElement
+  | MixinElement<node, props>
+  | MixInput<node, props>
 
 type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
@@ -504,7 +498,10 @@ class MixinHandleImpl
 
   get signal() {
     let scope = this.#activeScope
-    invariant(scope, 'handle.signal is only available during mixin setup, render, or lifecycle callbacks')
+    invariant(
+      scope,
+      'handle.signal is only available during mixin setup, render, or lifecycle callbacks',
+    )
     return this.#getScopeSignal(scope)
   }
 
