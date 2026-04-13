@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { createElement } from '../lib/create-element.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { createMixin, on, ref } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
-import type { Handle } from '../lib/component.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
 import type { Props } from '../index.ts'
 
 describe('vnode mixins', () => {
@@ -41,6 +42,41 @@ describe('vnode mixins', () => {
     let div = container.querySelector('div')
     invariant(div)
     expect(div.getAttribute('data-mixed')).toBe('nested')
+  })
+
+  it('supports createElement(handle.element, props) inside mixins', () => {
+    let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) =>
+      createElement(handle.element, { ...props, 'data-mixed': value }),
+    )
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withData('created')]} />)
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.getAttribute('data-mixed')).toBe('created')
+  })
+
+  it('supports mixins returning nested descriptors directly', () => {
+    let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) => (
+      <handle.element {...props} data-mixed={value} />
+    ))
+    let withReturnedMix = createMixin((_handle) => (value: string) => [
+      false,
+      [withData(value)],
+      undefined,
+    ])
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withReturnedMix('returned')]} />)
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.getAttribute('data-mixed')).toBe('returned')
   })
 
   it('normalizes component mix props so wrapped hosts can compose them', () => {
@@ -92,6 +128,33 @@ describe('vnode mixins', () => {
     expect(handles[1]).toBe(handles[2])
   })
 
+  it('reads ancestor component context from mixins', () => {
+    function Provider(handle: Handle<{ value: string }>) {
+      return ({ children }: { children?: RemixNode }) => {
+        handle.context.set({ value: 'from-context' })
+        return <section>{children}</section>
+      }
+    }
+
+    let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
+      let provider = handle.context.get(Provider)
+      return <handle.element {...props} data-value={provider.value} />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(
+      <Provider>
+        <div mix={[withContextValue()]} />
+      </Provider>,
+    )
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.dataset.value).toBe('from-context')
+  })
+
   it('aborts handle.signal when the host node is removed', () => {
     let signal = AbortSignal.abort()
     let withSignal = createMixin((handle) => {
@@ -107,6 +170,34 @@ describe('vnode mixins', () => {
     root.render(null)
     root.flush()
     expect(signal.aborted).toBe(true)
+  })
+
+  it('aborts handle.signal when a mixin slot is removed while the host stays mounted', () => {
+    let keptSignal = AbortSignal.abort()
+    let removedSignal = AbortSignal.abort()
+
+    let keepSignal = createMixin((handle) => {
+      keptSignal = handle.signal
+    })
+
+    let removeSignal = createMixin((handle) => {
+      removedSignal = handle.signal
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[keepSignal(), removeSignal()]} />)
+    root.flush()
+
+    expect(keptSignal.aborted).toBe(false)
+    expect(removedSignal.aborted).toBe(false)
+
+    root.render(<div mix={[keepSignal()]} />)
+    root.flush()
+
+    expect(keptSignal.aborted).toBe(false)
+    expect(removedSignal.aborted).toBe(true)
+    expect(container.querySelector('div')).toBeInstanceOf(HTMLDivElement)
   })
 
   it('supports setup-only passthrough mixins', () => {

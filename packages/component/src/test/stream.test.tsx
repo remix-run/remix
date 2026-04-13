@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
 import { createMixin, css, on } from '../index.ts'
+import { createElement } from '../lib/create-element.ts'
 
 import { renderToStream, renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
@@ -437,9 +438,84 @@ describe('stream', () => {
       expect(html).not.toContain('mix=')
     })
 
-    it('ignores lifecycle-only mixin side effects during SSR', async () => {
+    it('supports createElement(handle.element, props) during SSR', async () => {
+      let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) =>
+        createElement(handle.element, { ...props, 'data-mixed': value }),
+      )
+
+      let stream = renderToStream(<div mix={[withData('created')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="created"></div>')
+    })
+
+    it('supports mixins returning nested descriptors directly during SSR', async () => {
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} data-mixed={value} />
+        ),
+      )
+      let withReturnedMix = createMixin((_handle) => (value: string) => [
+        false,
+        [withData(value)],
+        undefined,
+      ])
+
+      let stream = renderToStream(<div mix={[withReturnedMix('returned')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="returned"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('reads ancestor component context from mixins during SSR', async () => {
+      function Provider(handle: Handle<{ value: string }>) {
+        return ({ children }: { children?: RemixNode }) => {
+          handle.context.set({ value: 'from-context' })
+          return <section>{children}</section>
+        }
+      }
+
+      let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
+        let provider = handle.context.get(Provider)
+        return <handle.element {...props} data-value={provider.value} />
+      })
+
+      let stream = renderToStream(
+        <Provider>
+          <div mix={[withContextValue()]} />
+        </Provider>,
+      )
+      let html = await drain(stream)
+
+      expect(html).toBe('<section><div data-value="from-context"></div></section>')
+    })
+
+    it('provides a shared no-op signal during SSR', async () => {
       let updateError: unknown
+      let componentSignal: AbortSignal | undefined
+      let mixinSignal: AbortSignal | undefined
+
+      function App(handle: Handle) {
+        componentSignal = handle.signal
+        componentSignal.addEventListener('abort', () => {
+          throw new Error('should not run in SSR')
+        })
+        componentSignal.onabort = () => {
+          throw new Error('should not run in SSR')
+        }
+
+        return () => <div mix={[lifecycleOnly()]} />
+      }
+
       let lifecycleOnly = createMixin((handle) => {
+        mixinSignal = handle.signal
+        mixinSignal.addEventListener('abort', () => {
+          throw new Error('should not run in SSR')
+        })
+        mixinSignal.onabort = () => {
+          throw new Error('should not run in SSR')
+        }
         handle.addEventListener('insert', () => {
           throw new Error('should not run in SSR')
         })
@@ -455,10 +531,14 @@ describe('stream', () => {
         return (props: { title?: string }) => <handle.element {...props} title="ok" />
       })
 
-      let stream = renderToStream(<div mix={[lifecycleOnly()]} />)
+      let stream = renderToStream(<App />)
       let html = await drain(stream)
 
       expect(html).toBe('<div title="ok"></div>')
+      expect(componentSignal).toBe(mixinSignal)
+      expect(componentSignal?.aborted).toBe(false)
+      expect(componentSignal?.reason).toBeUndefined()
+      expect(componentSignal?.onabort).toBe(null)
       expect(updateError).toBeInstanceOf(Error)
       expect((updateError as Error).message).toBe('handle.update() is not available during SSR.')
     })

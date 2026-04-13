@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
-import type { Handle } from '../lib/component'
+import type { Handle, RemixNode } from '../lib/component'
 import { animateLayout, createMixin, on, ref } from '../index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
-type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
-type NormalizedMix<mix> = Array<MixItem<Exclude<mix, undefined>>> | undefined
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type FalsyMixValue = false | 0 | 0n | '' | null | undefined
+type NormalizeMixLeaf<mix> = Exclude<MixLeaf<mix>, FalsyMixValue>
+type NormalizedMix<mix> = Array<NormalizeMixLeaf<mix>> | undefined
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -44,6 +46,15 @@ describe('jsx', () => {
           Click me
         </button>
       )
+    })
+
+    it('accepts nested mix values for host element JSX while render props still see arrays', () => {
+      let passthrough = createMixin((_handle) => {})
+      let descriptor = passthrough()
+
+      let withNested = <button mix={[[descriptor], [[[descriptor]]]]}>Click me</button>
+
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
     })
   })
 
@@ -116,10 +127,12 @@ describe('jsx', () => {
       let descriptor = passthrough()
       let withSingle = <Button mix={descriptor} />
       let withArray = <Button mix={[descriptor]} />
+      let withNested = <Button mix={[[descriptor], [[[descriptor]]]]} />
       let withoutMix = <Button />
 
       expect(withSingle.props.mix).toEqual([descriptor])
       expect(withArray.props.mix).toEqual([descriptor])
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
       expect(withoutMix.props.mix).toBeUndefined()
     })
   })
@@ -206,6 +219,27 @@ describe('jsx', () => {
       let element = (
         <div mix={[animateLayout(), animateLayout({ duration: 300, easing: 'linear' })]} />
       )
+    })
+
+    it('infers context.get types on mixin handles', () => {
+      function Provider(handle: Handle<{ value: number }>) {
+        return ({ children }: { children?: RemixNode }) => {
+          handle.context.set({ value: 1 })
+          return <div>{children}</div>
+        }
+      }
+
+      let withContext = createMixin<HTMLDivElement, [], Props<'div'>>((handle) => {
+        let provider = handle.context.get(Provider)
+        type inferredContext = Assert<Equal<typeof provider, { value: number }>>
+
+        return (props: Props<'div'>) => (
+          <handle.element {...props} data-value={String(provider.value)} />
+        )
+      })
+
+      let descriptor = withContext()
+      let provider = <Provider />
     })
   })
   /* oxlint-enable eslint/no-unused-vars */

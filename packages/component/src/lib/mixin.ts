@@ -1,5 +1,5 @@
-import type { FrameHandle } from './component.ts'
-import type { ElementProps, RemixElement } from './jsx.ts'
+import type { Context, FrameHandle } from './component.ts'
+import type { ElementProps, ElementType, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { SchedulerPhaseEvent } from './scheduler.ts'
 import { jsx } from './jsx.ts'
@@ -57,6 +57,8 @@ export type MixinBeforeRemoveEvent = Event & {
   persistNode(teardown: (signal: AbortSignal) => void | Promise<void>): void
 }
 
+type MixinContext = Pick<Context<Record<string, never>>, 'get'>
+
 type MixinHandleEventMap<node extends EventTarget = Element> = {
   beforeRemove: MixinBeforeRemoveEvent
   reclaimed: MixinReclaimedEvent<node>
@@ -74,6 +76,7 @@ export type MixinHandle<
   props extends ElementProps = ElementProps,
 > = TypedEventTarget<MixinHandleEventMap<node>> & {
   id: string
+  context: MixinContext
   frame: FrameHandle
   element: MixinElement<node, props>
   signal: AbortSignal
@@ -99,7 +102,7 @@ type MixinRuntimeType<
 ) =>
   | ((
       ...args: [...args, currentProps: props]
-    ) => void | null | RemixElement | MixinElement<node, props>)
+    ) => MixinReturn<node, props>)
   | void
 
 /**
@@ -115,7 +118,7 @@ export type MixinType<
 ) =>
   | ((
       ...args: [...args, currentProps: props]
-    ) => void | null | RemixElement | MixinElement<node, props>)
+    ) => MixinReturn<node, props>)
   | void
 
 /**
@@ -131,6 +134,23 @@ export type MixinDescriptor<
   readonly __node?: (node: node) => void
 }
 
+type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type FalsyMixValue = false | 0 | 0n | '' | null | undefined
+type NullableMixValue<descriptor> = descriptor | FalsyMixValue
+type NestedMixValue<descriptor, depth extends number = 4> = depth extends 0
+  ? NullableMixValue<descriptor> | ReadonlyArray<NullableMixValue<descriptor>>
+  :
+      | NullableMixValue<descriptor>
+      | ReadonlyArray<NestedMixValue<descriptor, PreviousMixDepth[depth]>>
+
+/**
+ * Accepted authoring shape for the `mix` prop on host elements.
+ */
+export type MixInput<
+  node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+> = NestedMixValue<MixinDescriptor<node, any, props>>
+
 /**
  * Accepted value shape for the `mix` prop.
  */
@@ -139,11 +159,16 @@ export type MixValue<
   props extends ElementProps = ElementProps,
 > = MixinDescriptor<node, any, props> | ReadonlyArray<MixinDescriptor<node, any, props>>
 
+type MixinReturn<
+  node extends EventTarget = Element,
+  props extends ElementProps = ElementProps,
+> = void | null | RemixElement | MixinElement<node, props> | MixInput<node, props>
+
 type AnyMixinType = MixinRuntimeType<unknown[], Element, ElementProps>
 type AnyMixinDescriptor = MixinDescriptor<Element, unknown[], ElementProps>
 type AnyMixinRunner = (
   ...args: [...unknown[], currentProps: ElementProps]
-) => void | null | RemixElement | MixinElement<Element, ElementProps>
+) => MixinReturn<Element, ElementProps>
 type AnyMixinRunnerResult = ReturnType<AnyMixinRunner>
 type AnyMixinSetupResult = ReturnType<AnyMixinType> | AnyMixinRunnerResult
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
@@ -165,7 +190,8 @@ type MixinHandleFactoryOptions = {
   hostType: string
   frame: FrameHandle
   scheduler: Scheduler
-  getSignal: () => AbortSignal
+  getContext: MixinContext['get']
+  getRuntimeSignal: () => AbortSignal
   getBinding: () => MixinRuntimeBinding | undefined
 }
 
@@ -183,6 +209,7 @@ type ResolveMixedPropsInput = {
   hostType: string
   frame: FrameHandle
   scheduler: Scheduler
+  getContext?: MixinContext['get']
   props: ElementProps
   state?: MixinRuntimeState
 }
@@ -237,7 +264,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       hostType: input.hostType,
       frame: input.frame,
       scheduler: input.scheduler,
-      getSignal: () => getMixinRuntimeSignal(state),
+      getContext: input.getContext ?? (() => undefined),
+      getRuntimeSignal: () => getMixinRuntimeSignal(state),
       getBinding: () => state.binding,
     }) as ScopedAnyMixinHandle
     state.handle = handle
@@ -277,6 +305,12 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     handle.setActiveScope(undefined)
     if (!result) continue
     if (isMixinElement(result)) continue
+
+    let returnedDescriptors = resolveReturnedMixDescriptors(result)
+    if (returnedDescriptors) {
+      for (let returned of returnedDescriptors) descriptors.push(returned)
+      continue
+    }
 
     if (!isRemixElement(result)) {
       console.error(new Error('mixins must return a remix element'))
@@ -417,7 +451,8 @@ function createMixinHandle(options: {
   hostType: string
   frame: FrameHandle
   scheduler: Scheduler
-  getSignal: () => AbortSignal
+  getContext: MixinContext['get']
+  getRuntimeSignal: () => AbortSignal
   getBinding: () => MixinRuntimeBinding | undefined
 }): AnyMixinHandle {
   return new MixinHandleImpl(options)
@@ -428,6 +463,7 @@ class MixinHandleImpl
   implements ScopedAnyMixinHandle
 {
   id: string
+  context: MixinContext
   frame: FrameHandle
   element: MixinElement<Element, ElementProps>
   #options: MixinHandleFactoryOptions
@@ -436,6 +472,7 @@ class MixinHandleImpl
     commit: 0,
   }
   #activeScope?: symbol
+  #scopeSignals = new Map<symbol, AbortController>()
   #scopeTargets = new Map<symbol, TypedEventTarget<MixinHandleEventMap<Element>>>()
   #scopePhaseCounts = new Map<symbol, Record<'beforeUpdate' | 'commit', number>>()
   #onSchedulerBeforeUpdate = (event: Event) => {
@@ -449,6 +486,9 @@ class MixinHandleImpl
     super()
     this.#options = options
     this.id = options.id
+    this.context = {
+      get: options.getContext,
+    }
     this.frame = options.frame
 
     let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) =>
@@ -463,7 +503,9 @@ class MixinHandleImpl
   }
 
   get signal() {
-    return this.#options.getSignal()
+    let scope = this.#activeScope
+    invariant(scope, 'handle.signal is only available during mixin setup, render, or lifecycle callbacks')
+    return this.#getScopeSignal(scope)
   }
 
   addEventListener(
@@ -520,7 +562,7 @@ class MixinHandleImpl
 
   update(): Promise<AbortSignal> {
     return new Promise((resolve) => {
-      let signal = this.#options.getSignal()
+      let signal = this.#options.getRuntimeSignal()
       if (signal.aborted) {
         resolve(signal)
         return
@@ -539,7 +581,7 @@ class MixinHandleImpl
       () => {
         let binding = this.#options.getBinding()
         invariant(binding)
-        task(binding.node, this.#options.getSignal())
+        task(binding.node, this.#options.getRuntimeSignal())
       },
     ])
   }
@@ -552,6 +594,7 @@ class MixinHandleImpl
     this.#activeScope = scope
     if (!scope) return
     if (this.#scopeTargets.has(scope)) return
+    this.#scopeSignals.set(scope, new AbortController())
     this.#scopeTargets.set(scope, new TypedEventTarget<MixinHandleEventMap<Element>>())
     this.#scopePhaseCounts.set(scope, { beforeUpdate: 0, commit: 0 })
   }
@@ -569,6 +612,8 @@ class MixinHandleImpl
       this.#decrementGlobalPhaseCount('beforeUpdate', scopePhaseCounts.beforeUpdate)
       this.#decrementGlobalPhaseCount('commit', scopePhaseCounts.commit)
     }
+    this.#scopeSignals.get(scope)?.abort()
+    this.#scopeSignals.delete(scope)
     this.#scopePhaseCounts.delete(scope)
     this.#scopeTargets.delete(scope)
     if (this.#activeScope === scope) {
@@ -593,6 +638,12 @@ class MixinHandleImpl
     let target = this.#scopeTargets.get(scope)
     invariant(target)
     return target
+  }
+
+  #getScopeSignal(scope: symbol) {
+    let controller = this.#scopeSignals.get(scope)
+    invariant(controller)
+    return controller.signal
   }
 
   #decrementGlobalPhaseCount(type: 'beforeUpdate' | 'commit', amount: number) {
@@ -756,10 +807,10 @@ function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNod
 
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
   let mix = props.mix
-  if (mix == null) return []
+  if (!mix) return []
   if (Array.isArray(mix)) {
     if (mix.length === 0) return []
-    return [...mix] as AnyMixinDescriptor[]
+    return mix.filter(Boolean) as AnyMixinDescriptor[]
   }
   return [mix] as AnyMixinDescriptor[]
 }
@@ -775,9 +826,52 @@ function composeMixinProps(previous: ElementProps, next: ElementProps): ElementP
   return { ...previous, ...next }
 }
 
+function resolveReturnedMixDescriptors(value: unknown): AnyMixinDescriptor[] | null {
+  let descriptors: AnyMixinDescriptor[] = []
+  if (!collectReturnedMixDescriptors(value, descriptors)) {
+    return null
+  }
+
+  return descriptors
+}
+
+function collectReturnedMixDescriptors(
+  value: unknown,
+  output: AnyMixinDescriptor[],
+): value is MixInput<Element, ElementProps> {
+  if (!value) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    for (let item of value) {
+      if (!collectReturnedMixDescriptors(item, output)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (!isMixinDescriptor(value)) {
+    return false
+  }
+
+  output.push(value)
+  return true
+}
+
 function isRemixElement(value: unknown): value is RemixElement {
   if (!value || typeof value !== 'object') return false
   return (value as { $rmx?: unknown }).$rmx === true
+}
+
+function isMixinDescriptor(value: unknown): value is AnyMixinDescriptor {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) {
+    return false
+  }
+
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
 function isMixinElement(value: unknown): value is MixinElement<Element, ElementProps> {
