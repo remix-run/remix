@@ -5,7 +5,7 @@ import { jsx } from '../jsx.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from '../mixin.ts'
 
-let attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
+const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
   (handle) => (defaults, props) => {
     let nextProps = props
 

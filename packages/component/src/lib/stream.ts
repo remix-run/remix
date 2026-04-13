@@ -132,7 +132,7 @@ const NUMERIC_CSS_PROPS = new Set([
 
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
 
-let ssrSignal = Object.freeze({
+const ssrSignal = Object.freeze({
   get aborted() {
     return false
   },
