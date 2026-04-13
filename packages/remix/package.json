@@ -81,6 +81,7 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./ui": "./src/ui.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -337,6 +338,10 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./ui": {
+        "types": "./dist/ui.d.ts",
+        "default": "./dist/ui.js"
+      },
       "./package.json": "./package.json"
     },
     "bin": {
@@ -389,7 +394,8 @@
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
     "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^"
+    "@remix-run/terminal": "workspace:^",
+    "@remix-run/ui": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
