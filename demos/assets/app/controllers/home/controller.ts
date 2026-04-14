@@ -57,7 +57,7 @@ export const homeController = {
   </head>
   <body>
     <main>
-      <h1>assets watch mode</h1>
+      <h1>remix/assets watch mode</h1>
       <p>
         This server stays running while <code>remix/assets</code> watches client files.
         Edit a client module, refresh the page, and the updated code is served without

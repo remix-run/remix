@@ -4,10 +4,11 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { performance } from 'node:perf_hooks'
 
+import { createAssetServer } from '@remix-run/assets'
+import type { AssetServer, AssetServerOptions } from '@remix-run/assets'
+
 import { getBasicFixture, getDeepGraphFixture } from './fixture.ts'
-import { createAssetServer } from '../src/assets.ts'
 import type { BenchFixture } from './fixture.ts'
-import type { AssetServer, AssetServerOptions } from '../src/assets.ts'
 
 interface Benchmark {
   id: string

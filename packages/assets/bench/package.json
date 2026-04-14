@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/assets": "workspace:*",
     "@remix-run/component": "workspace:*"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
-import type { AssetServerOptions } from '../src/assets.ts'
+import type { AssetServerOptions } from '@remix-run/assets'
 
 interface BenchFixtureStat {
   label: string
@@ -52,14 +52,14 @@ async function readBasicFixture(): Promise<BenchFixture> {
     entryPointFile: 'app/entry.tsx',
     entryPointUrl: '/assets/app/entry.tsx',
     expectedEntryUrlSubstrings: [
-      '/assets/app/summary.ts',
-      '/assets/bench-packages/shared/strings.ts',
-      '/assets/bench-packages/ui/panel.tsx',
+      '/assets/app/summary.@',
+      '/assets/bench-packages/shared/strings.@',
+      '/assets/bench-packages/ui/panel.@',
       '/assets/packages/component/',
     ],
     expectedPreloadUrlSubstrings: [
-      '/assets/bench-packages/shared/strings.ts',
-      '/assets/bench-packages/ui/panel.tsx',
+      '/assets/bench-packages/shared/strings.@',
+      '/assets/bench-packages/ui/panel.@',
       '/assets/packages/component/',
     ],
     createStats: async () => [

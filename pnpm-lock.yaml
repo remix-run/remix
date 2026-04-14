@@ -311,6 +311,9 @@ importers:
 
   packages/assets/bench:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:*
+        version: link:..
       '@remix-run/component':
         specifier: workspace:*
         version: link:../../component
