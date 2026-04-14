@@ -9,11 +9,17 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 import { books, orderItems, orders, users } from './schema.ts'
 import { hashPassword } from '../utils/password-hash.ts'
 
-const databaseDirectoryUrl = getDatabaseDirectoryUrl()
-const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
-const databaseFilePath = getDatabaseFilePath()
+let databaseFilePath: string
+if (process.env.NODE_ENV === 'test') {
+  databaseFilePath = ':memory:'
+} else {
+  let databaseDirectoryUrl = new URL('../../db/', import.meta.url)
+  databaseFilePath = fileURLToPath(new URL('bookstore.sqlite', databaseDirectoryUrl))
 
-fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
+  fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
+}
+
+const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 
 const sqlite = new BetterSqlite3(databaseFilePath)
 sqlite.pragma('foreign_keys = ON')
@@ -172,15 +178,4 @@ async function initialize(): Promise<void> {
       },
     ])
   }
-}
-
-function getDatabaseFilePath(): string {
-  let fileName = process.env.NODE_ENV === 'test' ? 'bookstore.test.sqlite' : 'bookstore.sqlite'
-
-  return fileURLToPath(new URL(fileName, databaseDirectoryUrl))
-}
-
-function getDatabaseDirectoryUrl(): URL {
-  let directory = process.env.NODE_ENV === 'test' ? '../../tmp/' : '../../db/'
-  return new URL(directory, import.meta.url)
 }

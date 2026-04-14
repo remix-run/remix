@@ -24,7 +24,16 @@ const SOURCE_FOLDER = 'src'
 type RemixRunPackage = {
   name: string
   version: string
+  packageJsonPath: string
   exports: ExportEntry[]
+  bins: BinEntry[]
+}
+
+type BinEntry = {
+  // The bin command name: "remix-test"
+  command: string
+  // The export subpath derived from the bin file stem: "cli" (from "./src/cli.ts")
+  sourceExport: string
 }
 
 type ExportEntry = {
@@ -36,21 +45,22 @@ type ExportEntry = {
   reExportFrom: string
 }
 
-const { remixRunPackages, allExports } = await getRemixRunPackages()
+const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
 const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
-// Track existing exports for comparison
+// Track existing exports and bins for comparison
 const existingExports = new Set<string>(
   Object.keys(remixPackageJson.exports || {}).filter(
     (key) => key !== '.' && key !== './package.json',
   ),
 )
+const existingBins = new Set<string>(Object.keys(remixPackageJson.bin || {}))
 
 // Update remixPackageJson in place and output to disk
 await updateRemixPackage()
 
 // Generate change files
-await outputExportsChangeFiles(remixPackageJson.exports)
+await outputExportsChangeFiles(remixPackageJson.exports, remixPackageJson.bin || {})
 
 // Implementations
 async function getRemixRunPackages() {
@@ -74,20 +84,33 @@ async function getRemixRunPackages() {
       continue
     }
 
+    let bins: BinEntry[] = []
+    let packageBin = packageJson.bin
+    if (packageBin && typeof packageBin === 'object') {
+      for (let [command, binFile] of Object.entries(packageBin as Record<string, string>)) {
+        let sourceExport = path.basename(binFile, path.extname(binFile))
+        bins.push({ command, sourceExport })
+      }
+    }
+
     let remixRunPackage: RemixRunPackage = {
       name: packageName,
       version: packageJson.version,
+      packageJsonPath,
       exports: [],
+      bins,
     }
     remixRunPackages.push(remixRunPackage)
 
     let shortName = packageName.replace('@remix-run/', '')
 
-    // Get all exports except package.json
+    // Get all exports except package.json and bin-derived exports (e.g. "./cli")
+    let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
       for (let [exportPath, _] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
+        if (binExports.has(exportPath)) continue
 
         if (exportPath === '.') {
           // Main export
@@ -113,11 +136,21 @@ async function getRemixRunPackages() {
   let allExports = remixRunPackages.flatMap((pkg) => pkg.exports)
   allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
 
+  // Sort bins by command for consistent ordering
+  let allBins = remixRunPackages.flatMap((pkg) =>
+    pkg.bins.map((bin) => ({
+      ...bin,
+      packageName: pkg.name,
+      packageJsonPath: pkg.packageJsonPath,
+    })),
+  )
+  allBins.sort((a, b) => a.command.localeCompare(b.command))
+
   console.log(
     `Found ${remixRunPackages.length} @remix-run packages with a total of ${allExports.length} exports.`,
   )
 
-  return { remixRunPackages, allExports }
+  return { remixRunPackages, allExports, allBins }
 }
 
 async function updateRemixPackage() {
@@ -143,8 +176,29 @@ async function updateRemixPackage() {
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
 
-  // Run linter against generated code with --fix
+  // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
   logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
+
+  // Generate bin wrapper files and update sub-package exports
+  for (let bin of allBins) {
+    // Create wrapper file in remix/src/
+    let wrapperPath = path.join(remixDir, SOURCE_FOLDER, `${bin.command}.ts`)
+    let content = [
+      `#!/usr/bin/env node`,
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `import '${bin.packageName}/${bin.sourceExport}'\n`,
+    ].join('\n')
+    await fs.writeFile(wrapperPath, content, 'utf-8')
+    await fs.chmod(wrapperPath, 0o755)
+
+    // Add ./cli (or equivalent) export to the sub-package's package.json
+    let subPackageJson = JSON.parse(await fs.readFile(bin.packageJsonPath, 'utf-8'))
+    let exportKey = `./${bin.sourceExport}`
+    let binSrcFile = subPackageJson.bin[bin.command] as string
+    subPackageJson.exports[exportKey] = binSrcFile
+    subPackageJson.publishConfig.exports[exportKey] = subPackageJson.publishConfig.bin[bin.command]
+    await fs.writeFile(bin.packageJsonPath, JSON.stringify(subPackageJson, null, 2) + '\n', 'utf-8')
+  }
 
   // Update package.json
   console.log('Updating Remix package.json...')
@@ -165,6 +219,18 @@ async function updateRemixPackage() {
   remixPackageJson.exports['./package.json'] = './package.json'
   remixPackageJson.publishConfig.exports['./package.json'] = './package.json'
 
+  if (allBins.length > 0) {
+    remixPackageJson.bin = {}
+    remixPackageJson.publishConfig.bin = {}
+    for (let bin of allBins) {
+      remixPackageJson.bin[bin.command] = `./${SOURCE_FOLDER}/${bin.command}.ts`
+      remixPackageJson.publishConfig.bin[bin.command] = `./dist/${bin.command}.js`
+    }
+  } else {
+    delete remixPackageJson.bin
+    delete remixPackageJson.publishConfig.bin
+  }
+
   for (let packageInfo of remixRunPackages) {
     remixPackageJson.dependencies[packageInfo.name] = 'workspace:^'
   }
@@ -177,18 +243,30 @@ async function updateRemixPackage() {
 }
 
 // Build exports change summary
-async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
+async function outputExportsChangeFiles(
+  exportsConfig: Record<string, string>,
+  binsConfig: Record<string, string>,
+) {
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
   let addedExports = Array.from(newExportsSet).filter((key) => !existingExports.has(key))
   let removedExports = Array.from(existingExports).filter((key) => !newExportsSet.has(key))
 
-  if (addedExports.length === 0 && removedExports.length === 0) {
+  let newBinsSet = new Set<string>(Object.keys(binsConfig))
+  let addedBins = Array.from(newBinsSet).filter((cmd) => !existingBins.has(cmd))
+  let removedBins = Array.from(existingBins).filter((cmd) => !newBinsSet.has(cmd))
+
+  if (
+    addedExports.length === 0 &&
+    removedExports.length === 0 &&
+    addedBins.length === 0 &&
+    removedBins.length === 0
+  ) {
     return
   }
 
-  let semverType = removedExports.length > 0 ? 'major' : 'minor'
+  let semverType = removedExports.length > 0 || removedBins.length > 0 ? 'major' : 'minor'
   let changeFileBaseName = 'remix.update-exports.md'
   let changeFile = path.join(remixChangesDir, `${semverType}.${changeFileBaseName}`)
   let alternateSemverType = semverType === 'major' ? 'minor' : 'major'
@@ -219,7 +297,7 @@ async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
   if (removedExports.length > 0) {
     console.log()
     console.log('Removed package.json exports:')
-    changes += 'Removed `package.json` `exports`:\n'
+    changes += (changes ? '\n' : '') + 'Removed `package.json` `exports`:\n'
     for (let exportPath of removedExports) {
       exportPath = exportPath.replace('./', '')
       let exportName = `remix/${exportPath}`
@@ -241,13 +319,36 @@ async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
   if (addedExports.length > 0) {
     console.log()
     console.log('Added package.json exports:')
-    changes += 'Added `package.json` `exports`:\n'
+    changes += (changes ? '\n' : '') + 'Added `package.json` `exports`:\n'
     for (let exportPath of addedExports) {
       let entry = allExports.find((e) => e.exportPath === exportPath)
       exportPath = `remix/${exportPath.replace('./', '')}`
       if (entry) {
         console.log(`   - ${exportPath} → ${entry.reExportFrom}`)
         changes += ` - \`${exportPath}\` to re-export APIs from \`${entry.reExportFrom}\`\n`
+      }
+    }
+  }
+
+  if (removedBins.length > 0) {
+    console.log()
+    console.log('Removed package.json bin commands:')
+    changes += (changes ? '\n' : '') + 'Removed `package.json` `bin` commands:\n'
+    for (let command of removedBins) {
+      console.log(`   - ${command}`)
+      changes += ` - \`${command}\`\n`
+    }
+  }
+
+  if (addedBins.length > 0) {
+    console.log()
+    console.log('Added package.json bin commands:')
+    changes += (changes ? '\n' : '') + 'Added `package.json` `bin` commands:\n'
+    for (let command of addedBins) {
+      let bin = allBins.find((b) => b.command === command)
+      if (bin) {
+        console.log(`   - ${command} → ${bin.packageName}`)
+        changes += ` - \`${command}\` delegating to \`${bin.packageName}\`\n`
       }
     }
   }

@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { after, before, describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { after, before, describe, it } from 'remix/test'
 
 import {
   installFetchMock,

@@ -2,15 +2,15 @@
 
 ## Runtime benchmarks
 
-Runtime benchmarks are in [src/](./src/) and use [Vitest benchmarking](https://vitest.dev/guide/features.html#benchmarking).
+Runtime benchmarks are in [src/](./src/) and use `.bench.ts` suffix.
 
 ```sh
 # All benchmarks
 pnpm bench
 
 # Specific benchmark
-pnpm bench src/shopify.bench.json # full name
-pnpm bench shopify                # pattern match
+pnpm bench src/match/shopify.bench.ts # full name
+pnpm bench shopify                    # pattern match
 ```
 
 ### Compare performance across branches
@@ -27,9 +27,9 @@ pnpm bench --compare=main.json
 
 ## Type benchmarks
 
-Type benchmarks are in [types/](./types/) and use [ArkType Attest](https://github.com/arktypeio/arktype/blob/main/ark/attest/README.md).
+Type benchmarks are in [src/types/](./src/types/) and use [ArkType Attest](https://github.com/arktypeio/arktype/blob/main/ark/attest/README.md).
 
 ```sh
 # Run type benchmarks directly with Node
-node types/href.ts
+node src/types/href.ts
 ```

@@ -18,6 +18,7 @@
   ],
   "type": "module",
   "exports": {
+    "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
@@ -78,10 +79,15 @@
     "./session/memory-storage": "./src/session/memory-storage.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
+    "./test": "./src/test.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
+      "./assert": {
+        "types": "./dist/assert.d.ts",
+        "default": "./dist/assert.js"
+      },
       "./assets": {
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
@@ -322,7 +328,14 @@
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
       },
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
+      },
       "./package.json": "./package.json"
+    },
+    "bin": {
+      "remix-test": "./dist/remix-test.js"
     }
   },
   "devDependencies": {
@@ -368,7 +381,9 @@
     "@remix-run/session-storage-memcache": "workspace:^",
     "@remix-run/session-storage-redis": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^"
+    "@remix-run/tar-parser": "workspace:^",
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -376,5 +391,8 @@
     "prepublishOnly": "pnpm run build",
     "test": "node --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
+  },
+  "bin": {
+    "remix-test": "./src/remix-test.ts"
   }
 }

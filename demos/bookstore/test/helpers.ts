@@ -3,8 +3,13 @@ import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
 import { createBookstoreRouter } from '../app/router.ts'
+import { beforeAll } from 'remix/test'
+import { initializeBookstoreDatabase } from '../app/data/setup.ts'
 
-export function createTestRouter() {
+export async function createTestRouter() {
+  // Initialize the DB before every test suite - needs to run per-worker
+  await initializeBookstoreDatabase()
+
   let sessionCookie = createCookie('session', {
     secrets: ['s3cr3t-k3y-for-d3mo'],
     httpOnly: true,

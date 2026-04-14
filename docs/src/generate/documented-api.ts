@@ -121,6 +121,7 @@ function getDocumentedFunction(
   fullName: string,
   node: typedoc.SignatureReflection,
 ): DocumentedFunction {
+  let comment = node.comment
   let method = getApiMethod(fullName, node)
   invariant(method, `Failed to get method for function: ${node.getFriendlyFullName()}`)
   let methods = [method]
@@ -129,6 +130,7 @@ function getDocumentedFunction(
 
   // For overloaded functions, collect all signatures and merge parameters
   if (node.parent.signatures && node.parent.signatures.length > 1) {
+    comment = node.parent.signatures.find((s) => s.comment)?.comment || comment
     methods = node.parent.signatures
       .map((s) => getApiMethod(fullName, s))
       .filter((m): m is Method => m != null)
@@ -150,11 +152,11 @@ function getDocumentedFunction(
     path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
     name: method.name,
-    aliases: node.comment ? getApiAliases(node.comment) : undefined,
-    description: node.comment ? getApiDescription(node.comment) : '',
+    aliases: comment ? getApiAliases(comment) : undefined,
+    description: comment ? getApiDescription(comment) : '',
     signature,
-    example: node.comment?.getTag('@example')?.content
-      ? processApiComment(node.comment.getTag('@example')!.content)
+    example: comment?.getTag('@example')?.content
+      ? processApiComment(comment.getTag('@example')!.content)
       : undefined,
     parameters,
     returns: method.returns,
