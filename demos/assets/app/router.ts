@@ -8,8 +8,7 @@ export const router = createRouter()
 
 router.map(routes.home, homeController)
 
-router.get(routes.scripts, async ({ request, params }) => {
-  if (!params.path) return new Response('Not found', { status: 404 })
+router.get(routes.scripts, async ({ request }) => {
   let script = await assetServer.fetch(request)
   return script ?? new Response('Not found', { status: 404 })
 })

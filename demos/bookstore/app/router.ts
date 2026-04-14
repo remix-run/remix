@@ -79,8 +79,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
 
   let router = createRouter({ middleware })
 
-  router.get(routes.assets, async ({ request, params }) => {
-    if (!params.path) return new Response('Not found', { status: 404 })
+  router.get(routes.assets, async ({ request }) => {
     let script = await assetServer.fetch(request)
     return script ?? new Response('Not found', { status: 404 })
   })
