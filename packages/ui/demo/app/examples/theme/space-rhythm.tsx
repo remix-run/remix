@@ -1,6 +1,5 @@
 import { css } from 'remix/component'
-import { theme } from 'remix/ui'
-
+import { theme } from '@remix-run/ui/theme'
 let gaps = [
   ['theme.space.xs', theme.space.xs],
   ['theme.space.sm', theme.space.sm],

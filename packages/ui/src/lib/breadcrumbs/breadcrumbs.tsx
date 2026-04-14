@@ -17,11 +17,11 @@ export type BreadcrumbsProps = Omit<Props<'nav'>, 'children'> & {
   separator?: RemixNode
 }
 
-let rootCss = css({
+const rootCss = css({
   minWidth: 0,
 })
 
-let listCss = css({
+const listCss = css({
   display: 'flex',
   flexWrap: 'wrap',
   alignItems: 'center',
@@ -32,13 +32,13 @@ let listCss = css({
   listStyle: 'none',
 })
 
-let itemCss = css({
+const itemCss = css({
   display: 'inline-flex',
   alignItems: 'center',
   minWidth: 0,
 })
 
-let separatorCss = css({
+const separatorCss = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -48,7 +48,7 @@ let separatorCss = css({
   color: theme.colors.text.muted,
 })
 
-let linkCss = css({
+const linkCss = css({
   color: theme.colors.text.secondary,
   fontSize: theme.fontSize.sm,
   lineHeight: theme.lineHeight.normal,
@@ -59,7 +59,7 @@ let linkCss = css({
   },
 })
 
-let currentCss = css({
+const currentCss = css({
   color: theme.colors.text.primary,
   fontSize: theme.fontSize.sm,
   lineHeight: theme.lineHeight.normal,
@@ -67,7 +67,7 @@ let currentCss = css({
   whiteSpace: 'nowrap',
 })
 
-let textCss = css({
+const textCss = css({
   color: theme.colors.text.secondary,
   fontSize: theme.fontSize.sm,
   lineHeight: theme.lineHeight.normal,
@@ -84,7 +84,7 @@ export function Breadcrumbs() {
     let separatorContent = separator ?? <Glyph name="chevronRight" />
 
     return (
-      <nav aria-label={ariaLabel ?? 'Breadcrumb'} {...navProps} mix={[rootCss, ...(mix ?? [])]}>
+      <nav aria-label={ariaLabel ?? 'Breadcrumb'} {...navProps} mix={[rootCss, mix]}>
         <ol mix={listCss}>
           {items.flatMap((item, index) => {
             let isCurrent = index === currentIndex

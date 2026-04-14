@@ -83,6 +83,11 @@ export function createScheduler(
     }, 0)
   }
 
+  function getFrameStyleManager(vnode: CommittedComponentNode): StyleManager {
+    let runtime = vnode._handle?.frame.$runtime as { styleManager?: StyleManager } | undefined
+    return runtime?.styleManager ?? styles
+  }
+
   function flush() {
     if (flushing) return
     flushing = true
@@ -130,6 +135,7 @@ export function createScheduler(
             // diff relies on anchor for correct positioning.
             let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
             try {
+              let updateStyles = getFrameStyleManager(vnode)
               renderComponent(
                 handle,
                 curr,
@@ -137,7 +143,7 @@ export function createScheduler(
                 domParent,
                 handle.frame,
                 scheduler,
-                styles,
+                updateStyles,
                 rootTarget,
                 vParent,
                 anchor,

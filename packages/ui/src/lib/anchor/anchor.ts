@@ -22,14 +22,18 @@ export type AnchorPlacement =
   | 'bottom-start'
   | 'bottom-end'
 
+type AnchorOffsetValue = number | ((floating: HTMLElement) => number)
+
 export type AnchorOptions = {
   placement?: ExtendedAnchorPlacement
   inset?: boolean
   relativeTo?: string
-  offset?: number | ((floating: HTMLElement) => number)
+  offset?: AnchorOffsetValue
+  offsetX?: AnchorOffsetValue
+  offsetY?: AnchorOffsetValue
 }
 
-let viewportPaddingPx = 16
+const viewportPaddingPx = 16
 
 function isHorizontalPlacement(placement: ExtendedAnchorPlacement) {
   return placement.startsWith('left') || placement.startsWith('right')
@@ -88,8 +92,10 @@ function applyOffset(
   position: { top: number; left: number },
   placement: ExtendedAnchorPlacement,
   offset: number,
+  offsetX = 0,
+  offsetY = 0,
 ) {
-  if (offset === 0) {
+  if (offset === 0 && offsetX === 0 && offsetY === 0) {
     return position
   }
 
@@ -105,7 +111,18 @@ function applyOffset(
     left += offset
   }
 
+  left += offsetX
+  top += offsetY
+
   return { top, left }
+}
+
+function resolveOffsetValue(offset: AnchorOffsetValue | undefined, floating: HTMLElement) {
+  if (typeof offset === 'function') {
+    return offset(floating)
+  }
+
+  return offset ?? 0
 }
 
 function calculatePosition(
@@ -189,7 +206,9 @@ function readFloatingDimensions(floating: HTMLElement, relativeTo?: string) {
     relativeElement = null
   }
 
-  let scrollContainer = relativeElement ? getRelativeScrollContainer(floating, relativeElement) : floating
+  let scrollContainer = relativeElement
+    ? getRelativeScrollContainer(floating, relativeElement)
+    : floating
   let relativeOffsetX: number | null = null
   let relativeOffsetY: number | null = null
   let scrollContainerOffsetX = 0
@@ -323,11 +342,16 @@ function hasFloatingDimensionsChanged(
     Math.abs(currentDimensions.width - previousDimensions.width) >= 1 ||
     Math.abs(currentDimensions.height - previousDimensions.height) >= 1 ||
     Math.abs(currentDimensions.scrollViewportWidth - previousDimensions.scrollViewportWidth) >= 1 ||
-    Math.abs(currentDimensions.scrollViewportHeight - previousDimensions.scrollViewportHeight) >= 1 ||
+    Math.abs(currentDimensions.scrollViewportHeight - previousDimensions.scrollViewportHeight) >=
+      1 ||
     Math.abs(currentDimensions.scrollWidth - previousDimensions.scrollWidth) >= 1 ||
     Math.abs(currentDimensions.scrollHeight - previousDimensions.scrollHeight) >= 1 ||
-    Math.abs(currentDimensions.scrollContainerOffsetX - previousDimensions.scrollContainerOffsetX) >= 1 ||
-    Math.abs(currentDimensions.scrollContainerOffsetY - previousDimensions.scrollContainerOffsetY) >= 1 ||
+    Math.abs(
+      currentDimensions.scrollContainerOffsetX - previousDimensions.scrollContainerOffsetX,
+    ) >= 1 ||
+    Math.abs(
+      currentDimensions.scrollContainerOffsetY - previousDimensions.scrollContainerOffsetY,
+    ) >= 1 ||
     hasNullableNumberChanged(currentDimensions.relativeWidth, previousDimensions.relativeWidth) ||
     hasNullableNumberChanged(currentDimensions.relativeHeight, previousDimensions.relativeHeight) ||
     hasNullableNumberChanged(
@@ -366,11 +390,13 @@ function calculateFloatingBounds(
   collisionHeight: number,
   inset: boolean,
   offset: number,
+  offsetX: number,
+  offsetY: number,
   relativeOffsetX?: number | null,
   relativeOffsetY?: number | null,
 ) {
   let position = calculatePosition(placement, anchorRect, placementWidth, placementHeight, inset)
-  position = applyOffset(position, placement, offset)
+  position = applyOffset(position, placement, offset, offsetX, offsetY)
 
   if (relativeOffsetX !== null && relativeOffsetX !== undefined) {
     position.left -= relativeOffsetX
@@ -397,6 +423,8 @@ function getPlacementScore(
   collisionHeight: number,
   inset: boolean,
   offset: number,
+  offsetX: number,
+  offsetY: number,
   relativeOffsetX?: number | null,
   relativeOffsetY?: number | null,
 ) {
@@ -411,6 +439,8 @@ function getPlacementScore(
     collisionHeight,
     inset,
     offset,
+    offsetX,
+    offsetY,
     relativeOffsetX,
     relativeOffsetY,
   )
@@ -441,6 +471,8 @@ function getFlippedPlacement(
   anchor: HTMLElement,
   inset: boolean,
   offset: number,
+  offsetX: number,
+  offsetY: number,
   relativeOffsetX?: number | null,
   relativeOffsetY?: number | null,
 ) {
@@ -463,6 +495,8 @@ function getFlippedPlacement(
     collisionHeight,
     inset,
     offset,
+    offsetX,
+    offsetY,
     relativeOffsetX,
     relativeOffsetY,
   )
@@ -481,6 +515,8 @@ function getFlippedPlacement(
     collisionHeight,
     inset,
     offset,
+    offsetX,
+    offsetY,
     relativeOffsetX,
     relativeOffsetY,
   )
@@ -537,6 +573,8 @@ function calculateDocumentPosition(
   placementHeight: number,
   inset: boolean,
   offset: number,
+  offsetX: number,
+  offsetY: number,
   isFixed: boolean,
   scrollContainerOffsetX = 0,
   scrollContainerOffsetY = 0,
@@ -550,7 +588,7 @@ function calculateDocumentPosition(
     position.left += window.scrollX
   }
 
-  position = applyOffset(position, placement, offset)
+  position = applyOffset(position, placement, offset, offsetX, offsetY)
 
   position.left -= scrollContainerOffsetX
   position.top -= scrollContainerOffsetY
@@ -617,7 +655,14 @@ export function anchor(
     throw new TypeError('anchor() expected an anchor HTMLElement')
   }
 
-  let { placement = 'bottom', inset = false, relativeTo, offset: rawOffset = 0 } = options
+  let {
+    placement = 'bottom',
+    inset = false,
+    relativeTo,
+    offset: rawOffset = 0,
+    offsetX: rawOffsetX = 0,
+    offsetY: rawOffsetY = 0,
+  } = options
 
   let isFixed =
     floating.hasAttribute('popover') || getComputedStyle(anchorElement).position === 'fixed'
@@ -629,7 +674,9 @@ export function anchor(
       ignoreInlineMaxSize: true,
     }),
   ) {
-    let offset = typeof rawOffset === 'function' ? rawOffset(floating) : rawOffset
+    let offset = resolveOffsetValue(rawOffset, floating)
+    let offsetX = resolveOffsetValue(rawOffsetX, floating)
+    let offsetY = resolveOffsetValue(rawOffsetY, floating)
     let viewport = getDocumentViewportBounds(isFixed, viewportPaddingPx)
 
     let placementWidth =
@@ -651,9 +698,12 @@ export function anchor(
       anchorElement,
       inset,
       offset,
+      offsetX,
+      offsetY,
       naturalDimensions.relativeOffsetX,
       naturalDimensions.relativeOffsetY,
     )
+    floating.setAttribute('data-anchor-placement', finalPlacement)
 
     let position = calculateDocumentPosition(
       finalPlacement,
@@ -662,6 +712,8 @@ export function anchor(
       placementHeight,
       inset,
       offset,
+      offsetX,
+      offsetY,
       isFixed,
       naturalDimensions.scrollContainerOffsetX,
       naturalDimensions.scrollContainerOffsetY,
@@ -706,6 +758,8 @@ export function anchor(
       placementHeight,
       inset,
       offset,
+      offsetX,
+      offsetY,
       isFixed,
       dimensions.scrollContainerOffsetX,
       dimensions.scrollContainerOffsetY,

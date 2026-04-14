@@ -612,7 +612,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
 
-      expect(html).toContain('<style data-rmx-styles>')
+      expect(html).toContain('<style data-rmx=')
       expect(html).toMatch(/class="base rmxc-[a-z0-9]+ rmxc-[a-z0-9]+"/)
       expect(html).toContain('.rmxc-')
     })
@@ -690,7 +690,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Should have a style tag in head
-      expect(html).toContain('<style data-rmx-styles>')
+      expect(html).toContain('<style data-rmx=')
       expect(html).toContain('.rmxc-')
       expect(html).toContain('color: red')
       expect(html).toContain('font-size: 16px')
@@ -767,6 +767,32 @@ describe('stream', () => {
       expect(spanMatches?.[0]).not.toBe(spanMatches?.[2])
     })
 
+    it('deduplicates selector-addressed styles across streamed frame templates', async () => {
+      async function resolveFrame(src: string): Promise<string> {
+        if (src === '/outer') {
+          return await drain(
+            renderToStream(
+              <section mix={[css({ color: 'red' })]}>
+                <Frame src="/inner" fallback={<span>Loading inner...</span>} />
+              </section>,
+              { resolveFrame },
+            ),
+          )
+        }
+
+        if (src === '/inner') {
+          return await drain(renderToStream(<span mix={[css({ color: 'red' })]}>Inner</span>))
+        }
+
+        throw new Error(`Unexpected frame src: ${src}`)
+      }
+
+      let html = await drain(renderToStream(<Frame src="/outer" />, { resolveFrame }))
+
+      expect(html).toContain('<template')
+      expect(html.match(/data-rmx="[^"]+"/g) ?? []).toHaveLength(1)
+    })
+
     it('places styles in head when html root exists', async () => {
       let stream = renderToStream(
         <html>
@@ -778,7 +804,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Style should be in the head section
-      expect(html).toContain('<html><head><style data-rmx-styles>')
+      expect(html).toContain('<html><head><style data-rmx=')
       expect(html).toContain('color: purple')
       expect(html).toContain('</style></head><body>')
     })
@@ -788,7 +814,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Style should be in a head element
-      expect(html).toMatch(/^<head><style data-rmx-styles>/)
+      expect(html).toMatch(/^<head><style data-rmx=/)
       expect(html).toContain('color: orange')
       expect(html).toMatch(/<\/style><\/head><div class="rmxc-[a-z0-9]+">No HTML root<\/div>$/)
     })
@@ -895,7 +921,7 @@ describe('stream', () => {
 
       // Styles should be injected into existing head, preserving other content
       expect(html).toContain('<head>')
-      expect(html).toContain('<style data-rmx-styles>')
+      expect(html).toContain('<style data-rmx=')
       expect(html).toContain('font-weight: bold')
       expect(html).toContain('<title>Page Title</title>')
       expect(html).toContain('<meta charset="utf-8" />')
@@ -905,7 +931,7 @@ describe('stream', () => {
       let headMatch = html.match(/<head>(.*?)<\/head>/s)
       expect(headMatch).toBeTruthy()
       let headContent = headMatch![1]
-      expect(headContent).toContain('<style data-rmx-styles>')
+      expect(headContent).toContain('<style data-rmx=')
       expect(headContent).toContain('<title>Page Title</title>')
       expect(headContent).toContain('<meta charset="utf-8" />')
     })

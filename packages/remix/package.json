@@ -81,7 +81,6 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
-    "./ui": "./src/ui.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -338,9 +337,53 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
-      "./ui": {
-        "types": "./dist/ui.d.ts",
-        "default": "./dist/ui.js"
+      "./ui/accordion": {
+        "types": "./dist/ui/accordion.d.ts",
+        "default": "./dist/ui/accordion.js"
+      },
+      "./ui/anchor": {
+        "types": "./dist/ui/anchor.d.ts",
+        "default": "./dist/ui/anchor.js"
+      },
+      "./ui/breadcrumbs": {
+        "types": "./dist/ui/breadcrumbs.d.ts",
+        "default": "./dist/ui/breadcrumbs.js"
+      },
+      "./ui/combobox": {
+        "types": "./dist/ui/combobox.d.ts",
+        "default": "./dist/ui/combobox.js"
+      },
+      "./ui/glyph": {
+        "types": "./dist/ui/glyph.d.ts",
+        "default": "./dist/ui/glyph.js"
+      },
+      "./ui/listbox": {
+        "types": "./dist/ui/listbox.d.ts",
+        "default": "./dist/ui/listbox.js"
+      },
+      "./ui/menu": {
+        "types": "./dist/ui/menu.d.ts",
+        "default": "./dist/ui/menu.js"
+      },
+      "./ui/on-outside-pointer-down": {
+        "types": "./dist/ui/on-outside-pointer-down.d.ts",
+        "default": "./dist/ui/on-outside-pointer-down.js"
+      },
+      "./ui/scroll-lock": {
+        "types": "./dist/ui/scroll-lock.d.ts",
+        "default": "./dist/ui/scroll-lock.js"
+      },
+      "./ui/select": {
+        "types": "./dist/ui/select.d.ts",
+        "default": "./dist/ui/select.js"
+      },
+      "./ui/tabs": {
+        "types": "./dist/ui/tabs.d.ts",
+        "default": "./dist/ui/tabs.js"
+      },
+      "./ui/theme": {
+        "types": "./dist/ui/theme.d.ts",
+        "default": "./dist/ui/theme.js"
       },
       "./package.json": "./package.json"
     },

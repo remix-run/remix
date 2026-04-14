@@ -1,15 +1,15 @@
-import { ui } from 'remix/ui'
+import { Button } from '@remix-run/ui/button'
 import { buttonScrollRowCss } from './shared.ts'
 
 export default function Example() {
   return () => (
     <div mix={buttonScrollRowCss}>
-      <button type="submit" mix={ui.button.primary}>
+      <Button tone="primary" type="submit">
         Save
-      </button>
-      <button mix={ui.button.secondary}>Secondary</button>
-      <button mix={ui.button.ghost}>Ghost</button>
-      <button mix={ui.button.danger}>Delete</button>
+      </Button>
+      <Button tone="secondary">Secondary</Button>
+      <Button tone="ghost">Ghost</Button>
+      <Button tone="danger">Delete</Button>
     </div>
   )
 }

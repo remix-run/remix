@@ -1,6 +1,7 @@
 import { css } from 'remix/component'
-import { createTheme, Glyph, theme, ui } from 'remix/ui'
-
+import { Button } from '@remix-run/ui/button'
+import { Glyph } from '@remix-run/ui/glyph'
+import { createTheme, theme } from '@remix-run/ui/theme'
 let MeadowTheme = createTheme(
   {
     space: {
@@ -73,15 +74,6 @@ let MeadowTheme = createTheme(
       lg: '0 16px 34px rgb(0 0 0 / 0.10)',
       xl: '0 24px 52px rgb(0 0 0 / 0.14)',
     },
-    zIndex: {
-      dropdown: '1000',
-      popover: '1100',
-      sticky: '1200',
-      overlay: '1300',
-      modal: '1400',
-      toast: '1500',
-      tooltip: '1600',
-    },
     colors: {
       text: {
         primary: '#17321a',
@@ -123,28 +115,6 @@ let MeadowTheme = createTheme(
           border: '#FF3000',
         },
       },
-      status: {
-        info: {
-          background: '#eaf2ff',
-          foreground: '#1A72FF',
-          border: '#b9d4ff',
-        },
-        success: {
-          background: '#e5f7e6',
-          foreground: '#25663a',
-          border: '#b6ddb8',
-        },
-        warning: {
-          background: '#fff8d6',
-          foreground: '#8f7300',
-          border: '#ebdb7a',
-        },
-        danger: {
-          background: '#ffe8e0',
-          foreground: '#ca3e17',
-          border: '#ffbfae',
-        },
-      },
     },
   },
   {
@@ -158,32 +128,30 @@ export default function Example() {
     <>
       <MeadowTheme />
       <section data-create-theme-local="" mix={frameCss}>
-        <article mix={[ui.card.base, previewCardCss]}>
-          <div mix={ui.card.header}>
-            <p mix={ui.card.eyebrow}>createTheme()</p>
-            <h3 mix={ui.card.title}>Scoped theme preview</h3>
-            <p mix={ui.card.description}>
-              The same `theme` and `ui` references now resolve against a locally scoped theme.
+        <article mix={[panelCss, previewCardCss]}>
+          <div mix={panelHeaderCss}>
+            <p mix={eyebrowCss}>createTheme()</p>
+            <h3 mix={titleCss}>Scoped theme preview</h3>
+            <p mix={bodyCss}>
+              The same `theme` values and styling namespaces now resolve against a locally scoped
+              theme.
             </p>
           </div>
           <div mix={statsRowCss}>
-            <div mix={[ui.card.secondary, statCardCss]}>
+            <div mix={[statCardCss, statCardSurfaceCss]}>
               <p mix={statLabelCss}>Surface</p>
               <p mix={statValueCss}>theme.surface.lvl0</p>
             </div>
-            <div mix={[ui.card.secondary, statCardCss]}>
+            <div mix={[statCardCss, statCardSurfaceCss]}>
               <p mix={statLabelCss}>Primary</p>
-              <p mix={statValueCss}>ui.button.primary</p>
+              <p mix={statValueCss}>button.primaryStyle</p>
             </div>
           </div>
           <div mix={actionRowCss}>
-            <button mix={ui.button.secondary}>
-              <span mix={ui.button.label}>Preview</span>
-            </button>
-            <button mix={ui.button.primary}>
-              <Glyph mix={ui.button.icon} name="add" />
-              <span mix={ui.button.label}>Ship theme</span>
-            </button>
+            <Button tone="secondary">Preview</Button>
+            <Button startIcon={<Glyph name="add" />} tone="primary">
+              Ship theme
+            </Button>
           </div>
         </article>
       </section>
@@ -198,8 +166,49 @@ let frameCss = css({
   backgroundColor: theme.surface.lvl2,
 })
 
-let previewCardCss = css({
+let panelCss = css({
+  display: 'flex',
+  flexDirection: 'column',
   gap: theme.space.md,
+  padding: theme.space.lg,
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.lg,
+  backgroundColor: theme.surface.lvl0,
+  boxShadow: theme.shadow.xs,
+})
+
+let panelHeaderCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+})
+
+let previewCardCss = css({
+  minHeight: '100%',
+})
+
+let eyebrowCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.xxxs,
+  fontWeight: theme.fontWeight.semibold,
+  letterSpacing: theme.letterSpacing.meta,
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
+})
+
+let titleCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.lg,
+  lineHeight: theme.lineHeight.tight,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
+})
+
+let bodyCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  color: theme.colors.text.secondary,
 })
 
 let statsRowCss = css({
@@ -211,6 +220,14 @@ let statsRowCss = css({
 let statCardCss = css({
   gap: theme.space.xs,
   padding: theme.space.md,
+})
+
+let statCardSurfaceCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.surface.lvl1,
 })
 
 let statLabelCss = css({

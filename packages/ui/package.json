@@ -20,14 +20,121 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    "./accordion": {
+      "types": "./src/accordion.ts",
+      "default": "./src/accordion.ts"
+    },
+    "./anchor": {
+      "types": "./src/lib/anchor/anchor.ts",
+      "default": "./src/lib/anchor/anchor.ts"
+    },
+    "./breadcrumbs": {
+      "types": "./src/lib/breadcrumbs/breadcrumbs.tsx",
+      "default": "./src/lib/breadcrumbs/breadcrumbs.tsx"
+    },
+    "./button": {
+      "types": "./src/button.ts",
+      "default": "./src/button.ts"
+    },
+    "./combobox": {
+      "types": "./src/combobox.ts",
+      "default": "./src/combobox.ts"
+    },
+    "./glyph": {
+      "types": "./src/lib/glyph/glyph.tsx",
+      "default": "./src/lib/glyph/glyph.tsx"
+    },
+    "./listbox": {
+      "types": "./src/listbox.ts",
+      "default": "./src/listbox.ts"
+    },
+    "./menu": {
+      "types": "./src/menu.ts",
+      "default": "./src/menu.ts"
+    },
+    "./popover": {
+      "types": "./src/popover.ts",
+      "default": "./src/popover.ts"
+    },
+    "./select": {
+      "types": "./src/select.ts",
+      "default": "./src/select.ts"
+    },
+    "./separator": {
+      "types": "./src/separator.ts",
+      "default": "./src/separator.ts"
+    },
+    "./theme": {
+      "types": "./src/lib/theme/theme.ts",
+      "default": "./src/lib/theme/theme.ts"
+    },
+    "./scroll-lock": {
+      "types": "./src/lib/utils/scroll-lock.ts",
+      "default": "./src/lib/utils/scroll-lock.ts"
+    },
+    "./on-outside-pointer-down": {
+      "types": "./src/lib/utils/outside-pointerdown.ts",
+      "default": "./src/lib/utils/outside-pointerdown.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+      "./accordion": {
+        "types": "./dist/accordion.d.ts",
+        "default": "./dist/accordion.js"
+      },
+      "./anchor": {
+        "types": "./dist/lib/anchor/anchor.d.ts",
+        "default": "./dist/lib/anchor/anchor.js"
+      },
+      "./breadcrumbs": {
+        "types": "./dist/lib/breadcrumbs/breadcrumbs.d.ts",
+        "default": "./dist/lib/breadcrumbs/breadcrumbs.js"
+      },
+      "./button": {
+        "types": "./dist/button.d.ts",
+        "default": "./dist/button.js"
+      },
+      "./combobox": {
+        "types": "./dist/combobox.d.ts",
+        "default": "./dist/combobox.js"
+      },
+      "./glyph": {
+        "types": "./dist/lib/glyph/glyph.d.ts",
+        "default": "./dist/lib/glyph/glyph.js"
+      },
+      "./listbox": {
+        "types": "./dist/listbox.d.ts",
+        "default": "./dist/listbox.js"
+      },
+      "./menu": {
+        "types": "./dist/menu.d.ts",
+        "default": "./dist/menu.js"
+      },
+      "./popover": {
+        "types": "./dist/popover.d.ts",
+        "default": "./dist/popover.js"
+      },
+      "./select": {
+        "types": "./dist/select.d.ts",
+        "default": "./dist/select.js"
+      },
+      "./separator": {
+        "types": "./dist/separator.d.ts",
+        "default": "./dist/separator.js"
+      },
+      "./theme": {
+        "types": "./dist/lib/theme/theme.d.ts",
+        "default": "./dist/lib/theme/theme.js"
+      },
+      "./scroll-lock": {
+        "types": "./dist/lib/utils/scroll-lock.d.ts",
+        "default": "./dist/lib/utils/scroll-lock.js"
+      },
+      "./on-outside-pointer-down": {
+        "types": "./dist/lib/utils/outside-pointerdown.d.ts",
+        "default": "./dist/lib/utils/outside-pointerdown.js"
       },
       "./package.json": "./package.json"
     }
@@ -49,6 +156,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
+    "lint": "pnpm -w exec oxlint packages/ui -A all --quiet",
+    "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

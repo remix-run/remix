@@ -1,27 +1,41 @@
-import { Glyph, ui } from 'remix/ui'
+import { css } from 'remix/component'
+import * as button from '@remix-run/ui/button'
+import { Glyph } from '@remix-run/ui/glyph'
 import { buttonScrollRowCss, buttonSpinnerGlyphCss } from './shared.ts'
 
 export default function Example() {
   return () => (
     <div mix={buttonScrollRowCss}>
-      <button mix={[ui.button.base, ui.button.md, ui.button.tone.primary]}>
-        <Glyph mix={ui.button.icon} name="add" />
-        <span mix={ui.button.label}>New issue</span>
+      <button mix={[button.baseStyle, button.primaryStyle]}>
+        <Glyph mix={button.iconStyle} name="add" />
+        <span mix={button.labelStyle}>New issue</span>
       </button>
 
-      <button mix={[ui.button.base, ui.button.md, ui.button.tone.ghost]}>
-        <span mix={ui.button.label}>Open</span>
-        <Glyph mix={ui.button.icon} name="chevronRight" />
+      <button mix={[button.baseStyle, button.ghostStyle]}>
+        <span mix={button.labelStyle}>Open</span>
+        <Glyph mix={button.iconStyle} name="chevronRight" />
       </button>
 
-      <button disabled mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        <span mix={ui.button.label}>Disabled</span>
+      <button disabled mix={[button.baseStyle, button.secondaryStyle]}>
+        <span mix={button.labelStyle}>Disabled</span>
       </button>
 
-      <button aria-busy="true" mix={[ui.button.base, ui.button.md, ui.button.tone.secondary]}>
-        <Glyph mix={[ui.button.icon, ui.animation.spin(), buttonSpinnerGlyphCss]} name="spinner" />
-        <span mix={ui.button.label}>Saving</span>
+      <button aria-busy="true" mix={[button.baseStyle, button.secondaryStyle]}>
+        <Glyph mix={[button.iconStyle, buttonSpinnerGlyphCss, spinCss]} name="spinner" />
+        <span mix={button.labelStyle}>Saving</span>
       </button>
     </div>
   )
 }
+
+let spinCss = css({
+  '@keyframes demo-button-spin': {
+    from: {
+      transform: 'rotate(0deg)',
+    },
+    to: {
+      transform: 'rotate(360deg)',
+    },
+  },
+  animation: 'demo-button-spin 1s linear infinite',
+})

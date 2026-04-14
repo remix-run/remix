@@ -1,6 +1,6 @@
 import { createMixin, on } from '@remix-run/component'
 
-export let onKeyDown = createMixin<
+export const onKeyDown = createMixin<
   HTMLElement,
   [key: string, handler: (event: KeyboardEvent) => void]
 >(

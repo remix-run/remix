@@ -1,5 +1,4 @@
-import { Breadcrumbs } from 'remix/ui'
-
+import { Breadcrumbs } from '@remix-run/ui/breadcrumbs'
 export default function example() {
   return () => (
     <Breadcrumbs

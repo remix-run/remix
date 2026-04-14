@@ -1,6 +1,6 @@
 import { css, ref } from 'remix/component'
-import { anchor, theme } from 'remix/ui'
-
+import { anchor } from '@remix-run/ui/anchor'
+import { theme } from '@remix-run/ui/theme'
 type Placement =
   | 'top'
   | 'top-start'
@@ -255,7 +255,7 @@ let menuItemCss = css({
     borderBottom: 'none',
   },
   '&[aria-selected="true"]': {
-    backgroundColor: theme.colors.status.info.background,
+    backgroundColor: theme.surface.lvl3,
   },
 })
 
@@ -263,9 +263,9 @@ let infoCss = css({
   width: '100%',
   padding: theme.space.lg,
   boxSizing: 'border-box',
-  backgroundColor: theme.colors.status.info.background,
+  backgroundColor: theme.surface.lvl3,
   borderRadius: theme.radius.lg,
-  borderLeft: `4px solid ${theme.colors.status.info.foreground}`,
+  borderLeft: `4px solid ${theme.colors.action.primary.background}`,
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.sm,
@@ -273,14 +273,14 @@ let infoCss = css({
 
 let infoTitleCss = css({
   margin: 0,
-  color: theme.colors.status.info.foreground,
+  color: theme.colors.text.primary,
   fontSize: theme.fontSize.md,
   fontWeight: theme.fontWeight.semibold,
 })
 
 let infoBodyCss = css({
   margin: 0,
-  color: theme.colors.status.info.foreground,
+  color: theme.colors.text.secondary,
   fontSize: theme.fontSize.sm,
   lineHeight: theme.lineHeight.relaxed,
 })
@@ -301,6 +301,8 @@ export default function example() {
           let insetCheckbox = root.querySelector('#anchor-demo-inset')
           let relativeToCheckbox = root.querySelector('#anchor-demo-relative-to')
           let offsetInput = root.querySelector('#anchor-demo-offset')
+          let offsetXInput = root.querySelector('#anchor-demo-offset-x')
+          let offsetYInput = root.querySelector('#anchor-demo-offset-y')
           let persistCheckbox = root.querySelector('#anchor-demo-persist')
 
           if (
@@ -309,6 +311,8 @@ export default function example() {
             !(insetCheckbox instanceof HTMLInputElement) ||
             !(relativeToCheckbox instanceof HTMLInputElement) ||
             !(offsetInput instanceof HTMLInputElement) ||
+            !(offsetXInput instanceof HTMLInputElement) ||
+            !(offsetYInput instanceof HTMLInputElement) ||
             !(persistCheckbox instanceof HTMLInputElement)
           ) {
             return
@@ -323,6 +327,8 @@ export default function example() {
           let currentInset = false
           let currentRelativeTo = false
           let currentOffset = 0
+          let currentOffsetX = 0
+          let currentOffsetY = 0
           let currentPersist = false
           let currentCleanup: null | (() => void) = null
 
@@ -340,6 +346,8 @@ export default function example() {
               inset: currentInset,
               relativeTo: currentRelativeTo ? '[aria-selected="true"]' : undefined,
               offset: currentOffset,
+              offsetX: currentOffsetX,
+              offsetY: currentOffsetY,
             })
           }
 
@@ -429,6 +437,20 @@ export default function example() {
             }
           }
 
+          let onOffsetXChange = () => {
+            currentOffsetX = Number.parseInt(offsetXInput.value, 10) || 0
+            if (currentPersist) {
+              syncPersistentPopover()
+            }
+          }
+
+          let onOffsetYChange = () => {
+            currentOffsetY = Number.parseInt(offsetYInput.value, 10) || 0
+            if (currentPersist) {
+              syncPersistentPopover()
+            }
+          }
+
           let onPersistChange = () => {
             currentPersist = persistCheckbox.checked
             syncPersistentPopover()
@@ -481,6 +503,8 @@ export default function example() {
           insetCheckbox.addEventListener('change', onInsetChange)
           relativeToCheckbox.addEventListener('change', onRelativeToChange)
           offsetInput.addEventListener('input', onOffsetChange)
+          offsetXInput.addEventListener('input', onOffsetXChange)
+          offsetYInput.addEventListener('input', onOffsetYChange)
           persistCheckbox.addEventListener('change', onPersistChange)
           anchorPopover.addEventListener('beforetoggle', onBeforeToggle)
           document.addEventListener('keydown', onKeyDown)
@@ -489,6 +513,8 @@ export default function example() {
             insetCheckbox.removeEventListener('change', onInsetChange)
             relativeToCheckbox.removeEventListener('change', onRelativeToChange)
             offsetInput.removeEventListener('input', onOffsetChange)
+            offsetXInput.removeEventListener('input', onOffsetXChange)
+            offsetYInput.removeEventListener('input', onOffsetYChange)
             persistCheckbox.removeEventListener('change', onPersistChange)
             anchorPopover.removeEventListener('beforetoggle', onBeforeToggle)
             document.removeEventListener('keydown', onKeyDown)
@@ -564,7 +590,31 @@ export default function example() {
                 name="offset"
                 type="number"
               />
-              Offset (pixels)
+              Gap (placement axis)
+            </label>
+            <label htmlFor="anchor-demo-offset-x" mix={optionCss}>
+              <input
+                defaultValue="0"
+                id="anchor-demo-offset-x"
+                max="100"
+                min="-100"
+                mix={offsetInputCss}
+                name="offset-x"
+                type="number"
+              />
+              Offset X
+            </label>
+            <label htmlFor="anchor-demo-offset-y" mix={optionCss}>
+              <input
+                defaultValue="0"
+                id="anchor-demo-offset-y"
+                max="100"
+                min="-100"
+                mix={offsetInputCss}
+                name="offset-y"
+                type="number"
+              />
+              Offset Y
             </label>
           </div>
         </section>
@@ -631,7 +681,8 @@ export default function example() {
         <h4 mix={infoTitleCss}>How it works:</h4>
         <p mix={infoBodyCss}>
           The anchor utility automatically chooses the best placement and applies smart shifting to
-          keep the popover visible. Use offset to add space between the popover and anchor.
+          keep the popover visible. Use offset for the placement gap, then offsetX and offsetY to
+          nudge the popover horizontally or vertically.
         </p>
         <p mix={infoBodyCss}>
           <strong>Interactive testing:</strong> Use arrow keys to move the button around and watch

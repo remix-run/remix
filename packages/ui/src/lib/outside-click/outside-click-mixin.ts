@@ -1,8 +1,20 @@
 import { createMixin } from '@remix-run/component'
 
-let onOutsideClick = createMixin<HTMLElement, [active: boolean, handler: () => void]>((handle) => {
+type InsideTargetMatcher = (target: Node) => boolean
+
+const onOutsideClick = createMixin<
+  HTMLElement,
+  [
+    active: boolean,
+    handler: (target: Node | null) => void,
+    isInsideTarget?: InsideTargetMatcher,
+    stopPropagation?: boolean,
+  ]
+>((handle) => {
   let active = false
-  let handler: () => void = () => {}
+  let handler: (target: Node | null) => void = () => {}
+  let isInsideTarget: InsideTargetMatcher = () => false
+  let stopPropagation = true
 
   handle.addEventListener('insert', (event) => {
     let node = event.node
@@ -11,19 +23,32 @@ let onOutsideClick = createMixin<HTMLElement, [active: boolean, handler: () => v
     doc.addEventListener(
       'click',
       (event) => {
-        if (!active || (event.target instanceof Node && node.contains(event.target))) {
+        let target = event.target instanceof Node ? event.target : null
+
+        if (!active || (target && (node.contains(target) || isInsideTarget(target)))) {
           return
         }
-        event.stopPropagation()
-        handler()
+
+        if (stopPropagation) {
+          event.stopPropagation()
+        }
+
+        handler(target)
       },
       { capture: true, signal: handle.signal },
     )
   })
 
-  return (nextActive, nextHandler) => {
+  return (
+    nextActive,
+    nextHandler,
+    nextIsInsideTarget = () => false,
+    nextStopPropagation = true,
+  ) => {
     active = nextActive
     handler = nextHandler
+    isInsideTarget = nextIsInsideTarget
+    stopPropagation = nextStopPropagation
   }
 })
 

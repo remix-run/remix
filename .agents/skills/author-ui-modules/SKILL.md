@@ -1,278 +1,220 @@
 ---
 name: author-ui-modules
-description: Build idiomatic `packages/ui` modules for Remix. Use when authoring or revising first-party UI primitives, controller-backed controls, popup or overlay modules, or role mixins that coordinate shared state through a context-provided controller and expose bubbling DOM events.
+description: Build idiomatic `packages/ui` modules for Remix. Use when authoring or revising first-party UI primitives, headless controls, or mixin-based modules that should follow the `popover`, `listbox`, and `select` patterns in `packages/ui`.
 ---
 
 # Author UI Modules
 
-Use this skill when building `packages/ui` APIs that are more than one component.
+Use this skill when building `packages/ui` APIs that span multiple roles or compose smaller modules into one control.
 
-For a concrete model, follow `packages/ui/src/lib/popover/popover.ts`.
+## Preferred Shapes
 
-## Default Shape
+Prefer one of these shapes:
 
-In `packages/ui`, prefer a module with four parts:
+1. A small headless module with:
 
-1. A controller for shared state and cross-element actions
-2. A context component that creates and provides one controller instance
-3. Role mixins that attach behavior to specific host elements
-4. Bubbling DOM events for public state changes
+- one provider/context component
+- a plain context value with shared methods, refs, or getters
+- a few focused role mixins
+- a namespace export like `popover` or `listbox`
 
-The caller keeps control of markup. The module coordinates behavior.
+2. A composed control with:
 
-## Terminology
+- a wrapper component that owns rendered state
+- composition of smaller modules like `popover` and `listbox`
+- thin components that implement a mixin that improves authoring ergonomics
 
-Call these **modules**, not just components.
+The caller should still own most markup unless the higher-level control is the actual product.
 
-A module may include:
+## Prefer Plain Context Over Controllers
 
-- a controller class
-- a context component
-- several role mixins
-- custom event types
-- small helpers
+Default to `handle.context.set(...)` with a plain object. Do not introduce a controller class or an event-emitter-on-context pattern unless the task truly needs it.
 
-The exported namespace is the product.
+Two good context shapes:
 
-## Reach For The Smallest Abstraction
+- a stable mutable object for shared refs or targets, like `popover`
+- a stable object with getters and methods over the latest props or state, like `listbox`
 
-- Use a plain mixin when the concern belongs to one host element.
-- Use a module when behavior spans multiple roles or elements but should stay headless.
-- Use a wrapper component only when the module must own structure, layout, or a very high-level authored API.
-
-Prefer `popover.button` plus `popover.surface` over a single `<Popover />` wrapper when consumers should choose the elements.
-
-## Controller Rules
-
-The controller is the single source of truth for shared module state.
-
-Put these in the controller:
-
-- open or closed state
-- selected value or active item
-- current opener, anchor, surface, or registration state
-- shared focus behavior
-- cross-element cleanup like anchoring or observers
-- imperative actions such as `show()`, `hide()`, `select()`, or `focusNext()`
-
-Do not put these in the controller:
-
-- raw DOM event parsing that only one role cares about
-- validation that belongs to a specific role mixin
-- transient callback-local values
-- per-element state that is not shared
-
-Controllers should expose a small API. Mixins normalize input before calling it.
-
-Use an internal `change` event so dependent mixins can re-render:
+Internal coordination should flow through normal component updates plus context methods. Do not add a `TypedEventTarget` or `change` emitter to context just to wake up mixins.
 
 ```tsx
-type MyControllerEventMap = {
-  change: Event
-}
+export function ListboxProvider(handle: Handle<ListboxContext>) {
+  let options: RegisteredOption[] = []
+  let props: ListboxProviderProps = UNSET_PROPS
 
-class MyController extends TypedEventTarget<MyControllerEventMap> {
-  #open = false
+  handle.context.set({
+    get value() {
+      return props.value
+    },
+    get activeValue() {
+      return props.activeValue
+    },
+    registerOption(option) {
+      options.push(option)
+    },
+    select(value) {
+      let option = options.find((option) => option.value === value)
+      props.onSelect(value, option)
+    },
+  })
 
-  get isOpen() {
-    return this.#open
-  }
-
-  show() {
-    if (this.#open) return
-    this.#open = true
-    this.dispatchEvent(new Event('change'))
+  return (nextProps: ListboxProviderProps) => {
+    options = []
+    props = nextProps
+    return props.children
   }
 }
 ```
 
-If outside consumers need to react, dispatch a bubbling DOM event from the relevant element when public state changes.
+## Split State By Ownership
 
-## Context Rules
+Do not force all state into one central abstraction.
 
-The context component exists to scope one controller instance to one module instance.
+Prefer:
 
-- Create the controller once in setup scope.
-- Call `handle.context.set(controller)` in render.
-- Return `props.children` unless the module truly needs wrapper DOM.
-- Add a `get...Controller()` helper that throws with a clear error when a role is used outside its context.
+- wrapper component state for render phases and displayed values, like `Select`
+- provider state for shared coordination and registrations, like `popover` focus targets or `listbox` options
+- mixin-local state for one host node, like refs, cleanup functions, or cached options
+- callback scope for transient DOM event parsing
+- for text-entry controls, provider state can own `inputText`, filter text, and open reasons while `listbox` still owns option registration, navigation, and selection settlement
 
-```tsx
-function MyContext(handle: Handle<MyController>) {
-  let controller = new MyController(handle.id)
+If a lower-level module can stay mostly stateless, let the wrapper own the rendered state and pass that into the provider through props.
 
-  return (props: { children?: RemixNode }) => {
-    handle.context.set(controller)
-    return props.children ?? null
-  }
-}
+## Provider Patterns
 
-function getMyController(handle: Handle | MixinHandle) {
-  let controller = handle.context.get(MyContext)
-  if (!(controller instanceof MyController)) {
-    throw new Error('My module roles must be used inside myModule.context')
-  }
-  return controller
-}
-```
+Providers usually exist to scope one module instance and expose shared coordination helpers.
+
+- Call `handle.context.set(...)` in setup scope when the context object can stay stable.
+- Use getters on the context object when descendants need the latest prop-backed state.
+- Return `props.children` unless wrapper DOM is genuinely part of the module.
+- Reset render-scoped registries in the render function when descendants re-register on each render.
+- Use `handle.queueTask()` when the provider needs to expose an imperative ref after render.
+- If the module exposes an imperative handle, keep that handle stable and back it with getters and methods over the latest provider state.
+
+The provider does not need to be the sole source of truth. In `listbox`, the wrapper owns `value` and `activeValue`, while the provider owns option registration and helper methods around that state.
 
 ## Role Mixins
 
-Role mixins are adapters between DOM elements and the controller.
+Role mixins are the adapters between one host element and shared module behavior.
 
 Each mixin should:
 
-- own one role
-- derive attrs and ARIA from controller state
-- validate and normalize user input for that role
-- call controller methods with normalized values
-- manage its own non-shared state in mixin setup scope
-- subscribe to controller `change` when its rendered output depends on shared state
+- own one role and one host element
+- derive attrs and ARIA from context getters
+- normalize DOM input before calling context methods
+- keep node-local refs or cleanup local to the mixin
+- register itself with the provider when the provider needs that node later
+- keep role-specific keyboard parsing local, then translate it into context methods like `openFromArrow()`, `navigateNext()`, or `selectActive()`
 
-Examples of role-local state:
-
-- current anchor options for a trigger
-- a registration object for one host node
-- local cleanup functions
-- refs used only by that role
-
-Examples of shared state that should not be duplicated in each mixin:
-
-- whether the module is open
-- which item is active or selected
-- the module's shared ids
-- where focus returns on close
-
-Update from controller changes with the standard pattern:
+Capture host nodes with `handle.queueTask((node) => { ... })`, `ref(...)`, or an insert listener when the mixin needs the real element.
 
 ```tsx
-let myRole = createMixin<HTMLElement, [], ElementProps>((handle) => {
-  let controller = getMyController(handle)
-  controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
+let optionMixin = createMixin<HTMLElement, [option: Omit<ListboxOption, 'id'>]>((handle) => {
+  let optionRef: HTMLElement
 
-  return () => [
-    attrs({ 'aria-expanded': controller.isOpen }),
-    on('click', () => {
-      controller.show()
-    }),
-  ]
+  handle.queueTask((node) => {
+    optionRef = node
+  })
+
+  return (option) => {
+    let context = handle.context.get(ListboxProvider)
+
+    context.registerOption({
+      ...option,
+      id: handle.id,
+      get node() {
+        return optionRef
+      },
+    })
+
+    return [
+      attrs({
+        role: 'option',
+        id: handle.id,
+        'aria-selected': context.value === option.value ? 'true' : 'false',
+      }),
+      on('click', () => {
+        context.select(option.value)
+      }),
+    ]
+  }
 })
 ```
 
-## Input Normalization
+## Wrapper Components
 
-Mixins should turn messy DOM input into small controller calls.
+Wrapper components are fine when the control itself is the product.
 
-Good:
+Use a wrapper component when it adds real value:
 
-- pointer vs keyboard handling in the trigger mixin
-- host defaults like `type="button"` for button hosts
-- outside-press, escape, and focusout handlers mapped to `controller.hide()`
-- id and default attr wiring derived from `controller.id`
+- it owns a small phase machine like `initializing`, `open`, or `selecting`
+- it coordinates labels, displayed values, or authored structure
+- it composes existing modules instead of re-implementing them
 
-Avoid pushing raw event branching into the controller unless it affects shared behavior across multiple roles.
+Thin child components are fine when they mostly apply lower-level mixins plus styling.
 
-## State Placement
-
-Choose the narrowest lifetime that fits:
-
-- shared across roles: controller
-- persistent for one host element: mixin setup scope
-- only needed for one callback: callback scope
-- only needed after the next render: the same event handler after `await handle.update()` or a deliberate queued task
-
-Do not create setup-scope state just to react to it on the next render.
+```tsx
+<popover.context>
+  <button mix={[popover.anchor({ placement: 'left' })]} />
+  <div mix={[popover.surface({ open, onHide })]}>
+    <listbox.context value={value} activeValue={activeValue} onSelect={selectOption}>
+      <div mix={[popover.focusOnShow(), listbox.list()]}>{props.children}</div>
+    </listbox.context>
+  </div>
+</popover.context>
+```
 
 ## DOM Work
 
-Put imperative DOM work where the ownership is clear.
+Keep imperative DOM work with the code that owns the relevant ref.
 
-Use the controller for DOM work that is shared or cross-element:
+- use `handle.queueTask()` for post-render `showPopover()`, `hidePopover()`, anchoring, scrolling, or exposing refs
+- use mixin-local refs for host-specific work
+- use wrapper-component refs for composed controls like `Select`
+- if one event needs DOM work after a state change, prefer the same handler after `await handle.update()`
 
-- focus restoration
-- focus on open
-- anchor synchronization
-- module-wide cleanup tied to shared state
+Do not create extra setup-scope state just to react to it on the next render.
 
-Use mixins for DOM work that belongs to one host element:
+## External APIs
 
-- registration via `ref(...)`
-- local listeners
-- host-specific validation
-- element-local measurement or observers
+Use plain context methods and provider props for internal coordination.
 
-Prefer doing post-update DOM work in the same handler that caused the update.
-
-## Internal Vs External Communication
-
-Use context plus controller methods for internal coordination.
-
-Use real bubbling DOM events for external communication.
-
-A good module usually exposes both:
-
-- internal `controller.addEventListener('change', ...)`
-- external `myModule.change` plus `MyModuleChangeEvent`
-
-This keeps internals ergonomic without making consumers reach into context.
+Use bubbling DOM events only when the host element truly needs a DOM-level public contract. Do not use DOM events, controller classes, or context emitters as the default internal signaling layer.
 
 ## Public API Shape
 
-Prefer a namespace object that exports the module's roles and event names.
+Lower-level modules should usually export a namespace object of providers and mixins:
 
 ```tsx
-type MyModuleApi = {
-  readonly context: typeof MyContext
-  readonly trigger: typeof myTriggerMixin
-  readonly surface: typeof mySurfaceMixin
-  readonly dismiss: typeof myDismissMixin
-  readonly change: typeof myChangeEventType
-}
-
-export let myModule: MyModuleApi = {
-  context: MyContext,
-  trigger: myTriggerMixin,
-  surface: mySurfaceMixin,
-  dismiss: myDismissMixin,
-  change: myChangeEventType,
+export let popover = {
+  context: PopoverProvider,
+  focusOnHide: focusOnHideMixin,
+  focusOnShow: focusOnShowMixin,
+  surface: surfaceMixin,
+  anchor: anchorMixin,
 }
 ```
 
-This is usually a better fit than exporting one wrapper component plus many props.
-
-## Keep Modules Headless
-
-Prefer APIs that let callers choose:
-
-- which element is the trigger
-- which element is the surface
-- where content lives
-- what styling mixins they compose in
-
-Avoid wrapper-heavy `as` or `asChild` style APIs when role mixins already express the behavior cleanly.
+Higher-level controls can export named components like `Select` and `Option` that compose those lower-level modules.
 
 ## Checklist
 
 When authoring a `packages/ui` module, verify:
 
-- the public API is module-shaped, not wrapper-shaped, unless wrapper DOM is truly required
-- shared state lives in one controller
-- the context component only scopes and provides the controller
+- it matches the `popover`, `listbox`, or `select` patterns and composes existing lower-level modules instead of inventing a separate control shape
+- shared coordination lives in plain context, not a controller class
+- there is no event-emitter-on-context layer just to force descendant updates
 - each mixin owns one role and one host element
-- mixins normalize DOM input before calling the controller
-- mixins keep their own non-shared state locally
-- cross-element DOM behavior lives in the controller
-- outside consumers learn about state changes through bubbling DOM events
-- internal coordination happens through context and the controller, not prop threading
-- the caller still owns the markup
+- wrapper components only own markup when that markup is the product
+- lower-level modules are composed instead of copied into higher-level controls
+- DOM effects live with the code that owns the relevant refs
 
 ## Anti-Patterns
 
 Avoid:
 
-- one large wrapper component with many role props
-- duplicating shared state across trigger, surface, and dismiss roles
-- controller methods that require raw DOM events from every mixin
-- using context as the public external API
-- prop drilling between roles that already share a controller
-- wrapper components created only to attach one mixin
+- introducing a controller class as the default abstraction
+- adding `TypedEventTarget` or `change` emitters to context just to trigger updates
+- duplicating open, selected, or active state across wrapper, provider, and mixins
+- re-implementing `popover` or `listbox` behavior inside a higher-level control that could compose them
+- copying specialized control logic into unrelated controls instead of composing lower-level modules

@@ -1,5 +1,10 @@
 export interface HoverAim {
-  start(target: HTMLElement, event?: PointerEvent, onExpire?: () => void): boolean
+  start(
+    source: HTMLElement,
+    target: HTMLElement,
+    event?: PointerEvent,
+    onExpire?: () => void,
+  ): boolean
   accepts(event: PointerEvent): boolean
 }
 
@@ -37,6 +42,30 @@ const HOVER_AIM_MAX_STALLED_UPDATES = 2
 export function createHoverAim(): HoverAim {
   let lastPointer: Point | null = null
   let session: Session | null = null
+  let pointerTrackingActive = false
+  let processedEvents = new WeakMap<PointerEvent, boolean>()
+
+  function handleDocumentPointerMove(event: Event) {
+    accepts(event as PointerEvent)
+  }
+
+  function startPointerTracking() {
+    if (pointerTrackingActive) {
+      return
+    }
+
+    document.addEventListener('pointermove', handleDocumentPointerMove, { capture: true })
+    pointerTrackingActive = true
+  }
+
+  function stopPointerTracking() {
+    if (!pointerTrackingActive) {
+      return
+    }
+
+    document.removeEventListener('pointermove', handleDocumentPointerMove, { capture: true })
+    pointerTrackingActive = false
+  }
 
   function clearSession(reason: string, currentSession: Session | null = session) {
     if (!currentSession) {
@@ -49,6 +78,8 @@ export function createHoverAim(): HoverAim {
     if (session === currentSession) {
       session = null
     }
+
+    stopPointerTracking()
 
     if (reason === 'duration-timeout' || reason === 'stall-timeout') {
       currentSession.onExpire?.()
@@ -76,14 +107,19 @@ export function createHoverAim(): HoverAim {
     lastPointer = getPoint(event)
   }
 
-  function start(target: HTMLElement, event?: PointerEvent, onExpire?: () => void) {
+  function start(
+    source: HTMLElement,
+    target: HTMLElement,
+    event?: PointerEvent,
+    onExpire?: () => void,
+  ) {
     clearSession('restart')
 
     if (event && !isMousePointer(event)) {
       return false
     }
 
-    if (!target.isConnected) {
+    if (!source.isConnected || !target.isConnected) {
       return false
     }
 
@@ -92,8 +128,19 @@ export function createHoverAim(): HoverAim {
       return false
     }
 
+    if (event?.relatedTarget instanceof Node && target.contains(event.relatedTarget)) {
+      lastPointer = startPoint
+      return true
+    }
+
+    let sourceRect = toRect(source.getBoundingClientRect())
     let actualRect = toRect(target.getBoundingClientRect())
-    if (isEmptyRect(actualRect) || containsPoint(actualRect, startPoint)) {
+    if (
+      isEmptyRect(sourceRect) ||
+      isEmptyRect(actualRect) ||
+      containsPoint(actualRect, startPoint) ||
+      !isHeadingTowardTarget(sourceRect, actualRect, startPoint)
+    ) {
       return false
     }
 
@@ -114,37 +161,47 @@ export function createHoverAim(): HoverAim {
     }
 
     session = currentSession
+    startPointerTracking()
     scheduleDurationTimeout(currentSession)
     scheduleStallTimeout(currentSession)
     return true
   }
 
   function accepts(event: PointerEvent) {
+    if (processedEvents.has(event)) {
+      return processedEvents.get(event) as boolean
+    }
+
     rememberPointer(event)
 
     let currentSession = session
     if (!currentSession) {
+      processedEvents.set(event, true)
       return true
     }
 
     if (!isMousePointer(event) || event.type !== 'pointermove') {
       clearSession('non-pointermove', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
     if (!currentSession.target.isConnected) {
       clearSession('target-disconnected', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
     let point = getPoint(event)
     if (enteredTarget(currentSession, point, event.target)) {
       clearSession('entered-target', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
     if (!pointInPolygon(point, currentSession.polygon)) {
       clearSession('outside-corridor', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
@@ -164,14 +221,17 @@ export function createHoverAim(): HoverAim {
 
     if (currentSession.stalledUpdates >= HOVER_AIM_MAX_STALLED_UPDATES) {
       clearSession('stalled-updates', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
     if (Date.now() - currentSession.startedAt >= HOVER_AIM_MAX_DURATION) {
       clearSession('max-duration', currentSession)
+      processedEvents.set(event, true)
       return true
     }
 
+    processedEvents.set(event, false)
     return false
   }
   return { start, accepts }
@@ -216,6 +276,21 @@ function containsPoint(rect: Rect, point: Point) {
   return (
     point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
   )
+}
+
+function isHeadingTowardTarget(sourceRect: Rect, targetRect: Rect, point: Point) {
+  let sourceCenterX = sourceRect.left + (sourceRect.right - sourceRect.left) / 2
+  let sourceCenterY = sourceRect.top + (sourceRect.bottom - sourceRect.top) / 2
+  let targetCenterX = targetRect.left + (targetRect.right - targetRect.left) / 2
+  let targetCenterY = targetRect.top + (targetRect.bottom - targetRect.top) / 2
+  let deltaX = targetCenterX - sourceCenterX
+  let deltaY = targetCenterY - sourceCenterY
+
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+    return deltaX >= 0 ? point.x >= sourceCenterX : point.x <= sourceCenterX
+  }
+
+  return deltaY >= 0 ? point.y >= sourceCenterY : point.y <= sourceCenterY
 }
 
 function enteredTarget(session: Session, point: Point, eventTarget: EventTarget | null) {

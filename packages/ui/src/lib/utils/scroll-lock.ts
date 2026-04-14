@@ -1,20 +1,14 @@
 import { createMixin, on, type ElementProps } from '@remix-run/component'
 
 type ScrollLockState = {
-  bodyLeft: string
-  bodyOverflow: string
-  bodyPaddingRight: string
-  bodyPosition: string
-  bodyRight: string
-  bodyTop: string
-  bodyWidth: string
   count: number
   documentOverflow: string
+  documentScrollbarGutter: string
   scrollX: number
   scrollY: number
 }
 
-let scrollLocks = new WeakMap<Document, ScrollLockState>()
+const scrollLocks = new WeakMap<Document, ScrollLockState>()
 
 export function lockScroll(targetDocument = globalThis.document) {
   if (!targetDocument?.body || !targetDocument.defaultView) {
@@ -22,44 +16,30 @@ export function lockScroll(targetDocument = globalThis.document) {
   }
 
   let document = targetDocument
-  let window = document.defaultView
-  let body = document.body
   let documentElement = document.documentElement
+  let view = document.defaultView!
   let state = scrollLocks.get(document)
 
   if (!state) {
-    let scrollX = window.scrollX
-    let scrollY = window.scrollY
+    let scrollX = view.scrollX
+    let scrollY = view.scrollY
     let scrollbarWidth =
       documentElement.clientWidth > 0
-        ? Math.max(window.innerWidth - documentElement.clientWidth, 0)
+        ? Math.max(view.innerWidth - documentElement.clientWidth, 0)
         : 0
-    let computedPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0
+    let computedScrollbarGutter = view.getComputedStyle(documentElement).scrollbarGutter
 
     state = {
-      bodyLeft: body.style.left,
-      bodyOverflow: body.style.overflow,
-      bodyPaddingRight: body.style.paddingRight,
-      bodyPosition: body.style.position,
-      bodyRight: body.style.right,
-      bodyTop: body.style.top,
-      bodyWidth: body.style.width,
       count: 0,
       documentOverflow: documentElement.style.overflow,
+      documentScrollbarGutter: documentElement.style.scrollbarGutter,
       scrollX,
       scrollY,
     }
 
     documentElement.style.overflow = 'hidden'
-    body.style.overflow = 'hidden'
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollY}px`
-    body.style.left = `-${scrollX}px`
-    body.style.right = '0px'
-    body.style.width = '100%'
-
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${computedPaddingRight + scrollbarWidth}px`
+    if (scrollbarWidth > 0 && computedScrollbarGutter === 'auto') {
+      documentElement.style.scrollbarGutter = 'stable'
     }
 
     scrollLocks.set(document, state)
@@ -89,18 +69,12 @@ export function lockScroll(targetDocument = globalThis.document) {
     scrollLocks.delete(document)
 
     documentElement.style.overflow = currentState.documentOverflow
-    body.style.overflow = currentState.bodyOverflow
-    body.style.position = currentState.bodyPosition
-    body.style.top = currentState.bodyTop
-    body.style.left = currentState.bodyLeft
-    body.style.right = currentState.bodyRight
-    body.style.width = currentState.bodyWidth
-    body.style.paddingRight = currentState.bodyPaddingRight
-    window.scrollTo(currentState.scrollX, currentState.scrollY)
+    documentElement.style.scrollbarGutter = currentState.documentScrollbarGutter
+    view.scrollTo(currentState.scrollX, currentState.scrollY)
   }
 }
 
-export let lockScrollOnToggle = createMixin<HTMLElement, [], ElementProps>((handle) => {
+export const lockScrollOnToggle = createMixin<HTMLElement, [], ElementProps>((handle) => {
   let unlockScroll = () => {}
 
   handle.signal.addEventListener('abort', () => {

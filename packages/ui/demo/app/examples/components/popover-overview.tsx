@@ -1,122 +1,139 @@
-// TODO: update this example to use the new popover API
 import { css, on, type Handle } from 'remix/component'
-import { Glyph, ui } from 'remix/ui'
-
-import { popover } from '../../../../src/lib/popover/popover.ts'
+import { Button } from '@remix-run/ui/button'
+import { Glyph } from '@remix-run/ui/glyph'
+import * as popover from '@remix-run/ui/popover'
+import { Option, Select } from '@remix-run/ui/select'
+import { theme } from '@remix-run/ui/theme'
 
 export default function Example(handle: Handle) {
   let open = false
 
+  function closePopover() {
+    open = false
+    void handle.update()
+  }
+
   return () => (
-    <popover.context>
-      <div mix={buttonRow}>
-        <button
+    <popover.Context>
+      <div mix={buttonRowCss}>
+        <Button
+          endIcon={<Glyph name="chevronDown" />}
           mix={[
             popover.anchor({ placement: 'bottom' }),
             popover.focusOnHide(),
-            ui.popover.button,
             on('click', () => {
-              open = true
-              handle.update()
+              open = !open
+              void handle.update()
             }),
           ]}
+          tone="secondary"
         >
-          <span mix={ui.button.label}>View options</span>
-          <Glyph mix={ui.button.icon} name="chevronDown" />
-        </button>
+          View options
+        </Button>
       </div>
 
       <div
         mix={[
+          popover.surfaceStyle,
           popover.surface({
+            closeOnAnchorClick: false,
             open,
-            onHide: () => {
-              open = false
-              handle.update()
+            onHide() {
+              closePopover()
             },
           }),
-          ui.popover.surface,
         ]}
       >
-        <div mix={panel}>
-          <div mix={field}>
-            <label mix={ui.text.label} htmlFor="grouping">
+        <div mix={[popover.contentStyle, panelCss]}>
+          <div mix={fieldCss}>
+            <label for={`${handle.id}-grouping`} mix={labelCss}>
               Grouping
             </label>
-            <select id="grouping" mix={[control]}>
-              <option>No grouping</option>
-              <option>Status</option>
-              <option>Priority</option>
-            </select>
+            <Select
+              id={`${handle.id}-grouping`}
+              defaultLabel="No grouping"
+              defaultValue="none"
+              mix={[fieldSelectCss, popover.focusOnShow()]}
+            >
+              <Option label="No grouping" value="none" />
+              <Option label="Status" value="status" />
+              <Option label="Priority" value="priority" />
+            </Select>
           </div>
 
-          <div mix={field}>
-            <label mix={ui.text.label} htmlFor="ordering">
+          <div mix={fieldCss}>
+            <label for={`${handle.id}-ordering`} mix={labelCss}>
               Ordering
             </label>
-            <select id="ordering" mix={[control, popover.focusOnShow()]}>
-              <option>Manual</option>
-              <option>Newest first</option>
-              <option>Oldest first</option>
-            </select>
+            <Select
+              id={`${handle.id}-ordering`}
+              defaultLabel="Manual"
+              defaultValue="manual"
+              mix={fieldSelectCss}
+            >
+              <Option label="Manual" value="manual" />
+              <Option label="Newest first" value="newest" />
+              <Option label="Oldest first" value="oldest" />
+            </Select>
           </div>
 
-          <div mix={field}>
-            <label mix={ui.text.label} htmlFor="closed-projects">
+          <div mix={fieldCss}>
+            <label for={`${handle.id}-closed-projects`} mix={labelCss}>
               Show closed projects
             </label>
-            <select id="closed-projects" mix={control}>
-              <option>All</option>
-              <option>Open only</option>
-              <option>Closed only</option>
-            </select>
+            <Select
+              id={`${handle.id}-closed-projects`}
+              defaultLabel="All"
+              defaultValue="all"
+              mix={fieldSelectCss}
+            >
+              <Option label="All" value="all" />
+              <Option label="Open only" value="open" />
+              <Option label="Closed only" value="closed" />
+            </Select>
           </div>
 
-          <div mix={actions}>
-            <button
-              mix={[
-                ui.button.ghost,
-                on('click', () => {
-                  open = false
-                  handle.update()
-                }),
-              ]}
-            >
+          <div mix={actionsCss}>
+            <Button mix={on('click', closePopover)} tone="ghost">
               Done
-            </button>
+            </Button>
           </div>
         </div>
       </div>
-    </popover.context>
+    </popover.Context>
   )
 }
 
-let buttonRow = css({
+let buttonRowCss = css({
   display: 'flex',
-  gap: '12px',
+  justifyContent: 'flex-start',
 })
 
-let panel = css({
+let panelCss = css({
   display: 'grid',
-  gridTemplateColumns: 'max-content minmax(0, 1fr)',
-  columnGap: '12px',
-  rowGap: '12px',
-  alignItems: 'center',
-  width: '24rem',
-  padding: '12px',
+  gap: theme.space.md,
+  width: '22rem',
+  padding: theme.space.lg,
 })
 
-let field = css({
-  display: 'contents',
+let fieldCss = css({
+  display: 'grid',
+  gap: theme.space.px,
 })
 
-let control = css({
+let labelCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.xs,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
+})
+
+let fieldSelectCss = css({
   width: '100%',
 })
 
-let actions = css({
+let actionsCss = css({
   display: 'flex',
-  gap: '8px',
   justifyContent: 'flex-end',
-  gridColumn: '1 / -1',
+  paddingTop: theme.space.xs,
 })

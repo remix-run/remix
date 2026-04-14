@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest'
 import { createElement } from '@remix-run/component'
 import { renderToString } from '@remix-run/component/server'
 
-import { createTheme, theme, ui } from './theme.ts'
+import * as accordion from '../accordion/accordion.tsx'
+import * as button from '../button/button.tsx'
+import * as combobox from '../combobox/combobox.tsx'
+import * as listbox from '../listbox/listbox.ts'
+import * as menu from '../menu/menu.tsx'
+import * as popover from '../popover/popover.ts'
+import * as select from '../select/select.tsx'
+import * as separator from '../separator/separator.ts'
+import * as tabs from '../tabs/tabs.tsx'
+import { createTheme, theme } from './theme.ts'
 
 const sampleTheme = {
   space: {
@@ -76,15 +85,6 @@ const sampleTheme = {
     lg: '0 10px 30px rgb(0 0 0 / 0.16)',
     xl: '0 20px 50px rgb(0 0 0 / 0.20)',
   },
-  zIndex: {
-    dropdown: '1000',
-    popover: '1100',
-    sticky: '1200',
-    overlay: '1300',
-    modal: '1400',
-    toast: '1500',
-    tooltip: '1600',
-  },
   colors: {
     text: {
       primary: '#111827',
@@ -124,28 +124,6 @@ const sampleTheme = {
         backgroundActive: '#991b1b',
         foreground: '#ffffff',
         border: '#dc2626',
-      },
-    },
-    status: {
-      info: {
-        background: '#eff6ff',
-        foreground: '#1d4ed8',
-        border: '#bfdbfe',
-      },
-      success: {
-        background: '#ecfdf5',
-        foreground: '#047857',
-        border: '#a7f3d0',
-      },
-      warning: {
-        background: '#fffbeb',
-        foreground: '#b45309',
-        border: '#fde68a',
-      },
-      danger: {
-        background: '#fef2f2',
-        foreground: '#b91c1c',
-        border: '#fecaca',
       },
     },
   },
@@ -219,87 +197,205 @@ describe('createTheme', () => {
   })
 })
 
-describe('ui', () => {
-  it('serializes component-scoped popup mixins using shared theme values', async () => {
+describe('modules', () => {
+  it('exposes the supported component style namespaces', () => {
+    expect(Object.keys(button).sort()).toEqual([
+      'Button',
+      'baseStyle',
+      'dangerStyle',
+      'ghostStyle',
+      'iconStyle',
+      'labelStyle',
+      'primaryStyle',
+      'secondaryStyle',
+    ])
+    expect(Object.keys(popover).sort()).toEqual([
+      'Context',
+      'anchor',
+      'contentStyle',
+      'focusOnHide',
+      'focusOnShow',
+      'surface',
+      'surfaceStyle',
+    ])
+    expect(Object.keys(combobox).sort()).toEqual([
+      'Combobox',
+      'ComboboxChangeEvent',
+      'ComboboxOption',
+      'Context',
+      'hiddenInput',
+      'input',
+      'inputStyle',
+      'list',
+      'onComboboxChange',
+      'option',
+      'popover',
+      'popoverStyle',
+    ])
+    expect(Object.keys(accordion).sort()).toEqual([
+      'Accordion',
+      'AccordionChangeEvent',
+      'AccordionContent',
+      'AccordionItem',
+      'AccordionTrigger',
+      'bodyStyle',
+      'indicatorStyle',
+      'itemStyle',
+      'onAccordionChange',
+      'panelStyle',
+      'rootStyle',
+      'triggerStyle',
+    ])
+    expect(Object.keys(tabs).sort()).toEqual([
+      'Context',
+      'Tab',
+      'Tabs',
+      'TabsChangeEvent',
+      'TabsList',
+      'TabsPanel',
+      'list',
+      'listStyle',
+      'onTabsChange',
+      'panel',
+      'trigger',
+      'triggerStyle',
+    ])
+    expect(Object.keys(listbox).sort()).toEqual([
+      'Context',
+      'glyphStyle',
+      'labelStyle',
+      'list',
+      'listStyle',
+      'option',
+      'optionStyle',
+    ])
+    expect(Object.keys(menu).sort()).toEqual([
+      'Context',
+      'Menu',
+      'MenuItem',
+      'MenuList',
+      'MenuSelectEvent',
+      'Submenu',
+      'buttonStyle',
+      'item',
+      'itemGlyphStyle',
+      'itemLabelStyle',
+      'itemSlotStyle',
+      'itemStyle',
+      'list',
+      'listStyle',
+      'onMenuSelect',
+      'popover',
+      'popoverStyle',
+      'submenuTrigger',
+      'trigger',
+      'triggerGlyphStyle',
+    ])
+    expect(Object.keys(select).sort()).toEqual([
+      'Context',
+      'Option',
+      'Select',
+      'SelectChangeEvent',
+      'hiddenInput',
+      'list',
+      'onSelectChange',
+      'option',
+      'popover',
+      'trigger',
+      'triggerStyle',
+    ])
+    expect(Object.keys(separator).sort()).toEqual(['separatorStyle'])
+  })
+
+  it('serializes menu, select, listbox, and popover mixins using shared theme values', async () => {
     let html = await renderToString(
       createElement('div', {}, [
-        createElement(
-          'div',
-          {
-            mix: [
-              ui.row,
-              ui.row.between,
-              ui.row.wrap,
-              ui.stack,
-              ui.stack.center,
-              ui.bg.lvl2,
-              ui.sidebar.heading,
-              ui.nav.itemActive,
-              ui.item.base,
-              ui.fieldText.help,
-              ui.text.code,
-              ui.px.md,
-              ui.rounded.md,
-              ui.icon.sm,
-              ui.icon.md,
-              ui.icon.lg,
-              ui.animation.spin(),
-            ],
-          },
-          'Hello',
-        ),
         createElement('div', {}, [
-          createElement('button', { 'aria-expanded': 'true', mix: ui.menu.button }, [
-            createElement('span', { mix: ui.button.label }, 'File'),
-            createElement('span', { mix: ui.button.icon }, 'v'),
-          ]),
-          createElement('div', { 'data-close-animation': 'none', mix: ui.menu.popover }, [
-            createElement('div', { mix: ui.menu.list }, [
-              createElement('div', { mix: ui.menu.trigger }, [
-                createElement('span', { mix: ui.menu.itemLabel }, 'Share'),
-                createElement('span', { mix: ui.menu.triggerGlyph }, '>'),
+          createElement(
+            'button',
+            {
+              'aria-expanded': 'true',
+              mix: [button.baseStyle, button.ghostStyle, menu.buttonStyle],
+            },
+            [
+              createElement('span', { mix: button.labelStyle }, 'File'),
+              createElement('span', { mix: button.iconStyle }, 'v'),
+            ],
+          ),
+          createElement(
+            'div',
+            {
+              'data-anchor-placement': 'right-start',
+              'data-close-animation': 'none',
+              'data-menu-submenu': 'true',
+              mix: [popover.surfaceStyle, menu.popoverStyle],
+            },
+            [
+              createElement('div', { mix: menu.listStyle }, [
+                createElement('div', { mix: menu.itemStyle }, [
+                  createElement('span', { mix: menu.itemSlotStyle }, [
+                    createElement('span', { mix: menu.itemGlyphStyle }, '*'),
+                  ]),
+                  createElement('span', { mix: menu.itemLabelStyle }, 'Share'),
+                  createElement('span', { mix: menu.triggerGlyphStyle }, '>'),
+                ]),
+                createElement('hr', { mix: separator.separatorStyle }),
+                createElement('div', { mix: menu.itemStyle }, [
+                  createElement('span', { mix: menu.itemSlotStyle }, [
+                    createElement('span', { mix: menu.itemGlyphStyle }, '*'),
+                  ]),
+                  createElement('span', { mix: menu.itemLabelStyle }, 'New File'),
+                ]),
               ]),
-              createElement('div', { mix: ui.menu.item }, [
-                createElement('span', { mix: ui.menu.itemGlyph }, '*'),
-                createElement('span', { mix: ui.menu.itemLabel }, 'New File'),
+            ],
+          ),
+          createElement(
+            'div',
+            {
+              'data-anchor-placement': 'left-start',
+              'data-menu-submenu': 'true',
+              mix: [popover.surfaceStyle, menu.popoverStyle],
+            },
+            'Popover',
+          ),
+          createElement(
+            'button',
+            { 'aria-expanded': 'false', mix: [button.baseStyle, select.triggerStyle] },
+            [
+              createElement('span', { mix: button.labelStyle }, 'Select a type'),
+              createElement('span', { mix: button.iconStyle }, 'v'),
+            ],
+          ),
+          createElement('div', { mix: popover.surfaceStyle }, [
+            createElement('div', { mix: [popover.contentStyle, listbox.listStyle] }, [
+              createElement('div', { mix: listbox.optionStyle, 'aria-selected': 'true' }, [
+                createElement('span', { mix: listbox.glyphStyle }, 'v'),
+                createElement('span', { mix: listbox.labelStyle }, 'Backlog'),
               ]),
-            ]),
-          ]),
-          createElement('div', { mix: ui.popover.surface }, 'Popover'),
-          createElement('button', { mix: ui.popover.button }, [
-            createElement('span', { mix: ui.button.label }, 'Backlog'),
-            createElement('span', { mix: ui.button.icon }, 'v'),
-          ]),
-          createElement('button', { 'aria-expanded': 'false', mix: ui.button.select }, [
-            createElement('span', { mix: ui.button.label }, 'Select a type'),
-            createElement('span', { mix: ui.button.icon }, 'v'),
-          ]),
-          createElement('div', { mix: ui.popover.surface }, [
-            createElement('div', { mix: [ui.popover.content, ui.listbox.surface] }, [
-              createElement('div', { mix: ui.listbox.option, 'aria-selected': 'true' }, [
-                createElement('span', { mix: ui.listbox.glyph }, 'v'),
-                createElement('span', { mix: ui.listbox.label }, 'Backlog'),
-              ]),
+              createElement('hr', { mix: separator.separatorStyle }),
             ]),
           ]),
         ]),
       ]),
     )
 
-    expect(html).toMatch(/background-color: var\(--rmx-surface-lvl2\)/)
     expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
-    expect(html).toMatch(/flex-direction: row/)
-    expect(html).toMatch(/justify-content: space-between/)
-    expect(html).toMatch(/flex-wrap: wrap/)
-    expect(html).toMatch(/flex-direction: column/)
-    expect(html).toMatch(/font-family: var\(--rmx-font-family-mono\)/)
-    expect(html).toMatch(/width: var\(--rmx-font-size-xs\)/)
-    expect(html).toMatch(/animation: rmx-spin 850ms linear infinite/)
-    expect(html).toMatch(/@keyframes rmx-spin/)
     expect(html).toMatch(/padding-inline: var\(--rmx-space-md\)/)
     expect(html).toMatch(/grid-template-columns: max-content minmax\(0, 1fr\)/)
     expect(html).toMatch(/scroll-margin-block: var\(--rmx-space-xs\)/)
-    expect(html).toMatch(/justify-self: end/)
+    expect(html).toMatch(/padding-block: var\(--rmx-space-xs\)/)
+    expect(html).toMatch(/position: relative/)
+    expect(html).toMatch(/isolation: isolate/)
+    expect(html).toMatch(/padding-inline: calc\(var\(--rmx-space-sm\) \+ var\(--rmx-space-xs\)\)/)
+    expect(html).toMatch(/inset-inline: var\(--rmx-space-xs\)/)
+    expect(html).toMatch(/margin-inline-start: auto/)
+    expect(html).toMatch(
+      /--rmx-ui-item-inset: calc\(var\(--rmx-space-sm\) \+ var\(--rmx-space-xs\)\)/,
+    )
+    expect(html).toMatch(/--rmx-ui-item-indicator-width: var\(--rmx-menu-item-slot-width\)/)
+    expect(html).toMatch(/--rmx-ui-item-indicator-width: var\(--rmx-font-size-sm\)/)
+    expect(html).toMatch(/margin-block: var\(--rmx-space-xs\)/)
+    expect(html).toMatch(/border-top: 1px solid var\(--rmx-color-border-subtle\)/)
     expect(html).toMatch(/-webkit-user-select: none/)
     expect(html).toMatch(/user-select: none/)
     expect(html).toMatch(/width: 100%/)
@@ -308,7 +404,12 @@ describe('ui', () => {
     expect(html).toMatch(/aria-expanded="true"/)
     expect(html).toMatch(/transition: none/)
     expect(html).toMatch(/transition-behavior: normal/)
-    expect(html).toMatch(/z-index: var\(--rmx-z-index-popover\)/)
+    expect(html).toMatch(
+      /\[data-menu-submenu="true"\]\[data-anchor-placement\^="right"\][^{]*\{[^}]*margin-left: calc\(var\(--rmx-space-xs\) \* -1\)/,
+    )
+    expect(html).toMatch(
+      /\[data-menu-submenu="true"\]\[data-anchor-placement\^="left"\][^{]*\{[^}]*margin-left: var\(--rmx-space-xs\)/,
+    )
     expect(html).toMatch(/aria-expanded="true".*background-color: var\(--rmx-surface-lvl3\)/s)
     expect(html).toMatch(/overflow: hidden/)
     expect(html).toMatch(/overflow: auto/)
@@ -316,17 +417,28 @@ describe('ui', () => {
     expect(html).toMatch(/:popover-open \{\s*opacity: 1;/)
     expect(html).toMatch(/:not\(:popover-open\) \{[^}]*pointer-events: none;/)
     expect(html).toMatch(/:not\(:popover-open\) \{[^}]*transition:/)
+    expect(html).toMatch(
+      /\[aria-haspopup="menu"\]\[aria-expanded="true"\]:not\(:focus\)[^{]*\{[^}]*background-color: var\(--rmx-surface-lvl2\)/,
+    )
+    expect(html).toMatch(/\[data-menu-flash="true"\][^}]*background-color: transparent/s)
+    expect(html).not.toMatch(/\[data-menu-flash="true"\][^}]*--rmx-menu-item-slot-width/s)
+    expect(html).not.toMatch(/\[data-menu-flash="true"\][^}]*--rmx-menu-item-indicator-opacity/s)
+    expect(html).not.toMatch(/data-menu-selected/)
   })
 
-  it('provides a combobox popover token with reason-based close behavior', async () => {
+  it('provides combobox css with reason-based close behavior', async () => {
     let html = await renderToString(
       createElement('div', {}, [
-        createElement('div', { 'data-show-reason': 'nav', mix: ui.combobox.popover }, [
-          createElement('div', { mix: ui.popover.content }, 'Nav combobox'),
-        ]),
-        createElement('div', { 'data-show-reason': 'hint', mix: ui.combobox.popover }, [
-          createElement('div', { mix: ui.popover.content }, 'Hint combobox'),
-        ]),
+        createElement(
+          'div',
+          { 'data-show-reason': 'nav', mix: [popover.surfaceStyle, combobox.popoverStyle] },
+          [createElement('div', { mix: popover.contentStyle }, 'Nav combobox')],
+        ),
+        createElement(
+          'div',
+          { 'data-show-reason': 'hint', mix: [popover.surfaceStyle, combobox.popoverStyle] },
+          [createElement('div', { mix: popover.contentStyle }, 'Hint combobox')],
+        ),
       ]),
     )
 
@@ -343,12 +455,28 @@ describe('ui', () => {
     )
   })
 
-  it('provides a field token with a tight focus ring', async () => {
-    let html = await renderToString(createElement('input', { mix: ui.field.base }))
+  it('provides tabs css for the list and selected trigger while leaving panels app-owned', async () => {
+    let html = await renderToString(
+      createElement('div', { mix: tabs.listStyle }, [
+        createElement(
+          'button',
+          { 'aria-selected': 'true', mix: [button.baseStyle, tabs.triggerStyle] },
+          'Overview',
+        ),
+        createElement(
+          'button',
+          { 'aria-selected': 'false', mix: [button.baseStyle, tabs.triggerStyle] },
+          'Analytics',
+        ),
+      ]),
+    )
 
-    expect(html).toMatch(/min-height: var\(--rmx-control-height-lg\)/)
-    expect(html).toMatch(/outline: 2px solid var\(--rmx-color-focus-ring\)/)
-    expect(html).toMatch(/outline-offset: var\(--rmx-space-none\)/)
+    expect(html).toMatch(/display: inline-flex/)
+    expect(html).toMatch(/background-color: var\(--rmx-surface-lvl2\)/)
+    expect(html).toMatch(/border-radius: var\(--rmx-radius-xl\)/)
+    expect(html).toMatch(/font-size: var\(--rmx-font-size-md\)/)
+    expect(html).toMatch(/aria-selected="true".*background-color: var\(--rmx-surface-lvl0\)/s)
+    expect(html).toMatch(/aria-selected="true".*box-shadow: var\(--rmx-shadow-xs\)/s)
   })
 
   it('provides a combobox input token that composes field styles and suppresses the active-descendant focus ring', async () => {
@@ -356,7 +484,7 @@ describe('ui', () => {
       createElement('input', {
         'aria-activedescendant': 'option-1',
         'data-surface-visible': 'true',
-        mix: ui.combobox.input,
+        mix: combobox.inputStyle,
       }),
     )
 
@@ -365,71 +493,5 @@ describe('ui', () => {
     expect(html).toMatch(
       /\[data-surface-visible="true"\]\[aria-activedescendant\]:focus-visible \{\s*outline: none;/,
     )
-  })
-
-  it('provides card structure mixins for layout and typography', async () => {
-    let html = await renderToString(
-      createElement(
-        'article',
-        {
-          mix: [ui.card.elevated, ui.card.headerWithAction],
-        },
-        createElement('div', { mix: ui.card.header }, [
-          createElement('p', { mix: ui.card.eyebrow }, 'Surface'),
-          createElement('h2', { mix: ui.card.title }, 'Share workspace'),
-          createElement('p', { mix: ui.card.description }, 'Invite teammates and manage access'),
-        ]),
-        createElement(
-          'div',
-          { mix: ui.card.footer },
-          createElement(
-            'button',
-            { type: 'button', mix: [ui.button.secondary, ui.card.action] },
-            'Edit',
-          ),
-        ),
-      ),
-    )
-
-    expect(html).toMatch(/box-shadow: var\(--rmx-shadow-md\)/)
-    expect(html).toMatch(/grid-template-columns: minmax\(0, 1fr\) auto/)
-    expect(html).toMatch(/justify-self: end/)
-    expect(html).toMatch(/text-transform: uppercase/)
-    expect(html).toMatch(/letter-spacing: -0.022em/)
-    expect(html).toMatch(/margin-right: calc\(var\(--rmx-space-lg\) \* -1\)/)
-    expect(html).toMatch(/font-size: var\(--rmx-font-size-xxxs\)/)
-    expect(html).toMatch(/background-color: var\(--rmx-surface-lvl1\)/)
-  })
-
-  it('lets button mixins provide default button attrs while preserving explicit overrides', async () => {
-    let defaultHtml = await renderToString(
-      createElement('button', { mix: ui.button.primary }, 'Save'),
-    )
-    let explicitHtml = await renderToString(
-      createElement('button', { type: 'submit', mix: ui.button.primary }, 'Save'),
-    )
-    let anchorHtml = await renderToString(
-      createElement('a', { href: '/settings', mix: ui.button.primary }, 'Settings'),
-    )
-    let composedHtml = await renderToString(
-      createElement(
-        'button',
-        {
-          mix: [ui.button.base, ui.button.lg, ui.button.tone.secondary],
-        },
-        createElement('span', { mix: ui.button.icon }, 'i'),
-        createElement('span', { mix: ui.button.label }, 'Publish'),
-      ),
-    )
-
-    expect(defaultHtml).toMatch(/type="button"/)
-    expect(explicitHtml).toMatch(/type="submit"/)
-    expect(anchorHtml).not.toMatch(/type="button"/)
-    expect(composedHtml).toMatch(/type="button"/)
-    expect(composedHtml).toMatch(/width: 1em/)
-    expect(composedHtml).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
-    expect(composedHtml).toMatch(/min-height: var\(--rmx-control-height-md\)/)
-    expect(composedHtml).toMatch(/padding-inline: var\(--rmx-space-sm\)/)
-    expect(composedHtml).toMatch(/aria-hidden\b/)
   })
 })

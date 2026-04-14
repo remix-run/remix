@@ -1,9 +1,21 @@
-import { css } from 'remix/component'
-import { createGlyphSheet, RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui'
-import { standaloneExampleBodyCss, standaloneExampleBodyPadCss } from '../example-preview.tsx'
-import type { ExampleEntry } from './index.tsx'
+import { Frame, css } from 'remix/component'
+import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'
 
-let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
+import {
+  ExamplePreview,
+  standaloneExampleBodyCss,
+  standaloneExampleBodyPadCss,
+} from '../example-preview.tsx'
+import { getExampleContentHref, type ExampleEntry } from './index.tsx'
+
+type ExampleContentProps = {
+  ExampleComponent: any
+  code: string
+  description?: string
+  example: ExampleEntry
+  standalone?: boolean
+  title?: string
+}
 
 export function ExampleDocument() {
   return ({ example, pad = false }: { example: ExampleEntry; pad?: boolean }) => (
@@ -26,25 +38,37 @@ export function ExampleDocument() {
           pad ? [standaloneExampleBodyCss, standaloneExampleBodyPadCss] : standaloneExampleBodyCss
         }
       >
-        <RMX_01Glyphs />
-        <div mix={shellCss}>
-          <div mix={previewFrameCss}>{example.preview}</div>
-        </div>
+        <RMX_01_GLYPHS />
+        <main mix={shellCss}>
+          <Frame src={getExampleContentHref(example, { standalone: true })} />
+        </main>
       </body>
     </html>
   )
 }
 
-let shellCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '100%',
-  minHeight: `calc(100vh - (${theme.space.xl} * 2))`,
-})
+export function ExampleContent() {
+  return ({
+    ExampleComponent,
+    code,
+    description,
+    example,
+    standalone = false,
+    title,
+  }: ExampleContentProps) => (
+    <ExamplePreview
+      code={code}
+      description={description ?? example.description}
+      href={standalone ? undefined : example.path}
+      title={title ?? example.title}
+    >
+      <ExampleComponent />
+    </ExamplePreview>
+  )
+}
 
-let previewFrameCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+let shellCss = css({
+  width: '100%',
+  maxWidth: '64rem',
+  marginInline: 'auto',
 })

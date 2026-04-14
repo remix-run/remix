@@ -1,5 +1,7 @@
-import { ExamplePreview } from '../example-preview.tsx'
+import { Frame } from 'remix/component'
+
 import type { ExampleEntry } from '../examples/index.tsx'
+import { getExampleContentHref } from '../examples/index.tsx'
 
 export function ExplorerExampleCard() {
   return ({
@@ -10,14 +12,17 @@ export function ExplorerExampleCard() {
     description?: string
     example: ExampleEntry
     title?: string
-  }) => (
-    <ExamplePreview
-      code={example.code}
-      description={description ?? example.description}
-      href={example.path}
-      title={title ?? example.title}
-    >
-      {example.preview}
-    </ExamplePreview>
-  )
+  }) => {
+    let nextTitle = title ?? example.title
+    let nextDescription = description ?? example.description
+
+    return (
+      <Frame
+        src={getExampleContentHref(example, {
+          description: nextDescription === example.description ? undefined : nextDescription,
+          title: nextTitle === example.title ? undefined : nextTitle,
+        })}
+      />
+    )
+  }
 }

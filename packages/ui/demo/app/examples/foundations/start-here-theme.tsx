@@ -1,6 +1,5 @@
 import { css } from 'remix/component'
-import { theme } from 'remix/ui'
-
+import { theme } from '@remix-run/ui/theme'
 export default function Example() {
   return () => (
     <div mix={frameCss}>

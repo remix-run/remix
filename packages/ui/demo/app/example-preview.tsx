@@ -1,7 +1,7 @@
 import { css } from 'remix/component'
 import type { RemixNode } from 'remix/component'
-import { Glyph, theme, ui } from 'remix/ui'
-
+import { Glyph } from '@remix-run/ui/glyph'
+import { theme } from '@remix-run/ui/theme'
 export function ExamplePreview() {
   return ({
     children,
@@ -19,8 +19,8 @@ export function ExamplePreview() {
     <div mix={exampleBlockCss}>
       {title || description ? (
         <div mix={exampleIntroCss}>
-          {title ? <h3 mix={[ui.text.title, exampleTitleCss]}>{title}</h3> : null}
-          {description ? <p mix={[ui.text.bodySm, exampleDescriptionCss]}>{description}</p> : null}
+          {title ? <h3 mix={exampleTitleCss}>{title}</h3> : null}
+          {description ? <p mix={exampleDescriptionCss}>{description}</p> : null}
         </div>
       ) : null}
       <article mix={exampleCardCss}>
@@ -31,21 +31,21 @@ export function ExamplePreview() {
             mix={exampleExpandLinkCss}
             title="Open standalone example"
           >
-            <Glyph mix={ui.icon.sm} name="expand" />
+            <Glyph mix={exampleExpandGlyphCss} name="expand" />
           </a>
         ) : null}
         <div mix={examplePreviewSurfaceCss}>
           <div mix={exampleCanvasCss}>{children}</div>
         </div>
         <div mix={exampleCodePanelCss}>
-          <code mix={[ui.text.code, exampleCodeCss]}>{renderHighlightedCode(code)}</code>
+          <code mix={exampleCodeCss}>{code}</code>
         </div>
       </article>
     </div>
   )
 }
 
-export let standaloneExampleBodyCss = css({
+export const standaloneExampleBodyCss = css({
   margin: 0,
   minHeight: '100vh',
   color: theme.colors.text.primary,
@@ -55,35 +55,41 @@ export let standaloneExampleBodyCss = css({
   boxSizing: 'border-box',
 })
 
-export let standaloneExampleBodyPadCss = css({
+export const standaloneExampleBodyPadCss = css({
   padding: theme.space.xxl,
 })
 
-export let exampleCanvasCss = css({
+export const exampleCanvasCss = css({
   maxWidth: '44rem',
   marginInline: 'auto',
 })
 
-let exampleBlockCss = css({
+const exampleBlockCss = css({
   display: 'grid',
   gap: theme.space.sm,
 })
 
-let exampleIntroCss = css({
+const exampleIntroCss = css({
   display: 'grid',
   gap: theme.space.xs,
 })
 
-let exampleTitleCss = css({
+const exampleTitleCss = css({
   margin: 0,
+  fontSize: theme.fontSize.lg,
+  lineHeight: theme.lineHeight.tight,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
 })
 
-let exampleDescriptionCss = css({
+const exampleDescriptionCss = css({
   margin: 0,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
   color: theme.colors.text.secondary,
 })
 
-let exampleCardCss = css({
+const exampleCardCss = css({
   position: 'relative',
   display: 'flex',
   flexDirection: 'column',
@@ -93,7 +99,7 @@ let exampleCardCss = css({
   overflow: 'hidden',
 })
 
-let examplePreviewSurfaceCss = css({
+const examplePreviewSurfaceCss = css({
   display: 'grid',
   alignItems: 'center',
   minHeight: '180px',
@@ -101,15 +107,17 @@ let examplePreviewSurfaceCss = css({
   backgroundColor: theme.surface.lvl0,
 })
 
-let exampleCodePanelCss = css({
+const exampleCodePanelCss = css({
   padding: theme.space.md,
   borderTop: `1px solid ${theme.colors.border.subtle}`,
   backgroundColor: 'color-mix(in oklab, rgb(248 248 248) 76%, white)',
   overflowX: 'auto',
 })
 
-let exampleCodeCss = css({
+const exampleCodeCss = css({
   display: 'block',
+  margin: 0,
+  fontFamily: theme.fontFamily.mono,
   fontSize: theme.fontSize.xs,
   lineHeight: theme.lineHeight.normal,
   color: theme.colors.text.secondary,
@@ -117,11 +125,11 @@ let exampleCodeCss = css({
   whiteSpace: 'pre',
 })
 
-let exampleExpandLinkCss = css({
+const exampleExpandLinkCss = css({
   position: 'absolute',
   top: theme.space.sm,
   right: theme.space.sm,
-  zIndex: theme.zIndex.sticky,
+  zIndex: 1,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -139,29 +147,9 @@ let exampleExpandLinkCss = css({
   },
 })
 
-function renderHighlightedCode(code: string): RemixNode[] {
-  let tokenPattern =
-    /(\b(?:ui|theme)(?:\.[A-Za-z0-9_]+)+|\b(?:createTheme|createGlyphSheet|RMX_01|RMX_01_VALUES|RMX_01_GLYPHS|Glyph|Breadcrumbs|Accordion|AccordionItem|AccordionTrigger|AccordionContent|Listbox|ListboxOption|Menu|MenuButton|MenuList|MenuItem|SubmenuTrigger|popover)\b)/g
-  let parts = code.split(tokenPattern)
-
-  return parts.map((part, index) => {
-    if (
-      /^(?:ui|theme)\./.test(part) ||
-      /^(?:createTheme|createGlyphSheet|RMX_01|RMX_01_VALUES|RMX_01_GLYPHS|Glyph|Breadcrumbs|Accordion|AccordionItem|AccordionTrigger|AccordionContent|Listbox|ListboxOption|Menu|MenuButton|MenuList|MenuItem|SubmenuTrigger|popover)$/.test(
-        part,
-      )
-    ) {
-      return (
-        <span key={index} mix={apiCodeTokenCss}>
-          {part}
-        </span>
-      )
-    }
-
-    return <span key={index}>{part}</span>
-  })
-}
-
-let apiCodeTokenCss = css({
-  color: theme.colors.text.link,
+const exampleExpandGlyphCss = css({
+  width: theme.fontSize.sm,
+  height: theme.fontSize.sm,
+  color: 'currentColor',
+  flexShrink: 0,
 })

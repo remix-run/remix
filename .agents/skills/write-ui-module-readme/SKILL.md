@@ -47,7 +47,7 @@ Use this structure unless the module needs something more specific:
 1. `# ModuleName`
 2. One or two sentences: what it is, what it is for, and what it is not for
 3. `## Usage`
-4. `## \`module.*\`` or equivalent export reference
+4. `## \`module.\*\`` or equivalent export reference
 5. `## Behavior Notes`
 6. `## When To Use Something Else` when the primitive sits below higher-level widgets
 

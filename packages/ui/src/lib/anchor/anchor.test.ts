@@ -143,6 +143,27 @@ describe('anchor', () => {
     cleanup()
   })
 
+  it('supports horizontal and vertical offsets independently', () => {
+    let floating = document.createElement('div')
+    let anchorElement = document.createElement('button')
+    document.body.append(floating, anchorElement)
+
+    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
+    mockLayout(anchorElement, { top: 40, left: 200, width: 80, height: 28 })
+
+    let cleanup = anchor(floating, anchorElement, {
+      offset: 8,
+      offsetX: (currentFloating) => currentFloating.offsetWidth / 10,
+      offsetY: (currentFloating) => -currentFloating.offsetHeight / 20,
+      placement: 'bottom-start',
+    })
+
+    expect(floating.style.top).toBe('72px')
+    expect(floating.style.left).toBe('212px')
+
+    cleanup()
+  })
+
   it('flips when the requested placement would overflow the viewport', () => {
     let floating = document.createElement('div')
     let anchorElement = document.createElement('button')
@@ -157,6 +178,26 @@ describe('anchor', () => {
 
     expect(floating.style.top).toBe('480px')
     expect(floating.style.left).toBe('180px')
+    expect(floating.getAttribute('data-anchor-placement')).toBe('top')
+
+    cleanup()
+  })
+
+  it('exposes the final horizontal placement when right placement flips to the left', () => {
+    let floating = document.createElement('div')
+    let anchorElement = document.createElement('button')
+    document.body.append(floating, anchorElement)
+
+    mockLayout(floating, { top: 0, left: 0, width: 180, height: 120 })
+    mockLayout(anchorElement, { top: 40, left: 760, width: 24, height: 32 })
+
+    let cleanup = anchor(floating, anchorElement, {
+      placement: 'right-start',
+    })
+
+    expect(floating.style.top).toBe('40px')
+    expect(floating.style.left).toBe('580px')
+    expect(floating.getAttribute('data-anchor-placement')).toBe('left-start')
 
     cleanup()
   })

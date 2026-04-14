@@ -1,12 +1,13 @@
 // @jsxRuntime classic
 // @jsx createElement
 import {
-  TypedEventTarget,
   attrs,
+  css,
   createElement,
   createMixin,
   on,
   ref,
+  type CSSMixinDescriptor,
   type ElementProps,
   type Handle,
   type MixinHandle,
@@ -14,98 +15,69 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 
-import { anchor } from '../anchor/anchor.ts'
 import { Glyph } from '../glyph/glyph.tsx'
-import { onOutsidePress } from '../outside-press/outside-press-mixin.ts'
-import { press } from '../press/press-mixin.ts'
-import { lockScrollOnToggle } from '../utils/scroll-lock.ts'
-import { ui } from '../theme/theme.ts'
-import { flashAttribute } from '../utils/flash-attribute.ts'
-import { itemMatchesSearchText, type SearchValue } from '../typeahead/typeahead-mixin.tsx'
+import * as listbox from '../listbox/listbox.ts'
+import * as popover from '../popover/popover.ts'
+import { theme } from '../theme/theme.ts'
+import { type SearchValue } from '../typeahead/typeahead-mixin.ts'
 import { waitForCssTransition } from '../utils/wait-for-css-transition.ts'
+import { wait } from '../utils/wait.ts'
 
-type ComboboxControllerEventMap = {
-  change: Event
-}
+const COMBOBOX_CHANGE_EVENT = 'rmx:combobox-change' as const
+const INPUT_COMMIT_DELAY_MS = 50
 
-type RegisteredOption = {
-  readonly id: string
-  get disabled(): boolean
-  get label(): string
-  get node(): HTMLElement
-  get searchValue(): SearchValue
-  get value(): string
-}
+type ComboboxChangeHandler = (
+  event: ComboboxChangeEvent,
+  signal: AbortSignal,
+) => void | Promise<void>
 
-type ComboboxCommitOptions = {
-  flash?: boolean
-  signal?: AbortSignal
-}
+type ShowReason = 'hint' | 'nav'
 
-function wait(ms: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
+const comboboxPopoverCss: CSSMixinDescriptor = css({
+  opacity: 0,
+  '&:popover-open': {
+    opacity: 1,
+  },
+  '&:not(:popover-open)': {
+    pointerEvents: 'none',
+  },
+  '&[data-show-reason="nav"]:not(:popover-open)': {
+    transition: 'opacity 180ms ease-in, overlay 180ms ease-in, display 180ms ease-in',
+    transitionBehavior: 'allow-discrete',
+  },
+  '&[data-show-reason="hint"]:not(:popover-open)': {
+    transition: 'none',
+    transitionBehavior: 'normal',
+  },
+})
 
-let inputCommitDelayMs = 50
-let selectionFlashDurationMs = 60
+const comboboxInputCss: CSSMixinDescriptor = css({
+  minHeight: theme.control.height.sm,
+  width: '100%',
+  paddingInline: theme.space.sm,
+  border: `0.5px solid ${theme.colors.border.default}`,
+  borderRadius: theme.radius.md,
+  backgroundColor: theme.surface.lvl0,
+  color: theme.colors.text.primary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.7)',
+  '&:focus-visible': {
+    outline: `2px solid ${theme.colors.focus.ring}`,
+    outlineOffset: theme.space.none,
+  },
+  '&[data-surface-visible="true"][aria-activedescendant]:focus-visible': {
+    outline: 'none',
+  },
+})
 
-type ComboboxComponent = typeof ComboboxImpl & {
-  readonly change: typeof comboboxChangeEventType
-}
-
-export type ComboboxContextProps = {
-  children?: RemixNode
-  defaultValue?: string | null
-  disabled?: boolean
-  name?: string
-  ref?: (handle: ComboboxHandle) => void
-}
-
-export type ComboboxHandle = {
-  readonly activeOptionId: string | null
-  readonly id: string
-  readonly inputText: string
-  readonly isOpen: boolean
-  readonly label: string | null
-  readonly value: string | null
-  close(options?: { focusInput?: boolean }): void
-  open(strategy?: ComboboxOpenStrategy): Promise<void>
-}
-
-export type ComboboxOpenStrategy = 'selected' | 'selected-or-none' | 'first' | 'last'
-type ComboboxShowReason = 'hint' | 'nav'
-
-export type ComboboxOptionOptions = {
-  disabled?: boolean
-  label: string
-  searchValue?: SearchValue
-  value: string
-}
-
-export type ComboboxProps = Omit<Props<'div'>, 'children'> & {
-  children?: RemixNode
-  defaultValue?: string | null
-  disabled?: boolean
-  inputId?: string
-  name?: string
-  placeholder?: string
-}
-
-export type OptionProps = Omit<Props<'div'>, 'children'> & {
-  children?: RemixNode
-  disabled?: boolean
-  label: string
-  searchValue?: SearchValue
-  value: string
-}
-
-export const comboboxChangeEventType = 'rmx:combobox-change' as const
+export const inputStyle = comboboxInputCss
+export const popoverStyle = comboboxPopoverCss
 
 declare global {
   interface HTMLElementEventMap {
-    [comboboxChangeEventType]: ComboboxChangeEvent
+    [COMBOBOX_CHANGE_EVENT]: ComboboxChangeEvent
   }
 }
 
@@ -123,641 +95,281 @@ export class ComboboxChangeEvent extends Event {
     optionId: string | null
     value: string | null
   }) {
-    super(comboboxChangeEventType, { bubbles: true })
+    super(COMBOBOX_CHANGE_EVENT, { bubbles: true })
     this.label = label
     this.optionId = optionId
     this.value = value
   }
 }
 
-class ComboboxController extends TypedEventTarget<ComboboxControllerEventMap> {
-  #activeOptionId: string | null = null
-  #cleanupAnchor = () => {}
-  #defaultListId: string
-  #defaultSurfaceId: string
-  #disabled = false
-  #filterText = ''
-  #focusInputOnClose = false
-  #input: HTMLInputElement | null = null
-  #inputText = ''
-  #list: HTMLElement | null = null
-  #listId: string
-  #name: string | undefined = undefined
-  #open = false
-  #options = new Map<string, RegisteredOption>()
-  #pendingInputValue: string | null = null
-  #selectedOptionId: string | null = null
-  #selectInputOnClose = false
-  #showReason: ComboboxShowReason | null = null
-  #surfaceVisible = false
-  #surface: HTMLElement | null = null
-  #surfaceId: string
-  #surfaceSignal: AbortSignal | null = null
-  #transitionId = 0
-  #update: () => Promise<AbortSignal>
-  #value: string | null = null
+export type ComboboxOpenStrategy = 'selected' | 'selected-or-none' | 'first' | 'last'
 
-  constructor(id: string, update: () => Promise<AbortSignal>) {
-    super()
-    this.#defaultListId = `${id}-combobox-list`
-    this.#defaultSurfaceId = `${id}-combobox-surface`
-    this.#listId = this.#defaultListId
-    this.#surfaceId = this.#defaultSurfaceId
-    this.#update = update
+export interface ComboboxHandle {
+  readonly activeOptionId: string | null
+  readonly id: string
+  readonly inputText: string
+  readonly isOpen: boolean
+  readonly label: string | null
+  readonly value: string | null
+  close: () => void
+  open: (strategy?: ComboboxOpenStrategy) => Promise<void>
+}
+
+export interface ComboboxContextProps {
+  children?: RemixNode
+  defaultValue?: string | null
+  disabled?: boolean
+  name?: string
+  ref?: (handle: ComboboxHandle) => void
+}
+
+export interface ComboboxProps extends Omit<Props<'div'>, 'children'> {
+  children?: RemixNode
+  defaultValue?: string | null
+  disabled?: boolean
+  inputId?: string
+  name?: string
+  placeholder?: string
+}
+
+export interface ComboboxOptionOptions {
+  disabled?: boolean
+  label: string
+  searchValue?: SearchValue
+  value: string
+}
+
+export interface ComboboxOptionProps extends Omit<Props<'div'>, 'children'> {
+  children?: RemixNode
+  disabled?: boolean
+  label: string
+  searchValue?: SearchValue
+  value: string
+}
+
+interface ComboboxContextValue {
+  readonly activeId: string | undefined
+  readonly disabled: boolean
+  readonly filterText: string
+  readonly inputText: string
+  readonly isOpen: boolean
+  readonly listId: string
+  readonly name: string | undefined
+  readonly showReason: ShowReason
+  readonly surfaceVisible: boolean
+  readonly value: listbox.ListboxValue
+  clearInputSelection: () => void
+  close: () => void
+  handleBlur: () => void
+  handleEscape: () => void
+  navigateNext: () => void
+  navigatePrevious: () => void
+  open: (strategy?: ComboboxOpenStrategy) => Promise<void>
+  openFromArrow: (direction: 'first' | 'last') => Promise<void>
+  openFromInputActivation: () => Promise<void>
+  registerInput: (node: HTMLInputElement) => void
+  registerSurface: (node: HTMLElement) => void
+  setInputText: (text: string) => Promise<void>
+  syncPopoverMinWidth: () => void
+  selectActive: () => Promise<void>
+  unregisterInput: (node: HTMLInputElement) => void
+  unregisterSurface: (node: HTMLElement) => void
+}
+
+type PendingChange = {
+  label: string
+  optionId: string
+  value: string
+} | null
+
+function getSearchValues(value: SearchValue) {
+  return Array.isArray(value) ? value : [value]
+}
+
+function matchesSearchValue(value: SearchValue, text: string) {
+  if (text === '') {
+    return true
   }
 
-  get activeOptionId() {
-    return this.#activeOptionId
+  let normalizedText = text.toLowerCase()
+  return getSearchValues(value).some((candidate) =>
+    candidate.toLowerCase().startsWith(normalizedText),
+  )
+}
+
+function matchesExactSearchValue(value: SearchValue, text: string) {
+  if (text === '') {
+    return false
   }
 
-  get id() {
-    return this.#listId
+  let normalizedText = text.toLowerCase()
+  return getSearchValues(value).some((candidate) => candidate.toLowerCase() === normalizedText)
+}
+
+function getOptionSearchValue(option: {
+  label: string
+  searchValue?: SearchValue
+  textValue?: SearchValue
+}) {
+  return option.searchValue ?? option.textValue ?? option.label
+}
+
+function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
+  let inputRef: HTMLInputElement | undefined
+  let listboxRef: listbox.ListboxRef | undefined
+  let surfaceRef: HTMLElement | undefined
+
+  let props: ComboboxContextProps = {}
+  let hasInitialized = false
+  let hasProvidedRef = false
+
+  let activeValue: listbox.ListboxValue = null
+  let activeId: string | undefined = undefined
+  let value: listbox.ListboxValue = null
+  let selectedId: string | undefined = undefined
+  let selectedLabel = ''
+  let inputText = ''
+  let filterText = ''
+  let open = false
+  let surfaceVisible = false
+  let showReason: ShowReason = 'nav'
+  let pendingInputValue: string | null = null
+  let pendingChange: PendingChange = null
+  let selectInputAfterClose = false
+  let closeSequenceId = 0
+
+  let listId = `${handle.id}-combobox-list`
+
+  function getOptions() {
+    return listboxRef?.options ?? []
   }
 
-  get inputText() {
-    return this.#inputText
+  function getSelectedOption() {
+    return getOptions().find((option) => option.value === value)
   }
 
-  get isDisabled() {
-    return this.#disabled
-  }
-
-  get isOpen() {
-    return this.#open
-  }
-
-  get isSurfaceVisible() {
-    return this.#surfaceVisible
-  }
-
-  get label() {
-    return this.#getSelectedOption()?.label ?? null
-  }
-
-  get name() {
-    return this.#name
-  }
-
-  get showReason() {
-    return this.#showReason
-  }
-
-  get surfaceId() {
-    return this.#surfaceId
-  }
-
-  get value() {
-    return this.#value
-  }
-
-  activateOption(optionId: string) {
-    let option = this.#options.get(optionId)
-    if (!option || option.disabled || !this.#matchesFilter(option, this.#filterText)) {
-      return
-    }
-
-    let activeChanged = this.#setActiveOptionId(option.id)
-    let showReasonChanged = this.#setShowReason('nav')
-    if (!activeChanged && !showReasonChanged) {
-      return
-    }
-
-    this.#notify()
-  }
-
-  close({
-    focusInput = false,
-    selectInput = false,
-  }: { focusInput?: boolean; selectInput?: boolean } = {}) {
-    let surface = this.#surface
-    if (!surface) {
-      return
-    }
-
-    if (!this.#open && !surface.matches(':popover-open')) {
-      return
-    }
-
-    this.#focusInputOnClose = focusInput
-    this.#selectInputOnClose = selectInput
-    surface.hidePopover()
-  }
-
-  focusNext() {
-    let options = this.#getEnabledVisibleOptions()
-    if (options.length === 0) {
-      return
-    }
-
-    this.#clearInputSelection()
-    let currentIndex = options.findIndex((option) => option.id === this.#activeOptionId)
-    let nextIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, options.length - 1)
-    let activeChanged = this.#setActiveOptionId(options[nextIndex].id)
-    let showReasonChanged = this.#setShowReason('nav')
-    if (!activeChanged && !showReasonChanged) {
-      return
-    }
-
-    this.#notify()
-    this.#scrollActiveOptionIntoView()
-  }
-
-  focusPrevious() {
-    let options = this.#getEnabledVisibleOptions()
-    if (options.length === 0) {
-      return
-    }
-
-    this.#clearInputSelection()
-    let currentIndex = options.findIndex((option) => option.id === this.#activeOptionId)
-    let nextIndex = currentIndex === -1 ? options.length - 1 : Math.max(currentIndex - 1, 0)
-    let activeChanged = this.#setActiveOptionId(options[nextIndex].id)
-    let showReasonChanged = this.#setShowReason('nav')
-    if (!activeChanged && !showReasonChanged) {
-      return
-    }
-
-    this.#notify()
-    this.#scrollActiveOptionIntoView()
-  }
-
-  handleBeforeToggle(node: HTMLElement, nextState: string) {
-    this.#surface = node
-
-    if (nextState === 'open' || !this.#open) {
-      return
-    }
-
-    this.#open = false
-    this.#cleanupAnchor()
-    this.#cleanupAnchor = () => {}
-
-    let focusInput = this.#focusInputOnClose
-    this.#focusInputOnClose = false
-    let selectInput = this.#selectInputOnClose
-    this.#selectInputOnClose = false
-    let transitionId = ++this.#transitionId
-    this.#notify()
-    void this.#handleCloseEndAfterTransition(node, transitionId, selectInput)
-
-    if (focusInput && this.#input?.isConnected) {
-      this.#input.focus()
-    }
-  }
-
-  handleBlur() {
-    this.#resolveDraftValueOnBlur()
-    this.close()
-  }
-
-  handleEscape() {
-    if (!this.#getExactInputMatch()) {
-      this.#clearInputAndSelection()
-    }
-
-    this.close()
-  }
-
-  handleOutsidePress() {
-    if (!this.#open) {
-      return
-    }
-
-    this.#resolveDraftValueOnBlur()
-    this.close()
-  }
-
-  isSelected(optionId: string) {
-    return this.#selectedOptionId === optionId
-  }
-
-  isVisible(optionId: string) {
-    let option = this.#options.get(optionId)
-    if (!option) {
-      return false
-    }
-
-    return this.#matchesFilter(option, this.#filterText)
-  }
-
-  async open(
-    strategy: ComboboxOpenStrategy = 'selected',
-    {
-      clearInputSelection = false,
-      showReason = 'nav',
-    }: { clearInputSelection?: boolean; showReason?: ComboboxShowReason } = {},
-  ) {
-    if (this.#disabled) {
-      return
-    }
-
-    if (this.#pendingInputValue !== null) {
-      this.#setInputValue(this.#pendingInputValue)
-      this.#pendingInputValue = null
-    }
-
-    let nextFilterText = this.#getArrowOpenFilterText()
-    let visibleOptions = this.#getVisibleOptions(nextFilterText)
-    if (visibleOptions.length === 0) {
-      return
-    }
-
-    let activeOption = this.#resolveOpenOption(strategy, nextFilterText)
-
-    let filterChanged = this.#setFilterText(nextFilterText)
-    let showReasonChanged = this.#setShowReason(showReason)
-    let activeChanged = false
-
-    if (this.#open) {
-      activeChanged = this.#setActiveOptionId(activeOption?.id ?? null)
-    }
-
-    if (filterChanged || (this.#open && (activeChanged || showReasonChanged))) {
-      this.#notify()
-      let signal = await this.#update()
-      if (signal.aborted) {
-        return
-      }
-    }
-
-    let surface = this.#surface
-    let input = this.#input
-
-    if (!surface || !input) {
-      return
-    }
-
-    let didOpen = false
-    if (!this.#open) {
-      this.#syncMinWidth()
-      surface.showPopover()
-      this.#open = true
-      this.#surfaceVisible = true
-      didOpen = true
-      this.#setActiveOptionId(activeOption?.id ?? null)
-      this.#syncAnchor()
-      this.#notify()
-    } else {
-      this.#syncAnchor()
-    }
-
-    input.focus()
-    if (clearInputSelection) {
-      this.#clearInputSelection()
-    }
-
-    if (didOpen) {
-      let signal = await this.#update()
-      if (signal.aborted) {
-        return
-      }
-    }
-
-    this.#scrollActiveOptionIntoView()
-  }
-
-  openFromArrow(direction: 'first' | 'last') {
-    let strategy: ComboboxOpenStrategy = this.#getExactInputMatch() ? 'selected' : direction
-    return this.open(strategy, { clearInputSelection: true })
-  }
-
-  openFromVirtualPress() {
-    return this.open('selected-or-none', { clearInputSelection: true })
-  }
-
-  resetOptions() {
-    this.#options = new Map()
-  }
-
-  registerInput(node: HTMLInputElement) {
-    this.#input = node
-    this.#setInputValue(this.#inputText)
-  }
-
-  registerList(node: HTMLElement) {
-    this.#list = node
-  }
-
-  registerOption(option: RegisteredOption) {
-    this.#options.set(option.id, option)
-  }
-
-  registerSurface(node: HTMLElement, signal: AbortSignal) {
-    this.#surface = node
-    this.#surfaceSignal = signal
-    this.setSurfaceId(node.id || this.#defaultSurfaceId)
-  }
-
-  async selectActive(options: ComboboxCommitOptions = {}) {
-    if (!this.#activeOptionId) {
-      return
-    }
-
-    await this.selectOption(this.#activeOptionId, options)
-  }
-
-  async selectOption(optionId: string, { flash = true, signal }: ComboboxCommitOptions = {}) {
-    if (signal?.aborted) {
-      return
-    }
-
-    let option = this.#options.get(optionId)
-    if (!option || option.disabled || !this.#matchesFilter(option, this.#filterText)) {
-      return
-    }
-
-    let activeChanged = this.#setActiveOptionId(option.id)
-    let showReasonChanged = this.#setShowReason('nav')
-    let selectionChanged = this.#value !== option.value
-    let inputChanged = this.#inputText !== option.label || this.#filterText !== ''
-
-    this.#selectedOptionId = option.id
-    this.#value = option.value
-    this.#inputText = option.label
-    this.#pendingInputValue = this.#input?.value === option.label ? null : option.label
-
-    if (activeChanged || showReasonChanged || selectionChanged || inputChanged) {
-      this.#notify()
-    }
-
-    if (flash) {
-      await flashAttribute(option.node, 'data-combobox-flash', selectionFlashDurationMs)
-    }
-
-    this.close({ focusInput: true, selectInput: true })
-
-    if (!selectionChanged) {
-      return
-    }
-
-    this.#dispatchChange({
-      label: option.label,
-      optionId: option.id,
-      value: option.value,
-    })
-  }
-
-  async setInputText(text: string) {
-    if (this.#disabled) {
-      return
-    }
-
-    this.#pendingInputValue = null
-    let showReasonChanged = this.#setShowReason('hint')
-
-    let inputChanged = this.#inputText !== text
-    let previousFilterText = this.#filterText
-    let nextFilterText = text !== '' || !this.#open ? text : previousFilterText
-    let filterChanged = nextFilterText !== previousFilterText
-    let selectionChanged = this.#value !== null || this.#selectedOptionId !== null
-    if (!inputChanged && !filterChanged && !selectionChanged && !showReasonChanged) {
-      return
-    }
-
-    this.#inputText = text
-    this.#filterText = nextFilterText
-    this.#selectedOptionId = null
-    this.#value = null
-
+  function getMatchingOptions(text: string) {
     if (text === '') {
-      let activeChanged = this.#setActiveOptionId(null)
-      if (inputChanged || filterChanged || activeChanged || selectionChanged || showReasonChanged) {
-        this.#notify()
+      return getOptions()
+    }
+
+    return getOptions().filter((option) =>
+      matchesSearchValue(option.textValue ?? option.label, text),
+    )
+  }
+
+  function getEnabledMatchingOptions(text: string) {
+    return getMatchingOptions(text).filter((option) => !option.disabled)
+  }
+
+  function getExactInputMatch(text = inputText) {
+    return (
+      getOptions().find(
+        (option) =>
+          !option.disabled && matchesExactSearchValue(option.textValue ?? option.label, text),
+      ) ?? null
+    )
+  }
+
+  function getOpenFilterText() {
+    if (inputText === '') {
+      return ''
+    }
+
+    if (getExactInputMatch(inputText)) {
+      return ''
+    }
+
+    if (getMatchingOptions(inputText).length === 0) {
+      return ''
+    }
+
+    return inputText
+  }
+
+  function resolveOpenOption(strategy: ComboboxOpenStrategy, nextFilterText: string) {
+    let enabledMatchingOptions = getEnabledMatchingOptions(nextFilterText)
+    if (enabledMatchingOptions.length === 0) {
+      return null
+    }
+
+    if (strategy === 'selected-or-none') {
+      let selectedOption = getSelectedOption()
+      if (
+        selectedOption &&
+        !selectedOption.disabled &&
+        matchesSearchValue(selectedOption.textValue ?? selectedOption.label, nextFilterText)
+      ) {
+        return selectedOption
       }
 
-      if (selectionChanged) {
-        this.#dispatchChange({ label: null, optionId: null, value: null })
+      return null
+    }
+
+    if (strategy === 'selected') {
+      let exactInputMatch = getExactInputMatch(inputText)
+      if (
+        exactInputMatch &&
+        matchesSearchValue(exactInputMatch.textValue ?? exactInputMatch.label, nextFilterText)
+      ) {
+        return exactInputMatch
       }
 
-      await this.#closeAfterHintRender()
-      return
-    }
-
-    let visibleOptions = this.#getVisibleOptions(text)
-    if (visibleOptions.length === 0) {
-      let activeChanged = this.#setActiveOptionId(null)
-      if (inputChanged || filterChanged || activeChanged || selectionChanged || showReasonChanged) {
-        this.#notify()
-      }
-
-      if (selectionChanged) {
-        this.#dispatchChange({ label: null, optionId: null, value: null })
-      }
-
-      await this.#closeAfterHintRender()
-      return
-    }
-
-    let activeChanged = this.#setActiveOptionId(null)
-    if (inputChanged || filterChanged || activeChanged || selectionChanged || showReasonChanged) {
-      this.#notify()
-    }
-
-    if (selectionChanged) {
-      this.#dispatchChange({ label: null, optionId: null, value: null })
-    }
-
-    let surface = this.#surface
-    if (!surface) {
-      return
-    }
-
-    if (!this.#open) {
-      this.#syncMinWidth()
-      surface.showPopover()
-      this.#open = true
-      this.#surfaceVisible = true
-      this.#syncAnchor()
-      this.#notify()
-      return
-    }
-
-    this.#syncAnchor()
-  }
-
-  setDisabled(disabled: boolean) {
-    this.#disabled = disabled
-  }
-
-  setListId(id: string) {
-    if (this.#listId === id) {
-      return
-    }
-
-    this.#listId = id
-    this.#notify()
-  }
-
-  setName(name: string | undefined) {
-    this.#name = name
-  }
-
-  setSurfaceId(id: string) {
-    if (this.#surfaceId === id) {
-      return
-    }
-
-    this.#surfaceId = id
-    this.#notify()
-  }
-
-  setValue(value: string | null) {
-    let nextSelectedOptionId = this.#getOptionIdForValue(value)
-    if (this.#value === value && this.#selectedOptionId === nextSelectedOptionId) {
-      return
-    }
-
-    this.#pendingInputValue = null
-    this.#value = value
-    this.#selectedOptionId = nextSelectedOptionId
-    this.#inputText = value ?? ''
-    this.#filterText = ''
-    this.#notify()
-  }
-
-  async syncAfterRender(signal?: AbortSignal) {
-    if (signal?.aborted) {
-      return
-    }
-
-    let nextSelectedOptionId = this.#getOptionIdForValue(this.#value)
-    let nextActiveOptionId = this.#activeOptionId
-    if (nextActiveOptionId && !this.isVisible(nextActiveOptionId)) {
-      nextActiveOptionId = this.#resolveOpenOption('first')?.id ?? null
-    }
-
-    let selectionChanged = this.#selectedOptionId !== nextSelectedOptionId
-    let activeChanged = this.#setActiveOptionId(nextActiveOptionId)
-    if (selectionChanged) {
-      this.#selectedOptionId = nextSelectedOptionId
-    }
-
-    if (selectionChanged || activeChanged) {
-      this.#notify()
-      return
-    }
-
-    if (
-      this.#disabled ||
-      this.#showReason !== 'hint' ||
-      this.#inputText === '' ||
-      this.#selectedOptionId !== null ||
-      this.#value !== null
-    ) {
-      return
-    }
-
-    let input = this.#input
-    if (!input?.isConnected || document.activeElement !== input) {
-      return
-    }
-
-    let visibleOptions = this.#getVisibleOptions(this.#inputText)
-    if (visibleOptions.length === 0) {
-      if (this.#open) {
-        this.close()
-      }
-
-      return
-    }
-
-    if (!this.#open) {
-      await this.open('selected-or-none', { showReason: 'hint' })
-    }
-  }
-
-  unregisterInput(node: HTMLInputElement) {
-    if (this.#input !== node) {
-      return
-    }
-
-    this.#input = null
-  }
-
-  unregisterList(node: HTMLElement) {
-    if (this.#list !== node) {
-      return
-    }
-
-    this.#list = null
-  }
-
-  unregisterOption(option: RegisteredOption) {
-    if (this.#options.get(option.id) !== option) {
-      return
-    }
-
-    this.#options.delete(option.id)
-  }
-
-  unregisterSurface(node: HTMLElement) {
-    if (this.#surface !== node) {
-      return
-    }
-
-    this.#cleanupAnchor()
-    this.#cleanupAnchor = () => {}
-    this.#surfaceVisible = false
-    this.#surface = null
-    this.#surfaceSignal = null
-  }
-
-  #clearInputAndSelection() {
-    let activeChanged = this.#setActiveOptionId(null)
-    let inputChanged = this.#inputText !== '' || this.#filterText !== ''
-    let selectionChanged = this.#value !== null || this.#selectedOptionId !== null
-
-    this.#pendingInputValue = null
-    this.#inputText = ''
-    if (!this.#open) {
-      this.#filterText = ''
-    }
-    this.#selectedOptionId = null
-    this.#value = null
-    this.#setInputValue('')
-
-    if (activeChanged || inputChanged || selectionChanged) {
-      this.#notify()
-    }
-
-    if (!selectionChanged) {
-      return
-    }
-
-    this.#dispatchChange({ label: null, optionId: null, value: null })
-  }
-
-  #clearInputSelection() {
-    let input = this.#input
-    if (!input || input.selectionStart === null || input.selectionEnd === null) {
-      return
-    }
-
-    let cursor = input.value.length
-    if (input.selectionStart === cursor && input.selectionEnd === cursor) {
-      return
-    }
-
-    input.setSelectionRange(cursor, cursor)
-  }
-
-  async #closeAfterHintRender() {
-    if (this.#open) {
-      let signal = await this.#update()
-      if (signal.aborted) {
-        return
+      let selectedOption = getSelectedOption()
+      if (
+        selectedOption &&
+        !selectedOption.disabled &&
+        matchesSearchValue(selectedOption.textValue ?? selectedOption.label, nextFilterText)
+      ) {
+        return selectedOption
       }
     }
 
-    this.close()
+    return strategy === 'last'
+      ? enabledMatchingOptions[enabledMatchingOptions.length - 1]
+      : enabledMatchingOptions[0]
   }
 
-  #dispatchChange(selection: {
+  function setInputValue(nextValue: string) {
+    if (!inputRef || inputRef.value === nextValue) {
+      return
+    }
+
+    inputRef.value = nextValue
+  }
+
+  function clearInputSelection() {
+    if (!inputRef || inputRef.selectionStart === null || inputRef.selectionEnd === null) {
+      return
+    }
+
+    let cursor = inputRef.value.length
+    if (inputRef.selectionStart === cursor && inputRef.selectionEnd === cursor) {
+      return
+    }
+
+    inputRef.setSelectionRange(cursor, cursor)
+  }
+
+  function syncPopoverMinWidth() {
+    if (!surfaceRef || !inputRef) {
+      return
+    }
+
+    let width = inputRef.offsetWidth
+    if (width <= 0) {
+      return
+    }
+
+    surfaceRef.style.minWidth = `${width}px`
+  }
+
+  function dispatchChange(selection: {
     label: string | null
     optionId: string | null
     value: string | null
   }) {
-    let target = this.#input ?? this.#list ?? this.#surface
+    let target = inputRef ?? surfaceRef
     target?.dispatchEvent(
       new ComboboxChangeEvent({
         label: selection.label,
@@ -767,614 +379,639 @@ class ComboboxController extends TypedEventTarget<ComboboxControllerEventMap> {
     )
   }
 
-  #getArrowOpenFilterText() {
-    if (this.#inputText === '') {
-      return ''
+  function clearCommittedSelection() {
+    let selectionChanged = value !== null || selectedId !== undefined
+    value = null
+    selectedId = undefined
+    selectedLabel = ''
+    return selectionChanged
+  }
+
+  function clearInputAndSelection() {
+    closeSequenceId++
+    pendingInputValue = null
+    pendingChange = null
+    selectInputAfterClose = false
+
+    inputText = ''
+    activeValue = null
+    activeId = undefined
+    if (!open) {
+      filterText = ''
     }
 
-    if (this.#getExactInputMatch()) {
-      return ''
+    let selectionChanged = clearCommittedSelection()
+    setInputValue('')
+
+    if (selectionChanged) {
+      dispatchChange({ label: null, optionId: null, value: null })
     }
-
-    if (this.#getVisibleOptions(this.#inputText).length === 0) {
-      return ''
-    }
-
-    return this.#inputText
   }
 
-  #getEnabledVisibleOptions(text = this.#filterText) {
-    return this.#getVisibleOptions(text).filter((option) => !option.disabled)
-  }
-
-  #getActiveOption() {
-    return this.#activeOptionId ? (this.#options.get(this.#activeOptionId) ?? null) : null
-  }
-
-  #getExactInputMatch() {
-    if (this.#inputText === '') {
-      return null
-    }
-
-    let normalizedText = this.#inputText.toLowerCase()
-    return (
-      this.#getEnabledOptions().find((option) => {
-        let values = Array.isArray(option.searchValue) ? option.searchValue : [option.searchValue]
-        return values.some((value) => value.toLowerCase() === normalizedText)
-      }) ?? null
-    )
-  }
-
-  #getEnabledOptions() {
-    return Array.from(this.#options.values()).filter((option) => !option.disabled)
-  }
-
-  #getOptionIdForValue(value: string | null) {
-    if (value === null) {
-      return null
-    }
-
-    let option = Array.from(this.#options.values()).find((candidate) => candidate.value === value)
-    return option?.id ?? null
-  }
-
-  #getSelectedOption() {
-    return this.#selectedOptionId ? (this.#options.get(this.#selectedOptionId) ?? null) : null
-  }
-
-  #getVisibleOptions(text = this.#filterText) {
-    let options = Array.from(this.#options.values())
-    if (text === '') {
-      return options
-    }
-
-    return options.filter((option) => this.#matchesFilter(option, text))
-  }
-
-  #matchesFilter(option: RegisteredOption, text: string) {
-    if (text === '') {
-      return true
-    }
-
-    return itemMatchesSearchText(option, text, (candidate) => candidate.searchValue)
-  }
-
-  #notify() {
-    this.dispatchEvent(new Event('change'))
-  }
-
-  async #handleCloseEndAfterTransition(
-    surface: HTMLElement,
-    transitionId: number,
-    selectInput: boolean,
-  ) {
-    let signal = this.#surfaceSignal
-    if (signal) {
-      await waitForCssTransition(surface, signal, () => {})
-    }
-
-    if (transitionId !== this.#transitionId || this.#open || !surface.isConnected) {
+  async function closePopover() {
+    if (!open) {
       return
     }
 
-    let activeChanged = this.#setActiveOptionId(null)
-    if (this.#surfaceVisible || activeChanged) {
-      this.#surfaceVisible = false
-      this.#notify()
+    let closeId = ++closeSequenceId
+    let shouldWaitForTransition = showReason === 'nav'
+    open = false
+
+    if (!shouldWaitForTransition) {
+      surfaceVisible = false
+      filterText = ''
+      activeValue = null
+      activeId = undefined
+      await handle.update()
+      return
     }
 
-    let pendingInputValue = this.#pendingInputValue
+    let signal = await handle.update()
+    if (signal.aborted || closeId !== closeSequenceId || open) {
+      return
+    }
+
+    if (surfaceRef?.isConnected) {
+      await waitForCssTransition(surfaceRef, signal)
+    }
+
+    if (signal.aborted || closeId !== closeSequenceId || open) {
+      return
+    }
+
+    surfaceVisible = false
+    filterText = ''
+    activeValue = null
+    activeId = undefined
+
+    signal = await handle.update()
+    if (signal.aborted || closeId !== closeSequenceId || open) {
+      return
+    }
+
     if (pendingInputValue !== null) {
-      await wait(inputCommitDelayMs)
-
-      if (signal?.aborted) {
+      let nextValue = pendingInputValue
+      await wait(INPUT_COMMIT_DELAY_MS)
+      if (
+        signal.aborted ||
+        closeId !== closeSequenceId ||
+        open ||
+        pendingInputValue !== nextValue
+      ) {
         return
       }
 
-      if (transitionId !== this.#transitionId || this.#open || !surface.isConnected) {
-        return
-      }
-
-      if (this.#pendingInputValue !== pendingInputValue) {
-        return
-      }
-
-      this.#setInputValue(pendingInputValue)
-      this.#pendingInputValue = null
+      setInputValue(nextValue)
+      pendingInputValue = null
     }
 
-    if (this.#setFilterText('')) {
-      this.#notify()
+    if (selectInputAfterClose && inputRef?.isConnected && document.activeElement === inputRef) {
+      inputRef.select()
     }
 
-    if (!selectInput) {
-      return
-    }
-
-    let input = this.#input
-    if (!input?.isConnected) {
-      return
-    }
-
-    input.select()
+    selectInputAfterClose = false
   }
 
-  #resolveDraftValueOnBlur() {
-    let exactMatch = this.#getExactInputMatch()
+  async function openPopover(
+    strategy: ComboboxOpenStrategy = 'selected',
+    nextShowReason: ShowReason = 'nav',
+  ) {
+    if (props.disabled) {
+      return
+    }
+
+    if (pendingInputValue !== null) {
+      setInputValue(pendingInputValue)
+      pendingInputValue = null
+    }
+
+    closeSequenceId++
+    selectInputAfterClose = false
+
+    let nextFilterText = getOpenFilterText()
+    let matchingOptions = getMatchingOptions(nextFilterText)
+    if (matchingOptions.length === 0) {
+      return
+    }
+
+    let activeOption = resolveOpenOption(strategy, nextFilterText)
+
+    filterText = nextFilterText
+    showReason = nextShowReason
+    open = true
+    surfaceVisible = true
+    activeValue = activeOption?.value ?? null
+    activeId = activeOption?.id
+
+    let signal = await handle.update()
+    if (signal.aborted) {
+      return
+    }
+
+    listboxRef?.scrollActiveOptionIntoView()
+  }
+
+  function beginSelection(
+    nextValue: listbox.ListboxValue,
+    option: listbox.ListboxRegisteredOption | undefined,
+  ) {
+    if (!option) {
+      return
+    }
+
+    let selectionChanged = value !== nextValue
+    value = nextValue
+    selectedId = option.id
+    selectedLabel = option.label
+    activeValue = nextValue
+    activeId = option.id
+    inputText = option.label
+    showReason = 'nav'
+    pendingInputValue = inputRef?.value === option.label ? null : option.label
+    pendingChange = selectionChanged
+      ? {
+          label: option.label,
+          optionId: option.id,
+          value: option.value,
+        }
+      : null
+    selectInputAfterClose = true
+    void handle.update()
+  }
+
+  async function finishSelection() {
+    let change = pendingChange
+    pendingChange = null
+
+    if (change) {
+      dispatchChange(change)
+    }
+
+    await closePopover()
+  }
+
+  async function setInputText(nextText: string) {
+    closeSequenceId++
+    pendingInputValue = null
+    pendingChange = null
+    selectInputAfterClose = false
+
+    let selectionChanged = clearCommittedSelection()
+
+    inputText = nextText
+    showReason = 'hint'
+    activeValue = null
+    activeId = undefined
+
+    let nextFilterText = nextText !== '' || !open ? nextText : filterText
+    let matchingOptions = getMatchingOptions(nextText)
+    filterText = nextFilterText
+
+    if (selectionChanged) {
+      dispatchChange({ label: null, optionId: null, value: null })
+    }
+
+    if (nextText === '' || matchingOptions.length === 0) {
+      if (open) {
+        open = false
+        surfaceVisible = false
+      } else {
+        filterText = ''
+      }
+
+      await handle.update()
+      return
+    }
+
+    open = true
+    surfaceVisible = true
+    await handle.update()
+  }
+
+  function handleBlur() {
+    let exactMatch = getExactInputMatch(inputText)
     if (!exactMatch) {
-      this.#clearInputAndSelection()
-      return
-    }
+      clearInputAndSelection()
+    } else {
+      let selectionChanged = value !== exactMatch.value
+      value = exactMatch.value
+      selectedId = exactMatch.id
+      selectedLabel = exactMatch.label
+      activeValue = exactMatch.value
+      activeId = exactMatch.id
 
-    let activeChanged = this.#setActiveOptionId(exactMatch.id)
-    let selectionChanged = this.#value !== exactMatch.value
-    let previousFilterText = this.#filterText
-    let nextFilterText = this.#open ? previousFilterText : ''
-
-    this.#selectedOptionId = exactMatch.id
-    this.#value = exactMatch.value
-    this.#filterText = nextFilterText
-
-    let filterChanged = nextFilterText !== previousFilterText
-
-    if (activeChanged || selectionChanged || filterChanged) {
-      this.#notify()
-    }
-
-    if (!selectionChanged) {
-      return
-    }
-
-    this.#dispatchChange({
-      label: exactMatch.label,
-      optionId: exactMatch.id,
-      value: exactMatch.value,
-    })
-  }
-
-  #resolveOpenOption(strategy: ComboboxOpenStrategy, text = this.#filterText) {
-    let options = this.#getEnabledVisibleOptions(text)
-    if (options.length === 0) {
-      return null
-    }
-
-    if (strategy === 'selected-or-none') {
-      let selectedOption = this.#getSelectedOption()
-      if (selectedOption && this.#matchesFilter(selectedOption, text) && !selectedOption.disabled) {
-        return selectedOption
-      }
-
-      return null
-    }
-
-    if (strategy === 'selected') {
-      let exactInputMatch = this.#getExactInputMatch()
-      if (exactInputMatch && this.#matchesFilter(exactInputMatch, text)) {
-        return exactInputMatch
-      }
-
-      let selectedOption = this.#getSelectedOption()
-      if (selectedOption && this.#matchesFilter(selectedOption, text) && !selectedOption.disabled) {
-        return selectedOption
+      if (selectionChanged) {
+        dispatchChange({
+          label: exactMatch.label,
+          optionId: exactMatch.id,
+          value: exactMatch.value,
+        })
       }
     }
 
-    return strategy === 'last' ? options[options.length - 1] : options[0]
+    void closePopover()
   }
 
-  #setActiveOptionId(optionId: string | null) {
-    if (this.#activeOptionId === optionId) {
-      return false
+  function handleEscape() {
+    if (!getExactInputMatch(inputText)) {
+      clearInputAndSelection()
     }
 
-    this.#activeOptionId = optionId
-    return true
+    if (open) {
+      void closePopover()
+    }
   }
 
-  #setFilterText(text: string) {
-    if (this.#filterText === text) {
-      return false
-    }
-
-    this.#filterText = text
-    return true
+  function openFromArrow(direction: 'first' | 'last') {
+    let strategy: ComboboxOpenStrategy = getExactInputMatch(inputText) ? 'selected' : direction
+    clearInputSelection()
+    return openPopover(strategy)
   }
 
-  #setShowReason(showReason: ComboboxShowReason) {
-    if (this.#showReason === showReason) {
-      return false
-    }
-
-    this.#showReason = showReason
-    return true
+  function openFromInputActivation() {
+    clearInputSelection()
+    return openPopover('selected-or-none')
   }
 
-  #setInputValue(value: string) {
-    let input = this.#input
-    if (!input || input.value === value) {
-      return
-    }
-
-    input.value = value
+  function navigateNext() {
+    clearInputSelection()
+    listboxRef?.navigateNext()
   }
 
-  #scrollActiveOptionIntoView() {
-    let activeOption = this.#getActiveOption()
-    if (!activeOption?.node.isConnected) {
-      return
-    }
-
-    activeOption.node.scrollIntoView({
-      block: 'nearest',
-      inline: 'nearest',
-    })
+  function navigatePrevious() {
+    clearInputSelection()
+    listboxRef?.navigatePrevious()
   }
 
-  #syncAnchor() {
-    this.#cleanupAnchor()
-    this.#cleanupAnchor = () => {}
-
-    if (!this.#open || !this.#surface || !this.#input) {
-      return
-    }
-
-    this.#cleanupAnchor = anchor(this.#surface, this.#input, {
-      placement: 'bottom-start',
-    })
+  function selectActive() {
+    return listboxRef?.selectActive() ?? Promise.resolve()
   }
 
-  #syncMinWidth() {
-    let surface = this.#surface
-    let input = this.#input
-    if (!surface || !input) {
-      return
-    }
-
-    let width = input.offsetWidth
-    if (width <= 0) {
-      return
-    }
-
-    surface.style.minWidth = `${width}px`
+  function registerInput(node: HTMLInputElement) {
+    inputRef = node
+    setInputValue(inputText)
   }
-}
 
-function ComboboxContext(handle: Handle<ComboboxController>) {
-  let controller = new ComboboxController(handle.id, handle.update)
-  let hasInitializedValue = false
-  let isFirstRender = true
+  function unregisterInput(node: HTMLInputElement) {
+    if (inputRef === node) {
+      inputRef = undefined
+    }
+  }
+
+  function registerSurface(node: HTMLElement) {
+    surfaceRef = node
+  }
+
+  function unregisterSurface(node: HTMLElement) {
+    if (surfaceRef === node) {
+      surfaceRef = undefined
+    }
+  }
+
   let publicHandle: ComboboxHandle = {
     get activeOptionId() {
-      return controller.activeOptionId
+      return activeId ?? null
     },
     get id() {
-      return controller.id
+      return listId
     },
     get inputText() {
-      return controller.inputText
+      return inputText
     },
     get isOpen() {
-      return controller.isOpen
+      return open
     },
     get label() {
-      return controller.label
+      return selectedLabel || null
     },
     get value() {
-      return controller.value
+      return value
     },
-    close(options) {
-      controller.close(options)
+    close() {
+      void closePopover()
     },
-    open(strategy) {
-      return controller.open(strategy)
+    open(strategy = 'selected') {
+      return openPopover(strategy)
     },
   }
 
-  return (props: ComboboxContextProps) => {
-    controller.resetOptions()
-    controller.setDisabled(props.disabled === true)
-    controller.setName(props.name)
+  handle.context.set({
+    get activeId() {
+      return activeId
+    },
+    get disabled() {
+      return props.disabled === true
+    },
+    get filterText() {
+      return filterText
+    },
+    get inputText() {
+      return inputText
+    },
+    get isOpen() {
+      return open
+    },
+    get listId() {
+      return listId
+    },
+    get name() {
+      return props.name
+    },
+    get showReason() {
+      return showReason
+    },
+    get surfaceVisible() {
+      return surfaceVisible
+    },
+    get value() {
+      return value
+    },
+    clearInputSelection,
+    close() {
+      void closePopover()
+    },
+    handleBlur,
+    handleEscape,
+    navigateNext,
+    navigatePrevious,
+    open(strategy = 'selected') {
+      return openPopover(strategy)
+    },
+    openFromArrow,
+    openFromInputActivation,
+    registerInput,
+    registerSurface,
+    setInputText,
+    selectActive,
+    syncPopoverMinWidth,
+    unregisterInput,
+    unregisterSurface,
+  })
 
-    if (!hasInitializedValue) {
-      controller.setValue(props.defaultValue ?? null)
-      hasInitializedValue = true
+  return (nextProps: ComboboxContextProps) => {
+    props = nextProps
+
+    if (!hasInitialized) {
+      value = nextProps.defaultValue ?? null
+      inputText = nextProps.defaultValue ?? ''
+      hasInitialized = true
     }
 
-    handle.context.set(controller)
-    handle.queueTask(async (signal) => {
-      await controller.syncAfterRender(signal)
+    handle.queueTask(() => {
+      let selectedOption = getSelectedOption()
+      if (selectedOption) {
+        selectedId = selectedOption.id
+        selectedLabel = selectedOption.label
+      } else if (value === null) {
+        selectedId = undefined
+        selectedLabel = ''
+      }
     })
-    if (isFirstRender) {
-      props.ref?.(publicHandle)
-      isFirstRender = false
+
+    if (!hasProvidedRef) {
+      handle.queueTask(() => {
+        props.ref?.(publicHandle)
+      })
+      hasProvidedRef = true
     }
-    return props.children ?? null
+
+    return (
+      <popover.Context>
+        <listbox.Context
+          activeValue={activeValue}
+          flashSelection
+          onHighlight={(nextActiveValue, option) => {
+            if (!open) {
+              return
+            }
+
+            activeValue = nextActiveValue
+            activeId = option?.id
+            if (option) {
+              showReason = 'nav'
+            }
+            void handle.update()
+          }}
+          onSelect={beginSelection}
+          onSelectSettled={finishSelection}
+          ref={(ref) => {
+            listboxRef = ref
+          }}
+          selectionFlashAttribute="data-combobox-flash"
+          value={value}
+        >
+          {nextProps.children}
+        </listbox.Context>
+      </popover.Context>
+    )
   }
 }
 
-function getComboboxController(handle: Handle | MixinHandle) {
-  let controller = handle.context.get(ComboboxContext)
-  if (!(controller instanceof ComboboxController)) {
-    throw new Error('Combobox roles must be used inside combobox.context')
-  }
-
-  return controller
+function getComboboxContext(handle: Handle | MixinHandle) {
+  return handle.context.get(ComboboxProvider)
 }
 
-let comboboxInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
-  let controller = getComboboxController(handle)
-  controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
+const inputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
+  let context = getComboboxContext(handle)
 
   return (props) => [
     attrs({
-      'aria-activedescendant': controller.activeOptionId ?? undefined,
+      'aria-activedescendant': context.activeId,
       'aria-autocomplete': 'list',
-      'aria-controls': controller.id,
-      'aria-expanded': controller.isOpen ? true : false,
+      'aria-controls': context.listId,
+      'aria-expanded': context.isOpen ? 'true' : 'false',
+      'aria-haspopup': 'listbox',
       autocomplete: props.autocomplete ?? 'off',
-      'data-surface-visible': controller.isSurfaceVisible ? true : undefined,
+      'data-surface-visible': context.surfaceVisible ? 'true' : undefined,
+      disabled: context.disabled ? true : props.disabled,
       role: 'combobox',
       type: props.type ?? 'text',
     }),
-    ref((nextNode: HTMLInputElement, signal) => {
-      controller.registerInput(nextNode)
-
+    ref((node: HTMLInputElement, signal) => {
+      context.registerInput(node)
       signal.addEventListener('abort', () => {
-        controller.unregisterInput(nextNode)
+        context.unregisterInput(node)
       })
     }),
-    on('input', (event) => {
-      void controller.setInputText(event.currentTarget.value)
-    }),
-    press(),
-    on(press.press, (event) => {
-      if (event.defaultPrevented || event.pointerType !== 'virtual' || controller.isOpen) {
+    popover.anchor({ placement: 'bottom-start' }),
+    on('click', () => {
+      if (context.isOpen) {
         return
       }
 
-      event.preventDefault()
-      void controller.openFromVirtualPress()
+      void context.openFromInputActivation()
     }),
-    on('keydown', (event, signal) => {
+    on('input', (event) => {
+      void context.setInputText(event.currentTarget.value)
+    }),
+    on('keydown', (event) => {
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
-          if (controller.isOpen) {
-            controller.focusNext()
+          if (context.isOpen) {
+            context.navigateNext()
           } else {
-            void controller.openFromArrow('first')
+            void context.openFromArrow('first')
           }
           return
         case 'ArrowUp':
           event.preventDefault()
-          if (controller.isOpen) {
-            controller.focusPrevious()
+          if (context.isOpen) {
+            context.navigatePrevious()
           } else {
-            void controller.openFromArrow('last')
+            void context.openFromArrow('last')
           }
           return
         case 'Enter':
-          if (!controller.isOpen) {
+          if (!context.isOpen) {
             return
           }
 
           event.preventDefault()
-          void controller.selectActive({ signal })
+          void context.selectActive()
           return
         case 'Escape':
-          if (!controller.isOpen && controller.inputText === '') {
+          if (!context.isOpen && context.inputText === '') {
             return
           }
 
           event.preventDefault()
-          controller.handleEscape()
+          context.handleEscape()
           return
       }
     }),
     on('blur', () => {
-      controller.handleBlur()
+      context.handleBlur()
     }),
   ]
 })
 
-let comboboxPopoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
-  let controller = getComboboxController(handle)
-  controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
+const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let context = getComboboxContext(handle)
 
-  return (props) => {
-    let id = props.id ?? controller.surfaceId
-    controller.setSurfaceId(id)
-
-    return [
-      attrs({ 'data-show-reason': controller.showReason ?? undefined, id, popover: 'manual' }),
-      ref((node: HTMLElement, signal) => {
-        controller.registerSurface(node, signal)
-        signal.addEventListener('abort', () => {
-          controller.unregisterSurface(node)
-        })
-      }),
-      lockScrollOnToggle(),
-      on('beforetoggle', (event) => {
-        controller.handleBeforeToggle(event.currentTarget, event.newState)
-      }),
-      onOutsidePress(() => {
-        controller.handleOutsidePress()
-      }),
-    ]
-  }
+  return () => [
+    attrs({ 'data-show-reason': context.showReason }),
+    ref((node: HTMLElement, signal) => {
+      context.registerSurface(node)
+      signal.addEventListener('abort', () => {
+        context.unregisterSurface(node)
+      })
+    }),
+    popover.surface({
+      open: context.isOpen,
+      onHide() {
+        context.close()
+      },
+      closeOnAnchorClick: false,
+    }),
+    on('beforetoggle', (event) => {
+      if (event.newState === 'open') {
+        context.syncPopoverMinWidth()
+      }
+    }),
+  ]
 })
 
-let comboboxListMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
-  let controller = getComboboxController(handle)
-  controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
-
-  return (props) => {
-    let id = props.id ?? controller.id
-    controller.setListId(id)
-
-    return [
-      attrs({ id, role: 'listbox' }),
-      ref((node: HTMLElement, signal) => {
-        controller.registerList(node)
-        signal.addEventListener('abort', () => {
-          controller.unregisterList(node)
-        })
-      }),
-    ]
-  }
+const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let context = getComboboxContext(handle)
+  return () => [attrs({ id: context.listId }), listbox.list()]
 })
 
-let comboboxHiddenInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
-  let controller = getComboboxController(handle)
-  controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
-
-  return () => attrs({ name: controller.name, type: 'hidden', value: controller.value ?? '' })
+const hiddenInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
+  let context = getComboboxContext(handle)
+  return () =>
+    attrs({
+      disabled: context.disabled ? true : undefined,
+      name: context.name,
+      type: 'hidden',
+      value: context.value ?? '',
+    })
 })
 
-let comboboxOptionMixin = createMixin<HTMLElement, [options: ComboboxOptionOptions], ElementProps>(
+const optionMixin = createMixin<HTMLElement, [options: ComboboxOptionOptions], ElementProps>(
   (handle) => {
-    let controller = getComboboxController(handle)
-    let currentDisabled = false
-    let currentLabel = ''
-    let currentSearchValue: SearchValue = ''
-    let currentValue = ''
-    let node: HTMLElement
-    let option: RegisteredOption = {
-      id: handle.id,
-      get disabled() {
-        return currentDisabled
-      },
-      get label() {
-        return currentLabel
-      },
-      get node() {
-        return node
-      },
-      get searchValue() {
-        return currentSearchValue
-      },
-      get value() {
-        return currentValue
-      },
-    }
-
-    controller.addEventListener('change', () => handle.update(), { signal: handle.signal })
+    let context = getComboboxContext(handle)
 
     return (options) => {
-      currentDisabled = options.disabled === true
-      currentLabel = options.label
-      currentSearchValue = options.searchValue ?? options.label
-      currentValue = options.value
-      controller.registerOption(option)
-      let isVisible = controller.isVisible(option.id)
+      let hidden = !matchesSearchValue(getOptionSearchValue(options), context.filterText)
 
       return [
-        attrs({
-          'aria-disabled': currentDisabled ? true : undefined,
-          'aria-selected': controller.isSelected(option.id) ? true : false,
-          'data-highlighted': controller.activeOptionId === option.id ? 'true' : 'false',
-          hidden: isVisible ? undefined : true,
-          id: option.id,
-          role: 'option',
-        }),
-        ref((nextNode: HTMLElement, signal) => {
-          node = nextNode
-          signal.addEventListener('abort', () => {
-            controller.unregisterOption(option)
-          })
-        }),
-        !currentDisabled && [
-          press(),
-          on(press.down, (event) => {
+        attrs({ hidden: hidden ? true : undefined }),
+        on('pointerdown', (event) => {
+          if (event.button === 0) {
             event.preventDefault()
-            controller.activateOption(option.id)
-          }),
-          on('pointermove', () => {
-            controller.activateOption(option.id)
-          }),
-          on(press.up, (event, signal) => {
-            if (event.pointerType === 'virtual') {
-              return
-            }
-
-            void controller.selectOption(option.id, { signal })
-          }),
-          on(press.press, (event, signal) => {
-            if (event.pointerType !== 'virtual') {
-              return
-            }
-
-            void controller.selectOption(option.id, { signal })
-          }),
-        ],
+          }
+        }),
+        listbox.option({
+          disabled: options.disabled,
+          label: options.label,
+          textValue: options.searchValue,
+          value: options.value,
+        }),
       ]
     }
   },
 )
 
-type ComboboxApi = {
-  readonly change: typeof comboboxChangeEventType
-  readonly context: typeof ComboboxContext
-  readonly hiddenInput: typeof comboboxHiddenInputMixin
-  readonly input: typeof comboboxInputMixin
-  readonly list: typeof comboboxListMixin
-  readonly option: typeof comboboxOptionMixin
-  readonly popover: typeof comboboxPopoverMixin
+export const Context = ComboboxProvider
+export const hiddenInput = hiddenInputMixin
+export const input = inputMixin
+export const list = listMixin
+export const option = optionMixin
+export { popoverMixin as popover }
+
+const combobox = {
+  Context,
+  hiddenInput,
+  input,
+  list,
+  option,
+  popover: popoverMixin,
+} as const
+
+export function onComboboxChange(handler: ComboboxChangeHandler, captureBoolean?: boolean) {
+  return on<HTMLElement, typeof COMBOBOX_CHANGE_EVENT>(
+    COMBOBOX_CHANGE_EVENT,
+    handler,
+    captureBoolean,
+  )
 }
 
-export let combobox: ComboboxApi = {
-  change: comboboxChangeEventType,
-  context: ComboboxContext,
-  hiddenInput: comboboxHiddenInputMixin,
-  input: comboboxInputMixin,
-  list: comboboxListMixin,
-  option: comboboxOptionMixin,
-  popover: comboboxPopoverMixin,
-}
-
-function ComboboxImpl() {
+export function Combobox() {
   return (props: ComboboxProps) => {
     let { children, defaultValue, disabled, inputId, name, placeholder, ...divProps } = props
 
     return (
-      <combobox.context defaultValue={defaultValue} disabled={disabled} name={name}>
+      <combobox.Context defaultValue={defaultValue} disabled={disabled} name={name}>
         <div {...divProps}>
           <input
-            disabled={disabled}
+            defaultValue={defaultValue ?? undefined}
             id={inputId}
-            mix={[ui.combobox.input, combobox.input()]}
+            mix={[inputStyle, combobox.input()]}
             placeholder={placeholder}
           />
-
-          <div mix={[combobox.popover(), ui.combobox.popover]}>
-            <div mix={[ui.popover.content, combobox.list(), ui.listbox.surface]}>{children}</div>
+          <div mix={[popover.surfaceStyle, popoverStyle, combobox.popover()]}>
+            <div mix={[popover.contentStyle, listbox.listStyle, combobox.list()]}>{children}</div>
           </div>
-
-          {name && <input disabled={disabled} mix={combobox.hiddenInput()} />}
+          {name && <input mix={combobox.hiddenInput()} />}
         </div>
-      </combobox.context>
+      </combobox.Context>
     )
   }
 }
 
-export let Combobox: ComboboxComponent = Object.assign(ComboboxImpl, {
-  change: combobox.change,
-})
-
-export function Option() {
-  return (props: OptionProps) => {
+export function ComboboxOption() {
+  return (props: ComboboxOptionProps) => {
     let { children, disabled, label, mix, searchValue, value, ...divProps } = props
 
     return (
       <div
         {...divProps}
-        mix={[combobox.option({ disabled, label, searchValue, value }), ui.listbox.option, mix]}
+        mix={[listbox.optionStyle, combobox.option({ disabled, label, searchValue, value }), mix]}
       >
-        <Glyph mix={ui.listbox.glyph} name="check" />
-        <span mix={ui.listbox.label}>{children ?? label}</span>
+        <Glyph mix={listbox.glyphStyle} name="check" />
+        <span mix={listbox.labelStyle}>{children ?? label}</span>
       </div>
     )
   }
 }
-
-export let ComboboxOption = Option

@@ -1,6 +1,5 @@
 import { css } from 'remix/component'
-import { theme } from 'remix/ui'
-
+import { theme } from '@remix-run/ui/theme'
 export default function Example() {
   return () => (
     <div mix={stackCss}>
@@ -11,9 +10,9 @@ export default function Example() {
         <p mix={[textCss, textLinkCss]}>theme.colors.text.link</p>
       </div>
       <div mix={badgeRowCss}>
-        <span mix={[badgeCss, infoBadgeCss]}>Info</span>
-        <span mix={[badgeCss, successBadgeCss]}>Success</span>
-        <span mix={[badgeCss, warningBadgeCss]}>Warning</span>
+        <span mix={[badgeCss, primaryBadgeCss]}>Primary</span>
+        <span mix={[badgeCss, secondaryBadgeCss]}>Secondary</span>
+        <span mix={[badgeCss, dangerBadgeCss]}>Danger</span>
       </div>
     </div>
   )
@@ -70,20 +69,20 @@ let badgeCss = css({
   fontWeight: theme.fontWeight.semibold,
 })
 
-let infoBadgeCss = css({
-  backgroundColor: theme.colors.status.info.background,
-  color: theme.colors.status.info.foreground,
-  borderColor: theme.colors.status.info.border,
+let primaryBadgeCss = css({
+  backgroundColor: theme.colors.action.primary.background,
+  color: theme.colors.action.primary.foreground,
+  borderColor: theme.colors.action.primary.border,
 })
 
-let successBadgeCss = css({
-  backgroundColor: theme.colors.status.success.background,
-  color: theme.colors.status.success.foreground,
-  borderColor: theme.colors.status.success.border,
+let secondaryBadgeCss = css({
+  backgroundColor: theme.colors.action.secondary.background,
+  color: theme.colors.action.secondary.foreground,
+  borderColor: theme.colors.action.secondary.border,
 })
 
-let warningBadgeCss = css({
-  backgroundColor: theme.colors.status.warning.background,
-  color: theme.colors.status.warning.foreground,
-  borderColor: theme.colors.status.warning.border,
+let dangerBadgeCss = css({
+  backgroundColor: theme.colors.action.danger.background,
+  color: theme.colors.action.danger.foreground,
+  borderColor: theme.colors.action.danger.border,
 })

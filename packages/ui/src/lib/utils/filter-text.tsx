@@ -8,7 +8,7 @@ type FilterTextOptions = {
   timeout?: number
 }
 
-export let filterText = createMixin<
+export const filterText = createMixin<
   HTMLElement,
   [onText: FilterTextHandler, options?: FilterTextOptions],
   ElementProps

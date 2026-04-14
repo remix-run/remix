@@ -6,7 +6,7 @@ A focused demo for the `@remix-run/ui` package using the built-in `RMX_01` prese
 
 - A practical, utilitarian web app theme instead of a marketing landing page look
 - Shared semantic tokens applied across buttons, cards, popover-like surfaces, and content areas
-- How `theme`, `ui`, and `css()` compose together in Remix component code
+- How `theme`, flat button `*Style` exports, and component-owned namespaces compose together in Remix component code
 
 ## Run It
 
@@ -46,7 +46,7 @@ pnpm -C packages/ui/demo screenshot:card
 
 ## Key APIs
 
-- `@remix-run/ui` for `RMX_01`, `theme`, and `ui`
+- `@remix-run/ui` entrypoints for `RMX_01`, `theme`, `button`, and component primitives
 - `remix/component/server` for server rendering
 - `remix/fetch-router` for request handling
 

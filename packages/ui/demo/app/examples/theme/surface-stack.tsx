@@ -1,6 +1,5 @@
 import { css } from 'remix/component'
-import { theme } from 'remix/ui'
-
+import { theme } from '@remix-run/ui/theme'
 let surfaces = [
   ['theme.surface.lvl0', theme.surface.lvl0],
   ['theme.surface.lvl1', theme.surface.lvl1],

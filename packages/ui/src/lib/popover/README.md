@@ -1,147 +1,122 @@
 # Popover
 
-`popover` is a low-level primitive for anchored, dismissible popover UI.
+`popover` is a low-level primitive for anchored, dismissible floating panels.
 
-Use it for custom panels like view options, filters, inspectors, and other floating surfaces that are not semantically menus, listboxes, or comboboxes. Higher-level widgets can be built on top of it, but it can also be used directly for standalone popover UI.
+Use it for custom surfaces like filters, inspectors, and view options. Higher-level widgets like `menu`, `select`, and `combobox` should build on top of it instead of exposing raw `popover.*` mixins directly.
 
 ## Usage
 
-Wrap the trigger(s) and surface in `popover.context`, apply `popover.button(...)` to any opener, and apply `popover.surface()` to the floating root.
-
 ```tsx
-import { css, type Handle } from 'remix/component'
-import { Glyph, popover, ui } from 'remix/ui'
+import { css, on, type Handle } from 'remix/component'
+import { Button } from '@remix-run/ui/button'
+import { Glyph } from '@remix-run/ui/glyph'
+import { popover } from '@remix-run/ui/popover'
 
-export function ViewOptionsButton() {
+export function ViewOptions(handle: Handle) {
+  let open = false
+
+  function openPopover() {
+    open = true
+    void handle.update()
+  }
+
+  function closePopover() {
+    open = false
+    void handle.update()
+  }
+
   return () => (
-    <popover.context>
-      <button mix={[popover.button({ placement: 'bottom-end' }), ui.popover.button]}>
-        <span mix={ui.button.label}>View options</span>
-        <Glyph mix={ui.button.icon} name="chevronDown" />
-      </button>
+    <popover.Context>
+      <Button
+        endIcon={<Glyph name="chevronDown" />}
+        mix={[
+          popover.anchor({ placement: 'bottom-end' }),
+          popover.focusOnHide(),
+          on('click', openPopover),
+        ]}
+        tone="secondary"
+      >
+        View options
+      </Button>
 
-      <div mix={[popover.surface(), ui.popover.surface]}>
-        <div mix={panel}>
-          <h2 mix={ui.text.titleSm}>View options</h2>
-
-          <div mix={field}>
-            <label mix={ui.text.labelSm}>Grouping</label>
-            <select mix={ui.select.input}>
-              <option>No grouping</option>
-              <option>Status</option>
-              <option>Priority</option>
-            </select>
-          </div>
-
-          <div mix={actions}>
-            <button mix={[ui.button.ghost, popover.initialFocus(), popover.dismiss()]}>
-              Cancel
-            </button>
-            <button mix={[ui.button.primary, popover.dismiss()]}>Apply</button>
-          </div>
+      <div
+        mix={[
+          popover.surfaceStyle,
+          popover.surface({
+            open,
+            onHide() {
+              closePopover()
+            },
+          }),
+        ]}
+      >
+        <div mix={popover.contentStyle}>
+          <Button mix={[popover.focusOnShow(), on('click', closePopover)]} tone="ghost">
+            Close
+          </Button>
+          <div mix={panelBody}>Panel content</div>
         </div>
       </div>
-    </popover.context>
+    </popover.Context>
   )
 }
 
-let panel = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
+let panelBody = css({
   padding: '12px',
-  width: '22rem',
-})
-
-let field = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-})
-
-let actions = css({
-  display: 'flex',
-  gap: '8px',
-  justifyContent: 'flex-end',
 })
 ```
 
 ## `popover.*`
 
-### `popover.context`
+### `popover.Context`
 
-Provides the shared coordinator for one popover session. Every related trigger and the surface must be rendered inside the same context.
+Provides shared coordination for one popover instance. Render the anchor, any focus targets, and the surface inside the same context.
 
-### `popover.button(options?)`
+### `popover.anchor(options)`
 
-Registers an opener for the current popover.
+Registers the host element as the anchor for the current popover surface.
 
-- Opens from pointer, keyboard, and virtual/assistive-technology activation.
-- Sets `aria-controls`, `aria-expanded`, and `aria-haspopup="dialog"`.
-- Accepts `AnchorOptions` to control how the surface is positioned relative to that opener.
+- Accepts standard `AnchorOptions`.
+- The stored anchor controls where the surface is positioned when it opens.
+- Apply it to the button or other element the surface should attach to.
 
-Multiple buttons can point at the same surface. The opener that started the current session controls anchoring and focus return for that session.
+### `popover.surface({ open, onHide, ... })`
 
-### `popover.surface()`
+Turns the host into the controlled popover surface.
 
-Turns an element into the popover surface.
+- Wires `popover="manual"` and native `showPopover()` / `hidePopover()` behavior.
+- Calls `onHide` for `Escape` and outside clicks with a `PopoverHideRequest`.
+- Restores focus to the registered hide target unless `restoreFocusOnHide: false`.
+- Accepts `closeOnAnchorClick: false` when the anchor must stay interactive while open.
 
-- Wires up the native manual popover behavior.
-- Closes on outside press.
-- Closes on `Escape`.
-- Closes when focus leaves the surface for another element outside it.
-- Restores focus to the session opener by default when closing.
+Apply this to the actual floating root, not a nested child.
 
-Apply this to the actual floating root, not a nested child inside the panel.
+### `popover.focusOnShow()`
 
-### `popover.initialFocus()`
+Registers the element that should receive focus when the popover opens.
 
-Marks the element that should receive focus after the popover opens.
+### `popover.focusOnHide()`
 
-If no `popover.initialFocus()` element is registered, focus falls back to the surface itself.
+Registers the element that should receive focus again when the popover closes.
 
-### `popover.dismiss()`
+### `popover.surfaceStyle`
 
-Closes the current popover when the host element is activated.
+Default floating-surface presentation for popovers.
 
-Use this on buttons or other controls inside the surface that should dismiss the panel.
+### `popover.contentStyle`
 
-### `popover.change`
-
-The bubbled event type dispatched from the surface when the open state changes.
-
-The event object includes:
-
-- `event.open`: whether the popover is now open
-- `event.opener`: the opener element for the current session, or `null`
-
-```tsx
-import { on } from 'remix/component'
-
-<div
-  mix={on(popover.change, (event) => {
-    console.log(event.open, event.opener)
-  })}
-/>
-```
+Default inner scroll container for popover content.
 
 ## Behavior Notes
 
-- The surface is anchored to the opener that started the current session.
-- Clicking the same trigger while open closes the popover without immediately reopening from the follow-up click.
-- Clicking a different trigger while open is treated as an outside press for the current session.
-- Focus returns to the opener after close unless the close path explicitly opts out.
-- The primitive owns popover coordination, focus handoff, and dismissal behavior. You still own the panel content, structure, and styling.
+- Opening anchors the surface to the registered anchor and locks page scrolling until close.
+- `onHide` receives `{ reason: 'escape-key' | 'outside-click', target? }`.
+- `popover.focusOnShow()` wins on open when present.
+- `popover.focusOnHide()` is used on close by default when focus restoration is enabled.
+- `closeOnAnchorClick: false` keeps anchor clicks inside the current session, which is useful for input-driven popovers like comboboxes.
 
 ## When To Use Something Else
 
-Use `popover` directly when you want a floating panel with custom content.
-
-Do not use it as the final consumer-facing primitive for widgets that need their own semantics and keyboard contracts, such as:
-
-- menus
-- listboxes
-- comboboxes
-- selects
-
-Those should build on top of `popover` rather than exposing raw `popover.*` mixins directly.
+- Use `menu` for command surfaces.
+- Use `listbox` or `select` for committed value picking.
+- Use `combobox` for input-first popup selection.

@@ -8,7 +8,7 @@ A theme contract for Remix apps and first-party Remix components built on CSS cu
 - `createTheme()` utility for rendering theme variables into a `<style>` tag
 - `createGlyphSheet()` utility for rendering a hidden SVG sprite sheet in the body
 - `<Glyph />` component for shared icon usage through sprite references
-- Typed `ui` utility mixins for common spacing, color, typography, and button styles
+- Typed `theme` values plus first-party styling entrypoints like `button.*Style`
 - Works with Remix component `mix` composition and server rendering
 
 ## Installation
@@ -128,28 +128,6 @@ let Theme = createTheme({
         border: '#dc2626',
       },
     },
-    status: {
-      info: {
-        background: '#eff6ff',
-        foreground: '#1d4ed8',
-        border: '#bfdbfe',
-      },
-      success: {
-        background: '#ecfdf5',
-        foreground: '#047857',
-        border: '#a7f3d0',
-      },
-      warning: {
-        background: '#fffbeb',
-        foreground: '#b45309',
-        border: '#fde68a',
-      },
-      danger: {
-        background: '#fef2f2',
-        foreground: '#b91c1c',
-        border: '#fecaca',
-      },
-    },
   },
 })
 ```
@@ -173,37 +151,39 @@ Consume the shared token contract from app code and first-party components:
 
 ```tsx
 import { css } from 'remix/component'
-import { theme, ui } from 'remix/ui'
+import { theme } from 'remix/ui'
 
 let card = css({
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
   border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.md,
+  paddingInline: theme.space.md,
+  paddingBlock: theme.space.sm,
 })
 
-<div mix={[card, ui.px.md, ui.py.sm, ui.rounded.md]} />
+<div mix={card} />
 ```
 
 Render shared glyphs separately from the theme styles:
 
 ```tsx
 import type { RemixNode } from 'remix/component'
-import { createGlyphSheet, Glyph, RMX_01_GLYPHS, ui } from 'remix/ui'
-
-let Glyphs = createGlyphSheet(RMX_01_GLYPHS)
+import { Button } from '@remix-run/ui/button'
+import { Glyph } from '@remix-run/ui/glyph'
+import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'
 
 function Layout(props: { children: RemixNode }) {
   return (
     <html>
       <head>
-        <Theme />
+        <RMX_01 />
       </head>
       <body>
-        <Glyphs />
-        <button mix={ui.button.primary}>
-          <Glyph mix={ui.button.icon} name="add" />
-          <span mix={ui.button.label}>New project</span>
-        </button>
+        <RMX_01_GLYPHS />
+        <Button startIcon={<Glyph name="add" />} tone="primary">
+          New project
+        </Button>
         {props.children}
       </body>
     </html>

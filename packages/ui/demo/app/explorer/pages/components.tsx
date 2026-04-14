@@ -8,9 +8,17 @@ import {
 } from '../page-primitives.tsx'
 import { EXAMPLES } from '../../examples/index.tsx'
 
-let componentLinks = [
+const componentLinks = [
   {
-    description: 'The first behavior-heavy proof point for the theme/ui/component split.',
+    description:
+      'The thin button wrapper and slot-level styles for ordinary actions and custom structure.',
+    eyebrow: 'Component',
+    href: '/components/button',
+    title: 'Button',
+  },
+  {
+    description:
+      'The first behavior-heavy proof point for the theme/style-namespace/component split.',
     eyebrow: 'Component',
     href: '/components/accordion',
     title: 'Accordion',
@@ -22,44 +30,50 @@ let componentLinks = [
     title: 'Breadcrumbs',
   },
   {
-    description: 'The floating-surface primitive used by popup-backed controls.',
-    eyebrow: 'Primitive',
-    href: '/components/popover',
-    title: 'Popover',
-  },
-  {
-    description: 'The input-first popup control for filtering draft text down to one committed value.',
+    description:
+      'The input-first popup control for filtering draft text down to one committed value.',
     eyebrow: 'Component',
     href: '/components/combobox',
     title: 'Combobox',
   },
   {
-    description: 'The ordinary popup-backed value control for choosing from a list of options.',
+    description: 'The low-level anchored surface primitive behind popup-backed controls.',
+    eyebrow: 'Primitive',
+    href: '/components/popover',
+    title: 'Popover',
+  },
+  {
+    description:
+      'The headless value-picker primitive that owns highlight, focus, and selection mechanics.',
     eyebrow: 'Component',
     href: '/components/listbox',
     title: 'Listbox',
   },
   {
-    description: 'The ordinary single-select popup control with built-in focus choreography and form support.',
+    description:
+      'The ordinary single-select popup control with built-in focus choreography and form support.',
     eyebrow: 'Component',
     href: '/components/select',
     title: 'Select',
   },
   {
-    description: 'Action-oriented popup menus with component-owned styling contracts and bubbling select events.',
+    description:
+      'Action-oriented popup menus with component-owned styling contracts and bubbling select events.',
     eyebrow: 'Component',
     href: '/components/menu',
     title: 'Menu',
   },
 ] as const
 
-let representativeExamples = [
+const representativeExamples = [
+  EXAMPLES.buttonAliases,
   EXAMPLES.accordionOverview,
   EXAMPLES.breadcrumbsBasic,
-  EXAMPLES.popoverOverview,
   EXAMPLES.comboboxOverview,
   EXAMPLES.listboxOverview,
+  EXAMPLES.popoverOverview,
   EXAMPLES.selectOverview,
+  EXAMPLES.selectDeconstructed,
   EXAMPLES.menuButtonOverview,
 ]
 

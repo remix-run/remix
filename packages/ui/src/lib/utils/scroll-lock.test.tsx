@@ -9,7 +9,9 @@ let currentScrollX = 24
 let currentScrollY = 120
 
 function dispatchBeforeToggle(target: HTMLElement, newState: 'closed' | 'open') {
-  let event = new Event('beforetoggle', { bubbles: true }) as Event & { newState: 'closed' | 'open' }
+  let event = new Event('beforetoggle', { bubbles: true }) as Event & {
+    newState: 'closed' | 'open'
+  }
   Object.defineProperty(event, 'newState', {
     configurable: true,
     value: newState,
@@ -62,18 +64,18 @@ beforeEach(() => {
     value: 980,
   })
 
-  vi.spyOn(window, 'scrollTo').mockImplementation((...args) => {
-    let [xOrOptions, y] = args
+  vi.spyOn(window, 'scrollTo').mockImplementation(
+    (xOrOptions?: number | ScrollToOptions, y?: number) => {
+      if (xOrOptions && typeof xOrOptions === 'object') {
+        currentScrollX = xOrOptions.left ?? currentScrollX
+        currentScrollY = xOrOptions.top ?? currentScrollY
+        return
+      }
 
-    if (typeof xOrOptions === 'object') {
-      currentScrollX = xOrOptions.left ?? currentScrollX
-      currentScrollY = xOrOptions.top ?? currentScrollY
-      return
-    }
-
-    currentScrollX = xOrOptions ?? currentScrollX
-    currentScrollY = y ?? currentScrollY
-  })
+      currentScrollX = xOrOptions ?? currentScrollX
+      currentScrollY = y ?? currentScrollY
+    },
+  )
 })
 
 afterEach(() => {
@@ -92,6 +94,7 @@ afterEach(() => {
 describe('lockScroll', () => {
   it('locks document scrolling and restores inline styles on unlock', () => {
     document.documentElement.style.overflow = 'auto'
+    document.documentElement.style.scrollbarGutter = 'stable both-edges'
     document.body.style.overflow = 'clip'
     document.body.style.position = 'relative'
     document.body.style.top = '1px'
@@ -103,17 +106,19 @@ describe('lockScroll', () => {
     let unlock = lockScroll()
 
     expect(document.documentElement.style.overflow).toBe('hidden')
-    expect(document.body.style.overflow).toBe('hidden')
-    expect(document.body.style.position).toBe('fixed')
-    expect(document.body.style.top).toBe('-120px')
-    expect(document.body.style.left).toBe('-24px')
-    expect(document.body.style.right).toBe('0px')
-    expect(document.body.style.width).toBe('100%')
-    expect(document.body.style.paddingRight).toBe('24px')
+    expect(document.documentElement.style.scrollbarGutter).toBe('stable both-edges')
+    expect(document.body.style.overflow).toBe('clip')
+    expect(document.body.style.position).toBe('relative')
+    expect(document.body.style.top).toBe('1px')
+    expect(document.body.style.left).toBe('2px')
+    expect(document.body.style.right).toBe('3px')
+    expect(document.body.style.width).toBe('80%')
+    expect(document.body.style.paddingRight).toBe('4px')
 
     unlock()
 
     expect(document.documentElement.style.overflow).toBe('auto')
+    expect(document.documentElement.style.scrollbarGutter).toBe('stable both-edges')
     expect(document.body.style.overflow).toBe('clip')
     expect(document.body.style.position).toBe('relative')
     expect(document.body.style.top).toBe('1px')
@@ -124,19 +129,31 @@ describe('lockScroll', () => {
     expect(window.scrollTo).toHaveBeenCalledWith(24, 120)
   })
 
+  it('reserves the scrollbar gutter while locked', () => {
+    let unlock = lockScroll()
+
+    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.scrollbarGutter).toBe('stable')
+
+    unlock()
+
+    expect(document.documentElement.style.overflow).toBe('')
+    expect(document.documentElement.style.scrollbarGutter).toBe('')
+  })
+
   it('keeps the document locked until the last unlock runs', () => {
     let unlockFirst = lockScroll()
     let unlockSecond = lockScroll()
 
     unlockFirst()
 
-    expect(document.body.style.position).toBe('fixed')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(window.scrollTo).not.toHaveBeenCalled()
 
     unlockSecond()
     unlockSecond()
 
-    expect(document.body.style.position).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(window.scrollTo).toHaveBeenCalledOnce()
   })
 })
@@ -148,11 +165,11 @@ describe('lockScrollOnToggle', () => {
 
     dispatchBeforeToggle(surface, 'open')
 
-    expect(document.body.style.position).toBe('fixed')
+    expect(document.documentElement.style.overflow).toBe('hidden')
 
     dispatchBeforeToggle(surface, 'closed')
 
-    expect(document.body.style.position).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(window.scrollTo).toHaveBeenCalledWith(24, 120)
   })
 
@@ -162,12 +179,12 @@ describe('lockScrollOnToggle', () => {
 
     dispatchBeforeToggle(surface, 'open')
 
-    expect(document.body.style.position).toBe('fixed')
+    expect(document.documentElement.style.overflow).toBe('hidden')
 
     root.render(<ScrollLockSurface mounted={false} />)
     root.flush()
 
-    expect(document.body.style.position).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(window.scrollTo).toHaveBeenCalledWith(24, 120)
   })
 })

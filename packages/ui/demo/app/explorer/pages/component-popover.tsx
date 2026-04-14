@@ -1,7 +1,5 @@
-import { ui } from 'remix/ui'
-
 import { ExplorerExampleCard } from '../example-card.tsx'
-import { noteListCss, PageSection, pageStackCss } from '../page-primitives.tsx'
+import { exampleGridCss, PageSection, pageStackCss } from '../page-primitives.tsx'
 import { EXAMPLES } from '../../examples/index.tsx'
 
 export function renderComponentPopoverPage() {
@@ -9,21 +7,14 @@ export function renderComponentPopoverPage() {
     <div mix={pageStackCss}>
       <PageSection
         title="Popover"
-        description="Use the floating-surface primitive for anchored, non-modal UI. Positioning belongs to `popover.surface()`, while the default surface treatment stays shared below it."
+        description="Popover is the low-level anchored surface primitive, while related popup-backed controls still keep their own contracts."
       >
-        <ExplorerExampleCard example={EXAMPLES.popoverOverview} />
-      </PageSection>
-
-      <PageSection title="What to remember">
-        <article mix={ui.card.base}>
-          <div mix={ui.card.body}>
-            <ul mix={noteListCss}>
-              <li>Reach for `popover.surface()` before inventing one-off floating panel mechanics.</li>
-              <li>Keep the popup visually on-system instead of styling each surface from scratch.</li>
-              <li>Use it for anchored UI, not for modal workflows that deserve dialog semantics later.</li>
-            </ul>
-          </div>
-        </article>
+        <div mix={exampleGridCss}>
+          <ExplorerExampleCard example={EXAMPLES.popoverOverview} />
+          <ExplorerExampleCard example={EXAMPLES.popoverContract} />
+          <ExplorerExampleCard example={EXAMPLES.menuContract} />
+          <ExplorerExampleCard example={EXAMPLES.listboxContract} />
+        </div>
       </PageSection>
     </div>
   )

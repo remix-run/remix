@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
-import { listbox, type ListboxOption, type ListboxRef, type ListboxValue } from './listbox.ts'
+import * as listbox from './listbox.ts'
+import type { ListboxOption, ListboxRef, ListboxValue } from './listbox.ts'
 
-let flashDurationMs = 60
+const flashDurationMs = 60
 let roots: ReturnType<typeof createRoot>[] = []
 
 type RenderListboxOptions = {
@@ -12,7 +13,10 @@ type RenderListboxOptions = {
   flashSelection?: boolean
   onHighlight?: (value: ListboxValue, option?: ListboxOption) => void
   onSelect?: (value: ListboxValue, option?: ListboxOption) => void
+  onSelectSettled?: (value: ListboxValue, option?: ListboxOption) => void | Promise<void>
+  options?: Array<Omit<ListboxOption, 'id'>>
   ref?: (ref: ListboxRef) => void
+  selectionFlashAttribute?: string
   tabIndex?: number
   value?: ListboxValue
 }
@@ -27,7 +31,7 @@ type SelectionCall = {
   value: ListboxValue
 }
 
-let frameworkOptions: Array<Omit<ListboxOption, 'id'>> = [
+const frameworkOptions: Array<Omit<ListboxOption, 'id'>> = [
   { label: 'Remix', value: 'remix' },
   { disabled: true, label: 'React Router', value: 'react-router' },
   { label: 'React', value: 'react' },
@@ -49,27 +53,32 @@ function renderListbox({
   flashSelection = false,
   onHighlight = () => {},
   onSelect = () => {},
+  onSelectSettled = () => {},
+  options = frameworkOptions,
   ref,
+  selectionFlashAttribute = 'data-listbox-flash',
   tabIndex,
   value = null,
 }: RenderListboxOptions = {}) {
   return (
-    <listbox.context
+    <listbox.Context
       activeValue={activeValue}
       flashSelection={flashSelection}
       onHighlight={onHighlight}
       onSelect={onSelect}
+      onSelectSettled={onSelectSettled}
       ref={ref}
+      selectionFlashAttribute={selectionFlashAttribute}
       value={value}
     >
       <div aria-label="Frameworks" tabIndex={tabIndex} mix={listbox.list()}>
-        {frameworkOptions.map((option) => (
+        {options.map((option) => (
           <div key={option.value} mix={listbox.option(option)}>
             {option.label}
           </div>
         ))}
       </div>
-    </listbox.context>
+    </listbox.Context>
   )
 }
 
@@ -79,7 +88,10 @@ function renderControlledListbox({
   initialValue = null,
   onHighlight = () => {},
   onSelect = () => {},
+  onSelectSettled = () => {},
+  options,
   ref,
+  selectionFlashAttribute,
   tabIndex,
 }: ControlledListboxOptions = {}) {
   function App(handle: Handle) {
@@ -100,7 +112,10 @@ function renderControlledListbox({
           onSelect(nextValue, option)
           void handle.update()
         },
+        onSelectSettled,
+        options,
         ref,
+        selectionFlashAttribute,
         tabIndex,
         value,
       })
@@ -136,17 +151,17 @@ function key(target: HTMLElement, key: string) {
   return event
 }
 
-function pointer(
-  target: HTMLElement,
-  type: 'click' | 'pointerleave' | 'pointermove' | 'pointerup',
-  options: { button?: number } = {},
-) {
+function click(target: HTMLElement, options: { button?: number } = {}) {
   target.dispatchEvent(
-    new MouseEvent(type, {
+    new MouseEvent('click', {
       bubbles: true,
       button: options.button ?? 0,
     }),
   )
+}
+
+function mouse(target: HTMLElement, type: 'mouseleave' | 'mousemove') {
+  target.dispatchEvent(new MouseEvent(type, { bubbles: true }))
 }
 
 async function settle(root: ReturnType<typeof createRoot>) {
@@ -478,7 +493,118 @@ describe('listbox', () => {
     expect(react.getAttribute('aria-selected')).toBe('false')
   })
 
-  it('pointermove and pointerleave update the controlled highlight for enabled options', async () => {
+  it('Tab prevents default and highlights the first enabled option', async () => {
+    let highlights: SelectionCall[] = []
+    let { container, root } = renderControlledListbox({
+      initialActiveValue: 'preact',
+      onHighlight(value, option) {
+        highlights.push({ option, value })
+      },
+    })
+
+    let list = getList(container)
+    let remix = getOptionByText(container, 'Remix')
+    let event = key(list, 'Tab')
+    await settle(root)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(highlights).toHaveLength(1)
+    expect(highlights[0]?.value).toBe('remix')
+    expect(remix.dataset.highlighted).toBe('true')
+  })
+
+  it('typeahead on the list highlights the next matching enabled option without selecting it', async () => {
+    let highlights: SelectionCall[] = []
+    let { container, root } = renderControlledListbox({
+      initialActiveValue: 'remix',
+      initialValue: 'remix',
+      onHighlight(value, option) {
+        highlights.push({ option, value })
+      },
+    })
+
+    let list = getList(container)
+    let remix = getOptionByText(container, 'Remix')
+    let react = getOptionByText(container, 'React')
+
+    key(list, 'r')
+    await settle(root)
+
+    expect(highlights).toHaveLength(1)
+    expect(highlights[0]?.value).toBe('react')
+    expect(highlights[0]?.option).toEqual(
+      expect.objectContaining({
+        id: react.id,
+        label: 'React',
+        value: 'react',
+      }),
+    )
+    expect(react.dataset.highlighted).toBe('true')
+    expect(remix.getAttribute('aria-selected')).toBe('true')
+    expect(react.getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('typeahead on the list matches option textValue values without selecting', async () => {
+    let highlights: SelectionCall[] = []
+    let { container, root } = renderControlledListbox({
+      onHighlight(value, option) {
+        highlights.push({ option, value })
+      },
+      options: [
+        { label: 'Production', value: 'production' },
+        { label: 'Staging', textValue: 'beta', value: 'staging' },
+        { label: 'Local', value: 'local' },
+      ],
+    })
+
+    let list = getList(container)
+    let production = getOptionByText(container, 'Production')
+    let staging = getOptionByText(container, 'Staging')
+
+    key(list, 'b')
+    await settle(root)
+
+    expect(highlights).toHaveLength(1)
+    expect(highlights[0]?.value).toBe('staging')
+    expect(staging.dataset.highlighted).toBe('true')
+    expect(production.getAttribute('aria-selected')).toBe('false')
+    expect(staging.getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('exposes matchSearchText on the ref and skips disabled options', async () => {
+    let refs: ListboxRef[] = []
+    let { container, root } = renderApp(
+      renderListbox({
+        ref(ref) {
+          refs.push(ref)
+        },
+      }),
+    )
+
+    await settle(root)
+
+    let remix = getOptionByText(container, 'Remix')
+    let react = getOptionByText(container, 'React')
+
+    expect(refs).toHaveLength(1)
+    expect(refs[0]?.matchSearchText('r')).toEqual(
+      expect.objectContaining({
+        id: remix.id,
+        label: 'Remix',
+        value: 'remix',
+      }),
+    )
+    expect(refs[0]?.matchSearchText('r', 'remix')).toEqual(
+      expect.objectContaining({
+        id: react.id,
+        label: 'React',
+        value: 'react',
+      }),
+    )
+    expect(refs[0]?.matchSearchText('zz')).toBeNull()
+  })
+
+  it('mousemove and mouseleave update the controlled highlight for enabled options', async () => {
     let highlights: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
       onHighlight(value, option) {
@@ -488,7 +614,7 @@ describe('listbox', () => {
 
     let react = getOptionByText(container, 'React')
 
-    pointer(react, 'pointermove')
+    mouse(react, 'mousemove')
     await settle(root)
 
     expect(highlights).toHaveLength(1)
@@ -502,7 +628,7 @@ describe('listbox', () => {
     )
     expect(react.dataset.highlighted).toBe('true')
 
-    pointer(react, 'pointerleave')
+    mouse(react, 'mouseleave')
     await settle(root)
 
     expect(highlights).toHaveLength(2)
@@ -510,7 +636,7 @@ describe('listbox', () => {
     expect(react.dataset.highlighted).toBe('false')
   })
 
-  it('ignores pointer interactions on disabled options', async () => {
+  it('ignores mousemove and click interactions on disabled options', async () => {
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
@@ -524,43 +650,15 @@ describe('listbox', () => {
 
     let reactRouter = getOptionByText(container, 'React Router')
 
-    pointer(reactRouter, 'pointermove')
+    mouse(reactRouter, 'mousemove')
     await settle(root)
-    pointer(reactRouter, 'pointerup')
-    await settle(root)
-    pointer(reactRouter, 'click')
+    click(reactRouter)
     await settle(root)
 
     expect(highlights).toHaveLength(0)
     expect(selections).toHaveLength(0)
     expect(reactRouter.dataset.highlighted).toBe('false')
     expect(reactRouter.getAttribute('aria-selected')).toBe('false')
-  })
-
-  it('selects once for a normal pointer interaction', async () => {
-    let selections: SelectionCall[] = []
-    let { container, root } = renderControlledListbox({
-      onSelect(value, option) {
-        selections.push({ option, value })
-      },
-    })
-
-    let react = getOptionByText(container, 'React')
-
-    pointer(react, 'pointerup')
-    pointer(react, 'click')
-    await settle(root)
-
-    expect(selections).toHaveLength(1)
-    expect(selections[0]?.value).toBe('react')
-    expect(selections[0]?.option).toEqual(
-      expect.objectContaining({
-        id: react.id,
-        label: 'React',
-        value: 'react',
-      }),
-    )
-    expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
   it('selects with click-only activation', async () => {
@@ -573,7 +671,7 @@ describe('listbox', () => {
 
     let react = getOptionByText(container, 'React')
 
-    pointer(react, 'click')
+    click(react)
     await settle(root)
 
     expect(selections).toHaveLength(1)
@@ -588,7 +686,7 @@ describe('listbox', () => {
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('selects the option under the pointer once after dragging between options', async () => {
+  it('tracks hover with mousemove and selects the clicked option after moving between options', async () => {
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
@@ -603,12 +701,11 @@ describe('listbox', () => {
     let react = getOptionByText(container, 'React')
     let preact = getOptionByText(container, 'Preact')
 
-    pointer(react, 'pointermove')
+    mouse(react, 'mousemove')
     await settle(root)
-    pointer(preact, 'pointermove')
+    mouse(preact, 'mousemove')
     await settle(root)
-    pointer(preact, 'pointerup')
-    pointer(preact, 'click')
+    click(preact)
     await settle(root)
 
     expect(highlights.map((highlight) => highlight.value)).toEqual(['react', 'preact'])
@@ -629,6 +726,7 @@ describe('listbox', () => {
 
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
+    let settledSelections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
       flashSelection: true,
       onHighlight(value, option) {
@@ -636,6 +734,9 @@ describe('listbox', () => {
       },
       onSelect(value, option) {
         selections.push({ option, value })
+      },
+      onSelectSettled(value, option) {
+        settledSelections.push({ option, value })
       },
     })
 
@@ -650,11 +751,13 @@ describe('listbox', () => {
     key(list, 'Enter')
     await settle(root)
 
-    expect(selections).toHaveLength(0)
-    expect(react.getAttribute('data-flash')).toBe('true')
+    expect(selections).toHaveLength(1)
+    expect(selections[0]?.value).toBe('react')
+    expect(settledSelections).toHaveLength(0)
+    expect(react.getAttribute('data-listbox-flash')).toBe('true')
 
     key(list, 'End')
-    pointer(preact, 'pointermove')
+    mouse(preact, 'mousemove')
     await settle(root)
 
     expect(highlights.map((highlight) => highlight.value)).toEqual(['remix', 'react'])
@@ -663,16 +766,16 @@ describe('listbox', () => {
 
     await finishSelectionFlash(root)
 
-    expect(selections).toHaveLength(1)
-    expect(selections[0]?.value).toBe('react')
-    expect(selections[0]?.option).toEqual(
+    expect(settledSelections).toHaveLength(1)
+    expect(settledSelections[0]?.value).toBe('react')
+    expect(settledSelections[0]?.option).toEqual(
       expect.objectContaining({
         id: react.id,
         label: 'React',
         value: 'react',
       }),
     )
-    expect(react.getAttribute('data-flash')).toBe(null)
+    expect(react.getAttribute('data-listbox-flash')).toBe(null)
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 })

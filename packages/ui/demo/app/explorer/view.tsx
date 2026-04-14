@@ -1,10 +1,7 @@
 import { css } from 'remix/component'
-import { createGlyphSheet, RMX_01, RMX_01_GLYPHS, theme, ui } from 'remix/ui'
-import type { ThemeMix } from 'remix/ui'
-
+import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
-
-let RMX_01Glyphs = createGlyphSheet(RMX_01_GLYPHS)
+import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 
 export function ExplorerDocument() {
   return ({ page }: { page: ShowcasePageDefinition }) => (
@@ -23,7 +20,7 @@ export function ExplorerDocument() {
         <RMX_01 />
       </head>
       <body mix={bodyCss}>
-        <RMX_01Glyphs />
+        <RMX_01_GLYPHS />
         <div mix={shellCss}>
           <aside mix={sidebarFrameCss}>
             <div mix={sidebarStickyCss}>
@@ -45,17 +42,19 @@ export function ExplorerDocument() {
 
 function Sidebar() {
   return ({ currentPath }: { currentPath: string }) => (
-    <div mix={ui.sidebar.panel}>
+    <div mix={sidebarPanelCss}>
       <div mix={sidebarIntroCss}>
-        <p mix={ui.text.eyebrow}>Remix UI</p>
-        <h1 mix={sidebarTitleCss}>Showcase-first demo</h1>
-        <p mix={sidebarBodyCss}>Examples first, source visible, and built from the same theme/UI surface.</p>
+        <p mix={eyebrowTextCss}>Preview Documentation</p>
+        <h1 mix={sidebarTitleCss}>Remix UI</h1>
+        <p mix={bodyTextCss}>
+          This is a preview of the Remix UI library. It is not yet ready for production use.
+        </p>
       </div>
 
       {NAV_SECTIONS.map((section) => (
-        <section key={section.id} mix={ui.sidebar.section}>
-          <p mix={ui.sidebar.heading}>{section.label}</p>
-          <nav aria-label={`${section.label} pages`} mix={ui.nav.list}>
+        <section key={section.id} mix={sidebarSectionCss}>
+          <p mix={sidebarHeadingCss}>{section.label}</p>
+          <nav aria-label={`${section.label} pages`} mix={sidebarNavCss}>
             {section.pageIds.map((pageId) => {
               let navPage = PAGES[pageId]
               return (
@@ -79,25 +78,25 @@ function Sidebar() {
 function PageHeader() {
   return ({ page }: { page: ShowcasePageDefinition }) => (
     <header mix={pageHeaderCss}>
-      <p mix={ui.text.eyebrow}>{page.eyebrow}</p>
-      <h2 mix={[ui.text.display, pageTitleCss]}>{page.title}</h2>
-      <p mix={[ui.text.body, pageDescriptionCss]}>{page.description}</p>
+      <p mix={eyebrowTextCss}>{page.eyebrow}</p>
+      <h2 mix={pageTitleCss}>{page.title}</h2>
+      <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
     </header>
   )
 }
 
-function getNavItemMix(page: ShowcasePageDefinition, currentPath: string): ThemeMix {
-  return isPageActive(page, currentPath) ? ui.nav.itemActive : ui.nav.item
+function getNavItemMix(page: ShowcasePageDefinition, currentPath: string) {
+  return isPageActive(page, currentPath) ? [navItemCss, navItemActiveCss] : navItemCss
 }
 
-let bodyCss = css({
+const bodyCss = css({
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
   fontFamily: theme.fontFamily.sans,
 })
 
-let shellCss = css({
+const shellCss = css({
   minHeight: '100vh',
   display: 'grid',
   gridTemplateColumns: '320px minmax(0, 1fr)',
@@ -108,7 +107,7 @@ let shellCss = css({
   },
 })
 
-let sidebarFrameCss = css({
+const sidebarFrameCss = css({
   backgroundColor: theme.surface.lvl3,
   borderRight: `1px solid ${theme.colors.border.subtle}`,
   '@media (max-width: 980px)': {
@@ -117,7 +116,7 @@ let sidebarFrameCss = css({
   },
 })
 
-let sidebarStickyCss = css({
+const sidebarStickyCss = css({
   position: 'sticky',
   top: 0,
   height: '100vh',
@@ -130,7 +129,7 @@ let sidebarStickyCss = css({
   },
 })
 
-let sidebarIntroCss = css({
+const sidebarIntroCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xs,
@@ -138,7 +137,34 @@ let sidebarIntroCss = css({
   borderBottom: `1px solid ${theme.colors.border.subtle}`,
 })
 
-let sidebarTitleCss = css({
+const sidebarPanelCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.lg,
+})
+
+const sidebarSectionCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+const sidebarHeadingCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.xxxs,
+  fontWeight: theme.fontWeight.semibold,
+  letterSpacing: theme.letterSpacing.meta,
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
+})
+
+const sidebarNavCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+const sidebarTitleCss = css({
   margin: 0,
   fontSize: theme.fontSize.xl,
   lineHeight: theme.lineHeight.tight,
@@ -146,14 +172,32 @@ let sidebarTitleCss = css({
   color: theme.colors.text.primary,
 })
 
-let sidebarBodyCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.relaxed,
+const navItemCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: theme.control.height.sm,
+  paddingInline: theme.space.sm,
+  borderRadius: theme.radius.md,
   color: theme.colors.text.secondary,
+  textDecoration: 'none',
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  transitionProperty: 'background-color, color, box-shadow',
+  transitionDuration: '120ms',
+  transitionTimingFunction: 'ease',
+  '&:hover': {
+    backgroundColor: theme.surface.lvl0,
+    color: theme.colors.text.primary,
+  },
 })
 
-let mainCss = css({
+const navItemActiveCss = css({
+  backgroundColor: theme.surface.lvl0,
+  color: theme.colors.text.primary,
+  boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
+})
+
+const mainCss = css({
   minWidth: 0,
   padding: theme.space.xxl,
   '@media (max-width: 980px)': {
@@ -161,7 +205,7 @@ let mainCss = css({
   },
 })
 
-let pageWrapCss = css({
+const pageWrapCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xxl,
@@ -170,20 +214,23 @@ let pageWrapCss = css({
   marginInline: 'auto',
 })
 
-let pageHeaderCss = css({
+const pageHeaderCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xs,
   maxWidth: '52rem',
 })
 
-let pageTitleCss = css({
+const pageTitleCss = css({
   margin: 0,
   fontSize: 'clamp(28px, 3vw, 38px)',
+  lineHeight: theme.lineHeight.tight,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
   maxWidth: '18ch',
 })
 
-let pageDescriptionCss = css({
+const pageDescriptionCss = css({
   margin: 0,
   maxWidth: '64ch',
 })

@@ -1,11 +1,11 @@
 import { css } from 'remix/component'
-import { theme, ui } from 'remix/ui'
-
+import * as popover from '@remix-run/ui/popover'
+import { theme } from '@remix-run/ui/theme'
 export default function Example() {
   return () => (
     <div
       mix={[
-        ui.popover.surface,
+        popover.surfaceStyle,
         // override hidden state
         css({
           opacity: 1,

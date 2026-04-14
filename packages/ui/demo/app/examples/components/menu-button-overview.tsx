@@ -1,59 +1,73 @@
-import { on, type Handle } from 'remix/component'
-import { MenuList, MenuItem, Menu, MenuButton, SubmenuTrigger } from 'remix/ui'
+import { type Handle } from 'remix/component'
+import { Menu, MenuItem, onMenuSelect, Submenu } from '@remix-run/ui/menu'
+import { separatorStyle } from '@remix-run/ui/separator'
+
+type Density = 'comfortable' | 'compact'
 
 export default function Example(handle: Handle) {
+  let wordWrap = true
+  let minimap = false
+  let showGutter = true
+  let density: Density = 'comfortable'
+
   return () => (
     <Menu
-      label="File actions"
-      mix={on(Menu.select, (event) => {
-        console.log('select', event.item)
+      label="View"
+      menuLabel="View options"
+      mix={onMenuSelect((event) => {
+        switch (event.item.name) {
+          case 'wordWrap':
+            wordWrap = !wordWrap
+            break
+          case 'minimap':
+            minimap = !minimap
+            break
+          case 'showGutter':
+            showGutter = !showGutter
+            break
+          case 'density':
+            density = event.item.value as Density
+            break
+        }
+        handle.update()
       })}
     >
-      <MenuButton>File</MenuButton>
-      <MenuList>
-        <Menu label="Color actions">
-          <SubmenuTrigger name="colors">Colors</SubmenuTrigger>
-          <MenuList>
-            <MenuItem name="red" value="red">
-              Red
-            </MenuItem>
-            <MenuItem name="green" value="green">
-              Green
-            </MenuItem>
-            <Menu label="More color actions">
-              <SubmenuTrigger name="more-colors">More colors</SubmenuTrigger>
-              <MenuList>
-                <MenuItem name="blue" value="blue">
-                  Blue
-                </MenuItem>
-                <MenuItem name="purple" value="purple">
-                  Purple
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          </MenuList>
-        </Menu>
-        <MenuItem name="rename" value="rename-file">
-          Rename
+      <MenuItem name="wordWrap" type="checkbox" checked={wordWrap}>
+        Word wrap
+      </MenuItem>
+      <MenuItem name="minimap" type="checkbox" checked={minimap}>
+        Minimap
+      </MenuItem>
+      <MenuItem name="showGutter" type="checkbox" checked={showGutter}>
+        Show gutter
+      </MenuItem>
+
+      <hr mix={separatorStyle} />
+      <Submenu label="Zoom">
+        <MenuItem name="zoomIn" value="zoom-in">
+          Zoom In
         </MenuItem>
-        <MenuItem name="delete" value="delete-file">
-          Delete
+        <MenuItem name="zoomOut" value="zoom-out">
+          Zoom Out
         </MenuItem>
-        <MenuItem name="archive" value="archive-file">
-          Archive
+        <MenuItem name="resetZoom" value="reset-zoom">
+          Reset Zoom
         </MenuItem>
-        <Menu label="Color actions 2">
-          <SubmenuTrigger name="colors2">Colors 2</SubmenuTrigger>
-          <MenuList>
-            <MenuItem name="red2" value="red2">
-              Red
-            </MenuItem>
-            <MenuItem name="green2" value="green2">
-              Green
-            </MenuItem>
-          </MenuList>
-        </Menu>
-      </MenuList>
+      </Submenu>
+
+      <Submenu label="Density">
+        <MenuItem
+          name="density"
+          type="radio"
+          value="comfortable"
+          checked={density === 'comfortable'}
+        >
+          Comfortable
+        </MenuItem>
+        <MenuItem name="density" type="radio" value="compact" checked={density === 'compact'}>
+          Compact
+        </MenuItem>
+      </Submenu>
     </Menu>
   )
 }

@@ -6,18 +6,25 @@ import {
   on,
   pressEvents,
   ref,
+  spring,
+  type CSSMixinDescriptor,
   type Handle,
   type Props,
   type RemixNode,
 } from '@remix-run/component'
 import { Glyph } from '../glyph/glyph.tsx'
-import { ui } from '../theme/theme.ts'
+import { theme } from '../theme/theme.ts'
 
-export let accordionChangeEventType = 'rmx:accordion-change' as const
+const ACCORDION_CHANGE_EVENT = 'rmx:accordion-change' as const
+
+type AccordionChangeHandler = (
+  event: AccordionChangeEvent,
+  signal: AbortSignal,
+) => void | Promise<void>
 
 declare global {
   interface HTMLElementEventMap {
-    [accordionChangeEventType]: AccordionChangeEvent
+    [ACCORDION_CHANGE_EVENT]: AccordionChangeEvent
   }
 }
 
@@ -33,7 +40,7 @@ export class AccordionChangeEvent extends Event {
       itemValue: string
     },
   ) {
-    super(accordionChangeEventType, {
+    super(ACCORDION_CHANGE_EVENT, {
       bubbles: true,
     })
     this.accordionType = init.accordionType
@@ -116,20 +123,115 @@ type AccordionItemContext = {
 
 type FocusDirection = 'first' | 'last' | 'next' | 'previous'
 
-type AccordionComponent = typeof AccordionComponentImpl & {
-  readonly change: typeof accordionChangeEventType
-}
-
-let accordionPanelClipCss = css({
+const accordionPanelClipCss = css({
   minHeight: 0,
   overflow: 'hidden',
 })
+
+const accordionTransition = spring()
+
+const accordionRootCss: CSSMixinDescriptor = css({
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+})
+
+const accordionItemCss: CSSMixinDescriptor = css({
+  minWidth: 0,
+})
+
+const accordionTriggerCss: CSSMixinDescriptor = css({
+  all: 'unset',
+  boxSizing: 'border-box',
+  cursor: 'revert',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: theme.space.md,
+  width: '100%',
+  minHeight: theme.control.height.lg,
+  padding: `${theme.space.md} 0`,
+  color: theme.colors.text.primary,
+  fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+  fontWeight: theme.fontWeight.medium,
+  textAlign: 'left',
+  '&:hover:not(:disabled)': {
+    backgroundColor: theme.surface.lvl1,
+  },
+  '&:focus-visible': {
+    outline: `2px solid ${theme.colors.focus.ring}`,
+    outlineOffset: '2px',
+  },
+  '&:disabled': {
+    opacity: 0.55,
+  },
+  '& > span:first-child': {
+    minWidth: 0,
+  },
+})
+
+const accordionIndicatorCss: CSSMixinDescriptor = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: theme.fontSize.sm,
+  height: theme.fontSize.sm,
+  color: theme.colors.text.muted,
+  transition: `transform ${accordionTransition}`,
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
+  '&[data-state="open"]': {
+    transform: 'rotate(90deg)',
+  },
+})
+
+const accordionPanelCss: CSSMixinDescriptor = css({
+  display: 'grid',
+  gridTemplateRows: '0fr',
+  transition: `grid-template-rows ${accordionTransition}`,
+  '&[data-state="open"]': {
+    gridTemplateRows: '1fr',
+  },
+  '&[data-state="closed"]': {
+    pointerEvents: 'none',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+  },
+})
+
+const accordionBodyCss: CSSMixinDescriptor = css({
+  display: 'flow-root',
+  minHeight: 0,
+  paddingBottom: theme.space.md,
+  color: theme.colors.text.secondary,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  '& > :first-child': {
+    marginTop: 0,
+  },
+  '& > :last-child': {
+    marginBottom: 0,
+  },
+})
+
+export const rootStyle = accordionRootCss
+export const itemStyle = accordionItemCss
+export const triggerStyle = accordionTriggerCss
+export const indicatorStyle = accordionIndicatorCss
+export const panelStyle = accordionPanelCss
+export const bodyStyle = accordionBodyCss
 
 function isMultipleProps(props: AccordionProps | null): props is AccordionMultipleProps {
   return props?.type === 'multiple'
 }
 
-function AccordionComponentImpl(handle: Handle<AccordionContext>) {
+function AccordionImpl(handle: Handle<AccordionContext>) {
   let rootNode: HTMLElement | null = null
   let registeredItems: RegisteredItem[] = []
   let currentProps: AccordionProps | null = null
@@ -303,7 +405,7 @@ function AccordionComponentImpl(handle: Handle<AccordionContext>) {
         data-disabled={disabled ? '' : undefined}
         data-type={type ?? 'single'}
         mix={[
-          ui.accordion.root,
+          rootStyle,
           ref((node) => {
             rootNode = node as HTMLElement
           }),
@@ -316,9 +418,15 @@ function AccordionComponentImpl(handle: Handle<AccordionContext>) {
   }
 }
 
-export let Accordion: AccordionComponent = Object.assign(AccordionComponentImpl, {
-  change: accordionChangeEventType,
-})
+export function onAccordionChange(handler: AccordionChangeHandler, captureBoolean?: boolean) {
+  return on<HTMLElement, typeof ACCORDION_CHANGE_EVENT>(
+    ACCORDION_CHANGE_EVENT,
+    handler,
+    captureBoolean,
+  )
+}
+
+export const Accordion = AccordionImpl
 
 export function AccordionItem(handle: Handle<AccordionItemContext>) {
   let triggerNode: HTMLButtonElement | null = null
@@ -356,7 +464,7 @@ export function AccordionItem(handle: Handle<AccordionItemContext>) {
         {...divProps}
         data-disabled={disabled ? '' : undefined}
         data-state={open ? 'open' : 'closed'}
-        mix={[ui.accordion.item, ...(mix ?? [])]}
+        mix={[itemStyle, ...(mix ?? [])]}
       >
         {children}
       </div>
@@ -383,7 +491,7 @@ export function AccordionTrigger(handle: Handle) {
         disabled={disabled ? true : undefined}
         id={item.triggerId}
         mix={[
-          ui.accordion.trigger,
+          triggerStyle,
           pressEvents(),
           ref((node) => {
             item.setTriggerNode(node as HTMLButtonElement)
@@ -424,7 +532,7 @@ export function AccordionTrigger(handle: Handle) {
           <span
             data-rmx-accordion-indicator=""
             data-state={item.open ? 'open' : 'closed'}
-            mix={ui.accordion.indicator}
+            mix={indicatorStyle}
           >
             {indicator ?? <Glyph name="chevronRight" />}
           </span>
@@ -449,10 +557,10 @@ export function AccordionContent(handle: Handle) {
         data-state={item.open ? 'open' : 'closed'}
         id={item.panelId}
         inert={item.open ? undefined : true}
-        mix={[ui.accordion.panel, mix ?? []]}
+        mix={[panelStyle, mix ?? []]}
       >
         <div mix={accordionPanelClipCss}>
-          <div mix={ui.accordion.body}>{children}</div>
+          <div mix={bodyStyle}>{children}</div>
         </div>
       </div>
     )

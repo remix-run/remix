@@ -10,11 +10,15 @@ import { onOutsidePointerDown } from './outside-pointerdown.ts'
 let roots: ReturnType<typeof createRoot>[] = []
 
 function pointerDown(target: HTMLElement) {
-  target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, cancelable: true }))
+  target.dispatchEvent(
+    new MouseEvent('pointerdown', { bubbles: true, button: 0, cancelable: true }),
+  )
 }
 
 function click(target: HTMLElement, detail = 1) {
-  target.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0, cancelable: true, detail }))
+  target.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, button: 0, cancelable: true, detail }),
+  )
 }
 
 function OutsideCounter(handle: Handle) {
@@ -25,10 +29,14 @@ function OutsideCounter(handle: Handle) {
     <div>
       <div
         id="host"
-        mix={active ? onOutsidePointerDown(() => {
-          outsideCount++
-          void handle.update()
-        }) : undefined}
+        mix={
+          active
+            ? onOutsidePointerDown(() => {
+                outsideCount++
+                void handle.update()
+              })
+            : undefined
+        }
       >
         <button id="inside" type="button">
           Inside

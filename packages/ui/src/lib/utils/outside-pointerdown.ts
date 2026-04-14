@@ -3,7 +3,7 @@ import { createMixin } from '@remix-run/component'
 type OutsidePointerDownEvent = PointerEvent | MouseEvent
 type OutsidePointerDownHandler = (event: OutsidePointerDownEvent) => void
 
-export let onOutsidePointerDown = createMixin<HTMLElement, [handler: OutsidePointerDownHandler]>(
+export const onOutsidePointerDown = createMixin<HTMLElement, [handler: OutsidePointerDownHandler]>(
   (handle) => {
     let currentHandler: OutsidePointerDownHandler = () => {}
     let controller: AbortController | null = null
@@ -44,7 +44,11 @@ export let onOutsidePointerDown = createMixin<HTMLElement, [handler: OutsidePoin
         suppressNextClick = false
 
         if (clickEvent.button !== 0) return
-        if (currentNode && clickEvent.target instanceof Node && currentNode.contains(clickEvent.target)) {
+        if (
+          currentNode &&
+          clickEvent.target instanceof Node &&
+          currentNode.contains(clickEvent.target)
+        ) {
           return
         }
 

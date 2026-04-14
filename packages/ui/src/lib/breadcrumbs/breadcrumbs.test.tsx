@@ -2,14 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { renderToString } from '@remix-run/component/server'
 
-import { Breadcrumbs as ExportedBreadcrumbs } from '../../index.ts'
 import { Breadcrumbs } from './breadcrumbs.tsx'
 
 describe('Breadcrumbs', () => {
-  it('is exported from the package entrypoint', () => {
-    expect(ExportedBreadcrumbs).toBe(Breadcrumbs)
-  })
-
   it('renders semantic breadcrumb structure', async () => {
     let html = await renderToString(
       <Breadcrumbs

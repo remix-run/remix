@@ -10,7 +10,8 @@ Apply `onOutsidePress(...)` to the element that defines the inside boundary. Whe
 
 ```tsx
 import { css, on, type Handle } from 'remix/component'
-import { onOutsidePress, ui } from 'remix/ui'
+import { Button } from '@remix-run/ui/button'
+import { onOutsidePress } from '@remix-run/ui/on-outside-pointer-down'
 
 export function FiltersExample(handle: Handle) {
   let open = false
@@ -22,17 +23,16 @@ export function FiltersExample(handle: Handle) {
 
   return () => (
     <div mix={root}>
-      <button
+      <Button
         mix={[
-          ui.button.secondary,
           on('click', () => {
             setOpen(!open)
           }),
         ]}
-        type="button"
+        tone="secondary"
       >
         Filters
-      </button>
+      </Button>
 
       {open ? (
         <div
@@ -43,11 +43,11 @@ export function FiltersExample(handle: Handle) {
             }),
           ]}
         >
-          <h2 mix={ui.text.titleSm}>Filters</h2>
+          <h2 mix={panelTitle}>Filters</h2>
 
           <label mix={field}>
-            <span mix={ui.text.labelSm}>Status</span>
-            <select>
+            <span mix={fieldLabel}>Status</span>
+            <select mix={fieldInput}>
               <option>All</option>
               <option>Open</option>
               <option>Closed</option>
@@ -55,17 +55,16 @@ export function FiltersExample(handle: Handle) {
           </label>
 
           <div mix={actions}>
-            <button
+            <Button
               mix={[
-                ui.button.ghost,
                 on('click', () => {
                   setOpen(false)
                 }),
               ]}
-              type="button"
+              tone="ghost"
             >
               Done
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -88,6 +87,22 @@ let panel = css({
 let field = css({
   display: 'grid',
   gap: '6px',
+})
+
+let panelTitle = css({
+  margin: 0,
+  fontSize: '16px',
+  lineHeight: '1.3',
+})
+
+let fieldLabel = css({
+  fontSize: '12px',
+  fontWeight: '600',
+})
+
+let fieldInput = css({
+  minHeight: '36px',
+  paddingInline: '8px',
 })
 
 let actions = css({
@@ -140,4 +155,3 @@ Prefer a higher-level primitive when you also need popup semantics, focus manage
 - `popover`
 - `Menu`
 - `Listbox`
-

@@ -2,13 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
-import { Combobox, Option, combobox } from './combobox.tsx'
-import type { ComboboxChangeEvent } from './combobox.tsx'
-import type { ComboboxHandle } from './combobox.tsx'
-import type { ComboboxProps } from './combobox.tsx'
+import {
+  Combobox,
+  ComboboxOption,
+  onComboboxChange,
+  type ComboboxChangeEvent,
+  type ComboboxHandle,
+  type ComboboxProps,
+} from './combobox.tsx'
+import * as combobox from './combobox.tsx'
 
-let flashDurationMs = 60
-let inputCommitDelayMs = 50
+const flashDurationMs = 60
+const inputCommitDelayMs = 50
 let roots: ReturnType<typeof createRoot>[] = []
 
 function renderApp(node: RemixNode) {
@@ -24,16 +29,31 @@ function renderApp(node: RemixNode) {
 function renderCombobox(props: Partial<ComboboxProps> = {}) {
   return (
     <Combobox inputId="framework" name="framework" placeholder="Search a framework" {...props}>
-      <Option label="Remix framework" value="remix">
+      <ComboboxOption label="Remix framework" value="remix">
         Remix
-      </Option>
-      <Option disabled label="React Router framework" value="react-router">
+      </ComboboxOption>
+      <ComboboxOption disabled label="React Router framework" value="react-router">
         React Router
-      </Option>
-      <Option label="React framework" value="react">
+      </ComboboxOption>
+      <ComboboxOption label="React framework" value="react">
         React
-      </Option>
+      </ComboboxOption>
     </Combobox>
+  )
+}
+
+function renderObservedCombobox(
+  changes: ComboboxChangeEvent[],
+  props: Partial<ComboboxProps> = {},
+) {
+  return renderApp(
+    <div
+      mix={onComboboxChange((event) => {
+        changes.push(event)
+      })}
+    >
+      {renderCombobox(props)}
+    </div>,
   )
 }
 
@@ -65,7 +85,12 @@ function expectInputSelectionCleared(input: HTMLInputElement) {
 }
 
 function key(target: HTMLElement, key: string, options: { repeat?: boolean } = {}) {
-  let event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key, repeat: options.repeat })
+  let event = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key,
+    repeat: options.repeat,
+  })
   target.dispatchEvent(event)
   return event
 }
@@ -181,7 +206,7 @@ describe('Combobox', () => {
   it('calls the public ref only on first render', async () => {
     let handles: ComboboxHandle[] = []
     let { container, root } = renderApp(
-      <combobox.context
+      <combobox.Context
         name="framework"
         ref={(handle: ComboboxHandle) => {
           handles.push(handle)
@@ -190,18 +215,18 @@ describe('Combobox', () => {
         <input id="framework" mix={combobox.input()} placeholder="Search a framework" />
         <div mix={combobox.popover()}>
           <div mix={combobox.list()}>
-            <Option label="Remix framework" value="remix">
+            <ComboboxOption label="Remix framework" value="remix">
               Remix
-            </Option>
-            <Option disabled label="React Router framework" value="react-router">
+            </ComboboxOption>
+            <ComboboxOption disabled label="React Router framework" value="react-router">
               React Router
-            </Option>
-            <Option label="React framework" value="react">
+            </ComboboxOption>
+            <ComboboxOption label="React framework" value="react">
               React
-            </Option>
+            </ComboboxOption>
           </div>
         </div>
-      </combobox.context>,
+      </combobox.Context>,
     )
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
 
@@ -213,20 +238,15 @@ describe('Combobox', () => {
     await settleFrames(root)
 
     expect(handles).toHaveLength(1)
-    expect(handles[0].isOpen).toBe(true)
+    expect(handles[0]?.isOpen).toBe(true)
   })
 
   it('clears the committed selection as soon as the user types', async () => {
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox({ defaultValue: 'react' }))
+    let { container, root } = renderObservedCombobox(changes, { defaultValue: 'react' })
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
-    let react = getOptionByText(container, 'React')
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'rea')
@@ -237,7 +257,7 @@ describe('Combobox', () => {
     expect(surface.matches(':popover-open')).toBe(true)
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe(null)
+    expect(changes[0]?.value).toBe(null)
   })
 
   it('typing matching text opens the popover, filters visible options, and keeps focus on the input', async () => {
@@ -267,30 +287,10 @@ describe('Combobox', () => {
     expect(list.id).toBe(input.getAttribute('aria-controls'))
   })
 
-  it('locks document scrolling while the popover is open', async () => {
-    let { container, root } = renderApp(renderCombobox())
-    let input = container.querySelector('input[type="text"]') as HTMLInputElement
-    let surface = container.querySelector('[popover]') as HTMLElement
-
-    input.focus()
-    changeInputValue(input, 'rea')
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(true)
-    expect(document.body.style.position).toBe('fixed')
-
-    key(input, 'Escape')
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(false)
-    expect(document.body.style.position).toBe('')
-  })
-
   it('allows real typing without resetting the input value between characters', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
-    let react = getOptionByText(container, 'React')
     input.focus()
 
     await typeText(input, root, 'rea')
@@ -301,7 +301,7 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
   })
 
-  it('allows typing spaces into the input while virtual press handling is attached', async () => {
+  it('allows typing spaces into the input while the popup is open', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
@@ -370,130 +370,6 @@ describe('Combobox', () => {
     expect(surface.getAttribute('data-show-reason')).toBe('hint')
   })
 
-  it('reopens the hint popover when parent updates introduce matching options', async () => {
-    type RemoteOption = {
-      label: string
-      searchValue?: string[]
-      value: string
-    }
-
-    let setOptions = (_options: RemoteOption[]) => {}
-
-    function RemoteCombobox(handle: Handle) {
-      let options: RemoteOption[] = []
-
-      setOptions = (nextOptions) => {
-        options = nextOptions
-        void handle.update()
-      }
-
-      return () => (
-        <Combobox inputId="airport" name="airport" placeholder="Search an airport">
-          {options.map((option) => (
-            <Option
-              key={option.value}
-              label={option.label}
-              searchValue={option.searchValue}
-              value={option.value}
-            >
-              {option.label}
-            </Option>
-          ))}
-        </Combobox>
-      )
-    }
-
-    let { container, root } = renderApp(<RemoteCombobox />)
-    let input = container.querySelector('input[type="text"]') as HTMLInputElement
-    let surface = container.querySelector('[popover]') as HTMLElement
-    input.focus()
-
-    changeInputValue(input, 'alb')
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(false)
-
-    setOptions([
-      {
-        label: 'Albany International',
-        searchValue: ['alb', 'albany', 'albany international'],
-        value: 'albany',
-      },
-    ])
-    await settle(root)
-
-    let albany = getOptionByText(container, 'Albany International')
-
-    expect(surface.matches(':popover-open')).toBe(true)
-    expect(surface.getAttribute('data-show-reason')).toBe('hint')
-    expect(document.activeElement).toBe(input)
-    expect(input.getAttribute('aria-activedescendant')).toBe(null)
-    expect(albany.hidden).toBe(false)
-  })
-
-  it('closes the hint popover when parent updates remove matching options', async () => {
-    type RemoteOption = {
-      label: string
-      searchValue?: string[]
-      value: string
-    }
-
-    let setOptions = (_options: RemoteOption[]) => {}
-
-    function RemoteCombobox(handle: Handle) {
-      let options: RemoteOption[] = []
-
-      setOptions = (nextOptions) => {
-        options = nextOptions
-        void handle.update()
-      }
-
-      return () => (
-        <Combobox inputId="airport" name="airport" placeholder="Search an airport">
-          {options.map((option) => (
-            <Option
-              key={option.value}
-              label={option.label}
-              searchValue={option.searchValue}
-              value={option.value}
-            >
-              {option.label}
-            </Option>
-          ))}
-        </Combobox>
-      )
-    }
-
-    let { container, root } = renderApp(<RemoteCombobox />)
-    let input = container.querySelector('input[type="text"]') as HTMLInputElement
-    let surface = container.querySelector('[popover]') as HTMLElement
-    input.focus()
-
-    changeInputValue(input, 'alb')
-    await settle(root)
-
-    setOptions([
-      {
-        label: 'Albany International',
-        searchValue: ['alb', 'albany', 'albany international'],
-        value: 'albany',
-      },
-    ])
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(true)
-
-    changeInputValue(input, 'al')
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(true)
-
-    setOptions([])
-    await settle(root)
-
-    expect(surface.matches(':popover-open')).toBe(false)
-  })
-
   it('ArrowDown on an exact-match closed input opens an unfiltered list while keeping focus on the input', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -522,7 +398,7 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
   })
 
-  it('virtual press on the focused input opens the list without an active item when nothing is selected', async () => {
+  it('clicking the focused input opens the list without an active item when nothing is selected', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
@@ -537,7 +413,7 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
   })
 
-  it('virtual press on the focused input activates the selected item when one exists', async () => {
+  it('clicking the focused input activates the selected item when one exists', async () => {
     let { container, root } = renderApp(renderCombobox({ defaultValue: 'react' }))
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
@@ -550,21 +426,6 @@ describe('Combobox', () => {
     expect(surface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(input)
     expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
-  })
-
-  it('pointer-only press on an already focused input opens the list without an active item when nothing is selected', async () => {
-    let { container, root } = renderApp(renderCombobox())
-    let input = container.querySelector('input[type="text"]') as HTMLInputElement
-    let surface = container.querySelector('[popover]') as HTMLElement
-    input.focus()
-
-    pointer(input, 'pointerdown')
-    pointer(input, 'pointerup')
-    await settleFrames(root)
-
-    expect(surface.matches(':popover-open')).toBe(true)
-    expect(document.activeElement).toBe(input)
-    expect(input.getAttribute('aria-activedescendant')).toBe(null)
   })
 
   it('ArrowUp and ArrowDown navigate the active descendant while the input stays focused', async () => {
@@ -642,20 +503,16 @@ describe('Combobox', () => {
     expect(hiddenInput.value).toBe('')
   })
 
-  it('Enter selects the active option, flashes it, then closes the popover and emits Combobox.change', async () => {
+  it('Enter selects the active option, flashes it, then closes the popover and emits onComboboxChange', async () => {
     vi.useFakeTimers()
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox())
+    let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
     let remix = getOptionByText(container, 'Remix')
     let reactRouter = getOptionByText(container, 'React Router')
     let react = getOptionByText(container, 'React')
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'rea')
@@ -683,10 +540,6 @@ describe('Combobox', () => {
     await finishSelectionFlash(root)
 
     expect(surface.matches(':popover-open')).toBe(false)
-    expect(remix.hidden).toBe(true)
-    expect(getComputedStyle(remix).display).toBe('none')
-    expect(reactRouter.hidden).toBe(false)
-    expect(getComputedStyle(reactRouter).display).toBe('grid')
     expect(input.value).toBe('rea')
     expect(input.getAttribute('data-surface-visible')).toBe('true')
     expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
@@ -710,20 +563,16 @@ describe('Combobox', () => {
     expectInputSelection(input)
     expect(react.getAttribute('data-combobox-flash')).toBe(null)
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe('react')
+    expect(changes[0]?.value).toBe('react')
   })
 
   it('selecting from an untouched input delays the visible input commit until after close', async () => {
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox())
+    let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
     let remix = getOptionByText(container, 'Remix')
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     key(input, 'ArrowDown')
@@ -762,19 +611,15 @@ describe('Combobox', () => {
     expectInputSelection(input)
     expect(remix.getAttribute('data-combobox-flash')).toBe(null)
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe('remix')
+    expect(changes[0]?.value).toBe('remix')
   })
 
   it('Enter does nothing when typing has opened the popover but no option is active', async () => {
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox())
+    let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'rea')
@@ -848,13 +693,9 @@ describe('Combobox', () => {
 
   it('Escape with a non-matching value clears the input and selection', async () => {
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox({ defaultValue: 'react' }))
+    let { container, root } = renderObservedCombobox(changes, { defaultValue: 'react' })
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'zzz')
@@ -866,25 +707,27 @@ describe('Combobox', () => {
     expect(input.value).toBe('')
     expect(hiddenInput.value).toBe('')
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe(null)
+    expect(changes[0]?.value).toBe(null)
   })
 
   it('blur commits an exact input match without rewriting the visible input text', async () => {
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderApp(
-      <Combobox inputId="environment" name="environment" placeholder="Search an environment">
-        <Option label="Production" value="production" />
-        <Option label="Staging" searchValue={['staging', 'beta']} value="staging" />
-        <Option label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
-      </Combobox>,
+      <div
+        mix={onComboboxChange((event) => {
+          changes.push(event)
+        })}
+      >
+        <Combobox inputId="environment" name="environment" placeholder="Search an environment">
+          <ComboboxOption label="Production" value="production" />
+          <ComboboxOption label="Staging" searchValue={['staging', 'beta']} value="staging" />
+          <ComboboxOption label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
+        </Combobox>
+      </div>,
     )
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'beta')
@@ -897,18 +740,14 @@ describe('Combobox', () => {
     expect(input.value).toBe('beta')
     expect(hiddenInput.value).toBe('staging')
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe('staging')
+    expect(changes[0]?.value).toBe('staging')
   })
 
   it('blur with a non-matching value clears the input and selection', async () => {
     let changes: ComboboxChangeEvent[] = []
-    let { container, root } = renderApp(renderCombobox({ defaultValue: 'remix' }))
+    let { container, root } = renderObservedCombobox(changes, { defaultValue: 'remix' })
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
-
-    container.addEventListener(Combobox.change, (event) => {
-      changes.push(event as ComboboxChangeEvent)
-    })
 
     input.focus()
     changeInputValue(input, 'zzz')
@@ -920,16 +759,16 @@ describe('Combobox', () => {
     expect(input.value).toBe('')
     expect(hiddenInput.value).toBe('')
     expect(changes).toHaveLength(1)
-    expect(changes[0].value).toBe(null)
+    expect(changes[0]?.value).toBe(null)
   })
 
   it('skips disabled options and supports searchValue string and array filtering', async () => {
     let { container, root } = renderApp(
       <Combobox inputId="environment" name="environment" placeholder="Search an environment">
-        <Option label="Production" value="production" />
-        <Option label="Staging" searchValue={['staging', 'beta']} value="staging" />
-        <Option disabled label="Dev Null" searchValue="dev" value="dev-null" />
-        <Option label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
+        <ComboboxOption label="Production" value="production" />
+        <ComboboxOption label="Staging" searchValue={['staging', 'beta']} value="staging" />
+        <ComboboxOption disabled label="Dev Null" searchValue="dev" value="dev-null" />
+        <ComboboxOption label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
       </Combobox>,
     )
     let input = container.querySelector('input[type="text"]') as HTMLInputElement

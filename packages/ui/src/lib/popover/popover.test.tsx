@@ -2,14 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 
-import { popover } from './popover.ts'
+import * as popover from './popover.ts'
+import type { PopoverHideRequest } from './popover.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
 type RenderPopoverOptions = {
+  closeOnAnchorClick?: boolean
   closeOnHide?: boolean
-  hasHideTransition?: boolean
-  onHide?: () => void
+  onHide?: (request?: PopoverHideRequest) => void
+  restoreFocusOnHide?: boolean
   withHideFocus?: boolean
   withShowFocus?: boolean
 }
@@ -67,14 +69,6 @@ function key(target: HTMLElement, keyValue: string) {
   return event
 }
 
-function pointerDown(target: HTMLElement) {
-  target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }))
-}
-
-function finishTransition(target: HTMLElement) {
-  target.dispatchEvent(new Event('transitionend', { bubbles: true }))
-}
-
 async function settle(root: ReturnType<typeof createRoot>) {
   root.flush()
   await new Promise<void>((resolve) => {
@@ -101,52 +95,52 @@ function PopoverHarness(handle: Handle, setup: RenderPopoverOptions) {
     void handle.update()
   }
 
-  return () => {
-    let anchorMix = [popover.anchor({ placement: 'bottom-start' }), on('click', openPopover)]
+  return () => (
+    <popover.Context>
+      <button
+        id="anchor"
+        mix={[
+          popover.anchor({ placement: 'bottom-start' }),
+          setup.withHideFocus ? popover.focusOnHide() : null,
+          on<HTMLButtonElement>('click', openPopover),
+        ]}
+      >
+        Anchor
+      </button>
 
-    if (setup.withHideFocus) {
-      anchorMix.splice(1, 0, popover.focusOnHide())
-    }
+      <div
+        id="surface"
+        mix={popover.surface({
+          closeOnAnchorClick: setup.closeOnAnchorClick,
+          open,
+          onHide(request) {
+            setup.onHide?.(request)
 
-    return (
-      <popover.context>
-        <button id="anchor" mix={anchorMix}>
-          Anchor
+            if (setup.closeOnHide === false) {
+              return
+            }
+
+            closePopover()
+          },
+          restoreFocusOnHide: setup.restoreFocusOnHide,
+        })}
+      >
+        {setup.withShowFocus ? (
+          <button id="show-focus" mix={popover.focusOnShow()}>
+            Focus on show
+          </button>
+        ) : null}
+
+        <button id="inside-close" mix={on('click', closePopover)}>
+          Close from inside
         </button>
 
-        <div
-          id="surface"
-          mix={popover.surface({
-            open,
-            hasHideTransition: setup.hasHideTransition,
-            onHide() {
-              setup.onHide?.()
+        <button id="inside">Inside</button>
+      </div>
 
-              if (setup.closeOnHide === false) {
-                return
-              }
-
-              closePopover()
-            },
-          })}
-        >
-          {setup.withShowFocus ? (
-            <button id="show-focus" mix={popover.focusOnShow()}>
-              Focus on show
-            </button>
-          ) : null}
-
-          <button id="inside-close" mix={on('click', closePopover)}>
-            Close from inside
-          </button>
-
-          <button id="inside">Inside</button>
-        </div>
-
-        <button id="outside">Outside</button>
-      </popover.context>
-    )
-  }
+      <button id="outside">Outside</button>
+    </popover.Context>
+  )
 }
 
 afterEach(() => {
@@ -227,7 +221,7 @@ describe('popover', () => {
   })
 
   it('calls onHide on Escape and focuses the registered hide target after closing', async () => {
-    let onHide = vi.fn()
+    let onHide = vi.fn<(request?: PopoverHideRequest) => void>()
     let { container, root } = renderPopover({
       onHide,
       withHideFocus: true,
@@ -247,12 +241,13 @@ describe('popover', () => {
 
     expect(event.defaultPrevented).toBe(true)
     expect(onHide).toHaveBeenCalledOnce()
+    expect(onHide).toHaveBeenCalledWith({ reason: 'escape-key' })
     expect(isPopoverOpen(surface)).toBe(false)
     expect(document.activeElement).toBe(anchor)
   })
 
-  it('calls onHide on outside pointerdown and focuses the registered hide target', async () => {
-    let onHide = vi.fn()
+  it('calls onHide on outside click and focuses the registered hide target', async () => {
+    let onHide = vi.fn<(request?: PopoverHideRequest) => void>()
     let { container, root } = renderPopover({
       onHide,
       withHideFocus: true,
@@ -266,28 +261,46 @@ describe('popover', () => {
     click(anchor)
     await settle(root)
 
-    pointerDown(outside)
+    click(outside)
     await settle(root)
 
     expect(onHide).toHaveBeenCalledOnce()
+    expect(onHide).toHaveBeenCalledWith({ reason: 'outside-click', target: outside })
     expect(isPopoverOpen(surface)).toBe(false)
     expect(document.activeElement).toBe(anchor)
   })
 
-  it('does not close when a click outside follows pointerdown inside the surface', async () => {
+  it('does not close when clicking inside the surface', async () => {
     let onHide = vi.fn()
     let { container, root } = renderPopover({ onHide })
 
     let anchor = getById<HTMLButtonElement>(container, 'anchor')
     let inside = getById<HTMLButtonElement>(container, 'inside')
-    let outside = getById<HTMLButtonElement>(container, 'outside')
     let surface = getById<HTMLDivElement>(container, 'surface')
 
     click(anchor)
     await settle(root)
 
-    pointerDown(inside)
-    click(outside)
+    click(inside)
+    await settle(root)
+
+    expect(onHide).not.toHaveBeenCalled()
+    expect(isPopoverOpen(surface)).toBe(true)
+  })
+
+  it('can ignore anchor clicks while open when closeOnAnchorClick is false', async () => {
+    let onHide = vi.fn()
+    let { container, root } = renderPopover({
+      closeOnAnchorClick: false,
+      onHide,
+    })
+
+    let anchor = getById<HTMLButtonElement>(container, 'anchor')
+    let surface = getById<HTMLDivElement>(container, 'surface')
+
+    click(anchor)
+    await settle(root)
+    click(anchor)
     await settle(root)
 
     expect(onHide).not.toHaveBeenCalled()
@@ -339,9 +352,9 @@ describe('popover', () => {
     expect(document.activeElement).toBe(anchor)
   })
 
-  it('waits for transitionend before focusing the registered hide target', async () => {
+  it('can skip restoring focus on hide', async () => {
     let { container, root } = renderPopover({
-      hasHideTransition: true,
+      restoreFocusOnHide: false,
       withHideFocus: true,
       withShowFocus: true,
     })
@@ -349,7 +362,6 @@ describe('popover', () => {
     let anchor = getById<HTMLButtonElement>(container, 'anchor')
     let inside = getById<HTMLButtonElement>(container, 'inside')
     let insideClose = getById<HTMLButtonElement>(container, 'inside-close')
-    let surface = getById<HTMLDivElement>(container, 'surface')
 
     click(anchor)
     await settle(root)
@@ -359,10 +371,5 @@ describe('popover', () => {
     await settle(root)
 
     expect(document.activeElement).not.toBe(anchor)
-
-    finishTransition(surface)
-    await settle(root)
-
-    expect(document.activeElement).toBe(anchor)
   })
 })

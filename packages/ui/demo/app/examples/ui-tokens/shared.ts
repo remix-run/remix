@@ -1,6 +1,5 @@
 import { css } from 'remix/component'
-import { theme } from 'remix/ui'
-
+import { theme } from '@remix-run/ui/theme'
 export let statusBadgeCss = css({
   display: 'inline-flex',
   alignItems: 'center',

@@ -1768,6 +1768,15 @@ importers:
       '@types/istanbul-reports':
         specifier: ^3.0.4
         version: 3.0.4
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      playwright:
+        specifier: 'catalog:'
+        version: 1.59.0
 
   packages/ui:
     dependencies:
@@ -1802,6 +1811,9 @@ importers:
 
   packages/ui/demo:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:..
       remix:
         specifier: workspace:*
         version: link:../../remix

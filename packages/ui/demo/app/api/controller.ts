@@ -19,7 +19,7 @@ function parseLimit(url: URL) {
 
 type ApiActions = Controller<typeof routes.api>['actions']
 
-let actions = {
+const actions = {
   airports({ url }: { url: URL }) {
     let query = url.searchParams.get('query') ?? url.searchParams.get('q') ?? ''
     let limit = parseLimit(url)
@@ -44,7 +44,7 @@ let actions = {
   },
 } satisfies ApiActions
 
-let apiController = {
+const apiController = {
   actions,
 } satisfies Controller<typeof routes.api>
 

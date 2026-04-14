@@ -3,7 +3,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 
 import { router } from './config/router.tsx'
 
-let server = http.createServer(
+const server = http.createServer(
   createRequestListener(async (request: Request) => {
     try {
       return await router.fetch(request)
@@ -14,7 +14,7 @@ let server = http.createServer(
   }),
 )
 
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`RMX_01 theme demo is running on http://localhost:${port}`)

@@ -23,34 +23,32 @@ function createPointerClickMixin(pointerEventType: 'pointerdown' | 'pointerup') 
 
     handle.addEventListener('remove', clearSuppressedClick)
 
-    return (handler) => {
-      return [
-        on(pointerEventType, (pointerEvent) => {
-          if (pointerEvent.button !== 0 || pointerEvent.isPrimary === false) return
-          armSuppressedClick()
-          handler(pointerEvent)
-        }),
-        on(
-          'click',
-          (clickEvent) => {
-            if (clickEvent.button !== 0) return
+    return (handler) => [
+      on(pointerEventType, (pointerEvent) => {
+        if (pointerEvent.button !== 0 || pointerEvent.isPrimary === false) return
+        armSuppressedClick()
+        handler(pointerEvent)
+      }),
+      on(
+        'click',
+        (clickEvent) => {
+          if (clickEvent.button !== 0) return
 
-            if (suppressNextClickToken) {
-              clearSuppressedClick()
-              clickEvent.stopImmediatePropagation()
-              clickEvent.preventDefault()
-              return
-            }
+          if (suppressNextClickToken) {
+            clearSuppressedClick()
+            clickEvent.stopImmediatePropagation()
+            clickEvent.preventDefault()
+            return
+          }
 
-            handler(clickEvent)
-          },
-          true,
-        ),
-      ]
-    }
+          handler(clickEvent)
+        },
+        true,
+      ),
+    ]
   })
 }
 
-export let onPointerDownClick = createPointerClickMixin('pointerdown')
+export const onPointerDownClick = createPointerClickMixin('pointerdown')
 
-export let onPointerUpClick = createPointerClickMixin('pointerup')
+export const onPointerUpClick = createPointerClickMixin('pointerup')

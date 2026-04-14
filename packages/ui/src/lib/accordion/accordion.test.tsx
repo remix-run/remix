@@ -8,10 +8,16 @@ import {
   AccordionChangeEvent,
   AccordionContent,
   AccordionItem,
+  bodyStyle,
+  indicatorStyle,
+  itemStyle,
+  onAccordionChange,
   type AccordionProps,
+  panelStyle,
+  rootStyle,
   AccordionTrigger,
+  triggerStyle,
 } from './accordion.tsx'
-import { ui } from '../theme/theme.ts'
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -260,7 +266,7 @@ describe('Accordion', () => {
 
     let { container, root } = renderApp(
       <div
-        mix={on(Accordion.change, (event) => {
+        mix={onAccordionChange((event) => {
           captured = event as AccordionChangeEvent
         })}
       >
@@ -289,18 +295,18 @@ describe('Accordion', () => {
   })
 })
 
-describe('ui.accordion', () => {
+describe('accordion style exports', () => {
   it('serializes accordion mixins for the base disclosure structure', async () => {
     let html = await renderToString(
       <>
-        <div mix={ui.accordion.root}>
-          <div mix={ui.accordion.item}>
-            <button aria-expanded="false" mix={ui.accordion.trigger}>
+        <div mix={rootStyle}>
+          <div mix={itemStyle}>
+            <button aria-expanded="false" mix={triggerStyle}>
               <span>Account</span>
-              <span mix={ui.accordion.indicator}>v</span>
+              <span mix={indicatorStyle}>v</span>
             </button>
-            <div data-state="closed" mix={ui.accordion.panel}>
-              <div mix={ui.accordion.body}>Panel</div>
+            <div data-state="closed" mix={panelStyle}>
+              <div mix={bodyStyle}>Panel</div>
             </div>
           </div>
         </div>
