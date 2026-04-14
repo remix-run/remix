@@ -29,11 +29,11 @@ import { search } from './controllers/search.tsx'
 import { uploads } from './controllers/uploads.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
-import { loadScriptEntry } from './middleware/script-entry.ts'
+import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-import { scriptServer } from './utils/scripts.ts'
+import { assetServer } from './utils/assets.ts'
 
 export type RootMiddleware = [
   ReturnType<typeof formData>,
@@ -74,14 +74,14 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(session(cookie, storage))
   middleware.push(asyncContext())
   middleware.push(loadDatabase())
-  middleware.push(loadScriptEntry())
+  middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
 
   let router = createRouter({ middleware })
 
-  router.get(routes.scripts, async ({ request, params }) => {
+  router.get(routes.assets, async ({ request, params }) => {
     if (!params.path) return new Response('Not found', { status: 404 })
-    let script = await scriptServer.fetch(request)
+    let script = await assetServer.fetch(request)
     return script ?? new Response('Not found', { status: 404 })
   })
 

@@ -1,8 +1,0 @@
-{
-  "name": "script-server-large-fixture",
-  "private": true,
-  "imports": {
-    "#packages/*": "../packages/*"
-  },
-  "type": "module"
-}

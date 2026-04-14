@@ -1,6 +1,6 @@
 import type { RemixNode } from 'remix/component'
 
-import { getScriptEntry } from '../middleware/script-entry.ts'
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 
 export interface DocumentProps {
   title?: string
@@ -9,7 +9,7 @@ export interface DocumentProps {
 
 export function Document() {
   return ({ title = 'Bookstore', children }: DocumentProps) => {
-    let { src, preloads } = getScriptEntry()
+    let { src, preloads } = getAssetEntry()
 
     return (
       <html lang="en">

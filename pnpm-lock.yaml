@@ -48,6 +48,22 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  demos/assets:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
   demos/bookstore:
     dependencies:
       better-sqlite3:
@@ -113,22 +129,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-
-  demos/script-server:
-    dependencies:
-      remix:
-        specifier: workspace:*
-        version: link:../../packages/remix
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -247,6 +247,65 @@ importers:
       typedoc:
         specifier: ^0.28.15
         version: 0.28.15(typescript@5.9.3)
+
+  packages/assets:
+    dependencies:
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+      '@remix-run/route-pattern':
+        specifier: workspace:*
+        version: link:../route-pattern
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.0.0
+      get-tsconfig:
+        specifier: ^4.13.6
+        version: 4.13.6
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      oxc-minify:
+        specifier: ^0.121.0
+        version: 0.121.0
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
+      oxc-resolver:
+        specifier: ^11.19.1
+        version: 11.19.1
+      oxc-transform:
+        specifier: ^0.121.0
+        version: 0.121.0
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/assets/bench:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../../component
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   packages/async-context-middleware:
     dependencies:
@@ -1072,6 +1131,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:^
+        version: link:../assets
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
@@ -1165,9 +1227,6 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
-      '@remix-run/script-server':
-        specifier: workspace:^
-        version: link:../script-server
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
@@ -1249,65 +1308,6 @@ importers:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
-
-  packages/script-server:
-    dependencies:
-      '@remix-run/headers':
-        specifier: workspace:*
-        version: link:../headers
-      '@remix-run/route-pattern':
-        specifier: workspace:*
-        version: link:../route-pattern
-      chokidar:
-        specifier: ^5.0.0
-        version: 5.0.0
-      es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
-      get-tsconfig:
-        specifier: ^4.13.6
-        version: 4.13.6
-      magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
-      oxc-minify:
-        specifier: ^0.121.0
-        version: 0.121.0
-      oxc-parser:
-        specifier: ^0.121.0
-        version: 0.121.0
-      oxc-resolver:
-        specifier: ^11.19.1
-        version: 11.19.1
-      oxc-transform:
-        specifier: ^0.121.0
-        version: 0.121.0
-      source-map-js:
-        specifier: ^1.2.1
-        version: 1.2.1
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-
-  packages/script-server/bench:
-    dependencies:
-      '@remix-run/component':
-        specifier: workspace:*
-        version: link:../../component
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
 
   packages/session:
     devDependencies:

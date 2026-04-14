@@ -18,6 +18,7 @@
   ],
   "type": "module",
   "exports": {
+    "./assets": "./src/assets.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
@@ -68,7 +69,6 @@
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
-    "./script-server": "./src/script-server.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
     "./session-storage-memcache": "./src/session-storage-memcache.ts",
@@ -82,6 +82,10 @@
   },
   "publishConfig": {
     "exports": {
+      "./assets": {
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
+      },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
@@ -282,10 +286,6 @@
         "types": "./dist/route-pattern/specificity.d.ts",
         "default": "./dist/route-pattern/specificity.js"
       },
-      "./script-server": {
-        "types": "./dist/script-server.d.ts",
-        "default": "./dist/script-server.js"
-      },
       "./session": {
         "types": "./dist/session.d.ts",
         "default": "./dist/session.js"
@@ -331,6 +331,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@remix-run/assets": "workspace:^",
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/auth": "workspace:^",
     "@remix-run/auth-middleware": "workspace:^",
@@ -362,7 +363,6 @@
     "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/response": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
-    "@remix-run/script-server": "workspace:^",
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/session-storage-memcache": "workspace:^",

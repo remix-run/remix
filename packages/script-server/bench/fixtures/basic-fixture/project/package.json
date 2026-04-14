@@ -1,8 +1,0 @@
-{
-  "name": "script-server-basic-project",
-  "private": true,
-  "imports": {
-    "#packages/*": "../packages/*"
-  },
-  "type": "module"
-}

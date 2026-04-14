@@ -10,6 +10,7 @@ packages:
   - demos/*
   - docs
   - packages/*
+  - packages/assets/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/component/demos
@@ -21,7 +22,6 @@ packages:
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
   - packages/route-pattern/bench
-  - packages/script-server/bench
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - scripts

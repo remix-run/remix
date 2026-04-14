@@ -4,7 +4,7 @@ import { renderToStream } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
 import type { RequestContext, Router } from 'remix/fetch-router'
 
-import { scriptServer } from '../utils/scripts.ts'
+import { assetServer } from './assets.ts'
 
 export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()
@@ -18,7 +18,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
         throw new Error(`Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`)
       }
       return {
-        href: await scriptServer.getHref(entryId),
+        href: await assetServer.getHref(entryId),
         exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
       }
     },

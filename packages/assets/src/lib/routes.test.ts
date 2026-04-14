@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+
+import { compileRoutes } from './routes.ts'
+
+describe('compileRoutes', () => {
+  it('supports windows-style roots without parsing them as route syntax', () => {
+    let routes = compileRoutes({
+      root: String.raw`C:\Users\runner\project`,
+      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+    })
+
+    assert.equal(
+      routes.resolveUrlPathname('/assets/app/entry.ts'),
+      'C:/Users/runner/project/app/entry.ts',
+    )
+    assert.equal(
+      routes.toUrlPathname(String.raw`C:\Users\runner\project\app\entry.ts`),
+      '/assets/app/entry.ts',
+    )
+  })
+})
