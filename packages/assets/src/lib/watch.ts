@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import type { FSWatcher } from 'chokidar'
 import chokidar from 'chokidar'
 
-import { resolveFilePath } from './paths.ts'
+import { isPathNotFoundError, resolveFilePath } from './paths.ts'
 import type { AssetRouteDefinition } from './routes.ts'
 
 type AssetServerWatcherOptions = {
@@ -135,8 +135,10 @@ function getWatchConfigRoot(filePath: string): string | null {
     if (fs.statSync(filePath).isDirectory()) {
       return filePath
     }
-  } catch {
-    // Missing exact paths fall back to parent directory watch roots.
+  } catch (error) {
+    // We intentionally tolerate only "not found" filesystem races here. Any other
+    // error (e.g. permissions) indicates a real setup problem and should surface.
+    if (!isPathNotFoundError(error)) throw error
   }
 
   return path.posix.dirname(filePath)
@@ -153,8 +155,10 @@ function getExistingConfigFileTargets(directoryPath: string): string[] {
         targets.push(`${directoryPath}/${entry.name}`)
       }
     }
-  } catch {
-    // Ignore missing or unreadable directories when building watch targets.
+  } catch (error) {
+    // Only ignore missing directory races while computing watch targets. Unexpected
+    // errors should bubble up so watch misconfiguration is visible to callers.
+    if (!isPathNotFoundError(error)) throw error
   }
 
   return targets

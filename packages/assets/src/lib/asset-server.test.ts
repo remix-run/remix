@@ -2557,8 +2557,29 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
-    assert.match(receivedError.message, /outside the asset server routing\/allow configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+  })
+
+  it('calls onError when an imported module is allowed but not routed', async () => {
+    await write(dir, 'app/entry.ts', 'import "../shared/util.ts"\nexport const entry = util')
+    await write(dir, 'shared/util.ts', 'export const util = true')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      allow: ['app/**', 'shared/**'],
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_NOT_ROUTED')
+    assert.match(receivedError.message, /not covered by any configured asset server route/)
+    assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
   })
 

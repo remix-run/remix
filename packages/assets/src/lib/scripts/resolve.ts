@@ -149,8 +149,8 @@ export async function resolveModule(
     if (!args.isAllowed(resolvedImport.identityPath)) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the asset server routing/allow configuration. ` +
-            `Add a matching route and allow rule, or mark this import as external.`,
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not allowed by the asset server allow/deny configuration. ` +
+            `Add a matching allow rule, remove a conflicting deny rule, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
           },
@@ -166,10 +166,10 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} points outside the asset server routing/allow configuration. ` +
-            `Add a matching route and allow rule, or mark this import as external.`,
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not covered by any configured asset server route. ` +
+            `Add a matching route for this file path, or mark this import as external.`,
           {
-            code: 'IMPORT_NOT_ALLOWED',
+            code: 'IMPORT_NOT_ROUTED',
           },
         ),
         trackedFiles,

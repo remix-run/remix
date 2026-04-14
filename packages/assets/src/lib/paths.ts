@@ -53,6 +53,17 @@ export function resolveFilePath(root: string, filePath: string): string {
   return normalizeFilePath(`${root.replace(/\/+$/, '')}/${normalizeWindowsPath(filePath)}`)
 }
 
+export function isPathNotFoundError(
+  error: unknown,
+): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
+  )
+}
+
 function getUncRoot(filePath: string): string | null {
   return filePath.startsWith('//') ? (filePath.match(uncPrefixRE)?.[0] ?? null) : null
 }

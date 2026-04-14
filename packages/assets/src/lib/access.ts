@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-import { normalizeFilePath, resolveFilePath } from './paths.ts'
+import { isPathNotFoundError, normalizeFilePath, resolveFilePath } from './paths.ts'
 
 type FileMatcher = (filePath: string) => boolean
 
@@ -51,8 +51,10 @@ function createFileMatcher(
         if (fs.statSync(resolveFilePath(root, pattern)).isDirectory()) {
           return (filePath) => isSameOrDescendantPath(filePath, resolvedPatternPath)
         }
-      } catch {
-        // Missing exact paths fall back to exact-file matching until they exist on disk.
+      } catch (error) {
+        // We only ignore missing-path races. Other fs errors are actionable and
+        // should surface instead of silently changing matcher behavior.
+        if (!isPathNotFoundError(error)) throw error
       }
     }
 
@@ -70,15 +72,4 @@ function isSameOrDescendantPath(filePath: string, directoryPath: string): boolea
 
 function containsGlobSyntax(pattern: string): boolean {
   return /[*?[\]{}()!+@]/.test(pattern)
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }

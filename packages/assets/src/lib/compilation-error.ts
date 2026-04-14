@@ -8,6 +8,7 @@ type AssetServerCompilationErrorCode =
   | 'IMPORT_RESOLUTION_FAILED'
   | 'IMPORT_NOT_SUPPORTED'
   | 'IMPORT_NOT_ALLOWED'
+  | 'IMPORT_NOT_ROUTED'
 
 /**
  * Internal error used by the request-time module compilation pipeline.
