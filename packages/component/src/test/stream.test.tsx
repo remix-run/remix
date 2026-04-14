@@ -466,8 +466,9 @@ describe('stream', () => {
     })
 
     it('ignores children returned from mixins during SSR', async () => {
-      let withChildren = createMixin((handle) => () =>
-        createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
+      let withChildren = createMixin(
+        (handle) => () =>
+          createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
       )
 
       let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

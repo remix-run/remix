@@ -244,9 +244,7 @@ export function createMixin<
   node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
->(
-  type: MixinType<node, args, props>,
-) {
+>(type: MixinType<node, args, props>) {
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({

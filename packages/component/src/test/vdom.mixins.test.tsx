@@ -81,8 +81,9 @@ describe('vnode mixins', () => {
   })
 
   it('ignores children returned from mixins while preserving host content', () => {
-    let withChildren = createMixin((handle) => () =>
-      createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
+    let withChildren = createMixin(
+      (handle) => () =>
+        createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
     )
 
     let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
