@@ -54,9 +54,10 @@ function calcAxisDelta(delta: AxisDelta, source: Axis, target: Axis, origin: num
   }
 }
 
-function calcBoxDelta(delta: Delta, source: Box, target: Box): void {
-  calcAxisDelta(delta.x, source.x, target.x, 0.5)
-  calcAxisDelta(delta.y, source.y, target.y, 0.5)
+function calcBoxDelta(delta: Delta, source: Box, target: Box, layoutConfig: LayoutAnimationConfig) {
+  let origin = layoutConfig.size === false ? 0 : 0.5
+  calcAxisDelta(delta.x, source.x, target.x, origin)
+  calcAxisDelta(delta.y, source.y, target.y, origin)
 }
 
 function mixAxisDelta(output: AxisDelta, delta: AxisDelta, progress: number): void {
@@ -83,21 +84,12 @@ function copyDeltaInto(target: Delta, source: Delta): void {
   copyAxisDeltaInto(target.y, source.y)
 }
 
-function isDeltaZero(delta: Delta): boolean {
-  return (
-    isNear(delta.x.translate, 0, TRANSLATE_PRECISION) &&
-    isNear(delta.y.translate, 0, TRANSLATE_PRECISION) &&
-    isNear(delta.x.scale, 1, SCALE_PRECISION) &&
-    isNear(delta.y.scale, 1, SCALE_PRECISION)
-  )
-}
-
-function buildProjectionTransform(delta: Delta): string {
+function buildProjectionTransform(delta: Delta, layoutConfig: LayoutAnimationConfig): string {
   let transform = ''
   if (delta.x.translate || delta.y.translate) {
     transform = `translate3d(${delta.x.translate}px, ${delta.y.translate}px, 0)`
   }
-  if (delta.x.scale !== 1 || delta.y.scale !== 1) {
+  if (layoutConfig.size !== false && (delta.x.scale !== 1 || delta.y.scale !== 1)) {
     transform += transform ? ' ' : ''
     transform += `scale(${delta.x.scale}, ${delta.y.scale})`
   }
@@ -130,6 +122,15 @@ function resolveLayoutConfig(config: LayoutConfig): LayoutAnimationConfig | null
   if (!config) return null
   if (config === true) return {}
   return config
+}
+
+function isVisualDeltaZero(delta: Delta, layoutConfig: LayoutAnimationConfig): boolean {
+  return (
+    isNear(delta.x.translate, 0, TRANSLATE_PRECISION) &&
+    isNear(delta.y.translate, 0, TRANSLATE_PRECISION) &&
+    (layoutConfig.size === false ||
+      (isNear(delta.x.scale, 1, SCALE_PRECISION) && isNear(delta.y.scale, 1, SCALE_PRECISION)))
+  )
 }
 
 const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>((handle) => {
@@ -187,9 +188,9 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     }
 
     let targetDelta = createDelta()
-    calcBoxDelta(targetDelta, latest, snapshot)
+    calcBoxDelta(targetDelta, latest, snapshot, layoutConfig)
 
-    if (isDeltaZero(targetDelta)) {
+    if (isVisualDeltaZero(targetDelta, layoutConfig)) {
       snapshot = latest
       return
     }
@@ -210,7 +211,7 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     copyDeltaInto(currentDelta, targetDelta)
     animationProgress = 0
 
-    let invert = buildProjectionTransform(targetDelta)
+    let invert = buildProjectionTransform(targetDelta, layoutConfig)
     let origin = buildTransformOrigin(targetDelta)
     htmlNode.style.transform = invert
     htmlNode.style.transformOrigin = origin

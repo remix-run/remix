@@ -3,6 +3,7 @@ import { createRoot, on, type Handle } from 'remix/component'
 function App(handle: Handle) {
   let controlledText = 'hello'
   let controlledChecked = true
+  let controlledChoice = 'alpha'
   let uncontrolledTextSnapshot = 'type to update this'
   let uncontrolledCheckedSnapshot = true
   let renderCount = 0
@@ -16,6 +17,7 @@ function App(handle: Handle) {
   let resetControlled = () => {
     controlledText = 'hello'
     controlledChecked = true
+    controlledChoice = 'alpha'
     rerender()
   }
 
@@ -94,9 +96,28 @@ function App(handle: Handle) {
           Checked
         </label>
 
+        <label style={{ display: 'block', marginBottom: '8px' }}>
+          Choice:
+          <select
+            style={{ marginLeft: '8px' }}
+            value={controlledChoice}
+            mix={[
+              on('change', (event) => {
+                controlledChoice = event.currentTarget.value
+                rerender()
+              }),
+            ]}
+          >
+            <option value="alpha">Alpha</option>
+            <option value="beta">Beta</option>
+            <option value="gamma">Gamma</option>
+          </select>
+        </label>
+
         <div>
           State snapshot: text=<code>{JSON.stringify(controlledText)}</code>, checked=
-          <code>{String(controlledChecked)}</code>
+          <code>{String(controlledChecked)}</code>, choice=
+          <code>{JSON.stringify(controlledChoice)}</code>
         </div>
       </section>
 
