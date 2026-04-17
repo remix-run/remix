@@ -80,7 +80,8 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   let router = createRouter({ middleware })
 
   router.get(routes.assets, async ({ request }) => {
-    return (await assetServer.fetch(request)) ?? new Response('Not found', { status: 404 })
+    let assetResponse = await assetServer.fetch(request)
+    return assetResponse ?? new Response('Not found', { status: 404 })
   })
 
   router.map(routes.uploads, uploads)

@@ -9,5 +9,6 @@ export const router = createRouter()
 router.map(routes.home, homeController)
 
 router.get(routes.assets, async ({ request }) => {
-  return (await assetServer.fetch(request)) ?? new Response('Not found', { status: 404 })
+  let assetResponse = await assetServer.fetch(request)
+  return assetResponse ?? new Response('Not found', { status: 404 })
 })
