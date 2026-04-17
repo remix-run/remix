@@ -193,9 +193,7 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     fingerprintModules: resolvedOptions.fingerprintModules,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
-    onWatchDirectoriesChange: async (delta) => {
-      await watcher?.updateWatchedDirectories(delta)
-    },
+    onWatchDirectoriesChange: async (delta) => watcher?.updateWatchedDirectories(delta),
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,

@@ -131,11 +131,9 @@ export function createTsconfigTransformOptionsResolver() {
         return transformOptions
       }
 
+      let tsconfigPath = findNearestTsconfigPath(directory)
       let transformOptions: TsconfigTransformOptions = {
-        trackedFiles: (() => {
-          let tsconfigPath = findNearestTsconfigPath(directory)
-          return tsconfigPath && !isWatchIgnored(tsconfigPath) ? [tsconfigPath] : []
-        })(),
+        trackedFiles: tsconfigPath && !isWatchIgnored(tsconfigPath) ? [tsconfigPath] : [],
         tsconfigRaw: tsconfig.config,
       }
 
