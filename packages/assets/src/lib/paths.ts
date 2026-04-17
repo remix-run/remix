@@ -45,23 +45,20 @@ export function normalizeFilePath(filePath: string): string {
   return path.posix.normalize(normalizeWindowsPath(path.resolve(normalized)))
 }
 
-export function resolveFilePath(root: string, filePath: string): string {
+export function resolveFilePath(rootDir: string, filePath: string): string {
   if (isAbsoluteFilePath(filePath)) {
     return normalizeFilePath(filePath)
   }
 
-  return normalizeFilePath(`${root.replace(/\/+$/, '')}/${normalizeWindowsPath(filePath)}`)
+  return normalizeFilePath(`${rootDir.replace(/\/+$/, '')}/${normalizeWindowsPath(filePath)}`)
 }
 
-export function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
+export function getFilePathDirectory(filePath: string): string {
+  return path.posix.dirname(normalizeWindowsPath(filePath))
+}
+
+export function getFilePathBaseName(filePath: string): string {
+  return path.posix.basename(normalizeWindowsPath(filePath))
 }
 
 function getUncRoot(filePath: string): string | null {

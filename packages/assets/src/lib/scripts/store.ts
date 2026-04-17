@@ -1,8 +1,9 @@
 import type { EmittedModule } from './emit.ts'
+import { getFilePathDirectory } from '../paths.ts'
 import type { ResolutionFailureState, ResolvedModule, TrackedResolution } from './resolve.ts'
 import type { TransformFailureState, TransformedModule } from './transform.ts'
 
-export type ModuleWatchEvent = 'change' | 'add' | 'delete'
+export type ModuleWatchEvent = 'change' | 'add' | 'unlink'
 
 type ModuleRecordState = {
   identityPath: string
@@ -24,22 +25,29 @@ type MutableModuleRecord = {
   emitted?: EmittedModule
   trackedFiles: Set<string>
   trackedResolutions: TrackedResolution[]
+  watchedDirectories: Set<string>
 }
 
 type ModuleStore = {
   get(identityPath: string): ModuleRecord
-  setTransformFailure(identityPath: string, failure: TransformFailureState): void
-  setTransformed(identityPath: string, transformed: TransformedModule): void
-  setResolved(identityPath: string, resolved: ResolvedModule): void
-  setResolveFailure(identityPath: string, failure: ResolutionFailureState): void
+  setTransformFailure(identityPath: string, failure: TransformFailureState): Promise<void>
+  setTransformed(identityPath: string, transformed: TransformedModule): Promise<void>
+  setResolved(identityPath: string, resolved: ResolvedModule): Promise<void>
+  setResolveFailure(identityPath: string, failure: ResolutionFailureState): Promise<void>
   setEmitted(identityPath: string, emitted: EmittedModule): void
   invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
   invalidateAll(): void
 }
 
-export function createModuleStore(): ModuleStore {
+export function createModuleStore(
+  options: {
+    onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => Promise<void> | void
+  } = {},
+): ModuleStore {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord>()
   let recordsByTrackedFile = new Map<string, Set<string>>()
+  let watchDirectoryRefCountByPath = new Map<string, number>()
+  let watchDirectorySyncPromise = Promise.resolve()
 
   return {
     get(identityPath) {
@@ -51,48 +59,48 @@ export function createModuleStore(): ModuleStore {
         lastInvalidatedAt: 0,
         trackedFiles: new Set(),
         trackedResolutions: [],
+        watchedDirectories: new Set(),
       }
       recordsByIdentityPath.set(identityPath, record)
       return record
     },
-
-    setTransformFailure(identityPath, failure) {
+    async setTransformFailure(identityPath, failure) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = undefined
       record.resolved = undefined
       record.emitted = undefined
-      setTracking(record, {
+      await setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: [],
       })
     },
 
-    setTransformed(identityPath, transformed) {
+    async setTransformed(identityPath, transformed) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = transformed
       record.resolved = undefined
       record.emitted = undefined
-      setTracking(record, {
+      await setTracking(record, {
         trackedFiles: transformed.trackedFiles,
         trackedResolutions: [],
       })
     },
 
-    setResolved(identityPath, resolved) {
+    async setResolved(identityPath, resolved) {
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = resolved
       record.emitted = undefined
-      setTracking(record, {
+      await setTracking(record, {
         trackedFiles: resolved.trackedFiles,
         trackedResolutions: resolved.trackedResolutions,
       })
     },
 
-    setResolveFailure(identityPath, failure) {
+    async setResolveFailure(identityPath, failure) {
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = undefined
       record.emitted = undefined
-      setTracking(record, {
+      await setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: failure.trackedResolutions,
       })
@@ -139,42 +147,90 @@ export function createModuleStore(): ModuleStore {
       lastInvalidatedAt: 0,
       trackedFiles: new Set(),
       trackedResolutions: [],
+      watchedDirectories: new Set(),
     }
     recordsByIdentityPath.set(identityPath, record)
     return record
   }
 
   function invalidateRecord(record: MutableModuleRecord) {
-    removeIndexes(record)
     record.emitted = undefined
     record.resolved = undefined
-    record.trackedFiles.clear()
-    record.trackedResolutions = []
     record.transformed = undefined
     record.lastInvalidatedAt = Date.now()
   }
 
-  function setTracking(
+  async function setTracking(
     record: MutableModuleRecord,
     tracking: {
       trackedFiles: readonly string[]
       trackedResolutions: readonly TrackedResolution[]
     },
   ) {
+    let previousWatchedDirectories = new Set(record.watchedDirectories)
     removeIndexes(record)
 
     record.trackedFiles = new Set(tracking.trackedFiles)
     record.trackedResolutions = [...tracking.trackedResolutions]
+    record.watchedDirectories = getWatchedDirectories(record)
 
     for (let trackedFile of record.trackedFiles) {
       addToIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
+
+    let delta = updateWatchDirectoryRefCounts(previousWatchedDirectories, record.watchedDirectories)
+    await emitWatchDirectoryDelta(delta)
   }
 
   function removeIndexes(record: MutableModuleRecord) {
     for (let trackedFile of record.trackedFiles) {
       removeFromIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
+  }
+
+  function updateWatchDirectoryRefCounts(
+    previousWatchedDirectories: ReadonlySet<string>,
+    nextWatchedDirectories: ReadonlySet<string>,
+  ): { add: string[]; remove: string[] } {
+    let add: string[] = []
+    let remove: string[] = []
+
+    for (let directory of previousWatchedDirectories) {
+      if (nextWatchedDirectories.has(directory)) continue
+      let previousCount = watchDirectoryRefCountByPath.get(directory)
+      if (!previousCount) continue
+      if (previousCount === 1) {
+        watchDirectoryRefCountByPath.delete(directory)
+        remove.push(directory)
+      } else {
+        watchDirectoryRefCountByPath.set(directory, previousCount - 1)
+      }
+    }
+
+    for (let directory of nextWatchedDirectories) {
+      if (previousWatchedDirectories.has(directory)) continue
+      let previousCount = watchDirectoryRefCountByPath.get(directory) ?? 0
+      watchDirectoryRefCountByPath.set(directory, previousCount + 1)
+      if (previousCount === 0) {
+        add.push(directory)
+      }
+    }
+
+    return { add, remove }
+  }
+
+  async function emitWatchDirectoryDelta(delta: {
+    add: string[]
+    remove: string[]
+  }): Promise<void> {
+    if (!options.onWatchDirectoriesChange) return
+    if (delta.add.length === 0 && delta.remove.length === 0) return
+
+    watchDirectorySyncPromise = watchDirectorySyncPromise.then(() =>
+      options.onWatchDirectoriesChange?.(delta),
+    )
+
+    await watchDirectorySyncPromise
   }
 }
 
@@ -201,4 +257,28 @@ function mayAffectTrackedResolution(
     trackedResolution.candidatePaths.includes(filePath) ||
     trackedResolution.candidatePrefixes.some((prefix) => filePath.startsWith(prefix))
   )
+}
+
+function getWatchedDirectories(record: {
+  trackedFiles: ReadonlySet<string>
+  trackedResolutions: readonly TrackedResolution[]
+}): Set<string> {
+  let watchedDirectories = new Set<string>()
+
+  for (let trackedFile of record.trackedFiles) {
+    watchedDirectories.add(getFilePathDirectory(trackedFile))
+  }
+
+  for (let trackedResolution of record.trackedResolutions) {
+    for (let candidatePath of trackedResolution.candidatePaths) {
+      watchedDirectories.add(getFilePathDirectory(candidatePath))
+    }
+
+    for (let candidatePrefix of trackedResolution.candidatePrefixes) {
+      let directoryPath = candidatePrefix.replace(/\/+$/, '') || '/'
+      watchedDirectories.add(directoryPath)
+    }
+  }
+
+  return watchedDirectories
 }

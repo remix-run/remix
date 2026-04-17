@@ -3,15 +3,16 @@ import * as fs from 'node:fs'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { createAccessPolicy } from './access.ts'
 import { createModuleCompiler, createResponseForModule } from './scripts/compiler.ts'
-import { normalizeFilePath } from './paths.ts'
+import { getFilePathBaseName, normalizeFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
-import type { AssetRouteDefinition, CompiledRoutes } from './routes.ts'
+import type { CompiledRoutes } from './routes.ts'
 import { createAssetServerWatcher } from './watch.ts'
 import type { AssetServerWatcher } from './watch.ts'
 
 interface AssetServerWatchOptions {
   /**
-   * Ignore matching file paths.
+   * Ignore matching glob patterns or file paths. Relative values are resolved
+   * from `rootDir`.
    */
   ignore?: readonly string[]
   /**
@@ -52,25 +53,25 @@ const scriptTargetSet = new Set<string>(scriptTargets)
 export type ScriptsTarget = (typeof scriptTargets)[number]
 
 export interface AssetServerOptions {
-  /** Routes that map public URL patterns to file-space patterns. */
-  routes: ReadonlyArray<AssetRouteDefinition>
+  /** File patterns keyed by public URL patterns. */
+  fileMap: Readonly<Record<string, string>>
   /**
-   * Root directory used to resolve relative file-space patterns. Defaults to `process.cwd()`.
+   * Root directory used to resolve relative file paths. Defaults to `process.cwd()`.
    */
-  root?: string
+  rootDir?: string
   /**
-   * File-space allow-list paths or filesystem glob patterns. Relative values are resolved from `root`.
+   * Glob patterns or file paths that are allowed to be served. Relative values are resolved from `rootDir`.
    */
   allow: readonly string[]
   /**
-   * File-space deny-list paths or filesystem glob patterns. Relative values are resolved from `root`.
+   * Glob patterns or file paths that are denied from being served. Relative values are resolved from `rootDir`.
    */
   deny?: readonly string[]
   /**
    * Controls optional source-based URL fingerprinting for rewritten import URLs.
    *
    * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
-   * Cannot be used together with `watch`.
+   * Cannot be used together with active watch mode. Set `watch: false` when fingerprinting.
    */
   fingerprint?: FingerprintOptions
   /**
@@ -108,8 +109,8 @@ export interface AssetServerOptions {
   }
   /**
    * Enable filesystem-backed cache invalidation for long-lived server instances.
-   * Pass `true` to use the default watcher options, or an options object to
-   * customize the watcher behavior.
+   * Enabled by default. Pass `true` to use the default watcher options, an options
+   * object to customize watcher behavior, or `false` to disable watching.
    */
   watch?: boolean | AssetServerWatchOptions
   /**
@@ -139,12 +140,6 @@ export interface AssetServer {
   close(): Promise<void>
 }
 
-type AssetServerInternals = {
-  watcher: AssetServerWatcher | null
-}
-
-const internalStateByAssetServer = new WeakMap<AssetServer, AssetServerInternals>()
-
 type ResolvedAssetServerOptions = {
   allow: readonly string[]
   buildId?: string
@@ -154,8 +149,7 @@ type ResolvedAssetServerOptions = {
   fingerprintModules: boolean
   minify: boolean
   onError: NonNullable<AssetServerOptions['onError']>
-  root: string
-  routeDefinitions: readonly AssetRouteDefinition[]
+  rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'url' | 'absolute'
   sourceMaps?: 'inline' | 'external'
@@ -163,21 +157,11 @@ type ResolvedAssetServerOptions = {
   watchOptions: AssetServerWatchOptions | null
 }
 
-// Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
-export function getInternalAssetServerWatchedDirectories(assetServer: AssetServer): string[] {
-  return internalStateByAssetServer.get(assetServer)?.watcher?.getWatchedDirectories() ?? []
-}
-
-// Internal-only test hook. This is intentionally not re-exported from the package entrypoint.
-export function waitForInternalAssetServerWatcher(assetServer: AssetServer): Promise<void> {
-  return internalStateByAssetServer.get(assetServer)?.watcher?.whenReady() ?? Promise.resolve()
-}
-
 /**
  * Create an asset server instance
  *
  * Compiles TypeScript/JavaScript modules on demand with optional source-based URL
- * fingerprinting, caching, and configurable route mapping.
+ * fingerprinting, caching, and configurable file mapping.
  *
  * @param options Server configuration
  * @returns A {@link AssetServer} with `fetch()`, `getHref()`, and `getPreloads()` methods
@@ -185,7 +169,9 @@ export function waitForInternalAssetServerWatcher(assetServer: AssetServer): Pro
  * @example
  * ```ts
  * let assetServer = createAssetServer({
- *   routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+ *   fileMap: {
+ *     '/assets/app/*path': 'app/*path',
+ *   },
  *   allow: ['app/**'],
  * })
  *
@@ -197,8 +183,9 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
   let accessPolicy = createAccessPolicy({
     allow: resolvedOptions.allow,
     deny: resolvedOptions.deny,
-    root: resolvedOptions.root,
+    rootDir: resolvedOptions.rootDir,
   })
+  let watcher: AssetServerWatcher | null = null
   let moduleCompiler = createModuleCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
@@ -206,20 +193,24 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     fingerprintModules: resolvedOptions.fingerprintModules,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
-    root: resolvedOptions.root,
+    onWatchDirectoriesChange: async (delta) => {
+      await watcher?.updateWatchedDirectories(delta)
+    },
+    rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps,
     target: resolvedOptions.scriptsTarget,
+    watchIgnore: resolvedOptions.watchOptions?.ignore,
+    watchMode: resolvedOptions.watchOptions !== null,
   })
-  let watcher = resolvedOptions.watchOptions
-    ? createAssetServerWatcher({
-        ...resolvedOptions.watchOptions,
-        onFileEvent: handleWatchEvent,
-        root: resolvedOptions.root,
-        routes: resolvedOptions.routeDefinitions,
-      })
-    : null
+  if (resolvedOptions.watchOptions) {
+    watcher = createAssetServerWatcher({
+      ...resolvedOptions.watchOptions,
+      onFileEvent: handleWatchEvent,
+      rootDir: resolvedOptions.rootDir,
+    })
+  }
 
   async function responseForError(error: unknown): Promise<Response> {
     try {
@@ -232,7 +223,8 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
 
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
     try {
-      await moduleCompiler.handleFileEvent(filePath, event)
+      let normalizedFilePath = normalizeFilePath(filePath)
+      await moduleCompiler.handleFileEvent(normalizedFilePath, event)
     } catch (error) {
       console.error(`There was an error invalidating the asset server cache: ${error}`)
     }
@@ -285,10 +277,6 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     },
   }
 
-  internalStateByAssetServer.set(assetServer, {
-    watcher,
-  })
-
   return assetServer
 }
 
@@ -303,8 +291,13 @@ function defaultErrorHandler(error: unknown): void {
   console.error(error)
 }
 
+function isConfigFilePath(filePath: string): boolean {
+  let baseName = getFilePathBaseName(filePath)
+  return baseName === 'package.json' || /^tsconfig(?:\..+)?\.json$/.test(baseName)
+}
+
 function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetServerOptions {
-  let root = normalizeFilePath(fs.realpathSync(path.resolve(options.root ?? process.cwd())))
+  let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
   let scriptOptions = options.scripts ?? {}
   let fingerprintOptions = normalizeFingerprintOptions({
     fingerprint: options.fingerprint,
@@ -320,11 +313,10 @@ function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetSe
     fingerprintModules: fingerprintOptions.enabled,
     minify: scriptOptions.minify ?? false,
     onError: options.onError ?? defaultErrorHandler,
-    root,
-    routeDefinitions: options.routes,
+    rootDir,
     routes: compileRoutes({
-      root,
-      routes: options.routes,
+      fileMap: options.fileMap,
+      rootDir,
     }),
     sourceMapSourcePaths: scriptOptions.sourceMapSourcePaths ?? 'url',
     sourceMaps: scriptOptions.sourceMaps,
@@ -373,7 +365,7 @@ function normalizeFingerprintOptions(options: {
     throw new TypeError('fingerprint.buildId must be a non-empty string')
   }
 
-  if (options.watch) {
+  if (options.watch !== false) {
     throw new TypeError('fingerprint cannot be used with watch mode')
   }
 
@@ -386,6 +378,7 @@ function normalizeFingerprintOptions(options: {
 function normalizeWatchOptions(
   options: AssetServerOptions['watch'],
 ): AssetServerWatchOptions | null {
-  if (!options) return null
-  return options === true ? {} : options
+  if (options === false) return null
+  if (options == null || options === true) return {}
+  return options
 }

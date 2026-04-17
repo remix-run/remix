@@ -4,10 +4,10 @@ Fetch-based server for compiling browser JS/TS assets on demand.
 
 ## Features
 
-- **Route-Based Serving** - Map public URL patterns to files on disk
+- **On-Demand Compilation** - Compile browser assets on demand
+- **Custom File Mapping** - Define patterns for mapping public URLs to file paths on disk
 - **Access Control** - Control exactly which files can be served with allow and deny rules
 - **Preloads** - Generate modulepreload URLs for `<link>` tags or `Link` headers
-- **Watch Mode** - Watch for file changes and invalidate cached scripts
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
@@ -27,14 +27,12 @@ import * as path from 'node:path'
 import { createRouter } from 'remix/fetch-router'
 import { createAssetServer } from 'remix/assets'
 
-let root = path.resolve(import.meta.dirname, '..')
-
 let assetServer = createAssetServer({
-  routes: [
-    { urlPattern: '/assets/app/*path', filePattern: 'app/*path' },
-    { urlPattern: '/assets/npm/*path', filePattern: 'node_modules/*path' },
-  ],
-  allow: ['app/client/**', 'app/shared/**', 'node_modules/**'],
+  fileMap: {
+    '/assets/app/*path': 'app/*path',
+    '/assets/npm/*path': 'node_modules/*path',
+  },
+  allow: ['app/assets/**', 'node_modules/**'],
 })
 
 let router = createRouter()
@@ -44,8 +42,24 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser JS modules from
-`app/client`, `app/shared`, and `node_modules`.
+This example gives you an `/assets/*` endpoint that serves compiled browser JS modules from `app/assets` and `node_modules`.
+
+## Root Directory
+
+Use `rootDir` to specify the root directory of the asset server, which is used to resolve relative file paths. Defaults to `process.cwd()`.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  rootDir: path.resolve(import.meta.dirname, '..'),
+  fileMap: {
+    '/assets/app/*path': 'app/*path',
+    '/assets/npm/*path': 'node_modules/*path',
+  },
+  allow: ['app/assets/**', 'node_modules/**'],
+})
+```
 
 ## Access Control
 
@@ -55,39 +69,84 @@ You must provide an `allow` list to specify which files are allowed to be served
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   deny: ['app/**/*.server.*'],
 })
 ```
 
-Rules for `allow` and `deny` are file paths or globs. Relative values are resolved from `root`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
+Rules for `allow` and `deny` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-## Routes
+## File Map
 
-Use `routes` to map public URLs to file paths.
+Use `fileMap` to map public URLs to file paths on disk. The keys are public URL patterns, and the values are root-relative file path patterns.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [
-    { urlPattern: '/assets/app/*path', filePattern: 'app/*path' },
-    { urlPattern: '/assets/packages/*path', filePattern: '../packages/*path' },
-  ],
-  allow: ['app/client/**', 'app/shared/**', '../packages/**'],
+  fileMap: {
+    '/assets/app/*path': 'app/*path',
+    '/assets/packages/*path': '../packages/*path',
+  },
+  allow: ['app/assets/**', '../packages/**'],
 })
 ```
 
-Routes use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URLs and file paths. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs.
+`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs.
+
+### File watching
+
+The file system is watched by default so source changes are picked up without requiring a server restart.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**', 'app/node_modules/**'],
+})
+```
+
+When finished with the asset server, call `await assetServer.close()` to clean up the file watcher.
+
+```ts
+await assetServer.close()
+```
+
+You can disable file watching if the files on disk won't change, or if watching is managed at a higher level (e.g. Node's `--watch` flag).
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**', 'app/node_modules/**'],
+  watch: false,
+})
+```
+
+You can optionally provide an array of glob patterns to the `watch.ignore` option:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**', 'app/node_modules/**'],
+  watch: {
+    ignore: ['**/node_modules/**'],
+  },
+})
+```
 
 ## Hrefs
 
 Use `assetServer.getHref()` when you need the public URL for a served asset. You can provide a root-relative or absolute file path, or a `file://` URL.
 
 ```ts
-let src = await assetServer.getHref('app/client/entry.tsx')
-// '/assets/app/client/entry.tsx'
+let src = await assetServer.getHref('app/assets/entry.tsx')
+// '/assets/app/assets/entry.tsx'
 ```
 
 ## Preloads
@@ -95,48 +154,14 @@ let src = await assetServer.getHref('app/client/entry.tsx')
 Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
 
 ```ts
-let preloads = await assetServer.getPreloads(['app/client/entry.tsx', 'app/client/search.tsx'])
+let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/assets/search.tsx'])
 // [
-//   '/assets/app/client/entry.tsx',
-//   '/assets/app/client/search.tsx',
-//   '/assets/app/shared/utils.ts',
+//   '/assets/app/assets/entry.tsx',
+//   '/assets/app/assets/search.tsx',
+//   '/assets/app/assets/utils.ts',
 //   '/assets/npm/@remix-run/component/index.js',
 //   ...etc
 // ]
-```
-
-### Watch Mode
-
-To pick up changes to source files without requiring a server restart, enable `watch` mode.
-
-```ts
-import { createAssetServer } from 'remix/assets'
-
-let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
-  watch: true,
-})
-```
-
-You can optionally provide an array of glob patterns to the `ignore` option:
-
-```ts
-import { createAssetServer } from 'remix/assets'
-
-let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
-  watch: {
-    ignore: ['**/node_modules/**'],
-  },
-})
-```
-
-When you enable watch mode, call `await assetServer.close()` when finished with the asset server or during shutdown so the file watcher is cleaned up properly.
-
-```ts
-await assetServer.close()
 ```
 
 ## Fingerprinting
@@ -149,8 +174,9 @@ If you want clients to cache scripts aggressively without revalidation, you can 
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  watch: false,
   fingerprint: {
     buildId: process.env.GITHUB_SHA,
   },
@@ -159,7 +185,7 @@ let assetServer = createAssetServer({
 
 When fingerprinting is enabled, scripts use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
-Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted modules are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so it cannot be used together with `watch`.
+Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted modules are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so fingerprinting requires `watch: false`.
 
 ## Script Options
 
@@ -171,8 +197,8 @@ Enable minification with `scripts.minify`:
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   scripts: {
     minify: true,
   },
@@ -187,8 +213,8 @@ Use `scripts.target` to lower emitted syntax to a specific ECMAScript version.
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   scripts: {
     target: 'es2019',
   },
@@ -205,8 +231,8 @@ Use `scripts.define` to replace global identifiers with constant expressions.
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**', 'app/node_modules/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**', 'app/node_modules/**'],
   scripts: {
     define: {
       'process.env.NODE_ENV': '"production"',
@@ -226,8 +252,8 @@ Enable sourcemaps with either `'external'` or `'inline'` using `scripts.sourceMa
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   scripts: {
     sourceMaps: 'external',
   },
@@ -240,8 +266,8 @@ By default, sourcemap `sources` use URLs so they're presented alongside the comp
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   scripts: {
     sourceMaps: 'inline',
     sourceMapSourcePaths: 'absolute',
@@ -257,8 +283,8 @@ Use `scripts.external` to leave specific import specifiers unchanged by providin
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   scripts: {
     external: ['my-external-import'],
   },
@@ -273,8 +299,8 @@ Use `onError` to report unexpected compilation failures or return a custom respo
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
-  allow: ['app/client/**', 'app/shared/**'],
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
   onError(error) {
     console.error('Failed to build client module', error)
     return new Response('Client module build failed', { status: 500 })

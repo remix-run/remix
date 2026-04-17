@@ -13,7 +13,7 @@ export interface AssetRouteDefinition {
 }
 
 interface CompiledRoute {
-  root: string
+  rootDir: string
   urlPattern: RoutePattern
   filePattern: RoutePattern
 }
@@ -34,14 +34,22 @@ function normalizeFilePattern(pattern: string): string {
 }
 
 export function compileRoutes(options: {
-  routes: readonly AssetRouteDefinition[]
-  root: string
+  fileMap: Readonly<Record<string, string>>
+  rootDir: string
 }): CompiledRoutes {
-  if (options.routes.length === 0) {
-    throw new Error('createAssetServer() requires at least one configured route.')
+  if (Object.keys(options.fileMap).length === 0) {
+    throw new Error('createAssetServer() requires at least one configured fileMap entry.')
   }
 
-  let compiledRoutes = options.routes.map((route) => compileRoute(route, { root: options.root }))
+  let compiledRoutes = Object.entries(options.fileMap).map(([urlPattern, filePattern]) =>
+    compileRoute(
+      {
+        urlPattern,
+        filePattern,
+      },
+      { rootDir: options.rootDir },
+    ),
+  )
 
   return {
     resolveUrlPathname(pathname) {
@@ -51,7 +59,7 @@ export function compileRoutes(options: {
         let match = route.urlPattern.match(`http://remix.run${normalizedPathname}`)
         if (!match) continue
         let relativeFilePath = route.filePattern.href(match.params).replace(/^\/+/, '')
-        return resolveFilePath(route.root, relativeFilePath)
+        return resolveFilePath(route.rootDir, relativeFilePath)
       }
 
       return null
@@ -60,7 +68,7 @@ export function compileRoutes(options: {
       let normalizedFilePath = normalizeFilePath(filePath)
 
       for (let route of compiledRoutes) {
-        let relativeFilePath = getRelativeFilePath(normalizedFilePath, route.root)
+        let relativeFilePath = getRelativeFilePath(normalizedFilePath, route.rootDir)
         if (relativeFilePath === null) continue
 
         let fileUrl = new URL(`http://remix.run/${relativeFilePath}`)
@@ -77,7 +85,7 @@ export function compileRoutes(options: {
 function compileRoute(
   route: AssetRouteDefinition,
   options: {
-    root: string
+    rootDir: string
   },
 ): CompiledRoute {
   let urlPatternSource = normalizePathname(route.urlPattern)
@@ -90,13 +98,17 @@ function compileRoute(
   validateNoUnnamedWildcards(filePattern, 'File')
   validateRoutePatterns(urlPattern, filePattern)
 
-  return { root: normalizeFilePath(options.root).replace(/\/+$/, ''), urlPattern, filePattern }
+  return {
+    rootDir: normalizeFilePath(options.rootDir).replace(/\/+$/, ''),
+    urlPattern,
+    filePattern,
+  }
 }
 
-function getRelativeFilePath(filePath: string, root: string): string | null {
-  if (filePath === root) return ''
-  if (!filePath.startsWith(`${root}/`)) return null
-  return filePath.slice(root.length + 1)
+function getRelativeFilePath(filePath: string, rootDir: string): string | null {
+  if (filePath === rootDir) return ''
+  if (!filePath.startsWith(`${rootDir}/`)) return null
+  return filePath.slice(rootDir.length + 1)
 }
 
 function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePattern): void {

@@ -6,8 +6,10 @@ import { compileRoutes } from './routes.ts'
 describe('compileRoutes', () => {
   it('supports windows-style roots without parsing them as route syntax', () => {
     let routes = compileRoutes({
-      root: String.raw`C:\Users\runner\project`,
-      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+      fileMap: {
+        '/assets/app/*path': 'app/*path',
+      },
+      rootDir: String.raw`C:\Users\runner\project`,
     })
 
     assert.equal(

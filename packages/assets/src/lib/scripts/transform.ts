@@ -97,6 +97,7 @@ export type TransformArgs = {
   buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
+  isWatchIgnored(filePath: string): boolean
   minify: boolean
   resolveActualPath(identityPath: string): string | null
   routes: CompiledRoutes
@@ -115,7 +116,10 @@ export function createTsconfigTransformOptionsResolver() {
       fileSystemCache = new Map()
       transformOptionsByDirectory.clear()
     },
-    getTransformOptions(filePath: string): TsconfigTransformOptions {
+    getTransformOptions(
+      filePath: string,
+      isWatchIgnored: (filePath: string) => boolean,
+    ): TsconfigTransformOptions {
       let directory = path.dirname(filePath)
       let cached = transformOptionsByDirectory.get(directory)
       if (cached) return cached
@@ -130,7 +134,7 @@ export function createTsconfigTransformOptionsResolver() {
       let transformOptions: TsconfigTransformOptions = {
         trackedFiles: (() => {
           let tsconfigPath = findNearestTsconfigPath(directory)
-          return tsconfigPath ? [tsconfigPath] : []
+          return tsconfigPath && !isWatchIgnored(tsconfigPath) ? [tsconfigPath] : []
         })(),
         tsconfigRaw: tsconfig.config,
       }
@@ -152,12 +156,18 @@ export async function transformModule(
       error: createAssetServerCompilationError(`Module not found: ${record.identityPath}`, {
         code: 'MODULE_NOT_FOUND',
       }),
-      trackedFiles: [record.identityPath],
+      trackedFiles: args.isWatchIgnored(record.identityPath) ? [] : [record.identityPath],
     }
   }
 
-  let transformOptions = args.tsconfigTransformOptionsResolver.getTransformOptions(resolvedPath)
-  let trackedFiles = [resolvedPath, ...transformOptions.trackedFiles]
+  let transformOptions = args.tsconfigTransformOptionsResolver.getTransformOptions(
+    resolvedPath,
+    args.isWatchIgnored,
+  )
+  let trackedFiles = [
+    ...(args.isWatchIgnored(resolvedPath) ? [] : [resolvedPath]),
+    ...transformOptions.trackedFiles,
+  ]
   let sourceText: string
   try {
     sourceText = await fsp.readFile(resolvedPath, 'utf-8')
@@ -205,9 +215,9 @@ export async function transformModule(
     let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
     if (!stableUrlPathname) {
       throw createAssetServerCompilationError(
-        `Module ${record.identityPath} is outside all configured routes.`,
+        `Module ${record.identityPath} is outside all configured fileMap entries.`,
         {
-          code: 'MODULE_OUTSIDE_ROUTES',
+          code: 'MODULE_OUTSIDE_FILE_MAP',
         },
       )
     }

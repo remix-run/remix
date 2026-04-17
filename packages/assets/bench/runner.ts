@@ -185,12 +185,12 @@ function createBenchAssetServer(
   fixture: BenchFixture,
   overrides: Partial<AssetServerOptions> = {},
 ): AssetServer {
-  let root = path.resolve(import.meta.dirname, '../../..')
   let options: AssetServerOptions = {
+    rootDir: path.resolve(import.meta.dirname, '../../..'),
     fingerprint: {
       buildId: String(Date.now()),
     },
-    root,
+    watch: false,
     ...fixture.assetServer,
     ...overrides,
   }

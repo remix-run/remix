@@ -12,7 +12,7 @@ export interface BenchFixture {
   id: 'basic' | 'deep-graph'
   label: string
   entryPoint: string
-  assetServer: Pick<AssetServerOptions, 'allow' | 'routes'>
+  assetServer: Pick<AssetServerOptions, 'allow' | 'fileMap'>
   entryPointUrl: string
   expectedEntryUrlSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
@@ -117,11 +117,11 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
     entryPoint,
     assetServer: {
       allow: [options.projectRoot, options.packagesRoot, repoPackagesRoot],
-      routes: [
-        createRoute(repoRoot, path.join(options.projectRoot, 'app'), '/assets/app/*path'),
-        createRoute(repoRoot, options.packagesRoot, '/assets/bench-packages/*path'),
-        createRoute(repoRoot, repoPackagesRoot, '/assets/packages/*path'),
-      ],
+      fileMap: {
+        '/assets/app/*path': createFilePattern(repoRoot, path.join(options.projectRoot, 'app')),
+        '/assets/bench-packages/*path': createFilePattern(repoRoot, options.packagesRoot),
+        '/assets/packages/*path': createFilePattern(repoRoot, repoPackagesRoot),
+      },
     },
     entryPointUrl: options.entryPointUrl,
     expectedEntryUrlSubstrings: options.expectedEntryUrlSubstrings,
@@ -130,13 +130,9 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
   }
 }
 
-function createRoute(root: string, directory: string, urlPattern: string) {
-  let relativeDirectory = path.relative(root, directory).replace(/\\/g, '/')
-
-  return {
-    filePattern: `${relativeDirectory.replace(/\/+$/, '')}/*path`,
-    urlPattern,
-  }
+function createFilePattern(rootDir: string, directory: string): string {
+  let relativeDirectory = path.relative(rootDir, directory).replace(/\\/g, '/')
+  return `${relativeDirectory.replace(/\/+$/, '')}/*path`
 }
 
 async function countSourceModules(directory: string): Promise<number> {

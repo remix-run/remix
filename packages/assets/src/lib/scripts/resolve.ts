@@ -70,6 +70,7 @@ type ResolveResult =
 
 export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
+  isWatchIgnored(filePath: string): boolean
   resolveModulePath(absolutePath: string): ResolveModuleResult | null
   resolverFactory: ResolverFactory
   routes: CompiledRoutes
@@ -100,7 +101,9 @@ export async function resolveModule(
           )
         : new Map<string, ResolvedSpec>()
   } catch (error) {
-    return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath)
+    return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+      isWatchIgnored: args.isWatchIgnored,
+    })
   }
 
   let importsWithPaths: ResolvedImport[] = []
@@ -110,6 +113,7 @@ export async function resolveModule(
     let trackedResolution = getTrackedRelativeImportResolution(
       transformed.importerDir,
       unresolved.specifier,
+      args.isWatchIgnored,
     )
 
     let resolvedSpec = resolvedImports.get(unresolved.specifier)
@@ -117,7 +121,7 @@ export async function resolveModule(
       return failResolve(
         createAssetServerCompilationError(
           `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}. ` +
-            `Ensure it resolves to a file within the configured asset server routes, or mark it as external.`,
+            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -125,7 +129,7 @@ export async function resolveModule(
         trackedFiles,
         trackedResolutions,
         transformed.resolvedPath,
-        trackedResolution,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
       )
     }
 
@@ -142,7 +146,7 @@ export async function resolveModule(
         trackedFiles,
         trackedResolutions,
         transformed.resolvedPath,
-        trackedResolution,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
       )
     }
 
@@ -158,7 +162,7 @@ export async function resolveModule(
         trackedFiles,
         trackedResolutions,
         transformed.resolvedPath,
-        trackedResolution,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
       )
     }
 
@@ -166,16 +170,16 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not covered by any configured asset server route. ` +
-            `Add a matching route for this file path, or mark this import as external.`,
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is outside all configured fileMap entries. ` +
+            `Add a matching fileMap entry for this file path, or mark this import as external.`,
           {
-            code: 'IMPORT_NOT_ROUTED',
+            code: 'IMPORT_OUTSIDE_FILE_MAP',
           },
         ),
         trackedFiles,
         trackedResolutions,
         transformed.resolvedPath,
-        trackedResolution,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
       )
     }
 
@@ -184,7 +188,9 @@ export async function resolveModule(
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
       let packageJsonPath =
         resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
-      if (packageJsonPath) trackedFiles.add(packageJsonPath)
+      if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
+        trackedFiles.add(packageJsonPath)
+      }
     }
 
     if (trackedResolution) {
@@ -241,51 +247,67 @@ function isRelativeImportSpecifier(specifier: string): boolean {
 function getTrackedRelativeImportResolution(
   importerDir: string,
   specifier: string,
+  isWatchIgnored: (filePath: string) => boolean,
 ): RelativeImportResolution | null {
   if (!isRelativeImportSpecifier(specifier)) return null
 
   let candidatePath = resolveCandidateBasePath(importerDir, specifier)
+  let candidatePrefixes = [`${candidatePath}/`].filter(
+    (candidatePrefix) => !isWatchIgnored(candidatePrefix.replace(/\/+$/, '') || '/'),
+  )
   let extension = path.extname(specifier)
   if (extension === '') {
-    return {
-      candidatePaths: [
-        candidatePath,
-        ...supportedScriptExtensions.map(
-          (candidateExtension) => `${candidatePath}${candidateExtension}`,
-        ),
-      ],
-      candidatePrefixes: [`${candidatePath}/`],
-      specifier,
-    }
+    let candidatePaths = [
+      candidatePath,
+      ...supportedScriptExtensions.map(
+        (candidateExtension) => `${candidatePath}${candidateExtension}`,
+      ),
+    ].filter((candidatePath) => !isWatchIgnored(candidatePath))
+
+    return candidatePaths.length === 0 && candidatePrefixes.length === 0
+      ? null
+      : {
+          candidatePaths,
+          candidatePrefixes,
+          specifier,
+        }
   }
 
   let candidateExtensions = resolverExtensionAlias[extension as keyof typeof resolverExtensionAlias]
   if (!candidateExtensions && !supportedScriptExtensionSet.has(extension)) {
-    return {
-      candidatePaths: [
-        candidatePath,
-        ...supportedScriptExtensions.map(
-          (candidateExtension) => `${candidatePath}${candidateExtension}`,
-        ),
-      ],
-      candidatePrefixes: [`${candidatePath}/`],
-      specifier,
-    }
+    let candidatePaths = [
+      candidatePath,
+      ...supportedScriptExtensions.map(
+        (candidateExtension) => `${candidatePath}${candidateExtension}`,
+      ),
+    ].filter((candidatePath) => !isWatchIgnored(candidatePath))
+
+    return candidatePaths.length === 0 && candidatePrefixes.length === 0
+      ? null
+      : {
+          candidatePaths,
+          candidatePrefixes,
+          specifier,
+        }
   }
 
   if (!candidateExtensions) return null
 
-  return {
-    candidatePaths: [
-      candidatePath,
-      ...candidateExtensions.map(
-        (candidateExtension) =>
-          `${candidatePath.slice(0, candidatePath.length - extension.length)}${candidateExtension}`,
-      ),
-    ],
-    candidatePrefixes: [`${candidatePath}/`],
-    specifier,
-  }
+  let candidatePaths = [
+    candidatePath,
+    ...candidateExtensions.map(
+      (candidateExtension) =>
+        `${candidatePath.slice(0, candidatePath.length - extension.length)}${candidateExtension}`,
+    ),
+  ].filter((candidatePath) => !isWatchIgnored(candidatePath))
+
+  return candidatePaths.length === 0 && candidatePrefixes.length === 0
+    ? null
+    : {
+        candidatePaths,
+        candidatePrefixes,
+        specifier,
+      }
 }
 
 function resolveCandidateBasePath(importerDir: string, specifier: string): string {
@@ -306,7 +328,7 @@ async function batchResolveSpecifiers(
       if (resolutionResult.error) {
         throw createAssetServerCompilationError(
           `Failed to resolve import "${specifier}" in ${importerPath}. ` +
-            `Ensure it resolves to a file within the configured asset server routes, or mark it as external.`,
+            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -354,14 +376,20 @@ function failResolve(
   trackedFiles: ReadonlySet<string>,
   trackedResolutions: readonly TrackedResolution[],
   importerPath: string,
-  trackedResolution?: RelativeImportResolution | null,
+  options: {
+    isWatchIgnored?: (filePath: string) => boolean
+    trackedResolution?: RelativeImportResolution | null
+  } = {},
 ): ResolveResult {
   return {
     ok: false,
     error: toResolveError(error, importerPath),
     tracking: {
       trackedFiles: [...trackedFiles],
-      trackedResolutions: appendFailedTrackedResolution(trackedResolutions, trackedResolution),
+      trackedResolutions: appendFailedTrackedResolution(
+        trackedResolutions,
+        options.trackedResolution,
+      ),
     },
   }
 }

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { IfNoneMatch } from '@remix-run/headers'
 
 import { createAssetServerCompilationError } from '../compilation-error.ts'
+import { createFileMatcher } from '../file-matcher.ts'
 import {
   formatFingerprintedPathname,
   getFingerprintRequestCacheControl,
@@ -23,7 +24,6 @@ import type { CompiledRoutes } from '../routes.ts'
 import type { ScriptsTarget } from '../asset-server.ts'
 import { createModuleStore } from './store.ts'
 import type { ModuleRecord } from './store.ts'
-import type { ModuleWatchEvent as StoreModuleWatchEvent } from './store.ts'
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
@@ -42,11 +42,14 @@ type ModuleCompilerOptions = {
   fingerprintModules: boolean
   isAllowed(absolutePath: string): boolean
   minify: boolean
-  root: string
+  onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => Promise<void> | void
+  rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
   target?: ScriptsTarget
+  watchIgnore?: readonly string[]
+  watchMode: boolean
 }
 
 type ModuleWatchEvent = 'add' | 'change' | 'unlink'
@@ -73,8 +76,13 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   let resolvedOptions = {
     ...options,
     externalSet: new Set(options.external),
+    watchIgnoreMatchers: (options.watchIgnore ?? []).map((pattern) =>
+      createFileMatcher(pattern, options.rootDir),
+    ),
   }
-  let store = createModuleStore()
+  let store = createModuleStore({
+    onWatchDirectoriesChange: options.onWatchDirectoriesChange,
+  })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
   let resolverFactory = new ResolverFactory({
     aliasFields: [['browser']],
@@ -91,6 +99,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     buildId: resolvedOptions.buildId ?? null,
     define: resolvedOptions.define ?? null,
     externalSet: resolvedOptions.externalSet,
+    isWatchIgnored,
     minify: resolvedOptions.minify,
     resolveActualPath,
     routes: resolvedOptions.routes,
@@ -101,6 +110,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
+    isWatchIgnored,
     resolveModulePath,
     resolverFactory,
     routes: resolvedOptions.routes,
@@ -158,7 +168,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     async handleFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
-      resolverFactory.clearCache()
+      if (isWatchIgnored(normalizedFilePath)) return
+
+      if (shouldClearResolverCacheForFileEvent(normalizedFilePath, event)) {
+        resolverFactory.clearCache()
+      }
 
       if (isTsconfigPath(normalizedFilePath)) {
         tsconfigTransformOptionsResolver.clear()
@@ -171,7 +185,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         return
       }
 
-      store.invalidateForFileEvent(normalizedFilePath, toStoreWatchEvent(event))
+      store.invalidateForFileEvent(normalizedFilePath, event)
     },
 
     parseRequestPathname(pathname) {
@@ -199,7 +213,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
     }
 
-    return resolveFilePath(resolvedOptions.root, filePath)
+    return resolveFilePath(resolvedOptions.rootDir, filePath)
   }
 
   function resolveServedModuleOrThrow(absolutePath: string): ResolveModuleResult {
@@ -237,17 +251,25 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     let promise = (async () => {
       let startedAt = Date.now()
       let transformedModule = await getOrCreateTransformedModule(record)
+      if (
+        resolvedOptions.watchMode &&
+        transformedModule.unresolvedImports.some((unresolved) =>
+          isBareImportSpecifier(unresolved.specifier),
+        )
+      ) {
+        resolverFactory.clearCache()
+      }
       let resolveModuleResult = await resolveModule(record, transformedModule, resolveArgs)
 
       if (!resolveModuleResult.ok) {
         if (startedAt >= record.lastInvalidatedAt) {
-          store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
+          await store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
         }
         throw resolveModuleResult.error
       }
 
       if (startedAt >= record.lastInvalidatedAt) {
-        store.setResolved(record.identityPath, resolveModuleResult.value)
+        await store.setResolved(record.identityPath, resolveModuleResult.value)
       }
 
       return resolveModuleResult.value
@@ -272,7 +294,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     if (!transformModuleResult.ok) {
       if (startedAt >= record.lastInvalidatedAt) {
-        store.setTransformFailure(record.identityPath, {
+        await store.setTransformFailure(record.identityPath, {
           trackedFiles: transformModuleResult.trackedFiles,
         })
       }
@@ -280,7 +302,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     }
 
     if (startedAt >= record.lastInvalidatedAt) {
-      store.setTransformed(record.identityPath, transformModuleResult.value)
+      await store.setTransformed(record.identityPath, transformModuleResult.value)
     }
 
     return transformModuleResult.value
@@ -332,6 +354,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       resolvedOptions.fingerprintModules ? resolvedModule.fingerprint : null,
     )
   }
+
+  function isWatchIgnored(filePath: string): boolean {
+    return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath))
+  }
 }
 
 function parseServedPathname(pathname: string): {
@@ -379,9 +405,16 @@ function toModuleCompileResult(emittedModule: EmittedModule): ModuleCompileResul
   }
 }
 
-function toStoreWatchEvent(event: ModuleWatchEvent): StoreModuleWatchEvent {
-  if (event === 'unlink') return 'delete'
-  return event
+function isPackageJsonPath(filePath: string): boolean {
+  return filePath.endsWith('/package.json')
+}
+
+function isTsconfigPath(filePath: string): boolean {
+  return /\/tsconfig(?:\..+)?\.json$/.test(filePath)
+}
+
+function shouldClearResolverCacheForFileEvent(filePath: string, event: ModuleWatchEvent): boolean {
+  return event !== 'change' || isPackageJsonPath(filePath) || isTsconfigPath(filePath)
 }
 
 function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
@@ -413,12 +446,16 @@ function resolveActualPath(identityPath: string): string | null {
   }
 }
 
-function isPackageJsonPath(filePath: string): boolean {
-  return path.posix.basename(filePath) === 'package.json'
-}
-
-function isTsconfigPath(filePath: string): boolean {
-  return /^tsconfig(?:\..+)?\.json$/.test(path.posix.basename(filePath))
+function isBareImportSpecifier(specifier: string): boolean {
+  return (
+    !specifier.startsWith('./') &&
+    !specifier.startsWith('../') &&
+    !specifier.startsWith('/') &&
+    !specifier.startsWith('file:') &&
+    !specifier.startsWith('data:') &&
+    !specifier.startsWith('http://') &&
+    !specifier.startsWith('https://')
+  )
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {

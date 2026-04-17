@@ -1,35 +1,34 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import type { FSWatcher } from 'chokidar'
 import chokidar from 'chokidar'
 
-import { isPathNotFoundError, resolveFilePath } from './paths.ts'
-import type { AssetRouteDefinition } from './routes.ts'
+import { getFilePathDirectory, normalizeFilePath } from './paths.ts'
 
 type AssetServerWatcherOptions = {
   ignore?: readonly string[]
   poll?: boolean
   pollInterval?: number
   onFileEvent(filePath: string, event: AssetServerWatchEvent): Promise<void>
-  root: string
-  routes: readonly AssetRouteDefinition[]
+  rootDir: string
 }
 
 type AssetServerWatchEvent = 'add' | 'change' | 'unlink'
 
 export type AssetServerWatcher = {
   close(): Promise<void>
-  getWatchedDirectories(): string[]
-  whenReady(): Promise<void>
+  updateWatchedDirectories(delta: {
+    add: readonly string[]
+    remove: readonly string[]
+  }): Promise<void>
 }
 
 export function createAssetServerWatcher(options: AssetServerWatcherOptions): AssetServerWatcher {
-  let watcher = chokidar.watch(getWatchTargets(options.root, options.routes), {
+  let watcher = chokidar.watch([], {
     ignoreInitial: true,
     ignorePermissionErrors: true,
     ...resolveChokidarWatchOptions(options),
   })
-  let readyPromise = createWatcherReadyPromise(watcher)
+  let watchedDirectories = new Set<string>()
+  let watchedTargets = new Set<string>()
+  let syncPromise = Promise.resolve()
 
   for (let event of ['add', 'change', 'unlink'] as const) {
     watcher.on(event, (filePath) => {
@@ -41,131 +40,100 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     async close() {
       await watcher.close()
     },
-    getWatchedDirectories() {
-      return Object.keys(watcher.getWatched())
-    },
-    whenReady() {
-      return readyPromise
+    async updateWatchedDirectories(delta) {
+      syncPromise = syncPromise.then(async () => {
+        let nextWatchedDirectories = new Set(watchedDirectories)
+
+        for (let directory of delta.add) {
+          nextWatchedDirectories.add(directory)
+        }
+        for (let directory of delta.remove) {
+          nextWatchedDirectories.delete(directory)
+        }
+
+        let nextTargets = getWatchTargetsForDirectories(options.rootDir, [
+          ...nextWatchedDirectories,
+        ])
+        let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
+        let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
+
+        if (targetsToRemove.length > 0) {
+          await watcher.unwatch(targetsToRemove)
+        }
+        if (targetsToAdd.length > 0) {
+          await watcher.add(targetsToAdd)
+        }
+        if (targetsToAdd.length > 0 || targetsToRemove.length > 0) {
+          await delay(50)
+        }
+
+        watchedDirectories = nextWatchedDirectories
+        watchedTargets = nextTargets
+      })
+
+      await syncPromise
     },
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function resolveChokidarWatchOptions(
   options: AssetServerWatcherOptions,
 ): Exclude<Parameters<typeof chokidar.watch>[1], undefined> {
   return {
+    awaitWriteFinish: {
+      pollInterval: 10,
+      stabilityThreshold: 10,
+    },
+    depth: 0,
     ignored: ['**/.git/**', ...(options.ignore ?? [])],
     interval: options.pollInterval ?? 100,
     usePolling: options.poll ?? false,
   }
 }
 
-function createWatcherReadyPromise(watcher: FSWatcher): Promise<void> {
-  let activeWatcher = watcher
-
-  return new Promise<void>((resolve, reject) => {
-    function handleReady() {
-      activeWatcher.off('error', handleError)
-      resolve()
-    }
-
-    function handleError(error: unknown) {
-      activeWatcher.off('ready', handleReady)
-      reject(error)
-    }
-
-    activeWatcher.once('ready', handleReady)
-    activeWatcher.once('error', handleError)
-  })
-}
-
-function getWatchTargets(root: string, routes: readonly AssetRouteDefinition[]): string[] {
+function getWatchTargetsForDirectories(
+  rootDir: string,
+  directories: readonly string[],
+): Set<string> {
+  let normalizedRootDir = normalizeFilePath(rootDir)
   let targets = new Set<string>()
-  let configRoots = new Set<string>()
+  let configAncestors = new Set<string>()
 
-  for (let route of routes) {
-    let resolvedPatternPath = resolveFilePath(root, route.filePattern)
-    let watchTarget = containsGlobSyntax(route.filePattern)
-      ? getGlobParentPath(resolvedPatternPath)
-      : resolvedPatternPath
-    targets.add(watchTarget)
+  for (let directory of directories) {
+    let normalizedDirectory = normalizeFilePath(directory).replace(/\/+$/, '')
+    if (!isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) continue
 
-    let configRoot = getWatchConfigRoot(watchTarget)
-    if (configRoot) {
-      configRoots.add(configRoot)
+    targets.add(normalizedDirectory)
+
+    for (let ancestor of getAncestorPaths(normalizedDirectory, normalizedRootDir)) {
+      configAncestors.add(ancestor)
     }
   }
 
-  for (let configRoot of configRoots) {
-    for (let ancestor of getAncestorPaths(configRoot, root)) {
-      for (let configPath of getExistingConfigFileTargets(ancestor)) {
-        targets.add(configPath)
-      }
-    }
-  }
-
-  return [...targets]
-}
-
-function getAncestorPaths(directoryPath: string, root: string): string[] {
-  let ancestors: string[] = []
-  let currentDirectory = directoryPath
-
-  while (isSameOrDescendantPath(currentDirectory, root)) {
-    ancestors.push(currentDirectory)
-    if (currentDirectory === root) break
-    let parentDirectory = path.posix.dirname(currentDirectory)
-    if (parentDirectory === currentDirectory) break
-    currentDirectory = parentDirectory
-  }
-
-  return ancestors
-}
-
-function getGlobParentPath(pattern: string): string {
-  let firstGlobIndex = pattern.search(/[*?[\]{}()!+@]/)
-  if (firstGlobIndex === -1) return pattern
-
-  let prefix = pattern.slice(0, firstGlobIndex)
-  return prefix.replace(/\/+$/, '') || '/'
-}
-
-function getWatchConfigRoot(filePath: string): string | null {
-  try {
-    if (fs.statSync(filePath).isDirectory()) {
-      return filePath
-    }
-  } catch (error) {
-    // We intentionally tolerate only "not found" filesystem races here. Any other
-    // error (e.g. permissions) indicates a real setup problem and should surface.
-    if (!isPathNotFoundError(error)) throw error
-  }
-
-  return path.posix.dirname(filePath)
-}
-
-function getExistingConfigFileTargets(directoryPath: string): string[] {
-  let targets: string[] = []
-
-  try {
-    let entries = fs.readdirSync(directoryPath, { withFileTypes: true })
-    for (let entry of entries) {
-      if (!entry.isFile()) continue
-      if (entry.name === 'package.json' || /^tsconfig(?:\..+)?\.json$/.test(entry.name)) {
-        targets.push(`${directoryPath}/${entry.name}`)
-      }
-    }
-  } catch (error) {
-    // Only ignore missing directory races while computing watch targets. Unexpected
-    // errors should bubble up so watch misconfiguration is visible to callers.
-    if (!isPathNotFoundError(error)) throw error
+  for (let ancestor of configAncestors) {
+    targets.add(ancestor)
   }
 
   return targets
 }
 
-function containsGlobSyntax(pattern: string): boolean {
-  return /[*?[\]{}()!+@]/.test(pattern)
+function getAncestorPaths(directoryPath: string, rootDir: string): string[] {
+  let ancestors: string[] = []
+  let currentDirectory = directoryPath
+
+  while (isSameOrDescendantPath(currentDirectory, rootDir)) {
+    ancestors.push(currentDirectory)
+    if (currentDirectory === rootDir) break
+    let parentDirectory = getFilePathDirectory(currentDirectory)
+    if (parentDirectory === currentDirectory) break
+    currentDirectory = parentDirectory
+  }
+
+  return ancestors
 }
 
 function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {

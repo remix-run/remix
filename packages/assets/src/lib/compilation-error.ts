@@ -1,14 +1,14 @@
 type AssetServerCompilationErrorCode =
   | 'MODULE_NOT_FOUND'
   | 'MODULE_NOT_ALLOWED'
-  | 'MODULE_OUTSIDE_ROUTES'
+  | 'MODULE_OUTSIDE_FILE_MAP'
   | 'MODULE_COMMONJS_NOT_SUPPORTED'
   | 'MODULE_TRANSFORM_FAILED'
   | 'MODULE_EMIT_FAILED'
   | 'IMPORT_RESOLUTION_FAILED'
   | 'IMPORT_NOT_SUPPORTED'
   | 'IMPORT_NOT_ALLOWED'
-  | 'IMPORT_NOT_ROUTED'
+  | 'IMPORT_OUTSIDE_FILE_MAP'
 
 /**
  * Internal error used by the request-time module compilation pipeline.

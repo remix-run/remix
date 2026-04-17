@@ -8,11 +8,7 @@ import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
-import {
-  createAssetServer,
-  getInternalAssetServerWatchedDirectories,
-  waitForInternalAssetServerWatcher,
-} from './asset-server.ts'
+import { createAssetServer } from './asset-server.ts'
 import type { AssetServerOptions } from './asset-server.ts'
 
 const watchTestTimeoutMs = 15000
@@ -21,7 +17,10 @@ type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 function createAssetServerForTest(
   options: Parameters<typeof createAssetServer>[0],
 ): ReturnType<typeof createAssetServer> {
-  return createAssetServer(options)
+  return createAssetServer({
+    ...options,
+    watch: options.watch ?? false,
+  })
 }
 
 async function makeTmpDir(): Promise<string> {
@@ -50,20 +49,21 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
   }
 }
 
-function createTestServer(root: string, overrides: Partial<AssetServerOptions> = {}) {
+function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
   return createAssetServerForTest({
     allow: ['app/**', 'app/node_modules/**'],
-    routes: [
-      { urlPattern: '/assets/app/*path', filePattern: 'app/*path' },
-      { urlPattern: '/assets/npm/*path', filePattern: 'app/node_modules/*path' },
-    ],
-    root,
+    fileMap: {
+      '/assets/app/*path': 'app/*path',
+      '/assets/npm/*path': 'app/node_modules/*path',
+    },
+    rootDir,
+    watch: overrides.watch ?? false,
     ...overrides,
   })
 }
 
-function createWatchedTestServer(root: string, overrides: Partial<AssetServerOptions> = {}) {
-  return createTestServer(root, {
+function createWatchedTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
+  return createTestServer(rootDir, {
     ...overrides,
     watch: overrides.watch ?? true,
   })
@@ -115,13 +115,13 @@ async function getCompiledCodeAndSourceMap(
 }
 
 async function assertCharacterAccurateImportRewriteSourceMap(
-  root: string,
+  rootDir: string,
   sourceText = 'import { dep } from "./dep.ts"\nexport function value() {\n  return dep + 1\n}\n',
 ) {
-  await write(root, 'app/dep.ts', 'export const dep = 1')
-  await write(root, 'app/entry.ts', sourceText)
+  await write(rootDir, 'app/dep.ts', 'export const dep = 1')
+  await write(rootDir, 'app/entry.ts', sourceText)
 
-  let assetServer = createTestServer(root, {
+  let assetServer = createTestServer(rootDir, {
     fingerprint: { buildId: 'build' },
     scripts: {
       minify: true,
@@ -167,20 +167,6 @@ async function waitFor<T>(
     }
     await sleep(25)
   }
-}
-
-async function waitForWatchedTestServerReady(
-  assetServer: ReturnType<typeof createAssetServer>,
-  root: string,
-): Promise<void> {
-  await waitForInternalAssetServerWatcher(assetServer)
-
-  let watchedRoot = normalizeWindowsPath(nodeFs.realpathSync(path.join(root, 'app')))
-  await waitFor(
-    async () => getInternalAssetServerWatchedDirectories(assetServer).map(normalizeWindowsPath),
-    (watchedDirectories) => watchedDirectories.includes(watchedRoot),
-    watchTestTimeoutMs,
-  )
 }
 
 async function assertInternalServerError(response: Response): Promise<void> {
@@ -895,7 +881,7 @@ describe('asset-server', () => {
     )
   })
 
-  it('getHref rejects modules outside configured routes', async () => {
+  it('getHref rejects modules outside configured fileMap entries', async () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
@@ -907,8 +893,8 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allow: ['app/**'],
       deny: ['app/entry.ts'],
-      root: dir,
-      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+      rootDir: dir,
+      fileMap: { '/assets/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
@@ -1108,8 +1094,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
@@ -1135,6 +1119,73 @@ describe('asset-server', () => {
     }
   })
 
+  it('picks up source changes in default watch mode without restarting', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createAssetServer({
+        allow: ['app/**'],
+        fileMap: {
+          '/assets/app/*path': 'app/*path',
+        },
+        rootDir: caseDir,
+      })
+
+      try {
+        let firstResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 1/)
+
+        await write(caseDir, 'app/entry.ts', 'export const value = 2')
+
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /value = 2/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(secondBody, /value = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores source changes that match watch.ignore in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        watch: {
+          ignore: ['app/dep.ts'],
+        },
+      })
+
+      try {
+        let firstResponse = await get(assetServer, '/assets/app/dep.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 1/)
+
+        await write(caseDir, 'app/dep.ts', 'export const value = 2')
+        await sleep(200)
+
+        let secondResponse = await get(assetServer, '/assets/app/dep.ts')
+        assert.ok(secondResponse)
+        assert.match(await secondResponse.text(), /value = 1/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('recovers in watch mode when a previously missing import is created', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1146,8 +1197,6 @@ describe('asset-server', () => {
       })
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         await assertInternalServerError(before)
@@ -1174,6 +1223,365 @@ describe('asset-server', () => {
     }
   })
 
+  it('ignores extensionless import recovery when the candidate matches watch.ignore', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'import "./missing"\nexport const entry = true')
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError() {
+          return
+        },
+        watch: {
+          ignore: ['app/missing.ts'],
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        await assertInternalServerError(before)
+
+        await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
+        await sleep(200)
+
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        await assertInternalServerError(after)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up root package imports changes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'package.json', {
+        imports: {
+          '#dep': './app/dep-a.ts',
+        },
+        name: 'watch-test',
+        type: 'module',
+      })
+      await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
+      await write(caseDir, 'app/dep-b.ts', 'export const dep = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /\/assets\/app\/dep-a\.ts/)
+
+        await writeJson(caseDir, 'package.json', {
+          imports: {
+            '#dep': './app/dep-b.ts',
+          },
+          name: 'watch-test',
+          type: 'module',
+        })
+
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /\/assets\/app\/dep-b\.ts/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(secondBody, /\/assets\/app\/dep-b\.ts/)
+        assert.doesNotMatch(secondBody, /\/assets\/app\/dep-a\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores root package.json changes that match watch.ignore in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'package.json', {
+        imports: {
+          '#dep': './app/dep-a.ts',
+        },
+        name: 'watch-test',
+        type: 'module',
+      })
+      await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
+      await write(caseDir, 'app/dep-b.ts', 'export const dep = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir, {
+        watch: {
+          ignore: ['package.json'],
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
+
+        await writeJson(caseDir, 'package.json', {
+          imports: {
+            '#dep': './app/dep-b.ts',
+          },
+          name: 'watch-test',
+          type: 'module',
+        })
+        await sleep(200)
+
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
+        assert.match(afterBody, /\/assets\/app\/dep-a\.ts/)
+        assert.doesNotMatch(afterBody, /\/assets\/app\/dep-b\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up root package imports when package.json is added in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError() {
+          return
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        await assertInternalServerError(before)
+
+        await writeJson(caseDir, 'package.json', {
+          imports: {
+            '#dep': './app/dep.ts',
+          },
+          name: 'watch-test',
+          type: 'module',
+        })
+
+        let body = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (value) => /\/assets\/app\/dep\.ts/.test(value),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(body, /\/assets\/app\/dep\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails alias resolution when root package.json is removed in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'package.json', {
+        imports: {
+          '#dep': './app/dep.ts',
+        },
+        name: 'watch-test',
+        type: 'module',
+      })
+      await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+
+        await fs.rm(path.join(caseDir, 'package.json'))
+
+        let after = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return {
+              code: errorCodes.at(-1),
+              status: response.status,
+            }
+          },
+          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
+          watchTestTimeoutMs,
+        )
+
+        assert.equal(after.status, 500)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('converges to the latest source content after burst writes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 0')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        for (let index = 1; index <= 12; index++) {
+          await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+        }
+
+        let body = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (value) => /value = 12/.test(value),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(body, /value = 12/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('converges to the latest broken source after burst writes in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 0')
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        for (let index = 1; index <= 6; index++) {
+          await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+        }
+        await write(caseDir, 'app/entry.ts', 'export const value =')
+
+        let failure = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+
+            return {
+              body: await response.text(),
+              code: errorCodes.at(-1),
+              status: response.status,
+            }
+          },
+          (result) => result.status === 500 && result.code === 'MODULE_TRANSFORM_FAILED',
+          watchTestTimeoutMs,
+        )
+
+        assert.equal(failure.status, 500)
+        assert.equal(failure.body, 'Internal Server Error')
+
+        await write(caseDir, 'app/entry.ts', 'export const value = 7')
+
+        let recovered = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+
+            return {
+              body: await response.text(),
+              status: response.status,
+            }
+          },
+          (result) => result.status === 200 && /value = 7/.test(result.body),
+          watchTestTimeoutMs,
+        )
+
+        assert.equal(recovered.status, 200)
+        assert.match(recovered.body, /value = 7/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('converges across repeated package imports toggles in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'package.json', {
+        imports: {
+          '#dep': './app/dep-a.ts',
+        },
+        name: 'watch-test',
+        type: 'module',
+      })
+      await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
+      await write(caseDir, 'app/dep-b.ts', 'export const dep = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        for (let index = 0; index < 8; index++) {
+          let useA = index % 2 === 0
+          let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
+          await writeJson(caseDir, 'package.json', {
+            imports: {
+              '#dep': useA ? './app/dep-a.ts' : './app/dep-b.ts',
+            },
+            name: 'watch-test',
+            type: 'module',
+          })
+
+          let body = await waitFor(
+            async () => {
+              let response = await get(assetServer, '/assets/app/entry.ts')
+              assert.ok(response)
+              return response.text()
+            },
+            (value) => expected.test(value),
+            watchTestTimeoutMs,
+          )
+
+          assert.match(body, expected)
+        }
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('recovers in watch mode when a previously broken transform is fixed', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1189,8 +1597,6 @@ describe('asset-server', () => {
       })
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         await assertInternalServerError(before)
@@ -1233,8 +1639,6 @@ describe('asset-server', () => {
       })
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let firstFailure = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstFailure)
         await assertInternalServerError(firstFailure)
@@ -1317,8 +1721,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await assetServer.getPreloads('app/entry.tsx')
         assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
 
@@ -1345,6 +1747,58 @@ describe('asset-server', () => {
     }
   })
 
+  it('ignores tsconfig changes that match watch.ignore in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.base.json', {
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: '@remix-run/component-a',
+        },
+      })
+      await writeJson(caseDir, 'tsconfig.json', {
+        extends: './tsconfig.base.json',
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
+      )
+      await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
+      let assetServer = createWatchedTestServer(caseDir, {
+        watch: {
+          ignore: ['tsconfig.base.json'],
+        },
+      })
+
+      try {
+        let before = await assetServer.getPreloads('app/entry.tsx')
+        assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+
+        await writeJson(caseDir, 'tsconfig.base.json', {
+          compilerOptions: {
+            jsx: 'react-jsx',
+            jsxImportSource: '@remix-run/component-b',
+          },
+        })
+        await sleep(200)
+
+        let after = await assetServer.getPreloads('app/entry.tsx')
+        assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up tsconfig paths resolution changes in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1363,8 +1817,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
@@ -1398,6 +1850,150 @@ describe('asset-server', () => {
     }
   })
 
+  it('picks up tsconfig paths when tsconfig.json is added in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError() {
+          return
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        await assertInternalServerError(before)
+
+        await writeJson(caseDir, 'tsconfig.json', {
+          compilerOptions: {
+            baseUrl: '.',
+            paths: {
+              '#dep': ['./app/dep.ts'],
+            },
+          },
+        })
+
+        let body = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (value) => /\/assets\/app\/dep\.ts/.test(value),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(body, /\/assets\/app\/dep\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails tsconfig paths resolution when tsconfig.json is removed in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.json', {
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            '#dep': ['./app/dep.ts'],
+          },
+        },
+      })
+      await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(before)
+        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+
+        await fs.rm(path.join(caseDir, 'tsconfig.json'))
+
+        let after = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/entry.ts')
+            assert.ok(response)
+            return {
+              code: errorCodes.at(-1),
+              status: response.status,
+            }
+          },
+          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
+          watchTestTimeoutMs,
+        )
+
+        assert.equal(after.status, 500)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('converges across repeated tsconfig paths toggles in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'tsconfig.json', {
+        compilerOptions: {
+          baseUrl: '.',
+          paths: {
+            '#dep': ['./app/dep-a.ts'],
+          },
+        },
+      })
+      await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
+      await write(caseDir, 'app/dep-b.ts', 'export const dep = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { dep } from "#dep"\nexport { dep }')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        for (let index = 0; index < 8; index++) {
+          let useA = index % 2 === 0
+          let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
+          await writeJson(caseDir, 'tsconfig.json', {
+            compilerOptions: {
+              baseUrl: '.',
+              paths: {
+                '#dep': [useA ? './app/dep-a.ts' : './app/dep-b.ts'],
+              },
+            },
+          })
+
+          let body = await waitFor(
+            async () => {
+              let response = await get(assetServer, '/assets/app/entry.ts')
+              assert.ok(response)
+              return response.text()
+            },
+            (value) => expected.test(value),
+            watchTestTimeoutMs,
+          )
+
+          assert.match(body, expected)
+        }
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('picks up package resolution changes in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1414,8 +2010,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /example\/a\.ts/)
@@ -1447,6 +2041,53 @@ describe('asset-server', () => {
     }
   })
 
+  it('converges across repeated package exports toggles in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+        exports: {
+          '.': './a.ts',
+        },
+        name: 'example',
+      })
+      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
+      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        for (let index = 0; index < 8; index++) {
+          let useA = index % 2 === 0
+          let expected = useA ? /example\/a\.ts/ : /example\/b\.ts/
+
+          await writeJson(caseDir, 'app/node_modules/example/package.json', {
+            exports: {
+              '.': useA ? './a.ts' : './b.ts',
+            },
+            name: 'example',
+          })
+
+          let body = await waitFor(
+            async () => {
+              let response = await get(assetServer, '/assets/app/entry.ts')
+              assert.ok(response)
+              return response.text()
+            },
+            (value) => expected.test(value),
+            watchTestTimeoutMs,
+          )
+
+          assert.match(body, expected)
+        }
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('switches extensionless imports to a higher-priority file in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1456,8 +2097,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.js/)
@@ -1493,8 +2132,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
@@ -1525,8 +2162,6 @@ describe('asset-server', () => {
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createWatchedTestServer(caseDir)
-
-      await waitForWatchedTestServerReady(assetServer, caseDir)
 
       let firstResponse = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(firstResponse)
@@ -1632,8 +2267,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
@@ -1670,8 +2303,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/styles\.css\.ts/)
@@ -1809,8 +2440,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
@@ -1847,8 +2476,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.js/)
@@ -1884,8 +2511,6 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
-        await waitForWatchedTestServerReady(assetServer, caseDir)
-
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
@@ -1958,8 +2583,8 @@ describe('asset-server', () => {
       () =>
         createAssetServerForTest({
           allow: ['app/\0allowed-realpath.ts'],
-          root: dir,
-          routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+          rootDir: dir,
+          fileMap: { '/assets/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
@@ -1971,14 +2596,12 @@ describe('asset-server', () => {
       () =>
         createAssetServerForTest({
           allow: [path.join(dir, 'app')],
-          root: dir,
-          routes: [
-            {
-              urlPattern: '/assets/app/*path',
-              filePattern: `${path.join(dir, 'app')}/*path`,
-            },
-          ],
+          rootDir: dir,
+          fileMap: {
+            '/assets/app/*path': `${path.join(dir, 'app')}/*path`,
+          },
           fingerprint: { buildId: 'build' },
+          watch: false,
         }),
       /must be relative to the asset server root/,
     )
@@ -1991,8 +2614,8 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allow: [allowedPath, path.join(dir, 'app')],
       deny: [path.join(dir, 'app/blocked.ts')],
-      root: dir,
-      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+      rootDir: dir,
+      fileMap: { '/assets/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -2005,13 +2628,13 @@ describe('asset-server', () => {
     assert.equal(hiddenResponse.status, 200)
   })
 
-  it('rejects unnamed route wildcards because routes must be reversible', async () => {
+  it('rejects unnamed route wildcards because fileMap entries must be reversible', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
           allow: ['app/**'],
-          root: dir,
-          routes: [{ urlPattern: '/assets/app/*', filePattern: 'app/*path' }],
+          rootDir: dir,
+          fileMap: { '/assets/app/*': 'app/*path' },
         }),
       /must use named wildcards/,
     )
@@ -2023,8 +2646,8 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allow: ['app/**/*.ts'],
       deny: ['app/**/private/**'],
-      root: dir,
-      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+      rootDir: dir,
+      fileMap: { '/assets/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -2040,8 +2663,8 @@ describe('asset-server', () => {
     let assetServer = createAssetServerForTest({
       allow: ['app/**'],
       deny: ['app/blocked.ts'],
-      root: dir,
-      routes: [{ urlPattern: '/assets/app/*path', filePattern: 'app/*path' }],
+      rootDir: dir,
+      fileMap: { '/assets/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -2463,6 +3086,22 @@ describe('asset-server', () => {
     )
   })
 
+  it('rejects fingerprinting when watch uses its default mode', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createAssetServer({
+          allow: ['app/**'],
+          fileMap: {
+            '/assets/app/*path': 'app/*path',
+          },
+          rootDir: dir,
+          fingerprint: { buildId: 'build' },
+        }),
+      /fingerprint cannot be used with watch mode/,
+    )
+  })
+
   it('calls onError for unexpected compilation failures', async () => {
     await write(dir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
     await write(dir, 'app/broken.ts', 'export const nope =')
@@ -2562,7 +3201,7 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
   })
 
-  it('calls onError when an imported module is allowed but not routed', async () => {
+  it('calls onError when an imported module is outside configured fileMap entries', async () => {
     await write(dir, 'app/entry.ts', 'import "../shared/util.ts"\nexport const entry = util')
     await write(dir, 'shared/util.ts', 'export const util = true')
     let receivedError: unknown
@@ -2577,8 +3216,8 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'IMPORT_NOT_ROUTED')
-    assert.match(receivedError.message, /not covered by any configured asset server route/)
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
+    assert.match(receivedError.message, /outside all configured fileMap entries/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
   })
