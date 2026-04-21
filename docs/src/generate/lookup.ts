@@ -21,5 +21,5 @@ export async function writeLookupFile(apis: DocumentedAPI[], docsDir: string) {
 
   let lookupPath = path.join(docsDir, 'api.json')
   info(`Writing API lookup file: ${lookupPath}`)
-  await fs.writeFile(lookupPath, JSON.stringify(sorted, null, 2) + '\n')
+  await fs.writeFile(lookupPath, JSON.stringify(sorted) + '\n')
 }
