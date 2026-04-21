@@ -270,7 +270,7 @@ function resolveConfig(
       cliValues.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
     ),
     coverage:
-      cliValues.coverage === true || fileConfig.coverage === true
+      cliValues.coverage === true || !!fileConfig.coverage
         ? {
             dir: cliValues['coverage.dir'] ?? fileCoverage.dir ?? defaultValues.coverage!.dir,
             include:
