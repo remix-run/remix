@@ -39,7 +39,8 @@ export function createRouter(versions: ServerContext['versions']) {
   const router = _createRouter()
 
   const respond = {
-    async file(request: Request, filePath: string, name: string) {
+    async file(request: Request, filePath: string, name?: string) {
+      name ??= path.basename(filePath)
       return await createFileResponse(openLazyFile(filePath, { name }), request)
     },
     async document(request: Request, node: RemixNode, init?: ResponseInit) {
@@ -131,7 +132,7 @@ export function createRouter(versions: ServerContext['versions']) {
           return new Response('Not Found', { status: 404 })
         }
 
-        return respond.file(request, docFile.path, params.slug)
+        return respond.file(request, docFile.path)
       },
     },
   })
