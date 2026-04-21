@@ -10,7 +10,7 @@ describe('resolveContainedPath', () => {
 
     assert.equal(
       resolveContainedPath(rootDir, 'app/controllers/home.ts'),
-      path.join(rootDir, 'app', 'controllers', 'home.ts'),
+      path.resolve(rootDir, 'app', 'controllers', 'home.ts'),
     )
   })
 
