@@ -40,7 +40,9 @@ await spider(
   new Set([
     '/',
     '/api.json',
-    ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || []),
+    ...(versions
+      ?.filter((v) => v.crawl)
+      .flatMap((v) => [`/${v.version}/api.json`, `/${v.version}/`]) || []),
   ]),
 )
 
