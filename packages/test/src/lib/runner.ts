@@ -1,6 +1,8 @@
+import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
+import { collectServerCoverageMap, type CoverageConfig, type CoverageMap } from './coverage.ts'
 import type { TestResults } from './executor.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
@@ -19,9 +21,11 @@ export async function runServerTests(
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
+    coverage?: CoverageConfig
   } = {},
-): Promise<Counts> {
+): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
+  let coverageMap: CoverageMap | null = null
   let envLabel = options.projectName ? `${type}:${options.projectName}` : type
 
   function accumulate(results: TestResults, file: string) {
@@ -47,15 +51,28 @@ export async function runServerTests(
       () => counts.failed++,
     )
   } else {
+    let coverageDataDir: string | undefined
+    if (options.coverage) {
+      coverageDataDir = path.resolve(options.coverage.dir)
+      await fsp.mkdir(coverageDataDir, { recursive: true })
+      process.env.NODE_V8_COVERAGE = coverageDataDir
+    }
+
     await runInConcurrentWorkers(
       files,
       concurrency,
       (file) => runFileInWorker(file, type, (results) => accumulate(results, file)),
       () => counts.failed++,
     )
+
+    if (coverageDataDir) {
+      delete process.env.NODE_V8_COVERAGE
+      let serverMap = await collectServerCoverageMap(coverageDataDir, process.cwd(), new Set(files))
+      coverageMap = serverMap
+    }
   }
 
-  return { ...counts }
+  return { ...counts, coverageMap }
 }
 
 async function runInConcurrentWorkers(
@@ -106,6 +123,7 @@ function runFileInWorker(
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
   options: {
+    coverage?: CoverageConfig
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
   } = {},
@@ -125,6 +143,7 @@ function runFileInWorker(
             workerData: {
               file: pathToFileURL(file).href,
               type,
+              coverage: options.coverage,
             },
           })
     worker.once('message', (msg: TestResults) => onResults(msg))

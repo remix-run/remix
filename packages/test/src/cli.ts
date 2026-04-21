@@ -4,6 +4,7 @@ import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
+import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
@@ -69,15 +70,19 @@ async function executeRun() {
       skipped: 0,
       todo: 0,
     }
+    let allCoverageMaps: Array<ReturnType<typeof Object.values>[number] | null | undefined> = []
 
     // Run server tests
     if (serverFiles.length > 0) {
       reporter.onSectionStart('\nRunning server tests:')
-      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server')
+      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server', {
+        coverage: config.coverage,
+      })
       counts.failed += serverResult.failed
       counts.passed += serverResult.passed
       counts.skipped += serverResult.skipped
       counts.todo += serverResult.todo
+      allCoverageMaps.push(serverResult.coverageMap)
     }
 
     // Run e2e tests for all browsers configured by the user
@@ -123,7 +128,15 @@ async function executeRun() {
 
     reporter.onSummary(counts, performance.now() - startTime)
 
-    latestExitCode = counts.failed > 0 ? 1 : 0
+    let thresholdsPassed = true
+    if (config.coverage) {
+      thresholdsPassed = await generateCombinedCoverageReport(
+        allCoverageMaps,
+        process.cwd(),
+        config.coverage,
+      )
+    }
+    latestExitCode = counts.failed > 0 || !thresholdsPassed ? 1 : 0
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1
