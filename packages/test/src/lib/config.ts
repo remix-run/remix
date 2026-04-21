@@ -56,7 +56,7 @@ const cliOptions = {
   type: {
     type: 'string',
     short: 't',
-    description: 'Comma-separated test types to run: server, browser, e2e (default: server,browser,e2e)',
+    description: 'Comma-separated test types to run (default: server,e2e)',
   },
   watch: {
     type: 'boolean',
@@ -76,7 +76,7 @@ const defaultValues: ResolvedRemixTestConfig = {
     e2e: '**/*.test.e2e.{ts,tsx}',
   },
   reporter: process.env.CI === 'true' ? 'dot' : 'spec',
-  type: 'server,browser,e2e',
+  type: 'server,e2e',
   setup: undefined,
   playwrightConfig: undefined,
   project: undefined,
@@ -118,7 +118,7 @@ export interface RemixTestConfig {
   project?: string
   /** Test reporter (--reporter) */
   reporter?: string
-  /** Comma-separated list of test types to run: server,browser,e2e (--type) */
+  /** Comma-separated list of test types to run (--type) */
   type?: string
   /** Watch mode — re-run tests on file changes (--watch) */
   watch?: boolean
