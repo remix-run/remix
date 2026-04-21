@@ -48,6 +48,17 @@ describe('parseArgs', () => {
     )
   })
 
+  it('throws for missing string option values before another flag', () => {
+    assert.throws(
+      () =>
+        parseArgs(['--dir', '--json'], {
+          dir: { flag: '--dir', type: 'string' },
+          json: { flag: '--json', type: 'boolean' },
+        }),
+      /--dir requires a value\./,
+    )
+  })
+
   it('throws for unknown flags', () => {
     assert.throws(
       () =>
