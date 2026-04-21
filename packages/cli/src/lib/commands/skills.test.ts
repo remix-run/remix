@@ -12,20 +12,89 @@ import { getSkillsCacheFilePath } from '../skills-cache.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
-const REMIX_GITHUB_ARCHIVE_URL = 'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
+const REMIX_GITHUB_ARCHIVE_URL =
+  'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
+
+const SKILLS_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills <command>',
+  '',
+  'Manage Remix skills for the current project.',
+  '',
+  'Commands:',
+  '  install [--dir <path>]        Install Remix skills into a local directory',
+  '  list [--dir <path>] [--json]  List Remix skills and local status',
+  '',
+  'Examples:',
+  '  remix skills install',
+  '  remix skills install --dir custom/skills',
+  '  remix skills list --dir custom/skills',
+  '  remix skills list --json',
+  '',
+].join('\n')
+
+const SKILLS_INSTALL_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills install [--dir <path>]',
+  '',
+  'Install or refresh Remix skills in .agents/skills for the current project.',
+  '',
+  'Options:',
+  '  --dir <path>  Install skills into a custom directory relative to the project root',
+  '',
+  'Examples:',
+  '  remix skills install',
+  '  remix skills install --dir custom/skills',
+  '',
+].join('\n')
+
+const SKILLS_LIST_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills list [--dir <path>] [--json]',
+  '',
+  'List Remix skills and show whether each one is installed, outdated, or missing locally.',
+  '',
+  'Options:',
+  '  --dir <path>  Read local skills from a custom directory relative to the project root',
+  '  --json        Print skill state as JSON',
+  '',
+  'Examples:',
+  '  remix skills list',
+  '  remix skills list --dir custom/skills',
+  '  remix skills list --json',
+  '',
+].join('\n')
+
+function getMissingOptionValueErrorText(helpText: string): string {
+  return [
+    'Error [RMX_MISSING_OPTION_VALUE] Missing option value',
+    '--dir requires a value.',
+    '',
+    'Try:',
+    '  Pass a value immediately after the option.',
+    '',
+    helpText,
+  ].join('\n')
+}
+
+function getUnknownSkillsCommandErrorText(command: string): string {
+  return [
+    'Error [RMX_UNKNOWN_SKILLS_COMMAND] Unknown skills command',
+    `Unknown skills command: ${command}`,
+    '',
+    'Try:',
+    '  Run `remix skills --help` to see available skills commands.',
+    '',
+    SKILLS_COMMAND_HELP_TEXT,
+  ].join('\n')
+}
 
 describe('skills command', () => {
   it('prints skills command help', async () => {
     let result = await captureOutput(() => run(['skills', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix skills <command>/)
-    assert.match(result.stdout, /install \[--dir <path>\]/)
-    assert.match(result.stdout, /list \[--dir <path>\] \[--json\]/)
-    assert.match(result.stdout, /remix skills install --dir custom\/skills/)
-    assert.match(result.stdout, /remix skills list --dir custom\/skills/)
-    assert.match(result.stdout, /remix skills list --json/)
-    assert.match(result.stdout, /list/)
+    assert.equal(result.stdout, SKILLS_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -34,23 +103,19 @@ describe('skills command', () => {
     let listHelp = await captureOutput(() => run(['skills', 'list', '--help']))
 
     assert.equal(installHelp.exitCode, 0)
-    assert.match(installHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
-    assert.match(installHelp.stdout, /--dir <path>/)
-    assert.match(installHelp.stdout, /remix skills install --dir custom\/skills/)
+    assert.equal(installHelp.stdout, SKILLS_INSTALL_COMMAND_HELP_TEXT)
+    assert.equal(installHelp.stderr, '')
     assert.equal(listHelp.exitCode, 0)
-    assert.match(listHelp.stdout, /Usage:\s+remix skills list \[--dir <path>\] \[--json\]/)
-    assert.match(listHelp.stdout, /--dir <path>/)
-    assert.match(listHelp.stdout, /--json/)
-    assert.match(listHelp.stdout, /remix skills list --dir custom\/skills/)
-    assert.match(listHelp.stdout, /remix skills list --json/)
+    assert.equal(listHelp.stdout, SKILLS_LIST_COMMAND_HELP_TEXT)
+    assert.equal(listHelp.stderr, '')
   })
 
   it('does not treat help as a skills subcommand', async () => {
     let result = await captureOutput(() => run(['skills', 'help']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /Unknown skills command: help/)
-    assert.match(result.stderr, /Usage:\s+remix skills <command>/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, getUnknownSkillsCommandErrorText('help'))
   })
 
   it('installs remote skills into .agents/skills and creates the directory', async () => {
@@ -253,7 +318,8 @@ describe('skills command', () => {
     let result = await captureOutput(() => run(['skills', 'install', '--dir']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /--dir requires a value\./)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, getMissingOptionValueErrorText(SKILLS_INSTALL_COMMAND_HELP_TEXT))
   })
 
   it('reports write-updated-skills as skipped when install has no changes', async () => {
@@ -320,7 +386,10 @@ describe('skills command', () => {
         await withFetchMock(fetchMock.fetch, () =>
           withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
         )
-        await fs.writeFile(path.join(tmpDir, '.agents', 'skills', 'remix-ui', 'SKILL.md'), '# Edited UI\n')
+        await fs.writeFile(
+          path.join(tmpDir, '.agents', 'skills', 'remix-ui', 'SKILL.md'),
+          '# Edited UI\n',
+        )
         fetchMock.requests.archive = 0
         fetchMock.requests.metadata = 0
 
@@ -442,16 +511,16 @@ describe('skills command', () => {
     let result = await captureOutput(() => run(['skills', 'list', '--dir']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /--dir requires a value\./)
-    assert.match(result.stderr, /Usage:\s+remix skills list \[--dir <path>\]/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, getMissingOptionValueErrorText(SKILLS_LIST_COMMAND_HELP_TEXT))
   })
 
   it('fails for the removed skills status command', async () => {
     let result = await captureOutput(() => run(['skills', 'status']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /Unknown skills command: status/)
-    assert.match(result.stderr, /Usage:\s+remix skills <command>/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, getUnknownSkillsCommandErrorText('status'))
   })
 
   it('lists Remix skills from a nested directory with inline status tags', async () => {
@@ -548,9 +617,8 @@ describe('skills command', () => {
 
       let result = await withIsolatedSkillsCache(async () => {
         await withFetchMock(installFetchMock.fetch, () =>
-          withCwd(
-            nestedDir,
-            () => captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
+          withCwd(nestedDir, () =>
+            captureOutput(() => run(['skills', 'install', '--dir', 'custom/skills'])),
           ),
         )
         return withFetchMock(listFetchMock.fetch, () =>
@@ -566,7 +634,9 @@ describe('skills command', () => {
       assert.equal(listFetchMock.requests.archive, 0)
       assert.match(
         result.stdout,
-        new RegExp(`Checked Remix skills against ${escapeRegExp(displayPath)}: 1 installed, 1 missing\\.`),
+        new RegExp(
+          `Checked Remix skills against ${escapeRegExp(displayPath)}: 1 installed, 1 missing\\.`,
+        ),
       )
       assert.match(result.stdout, /• remix-project-layout/)
       assert.match(result.stdout, /• remix-auth \[missing\]/)
@@ -966,13 +1036,13 @@ function createGitHubSkillsFetchMock(
   requests: { archive: number; metadata: number }
 } {
   let requests = { archive: 0, metadata: 0 }
-      let treeEntries = Object.entries(remoteSkills).flatMap(([skillName, files]) =>
-        Object.entries(files).map(([filePath, content]) => ({
-          path: `skills/${skillName}/${filePath}`,
-          sha: computeGitBlobSha(Buffer.from(content, 'utf8')),
-          type: 'blob',
-        })),
-      )
+  let treeEntries = Object.entries(remoteSkills).flatMap(([skillName, files]) =>
+    Object.entries(files).map(([filePath, content]) => ({
+      path: `skills/${skillName}/${filePath}`,
+      sha: computeGitBlobSha(Buffer.from(content, 'utf8')),
+      type: 'blob',
+    })),
+  )
   let archive = buildTarGzArchive(remoteSkills)
 
   let fetchMock = (async (input: RequestInfo | URL) => {

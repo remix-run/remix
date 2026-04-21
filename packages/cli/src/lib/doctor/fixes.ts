@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
+import { resolveContainedPath } from '../contained-path.ts'
 import type { DoctorAppliedFix, DoctorFixPlan } from './types.ts'
 
 export async function applyDoctorFixPlans(
@@ -69,13 +70,13 @@ function toAppliedDoctorFix(fixPlan: DoctorFixPlan): DoctorAppliedFix {
 }
 
 function resolveDoctorFixPath(appRoot: string, fixPath: string): string {
-  let resolvedAppRoot = path.resolve(appRoot)
-  let resolvedPath = path.resolve(resolvedAppRoot, fixPath)
-  let relativePath = path.relative(resolvedAppRoot, resolvedPath)
+  try {
+    return resolveContainedPath(appRoot, fixPath)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('escapes the allowed root')) {
+      throw new Error(`Doctor fix path resolves outside the app root: ${fixPath}`)
+    }
 
-  if (relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))) {
-    return resolvedPath
+    throw error
   }
-
-  throw new Error(`Doctor fix path resolves outside the app root: ${fixPath}`)
 }

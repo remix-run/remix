@@ -1,11 +1,8 @@
 import * as process from 'node:process'
 
 import { getDisplayPath } from '../display-path.ts'
-import {
-  renderCliError,
-  toCliError,
-  unknownSkillsCommand,
-} from '../errors.ts'
+import { renderCliError, toCliError, unknownSkillsCommand } from '../errors.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import type { SkillChange, SkillsInstallPhase, SkillsProgressReporter } from '../skills.ts'
 import { getSkillsOverview, installRemixSkills } from '../skills.ts'
@@ -44,60 +41,78 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
     throw unknownSkillsCommand(subcommand)
   } catch (error) {
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsCommandHelpText() }),
+      renderCliError(toCliError(error), { helpText: getSkillsCommandHelpText(process.stderr) }),
     )
     return 1
   }
 }
 
-export function getSkillsCommandHelpText(): string {
-  return `Usage:
-  remix skills <command>
-
-Manage Remix skills for the current project.
-
-Commands:
-  install [--dir <path>]           Install Remix skills into a local directory
-  list [--dir <path>] [--json]     List Remix skills and local status
-
-Examples:
-  remix skills install
-  remix skills install --dir custom/skills
-  remix skills list --dir custom/skills
-  remix skills list --json
-`
+export function getSkillsCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      commands: [
+        {
+          description: 'Install Remix skills into a local directory',
+          label: 'install [--dir <path>]',
+        },
+        {
+          description: 'List Remix skills and local status',
+          label: 'list [--dir <path>] [--json]',
+        },
+      ],
+      description: 'Manage Remix skills for the current project.',
+      examples: [
+        'remix skills install',
+        'remix skills install --dir custom/skills',
+        'remix skills list --dir custom/skills',
+        'remix skills list --json',
+      ],
+      usage: ['remix skills <command>'],
+    },
+    target,
+  )
 }
 
-export function getSkillsInstallCommandHelpText(): string {
-  return `Usage:
-  remix skills install [--dir <path>]
-
-Install or refresh Remix skills in .agents/skills for the current project.
-
-Options:
-  --dir <path>  Install skills into a custom directory relative to the project root
-
-Examples:
-  remix skills install
-  remix skills install --dir custom/skills
-`
+export function getSkillsInstallCommandHelpText(
+  target: NodeJS.WriteStream = process.stdout,
+): string {
+  return formatHelpText(
+    {
+      description: 'Install or refresh Remix skills in .agents/skills for the current project.',
+      examples: ['remix skills install', 'remix skills install --dir custom/skills'],
+      options: [
+        {
+          description: 'Install skills into a custom directory relative to the project root',
+          label: '--dir <path>',
+        },
+      ],
+      usage: ['remix skills install [--dir <path>]'],
+    },
+    target,
+  )
 }
 
-export function getSkillsListCommandHelpText(): string {
-  return `Usage:
-  remix skills list [--dir <path>] [--json]
-
-List Remix skills and show whether each one is installed, outdated, or missing locally.
-
-Options:
-  --dir <path>  Read local skills from a custom directory relative to the project root
-  --json        Print skill state as JSON
-
-Examples:
-  remix skills list
-  remix skills list --dir custom/skills
-  remix skills list --json
-`
+export function getSkillsListCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description:
+        'List Remix skills and show whether each one is installed, outdated, or missing locally.',
+      examples: [
+        'remix skills list',
+        'remix skills list --dir custom/skills',
+        'remix skills list --json',
+      ],
+      options: [
+        {
+          description: 'Read local skills from a custom directory relative to the project root',
+          label: '--dir <path>',
+        },
+        { description: 'Print skill state as JSON', label: '--json' },
+      ],
+      usage: ['remix skills list [--dir <path>] [--json]'],
+    },
+    target,
+  )
 }
 
 async function runSkillsInstallCommand(argv: string[]): Promise<number> {
@@ -111,7 +126,9 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     options = parseSkillsInstallCommandArgs(argv)
   } catch (error) {
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsInstallCommandHelpText() }),
+      renderCliError(toCliError(error), {
+        helpText: getSkillsInstallCommandHelpText(process.stderr),
+      }),
     )
     return 1
   }
@@ -141,7 +158,9 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
   } catch (error) {
     progress.writeSummaryGap()
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsInstallCommandHelpText() }),
+      renderCliError(toCliError(error), {
+        helpText: getSkillsInstallCommandHelpText(process.stderr),
+      }),
     )
     reporter.finish()
     return 1
@@ -159,7 +178,7 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     options = parseSkillsDirArgs(argv, { allowJson: true })
   } catch (error) {
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText() }),
+      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText(process.stderr) }),
     )
     return 1
   }
@@ -194,14 +213,16 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     }
 
     progress?.writeSummaryGap()
-    reporter.out.line(formatSkillsListSummary(result.entries, getDisplayPath(result.skillsDir, cwd)))
+    reporter.out.line(
+      formatSkillsListSummary(result.entries, getDisplayPath(result.skillsDir, cwd)),
+    )
     reporter.out.bullets(result.entries.map((entry) => formatSkillListEntry(reporter, entry)))
     reporter.finish()
     return 0
   } catch (error) {
     progress?.writeSummaryGap()
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText() }),
+      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText(process.stderr) }),
     )
     reporter.finish()
     return 1

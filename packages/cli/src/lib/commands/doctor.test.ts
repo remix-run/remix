@@ -13,17 +13,31 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'index.ts')
 const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
+const DOCTOR_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix doctor [--json] [--strict] [--fix] [--no-color]',
+  '',
+  'Check project environment and Remix app conventions for the current project.',
+  '',
+  'Options:',
+  '  --json    Print doctor findings as JSON',
+  '  --strict  Exit with status 1 when warning-level findings are present',
+  '  --fix     Apply low-risk project and controller fixes',
+  '',
+  'Examples:',
+  '  remix doctor',
+  '  remix doctor --json',
+  '  remix doctor --strict',
+  '  remix doctor --fix',
+  '',
+].join('\n')
+
 describe('doctor command', () => {
   it('prints doctor command help', async () => {
     let result = runDoctorCommand(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(
-      result.stdout,
-      /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/,
-    )
-    assert.match(result.stdout, /Check project environment and Remix app conventions/)
-    assert.match(result.stdout, /--fix\s+Apply low-risk project and controller fixes/)
+    assert.equal(result.stdout, DOCTOR_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -1131,10 +1145,10 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /✗ project/)
     assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-      assert.match(
-        result.stdout,
-        /✗ project\n  • \[WARN\] app\/routes\.ts must export a named "routes" value\./,
-      )
+    assert.match(
+      result.stdout,
+      /✗ project\n  • \[WARN\] app\/routes\.ts must export a named "routes" value\./,
+    )
     assert.equal(result.stderr, '')
   })
 
@@ -1154,10 +1168,10 @@ describe('doctor command', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /✗ project/)
     assert.match(result.stdout, /• controllers \(skipped: Blocked by project warnings\.\)/)
-      assert.match(
-        result.stdout,
-        /✗ project\n  • \[WARN\] Failed to load app\/routes\.ts: boom from routes fixture/,
-      )
+    assert.match(
+      result.stdout,
+      /✗ project\n  • \[WARN\] Failed to load app\/routes\.ts: boom from routes fixture/,
+    )
     assert.equal(result.stderr, '')
   })
 

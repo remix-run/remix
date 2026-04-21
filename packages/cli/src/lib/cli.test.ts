@@ -7,18 +7,209 @@ import { describe, it } from 'node:test'
 
 import { run } from '../index.ts'
 
+const ROOT_HELP_TEXT = [
+  'Usage:',
+  '  remix <command> [options]',
+  '',
+  'Commands:',
+  '  completion      Print shell completion scripts for Remix',
+  '  help [command]  Show help for Remix commands',
+  '  new <name>      Create a new Remix project',
+  '  doctor          Check project health for the current project',
+  '  routes          Show the route tree for the current project',
+  '  skills          Manage Remix skills for the current project',
+  '  version         Show the current Remix version',
+  '',
+  'Options:',
+  '  -h, --help     Show help',
+  '  --no-color     Disable ANSI color output',
+  '  -v, --version  Show version',
+  '',
+  'Examples:',
+  '  remix completion bash',
+  '  remix help',
+  '  remix help completion',
+  '  remix help doctor',
+  '  remix help skills install',
+  '  remix doctor',
+  '  remix new my-remix-app',
+  '  remix new my-remix-app --app-name "My Remix App"',
+  '  remix routes',
+  '  remix skills install',
+  '  remix version',
+  '',
+].join('\n')
+
+const COMPLETION_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix completion <bash|zsh>',
+  '',
+  'Print a shell completion script for Remix.',
+  '',
+  'Examples:',
+  '  remix completion bash >> ~/.bashrc',
+  '  remix completion zsh >> ~/.zshrc',
+  '',
+].join('\n')
+
+const DOCTOR_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix doctor [--json] [--strict] [--fix] [--no-color]',
+  '',
+  'Check project environment and Remix app conventions for the current project.',
+  '',
+  'Options:',
+  '  --json    Print doctor findings as JSON',
+  '  --strict  Exit with status 1 when warning-level findings are present',
+  '  --fix     Apply low-risk project and controller fixes',
+  '',
+  'Examples:',
+  '  remix doctor',
+  '  remix doctor --json',
+  '  remix doctor --strict',
+  '  remix doctor --fix',
+  '',
+].join('\n')
+
+const HELP_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix help [command]',
+  '',
+  'Show help for Remix commands.',
+  '',
+  'Examples:',
+  '  remix help',
+  '  remix help completion',
+  '  remix help doctor',
+  '  remix help new',
+  '  remix help routes',
+  '  remix help skills install',
+  '  remix help version',
+  '',
+].join('\n')
+
+const NEW_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix new <target-dir> [--app-name <name>] [--force]',
+  '',
+  'Create a new Remix project in the target directory.',
+  '',
+  'Examples:',
+  '  remix new ./my-remix-app',
+  '  remix new ./my-remix-app --app-name "My Remix App"',
+  '  remix new ./my-remix-app --force',
+  '',
+].join('\n')
+
+const ROUTES_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix routes [--json | --table] [--no-headers] [--verbose] [--no-color]',
+  '',
+  'Show the Remix route tree for the current app.',
+  '',
+  'Options:',
+  '  --json        Print the normalized route tree as JSON',
+  '  --table       Print routes as a flat table',
+  '  --no-headers  Omit the table header row when using --table',
+  '  --verbose     Show full owner paths in tree or table output',
+  '',
+  'Examples:',
+  '  remix routes',
+  '  remix routes --table',
+  '  remix routes --table --no-headers',
+  '  remix routes --verbose',
+  '  remix routes --json',
+  '',
+].join('\n')
+
+const SKILLS_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills <command>',
+  '',
+  'Manage Remix skills for the current project.',
+  '',
+  'Commands:',
+  '  install [--dir <path>]        Install Remix skills into a local directory',
+  '  list [--dir <path>] [--json]  List Remix skills and local status',
+  '',
+  'Examples:',
+  '  remix skills install',
+  '  remix skills install --dir custom/skills',
+  '  remix skills list --dir custom/skills',
+  '  remix skills list --json',
+  '',
+].join('\n')
+
+const SKILLS_INSTALL_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills install [--dir <path>]',
+  '',
+  'Install or refresh Remix skills in .agents/skills for the current project.',
+  '',
+  'Options:',
+  '  --dir <path>  Install skills into a custom directory relative to the project root',
+  '',
+  'Examples:',
+  '  remix skills install',
+  '  remix skills install --dir custom/skills',
+  '',
+].join('\n')
+
+const SKILLS_LIST_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix skills list [--dir <path>] [--json]',
+  '',
+  'List Remix skills and show whether each one is installed, outdated, or missing locally.',
+  '',
+  'Options:',
+  '  --dir <path>  Read local skills from a custom directory relative to the project root',
+  '  --json        Print skill state as JSON',
+  '',
+  'Examples:',
+  '  remix skills list',
+  '  remix skills list --dir custom/skills',
+  '  remix skills list --json',
+  '',
+].join('\n')
+
+const VERSION_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix version',
+  '',
+  'Show the current Remix version.',
+  '',
+  'Examples:',
+  '  remix version',
+  '  remix --version',
+  '',
+].join('\n')
+
+const UNKNOWN_COMMAND_ERROR_TEXT = [
+  'Error [RMX_UNKNOWN_COMMAND] Unknown command',
+  'Unknown command: unknown',
+  '',
+  'Try:',
+  '  Run `remix help` to see available commands.',
+  '',
+  ROOT_HELP_TEXT,
+].join('\n')
+
+const UNKNOWN_HELP_TOPIC_ERROR_TEXT = [
+  'Error [RMX_UNKNOWN_HELP_TOPIC] Unknown help topic',
+  'Unknown help topic: unknown',
+  '',
+  'Try:',
+  '  Run `remix help` to see available commands and help topics.',
+  '',
+  ROOT_HELP_TEXT,
+].join('\n')
+
 describe('run', () => {
   it('prints root help', async () => {
     let result = await captureOutput(() => run(['--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
-    assert.match(result.stdout, /completion\s+Print shell completion scripts/)
-    assert.match(result.stdout, /doctor\s+Check project health/)
-    assert.match(result.stdout, /routes\s+Show the route tree/)
-    assert.match(result.stdout, /skills\s+Manage Remix skills/)
-    assert.match(result.stdout, /version\s+Show the current Remix version/)
-    assert.match(result.stdout, /--no-color\s+Disable ANSI color output/)
+    assert.equal(result.stdout, ROOT_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -26,8 +217,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
-    assert.match(result.stdout, /help \[command\]\s+Show help/)
+    assert.equal(result.stdout, ROOT_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -35,7 +225,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['help', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix help \[command\]/)
+    assert.equal(result.stdout, HELP_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -59,7 +249,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['new', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(result.stdout, NEW_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -67,7 +257,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['new']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(result.stdout, NEW_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -79,40 +269,43 @@ describe('run', () => {
     let routesHelp = await captureOutput(() => run(['help', 'routes']))
     let skillsHelp = await captureOutput(() => run(['help', 'skills']))
     let skillsInstallHelp = await captureOutput(() => run(['help', 'skills', 'install']))
+    let skillsListHelp = await captureOutput(() => run(['help', 'skills', 'list']))
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
     assert.equal(doctorHelp.exitCode, 0)
-    assert.match(
-      doctorHelp.stdout,
-      /Usage:\s+remix doctor \[--json\] \[--strict\] \[--fix\] \[--no-color\]/,
-    )
+    assert.equal(doctorHelp.stdout, DOCTOR_COMMAND_HELP_TEXT)
+    assert.equal(doctorHelp.stderr, '')
     assert.equal(completionHelp.exitCode, 0)
-    assert.match(completionHelp.stdout, /Usage:\s+remix completion <bash\|zsh>/)
+    assert.equal(completionHelp.stdout, COMPLETION_COMMAND_HELP_TEXT)
+    assert.equal(completionHelp.stderr, '')
     assert.equal(newHelp.exitCode, 0)
-    assert.match(newHelp.stdout, /Usage:\s+remix new <target-dir>/)
+    assert.equal(newHelp.stdout, NEW_COMMAND_HELP_TEXT)
+    assert.equal(newHelp.stderr, '')
     assert.equal(helpHelp.exitCode, 0)
-    assert.match(helpHelp.stdout, /Usage:\s+remix help \[command\]/)
+    assert.equal(helpHelp.stdout, HELP_COMMAND_HELP_TEXT)
+    assert.equal(helpHelp.stderr, '')
     assert.equal(routesHelp.exitCode, 0)
-    assert.match(
-      routesHelp.stdout,
-      /Usage:\s+remix routes \[--json \| --table\] \[--no-headers\] \[--verbose\] \[--no-color\]/,
-    )
+    assert.equal(routesHelp.stdout, ROUTES_COMMAND_HELP_TEXT)
+    assert.equal(routesHelp.stderr, '')
     assert.equal(skillsHelp.exitCode, 0)
-    assert.match(skillsHelp.stdout, /Usage:\s+remix skills <command>/)
+    assert.equal(skillsHelp.stdout, SKILLS_COMMAND_HELP_TEXT)
+    assert.equal(skillsHelp.stderr, '')
     assert.equal(skillsInstallHelp.exitCode, 0)
-    assert.match(skillsInstallHelp.stdout, /Usage:\s+remix skills install \[--dir <path>\]/)
+    assert.equal(skillsInstallHelp.stdout, SKILLS_INSTALL_COMMAND_HELP_TEXT)
+    assert.equal(skillsInstallHelp.stderr, '')
+    assert.equal(skillsListHelp.exitCode, 0)
+    assert.equal(skillsListHelp.stdout, SKILLS_LIST_COMMAND_HELP_TEXT)
+    assert.equal(skillsListHelp.stderr, '')
     assert.equal(versionHelp.exitCode, 0)
-    assert.match(versionHelp.stdout, /Usage:\s+remix version/)
+    assert.equal(versionHelp.stdout, VERSION_COMMAND_HELP_TEXT)
+    assert.equal(versionHelp.stderr, '')
   })
 
   it('prints routes command help', async () => {
     let result = await captureOutput(() => run(['routes', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(
-      result.stdout,
-      /Usage:\s+remix routes \[--json \| --table\] \[--no-headers\] \[--verbose\] \[--no-color\]/,
-    )
+    assert.equal(result.stdout, ROUTES_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -120,7 +313,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['version', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix version/)
+    assert.equal(result.stdout, VERSION_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -138,7 +331,7 @@ describe('run', () => {
     let result = await captureOutput(() => run(['--', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
+    assert.equal(result.stdout, ROOT_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -146,16 +339,16 @@ describe('run', () => {
     let result = await captureOutput(() => run(['unknown']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /Unknown command: unknown/)
-    assert.match(result.stderr, /Usage:\s+remix <command> \[options\]/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, UNKNOWN_COMMAND_ERROR_TEXT)
   })
 
   it('fails for unknown help topics', async () => {
     let result = await captureOutput(() => run(['help', 'unknown']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /Unknown help topic: unknown/)
-    assert.match(result.stderr, /Usage:\s+remix <command> \[options\]/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, UNKNOWN_HELP_TOPIC_ERROR_TEXT)
   })
 
   it('creates the expected scaffold', async () => {

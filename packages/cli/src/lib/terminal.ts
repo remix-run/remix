@@ -29,6 +29,10 @@ export function lightBlue(text: string, target: NodeJS.WriteStream = process.std
   return paint(text, ANSI_LIGHT_BLUE, target)
 }
 
+export function boldLightBlue(text: string, target: NodeJS.WriteStream = process.stdout): string {
+  return isColorDisabled(target) ? text : `${ANSI_BOLD}${ANSI_LIGHT_BLUE}${text}${ANSI_RESET}`
+}
+
 export function lightGray(text: string, target: NodeJS.WriteStream = process.stdout): string {
   return paint(text, ANSI_LIGHT_GRAY, target)
 }

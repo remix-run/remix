@@ -4,14 +4,34 @@ import { describe, it } from 'node:test'
 
 import { run } from '../../index.ts'
 
+const COMPLETION_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix completion <bash|zsh>',
+  '',
+  'Print a shell completion script for Remix.',
+  '',
+  'Examples:',
+  '  remix completion bash >> ~/.bashrc',
+  '  remix completion zsh >> ~/.zshrc',
+  '',
+].join('\n')
+
+const UNKNOWN_COMPLETION_SHELL_ERROR_TEXT = [
+  'Error [RMX_UNKNOWN_COMPLETION_SHELL] Unknown completion shell',
+  'Unknown completion shell: fish',
+  '',
+  'Try:',
+  '  Run `remix completion bash` or `remix completion zsh`.',
+  '',
+  COMPLETION_COMMAND_HELP_TEXT,
+].join('\n')
+
 describe('completion command', () => {
   it('prints completion command help', async () => {
     let result = await captureOutput(() => run(['completion', '--help']))
 
     assert.equal(result.exitCode, 0)
-    assert.match(result.stdout, /Usage:\s+remix completion <bash\|zsh>/)
-    assert.match(result.stdout, /remix completion bash >> ~\/\.bashrc/)
-    assert.match(result.stdout, /remix completion zsh >> ~\/\.zshrc/)
+    assert.equal(result.stdout, COMPLETION_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
 
@@ -32,8 +52,8 @@ describe('completion command', () => {
     let result = await captureOutput(() => run(['completion', 'fish']))
 
     assert.equal(result.exitCode, 1)
-    assert.match(result.stderr, /Unknown completion shell: fish/)
-    assert.match(result.stderr, /Usage:\s+remix completion <bash\|zsh>/)
+    assert.equal(result.stdout, '')
+    assert.equal(result.stderr, UNKNOWN_COMPLETION_SHELL_ERROR_TEXT)
   })
 
   it('returns machine-readable completions in plumbing mode', async () => {

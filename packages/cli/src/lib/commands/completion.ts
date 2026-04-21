@@ -12,6 +12,7 @@ import {
   toCliError,
   unknownCompletionShell,
 } from '../errors.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
 export async function runCompletionCommand(argv: string[]): Promise<number> {
@@ -37,22 +38,23 @@ export async function runCompletionCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getCompletionCommandHelpText() }),
+      renderCliError(toCliError(error), {
+        helpText: getCompletionCommandHelpText(process.stderr),
+      }),
     )
     return 1
   }
 }
 
-export function getCompletionCommandHelpText(): string {
-  return `Usage:
-  remix completion <bash|zsh>
-
-Print a shell completion script for Remix.
-
-Examples:
-  remix completion bash >> ~/.bashrc
-  remix completion zsh >> ~/.zshrc
-`
+export function getCompletionCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description: 'Print a shell completion script for Remix.',
+      examples: ['remix completion bash >> ~/.bashrc', 'remix completion zsh >> ~/.zshrc'],
+      usage: ['remix completion <bash|zsh>'],
+    },
+    target,
+  )
 }
 
 function runCompletionPlumbing(argv: string[]): number {

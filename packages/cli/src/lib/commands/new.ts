@@ -6,12 +6,9 @@ import type {
   BootstrapProgressReporter,
 } from '../bootstrap-project.ts'
 import { bootstrapProject } from '../bootstrap-project.ts'
-import {
-  renderCliError,
-  missingTargetDirectory,
-  toCliError,
-} from '../errors.ts'
+import { renderCliError, missingTargetDirectory, toCliError } from '../errors.ts'
 import { getDisplayPath } from '../display-path.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import {
   createCommandReporter,
@@ -44,23 +41,27 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     progress.writeSummaryGap()
-    process.stderr.write(renderCliError(toCliError(error), { helpText: getNewCommandHelpText() }))
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getNewCommandHelpText(process.stderr) }),
+    )
     reporter.finish()
     return 1
   }
 }
 
-export function getNewCommandHelpText(): string {
-  return `Usage:
-  remix new <target-dir> [--app-name <name>] [--force]
-
-Create a new Remix project in the target directory.
-
-Examples:
-  remix new ./my-remix-app
-  remix new ./my-remix-app --app-name "My Remix App"
-  remix new ./my-remix-app --force
-`
+export function getNewCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description: 'Create a new Remix project in the target directory.',
+      examples: [
+        'remix new ./my-remix-app',
+        'remix new ./my-remix-app --app-name "My Remix App"',
+        'remix new ./my-remix-app --force',
+      ],
+      usage: ['remix new <target-dir> [--app-name <name>] [--force]'],
+    },
+    target,
+  )
 }
 
 function parseNewCommandArgs(argv: string[]): BootstrapProjectOptions {

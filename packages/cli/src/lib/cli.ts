@@ -81,7 +81,9 @@ async function runCommand(command: string, argv: string[]): Promise<number> {
     return runVersionCommand(argv)
   }
 
-  process.stderr.write(renderCliError(unknownCommand(command), { helpText: getCliHelpText() }))
+  process.stderr.write(
+    renderCliError(unknownCommand(command), { helpText: getCliHelpText(process.stderr) }),
+  )
   return 1
 }
 

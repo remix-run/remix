@@ -2,6 +2,7 @@ import * as process from 'node:process'
 
 import { readRemixVersion } from '../remix-version.ts'
 import { renderCliError, toCliError } from '../errors.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
 export async function runVersionCommand(argv: string[]): Promise<number> {
@@ -17,20 +18,19 @@ export async function runVersionCommand(argv: string[]): Promise<number> {
     return 0
   } catch (error) {
     process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getVersionCommandHelpText() }),
+      renderCliError(toCliError(error), { helpText: getVersionCommandHelpText(process.stderr) }),
     )
     return 1
   }
 }
 
-export function getVersionCommandHelpText(): string {
-  return `Usage:
-  remix version
-
-Show the current Remix version.
-
-Examples:
-  remix version
-  remix --version
-`
+export function getVersionCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description: 'Show the current Remix version.',
+      examples: ['remix version', 'remix --version'],
+      usage: ['remix version'],
+    },
+    target,
+  )
 }

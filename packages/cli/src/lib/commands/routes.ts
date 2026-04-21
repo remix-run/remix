@@ -1,10 +1,7 @@
 import * as process from 'node:process'
 
-import {
-  invalidFlagCombination,
-  renderCliError,
-  toCliError,
-} from '../errors.ts'
+import { invalidFlagCombination, renderCliError, toCliError } from '../errors.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
@@ -34,31 +31,39 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
   } catch (error) {
     let cliError = toCliError(error)
     process.stderr.write(
-      lightRed(renderCliError(cliError, { helpText: getRoutesCommandHelpText() }), process.stderr),
+      lightRed(
+        renderCliError(cliError, { helpText: getRoutesCommandHelpText(process.stderr) }),
+        process.stderr,
+      ),
     )
     return 1
   }
 }
 
-export function getRoutesCommandHelpText(): string {
-  return `Usage:
-  remix routes [--json | --table] [--no-headers] [--verbose] [--no-color]
-
-Show the Remix route tree for the current app.
-
-Options:
-  --json       Print the normalized route tree as JSON
-  --table      Print routes as a flat table
-  --no-headers Omit the table header row when using --table
-  --verbose    Show full owner paths in tree or table output
-
-Examples:
-  remix routes
-  remix routes --table
-  remix routes --table --no-headers
-  remix routes --verbose
-  remix routes --json
-`
+export function getRoutesCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description: 'Show the Remix route tree for the current app.',
+      examples: [
+        'remix routes',
+        'remix routes --table',
+        'remix routes --table --no-headers',
+        'remix routes --verbose',
+        'remix routes --json',
+      ],
+      options: [
+        { description: 'Print the normalized route tree as JSON', label: '--json' },
+        { description: 'Print routes as a flat table', label: '--table' },
+        {
+          description: 'Omit the table header row when using --table',
+          label: '--no-headers',
+        },
+        { description: 'Show full owner paths in tree or table output', label: '--verbose' },
+      ],
+      usage: ['remix routes [--json | --table] [--no-headers] [--verbose] [--no-color]'],
+    },
+    target,
+  )
 }
 
 interface RoutesCommandOptions {

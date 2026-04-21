@@ -15,6 +15,7 @@ import {
   type DoctorSuiteResult,
 } from '../doctor/types.ts'
 import { renderCliError, toCliError } from '../errors.ts'
+import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import {
   createCommandReporter,
@@ -81,7 +82,10 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     let cliError = toCliError(error)
     progress?.writeSummaryGap()
     process.stderr.write(
-      lightRed(renderCliError(cliError, { helpText: getDoctorCommandHelpText() }), process.stderr),
+      lightRed(
+        renderCliError(cliError, { helpText: getDoctorCommandHelpText(process.stderr) }),
+        process.stderr,
+      ),
     )
     if (!options.json) {
       reporter.finish()
@@ -90,23 +94,28 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
   }
 }
 
-export function getDoctorCommandHelpText(): string {
-  return `Usage:
-  remix doctor [--json] [--strict] [--fix] [--no-color]
-
-Check project environment and Remix app conventions for the current project.
-
-Options:
-  --json       Print doctor findings as JSON
-  --strict     Exit with status 1 when warning-level findings are present
-  --fix        Apply low-risk project and controller fixes
-
-Examples:
-  remix doctor
-  remix doctor --json
-  remix doctor --strict
-  remix doctor --fix
-`
+export function getDoctorCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return formatHelpText(
+    {
+      description: 'Check project environment and Remix app conventions for the current project.',
+      examples: [
+        'remix doctor',
+        'remix doctor --json',
+        'remix doctor --strict',
+        'remix doctor --fix',
+      ],
+      options: [
+        { description: 'Print doctor findings as JSON', label: '--json' },
+        {
+          description: 'Exit with status 1 when warning-level findings are present',
+          label: '--strict',
+        },
+        { description: 'Apply low-risk project and controller fixes', label: '--fix' },
+      ],
+      usage: ['remix doctor [--json] [--strict] [--fix] [--no-color]'],
+    },
+    target,
+  )
 }
 
 function parseDoctorCommandArgs(argv: string[]): DoctorCommandOptions {
