@@ -8,6 +8,7 @@
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
+    "@typescript/native-preview": "catalog:",
     "semver": "^7.6.3"
   },
   "scripts": {
