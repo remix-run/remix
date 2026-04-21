@@ -157,12 +157,88 @@ async function writeIstanbulReports(coverageMap: CoverageMap, cwd: string, outDi
   console.log(`\nLCOV coverage written to ${path.relative(cwd, path.join(outDir, 'lcov.info'))}`)
 }
 
+// Convert a single V8 coverage entry to Istanbul format and merge it into the
+// coverage map. Both server and E2E collection use this shared path so the
+// esbuild re-transform and source-map options stay in sync.
+async function addV8EntryToCoverageMap(
+  coverageMap: CoverageMap,
+  filePath: string,
+  functions: V8CoverageEntry['functions'],
+): Promise<boolean> {
+  let { V8ToIstanbul } = getIstanbul()
+
+  // When our coverage-loader (server) or test handler (E2E) transforms
+  // TypeScript, V8 tracks coverage using byte offsets from the transformed JS.
+  // Re-transform with the same esbuild options so offsets align, then pass the
+  // result with its inline source map to v8-to-istanbul.
+  let sources: { source: string } | undefined
+  if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+    let tsSource = await fsp.readFile(filePath, 'utf-8')
+    let { code } = await transformTypeScript(tsSource, filePath)
+    sources = { source: code }
+  }
+  let converter = new V8ToIstanbul(filePath, undefined, sources)
+  await converter.load()
+  converter.applyCoverage(functions)
+  coverageMap.merge(converter.toIstanbul())
+  return true
+}
+
+// Resolve a V8 coverage entry URL to an absolute file path, or null if it
+// should be skipped (node_modules, test files, outside cwd, etc.).
+function resolveServerEntryPath(url: string, cwd: string, testFiles: Set<string>): string | null {
+  if (!url.startsWith('file://')) return null
+
+  let filePath: string
+  try {
+    filePath = fileURLToPath(url)
+  } catch {
+    return null
+  }
+
+  if (!filePath.startsWith(cwd + path.sep)) return null
+  if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null
+  if (testFiles.has(filePath)) return null
+  return filePath
+}
+
+// Resolve a browser coverage entry URL (http://host:port/path) to an absolute
+// file path, or null if it should be skipped.
+async function resolveE2EEntryPath(
+  url: string,
+  cwd: string,
+  testFiles: Set<string>,
+): Promise<string | null> {
+  let urlPath: string
+  try {
+    urlPath = new URL(url).pathname
+  } catch {
+    return null
+  }
+
+  let relative = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath
+  if (!relative) return null
+
+  let filePath = path.resolve(cwd, relative)
+  if (!filePath.startsWith(cwd + path.sep)) return null
+  if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null
+  if (testFiles.has(filePath)) return null
+
+  try {
+    await fsp.access(filePath)
+  } catch {
+    return null
+  }
+
+  return filePath
+}
+
 export async function collectServerCoverageMap(
   coverageDataDir: string,
   cwd: string,
   testFiles: Set<string>,
 ): Promise<CoverageMap | null> {
-  let { V8ToIstanbul, createCoverageMap } = getIstanbul()
+  let { createCoverageMap } = getIstanbul()
   let coverageMap = createCoverageMap({})
   let converted = 0
 
@@ -180,36 +256,11 @@ export async function collectServerCoverageMap(
     let scriptCoverages: Array<{ url: string; functions: any[] }> = data.result ?? []
 
     for (let entry of scriptCoverages) {
-      if (!entry.url.startsWith('file://')) continue
-
-      let filePath: string
-      try {
-        filePath = fileURLToPath(entry.url)
-      } catch {
-        continue
-      }
-
-      if (!filePath.startsWith(cwd + path.sep)) continue
-      if (filePath.includes(`${path.sep}node_modules${path.sep}`)) continue
-      if (testFiles.has(filePath)) continue
+      let filePath = resolveServerEntryPath(entry.url, cwd, testFiles)
+      if (!filePath) continue
 
       try {
-        // When our coverage-loader transforms TypeScript files, V8 tracks coverage
-        // using byte offsets from the transformed (non-minified) JavaScript, not
-        // the TypeScript source. We re-transform with the same options used in
-        // coverage-loader.ts so byte offsets align, then pass the result with its
-        // inline source map to v8-to-istanbul to remap JS offsets → TS lines.
-        let sources: { source: string } | undefined
-        if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
-          let tsSource = await fsp.readFile(filePath, 'utf-8')
-          let { code } = await transformTypeScript(tsSource, filePath)
-          sources = { source: code }
-        }
-        let converter = new V8ToIstanbul(filePath, undefined, sources)
-        await converter.load()
-        converter.applyCoverage(entry.functions)
-        coverageMap.merge(converter.toIstanbul())
-        converted++
+        if (await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions)) converted++
       } catch {
         // Skip files that can't be converted
       }
@@ -227,52 +278,17 @@ export async function collectE2ECoverageMap(
   cwd: string,
   testFiles: Set<string>,
 ): Promise<CoverageMap | null> {
-  let { V8ToIstanbul, createCoverageMap } = getIstanbul()
+  let { createCoverageMap } = getIstanbul()
   let coverageMap = createCoverageMap({})
   let converted = 0
 
   for (let { entries } of browserEntries) {
     for (let entry of entries) {
-      // Map browser URL back to a file path
-      // e.g. http://127.0.0.1:PORT/src/lib/foo.ts → <cwd>/src/lib/foo.ts
-      let urlPath: string
-      try {
-        let url = new URL(entry.url)
-        urlPath = url.pathname
-      } catch {
-        continue
-      }
-
-      // Strip leading slash to get the relative path
-      let relative = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath
-      if (!relative) continue
-
-      let filePath = path.resolve(cwd, relative)
-      if (!filePath.startsWith(cwd + path.sep)) continue
-      if (filePath.includes(`${path.sep}node_modules${path.sep}`)) continue
-      if (testFiles.has(filePath)) continue
+      let filePath = await resolveE2EEntryPath(entry.url, cwd, testFiles)
+      if (!filePath) continue
 
       try {
-        await fsp.access(filePath)
-      } catch {
-        continue
-      }
-
-      try {
-        // The browser ran esbuild-compiled JS served by the test handler.
-        // Re-transform with the same options so V8 byte offsets align, then
-        // pass the result with its inline source map to v8-to-istanbul.
-        let sources: { source: string } | undefined
-        if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
-          let tsSource = await fsp.readFile(filePath, 'utf-8')
-          let { code } = await transformTypeScript(tsSource, filePath)
-          sources = { source: code }
-        }
-        let converter = new V8ToIstanbul(filePath, undefined, sources)
-        await converter.load()
-        converter.applyCoverage(entry.functions)
-        coverageMap.merge(converter.toIstanbul())
-        converted++
+        if (await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions)) converted++
       } catch {
         // Skip files that can't be converted
       }
