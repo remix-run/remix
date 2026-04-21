@@ -37,7 +37,11 @@ for (let version of versions || getDefaultVersions()) {
 await spider(
   docsRouter,
   outputDir,
-  new Set(['/', ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || [])]),
+  new Set([
+    '/',
+    '/api.json',
+    ...(versions?.filter((v) => v.crawl).map((v) => `/${v.version}/`) || []),
+  ]),
 )
 
 // Spider the website served by router, beginning at /
