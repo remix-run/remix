@@ -48,17 +48,24 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  */
 export type RemixNode = Renderable | RemixNode[]
 
-type MixItem<mix> = mix extends ReadonlyArray<infer descriptor> ? descriptor : mix
+type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type FalsyMixValue = false | 0 | 0n | '' | null | undefined
+type NullableMixValue<mix> = mix | FalsyMixValue
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type NormalizeMixLeaf<mix> = Exclude<MixLeaf<mix>, FalsyMixValue>
+type NestedMixValue<mix, depth extends number = 4> = depth extends 0
+  ? NullableMixValue<mix> | ReadonlyArray<NullableMixValue<mix>>
+  : NullableMixValue<mix> | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>
 
 type NormalizeMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: Array<MixItem<Exclude<mix, undefined>>>
+      mix?: Array<NormalizeMixLeaf<mix>>
     }
   : props
 
 type ExpandMixProp<props> = props extends { mix?: infer mix }
   ? Omit<props, 'mix'> & {
-      mix?: MixItem<Exclude<mix, undefined>> | ReadonlyArray<MixItem<Exclude<mix, undefined>>>
+      mix?: NestedMixValue<NormalizeMixLeaf<mix>>
     }
   : props
 
@@ -82,17 +89,8 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  * @param key Optional reconciliation key.
  * @returns A Remix virtual element.
  */
-export function jsx(type: string, props: ElementProps, key?: string): RemixElement
-/**
- * Creates a Remix virtual element from a component function.
- *
- * @param type Component function.
- * @param props Element props.
- * @param key Optional reconciliation key.
- * @returns A Remix virtual element.
- */
-export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
-export function jsx(type: any, props: any, key?: any): RemixElement {
+export function jsx(type: ElementType, props: ElementProps, key?: string): RemixElement
+export function jsx(type: ElementType, props: ElementProps, key?: string): RemixElement {
   return { type, props: normalizeElementProps(props), key, $rmx: true }
 }
 
@@ -367,9 +365,21 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
 }
 
 function normalizeMixValue(mix: unknown): unknown[] | undefined {
-  if (mix == null) return undefined
-  if (Array.isArray(mix)) {
-    return mix.length === 0 ? undefined : [...mix]
+  if (!mix) return undefined
+
+  let normalizedMix = flattenMixValue(mix)
+  return normalizedMix.length === 0 ? undefined : normalizedMix
+}
+
+function flattenMixValue(mix: unknown): unknown[] {
+  if (!mix) return []
+  if (!Array.isArray(mix)) return [mix]
+
+  let flattened: unknown[] = []
+
+  for (let item of mix) {
+    flattened.push(...flattenMixValue(item))
   }
-  return [mix]
+
+  return flattened
 }

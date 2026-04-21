@@ -208,6 +208,7 @@ type ComponentConfig = {
   getContext: (type: Component) => unknown
   getFrameByName: (name: string) => FrameHandle | undefined
   getTopFrame?: () => FrameHandle | undefined
+  signal?: AbortSignal
 }
 
 /**
@@ -265,7 +266,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     },
     context: context,
     get signal() {
-      return getConnectedSignal()
+      return config.signal ?? getConnectedSignal()
     },
   }
 

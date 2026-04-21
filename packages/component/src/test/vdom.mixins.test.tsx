@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { createElement } from '../lib/create-element.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { createMixin, on, ref } from '../index.ts'
 import { invariant } from '../lib/invariant.ts'
-import type { Handle } from '../lib/component.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
 import type { Props } from '../index.ts'
 
 describe('vnode mixins', () => {
@@ -41,6 +42,111 @@ describe('vnode mixins', () => {
     let div = container.querySelector('div')
     invariant(div)
     expect(div.getAttribute('data-mixed')).toBe('nested')
+  })
+
+  it('supports createElement(handle.element, props) inside mixins', () => {
+    let withData = createMixin(
+      (handle) => (value: string, props: { ['data-mixed']?: string }) =>
+        createElement(handle.element, { ...props, 'data-mixed': value }),
+    )
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withData('created')]}>child</div>)
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.getAttribute('data-mixed')).toBe('created')
+    expect(div.textContent).toBe('child')
+  })
+
+  it('strips children and innerHTML before passing props to mixins', () => {
+    let seenProps: Array<Record<string, unknown>> = []
+    let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
+      seenProps.push(props)
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[inspect()]}>child</div>)
+    root.flush()
+    root.render(<div innerHTML="<strong>html</strong>" mix={[inspect()]} />)
+    root.flush()
+
+    expect('children' in seenProps[0]!).toBe(false)
+    expect('innerHTML' in seenProps[0]!).toBe(false)
+    expect('children' in seenProps[1]!).toBe(false)
+    expect('innerHTML' in seenProps[1]!).toBe(false)
+  })
+
+  it('ignores children returned from mixins while preserving host content', () => {
+    let withChildren = createMixin(
+      (handle) => () =>
+        createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
+    )
+
+    let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<div mix={[withChildren()]}>safe</div>)
+      root.flush()
+
+      expect(container.querySelector('div')?.dataset.mode).toBe('children')
+      expect(container.querySelector('div')?.textContent).toBe('safe')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
+        'mixin elements must not receive children',
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('ignores innerHTML returned from mixins while preserving host content', () => {
+    let withInnerHtml = createMixin((_handle) => () => (
+      <div data-mode="innerHTML" innerHTML="<strong>blocked</strong>" />
+    ))
+
+    let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<div mix={[withInnerHtml()]}>safe</div>)
+      root.flush()
+
+      expect(container.querySelector('div')?.dataset.mode).toBe('innerHTML')
+      expect(container.querySelector('div')?.textContent).toBe('safe')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
+        'mixins must not return children or innerHTML',
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('supports mixins returning nested descriptors directly', () => {
+    let withData = createMixin((handle) => (value: string, props: { ['data-mixed']?: string }) => (
+      <handle.element {...props} data-mixed={value} />
+    ))
+    let withReturnedMix = createMixin<Element, [value: string]>((_handle) => (value) => [
+      false,
+      [withData(value)],
+      undefined,
+    ])
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[withReturnedMix('returned')]} />)
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.getAttribute('data-mixed')).toBe('returned')
   })
 
   it('normalizes component mix props so wrapped hosts can compose them', () => {
@@ -92,6 +198,33 @@ describe('vnode mixins', () => {
     expect(handles[1]).toBe(handles[2])
   })
 
+  it('reads ancestor component context from mixins', () => {
+    function Provider(handle: Handle<{ value: string }>) {
+      return ({ children }: { children?: RemixNode }) => {
+        handle.context.set({ value: 'from-context' })
+        return <section>{children}</section>
+      }
+    }
+
+    let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
+      let provider = handle.context.get(Provider)
+      return <handle.element {...props} data-value={provider.value} />
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(
+      <Provider>
+        <div mix={[withContextValue()]} />
+      </Provider>,
+    )
+    root.flush()
+
+    let div = container.querySelector('div')
+    invariant(div)
+    expect(div.dataset.value).toBe('from-context')
+  })
+
   it('aborts handle.signal when the host node is removed', () => {
     let signal = AbortSignal.abort()
     let withSignal = createMixin((handle) => {
@@ -107,6 +240,34 @@ describe('vnode mixins', () => {
     root.render(null)
     root.flush()
     expect(signal.aborted).toBe(true)
+  })
+
+  it('aborts handle.signal when a mixin slot is removed while the host stays mounted', () => {
+    let keptSignal = AbortSignal.abort()
+    let removedSignal = AbortSignal.abort()
+
+    let keepSignal = createMixin((handle) => {
+      keptSignal = handle.signal
+    })
+
+    let removeSignal = createMixin((handle) => {
+      removedSignal = handle.signal
+    })
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={[keepSignal(), removeSignal()]} />)
+    root.flush()
+
+    expect(keptSignal.aborted).toBe(false)
+    expect(removedSignal.aborted).toBe(false)
+
+    root.render(<div mix={[keepSignal()]} />)
+    root.flush()
+
+    expect(keptSignal.aborted).toBe(false)
+    expect(removedSignal.aborted).toBe(true)
+    expect(container.querySelector('div')).toBeInstanceOf(HTMLDivElement)
   })
 
   it('supports setup-only passthrough mixins', () => {
