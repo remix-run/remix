@@ -1,4 +1,5 @@
-import { register } from 'node:module'
+import * as path from 'node:path'
+import * as mod from 'node:module'
 import { workerData, parentPort } from 'node:worker_threads'
 import { runTests, type TestResults } from './executor.ts'
 
@@ -8,7 +9,10 @@ import { runTests, type TestResults } from './executor.ts'
 // inherited tsx hook (hooks are LIFO), so it intercepts .ts imports and
 // short-circuits before tsx transforms them.
 if (workerData.coverage) {
-  register(new URL('./coverage-loader.ts', import.meta.url), import.meta.url)
+  // Ensure we load the right file whether we're running in the monorepo (TS) or
+  // from a published package (JS)
+  let ext = path.extname(import.meta.url)
+  mod.register(new URL(`./coverage-loader${ext}`, import.meta.url), import.meta.url)
 }
 
 try {

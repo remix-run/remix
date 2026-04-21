@@ -116,6 +116,7 @@ async function executeRun() {
                 open: config.browser?.open,
                 playwrightUseOpts: project.playwrightUseOpts,
                 projectName: project.name,
+                coverage: config.coverage,
               })
             : null
 
@@ -123,6 +124,7 @@ async function executeRun() {
         counts.failed += e2eResult?.failed ?? 0
         counts.skipped += e2eResult?.skipped ?? 0
         counts.todo += e2eResult?.todo ?? 0
+        allCoverageMaps.push(e2eResult?.coverageMap)
       }
     }
 

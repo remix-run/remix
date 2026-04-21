@@ -222,6 +222,66 @@ export async function collectServerCoverageMap(
   return converted > 0 ? coverageMap : null
 }
 
+export async function collectE2ECoverageMap(
+  browserEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>,
+  cwd: string,
+  testFiles: Set<string>,
+): Promise<CoverageMap | null> {
+  let { V8ToIstanbul, createCoverageMap } = getIstanbul()
+  let coverageMap = createCoverageMap({})
+  let converted = 0
+
+  for (let { entries } of browserEntries) {
+    for (let entry of entries) {
+      // Map browser URL back to a file path
+      // e.g. http://127.0.0.1:PORT/src/lib/foo.ts → <cwd>/src/lib/foo.ts
+      let urlPath: string
+      try {
+        let url = new URL(entry.url)
+        urlPath = url.pathname
+      } catch {
+        continue
+      }
+
+      // Strip leading slash to get the relative path
+      let relative = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath
+      if (!relative) continue
+
+      let filePath = path.resolve(cwd, relative)
+      if (!filePath.startsWith(cwd + path.sep)) continue
+      if (filePath.includes(`${path.sep}node_modules${path.sep}`)) continue
+      if (testFiles.has(filePath)) continue
+
+      try {
+        await fsp.access(filePath)
+      } catch {
+        continue
+      }
+
+      try {
+        // The browser ran esbuild-compiled JS served by the test handler.
+        // Re-transform with the same options so V8 byte offsets align, then
+        // pass the result with its inline source map to v8-to-istanbul.
+        let sources: { source: string } | undefined
+        if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+          let tsSource = await fsp.readFile(filePath, 'utf-8')
+          let { code } = await transformTypeScript(tsSource, filePath)
+          sources = { source: code }
+        }
+        let converter = new V8ToIstanbul(filePath, undefined, sources)
+        await converter.load()
+        converter.applyCoverage(entry.functions)
+        coverageMap.merge(converter.toIstanbul())
+        converted++
+      } catch {
+        // Skip files that can't be converted
+      }
+    }
+  }
+
+  return converted > 0 ? coverageMap : null
+}
+
 export async function generateCombinedCoverageReport(
   maps: (CoverageMap | null | undefined)[],
   cwd: string,
