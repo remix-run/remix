@@ -340,9 +340,6 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.59.0
-      remix:
-        specifier: workspace:^
-        version: link:../remix
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

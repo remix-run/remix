@@ -64,7 +64,6 @@
     "@vitest/coverage-v8": "^3.2.4",
     "esbuild": "^0.25.5",
     "playwright": "catalog:",
-    "remix": "workspace:^",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
