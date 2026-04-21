@@ -1,5 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { describe, it } from './framework.ts'
+import { describe, it } from '../lib/framework.ts'
 import { add, classify, greet } from './coverage-fixture.ts'
 
 // Expected coverage for coverage-fixture.ts:
