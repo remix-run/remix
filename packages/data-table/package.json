@@ -53,8 +53,6 @@
     }
   },
   "devDependencies": {
-    "@remix-run/assert": "workspace:*",
-    "@remix-run/test": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
@@ -65,7 +63,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
+    "test": "node --test",
     "test:coverage": "pnpm run test:coverage:core && pnpm run test:coverage:migrations",
     "test:coverage:core": "node --experimental-test-coverage --test-coverage-include='src/lib/operators.ts' --test-coverage-include='src/lib/references.ts' --test-coverage-include='src/lib/inflection.ts' --test-coverage-include='src/lib/sql.ts' --test-coverage-include='src/lib/errors.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/operators.test.ts ./src/lib/references.test.ts ./src/lib/inflection.test.ts ./src/lib/sql.test.ts ./src/lib/errors.test.ts",
     "test:coverage:migrations": "node --experimental-test-coverage --test-coverage-include='src/lib/migrations.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/migrations.test.ts",

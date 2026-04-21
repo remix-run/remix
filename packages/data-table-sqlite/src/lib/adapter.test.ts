@@ -1,5 +1,5 @@
-import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 import Database from 'better-sqlite3'
 import type { DataMigrationOperation } from '@remix-run/data-table'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'

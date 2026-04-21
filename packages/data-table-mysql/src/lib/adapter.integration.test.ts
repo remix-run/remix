@@ -1,4 +1,4 @@
-import { after, before, describe } from '@remix-run/test'
+import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
 import { createPool, type Pool } from 'mysql2/promise'
 

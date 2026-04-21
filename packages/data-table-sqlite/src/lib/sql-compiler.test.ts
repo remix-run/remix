@@ -1,5 +1,5 @@
-import * as assert from '@remix-run/assert'
-import { beforeEach, describe, it } from '@remix-run/test'
+import * as assert from 'node:assert/strict'
+import { beforeEach, describe, it } from 'node:test'
 import {
   between,
   column,

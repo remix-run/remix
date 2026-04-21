@@ -1,5 +1,5 @@
-import * as assert from '@remix-run/assert'
-import { beforeEach, it } from '@remix-run/test'
+import * as assert from 'node:assert/strict'
+import { beforeEach, it } from 'node:test'
 
 import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
