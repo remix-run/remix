@@ -3,7 +3,8 @@ import * as path from 'node:path'
 import * as semver from 'semver'
 import { type RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
-import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
+import { createRouter as _createRouter, type Middleware, type Router } from 'remix/fetch-router'
+import { Accept } from 'remix/headers'
 import { createHtmlResponse } from 'remix/response/html'
 import { ServerPage, Home, NotFound, type ServerContext } from './components.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
@@ -24,6 +25,14 @@ const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 export const getDefaultVersions = (): ServerContext['versions'] => {
   let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
   return [{ version, crawl: semver.prerelease(version) === null }]
+}
+
+function responseHeader(name: string, value: string): Middleware {
+  return async (_, next) => {
+    let response = await next()
+    response.headers.set(name, value)
+    return response
+  }
 }
 
 export function createRouter(versions: ServerContext['versions']) {
@@ -60,31 +69,53 @@ export function createRouter(versions: ServerContext['versions']) {
             : path.join(ASSETS_DIR, params.asset)
         return respond.file(request, filePath, params.asset)
       },
-      async docs({ request, params }) {
-        // Docs page
-        let docFile = docFiles.find((file) => file.urlPath === params.slug)
-        let node: RemixNode
+      docs: {
+        middleware: [responseHeader('Vary', 'Accept')],
+        async handler({ request, params }) {
+          // Docs page
+          let docFile = docFiles.find((file) => file.urlPath === params.slug)
 
-        if (!docFile) {
-          node = <NotFound slug={params.slug} />
-        } else {
-          let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
-          node = <div innerHTML={html} />
-        }
+          // Content negotiation: serve raw markdown when the client prefers it.
+          // Ties (e.g. `*/*`) fall through to HTML since that's the browser default.
+          let accept = Accept.from(request.headers.get('accept') ?? '*/*')
+          let type = accept.getPreferred(['text/html', 'text/markdown', '*/*'])
 
-        return await respond.document(
-          request,
-          <ServerPage
-            setup={{
-              docFiles,
-              versions,
-              slug: params.slug,
-              activeVersion: params.version,
-            }}
-          >
-            {node}
-          </ServerPage>,
-        )
+          if (!type) {
+            // Invalid Accept header
+            return new Response('Not Acceptable', { status: 406 })
+          }
+
+          if (type === 'text/markdown') {
+            if (docFile) {
+              return respond.file(request, docFile.path)
+            } else {
+              return new Response('Not Found', { status: 404 })
+            }
+          }
+
+          let node: RemixNode
+
+          if (!docFile) {
+            node = <NotFound slug={params.slug} />
+          } else {
+            let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
+            node = <div innerHTML={html} />
+          }
+
+          return await respond.document(
+            request,
+            <ServerPage
+              setup={{
+                docFiles,
+                versions,
+                slug: params.slug,
+                activeVersion: params.version,
+              }}
+            >
+              {node}
+            </ServerPage>,
+          )
+        },
       },
       async home({ request, params }) {
         return respond.document(
