@@ -466,7 +466,8 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/ui": "workspace:^",
+    "@remix-run/tar-parser": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -476,7 +477,7 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix": "./dist/cli.js",
+    "remix": "./src/cli.ts",
     "remix-test": "./src/remix-test.ts"
   }
 }

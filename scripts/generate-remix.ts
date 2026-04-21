@@ -190,8 +190,18 @@ async function updateRemixPackage() {
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
   logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
 
+  for (let entry of allExports) {
+    if (entry.sourceKind === 'cli-wrapper') {
+      await fs.chmod(path.join(remixDir, SOURCE_FOLDER, entry.sourceFile), 0o755)
+    }
+  }
+
   // Generate bin wrapper files and update sub-package exports
   for (let bin of allBins) {
+    if (isRemixCliBin(bin)) {
+      continue
+    }
+
     // Create wrapper file in remix/src/
     let wrapperPath = path.join(remixDir, SOURCE_FOLDER, `${bin.command}.ts`)
     let content = [
@@ -229,18 +239,20 @@ async function updateRemixPackage() {
 
   remixPackageJson.exports['./package.json'] = './package.json'
   remixPackageJson.publishConfig.exports['./package.json'] = './package.json'
-  if (allExports.some((entry) => entry.exportPath === './cli')) {
-    remixPackageJson.bin = {
-      remix: './dist/cli.js',
-    }
-  } else {
-    delete remixPackageJson.bin
-  }
-
-  if (allBins.length > 0) {
+  if (allBins.length > 0 || allExports.some((entry) => entry.exportPath === './cli')) {
     remixPackageJson.bin = {}
     remixPackageJson.publishConfig.bin = {}
+
+    if (allExports.some((entry) => entry.exportPath === './cli')) {
+      remixPackageJson.bin.remix = `./${SOURCE_FOLDER}/cli.ts`
+      remixPackageJson.publishConfig.bin.remix = './dist/cli.js'
+    }
+
     for (let bin of allBins) {
+      if (isRemixCliBin(bin)) {
+        continue
+      }
+
       remixPackageJson.bin[bin.command] = `./${SOURCE_FOLDER}/${bin.command}.ts`
       remixPackageJson.publishConfig.bin[bin.command] = `./dist/${bin.command}.js`
     }
@@ -258,6 +270,10 @@ async function updateRemixPackage() {
     JSON.stringify(remixPackageJson, null, 2) + '\n',
     'utf-8',
   )
+}
+
+function isRemixCliBin(bin: { command: string; packageName: string }): boolean {
+  return bin.packageName === CLI_PACKAGE_NAME && bin.command === 'remix'
 }
 
 function createExportSource(entry: ExportEntry): string {
