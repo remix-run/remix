@@ -61,13 +61,38 @@ export async function checkProject(projectRoot: string): Promise<ProjectDoctorRe
 
 export async function getProjectFixPlans(projectRoot: string): Promise<DoctorFixPlan[]> {
   let routesFile = path.join(projectRoot, 'app', 'routes.ts')
-  if (await pathExists(routesFile)) {
-    return []
-  }
-
   let homeActionPath = normalizeRelativePath(
     path.join('app', 'controllers', `home${await inferHomeOwnerExtension(projectRoot)}`),
   )
+
+  if (await pathExists(routesFile)) {
+    let routesSource = await fs.readFile(routesFile, 'utf8')
+    if (!hasOnlyWhitespaceAndComments(routesSource)) {
+      return []
+    }
+
+    return [
+      {
+        code: 'routes-export-missing',
+        contents: renderDefaultRoutesFile(),
+        kind: 'update-file',
+        path: 'app/routes.ts',
+        suite: 'project',
+      },
+      ...((await pathExists(path.join(projectRoot, homeActionPath)))
+        ? []
+        : [
+            {
+              code: 'missing-owner',
+              contents: renderDefaultHomeAction(homeActionPath),
+              kind: 'create-file',
+              path: homeActionPath,
+              routeName: 'home',
+              suite: 'project',
+            } satisfies DoctorFixPlan,
+          ]),
+    ]
+  }
 
   return [
     {
@@ -164,6 +189,39 @@ async function pathExists(filePath: string): Promise<boolean> {
 
     throw error
   }
+}
+
+function hasOnlyWhitespaceAndComments(source: string): boolean {
+  for (let index = 0; index < source.length; ) {
+    let char = source[index]
+    let next = source[index + 1]
+
+    if (char == null || /\s/.test(char)) {
+      index += 1
+      continue
+    }
+
+    if (char === '/' && next === '/') {
+      index += 2
+      while (index < source.length && source[index] !== '\n') {
+        index += 1
+      }
+      continue
+    }
+
+    if (char === '/' && next === '*') {
+      index += 2
+      while (index < source.length && !(source[index] === '*' && source[index + 1] === '/')) {
+        index += 1
+      }
+      index = Math.min(index + 2, source.length)
+      continue
+    }
+
+    return false
+  }
+
+  return true
 }
 
 async function inferHomeOwnerExtension(projectRoot: string): Promise<OwnerFileExtension> {

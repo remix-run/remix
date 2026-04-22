@@ -7,7 +7,7 @@ Command-line interface for creating and managing Remix projects.
 - Create new Remix projects with zero-install `npm create remix` or installed `remix new`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
-- Create missing low-risk controller owner files with `remix doctor --fix`
+- Create low-risk project and controller files with `remix doctor --fix`
 - Inspect the current app route tree with `remix routes`
 - Sync Remix skills into `.agents/skills` with `remix skills`
 - Print the current Remix version with `remix version`

@@ -94,6 +94,7 @@ function getSubtreeFindings(subtrees: OwnedSubtree[], fixPlans: DoctorFixPlan[])
           subtree.kind === 'action'
             ? `Route "${subtree.routeName}" expects action ${subtree.entryDisplayPath}, but found controller ${actualAlternatePath}.`
             : `Route "${subtree.routeName}" expects controller ${subtree.entryDisplayPath}, but found standalone action ${actualAlternatePath}.`,
+        fixable: fixableFindingKeys.has(`wrong-owner-kind:${subtree.routeName}`),
         routeName: subtree.routeName,
         severity: 'warn',
         suite: 'controllers',

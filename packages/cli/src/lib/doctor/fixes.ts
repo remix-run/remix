@@ -34,6 +34,8 @@ export async function applyDoctorFixPlans(
       if (nodeError.code !== 'EEXIST') {
         throw error
       }
+
+      continue
     }
 
     appliedFixes.push(toAppliedDoctorFix(fixPlan))

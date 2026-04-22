@@ -76,12 +76,16 @@ export async function getControllerFixPlans(
 }
 
 function getFixCodeForSubtree(subtree: OwnedSubtree): DoctorFixPlan['code'] | null {
-  if (subtree.actualEntryPath != null || subtree.actualAlternatePath != null) {
+  if (subtree.actualEntryPaths.length > 1 || subtree.actualAlternatePaths.length > 1) {
     return null
   }
 
-  if (subtree.actualEntryPaths.length > 1 || subtree.actualAlternatePaths.length > 1) {
+  if (subtree.actualEntryPath != null) {
     return null
+  }
+
+  if (subtree.actualAlternatePath != null) {
+    return 'wrong-owner-kind'
   }
 
   if (subtree.kind === 'controller') {

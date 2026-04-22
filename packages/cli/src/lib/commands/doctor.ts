@@ -268,7 +268,11 @@ async function collectDoctorReport(
         project.routeManifest!.appRoot,
         controllerResult.fixPlans,
       )
-      remainingFindings = getRemainingFindings(controllerResult.suite.findings, suiteAppliedFixes)
+      let finalControllerResult = await checkControllerConventions(
+        project.routeManifest!.appRoot,
+        project.routeManifest!.tree,
+      )
+      remainingFindings = finalControllerResult.suite.findings
     }
 
     let suite = createDoctorSuite('controllers', remainingFindings)
@@ -298,19 +302,6 @@ async function collectDoctorReport(
   }
 
   return report
-}
-
-function getRemainingFindings(
-  findings: DoctorFinding[],
-  appliedFixes: DoctorAppliedFix[],
-): DoctorFinding[] {
-  let appliedFindingKeys = new Set(
-    appliedFixes.map((appliedFix) => `${appliedFix.code}:${appliedFix.routeName ?? ''}`),
-  )
-
-  return findings.filter(
-    (finding) => !appliedFindingKeys.has(`${finding.code}:${finding.routeName ?? ''}`),
-  )
 }
 
 function hasWarningFindings(findings: DoctorFinding[]): boolean {

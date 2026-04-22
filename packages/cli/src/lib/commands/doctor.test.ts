@@ -561,6 +561,58 @@ describe('doctor command', () => {
     }
   })
 
+  it('replaces comment-only app/routes.ts and creates a default home action', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/routes.ts': ['// TODO: define routes', '', '/* routes coming soon */'].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'latest',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-fix-empty-routes-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let fixResult = runDoctorCommand(['--fix'], projectDir)
+
+      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.match(fixResult.stdout, /✓ project/)
+      assert.match(fixResult.stdout, /Updated app\/routes\.ts/)
+      assert.match(fixResult.stdout, /Created app\/controllers\/home\.js/)
+      assert.equal(fixResult.stderr, '')
+
+      let routesSource = await fs.readFile(path.join(projectDir, 'app', 'routes.ts'), 'utf8')
+      let homeSource = await fs.readFile(
+        path.join(projectDir, 'app', 'controllers', 'home.js'),
+        'utf8',
+      )
+
+      assert.match(routesSource, /export const routes = route\(\{/)
+      assert.match(routesSource, /home: '\//)
+      assert.match(homeSource, /export const home = \{/)
+
+      let checkResult = runDoctorCommand([], projectDir)
+
+      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.match(checkResult.stdout, /Doctor found no issues\./)
+      assert.equal(checkResult.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('creates runnable placeholder owners for missing routes and leaves the project clean', async () => {
     let projectDir = await copyFixtureProject('doctor-missing')
 
@@ -841,26 +893,32 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
-  it('does not change non-fixable controller warnings', async () => {
+  it('creates expected owner files for wrong owner kinds without removing existing files', async () => {
     let projectDir = await copyFixtureProject('doctor-wrong-kind')
 
     try {
       let result = runDoctorCommand(['--fix'], projectDir)
 
       assert.equal(result.status, 1)
+      assert.match(result.stdout, /Applied fixes:/)
+      assert.match(result.stdout, /Created app\/controllers\/home\.js/)
+      assert.match(result.stdout, /Created app\/controllers\/contact\/controller\.ts/)
       assert.match(
         result.stdout,
-        /Route "home" expects action app\/controllers\/home\.tsx, but found controller app\/controllers\/home\/controller\.js\./,
+        /Route "home" has both action app\/controllers\/home\.js and controller app\/controllers\/home\/controller\.js\./,
       )
       assert.match(
         result.stdout,
-        /Route "contact" expects controller app\/controllers\/contact\/controller\.tsx, but found standalone action app\/controllers\/contact\.ts\./,
+        /Route "contact" has both controller app\/controllers\/contact\/controller\.ts and standalone action app\/controllers\/contact\.ts\./,
       )
-      assert.doesNotMatch(result.stdout, /Applied fixes:/)
+      assert.match(result.stdout, /Applied 2 fixes\./)
+      assert.doesNotMatch(result.stdout, /Doctor found no issues\./)
       assert.equal(result.stderr, '')
-      await assertPathMissing(path.join(projectDir, 'app', 'controllers', 'home.tsx'))
-      await assertPathMissing(
-        path.join(projectDir, 'app', 'controllers', 'contact', 'controller.tsx'),
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home.js'))
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'home', 'controller.js'))
+      await assertPathExists(path.join(projectDir, 'app', 'controllers', 'contact.ts'))
+      await assertPathExists(
+        path.join(projectDir, 'app', 'controllers', 'contact', 'controller.ts'),
       )
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -1343,6 +1401,8 @@ interface DoctorAppliedFix {
     | 'node-version-unsupported'
     | 'remix-dependency-missing'
     | 'routes-file-missing'
+    | 'routes-export-missing'
+    | 'wrong-owner-kind'
   kind: 'create-directory' | 'create-file' | 'update-file'
   path: string
   routeName?: string
