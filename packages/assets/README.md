@@ -23,7 +23,6 @@ npm i remix
 Use `createAssetServer` to serve browser modules from a URL namespace in your app.
 
 ```ts
-import * as path from 'node:path'
 import { createRouter } from 'remix/fetch-router'
 import { createAssetServer } from 'remix/assets'
 
@@ -49,6 +48,7 @@ This example gives you an `/assets/*` endpoint that serves compiled browser JS m
 Use `rootDir` to specify the root directory of the asset server, which is used to resolve relative file paths. Defaults to `process.cwd()`.
 
 ```ts
+import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
