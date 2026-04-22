@@ -357,9 +357,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  * let db = createDatabase(adapter)
  * ```
  */
-export function createMysqlDatabaseAdapter(
-  client: MysqlQueryable,
-): MysqlDatabaseAdapter {
+export function createMysqlDatabaseAdapter(client: MysqlQueryable): MysqlDatabaseAdapter {
   return new MysqlDatabaseAdapter(client)
 }
 

@@ -265,9 +265,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(
-  database: BetterSqliteDatabase,
-): SqliteDatabaseAdapter {
+export function createSqliteDatabaseAdapter(database: BetterSqliteDatabase): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(database)
 }
 
