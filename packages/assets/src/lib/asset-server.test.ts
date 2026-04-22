@@ -179,8 +179,24 @@ async function waitForWatchedFile(
   let watchedDirectoryPath = normalizeWindowsPath(nodeFs.realpathSync(path.dirname(filePath)))
   await waitFor(
     async () => chokidarWatcher.getWatched(),
-    (watched) => watched[watchedDirectoryPath]?.includes(path.basename(watchedFilePath)) ?? false,
+    (watched) =>
+      hasWatchedDirectoryEntry(watched, watchedDirectoryPath, path.posix.basename(watchedFilePath)),
     watchTestTimeoutMs,
+  )
+}
+
+function hasWatchedDirectoryEntry(
+  watched: Record<string, string[]>,
+  directoryPath: string,
+  entryName: string,
+): boolean {
+  let normalizedDirectoryPath = normalizeWindowsPath(directoryPath)
+  let normalizedEntryName = normalizeWindowsPath(entryName)
+
+  return Object.entries(watched).some(
+    ([watchedDirectoryPath, entries]) =>
+      normalizeWindowsPath(watchedDirectoryPath) === normalizedDirectoryPath &&
+      entries.some((entry) => normalizeWindowsPath(entry) === normalizedEntryName),
   )
 }
 
@@ -2217,7 +2233,7 @@ describe('asset-server', () => {
             await response.text()
             return chokidarWatcher.getWatched()
           },
-          (watched) => watched[nestedDir]?.includes('only.ts') ?? false,
+          (watched) => hasWatchedDirectoryEntry(watched, nestedDir, 'only.ts'),
           watchTestTimeoutMs,
         )
 
@@ -2230,8 +2246,8 @@ describe('asset-server', () => {
           }),
           ({ response, watched }) =>
             response === null &&
-            !(watched[nestedDir]?.includes('only.ts') ?? false) &&
-            !(watched[appDir]?.includes('nested') ?? false),
+            !hasWatchedDirectoryEntry(watched, nestedDir, 'only.ts') &&
+            !hasWatchedDirectoryEntry(watched, appDir, 'nested'),
           watchTestTimeoutMs,
         )
 
