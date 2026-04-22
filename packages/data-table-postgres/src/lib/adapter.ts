@@ -19,7 +19,11 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
-import type { Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
+import type {
+  Client as PostgresClient,
+  Pool as PostgresPool,
+  PoolClient as PostgresPoolClient,
+} from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
 
@@ -31,11 +35,11 @@ export type PostgresDatabaseAdapterOptions = {
 }
 
 type TransactionState = {
-  client: PostgresPoolClient
+  client: PostgresClient | PostgresPoolClient
   releaseOnClose: boolean
 }
 
-type PostgresQueryable = PostgresPool | PostgresPoolClient
+type PostgresQueryable = PostgresClient | PostgresPool | PostgresPoolClient
 
 /**
  * `DatabaseAdapter` implementation for postgres-compatible clients.
@@ -171,7 +175,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     let releaseOnClose = false
-    let transactionClient: PostgresPoolClient
+    let transactionClient: PostgresClient | PostgresPoolClient
 
     if (isPostgresPool(this.#client)) {
       transactionClient = await this.#client.connect()
@@ -300,7 +304,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     return this.#transactionClient(token)
   }
 
-  #transactionClient(token: TransactionToken): PostgresPoolClient {
+  #transactionClient(token: TransactionToken): PostgresClient | PostgresPoolClient {
     let transaction = this.#transactions.get(token.id)
 
     if (!transaction) {
@@ -338,7 +342,7 @@ function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
   return 'connect' in client && typeof client.connect === 'function'
 }
 
-function releasePostgresClient(client: PostgresPoolClient): void {
+function releasePostgresClient(client: PostgresClient | PostgresPoolClient): void {
   let release = (client as { release?: () => void }).release
   release?.()
 }
