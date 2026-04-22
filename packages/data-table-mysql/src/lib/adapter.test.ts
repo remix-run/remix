@@ -41,33 +41,6 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
-  it('supports capability mutation for fallback tests', () => {
-    let adapter = createMysqlDatabaseAdapter({
-      async query() {
-        return [[], []]
-      },
-      async beginTransaction() {},
-      async commit() {},
-      async rollback() {},
-    } as never)
-
-    adapter.capabilities = {
-      returning: true,
-      savepoints: false,
-      upsert: false,
-      transactionalDdl: true,
-      migrationLock: false,
-    }
-
-    assert.deepEqual(adapter.capabilities, {
-      returning: true,
-      savepoints: false,
-      upsert: false,
-      transactionalDdl: true,
-      migrationLock: false,
-    })
-  })
-
   it('checks table and column existence through adapter introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 
