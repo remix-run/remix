@@ -1,3 +1,4 @@
+import * as path from 'node:path'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 import {
@@ -70,11 +71,9 @@ export function compileRoutes(options: {
       for (let route of compiledRoutes) {
         let relativeFilePath = getRelativeFilePath(normalizedFilePath, route.rootDir)
         if (relativeFilePath === null) continue
-
-        let fileUrl = new URL(`http://remix.run/${relativeFilePath}`)
-        let match = route.filePattern.match(fileUrl)
+        let match = route.filePattern.ast.pathname.match(relativeFilePath)
         if (!match) continue
-        return normalizePathname(route.urlPattern.href(match.params))
+        return normalizePathname(route.urlPattern.href(getPathnameParams(route.filePattern, match)))
       }
 
       return null
@@ -106,9 +105,27 @@ function compileRoute(
 }
 
 function getRelativeFilePath(filePath: string, rootDir: string): string | null {
-  if (filePath === rootDir) return ''
-  if (!filePath.startsWith(`${rootDir}/`)) return null
-  return filePath.slice(rootDir.length + 1)
+  if (filePath[1] === ':' && rootDir[1] === ':' && filePath[0] !== rootDir[0]) return null
+  return path.posix.relative(rootDir, filePath)
+}
+
+function getPathnameParams(
+  pattern: RoutePattern,
+  match: Array<{ name: string; type: ':' | '*'; value: string }>,
+): Record<string, string | undefined> {
+  let params: Record<string, string | undefined> = {}
+
+  for (let param of pattern.ast.pathname.params) {
+    if (param.name === '*') continue
+    params[param.name] = undefined
+  }
+
+  for (let param of match) {
+    if (param.name === '*') continue
+    params[param.name] = param.value
+  }
+
+  return params
 }
 
 function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePattern): void {

@@ -94,9 +94,9 @@ function getWatchTargetsForDirectories(
 
   for (let directory of directories) {
     let normalizedDirectory = normalizeFilePath(directory).replace(/\/+$/, '')
-    if (!isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) continue
 
     targets.add(normalizedDirectory)
+    if (!isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) continue
 
     for (let ancestor of getAncestorPaths(normalizedDirectory, normalizedRootDir)) {
       configAncestors.add(ancestor)

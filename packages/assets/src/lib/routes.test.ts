@@ -21,4 +21,22 @@ describe('compileRoutes', () => {
       '/assets/app/entry.ts',
     )
   })
+
+  it('supports file patterns outside the root directory', () => {
+    let routes = compileRoutes({
+      fileMap: {
+        '/assets/packages/*path': '../packages/*path',
+      },
+      rootDir: '/repo/project',
+    })
+
+    assert.equal(
+      routes.resolveUrlPathname('/assets/packages/shared/value.ts'),
+      '/repo/packages/shared/value.ts',
+    )
+    assert.equal(
+      routes.toUrlPathname('/repo/packages/shared/value.ts'),
+      '/assets/packages/shared/value.ts',
+    )
+  })
 })

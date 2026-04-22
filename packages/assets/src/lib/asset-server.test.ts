@@ -1209,6 +1209,51 @@ describe('asset-server', () => {
     }
   })
 
+  it('picks up source changes outside rootDir in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let projectDir = path.join(caseDir, 'project')
+      let packageFilePath = await write(
+        caseDir,
+        'packages/shared/value.ts',
+        'export const value = 1',
+      )
+      await fs.mkdir(projectDir, { recursive: true })
+      let assetServer = createAssetServer({
+        allow: ['../packages/**'],
+        fileMap: {
+          '/assets/packages/*path': '../packages/*path',
+        },
+        rootDir: projectDir,
+      })
+
+      try {
+        let firstResponse = await get(assetServer, '/assets/packages/shared/value.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 1/)
+
+        await waitForWatchedFile(assetServer, packageFilePath)
+        await write(caseDir, 'packages/shared/value.ts', 'export const value = 2')
+
+        let secondBody = await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/packages/shared/value.ts')
+            assert.ok(response)
+            return response.text()
+          },
+          (body) => /value = 2/.test(body),
+          watchTestTimeoutMs,
+        )
+
+        assert.match(secondBody, /value = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('ignores source changes that match watch.ignore in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
