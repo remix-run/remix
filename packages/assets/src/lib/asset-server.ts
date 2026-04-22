@@ -158,7 +158,7 @@ type ResolvedAssetServerOptions = {
   watchOptions: AssetServerWatchOptions | null
 }
 
-let chokidarWatcherByAssetServer = new WeakMap<AssetServer, ChokidarWatcher>()
+const chokidarWatcherByAssetServer = new WeakMap<AssetServer, ChokidarWatcher>()
 
 export function getInternalChokidarWatcher(assetServer: AssetServer): ChokidarWatcher | undefined {
   return chokidarWatcherByAssetServer.get(assetServer)
