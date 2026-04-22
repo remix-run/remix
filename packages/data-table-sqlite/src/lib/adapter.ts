@@ -1,5 +1,4 @@
 import type {
-  AdapterCapabilityOverrides,
   DataManipulationRequest,
   DataMigrationRequest,
   DataMigrationResult,
@@ -24,13 +23,6 @@ import type { Database as BetterSqliteDatabase, RunResult } from 'better-sqlite3
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 /**
- * Sqlite adapter configuration.
- */
-export type SqliteDatabaseAdapterOptions = {
-  capabilities?: AdapterCapabilityOverrides
-}
-
-/**
  * `DatabaseAdapter` implementation for Better SQLite3.
  */
 export class SqliteDatabaseAdapter implements DatabaseAdapter {
@@ -48,14 +40,14 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: BetterSqliteDatabase, options?: SqliteDatabaseAdapterOptions) {
+  constructor(database: BetterSqliteDatabase) {
     this.#database = database
     this.capabilities = {
-      returning: options?.capabilities?.returning ?? true,
-      savepoints: options?.capabilities?.savepoints ?? true,
-      upsert: options?.capabilities?.upsert ?? true,
-      transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
-      migrationLock: options?.capabilities?.migrationLock ?? false,
+      returning: true,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: true,
+      migrationLock: false,
     }
   }
 
@@ -273,11 +265,8 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(
-  database: BetterSqliteDatabase,
-  options?: SqliteDatabaseAdapterOptions,
-): SqliteDatabaseAdapter {
-  return new SqliteDatabaseAdapter(database, options)
+export function createSqliteDatabaseAdapter(database: BetterSqliteDatabase): SqliteDatabaseAdapter {
+  return new SqliteDatabaseAdapter(database)
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {

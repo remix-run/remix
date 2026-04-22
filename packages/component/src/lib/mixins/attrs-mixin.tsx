@@ -1,9 +1,7 @@
-// @jsxRuntime classic
-// @jsx jsx
 import { createMixin } from '../mixin.ts'
-import { jsx } from '../jsx.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from '../mixin.ts'
+import { createElement } from '../create-element.ts'
 
 const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
   (handle) => (defaults, props) => {
@@ -15,7 +13,7 @@ const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
       nextProps[key] = defaults[key]
     }
 
-    return nextProps === props ? handle.element : <handle.element {...nextProps} />
+    return nextProps === props ? handle.element : createElement(handle.element, nextProps)
   },
 )
 

@@ -10,7 +10,7 @@ export interface BookCardProps {
 
 export function BookCard() {
   return ({ book }: BookCardProps) => (
-    <div class="book-card">
+    <div class="book-card" data-test-slug={book.slug}>
       <img src={book.cover_url} alt={book.title} />
       <div class="book-card-body">
         <h3>{book.title}</h3>

@@ -59,18 +59,6 @@ let sqlite = new Database(':memory:')
 let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 ```
 
-### Capability Overrides For Fallback Testing
-
-```ts
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
-
-let adapter = createSqliteDatabaseAdapter(sqlite, {
-  capabilities: {
-    returning: false,
-  },
-})
-```
-
 ## Related Packages
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
