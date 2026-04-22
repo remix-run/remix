@@ -13,8 +13,8 @@ catalogs:
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
     playwright:
-      specifier: ^1.53.1
-      version: 1.57.0
+      specifier: ^1.59.0
+      version: 1.59.0
     tsx:
       specifier: ^4.20.6
       version: 4.21.0
@@ -78,6 +78,9 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
+      playwright:
+        specifier: 'catalog:'
+        version: 1.59.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -327,7 +330,7 @@ importers:
     devDependencies:
       '@vitest/browser':
         specifier: ^3.2.4
-        version: 3.2.4(playwright@1.57.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
+        version: 3.2.4(playwright@1.59.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
@@ -336,7 +339,7 @@ importers:
         version: 0.25.12
       playwright:
         specifier: 'catalog:'
-        version: 1.57.0
+        version: 1.59.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -361,7 +364,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: ^1.49.1
-        version: 1.57.0
+        version: 1.59.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1410,6 +1413,15 @@ importers:
 
   packages/test:
     dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../component
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../node-fetch-server
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1423,6 +1435,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      playwright:
+        specifier: 'catalog:'
+        version: 1.59.0
 
   scripts:
     dependencies:
@@ -3961,13 +3976,13 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
-  playwright-core@1.57.0:
-    resolution: {integrity: sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==}
+  playwright-core@1.59.0:
+    resolution: {integrity: sha512-PW/X/IoZ6BMUUy8rpwHEZ8Kc0IiLIkgKYGNFaMs5KmQhcfLILNx9yCQD0rnWeWfz1PNeqcFP1BsihQhDOBCwZw==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.57.0:
-    resolution: {integrity: sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==}
+  playwright@1.59.0:
+    resolution: {integrity: sha512-wihGScriusvATUxmhfENxg0tj1vHEFeIwxlnPFKQTOQVd7aG08mUfvvniRP/PtQOC+2Bs52kBOC/Up1jTXeIbw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5790,7 +5805,7 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@vitest/browser@3.2.4(playwright@1.57.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)':
+  '@vitest/browser@3.2.4(playwright@1.59.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)':
     dependencies:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
@@ -5802,7 +5817,7 @@ snapshots:
       vitest: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
       ws: 8.18.3
     optionalDependencies:
-      playwright: 1.57.0
+      playwright: 1.59.0
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -5826,7 +5841,7 @@ snapshots:
       tinyrainbow: 2.0.0
       vitest: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
     optionalDependencies:
-      '@vitest/browser': 3.2.4(playwright@1.57.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(playwright@1.59.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
     transitivePeerDependencies:
       - supports-color
 
@@ -7003,11 +7018,11 @@ snapshots:
 
   picomatch@4.0.3: {}
 
-  playwright-core@1.57.0: {}
+  playwright-core@1.59.0: {}
 
-  playwright@1.57.0:
+  playwright@1.59.0:
     dependencies:
-      playwright-core: 1.57.0
+      playwright-core: 1.59.0
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -7650,7 +7665,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.4
-      '@vitest/browser': 3.2.4(playwright@1.57.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(playwright@1.59.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
     transitivePeerDependencies:
       - jiti
       - less

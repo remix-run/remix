@@ -3,8 +3,9 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
-import { createReporter } from './lib/reporter.ts'
+import { createReporter } from './lib/reporters/index.ts'
 import { createWatcher } from './lib/watcher.ts'
+import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import type { Counts } from './lib/utils.ts'
 
@@ -47,12 +48,17 @@ async function executeRun() {
       await globalSetup?.()
     }
 
-    let { files, serverFiles } = await discoverTests(config)
+    let { files, serverFiles, e2eFiles } = await discoverTests(config)
 
     if (config.watch) {
       watcher ??= createWatcher((file) => queueRerun(file))
       watcher.update(files)
     }
+
+    let playwrightConfig =
+      config.playwrightConfig == null || typeof config.playwrightConfig === 'string'
+        ? await loadPlaywrightConfig(config.playwrightConfig)
+        : config.playwrightConfig
 
     let reporter = createReporter(config.reporter)
     let startTime = performance.now()
@@ -72,6 +78,47 @@ async function executeRun() {
       counts.passed += serverResult.passed
       counts.skipped += serverResult.skipped
       counts.todo += serverResult.todo
+    }
+
+    // Run e2e tests for all browsers configured by the user
+    if (e2eFiles.length > 0) {
+      let projects = resolveProjects(playwrightConfig)
+      if (config.project) {
+        let projectNames = config.project.split(',').map((p) => p.trim())
+        projects = projects.filter((p) => p.name && projectNames.includes(p.name))
+        if (projects.length === 0) {
+          throw new Error(`No playwright projects found with name(s) "${config.project}"`)
+        }
+      }
+
+      for (let project of projects) {
+        reporter.onSectionStart(`\nRunning tests for project \`${project.name}\`:`)
+
+        if (config.browser?.open) {
+          if (project.playwrightUseOpts?.headless === true) {
+            let label = project.name ? ` (project "${project.name}")` : ''
+            console.warn(
+              `Warning: browser.open is set but playwright headless is explicitly true${label} — ignoring browser.open`,
+            )
+          } else {
+            project.playwrightUseOpts = { ...project.playwrightUseOpts, headless: false }
+          }
+        }
+
+        let e2eResult =
+          e2eFiles.length > 0
+            ? await runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
+                open: config.browser?.open,
+                playwrightUseOpts: project.playwrightUseOpts,
+                projectName: project.name,
+              })
+            : null
+
+        counts.passed += e2eResult?.passed ?? 0
+        counts.failed += e2eResult?.failed ?? 0
+        counts.skipped += e2eResult?.skipped ?? 0
+        counts.todo += e2eResult?.todo ?? 0
+      }
     }
 
     reporter.onSummary(counts, performance.now() - startTime)
@@ -95,6 +142,7 @@ async function executeRun() {
 async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
   files: string[]
   serverFiles: string[]
+  e2eFiles: string[]
 }> {
   async function findFiles(pattern: string) {
     let files: string[] = []
@@ -114,14 +162,27 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
     process.exit(1)
   }
 
-  let serverFiles = files
-  let totalFiles = serverFiles.length
+  let e2eSet = new Set(await findFiles(config.glob.e2e))
 
-  console.log(`Found ${totalFiles} test file(s) (${serverFiles.length} server)`)
+  let types = new Set(config.type.split(','))
+  let e2eFiles = types.has('e2e') ? files.filter((f) => e2eSet.has(f)) : []
+  let serverFiles = types.has('server') ? files.filter((f) => !e2eSet.has(f)) : []
+
+  let totalFiles = serverFiles.length + e2eFiles.length
+
+  if (totalFiles === 0) {
+    console.log(`No test files remain after filtering for type ${config.type}`)
+    process.exit(1)
+  }
+
+  console.log(
+    `Found ${totalFiles} test file(s) (${serverFiles.length} server, ${e2eFiles.length} e2e)`,
+  )
 
   return {
     files,
     serverFiles,
+    e2eFiles,
   }
 }
 

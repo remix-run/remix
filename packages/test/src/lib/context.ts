@@ -1,4 +1,8 @@
+import type { Browser, Page } from 'playwright'
 import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
+
+import type { CreateServerFunction } from './e2e-server.ts'
+import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -41,9 +45,22 @@ export interface TestContext {
    * @returns {MockFunction} A mock function instance for the spied method
    */
   spyOn<T extends object, K extends keyof T>(obj: T, method: K, impl?: Function): MockFunction
+
+  /**
+   * Starts a test server with the provided request handler.
+   *
+   * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
+   * @returns {Promise<Page>} A promise resolving to a page instance for the server
+   */
+  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
 }
 
-export function createTestContext(): { testContext: TestContext; cleanup(): Promise<void> } {
+export function createTestContext(options: {
+  createServer?: CreateServerFunction
+  browser?: Browser
+  open?: boolean
+  playwrightPageOptions?: ReturnType<typeof getPlaywrightPageOptions>
+}): { testContext: TestContext; cleanup(): Promise<void> } {
   let cleanups: Array<() => void | Promise<void>> = []
 
   let testContext: TestContext = {
@@ -55,6 +72,32 @@ export function createTestContext(): { testContext: TestContext; cleanup(): Prom
     },
     after(fn) {
       cleanups.push(fn)
+    },
+    async serve(handler) {
+      if (!options.createServer || !options.browser) {
+        throw new Error('t.serve() is only available in E2E test suites')
+      }
+
+      let server = await options.createServer(handler)
+      let page = await options.browser.newPage({
+        ...options.playwrightPageOptions,
+        baseURL: server.baseUrl,
+      })
+      if (options.playwrightPageOptions?.navigationTimeout != null) {
+        page.setDefaultNavigationTimeout(options.playwrightPageOptions.navigationTimeout)
+      }
+      if (options.playwrightPageOptions?.actionTimeout != null) {
+        page.setDefaultTimeout(options.playwrightPageOptions.actionTimeout)
+      }
+
+      cleanups.push(async () => {
+        if (!options.open) {
+          await page.close()
+        }
+        await server.close()
+      })
+
+      return page
     },
   }
 
