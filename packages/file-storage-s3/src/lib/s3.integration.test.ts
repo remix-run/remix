@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { before, beforeEach, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { before, beforeEach, describe, it } from '@remix-run/test'
 import { AwsClient } from 'aws4fetch'
 
 import { createS3FileStorage } from './s3.ts'

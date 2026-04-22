@@ -7,7 +7,8 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
   },
   "exclude": ["dist"]
 }

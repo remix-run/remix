@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { after, before, beforeEach, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { after, before, beforeEach, describe, it } from '@remix-run/test'
 
 import { createClient } from 'redis'
 

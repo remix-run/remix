@@ -32,7 +32,9 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
@@ -43,7 +45,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

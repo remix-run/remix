@@ -11,7 +11,7 @@ import type { getPlaywrightPageOptions } from './playwright.ts'
  * @example
  * describe('my test suite', () => {
  *   it('my test case', async (t) => {
- *     let mockFn = t.mock(() => 'mocked value')
+ *     let mockFn = t.mock.fn(() => 'mocked value')
  *     // ...
  *   })
  * })
@@ -26,25 +26,36 @@ export interface TestContext {
   after(fn: () => void): void
 
   /**
-   * Creates a mock function with an optional implementation.
-   *
-   * @template T - The function type to be mocked
-   * @param {T} [impl] - Optional custom implementation for the mock
-   * @returns {MockFunction<T>} A mock function instance
+   * Mock tracker for the current test. Mirrors the shape of Node's
+   * `t.mock`. Method mocks created here are auto-restored on test completion.
    */
-  mock<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+  mock: {
+    /**
+     * Creates a mock function with an optional implementation.
+     *
+     * @template T - The function type to be mocked
+     * @param {T} [impl] - Optional custom implementation for the mock
+     * @returns {MockFunction<T>} A mock function instance
+     */
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 
-  /**
-   * Creates a spy on an object's method with optional implementation override.
-   *
-   * @template T - The object type
-   * @template K - The method key of the object
-   * @param {T} obj - The object to spy on
-   * @param {K} method - The method name to spy on
-   * @param {Function} [impl] - Optional implementation override (must be a function)
-   * @returns {MockFunction} A mock function instance for the spied method
-   */
-  spyOn<T extends object, K extends keyof T>(obj: T, method: K, impl?: Function): MockFunction
+    /**
+     * Replaces `obj[methodName]` with a mock and records every call. The
+     * original method is restored automatically after the test completes.
+     *
+     * @template T - The object type
+     * @template K - The method key of the object
+     * @param {T} obj - The object to mock
+     * @param {K} methodName - The method name to mock
+     * @param {Function} [impl] - Optional implementation override (must be a function)
+     * @returns {MockFunction} A mock function instance for the mocked method
+     */
+    method<T extends object, K extends keyof T>(
+      obj: T,
+      methodName: K,
+      impl?: Function,
+    ): MockFunction
+  }
 
   /**
    * Starts a test server with the provided request handler.
@@ -64,11 +75,13 @@ export function createTestContext(options: {
   let cleanups: Array<() => void | Promise<void>> = []
 
   let testContext: TestContext = {
-    mock: mock.fn,
-    spyOn(obj, method, impl) {
-      let mockFn = mock.spyOn(obj, method, impl as any)
-      if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
-      return mockFn
+    mock: {
+      fn: mock.fn,
+      method(obj, methodName, impl) {
+        let mockFn = mock.method(obj, methodName, impl as any)
+        if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
+        return mockFn
+      },
     },
     after(fn) {
       cleanups.push(fn)

@@ -1,7 +1,7 @@
 Initial release of `@remix-run/test`, a test framework for Remix applications.
 
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
-- `TestContext` (`t`) per test: `t.mock()`, `t.spyOn()`, `t.after()` for cleanup
+- `TestContext` (`t`) per test: `t.mock.fn()`, `t.mock.method()`, `t.after()` for cleanup
 - Playwright E2E testing via `t.serve()`
 - CLI (`remix-test`) with flags for all config options
 - Watch mode (`--watch`)

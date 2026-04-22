@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { afterEach, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { afterEach, describe, it } from '@remix-run/test'
 
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
