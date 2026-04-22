@@ -7,7 +7,7 @@ export type ModuleWatchEvent = 'change' | 'add' | 'unlink'
 
 type ModuleRecordState = {
   identityPath: string
-  lastInvalidatedAt: number
+  invalidationVersion: number
   transformed?: TransformedModule
   resolved?: ResolvedModule
   emitted?: EmittedModule
@@ -19,7 +19,7 @@ export type ModuleRecord = Readonly<ModuleRecordState>
 
 type MutableModuleRecord = {
   identityPath: string
-  lastInvalidatedAt: number
+  invalidationVersion: number
   transformed?: TransformedModule
   resolved?: ResolvedModule
   emitted?: EmittedModule
@@ -54,7 +54,7 @@ export function createModuleStore(
 
       let record: MutableModuleRecord = {
         identityPath,
-        lastInvalidatedAt: 0,
+        invalidationVersion: 0,
         trackedFiles: new Set(),
         trackedResolutions: [],
       }
@@ -148,7 +148,7 @@ export function createModuleStore(
 
     let record: MutableModuleRecord = {
       identityPath,
-      lastInvalidatedAt: 0,
+      invalidationVersion: 0,
       trackedFiles: new Set(),
       trackedResolutions: [],
     }
@@ -160,7 +160,7 @@ export function createModuleStore(
     record.emitted = undefined
     record.resolved = undefined
     record.transformed = undefined
-    record.lastInvalidatedAt = Date.now()
+    record.invalidationVersion += 1
   }
 
   function setTracking(

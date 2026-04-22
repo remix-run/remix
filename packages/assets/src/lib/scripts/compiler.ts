@@ -92,8 +92,8 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     mainFields: ['browser', 'module', 'main'],
     tsconfig: 'auto',
   })
-  let resolveInFlightByIdentityPath = new Map<string, Promise<ResolvedModule>>()
-  let emitInFlightByIdentityPath = new Map<string, Promise<EmittedModule>>()
+  let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
+  let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
 
   let transformArgs: TransformArgs = {
     buildId: resolvedOptions.buildId ?? null,
@@ -245,11 +245,12 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function getOrCreateResolvedModule(record: ModuleRecord): Promise<ResolvedModule> {
     if (record.resolved) return record.resolved
 
-    let existing = resolveInFlightByIdentityPath.get(record.identityPath)
+    let cacheKey = getRecordCacheKey(record)
+    let existing = resolveInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let startedAt = Date.now()
+      let startedVersion = record.invalidationVersion
       let transformedModule = await getOrCreateTransformedModule(record)
       if (
         resolvedOptions.watchMode &&
@@ -262,26 +263,26 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       let resolveModuleResult = await resolveModule(record, transformedModule, resolveArgs)
 
       if (!resolveModuleResult.ok) {
-        if (startedAt >= record.lastInvalidatedAt) {
+        if (isFresh(record, startedVersion)) {
           store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
         }
         throw resolveModuleResult.error
       }
 
-      if (startedAt >= record.lastInvalidatedAt) {
+      if (isFresh(record, startedVersion)) {
         store.setResolved(record.identityPath, resolveModuleResult.value)
       }
 
       return resolveModuleResult.value
     })()
 
-    resolveInFlightByIdentityPath.set(record.identityPath, promise)
+    resolveInFlightByCacheKey.set(cacheKey, promise)
 
     try {
       return await promise
     } finally {
-      if (resolveInFlightByIdentityPath.get(record.identityPath) === promise) {
-        resolveInFlightByIdentityPath.delete(record.identityPath)
+      if (resolveInFlightByCacheKey.get(cacheKey) === promise) {
+        resolveInFlightByCacheKey.delete(cacheKey)
       }
     }
   }
@@ -289,11 +290,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function getOrCreateTransformedModule(record: ModuleRecord): Promise<TransformedModule> {
     if (record.transformed) return record.transformed
 
-    let startedAt = Date.now()
+    let startedVersion = record.invalidationVersion
     let transformModuleResult = await transformModule(record, transformArgs)
 
     if (!transformModuleResult.ok) {
-      if (startedAt >= record.lastInvalidatedAt) {
+      if (isFresh(record, startedVersion)) {
         store.setTransformFailure(record.identityPath, {
           trackedFiles: transformModuleResult.trackedFiles,
         })
@@ -301,7 +302,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       throw transformModuleResult.error
     }
 
-    if (startedAt >= record.lastInvalidatedAt) {
+    if (isFresh(record, startedVersion)) {
       store.setTransformed(record.identityPath, transformModuleResult.value)
     }
 
@@ -311,11 +312,12 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   async function getOrCreateEmittedModule(record: ModuleRecord): Promise<EmittedModule> {
     if (record.emitted) return record.emitted
 
-    let existing = emitInFlightByIdentityPath.get(record.identityPath)
+    let cacheKey = getRecordCacheKey(record)
+    let existing = emitInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let startedAt = Date.now()
+      let startedVersion = record.invalidationVersion
       let resolvedModule = await getOrCreateResolvedModule(record)
       let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
         getServedUrl,
@@ -326,20 +328,20 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
         throw emitResolvedModuleResult.error
       }
 
-      if (startedAt >= record.lastInvalidatedAt) {
+      if (isFresh(record, startedVersion)) {
         store.setEmitted(record.identityPath, emitResolvedModuleResult.value)
       }
 
       return emitResolvedModuleResult.value
     })()
 
-    emitInFlightByIdentityPath.set(record.identityPath, promise)
+    emitInFlightByCacheKey.set(cacheKey, promise)
 
     try {
       return await promise
     } finally {
-      if (emitInFlightByIdentityPath.get(record.identityPath) === promise) {
-        emitInFlightByIdentityPath.delete(record.identityPath)
+      if (emitInFlightByCacheKey.get(cacheKey) === promise) {
+        emitInFlightByCacheKey.delete(cacheKey)
       }
     }
   }
@@ -358,6 +360,14 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   function isWatchIgnored(filePath: string): boolean {
     return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath))
   }
+}
+
+function getRecordCacheKey(record: ModuleRecord): string {
+  return `${record.identityPath}\0${record.invalidationVersion}`
+}
+
+function isFresh(record: ModuleRecord, version: number): boolean {
+  return record.invalidationVersion === version
 }
 
 function parseServedPathname(pathname: string): {
