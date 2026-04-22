@@ -30,7 +30,8 @@ export function createRouter(versions: ServerContext['versions']) {
   const router = _createRouter()
 
   const respond = {
-    async file(request: Request, filePath: string, name: string) {
+    async file(request: Request, filePath: string, name?: string) {
+      name ??= path.basename(filePath)
       return await createFileResponse(openLazyFile(filePath, { name }), request)
     },
     async document(request: Request, node: RemixNode, init?: ResponseInit) {
@@ -94,13 +95,24 @@ export function createRouter(versions: ServerContext['versions']) {
           </ServerPage>,
         )
       },
+      async lookup({ request, params }) {
+        let jsonPath = path.join(MD_DIR, 'api.json')
+        if (!params.version) {
+          return respond.file(request, jsonPath)
+        }
+        let content = JSON.parse(await fs.promises.readFile(jsonPath, 'utf-8'))
+        for (let key in content) {
+          content[key] = `/${params.version}${content[key]}`
+        }
+        return Response.json(content)
+      },
       async markdown({ request, params }) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
         }
 
-        return respond.file(request, docFile.path, params.slug)
+        return respond.file(request, docFile.path)
       },
     },
   })

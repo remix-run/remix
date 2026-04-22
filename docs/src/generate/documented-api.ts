@@ -77,8 +77,8 @@ export type DocumentedType = BaseDocumentedAPI & {
   signature: string
 }
 
-// PAth docs are served at on the website
-const WEBSITE_DOCS_PATH = '/api'
+// Path docs are served at on the website
+export const WEBSITE_DOCS_PATH = '/api'
 
 // Convert a typedoc reflection for a given node into a documentable instance
 export function getDocumentedAPI(fullName: string, node: typedoc.Reflection): DocumentedAPI {
