@@ -86,7 +86,7 @@ test('generateChangelogContent keeps stable releases grouped by bump type', () =
   assert.doesNotMatch(content, /^### Pre-release Changes$/m)
 })
 
-test('getNextVersion starts create-remix prereleases from the next major version', () => {
+test('getNextVersion starts prereleases from the next major version', () => {
   assert.equal(getNextVersion('2.17.4', 'major', { prereleaseChannel: 'alpha' }), '3.0.0-alpha.0')
 })
 

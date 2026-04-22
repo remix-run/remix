@@ -44,7 +44,6 @@ Remix is composed of lots of small, focused sub-packages that are composed toget
 - [component](packages/component): UI components for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
-- [create-remix](packages/create-remix): Zero-install project scaffolding entrypoint for Remix
 - [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
@@ -85,6 +84,12 @@ To try the current Remix alpha, install the `next` dist-tag:
 
 ```sh
 npm install remix@next
+```
+
+To create a new Remix app with the CLI, use `npx remix new`:
+
+```sh
+npx remix new my-remix-app
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):

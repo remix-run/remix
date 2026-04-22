@@ -136,7 +136,7 @@ Packages can opt into prerelease mode via an optional `.changes/config.json` fil
 }
 ```
 
-The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is currently used for `remix` and `create-remix`.
+The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is currently used for `remix`.
 
 #### Bumping prerelease versions
 
