@@ -42,7 +42,7 @@ type ModuleCompilerOptions = {
   fingerprintModules: boolean
   isAllowed(absolutePath: string): boolean
   minify: boolean
-  onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => Promise<void> | void
+  onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
@@ -263,13 +263,13 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       if (!resolveModuleResult.ok) {
         if (startedAt >= record.lastInvalidatedAt) {
-          await store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
+          store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
         }
         throw resolveModuleResult.error
       }
 
       if (startedAt >= record.lastInvalidatedAt) {
-        await store.setResolved(record.identityPath, resolveModuleResult.value)
+        store.setResolved(record.identityPath, resolveModuleResult.value)
       }
 
       return resolveModuleResult.value
@@ -294,7 +294,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     if (!transformModuleResult.ok) {
       if (startedAt >= record.lastInvalidatedAt) {
-        await store.setTransformFailure(record.identityPath, {
+        store.setTransformFailure(record.identityPath, {
           trackedFiles: transformModuleResult.trackedFiles,
         })
       }
@@ -302,7 +302,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     }
 
     if (startedAt >= record.lastInvalidatedAt) {
-      await store.setTransformed(record.identityPath, transformModuleResult.value)
+      store.setTransformed(record.identityPath, transformModuleResult.value)
     }
 
     return transformModuleResult.value

@@ -4,6 +4,7 @@ import { getFilePathDirectory, normalizeFilePath } from './paths.ts'
 
 type AssetServerWatcherOptions = {
   ignore?: readonly string[]
+  onChokidarWatcherCreated?: (watcher: ChokidarWatcher) => void
   poll?: boolean
   pollInterval?: number
   onFileEvent(filePath: string, event: AssetServerWatchEvent): Promise<void>
@@ -11,13 +12,11 @@ type AssetServerWatcherOptions = {
 }
 
 type AssetServerWatchEvent = 'add' | 'change' | 'unlink'
+export type ChokidarWatcher = ReturnType<typeof chokidar.watch>
 
 export type AssetServerWatcher = {
   close(): Promise<void>
-  updateWatchedDirectories(delta: {
-    add: readonly string[]
-    remove: readonly string[]
-  }): Promise<void>
+  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
 }
 
 export function createAssetServerWatcher(options: AssetServerWatcherOptions): AssetServerWatcher {
@@ -26,58 +25,48 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     ignorePermissionErrors: true,
     ...resolveChokidarWatchOptions(options),
   })
+  options.onChokidarWatcherCreated?.(watcher)
   let watchedDirectories = new Set<string>()
   let watchedTargets = new Set<string>()
-  let syncPromise = Promise.resolve()
 
   for (let event of ['add', 'change', 'unlink'] as const) {
     watcher.on(event, (filePath) => {
-      void options.onFileEvent(filePath, event)
+      options.onFileEvent(filePath, event)
     })
   }
+  watcher.on('error', (error) => {
+    console.error('Asset server file system watcher encountered an error.', error)
+  })
 
   return {
     async close() {
       await watcher.close()
     },
-    async updateWatchedDirectories(delta) {
-      syncPromise = syncPromise.then(async () => {
-        let nextWatchedDirectories = new Set(watchedDirectories)
+    updateWatchedDirectories(delta) {
+      let nextWatchedDirectories = new Set(watchedDirectories)
 
-        for (let directory of delta.add) {
-          nextWatchedDirectories.add(directory)
-        }
-        for (let directory of delta.remove) {
-          nextWatchedDirectories.delete(directory)
-        }
+      for (let directory of delta.add) {
+        nextWatchedDirectories.add(directory)
+      }
+      for (let directory of delta.remove) {
+        nextWatchedDirectories.delete(directory)
+      }
 
-        let nextTargets = getWatchTargetsForDirectories(options.rootDir, [
-          ...nextWatchedDirectories,
-        ])
-        let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
-        let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
+      let nextTargets = getWatchTargetsForDirectories(options.rootDir, [...nextWatchedDirectories])
+      let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
+      let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
 
-        if (targetsToRemove.length > 0) {
-          await watcher.unwatch(targetsToRemove)
-        }
-        if (targetsToAdd.length > 0) {
-          await watcher.add(targetsToAdd)
-        }
-        if (targetsToAdd.length > 0 || targetsToRemove.length > 0) {
-          await delay(50)
-        }
+      if (targetsToRemove.length > 0) {
+        watcher.unwatch(targetsToRemove)
+      }
+      if (targetsToAdd.length > 0) {
+        watcher.add(targetsToAdd)
+      }
 
-        watchedDirectories = nextWatchedDirectories
-        watchedTargets = nextTargets
-      })
-
-      await syncPromise
+      watchedDirectories = nextWatchedDirectories
+      watchedTargets = nextTargets
     },
   }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function resolveChokidarWatchOptions(

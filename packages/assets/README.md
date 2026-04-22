@@ -293,7 +293,7 @@ let assetServer = createAssetServer({
 
 ## Error Handling
 
-Use `onError` to report unexpected compilation failures or return a custom response.
+Use `onError` to report unexpected compilation failures and/or return a custom response.
 
 ```ts
 import { createAssetServer } from 'remix/assets'

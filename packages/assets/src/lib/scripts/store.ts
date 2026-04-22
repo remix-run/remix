@@ -25,15 +25,14 @@ type MutableModuleRecord = {
   emitted?: EmittedModule
   trackedFiles: Set<string>
   trackedResolutions: TrackedResolution[]
-  watchedDirectories: Set<string>
 }
 
 type ModuleStore = {
   get(identityPath: string): ModuleRecord
-  setTransformFailure(identityPath: string, failure: TransformFailureState): Promise<void>
-  setTransformed(identityPath: string, transformed: TransformedModule): Promise<void>
-  setResolved(identityPath: string, resolved: ResolvedModule): Promise<void>
-  setResolveFailure(identityPath: string, failure: ResolutionFailureState): Promise<void>
+  setTransformFailure(identityPath: string, failure: TransformFailureState): void
+  setTransformed(identityPath: string, transformed: TransformedModule): void
+  setResolved(identityPath: string, resolved: ResolvedModule): void
+  setResolveFailure(identityPath: string, failure: ResolutionFailureState): void
   setEmitted(identityPath: string, emitted: EmittedModule): void
   invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
   invalidateAll(): void
@@ -41,13 +40,12 @@ type ModuleStore = {
 
 export function createModuleStore(
   options: {
-    onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => Promise<void> | void
+    onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   } = {},
 ): ModuleStore {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord>()
   let recordsByTrackedFile = new Map<string, Set<string>>()
   let watchDirectoryRefCountByPath = new Map<string, number>()
-  let watchDirectorySyncPromise = Promise.resolve()
 
   return {
     get(identityPath) {
@@ -59,48 +57,47 @@ export function createModuleStore(
         lastInvalidatedAt: 0,
         trackedFiles: new Set(),
         trackedResolutions: [],
-        watchedDirectories: new Set(),
       }
       recordsByIdentityPath.set(identityPath, record)
       return record
     },
-    async setTransformFailure(identityPath, failure) {
+    setTransformFailure(identityPath, failure) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = undefined
       record.resolved = undefined
       record.emitted = undefined
-      await setTracking(record, {
+      setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: [],
       })
     },
 
-    async setTransformed(identityPath, transformed) {
+    setTransformed(identityPath, transformed) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = transformed
       record.resolved = undefined
       record.emitted = undefined
-      await setTracking(record, {
+      setTracking(record, {
         trackedFiles: transformed.trackedFiles,
         trackedResolutions: [],
       })
     },
 
-    async setResolved(identityPath, resolved) {
+    setResolved(identityPath, resolved) {
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = resolved
       record.emitted = undefined
-      await setTracking(record, {
+      setTracking(record, {
         trackedFiles: resolved.trackedFiles,
         trackedResolutions: resolved.trackedResolutions,
       })
     },
 
-    async setResolveFailure(identityPath, failure) {
+    setResolveFailure(identityPath, failure) {
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = undefined
       record.emitted = undefined
-      await setTracking(record, {
+      setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: failure.trackedResolutions,
       })
@@ -129,6 +126,13 @@ export function createModuleStore(
         let record = recordsByIdentityPath.get(identityPath)
         if (record) invalidateRecord(record)
       }
+
+      if (event === 'unlink') {
+        let deletedRecord = recordsByIdentityPath.get(filePath)
+        if (deletedRecord) {
+          clearTracking(deletedRecord)
+        }
+      }
     },
 
     invalidateAll() {
@@ -147,7 +151,6 @@ export function createModuleStore(
       lastInvalidatedAt: 0,
       trackedFiles: new Set(),
       trackedResolutions: [],
-      watchedDirectories: new Set(),
     }
     recordsByIdentityPath.set(identityPath, record)
     return record
@@ -160,26 +163,33 @@ export function createModuleStore(
     record.lastInvalidatedAt = Date.now()
   }
 
-  async function setTracking(
+  function setTracking(
     record: MutableModuleRecord,
     tracking: {
       trackedFiles: readonly string[]
       trackedResolutions: readonly TrackedResolution[]
     },
   ) {
-    let previousWatchedDirectories = new Set(record.watchedDirectories)
+    let previousWatchedDirectories = getWatchedDirectories(record)
     removeIndexes(record)
 
     record.trackedFiles = new Set(tracking.trackedFiles)
     record.trackedResolutions = [...tracking.trackedResolutions]
-    record.watchedDirectories = getWatchedDirectories(record)
 
     for (let trackedFile of record.trackedFiles) {
       addToIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
 
-    let delta = updateWatchDirectoryRefCounts(previousWatchedDirectories, record.watchedDirectories)
-    await emitWatchDirectoryDelta(delta)
+    let nextWatchedDirectories = getWatchedDirectories(record)
+    let delta = updateWatchDirectoryRefCounts(previousWatchedDirectories, nextWatchedDirectories)
+    emitWatchDirectoryDelta(delta)
+  }
+
+  function clearTracking(record: MutableModuleRecord) {
+    setTracking(record, {
+      trackedFiles: [],
+      trackedResolutions: [],
+    })
   }
 
   function removeIndexes(record: MutableModuleRecord) {
@@ -219,18 +229,10 @@ export function createModuleStore(
     return { add, remove }
   }
 
-  async function emitWatchDirectoryDelta(delta: {
-    add: string[]
-    remove: string[]
-  }): Promise<void> {
+  function emitWatchDirectoryDelta(delta: { add: string[]; remove: string[] }): void {
     if (!options.onWatchDirectoriesChange) return
     if (delta.add.length === 0 && delta.remove.length === 0) return
-
-    watchDirectorySyncPromise = watchDirectorySyncPromise.then(() =>
-      options.onWatchDirectoriesChange?.(delta),
-    )
-
-    await watchDirectorySyncPromise
+    options.onWatchDirectoriesChange(delta)
   }
 }
 

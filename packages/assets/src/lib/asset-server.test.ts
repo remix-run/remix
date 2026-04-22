@@ -1,4 +1,4 @@
-import { after, before, describe, it } from 'node:test'
+import { after, before, describe, it, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
@@ -8,7 +8,7 @@ import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
-import { createAssetServer } from './asset-server.ts'
+import { createAssetServer, getInternalChokidarWatcher } from './asset-server.ts'
 import type { AssetServerOptions } from './asset-server.ts'
 
 const watchTestTimeoutMs = 15000
@@ -167,6 +167,36 @@ async function waitFor<T>(
     }
     await sleep(25)
   }
+}
+
+async function waitForWatchedFile(
+  assetServer: ReturnType<typeof createAssetServer>,
+  filePath: string,
+): Promise<void> {
+  let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+  assert.ok(chokidarWatcher)
+  let watchedFilePath = normalizeWindowsPath(nodeFs.realpathSync(filePath))
+  let watchedDirectoryPath = normalizeWindowsPath(nodeFs.realpathSync(path.dirname(filePath)))
+  await waitFor(
+    async () => chokidarWatcher.getWatched(),
+    (watched) => watched[watchedDirectoryPath]?.includes(path.basename(watchedFilePath)) ?? false,
+    watchTestTimeoutMs,
+  )
+}
+
+async function waitForWatcherToClose(
+  assetServer: ReturnType<typeof createAssetServer>,
+): Promise<void> {
+  let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+  assert.ok(chokidarWatcher)
+
+  await waitFor(
+    async () => chokidarWatcher.getWatched(),
+    (watched) =>
+      Object.keys(watched).length === 0 ||
+      Object.values(watched).every((entries) => entries.length === 0),
+    watchTestTimeoutMs,
+  )
 }
 
 async function assertInternalServerError(response: Response): Promise<void> {
@@ -1098,6 +1128,9 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
+        // The first request installs watch targets lazily, so wait until chokidar has attached
+        // before writing again.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
         await write(caseDir, 'app/entry.ts', 'export const value = 2')
 
         let secondBody = await waitFor(
@@ -1136,6 +1169,9 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
+        // The first request installs watch targets lazily, so wait until chokidar has attached
+        // before writing again.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
         await write(caseDir, 'app/entry.ts', 'export const value = 2')
 
         let secondBody = await waitFor(
@@ -1201,6 +1237,9 @@ describe('asset-server', () => {
         assert.ok(before)
         await assertInternalServerError(before)
 
+        // Missing imports are tracked lazily, so wait until the initial module graph is fully
+        // watched before creating a new candidate file.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
         await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
 
         let afterBody = await waitFor(
@@ -2101,6 +2140,9 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.js/)
 
+        // Extensionless candidates are tracked lazily, so wait until the currently resolved
+        // dependency is watched before creating a higher-priority file.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/dep.js'))
         await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
 
         let afterBody = await waitFor(
@@ -2157,6 +2199,51 @@ describe('asset-server', () => {
     }
   })
 
+  it('stops watching a deleted module directory after the module is removed in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/nested/only.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir)
+      let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+      assert.ok(chokidarWatcher)
+      let nestedDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/nested')))
+      let appDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))
+
+      try {
+        await waitFor(
+          async () => {
+            let response = await get(assetServer, '/assets/app/nested/only.ts')
+            assert.ok(response)
+            await response.text()
+            return chokidarWatcher.getWatched()
+          },
+          (watched) => watched[nestedDir]?.includes('only.ts') ?? false,
+          watchTestTimeoutMs,
+        )
+
+        await fs.rm(path.join(caseDir, 'app/nested/only.ts'))
+
+        let afterDelete = await waitFor(
+          async () => ({
+            response: await get(assetServer, '/assets/app/nested/only.ts'),
+            watched: chokidarWatcher.getWatched(),
+          }),
+          ({ response, watched }) =>
+            response === null &&
+            !(watched[nestedDir]?.includes('only.ts') ?? false) &&
+            !(watched[appDir]?.includes('nested') ?? false),
+          watchTestTimeoutMs,
+        )
+
+        assert.equal(afterDelete.response, null)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('stops invalidating caches after close is called in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -2169,7 +2256,7 @@ describe('asset-server', () => {
 
       await assetServer.close()
       await write(caseDir, 'app/entry.ts', 'export const value = 2')
-      await sleep(100)
+      await waitForWatcherToClose(assetServer)
 
       let secondResponse = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(secondResponse)
@@ -2271,6 +2358,9 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
 
+        // Dotted extensionless candidates are tracked lazily, so wait until the currently resolved
+        // dependency is watched before creating a higher-priority file.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/styles.css.js'))
         await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
 
         let afterBody = await waitFor(
@@ -2444,6 +2534,9 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
+        // Aliased candidates are tracked lazily, so wait until the currently resolved dependency
+        // is watched before creating an exact-match file.
+        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/dep.ts'))
         await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
         let afterBody = await waitFor(
@@ -3249,5 +3342,45 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
+  })
+
+  it('logs watcher errors', async () => {
+    let caseDir = await makeTmpDir()
+    let onError = mock.fn<(error: unknown) => void>()
+
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError,
+      })
+      let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+      assert.ok(chokidarWatcher)
+      let consoleError = mock.method(console, 'error', () => {})
+
+      try {
+        assert.ok(
+          consoleError.mock.calls.every((call) => !/watcher\./i.test(String(call.arguments[0]))),
+        )
+
+        let firstResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 1/)
+
+        let watchError = new Error('EMFILE') as Error & { code?: string }
+        watchError.code = 'EMFILE'
+        chokidarWatcher.emit('error', watchError)
+
+        assert.equal(onError.mock.calls.length, 0)
+        assert.equal(
+          (consoleError.mock.calls.at(-1)?.arguments[1] as { code?: string }).code,
+          'EMFILE',
+        )
+      } finally {
+        consoleError.mock.restore?.()
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
   })
 })

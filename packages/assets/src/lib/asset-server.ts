@@ -7,6 +7,7 @@ import { getFilePathBaseName, normalizeFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
 import { createAssetServerWatcher } from './watch.ts'
+import type { ChokidarWatcher } from './watch.ts'
 import type { AssetServerWatcher } from './watch.ts'
 
 interface AssetServerWatchOptions {
@@ -157,6 +158,12 @@ type ResolvedAssetServerOptions = {
   watchOptions: AssetServerWatchOptions | null
 }
 
+let chokidarWatcherByAssetServer = new WeakMap<AssetServer, ChokidarWatcher>()
+
+export function getInternalChokidarWatcher(assetServer: AssetServer): ChokidarWatcher | undefined {
+  return chokidarWatcherByAssetServer.get(assetServer)
+}
+
 /**
  * Create an asset server instance
  *
@@ -186,6 +193,7 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     rootDir: resolvedOptions.rootDir,
   })
   let watcher: AssetServerWatcher | null = null
+  let chokidarWatcher: ChokidarWatcher | null = null
   let moduleCompiler = createModuleCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
@@ -193,7 +201,10 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     fingerprintModules: resolvedOptions.fingerprintModules,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
-    onWatchDirectoriesChange: async (delta) => watcher?.updateWatchedDirectories(delta),
+    onWatchDirectoriesChange: (delta) => {
+      if (!watcher) return
+      watcher.updateWatchedDirectories(delta)
+    },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
@@ -205,6 +216,9 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
   if (resolvedOptions.watchOptions) {
     watcher = createAssetServerWatcher({
       ...resolvedOptions.watchOptions,
+      onChokidarWatcherCreated(createdWatcher) {
+        chokidarWatcher = createdWatcher
+      },
       onFileEvent: handleWatchEvent,
       rootDir: resolvedOptions.rootDir,
     })
@@ -273,6 +287,10 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     async close() {
       await watcher?.close()
     },
+  }
+
+  if (chokidarWatcher) {
+    chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
   }
 
   return assetServer
