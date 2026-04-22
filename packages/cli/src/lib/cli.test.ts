@@ -5,7 +5,11 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { describe, it } from 'node:test'
 
+import { getFixturePath } from '../../test/fixtures.ts'
 import { run } from '../index.ts'
+
+const REMIX_GITHUB_TREE_URL =
+  'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
 
 const ROOT_HELP_TEXT = [
   'Usage:',
@@ -243,6 +247,75 @@ describe('run', () => {
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, '9.9.9\n')
     assert.equal(result.stderr, '')
+  })
+
+  it('smoke tests every top-level command', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-smoke-'))
+
+    try {
+      let rootHelp = await captureOutput(() => run(['--help']))
+      assert.equal(rootHelp.exitCode, 0)
+      assert.match(rootHelp.stdout, /Commands:/)
+      assert.match(rootHelp.stdout, /new <name>\s+Create a new Remix project/)
+
+      let commandHelp = await captureOutput(() => run(['help', 'routes']))
+      assert.equal(commandHelp.exitCode, 0)
+      assert.match(commandHelp.stdout, /Usage:\s+remix routes/)
+
+      let version = await captureOutput(() => run(['version'], { remixVersion: '9.9.9' }))
+      assert.equal(version.exitCode, 0)
+      assert.equal(version.stdout, '9.9.9\n')
+
+      let completion = await captureOutput(() => run(['completion', 'bash']))
+      assert.equal(completion.exitCode, 0)
+      assert.match(completion.stdout, /###-begin-remix-completion-###/)
+
+      let appDir = path.join(tmpDir, 'my-app')
+      let newApp = await captureOutput(() =>
+        run(['new', appDir, '--app-name', 'Smoke App'], { remixVersion: '9.9.9' }),
+      )
+      assert.equal(newApp.exitCode, 0, newApp.stderr)
+      await assertPathExists(path.join(appDir, 'AGENTS.md'))
+      await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
+
+      let doctor = await withCwd(getFixturePath('doctor-clean'), () =>
+        captureOutput(() => run(['doctor', '--json'])),
+      )
+      assert.equal(doctor.exitCode, 0, doctor.stderr)
+      assert.equal(doctor.stderr, '')
+      let doctorReport = JSON.parse(doctor.stdout) as { findings: unknown[] }
+      assert.equal(doctorReport.findings.length, 0)
+
+      let routes = await withCwd(getFixturePath('routes-tree'), () =>
+        captureOutput(() => run(['routes', '--json'])),
+      )
+      assert.equal(routes.exitCode, 0, routes.stderr)
+      assert.equal(routes.stderr, '')
+      let routesReport = JSON.parse(routes.stdout) as { tree: Array<{ name: string }> }
+      assert.ok(routesReport.tree.some((route) => route.name === 'home'))
+
+      let skillsProjectDir = path.join(tmpDir, 'skills-project')
+      await fs.mkdir(skillsProjectDir)
+      await fs.writeFile(
+        path.join(skillsProjectDir, 'package.json'),
+        `${JSON.stringify({ name: 'skills-project', private: true }, null, 2)}\n`,
+        'utf8',
+      )
+
+      let skills = await withCwd(skillsProjectDir, () =>
+        withFetchMock(createSkillsMetadataFetchMock(), () =>
+          captureOutput(() => run(['skills', 'list', '--json'])),
+        ),
+      )
+      assert.equal(skills.exitCode, 0, skills.stderr)
+      assert.equal(skills.stderr, '')
+      let skillsReport = JSON.parse(skills.stdout) as {
+        entries: Array<{ name: string; state: string }>
+      }
+      assert.deepEqual(skillsReport.entries, [{ name: 'remix-ui', state: 'missing' }])
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
   })
 
   it('prints new command help', async () => {
@@ -545,6 +618,56 @@ async function withEnv<T>(name: string, value: string, callback: () => Promise<T
       process.env[name] = previousValue
     }
   }
+}
+
+async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
+  let previousCwd = process.cwd()
+  process.chdir(cwd)
+
+  try {
+    return await callback()
+  } finally {
+    process.chdir(previousCwd)
+  }
+}
+
+async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise<T>): Promise<T> {
+  let originalFetch = globalThis.fetch
+  globalThis.fetch = fetchMock
+
+  try {
+    return await callback()
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
+
+function createSkillsMetadataFetchMock(): typeof fetch {
+  return (async (input: RequestInfo | URL) => {
+    let url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+    if (url === REMIX_GITHUB_TREE_URL) {
+      return new Response(
+        JSON.stringify({
+          tree: [
+            {
+              path: 'skills/remix-ui/SKILL.md',
+              sha: '0000000000000000000000000000000000000000',
+              type: 'blob',
+            },
+          ],
+          truncated: false,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      )
+    }
+
+    return new Response('Not found', { status: 404, statusText: 'Not Found' })
+  }) as typeof fetch
 }
 
 async function assertPathExists(filePath: string): Promise<void> {
