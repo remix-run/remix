@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { createAccessPolicy } from './access.ts'
 import { createModuleCompiler, createResponseForModule } from './scripts/compiler.ts'
-import { getFilePathBaseName, normalizeFilePath } from './paths.ts'
+import { normalizeFilePath } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
 import { createAssetServerWatcher } from './watch.ts'
@@ -251,7 +251,19 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
 
       try {
         let ifNoneMatch = request.headers.get('If-None-Match')
-        let compiledModule = await moduleCompiler.compileModule(parsedRequestPathname.filePath)
+        let moduleResult = await moduleCompiler.getModule(parsedRequestPathname.filePath, {
+          ifNoneMatch,
+          isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+          requestedFingerprint: parsedRequestPathname.requestedFingerprint,
+        })
+        if (moduleResult.type === 'not-modified') {
+          return new Response(null, {
+            status: 304,
+            headers: { ETag: moduleResult.etag },
+          })
+        }
+
+        let compiledModule = moduleResult.module
 
         if (parsedRequestPathname.requestedFingerprint !== null) {
           if (compiledModule.fingerprint !== parsedRequestPathname.requestedFingerprint) return null
@@ -305,11 +317,6 @@ function internalServerError(): Response {
 
 function defaultErrorHandler(error: unknown): void {
   console.error(error)
-}
-
-function isConfigFilePath(filePath: string): boolean {
-  let baseName = getFilePathBaseName(filePath)
-  return baseName === 'package.json' || /^tsconfig(?:\..+)?\.json$/.test(baseName)
 }
 
 function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetServerOptions {

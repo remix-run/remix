@@ -5,12 +5,22 @@ import type { TransformFailureState, TransformedModule } from './transform.ts'
 
 export type ModuleWatchEvent = 'change' | 'add' | 'unlink'
 
+export type FileSnapshot = {
+  mtimeNs: bigint
+  size: bigint
+}
+
+export type ModuleSnapshot = ReadonlyMap<string, FileSnapshot>
+
 type ModuleRecordState = {
   identityPath: string
   invalidationVersion: number
   transformed?: TransformedModule
   resolved?: ResolvedModule
   emitted?: EmittedModule
+  emittedSnapshot?: ModuleSnapshot
+  staleEmitted?: EmittedModule
+  staleEmittedSnapshot?: ModuleSnapshot
   trackedFiles: ReadonlySet<string>
   trackedResolutions: readonly TrackedResolution[]
 }
@@ -23,6 +33,9 @@ type MutableModuleRecord = {
   transformed?: TransformedModule
   resolved?: ResolvedModule
   emitted?: EmittedModule
+  emittedSnapshot?: ModuleSnapshot
+  staleEmitted?: EmittedModule
+  staleEmittedSnapshot?: ModuleSnapshot
   trackedFiles: Set<string>
   trackedResolutions: TrackedResolution[]
 }
@@ -33,7 +46,7 @@ type ModuleStore = {
   setTransformed(identityPath: string, transformed: TransformedModule): void
   setResolved(identityPath: string, resolved: ResolvedModule): void
   setResolveFailure(identityPath: string, failure: ResolutionFailureState): void
-  setEmitted(identityPath: string, emitted: EmittedModule): void
+  setEmitted(identityPath: string, emitted: EmittedModule, snapshot: ModuleSnapshot | null): void
   invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
   invalidateAll(): void
 }
@@ -66,6 +79,9 @@ export function createModuleStore(
       record.transformed = undefined
       record.resolved = undefined
       record.emitted = undefined
+      record.emittedSnapshot = undefined
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
       setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: [],
@@ -77,6 +93,9 @@ export function createModuleStore(
       record.transformed = transformed
       record.resolved = undefined
       record.emitted = undefined
+      record.emittedSnapshot = undefined
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
       setTracking(record, {
         trackedFiles: transformed.trackedFiles,
         trackedResolutions: [],
@@ -87,6 +106,9 @@ export function createModuleStore(
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = resolved
       record.emitted = undefined
+      record.emittedSnapshot = undefined
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
       setTracking(record, {
         trackedFiles: resolved.trackedFiles,
         trackedResolutions: resolved.trackedResolutions,
@@ -97,14 +119,21 @@ export function createModuleStore(
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = undefined
       record.emitted = undefined
+      record.emittedSnapshot = undefined
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
       setTracking(record, {
         trackedFiles: failure.trackedFiles,
         trackedResolutions: failure.trackedResolutions,
       })
     },
 
-    setEmitted(identityPath, emitted) {
-      getOrCreateMutableRecord(identityPath).emitted = emitted
+    setEmitted(identityPath, emitted, snapshot) {
+      let record = getOrCreateMutableRecord(identityPath)
+      record.emitted = emitted
+      record.emittedSnapshot = snapshot ?? undefined
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
     },
 
     invalidateForFileEvent(filePath, event) {
@@ -124,7 +153,7 @@ export function createModuleStore(
 
       for (let identityPath of affected) {
         let record = recordsByIdentityPath.get(identityPath)
-        if (record) invalidateRecord(record)
+        if (record) invalidateRecord(record, { retainStale: event === 'change' })
       }
 
       if (event === 'unlink') {
@@ -137,7 +166,7 @@ export function createModuleStore(
 
     invalidateAll() {
       for (let record of recordsByIdentityPath.values()) {
-        invalidateRecord(record)
+        invalidateRecord(record, { retainStale: false })
       }
     },
   }
@@ -156,8 +185,20 @@ export function createModuleStore(
     return record
   }
 
-  function invalidateRecord(record: MutableModuleRecord) {
+  function invalidateRecord(record: MutableModuleRecord, options: { retainStale: boolean }) {
+    if (!options.retainStale) {
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
+    } else if (record.emitted && record.emittedSnapshot) {
+      record.staleEmitted = record.emitted
+      record.staleEmittedSnapshot = record.emittedSnapshot
+    } else if (!record.staleEmitted || !record.staleEmittedSnapshot) {
+      record.staleEmitted = undefined
+      record.staleEmittedSnapshot = undefined
+    }
+
     record.emitted = undefined
+    record.emittedSnapshot = undefined
     record.resolved = undefined
     record.transformed = undefined
     record.invalidationVersion += 1

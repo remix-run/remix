@@ -23,7 +23,7 @@ import type { ResolveArgs, ResolvedModule } from './resolve.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ScriptsTarget } from '../asset-server.ts'
 import { createModuleStore } from './store.ts'
-import type { ModuleRecord } from './store.ts'
+import type { FileSnapshot, ModuleRecord, ModuleSnapshot } from './store.ts'
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
@@ -33,6 +33,22 @@ type ModuleCompileResult = {
   code: EmittedAsset
   fingerprint: string | null
   sourceMap: EmittedAsset | null
+}
+
+type ModuleGetResult =
+  | {
+      type: 'module'
+      module: ModuleCompileResult
+    }
+  | {
+      type: 'not-modified'
+      etag: string
+    }
+
+type ModuleGetOptions = {
+  ifNoneMatch: string | null
+  isSourceMapRequest: boolean
+  requestedFingerprint: string | null
 }
 
 type ModuleCompilerOptions = {
@@ -55,7 +71,7 @@ type ModuleCompilerOptions = {
 type ModuleWatchEvent = 'add' | 'change' | 'unlink'
 
 type ModuleCompiler = {
-  compileModule(filePath: string): Promise<ModuleCompileResult>
+  getModule(filePath: string, options: ModuleGetOptions): Promise<ModuleGetResult>
   getPreloadUrls(filePath: string | readonly string[]): Promise<string[]>
   getHref(filePath: string): Promise<string>
   handleFileEvent(filePath: string, event: ModuleWatchEvent): Promise<void>
@@ -117,11 +133,17 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   return {
-    async compileModule(filePath) {
+    async getModule(filePath, getOptions) {
       let resolvedModule = resolveServedModuleOrThrow(resolveInputFilePath(filePath))
       let record = store.get(resolvedModule.identityPath)
+      let notModified = getNotModifiedModule(record, getOptions)
+      if (notModified) return notModified
+
       let emitted = await getOrCreateEmittedModule(record)
-      return toModuleCompileResult(emitted)
+      return {
+        type: 'module',
+        module: toModuleCompileResult(emitted),
+      }
     },
 
     async getPreloadUrls(filePath) {
@@ -236,6 +258,20 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     return resolvedModule
   }
 
+  function getNotModifiedModule(
+    record: ModuleRecord,
+    options: ModuleGetOptions,
+  ): ModuleGetResult | null {
+    let current = getNotModifiedResult(record.emitted, options)
+    if (current) return current
+
+    if (!record.staleEmittedSnapshot || !isModuleSnapshotFresh(record.staleEmittedSnapshot)) {
+      return null
+    }
+
+    return getNotModifiedResult(record.staleEmitted, options)
+  }
+
   async function getOrCreateResolvedModules(records: ModuleRecord[]): Promise<ResolvedModule[]> {
     return mapWithConcurrency(records, preloadConcurrency, (record) =>
       getOrCreateResolvedModule(record),
@@ -329,7 +365,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       }
 
       if (isFresh(record, startedVersion)) {
-        store.setEmitted(record.identityPath, emitResolvedModuleResult.value)
+        store.setEmitted(
+          record.identityPath,
+          emitResolvedModuleResult.value,
+          createModuleSnapshot(resolvedModule.trackedFiles),
+        )
       }
 
       return emitResolvedModuleResult.value
@@ -368,6 +408,69 @@ function getRecordCacheKey(record: ModuleRecord): string {
 
 function isFresh(record: ModuleRecord, version: number): boolean {
   return record.invalidationVersion === version
+}
+
+function getNotModifiedResult(
+  emittedModule: EmittedModule | undefined,
+  options: ModuleGetOptions,
+): ModuleGetResult | null {
+  if (!emittedModule || options.ifNoneMatch === null) return null
+
+  if (
+    options.requestedFingerprint !== null &&
+    emittedModule.fingerprint !== options.requestedFingerprint
+  ) {
+    return null
+  }
+
+  let asset = getEmittedAssetForRequest(emittedModule, options.isSourceMapRequest)
+  if (!asset) return null
+
+  if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) return null
+  return { type: 'not-modified', etag: asset.etag }
+}
+
+function getEmittedAssetForRequest(
+  emittedModule: EmittedModule,
+  isSourceMapRequest: boolean,
+): EmittedAsset | null {
+  return isSourceMapRequest ? emittedModule.sourceMap : emittedModule.code
+}
+
+function createModuleSnapshot(filePaths: readonly string[]): ModuleSnapshot | null {
+  let snapshot = new Map<string, FileSnapshot>()
+
+  for (let filePath of filePaths) {
+    let fileSnapshot = getFileSnapshot(filePath)
+    if (!fileSnapshot) return null
+    snapshot.set(filePath, fileSnapshot)
+  }
+
+  return snapshot
+}
+
+function isModuleSnapshotFresh(snapshot: ModuleSnapshot): boolean {
+  for (let [filePath, previous] of snapshot) {
+    let current = getFileSnapshot(filePath)
+    if (!current) return false
+    if (current.mtimeNs !== previous.mtimeNs || current.size !== previous.size) return false
+  }
+
+  return true
+}
+
+function getFileSnapshot(filePath: string): FileSnapshot | null {
+  try {
+    let stats = fs.statSync(filePath, { bigint: true })
+    if (!stats.isFile()) return null
+    return {
+      mtimeNs: stats.mtimeNs,
+      size: stats.size,
+    }
+  } catch (error) {
+    if (isNoEntityError(error)) return null
+    throw error
+  }
 }
 
 function parseServedPathname(pathname: string): {
@@ -468,9 +571,14 @@ function isBareImportSpecifier(specifier: string): boolean {
   )
 }
 
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
+function isNoEntityError(
+  error: unknown,
+): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
   return (
-    error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT'
+    error instanceof Error &&
+    'code' in error &&
+    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
   )
 }
 
