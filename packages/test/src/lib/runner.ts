@@ -2,20 +2,27 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import type { TestResults } from './executor.ts'
-import type { Reporter } from './reporter.ts'
+import { type PlaywrightUseOpts } from './playwright.ts'
+import type { Reporter } from './reporters/index.ts'
 import type { Counts } from './utils.ts'
 
 const ext = path.extname(import.meta.url)
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
+const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
 
 export async function runServerTests(
   files: string[],
   reporter: Reporter,
   concurrency: number,
   type: 'server' | 'e2e',
+  options: {
+    open?: boolean
+    playwrightUseOpts?: PlaywrightUseOpts
+    projectName?: string
+  } = {},
 ): Promise<Counts> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
-  let envLabel = type
+  let envLabel = options.projectName ? `${type}:${options.projectName}` : type
 
   function accumulate(results: TestResults, file: string) {
     reporter.onResult(
@@ -28,13 +35,25 @@ export async function runServerTests(
     counts.todo += results.todo
   }
 
-  await runInConcurrentWorkers(
-    files,
-    concurrency,
-    (file) => runFileInWorker(file, type),
-    accumulate,
-    () => counts.failed++,
-  )
+  if (type === 'e2e') {
+    await runInConcurrentWorkers(
+      files,
+      concurrency,
+      (file) =>
+        runFileInWorker(file, type, (results) => accumulate(results, file), {
+          ...options,
+          playwrightUseOpts: options.playwrightUseOpts,
+        }),
+      () => counts.failed++,
+    )
+  } else {
+    await runInConcurrentWorkers(
+      files,
+      concurrency,
+      (file) => runFileInWorker(file, type, (results) => accumulate(results, file)),
+      () => counts.failed++,
+    )
+  }
 
   return { ...counts }
 }
@@ -42,8 +61,7 @@ export async function runServerTests(
 async function runInConcurrentWorkers(
   files: string[],
   concurrency: number,
-  runFile: (file: string) => Promise<TestResults>,
-  onResult: (results: TestResults, file: string) => void,
+  runFile: (file: string) => Promise<void>,
   onError: () => void,
 ): Promise<void> {
   let index = 0
@@ -57,8 +75,7 @@ async function runInConcurrentWorkers(
         active++
 
         runFile(file).then(
-          (results) => {
-            onResult(results, file)
+          () => {
             active--
             if (index < files.length) {
               dispatch()
@@ -84,23 +101,37 @@ async function runInConcurrentWorkers(
   })
 }
 
-function runFileInWorker(file: string, type: 'server' | 'e2e'): Promise<TestResults> {
+function runFileInWorker(
+  file: string,
+  type: 'server' | 'e2e',
+  onResults: (results: TestResults) => void,
+  options: {
+    open?: boolean
+    playwrightUseOpts?: PlaywrightUseOpts
+  } = {},
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    let worker = new Worker(workerUrl, {
-      workerData: {
-        file: pathToFileURL(file).href,
-        type,
-      },
-    })
-    let results: TestResults | undefined
-    worker.once('message', (msg) => {
-      results = msg
-    })
+    let worker =
+      type === 'e2e'
+        ? new Worker(workerE2EUrl, {
+            workerData: {
+              file: pathToFileURL(file).href,
+              type,
+              open: options.open,
+              playwrightUseOpts: options.playwrightUseOpts,
+            },
+          })
+        : new Worker(workerUrl, {
+            workerData: {
+              file: pathToFileURL(file).href,
+              type,
+            },
+          })
+    worker.once('message', (msg: TestResults) => onResults(msg))
     worker.once('error', reject)
     worker.once('exit', (code) => {
       if (code !== 0) reject(new Error(`Worker exited with code ${code}`))
-      else if (results) resolve(results)
-      else reject(new Error('Worker exited without sending results'))
+      else resolve()
     })
   })
 }

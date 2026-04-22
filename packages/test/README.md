@@ -1,4 +1,4 @@
-# testing
+# `test`
 
 A test framework for Remix applications
 
@@ -6,7 +6,8 @@ A test framework for Remix applications
 
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
-- Mock functions and spies via `t.mock` / `t.spyOn`
+- Playwright E2E testing via `t.serve`
+- Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Watch mode
 - Config file support (`remix-test.config.ts`)
 
@@ -54,19 +55,49 @@ Create a `remix-test.config.ts` (or `.js`) file at the root of your project (sho
 import type { RemixTestConfig } from 'remix/test'
 
 export default {
+  // Browser options for E2E tests
+  browser: {
+    // Echo browser console output to the terminal
+    echo: false,
+    // Open browser (via playwright `headless:false`) and keep it open after tests
+    // complete (useful for debugging)
+    open: false,
+  },
+
   // Max number of concurrent test workers (default `os.availableParallelism()`)
   concurrency: 2,
 
   glob: {
-    // Test file glob pattern (default: "**/*.test.{ts,tsx}")
-    test: '**/*.test.ts',
+    // Glob pattern identifying all test files (default: "**/*.test?(.e2e).{ts,tsx}")
+    test: '**/*.test?(.e2e).ts',
+    // Global pattern identifying the subset of E2E test files{ts,tsx}")
+    e2e: '**/*.test.e2e.ts',
   },
 
-  // Test reporter ("spec", "tap", "dot")
+  // Playwright configuration for E2E tests, or string path to an existing
+  // config file on disk
+  playwrightConfig: {
+    projects: [
+      { name: 'chromium', use: { browserName: 'chromium' } },
+      { name: 'firefox', use: { browserName: 'firefox' } },
+    ],
+    use: {
+      navigationTimeout: 5_000,
+      actionTimeout: 5_000,
+    },
+  },
+
+  // Comma-separated list of playwright projects to run E2E tests for
+  project: 'chromium',
+
+  // Test reporter ("spec", "files", "tap", "dot")
   reporter: 'spec',
 
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
+
+  // Comma-separated list of test types to run ("server", "e2e")
+  type: 'server,e2e',
 
   // Watch for file changes and re-run
   watch: false,
@@ -83,13 +114,19 @@ remix-test --config ./tests/config.ts
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
 
-| Flag                | Short |
-| ------------------- | ----- |
-| `--concurrency <n>` | `-c`  |
-| `--glob.test`       |       |
-| `--reporter <name>` | `-r`  |
-| `--setup <path>`    |       |
-| `--watch`           | `-w`  |
+| Flag                        | Short |
+| --------------------------- | ----- |
+| `--browser.echo`            |       |
+| `--browser.open`            |       |
+| `--concurrency <n>`         | `-c`  |
+| `--glob.test`               |       |
+| `--glob.e2e`                |       |
+| `--playwrightConfig <path>` |       |
+| `--project <name>`          | `-p`  |
+| `--reporter <name>`         | `-r`  |
+| `--setup <path>`            | `-s`  |
+| `--type <name>`             | `-t`  |
+| `--watch`                   | `-w`  |
 
 ### Setup
 
@@ -144,30 +181,40 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Create a mock function with an optional implementation
-  mock<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
+  mock: {
+    // Create a mock function with an optional implementation
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 
-  // Spy on an object method with an optional implementation override
-  spyOn<T extends object, K extends keyof T>(obj: T, method: K): MockFunction
+    // Mock an object method with an optional implementation override
+    method<T extends object, K extends keyof T>(
+      obj: T,
+      methodName: K,
+      impl?: Function,
+    ): MockFunction
+  }
+
+  // E2E only: start a server with the given request handler, returns a Playwright Page
+  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
 }
 ```
 
 #### Mocks and Spies
 
-Use `t.mock()`/`t.spyOn()` to set up mocks and spies. This is preferred over the standalone `mock` import because TestContext mocks/spies wll be automatically cleaned up after the test runs.
+Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
 
 ```ts
 it('mocks and spies', (t) => {
   // Create a mock function
-  let fn = t.mock((x: number) => x * 2)
+  let fn = t.mock.fn((x: number) => x * 2)
   fn(3)
   fn.mock.calls[0].result // 6
 
-  // Spy on an existing method
-  let spy = t.spyOn(console, 'warn')
+  // Mock an existing method
+  let spy = t.mock.method(console, 'warn')
   console.warn('test')
   spy.mock.calls.length // 1
-  // both fn and spy are restored automatically when the test ends
+  // spy is restored automatically when the test ends
 })
 ```
 
@@ -183,6 +230,18 @@ it('cleanup', (t) => {
 })
 ```
 
+#### E2E
+
+In E2E test files, `t.serve()` starts an HTTP server and returns a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
+
+```ts
+it('navigates to home', async (t) => {
+  let router = createRouter()
+  let page = await t.serve(router.fetch)
+  await page.goto('/')
+})
+```
+
 ### Standalone mocks (module scope)
 
 When you need a mock outside of a test body, import `mock` directly and call `restore()` manually:
@@ -190,10 +249,59 @@ When you need a mock outside of a test body, import `mock` directly and call `re
 ```ts
 import { mock } from 'remix/test'
 
-let spy = mock.spyOn(console, 'log')
+let spy = mock.method(console, 'log')
 // ...
 spy.mock.restore?.()
 ```
+
+### E2E Testing
+
+E2E tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
+
+E2E tests receive `t.serve()` on the test context, which starts an HTTP server with the given request handler and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page). The server and page are automatically closed after each test.
+
+```ts
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+import { createRouter } from './router.ts'
+
+describe('checkout', () => {
+  it('adds an item to the cart', async (t) => {
+    let router = createRouter()
+    let page = await t.serve(router.fetch)
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Add to Cart' }).click()
+    await page.getByRole('link', { name: 'Cart' }).click()
+    await page.getByRole('heading', { name: 'Shopping Cart' }).waitFor()
+
+    assert.equal(await page.locator('[data-test-cart-quantity]').innerText(), 1)
+  })
+})
+```
+
+Configure Playwright (browsers, timeouts, viewport, etc.) via `playwrightConfig` in your config file:
+
+```ts
+export default {
+  playwrightConfig: {
+    projects: [
+      { name: 'chromium', use: { browserName: 'chromium' } },
+      { name: 'firefox', use: { browserName: 'firefox' } },
+      { name: 'webkit', use: { browserName: 'webkit' } },
+    ],
+    use: {
+      navigationTimeout: 5_000,
+      actionTimeout: 5_000,
+    },
+  },
+
+  // Or, point to an existing playwright config file
+  // playwrightConfig: './playwright.config.ts'
+} satisfies RemixTestConfig
+```
+
+Set `browser.open: true` to keep the browser open after tests finish — useful for debugging failures.
 
 ### Assertions
 

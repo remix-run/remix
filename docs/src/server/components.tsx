@@ -43,7 +43,8 @@ export function ServerPage(handle: Handle<ServerContext>, setup: ServerContext) 
 }
 
 function Document(handle: Handle) {
-  let { activeVersion } = handle.context.get(ServerPage)
+  let { activeVersion, slug } = handle.context.get(ServerPage)
+  let apiName = slug?.split('/').slice(-1)[0]
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <html lang="en">
       <head>
@@ -57,6 +58,14 @@ function Document(handle: Handle) {
         ) : null}
 
         <title>Remix API Documentation</title>
+        {slug ? (
+          <link
+            rel="alternate"
+            type="text/markdown"
+            href={routes.markdown.href({ version: activeVersion, slug })}
+            title={`Markdown docs for ${apiName}`}
+          />
+        ) : null}
         <link
           href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
           rel="stylesheet"

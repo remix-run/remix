@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
 import { on } from './on-mixin.ts'
-import { keysEvents } from './keys-mixin.ts'
+import { keys } from './keys-mixin.ts'
 
 describe('keysEvents mixin', () => {
   it('dispatches keydown:Space events and prevents default', () => {
@@ -15,8 +15,8 @@ describe('keysEvents mixin', () => {
       <div
         tabIndex={0}
         mix={[
-          keysEvents(),
-          on(keysEvents.space, () => {
+          keys(),
+          on(keys.space, () => {
             calls++
           }),
         ]}
@@ -43,8 +43,8 @@ describe('keysEvents mixin', () => {
     root.render(
       <div
         mix={[
-          keysEvents(),
-          on(keysEvents.arrowUp, () => {
+          keys(),
+          on(keys.arrowUp, () => {
             calls++
           }),
         ]}

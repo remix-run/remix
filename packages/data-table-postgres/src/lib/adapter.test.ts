@@ -41,39 +41,6 @@ const accountProjects = table({
 })
 
 describe('postgres adapter', () => {
-  it('applies explicit capability overrides', () => {
-    let adapter = createPostgresDatabaseAdapter(
-      {
-        async query() {
-          return {
-            rows: [],
-            rowCount: 0,
-            command: 'SELECT',
-            oid: 0,
-            fields: [],
-          }
-        },
-      } as never,
-      {
-        capabilities: {
-          returning: false,
-          savepoints: false,
-          upsert: false,
-          transactionalDdl: false,
-          migrationLock: false,
-        },
-      },
-    )
-
-    assert.deepEqual(adapter.capabilities, {
-      returning: false,
-      savepoints: false,
-      upsert: false,
-      transactionalDdl: false,
-      migrationLock: false,
-    })
-  })
-
   it('checks table and column existence through adapter introspection hooks', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 

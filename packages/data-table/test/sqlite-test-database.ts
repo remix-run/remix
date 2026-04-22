@@ -1,7 +1,6 @@
 import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 
 import type { DatabaseAdapter } from '../src/lib/adapter.ts'
-import type { SqliteDatabaseAdapterOptions } from './sqlite-adapter.ts'
 import { createSqliteDatabaseAdapter } from './sqlite-adapter.ts'
 
 export type SqliteTestSeed = Record<string, Array<Record<string, unknown>>>
@@ -22,18 +21,19 @@ export function createSqliteTestAdapter(
   let sqlite = new BetterSqlite3(':memory:')
   initializeSchema(sqlite)
   seedDatabase(sqlite, seed)
+  let adapter = createSqliteDatabaseAdapter(sqlite)
 
-  let adapterOptions: SqliteDatabaseAdapterOptions | undefined = options
-    ? {
-        capabilities: {
-          returning: options.returning,
-          savepoints: options.savepoints,
-          upsert: options.upsert,
-        },
-      }
-    : undefined
+  if (options?.returning !== undefined) {
+    adapter.capabilities.returning = options.returning
+  }
 
-  let adapter = createSqliteDatabaseAdapter(sqlite, adapterOptions)
+  if (options?.savepoints !== undefined) {
+    adapter.capabilities.savepoints = options.savepoints
+  }
+
+  if (options?.upsert !== undefined) {
+    adapter.capabilities.upsert = options.upsert
+  }
 
   return {
     adapter,

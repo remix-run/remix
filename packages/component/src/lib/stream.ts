@@ -150,27 +150,33 @@ const NUMERIC_CSS_PROPS = new Set([
 ])
 
 const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
-const SSR_MIXIN_SIGNAL = createSsrThrowingSignal()
 
-function createSsrSignalError() {
-  return new Error('handle.signal is not available during SSR.')
-}
-
-function createSsrThrowingSignal(): AbortSignal {
-  let error = createSsrSignalError()
-  let throwAccess = () => {
-    throw error
-  }
-  return new Proxy({} as AbortSignal, {
-    get: throwAccess,
-    set: throwAccess,
-    has: throwAccess,
-    ownKeys: throwAccess,
-    getOwnPropertyDescriptor: throwAccess,
-    defineProperty: throwAccess,
-    getPrototypeOf: throwAccess,
-  })
-}
+const ssrSignal = Object.freeze({
+  get aborted() {
+    return false
+  },
+  get reason() {
+    return undefined
+  },
+  get onabort() {
+    return null
+  },
+  set onabort(_: AbortSignal['onabort']) {},
+  addEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject | null,
+    _options?: AddEventListenerOptions | boolean,
+  ) {},
+  removeEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject | null,
+    _options?: EventListenerOptions | boolean,
+  ) {},
+  dispatchEvent(_event: Event) {
+    return true
+  },
+  throwIfAborted() {},
+}) as AbortSignal
 
 /**
  * Renders a node tree to a streaming HTML response body.
@@ -514,6 +520,7 @@ function resolveSsrMixedProps(
   if (descriptors.length === 0) return initialProps
 
   let composedProps = withoutSsrMix(initialProps)
+  let mixinProps = withoutSsrMixinTreeProps(composedProps)
   let maxDescriptors = 1024
 
   for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
@@ -523,7 +530,7 @@ function resolveSsrMixedProps(
 
     let result: unknown
     try {
-      result = runner(...descriptor.args, composedProps)
+      result = runner(...descriptor.args, mixinProps)
     } catch (error) {
       console.error(error)
       continue
@@ -531,6 +538,12 @@ function resolveSsrMixedProps(
 
     if (!result) continue
     if (isSsrMixinElement(result)) continue
+
+    let returnedDescriptors = resolveReturnedSsrMixDescriptors(result)
+    if (returnedDescriptors) {
+      for (let returned of returnedDescriptors) descriptors.push(returned)
+      continue
+    }
 
     if (!isRemixElement(result)) {
       console.error(new Error('mixins must return a remix element'))
@@ -554,10 +567,11 @@ function resolveSsrMixedProps(
       remixResult = { ...remixResult, type: resultType }
     }
 
-    let nextProps = remixResult.props as ElementProps
+    let nextProps = sanitizeReturnedSsrMixinProps(remixResult.props as ElementProps)
     let nestedDescriptors = resolveSsrMixDescriptors(nextProps)
     for (let nested of nestedDescriptors) descriptors.push(nested)
     composedProps = { ...composedProps, ...withoutSsrMix(nextProps) }
+    mixinProps = withoutSsrMixinTreeProps(composedProps)
   }
 
   let nextMix = initialProps.mix
@@ -575,7 +589,7 @@ function resolveSsrMixinRunner(
 ): ((...args: unknown[]) => unknown) | null {
   if (typeof descriptor.type !== 'function') return null
   try {
-    let handle = createSsrMixinHandle(hostType, context, frameState)
+    let handle = createSsrMixinHandle(hostType, descriptor, context, frameState)
     let runner = descriptor.type(handle, hostType)
     if (typeof runner !== 'function') return null
     return runner
@@ -585,8 +599,12 @@ function resolveSsrMixinRunner(
   }
 }
 
-function createSsrMixinHandle(hostType: string, context: RenderContext, frameState: SsrFrameState) {
-  let signal = SSR_MIXIN_SIGNAL
+function createSsrMixinHandle(
+  hostType: string,
+  _descriptor: { type?: unknown },
+  context: RenderContext,
+  frameState: SsrFrameState,
+) {
   let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
     $rmx: true as const,
     type: hostType,
@@ -602,6 +620,26 @@ function createSsrMixinHandle(hostType: string, context: RenderContext, frameSta
 
   return {
     id: 'ssr-mixin',
+    context: {
+      get(providerType: ElementType | symbol) {
+        if (typeof providerType !== 'function') {
+          return undefined
+        }
+
+        let current = context.parentVNode
+        while (current) {
+          if (current.type === providerType) {
+            let providerHandle = current._handle
+            if (providerHandle) {
+              return providerHandle.getContextValue()
+            }
+          }
+          current = current._parent
+        }
+
+        return undefined
+      },
+    },
     frame: createFrameHandle({
       src: frameState.frame.src,
       $runtime: {
@@ -609,7 +647,7 @@ function createSsrMixinHandle(hostType: string, context: RenderContext, frameSta
       },
     }),
     element,
-    signal,
+    signal: ssrSignal,
     update: () => {
       throw new Error('handle.update() is not available during SSR.')
     },
@@ -623,10 +661,10 @@ function createSsrMixinHandle(hostType: string, context: RenderContext, frameSta
 
 function resolveSsrMixDescriptors(props: ElementProps): Array<{ type: any; args: unknown[] }> {
   let mix = props.mix
-  if (mix == null) return []
+  if (!mix) return []
   if (Array.isArray(mix)) {
     if (mix.length === 0) return []
-    return [...mix] as Array<{ type: any; args: unknown[] }>
+    return mix.filter(Boolean) as Array<{ type: any; args: unknown[] }>
   }
   return [mix] as Array<{ type: any; args: unknown[] }>
 }
@@ -638,11 +676,70 @@ function withoutSsrMix(props: ElementProps): ElementProps {
   return output
 }
 
+function withoutSsrMixinTreeProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  let output = { ...props }
+  delete output.children
+  delete output.innerHTML
+  return output
+}
+
+function sanitizeReturnedSsrMixinProps(props: ElementProps): ElementProps {
+  if (!('children' in props) && !('innerHTML' in props)) return props
+  console.error(new Error('mixins must not return children or innerHTML'))
+  return withoutSsrMixinTreeProps(props)
+}
+
+function resolveReturnedSsrMixDescriptors(
+  value: unknown,
+): Array<{ type: Function; args: unknown[] }> | null {
+  let descriptors: Array<{ type: Function; args: unknown[] }> = []
+  if (!collectReturnedSsrMixDescriptors(value, descriptors)) {
+    return null
+  }
+
+  return descriptors
+}
+
+function collectReturnedSsrMixDescriptors(
+  value: unknown,
+  output: Array<{ type: Function; args: unknown[] }>,
+): boolean {
+  if (!value) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    for (let item of value) {
+      if (!collectReturnedSsrMixDescriptors(item, output)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (!isSsrMixinDescriptor(value)) {
+    return false
+  }
+
+  output.push(value)
+  return true
+}
+
 function isSsrMixinElement(
   value: unknown,
 ): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
   if (typeof value !== 'function') return false
   return '__rmxMixinElementType' in value
+}
+
+function isSsrMixinDescriptor(value: unknown): value is { type: Function; args: unknown[] } {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) {
+    return false
+  }
+
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
 function buildComponentSegment(
@@ -661,6 +758,7 @@ function buildComponentSegment(
     id: componentId,
     type: type,
     frame: frameState.frame,
+    signal: ssrSignal,
     getContext(providerType) {
       let current = vnode._parent
       while (current) {
@@ -735,6 +833,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
         id: 'SERIALIZED',
         type: type,
         frame: frameState.frame,
+        signal: ssrSignal,
         getContext(providerType) {
           let current = vnode._parent
           while (current) {

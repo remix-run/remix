@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { afterEach, beforeEach, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'

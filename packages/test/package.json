@@ -48,12 +48,24 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@remix-run/component": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
     "tsx": "^4.21.0"
+  },
+  "peerDependencies": {
+    "playwright": "^1.59.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "playwright": "catalog:"
   },
   "keywords": [
     "testing",

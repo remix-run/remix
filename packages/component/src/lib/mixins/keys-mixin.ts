@@ -88,7 +88,7 @@ type KeysEventsMixin = typeof baseKeysEvents & {
 /**
  * Normalizes common keyboard keys into custom key-specific DOM events.
  */
-export const keysEvents: KeysEventsMixin = Object.assign(baseKeysEvents, {
+export const keys: KeysEventsMixin = Object.assign(baseKeysEvents, {
   escape: escapeEventType,
   enter: enterEventType,
   space: spaceEventType,

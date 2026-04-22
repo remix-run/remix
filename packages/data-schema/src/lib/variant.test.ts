@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { literal, number, object, string, variant } from './schema.ts'
 import type { Issue, ValidationResult } from './schema.ts'

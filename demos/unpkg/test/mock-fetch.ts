@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { mock } from 'node:test'
+import { mock } from 'remix/test'
 
 const fixturesDir = path.join(import.meta.dirname, 'fixtures')
 
@@ -12,6 +12,7 @@ interface MockResponse {
 
 type FetchMockHandler = (url: string, init?: RequestInit) => MockResponse | null
 
+let fetchMock: ReturnType<typeof mock.method> | undefined
 let mockHandlers: FetchMockHandler[] = []
 
 function createMockResponse(mockResponse: MockResponse): Response {
@@ -52,15 +53,16 @@ function mockedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
 /**
  * Install the fetch mock. Call this in a before() hook.
  */
-export function installFetchMock(): void {
-  mock.method(globalThis, 'fetch', mockedFetch)
+export function installFetchMock() {
+  fetchMock = mock.method(globalThis, 'fetch', mockedFetch)
 }
 
 /**
  * Restore the original fetch. Call this in an after() hook.
  */
 export function restoreFetchMock(): void {
-  mock.reset()
+  fetchMock?.mock.restore?.()
+  fetchMock = undefined
   mockHandlers = []
 }
 
