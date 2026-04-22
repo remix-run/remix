@@ -76,7 +76,7 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let fileUploadHandler = t.mock<FileUploadHandler>()
+    let fileUploadHandler = t.mock.fn<FileUploadHandler>()
 
     await parseFormData(request, fileUploadHandler)
 

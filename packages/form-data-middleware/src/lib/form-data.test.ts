@@ -378,7 +378,7 @@ describe('formData middleware', () => {
   })
 
   it('invokes a custom `uploadHandler` for file uploads', async (t) => {
-    let uploadHandler = t.mock<FileUploadHandler>()
+    let uploadHandler = t.mock.fn<FileUploadHandler>()
 
     let router = createRouter({
       middleware: [formData({ uploadHandler })],
@@ -428,8 +428,8 @@ describe('formData middleware', () => {
   })
 
   it('is a no-op when FormData has already been parsed by an earlier middleware', async (t) => {
-    let firstUploadHandler = t.mock<FileUploadHandler>((upload) => `first:${upload.name}`)
-    let secondUploadHandler = t.mock<FileUploadHandler>((upload) => `second:${upload.name}`)
+    let firstUploadHandler = t.mock.fn<FileUploadHandler>((upload) => `first:${upload.name}`)
+    let secondUploadHandler = t.mock.fn<FileUploadHandler>((upload) => `second:${upload.name}`)
 
     let router = createRouter({
       middleware: [
@@ -469,8 +469,8 @@ describe('formData middleware', () => {
   })
 
   it('is a no-op when FormData has already been parsed by earlier request pipeline middleware', async (t) => {
-    let globalUploadHandler = t.mock<FileUploadHandler>((upload) => `global:${upload.name}`)
-    let routeUploadHandler = t.mock<FileUploadHandler>((upload) => `route:${upload.name}`)
+    let globalUploadHandler = t.mock.fn<FileUploadHandler>((upload) => `global:${upload.name}`)
+    let routeUploadHandler = t.mock.fn<FileUploadHandler>((upload) => `route:${upload.name}`)
 
     let router = createRouter({
       middleware: [formData({ uploadHandler: globalUploadHandler })],

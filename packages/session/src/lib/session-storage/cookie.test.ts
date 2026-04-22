@@ -144,7 +144,7 @@ describe('cookie session storage', () => {
   })
 
   it('logs a warning when the id is regenerated and the deleteOldSession option is true', async (t) => {
-    let consoleWarn = t.spyOn(console, 'warn', () => {})
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
 
     let storage = createCookieSessionStorage()
 
@@ -181,6 +181,5 @@ describe('cookie session storage', () => {
       warning,
       /Session ID [\w-]+ was regenerated, but the old session cannot be deleted when using cookie storage/,
     )
-
   })
 })

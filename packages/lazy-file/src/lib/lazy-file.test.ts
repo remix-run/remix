@@ -246,7 +246,7 @@ describe('LazyFile', () => {
 
     it('calls content.stream() with the correct range', (t) => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.spyOn(content, 'stream')
+      let read = t.mock.method(content, 'stream')
       let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       lazyFile.slice(10, 20).stream()
       assert.equal(read.mock.calls.length, 1)
@@ -255,7 +255,7 @@ describe('LazyFile', () => {
 
     it('calls content.stream() with the correct range when slicing a file with a negative "start" index', (t) => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.spyOn(content, 'stream')
+      let read = t.mock.method(content, 'stream')
       let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       lazyFile.slice(-10).stream()
       assert.equal(read.mock.calls.length, 1)
@@ -264,7 +264,7 @@ describe('LazyFile', () => {
 
     it('calls content.stream() with the correct range when slicing a file with a negative "end" index', (t) => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.spyOn(content, 'stream')
+      let read = t.mock.method(content, 'stream')
       let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       lazyFile.slice(0, -10).stream()
       assert.equal(read.mock.calls.length, 1)
@@ -273,7 +273,7 @@ describe('LazyFile', () => {
 
     it('calls content.stream() with the correct range when slicing a file with negative "start" and "end" indexes', (t) => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.spyOn(content, 'stream')
+      let read = t.mock.method(content, 'stream')
       let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       lazyFile.slice(-20, -10).stream()
       assert.equal(read.mock.calls.length, 1)
@@ -282,7 +282,7 @@ describe('LazyFile', () => {
 
     it('calls content.stream() with the correct range when slicing a file with a "start" index greater than the "end" index', (t) => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.spyOn(content, 'stream')
+      let read = t.mock.method(content, 'stream')
       let lazyFile = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       lazyFile.slice(20, 10).stream()
       assert.equal(read.mock.calls.length, 1)

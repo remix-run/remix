@@ -19,11 +19,11 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let chunks: Uint8Array[] = []
-      t.spyOn(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      t.spyOn(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Hello, world!')
         resolve()
@@ -52,7 +52,7 @@ describe('createRequestListener', () => {
       req.httpVersionMajor = 1
       let res = createMockResponse({ req })
 
-      t.spyOn(
+      t.mock.method(
         res,
         'writeHead',
         (status: number, statusText: string, headers: Record<string, string | string[]>) => {
@@ -63,7 +63,7 @@ describe('createRequestListener', () => {
         },
       )
 
-      t.spyOn(res, 'end', () => resolve())
+      t.mock.method(res, 'end', () => resolve())
 
       listener(req, res)
     })
@@ -88,7 +88,7 @@ describe('createRequestListener', () => {
       req.httpVersionMajor = 2
       let res = createMockResponse({ req })
 
-      t.spyOn(
+      t.mock.method(
         res,
         'writeHead',
         (status: number, headers: Record<string, string | string[]>) => {
@@ -98,7 +98,7 @@ describe('createRequestListener', () => {
         },
       )
 
-      t.spyOn(res, 'end', () => resolve())
+      t.mock.method(res, 'end', () => resolve())
 
       listener(req, res)
     })
@@ -109,7 +109,7 @@ describe('createRequestListener', () => {
       let handler: FetchHandler = async () => {
         throw new Error('boom!')
       }
-      let errorHandler = t.mock()
+      let errorHandler = t.mock.fn()
 
       let listener = createRequestListener(handler, { onError: errorHandler })
       assert.ok(listener)
@@ -117,7 +117,7 @@ describe('createRequestListener', () => {
       let req = createMockRequest()
       let res = createMockResponse({ req })
 
-      t.spyOn(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(errorHandler.mock.calls.length, 1)
         resolve()
       })
@@ -142,16 +142,16 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let status: number | undefined
-      t.spyOn(res, 'writeHead', (statusCode: number) => {
+      t.mock.method(res, 'writeHead', (statusCode: number) => {
         status = statusCode
       })
 
       let chunks: Uint8Array[] = []
-      t.spyOn(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      t.spyOn(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(status, 500)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Internal Server Error')
@@ -252,7 +252,7 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let headers: Record<string, string | string[]>
-      t.spyOn(
+      t.mock.method(
         res,
         'writeHead',
         (_status: number, _statusText: string, headersObj: Record<string, string | string[]>) => {
@@ -260,7 +260,7 @@ describe('createRequestListener', () => {
         },
       )
 
-      t.spyOn(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.deepEqual(headers, {
           'content-type': 'text/plain',
           'set-cookie': ['a=1', 'b=2'],
@@ -283,11 +283,11 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let chunks: Uint8Array[] = []
-      t.spyOn(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      t.spyOn(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(chunks.length, 0)
         resolve()
       })

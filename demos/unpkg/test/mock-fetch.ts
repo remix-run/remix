@@ -12,7 +12,7 @@ interface MockResponse {
 
 type FetchMockHandler = (url: string, init?: RequestInit) => MockResponse | null
 
-let fetchMock: ReturnType<typeof mock.spyOn> | undefined
+let fetchMock: ReturnType<typeof mock.method> | undefined
 let mockHandlers: FetchMockHandler[] = []
 
 function createMockResponse(mockResponse: MockResponse): Response {
@@ -54,7 +54,7 @@ function mockedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
  * Install the fetch mock. Call this in a before() hook.
  */
 export function installFetchMock() {
-  fetchMock = mock.spyOn(globalThis, 'fetch', mockedFetch)
+  fetchMock = mock.method(globalThis, 'fetch', mockedFetch)
 }
 
 /**
