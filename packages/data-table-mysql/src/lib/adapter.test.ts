@@ -41,26 +41,23 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
-  it('applies explicit capability overrides', () => {
-    let adapter = createMysqlDatabaseAdapter(
-      {
-        async query() {
-          return [[], []]
-        },
-        async beginTransaction() {},
-        async commit() {},
-        async rollback() {},
-      } as never,
-      {
-        capabilities: {
-          returning: true,
-          savepoints: false,
-          upsert: false,
-          transactionalDdl: true,
-          migrationLock: false,
-        },
+  it('supports capability mutation for fallback tests', () => {
+    let adapter = createMysqlDatabaseAdapter({
+      async query() {
+        return [[], []]
       },
-    )
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    } as never)
+
+    adapter.capabilities = {
+      returning: true,
+      savepoints: false,
+      upsert: false,
+      transactionalDdl: true,
+      migrationLock: false,
+    }
 
     assert.deepEqual(adapter.capabilities, {
       returning: true,

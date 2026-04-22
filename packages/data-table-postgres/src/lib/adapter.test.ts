@@ -41,29 +41,26 @@ const accountProjects = table({
 })
 
 describe('postgres adapter', () => {
-  it('applies explicit capability overrides', () => {
-    let adapter = createPostgresDatabaseAdapter(
-      {
-        async query() {
-          return {
-            rows: [],
-            rowCount: 0,
-            command: 'SELECT',
-            oid: 0,
-            fields: [],
-          }
-        },
-      } as never,
-      {
-        capabilities: {
-          returning: false,
-          savepoints: false,
-          upsert: false,
-          transactionalDdl: false,
-          migrationLock: false,
-        },
+  it('supports capability mutation for fallback tests', () => {
+    let adapter = createPostgresDatabaseAdapter({
+      async query() {
+        return {
+          rows: [],
+          rowCount: 0,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
       },
-    )
+    } as never)
+
+    adapter.capabilities = {
+      returning: false,
+      savepoints: false,
+      upsert: false,
+      transactionalDdl: false,
+      migrationLock: false,
+    }
 
     assert.deepEqual(adapter.capabilities, {
       returning: false,

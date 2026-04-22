@@ -1,5 +1,4 @@
 import type {
-  AdapterCapabilityOverrides,
   DataManipulationRequest,
   DataMigrationRequest,
   DataMigrationResult,
@@ -28,13 +27,6 @@ import type {
 } from 'mysql2/promise'
 
 import { compileMysqlOperation } from './sql-compiler.ts'
-
-/**
- * Mysql adapter configuration.
- */
-export type MysqlDatabaseAdapterOptions = {
-  capabilities?: AdapterCapabilityOverrides
-}
 
 type TransactionState = {
   connection: MysqlTransactionConnection
@@ -67,14 +59,14 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: MysqlQueryable, options?: MysqlDatabaseAdapterOptions) {
+  constructor(client: MysqlQueryable) {
     this.#client = client
     this.capabilities = {
-      returning: options?.capabilities?.returning ?? false,
-      savepoints: options?.capabilities?.savepoints ?? true,
-      upsert: options?.capabilities?.upsert ?? true,
-      transactionalDdl: options?.capabilities?.transactionalDdl ?? false,
-      migrationLock: options?.capabilities?.migrationLock ?? true,
+      returning: false,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: false,
+      migrationLock: true,
     }
   }
 
@@ -367,9 +359,8 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  */
 export function createMysqlDatabaseAdapter(
   client: MysqlQueryable,
-  options?: MysqlDatabaseAdapterOptions,
 ): MysqlDatabaseAdapter {
-  return new MysqlDatabaseAdapter(client, options)
+  return new MysqlDatabaseAdapter(client)
 }
 
 function isMysqlPool(client: MysqlQueryable): client is MysqlPool {

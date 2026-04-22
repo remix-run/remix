@@ -48,21 +48,6 @@ Import any driver-specific types you need directly from `mysql2/promise`.
 
 ## Advanced Usage
 
-### Capability Overrides For Testing
-
-Capability overrides are mainly for tests where you want to force or disable specific behavior
-checks. In production, keep defaults so adapter behavior matches MySQL behavior.
-
-```ts
-import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
-
-let adapter = createMysqlDatabaseAdapter(pool, {
-  capabilities: {
-    upsert: false,
-  },
-})
-```
-
 ### `returning` On MySQL
 
 MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write

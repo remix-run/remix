@@ -1,5 +1,4 @@
 import type {
-  AdapterCapabilityOverrides,
   DataMigrationRequest,
   DataManipulationRequest,
   DataMigrationResult,
@@ -22,13 +21,6 @@ import {
 import type { Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
-
-/**
- * Postgres adapter configuration.
- */
-export type PostgresDatabaseAdapterOptions = {
-  capabilities?: AdapterCapabilityOverrides
-}
 
 type TransactionState = {
   client: PostgresPoolClient
@@ -55,14 +47,14 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: PostgresQueryable, options?: PostgresDatabaseAdapterOptions) {
+  constructor(client: PostgresQueryable) {
     this.#client = client
     this.capabilities = {
-      returning: options?.capabilities?.returning ?? true,
-      savepoints: options?.capabilities?.savepoints ?? true,
-      upsert: options?.capabilities?.upsert ?? true,
-      transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
-      migrationLock: options?.capabilities?.migrationLock ?? true,
+      returning: true,
+      savepoints: true,
+      upsert: true,
+      transactionalDdl: true,
+      migrationLock: true,
     }
   }
 
@@ -327,11 +319,8 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  * let db = createDatabase(adapter)
  * ```
  */
-export function createPostgresDatabaseAdapter(
-  client: PostgresQueryable,
-  options?: PostgresDatabaseAdapterOptions,
-): PostgresDatabaseAdapter {
-  return new PostgresDatabaseAdapter(client, options)
+export function createPostgresDatabaseAdapter(client: PostgresQueryable): PostgresDatabaseAdapter {
+  return new PostgresDatabaseAdapter(client)
 }
 
 function isPostgresPool(client: PostgresQueryable): client is PostgresPool {

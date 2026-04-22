@@ -62,20 +62,6 @@ await db.transaction(async (txDb) => txDb.exec('select 1'), {
 })
 ```
 
-### Capability Overrides For Testing
-
-You can override capabilities to verify fallback paths in tests.
-
-```ts
-import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
-
-let adapter = createPostgresDatabaseAdapter(pool, {
-  capabilities: {
-    returning: false,
-  },
-})
-```
-
 ## Related Packages
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
