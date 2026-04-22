@@ -217,6 +217,113 @@ describe('skills command', () => {
     }
   })
 
+  it('rejects remote skill names that resolve outside the skills directory', async () => {
+    let remoteSkills = {
+      '..': {
+        'SKILL.md': '# Escape\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      await writeFiles(path.join(tmpDir, '.agents'), {
+        'sentinel.txt': 'keep\n',
+      })
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 0)
+      assert.match(
+        result.stderr,
+        /GitHub returned an invalid Remix skill path: skills\/\.\.\/SKILL\.md/,
+      )
+      assert.equal(
+        await fs.readFile(path.join(tmpDir, '.agents', 'sentinel.txt'), 'utf8'),
+        'keep\n',
+      )
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects remote skill file paths that resolve outside the skill directory', async () => {
+    let remoteSkills = {
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+        '../../escaped.txt': 'owned\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills)
+
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 0)
+      assert.match(
+        result.stderr,
+        /GitHub returned an invalid Remix skill path: skills\/remix-ui\/\.\.\/\.\.\/escaped\.txt/,
+      )
+      await assertPathMissing(path.join(tmpDir, '.agents', 'escaped.txt'))
+      await assertPathMissing(path.join(tmpDir, 'escaped.txt'))
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects archive skill file paths that resolve outside the skill directory', async () => {
+    let remoteSkills = {
+      'remix-ui': {
+        'SKILL.md': '# UI\n',
+      },
+    }
+
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-skills-'))
+    try {
+      await fs.mkdir(path.join(tmpDir, '.git'))
+      let fetchMock = createGitHubSkillsFetchMock(remoteSkills, {
+        archiveSkills: {
+          'remix-ui': {
+            '../SKILL.md': '# UI\n',
+          },
+        },
+      })
+
+      let result = await withIsolatedSkillsCache(() =>
+        withFetchMock(fetchMock.fetch, () =>
+          withCwd(tmpDir, () => captureOutput(() => run(['skills', 'install']))),
+        ),
+      )
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(fetchMock.requests.metadata, 1)
+      assert.equal(fetchMock.requests.archive, 1)
+      assert.match(
+        result.stderr,
+        /GitHub returned an invalid Remix skill path: remix-ui\/\.\.\/SKILL\.md/,
+      )
+      await assertPathMissing(path.join(tmpDir, '.agents', 'skills', 'SKILL.md'))
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   it('installs remote skills into a custom directory relative to the project root', async () => {
     let remoteSkills = {
       'remix-project-layout': {
@@ -1030,7 +1137,12 @@ async function findWrittenSkillsCacheFile(skillsDir: string): Promise<string> {
 
 function createGitHubSkillsFetchMock(
   remoteSkills: Record<string, Record<string, string>>,
-  options: { archiveStatus?: number; malformedTree?: boolean; treeStatus?: number } = {},
+  options: {
+    archiveSkills?: Record<string, Record<string, string>>
+    archiveStatus?: number
+    malformedTree?: boolean
+    treeStatus?: number
+  } = {},
 ): {
   fetch: typeof fetch
   requests: { archive: number; metadata: number }
@@ -1043,7 +1155,7 @@ function createGitHubSkillsFetchMock(
       type: 'blob',
     })),
   )
-  let archive = buildTarGzArchive(remoteSkills)
+  let archive = buildTarGzArchive(options.archiveSkills ?? remoteSkills)
 
   let fetchMock = (async (input: RequestInfo | URL) => {
     let url = toUrlString(input)
@@ -1169,6 +1281,13 @@ async function writeFiles(rootDir: string, files: Record<string, string>): Promi
 
 async function assertPathExists(filePath: string): Promise<void> {
   await fs.access(filePath)
+}
+
+async function assertPathMissing(filePath: string): Promise<void> {
+  await assert.rejects(fs.access(filePath), (error: unknown) => {
+    let nodeError = error as NodeJS.ErrnoException
+    return nodeError.code === 'ENOENT'
+  })
 }
 
 function escapeRegExp(value: string): string {

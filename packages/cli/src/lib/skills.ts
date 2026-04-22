@@ -5,6 +5,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { gunzipSync } from 'node:zlib'
 
+import { resolveContainedPath } from './contained-path.ts'
 import { fetchUnavailable, projectRootNotFound, remoteSkillDataMissing } from './errors.ts'
 import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 import {
@@ -17,7 +18,8 @@ import {
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
-const REMIX_GITHUB_ARCHIVE_URL = 'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
+const REMIX_GITHUB_ARCHIVE_URL =
+  'https://codeload.github.com/remix-run/remix/tar.gz/refs/heads/main'
 const REMIX_SKILLS_PATH = 'skills/'
 
 export interface SkillChange {
@@ -132,8 +134,10 @@ export async function installRemixSkills(
   }
 
   let targetSkillNames = new Set(plan.pendingChanges.map((change) => change.name))
-  let downloadedSkills = await runProgressStep(options.progress, 'download-remix-skills-archive', () =>
-    downloadRemoteSkillsArchive(fetchImpl, plan.remoteSkills, targetSkillNames),
+  let downloadedSkills = await runProgressStep(
+    options.progress,
+    'download-remix-skills-archive',
+    () => downloadRemoteSkillsArchive(fetchImpl, plan.remoteSkills, targetSkillNames),
   )
 
   await runProgressStep(options.progress, 'write-updated-skills', async () => {
@@ -145,7 +149,7 @@ export async function installRemixSkills(
         throw remoteSkillDataMissing(change.name)
       }
 
-      let skillDir = path.join(plan.skillsDir, remoteSkill.name)
+      let skillDir = resolveRemoteSkillDir(plan.skillsDir, remoteSkill.name)
       await fs.rm(skillDir, { recursive: true, force: true })
       await writeRemoteSkill(skillDir, remoteSkill)
     }
@@ -184,7 +188,7 @@ async function loadSkillsPlan(
   let entries = await runProgressStep(options.progress, 'compare-local-skills', async () =>
     Promise.all(
       remoteSkills.map(async (remoteSkill) => {
-        let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
+        let localSkill = await readLocalSkill(resolveRemoteSkillDir(skillsDir, remoteSkill.name))
         return {
           name: remoteSkill.name,
           state: getSkillState(remoteSkill, localSkill, cacheManifest),
@@ -241,13 +245,15 @@ async function fetchRemoteSkills(fetchImpl: FetchImpl): Promise<RemoteSkill[]> {
     }
 
     let skillName = pathParts[1]
+    let filePath = pathParts.slice(2).join('/')
     if (skillName.length === 0) {
       continue
     }
+    validateRemoteSkillPath(skillName, filePath, entry.path)
 
     let existing = groupedFiles.get(skillName) ?? []
     existing.push({
-      path: pathParts.slice(2).join('/'),
+      path: filePath,
       sha: entry.sha,
     })
     groupedFiles.set(skillName, existing)
@@ -300,13 +306,16 @@ async function downloadRemoteSkillsArchive(
       return
     }
 
+    let filePath = fileParts.join('/')
+    validateRemoteSkillPath(skillName, filePath, archivePath)
+
     let files = downloadedFiles.get(skillName)
     if (files == null) {
       files = new Map<string, string>()
       downloadedFiles.set(skillName, files)
     }
 
-    files.set(fileParts.join('/'), new TextDecoder().decode(await entry.bytes()))
+    files.set(filePath, new TextDecoder().decode(await entry.bytes()))
   })
 
   let downloadedSkills = new Map<string, RemoteSkillContent>()
@@ -579,7 +588,7 @@ async function buildSkillsCacheManifest(
   let cachedSkills: Record<string, SkillsCacheSkillEntry> = {}
 
   for (let remoteSkill of remoteSkills) {
-    let localSkill = await readLocalSkill(path.join(skillsDir, remoteSkill.name))
+    let localSkill = await readLocalSkill(resolveRemoteSkillDir(skillsDir, remoteSkill.name))
     if (!localSkill.exists || !localSkill.isDirectory) {
       throw remoteSkillDataMissing(remoteSkill.name)
     }
@@ -611,10 +620,71 @@ async function writeRemoteSkill(skillDir: string, remoteSkill: RemoteSkillConten
   await fs.mkdir(skillDir, { recursive: true })
 
   for (let file of remoteSkill.files) {
-    let filePath = path.join(skillDir, file.path)
+    let filePath = resolveRemoteSkillFilePath(skillDir, file.path)
     await fs.mkdir(path.dirname(filePath), { recursive: true })
     await fs.writeFile(filePath, file.content, 'utf8')
   }
+}
+
+function resolveRemoteSkillDir(skillsDir: string, skillName: string): string {
+  validateRemoteSkillName(skillName, skillName)
+  return resolveRemoteSkillPath(skillsDir, skillName)
+}
+
+function resolveRemoteSkillFilePath(skillDir: string, filePath: string): string {
+  validateRemoteSkillFilePath(filePath, filePath)
+  return resolveRemoteSkillPath(skillDir, filePath)
+}
+
+function resolveRemoteSkillPath(rootDir: string, relativePath: string): string {
+  try {
+    return resolveContainedPath(rootDir, relativePath)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('escapes the allowed root')) {
+      throw new Error(`GitHub returned an invalid Remix skill path: ${relativePath}`)
+    }
+
+    throw error
+  }
+}
+
+function validateRemoteSkillPath(skillName: string, filePath: string, remotePath: string): void {
+  validateRemoteSkillName(skillName, remotePath)
+  validateRemoteSkillFilePath(filePath, remotePath)
+}
+
+function validateRemoteSkillName(skillName: string, remotePath: string): void {
+  if (isSafeRemoteSkillPath(skillName, { allowNested: false })) {
+    return
+  }
+
+  throw new Error(`GitHub returned an invalid Remix skill path: ${remotePath}`)
+}
+
+function validateRemoteSkillFilePath(filePath: string, remotePath: string): void {
+  if (isSafeRemoteSkillPath(filePath, { allowNested: true })) {
+    return
+  }
+
+  throw new Error(`GitHub returned an invalid Remix skill path: ${remotePath}`)
+}
+
+function isSafeRemoteSkillPath(remotePath: string, options: { allowNested: boolean }): boolean {
+  if (
+    remotePath.length === 0 ||
+    remotePath.includes('\\') ||
+    path.posix.isAbsolute(remotePath) ||
+    path.win32.isAbsolute(remotePath)
+  ) {
+    return false
+  }
+
+  let pathParts = remotePath.split('/')
+  if (!options.allowNested && pathParts.length !== 1) {
+    return false
+  }
+
+  return pathParts.every((pathPart) => pathPart.length > 0 && pathPart !== '.' && pathPart !== '..')
 }
 
 function getArchiveSkillPath(entryName: string): string | null {
@@ -632,9 +702,5 @@ function computeLocalContentHash(bytes: Uint8Array): string {
 }
 
 function computeGitBlobSha(bytes: Uint8Array): string {
-  return crypto
-    .createHash('sha1')
-    .update(`blob ${bytes.length}\0`)
-    .update(bytes)
-    .digest('hex')
+  return crypto.createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
 }
