@@ -159,9 +159,14 @@ type ResolvedAssetServerOptions = {
 }
 
 const chokidarWatcherByAssetServer = new WeakMap<AssetServer, ChokidarWatcher>()
+const watcherByAssetServer = new WeakMap<AssetServer, AssetServerWatcher>()
 
 export function getInternalChokidarWatcher(assetServer: AssetServer): ChokidarWatcher | undefined {
   return chokidarWatcherByAssetServer.get(assetServer)
+}
+
+export function getInternalWatchTargets(assetServer: AssetServer): readonly string[] {
+  return watcherByAssetServer.get(assetServer)?.getWatchedTargets() ?? []
 }
 
 /**
@@ -303,6 +308,9 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
 
   if (chokidarWatcher) {
     chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
+  }
+  if (watcher) {
+    watcherByAssetServer.set(assetServer, watcher)
   }
 
   return assetServer

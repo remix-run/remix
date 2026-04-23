@@ -16,6 +16,7 @@ export type ChokidarWatcher = ReturnType<typeof chokidar.watch>
 
 export type AssetServerWatcher = {
   close(): Promise<void>
+  getWatchedTargets(): readonly string[]
   updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
 }
 
@@ -41,6 +42,9 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
   return {
     async close() {
       await watcher.close()
+    },
+    getWatchedTargets() {
+      return [...watchedTargets]
     },
     updateWatchedDirectories(delta) {
       let nextWatchedDirectories = new Set(watchedDirectories)

@@ -8,10 +8,13 @@ import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
-import { createAssetServer, getInternalChokidarWatcher } from './asset-server.ts'
+import {
+  createAssetServer,
+  getInternalChokidarWatcher,
+  getInternalWatchTargets,
+} from './asset-server.ts'
 import type { AssetServerOptions } from './asset-server.ts'
 
-const watchTestTimeoutMs = 15000
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
 function createAssetServerForTest(
@@ -97,6 +100,35 @@ function post(assetServer: ReturnType<typeof createAssetServer>, pathname: strin
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
 
+async function emitWatchEvent(
+  assetServer: ReturnType<typeof createAssetServer>,
+  filePath: string,
+  event: 'add' | 'change' | 'unlink',
+): Promise<void> {
+  let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+  assert.ok(chokidarWatcher)
+  chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
+  await Promise.resolve()
+}
+
+function getWatchEventFilePath(filePath: string): string {
+  try {
+    return nodeFs.realpathSync(filePath)
+  } catch (error) {
+    if (!isNoEntityError(error)) throw error
+    return path.join(nodeFs.realpathSync(path.dirname(filePath)), path.basename(filePath))
+  }
+}
+
+function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
+  )
+}
+
 async function getCompiledCodeAndSourceMap(
   assetServer: ReturnType<typeof createAssetServer>,
   filePath: string,
@@ -146,73 +178,6 @@ async function assertCharacterAccurateImportRewriteSourceMap(
   } finally {
     await assetServer.close()
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function waitFor<T>(
-  callback: () => Promise<T>,
-  predicate: (value: T) => boolean,
-  timeoutMs = 5000,
-): Promise<T> {
-  let start = Date.now()
-
-  while (true) {
-    let value = await callback()
-    if (predicate(value)) return value
-    if (Date.now() - start > timeoutMs) {
-      throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`)
-    }
-    await sleep(25)
-  }
-}
-
-async function waitForWatchedFile(
-  assetServer: ReturnType<typeof createAssetServer>,
-  filePath: string,
-): Promise<void> {
-  let chokidarWatcher = getInternalChokidarWatcher(assetServer)
-  assert.ok(chokidarWatcher)
-  let watchedFilePath = normalizeWindowsPath(nodeFs.realpathSync(filePath))
-  let watchedDirectoryPath = normalizeWindowsPath(nodeFs.realpathSync(path.dirname(filePath)))
-  await waitFor(
-    async () => chokidarWatcher.getWatched(),
-    (watched) =>
-      hasWatchedDirectoryEntry(watched, watchedDirectoryPath, path.posix.basename(watchedFilePath)),
-    watchTestTimeoutMs,
-  )
-}
-
-function hasWatchedDirectoryEntry(
-  watched: Record<string, string[]>,
-  directoryPath: string,
-  entryName: string,
-): boolean {
-  let normalizedDirectoryPath = normalizeWindowsPath(directoryPath)
-  let normalizedEntryName = normalizeWindowsPath(entryName)
-
-  return Object.entries(watched).some(
-    ([watchedDirectoryPath, entries]) =>
-      normalizeWindowsPath(watchedDirectoryPath) === normalizedDirectoryPath &&
-      entries.some((entry) => normalizeWindowsPath(entry) === normalizedEntryName),
-  )
-}
-
-async function waitForWatcherToClose(
-  assetServer: ReturnType<typeof createAssetServer>,
-): Promise<void> {
-  let chokidarWatcher = getInternalChokidarWatcher(assetServer)
-  assert.ok(chokidarWatcher)
-
-  await waitFor(
-    async () => chokidarWatcher.getWatched(),
-    (watched) =>
-      Object.keys(watched).length === 0 ||
-      Object.values(watched).every((entries) => entries.length === 0),
-    watchTestTimeoutMs,
-  )
 }
 
 async function assertInternalServerError(response: Response): Promise<void> {
@@ -1144,20 +1109,12 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
-        // The first request installs watch targets lazily, so wait until chokidar has attached
-        // before writing again.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
-        await write(caseDir, 'app/entry.ts', 'export const value = 2')
+        let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, entryPath, 'change')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /value = 2/.test(body),
-          watchTestTimeoutMs,
-        )
+        let secondResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /value = 2/)
       } finally {
@@ -1185,20 +1142,12 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
-        // The first request installs watch targets lazily, so wait until chokidar has attached
-        // before writing again.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
-        await write(caseDir, 'app/entry.ts', 'export const value = 2')
+        let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, entryPath, 'change')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /value = 2/.test(body),
-          watchTestTimeoutMs,
-        )
+        let secondResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /value = 2/)
       } finally {
@@ -1232,18 +1181,12 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
-        await waitForWatchedFile(assetServer, packageFilePath)
         await write(caseDir, 'packages/shared/value.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, packageFilePath, 'change')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/packages/shared/value.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /value = 2/.test(body),
-          watchTestTimeoutMs,
-        )
+        let secondResponse = await get(assetServer, '/assets/packages/shared/value.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /value = 2/)
       } finally {
@@ -1269,8 +1212,8 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /value = 1/)
 
-        await write(caseDir, 'app/dep.ts', 'export const value = 2')
-        await sleep(200)
+        let depPath = await write(caseDir, 'app/dep.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, depPath, 'change')
 
         let secondResponse = await get(assetServer, '/assets/app/dep.ts')
         assert.ok(secondResponse)
@@ -1298,21 +1241,13 @@ describe('asset-server', () => {
         assert.ok(before)
         await assertInternalServerError(before)
 
-        // Missing imports are tracked lazily, so wait until the initial module graph is fully
-        // watched before creating a new candidate file.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/entry.ts'))
-        await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
+        let missingPath = await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
+        await emitWatchEvent(assetServer, missingPath, 'add')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            if (response.status !== 200) return await response.text()
-            return response.text()
-          },
-          (body) => /\/assets\/app\/missing\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        assert.equal(after.status, 200)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/missing\.ts/)
       } finally {
@@ -1341,8 +1276,8 @@ describe('asset-server', () => {
         assert.ok(before)
         await assertInternalServerError(before)
 
-        await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
-        await sleep(200)
+        let missingPath = await write(caseDir, 'app/missing.ts', 'export const value = "ready"')
+        await emitWatchEvent(assetServer, missingPath, 'add')
 
         let after = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(after)
@@ -1375,23 +1310,18 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /\/assets\/app\/dep-a\.ts/)
 
-        await writeJson(caseDir, 'package.json', {
+        let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
             '#dep': './app/dep-b.ts',
           },
           name: 'watch-test',
           type: 'module',
         })
+        await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep-b\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let secondResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /\/assets\/app\/dep-b\.ts/)
         assert.doesNotMatch(secondBody, /\/assets\/app\/dep-a\.ts/)
@@ -1427,14 +1357,14 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
 
-        await writeJson(caseDir, 'package.json', {
+        let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
             '#dep': './app/dep-b.ts',
           },
           name: 'watch-test',
           type: 'module',
         })
-        await sleep(200)
+        await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
         let after = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(after)
@@ -1465,23 +1395,18 @@ describe('asset-server', () => {
         assert.ok(before)
         await assertInternalServerError(before)
 
-        await writeJson(caseDir, 'package.json', {
+        let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
             '#dep': './app/dep.ts',
           },
           name: 'watch-test',
           type: 'module',
         })
+        await emitWatchEvent(assetServer, packageJsonPath, 'add')
 
-        let body = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (value) => /\/assets\/app\/dep\.ts/.test(value),
-          watchTestTimeoutMs,
-        )
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        let body = await response.text()
 
         assert.match(body, /\/assets\/app\/dep\.ts/)
       } finally {
@@ -1518,22 +1443,19 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
-        await fs.rm(path.join(caseDir, 'package.json'))
+        let packageJsonPath = path.join(caseDir, 'package.json')
+        await fs.rm(packageJsonPath)
+        await emitWatchEvent(assetServer, packageJsonPath, 'unlink')
 
-        let after = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return {
-              code: errorCodes.at(-1),
-              status: response.status,
-            }
-          },
-          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
-          watchTestTimeoutMs,
-        )
+        let afterResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(afterResponse)
+        let after = {
+          code: errorCodes.at(-1),
+          status: afterResponse.status,
+        }
 
         assert.equal(after.status, 500)
+        assert.equal(after.code, 'IMPORT_RESOLUTION_FAILED')
       } finally {
         await assetServer.close()
       }
@@ -1549,19 +1471,18 @@ describe('asset-server', () => {
       let assetServer = createWatchedTestServer(caseDir)
 
       try {
+        let firstResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 0/)
+
         for (let index = 1; index <= 12; index++) {
-          await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+          let entryPath = await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+          await emitWatchEvent(assetServer, entryPath, 'change')
         }
 
-        let body = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (value) => /value = 12/.test(value),
-          watchTestTimeoutMs,
-        )
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        let body = await response.text()
 
         assert.match(body, /value = 12/)
       } finally {
@@ -1586,44 +1507,40 @@ describe('asset-server', () => {
       })
 
       try {
+        let firstResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /value = 0/)
+
         for (let index = 1; index <= 6; index++) {
-          await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+          let entryPath = await write(caseDir, 'app/entry.ts', `export const value = ${index}`)
+          await emitWatchEvent(assetServer, entryPath, 'change')
         }
-        await write(caseDir, 'app/entry.ts', 'export const value =')
+        let brokenEntryPath = await write(caseDir, 'app/entry.ts', 'export const value =')
+        await emitWatchEvent(assetServer, brokenEntryPath, 'change')
 
-        let failure = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
+        let failureResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(failureResponse)
 
-            return {
-              body: await response.text(),
-              code: errorCodes.at(-1),
-              status: response.status,
-            }
-          },
-          (result) => result.status === 500 && result.code === 'MODULE_TRANSFORM_FAILED',
-          watchTestTimeoutMs,
-        )
+        let failure = {
+          body: await failureResponse.text(),
+          code: errorCodes.at(-1),
+          status: failureResponse.status,
+        }
 
         assert.equal(failure.status, 500)
+        assert.equal(failure.code, 'MODULE_TRANSFORM_FAILED')
         assert.equal(failure.body, 'Internal Server Error')
 
-        await write(caseDir, 'app/entry.ts', 'export const value = 7')
+        let fixedEntryPath = await write(caseDir, 'app/entry.ts', 'export const value = 7')
+        await emitWatchEvent(assetServer, fixedEntryPath, 'change')
 
-        let recovered = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
+        let recoveredResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(recoveredResponse)
 
-            return {
-              body: await response.text(),
-              status: response.status,
-            }
-          },
-          (result) => result.status === 200 && /value = 7/.test(result.body),
-          watchTestTimeoutMs,
-        )
+        let recovered = {
+          body: await recoveredResponse.text(),
+          status: recoveredResponse.status,
+        }
 
         assert.equal(recovered.status, 200)
         assert.match(recovered.body, /value = 7/)
@@ -1654,23 +1571,18 @@ describe('asset-server', () => {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
           let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
-          await writeJson(caseDir, 'package.json', {
+          let packageJsonPath = await writeJson(caseDir, 'package.json', {
             imports: {
               '#dep': useA ? './app/dep-a.ts' : './app/dep-b.ts',
             },
             name: 'watch-test',
             type: 'module',
           })
+          await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
-          let body = await waitFor(
-            async () => {
-              let response = await get(assetServer, '/assets/app/entry.ts')
-              assert.ok(response)
-              return response.text()
-            },
-            (value) => expected.test(value),
-            watchTestTimeoutMs,
-          )
+          let response = await get(assetServer, '/assets/app/entry.ts')
+          assert.ok(response)
+          let body = await response.text()
 
           assert.match(body, expected)
         }
@@ -1702,17 +1614,12 @@ describe('asset-server', () => {
         await assertInternalServerError(before)
         assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
 
-        await write(caseDir, 'app/broken.ts', 'export const nope = 1')
+        let brokenPath = await write(caseDir, 'app/broken.ts', 'export const nope = 1')
+        await emitWatchEvent(assetServer, brokenPath, 'change')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/broken\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/broken\.ts/)
       } finally {
@@ -1754,36 +1661,27 @@ describe('asset-server', () => {
         assert.equal(healthyResponse.status, 200)
         assert.match(await healthyResponse.text(), /healthy = true/)
 
-        await write(caseDir, 'app/broken.ts', 'import "./missing.ts"\nexport const nope = true')
-
-        await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            let body = await response.text()
-            return {
-              body,
-              code: errorCodes.at(-1),
-              status: response.status,
-            }
-          },
-          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
-          watchTestTimeoutMs,
+        let brokenPath = await write(
+          caseDir,
+          'app/broken.ts',
+          'import "./missing.ts"\nexport const nope = true',
         )
+        await emitWatchEvent(assetServer, brokenPath, 'change')
 
-        await write(caseDir, 'app/missing.ts', 'export const missing = true')
+        let missingFailure = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(missingFailure)
+        assert.equal(missingFailure.status, 500)
+        assert.equal(errorCodes.at(-1), 'IMPORT_RESOLUTION_FAILED')
 
-        let recoveredBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/broken\.ts/.test(body) && /entry = true/.test(body),
-          watchTestTimeoutMs,
-        )
+        let missingPath = await write(caseDir, 'app/missing.ts', 'export const missing = true')
+        await emitWatchEvent(assetServer, missingPath, 'add')
+
+        let recovered = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(recovered)
+        let recoveredBody = await recovered.text()
 
         assert.match(recoveredBody, /\/assets\/app\/broken\.ts/)
+        assert.match(recoveredBody, /entry = true/)
         assert.ok(errorCodes.includes('MODULE_TRANSFORM_FAILED'))
         assert.ok(errorCodes.includes('IMPORT_RESOLUTION_FAILED'))
       } finally {
@@ -1824,18 +1722,15 @@ describe('asset-server', () => {
         let before = await assetServer.getPreloads('app/entry.tsx')
         assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
 
-        await writeJson(caseDir, 'tsconfig.base.json', {
+        let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
             jsxImportSource: '@remix-run/component-b',
           },
         })
+        await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
-        let after = await waitFor(
-          async () => assetServer.getPreloads('app/entry.tsx'),
-          (urls) => urls.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')),
-          watchTestTimeoutMs,
-        )
+        let after = await assetServer.getPreloads('app/entry.tsx')
 
         assert.ok(after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
         assert.ok(!after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
@@ -1880,13 +1775,13 @@ describe('asset-server', () => {
         let before = await assetServer.getPreloads('app/entry.tsx')
         assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
 
-        await writeJson(caseDir, 'tsconfig.base.json', {
+        let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
             jsxImportSource: '@remix-run/component-b',
           },
         })
-        await sleep(200)
+        await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
         assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
@@ -1921,7 +1816,7 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
 
-        await writeJson(caseDir, 'tsconfig.json', {
+        let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
           compilerOptions: {
             baseUrl: '.',
             paths: {
@@ -1929,16 +1824,11 @@ describe('asset-server', () => {
             },
           },
         })
+        await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep-b\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep-b\.ts/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/dep-a\.ts/)
@@ -1966,7 +1856,7 @@ describe('asset-server', () => {
         assert.ok(before)
         await assertInternalServerError(before)
 
-        await writeJson(caseDir, 'tsconfig.json', {
+        let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
           compilerOptions: {
             baseUrl: '.',
             paths: {
@@ -1974,16 +1864,11 @@ describe('asset-server', () => {
             },
           },
         })
+        await emitWatchEvent(assetServer, tsconfigPath, 'add')
 
-        let body = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (value) => /\/assets\/app\/dep\.ts/.test(value),
-          watchTestTimeoutMs,
-        )
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        let body = await response.text()
 
         assert.match(body, /\/assets\/app\/dep\.ts/)
       } finally {
@@ -2021,22 +1906,19 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
-        await fs.rm(path.join(caseDir, 'tsconfig.json'))
+        let tsconfigPath = path.join(caseDir, 'tsconfig.json')
+        await fs.rm(tsconfigPath)
+        await emitWatchEvent(assetServer, tsconfigPath, 'unlink')
 
-        let after = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return {
-              code: errorCodes.at(-1),
-              status: response.status,
-            }
-          },
-          (result) => result.status === 500 && result.code === 'IMPORT_RESOLUTION_FAILED',
-          watchTestTimeoutMs,
-        )
+        let afterResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(afterResponse)
+        let after = {
+          code: errorCodes.at(-1),
+          status: afterResponse.status,
+        }
 
         assert.equal(after.status, 500)
+        assert.equal(after.code, 'IMPORT_RESOLUTION_FAILED')
       } finally {
         await assetServer.close()
       }
@@ -2065,7 +1947,7 @@ describe('asset-server', () => {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
           let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
-          await writeJson(caseDir, 'tsconfig.json', {
+          let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
             compilerOptions: {
               baseUrl: '.',
               paths: {
@@ -2073,16 +1955,11 @@ describe('asset-server', () => {
               },
             },
           })
+          await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
-          let body = await waitFor(
-            async () => {
-              let response = await get(assetServer, '/assets/app/entry.ts')
-              assert.ok(response)
-              return response.text()
-            },
-            (value) => expected.test(value),
-            watchTestTimeoutMs,
-          )
+          let response = await get(assetServer, '/assets/app/entry.ts')
+          assert.ok(response)
+          let body = await response.text()
 
           assert.match(body, expected)
         }
@@ -2114,22 +1991,17 @@ describe('asset-server', () => {
         assert.ok(firstResponse)
         assert.match(await firstResponse.text(), /example\/a\.ts/)
 
-        await writeJson(caseDir, 'app/node_modules/example/package.json', {
+        let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
           exports: {
             '.': './b.ts',
           },
           name: 'example',
         })
+        await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
-        let secondBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /example\/b\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let secondResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /example\/b\.ts/)
         assert.doesNotMatch(secondBody, /example\/a\.ts/)
@@ -2161,22 +2033,17 @@ describe('asset-server', () => {
           let useA = index % 2 === 0
           let expected = useA ? /example\/a\.ts/ : /example\/b\.ts/
 
-          await writeJson(caseDir, 'app/node_modules/example/package.json', {
+          let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
             exports: {
               '.': useA ? './a.ts' : './b.ts',
             },
             name: 'example',
           })
+          await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
-          let body = await waitFor(
-            async () => {
-              let response = await get(assetServer, '/assets/app/entry.ts')
-              assert.ok(response)
-              return response.text()
-            },
-            (value) => expected.test(value),
-            watchTestTimeoutMs,
-          )
+          let response = await get(assetServer, '/assets/app/entry.ts')
+          assert.ok(response)
+          let body = await response.text()
 
           assert.match(body, expected)
         }
@@ -2201,20 +2068,12 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.js/)
 
-        // Extensionless candidates are tracked lazily, so wait until the currently resolved
-        // dependency is watched before creating a higher-priority file.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/dep.js'))
-        await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+        let depPath = await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
+        await emitWatchEvent(assetServer, depPath, 'add')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep\.ts/)
       } finally {
@@ -2239,17 +2098,13 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
-        await fs.rm(path.join(caseDir, 'app/dep.ts'))
+        let depPath = path.join(caseDir, 'app/dep.ts')
+        await fs.rm(depPath)
+        await emitWatchEvent(assetServer, depPath, 'unlink')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep\.js/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep\.js/)
       } finally {
@@ -2265,38 +2120,34 @@ describe('asset-server', () => {
     try {
       await write(caseDir, 'app/nested/only.ts', 'export const value = 1')
       let assetServer = createWatchedTestServer(caseDir)
-      let chokidarWatcher = getInternalChokidarWatcher(assetServer)
-      assert.ok(chokidarWatcher)
       let nestedDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/nested')))
       let appDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))
 
       try {
-        await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/nested/only.ts')
-            assert.ok(response)
-            await response.text()
-            return chokidarWatcher.getWatched()
-          },
-          (watched) => hasWatchedDirectoryEntry(watched, nestedDir, 'only.ts'),
-          watchTestTimeoutMs,
-        )
+        let response = await get(assetServer, '/assets/app/nested/only.ts')
+        assert.ok(response)
+        await response.text()
 
-        await fs.rm(path.join(caseDir, 'app/nested/only.ts'))
-
-        let afterDelete = await waitFor(
-          async () => ({
-            response: await get(assetServer, '/assets/app/nested/only.ts'),
-            watched: chokidarWatcher.getWatched(),
-          }),
-          ({ response, watched }) =>
-            response === null &&
-            !hasWatchedDirectoryEntry(watched, nestedDir, 'only.ts') &&
-            !hasWatchedDirectoryEntry(watched, appDir, 'nested'),
-          watchTestTimeoutMs,
+        let beforeTargets = getInternalWatchTargets(assetServer).map((target) =>
+          normalizeWindowsPath(target),
         )
+        assert.ok(beforeTargets.includes(nestedDir))
+        assert.ok(beforeTargets.includes(appDir))
+
+        let deletedPath = path.join(caseDir, 'app/nested/only.ts')
+        await fs.rm(deletedPath)
+        await emitWatchEvent(assetServer, deletedPath, 'unlink')
+
+        let afterDelete = {
+          response: await get(assetServer, '/assets/app/nested/only.ts'),
+          targets: getInternalWatchTargets(assetServer).map((target) =>
+            normalizeWindowsPath(target),
+          ),
+        }
 
         assert.equal(afterDelete.response, null)
+        assert.ok(!afterDelete.targets.includes(nestedDir))
+        assert.ok(!afterDelete.targets.includes(appDir))
       } finally {
         await assetServer.close()
       }
@@ -2317,7 +2168,6 @@ describe('asset-server', () => {
 
       await assetServer.close()
       await write(caseDir, 'app/entry.ts', 'export const value = 2')
-      await waitForWatcherToClose(assetServer)
 
       let secondResponse = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(secondResponse)
@@ -2419,20 +2269,12 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
 
-        // Dotted extensionless candidates are tracked lazily, so wait until the currently resolved
-        // dependency is watched before creating a higher-priority file.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/styles.css.js'))
-        await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+        let stylesPath = await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
+        await emitWatchEvent(assetServer, stylesPath, 'add')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/styles\.css\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/styles\.css\.ts/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.js/)
@@ -2458,17 +2300,13 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/styles\.css\.ts/)
 
-        await fs.rm(path.join(caseDir, 'app/styles.css.ts'))
+        let stylesPath = path.join(caseDir, 'app/styles.css.ts')
+        await fs.rm(stylesPath)
+        await emitWatchEvent(assetServer, stylesPath, 'unlink')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/styles\.css\.js/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/styles\.css\.js/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
@@ -2595,20 +2433,12 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
-        // Aliased candidates are tracked lazily, so wait until the currently resolved dependency
-        // is watched before creating an exact-match file.
-        await waitForWatchedFile(assetServer, path.join(caseDir, 'app/dep.ts'))
-        await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+        let depPath = await write(caseDir, 'app/dep.js', 'export const dep = "js"')
+        await emitWatchEvent(assetServer, depPath, 'add')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep\.js/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep\.js/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
@@ -2634,17 +2464,13 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.js/)
 
-        await fs.rm(path.join(caseDir, 'app/dep.js'))
+        let depPath = path.join(caseDir, 'app/dep.js')
+        await fs.rm(depPath)
+        await emitWatchEvent(assetServer, depPath, 'unlink')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep\.ts/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep\.ts/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
@@ -2669,18 +2495,15 @@ describe('asset-server', () => {
         assert.ok(before)
         assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
 
-        await fs.rm(path.join(caseDir, 'app/dep.ts'))
-        await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
+        let depPath = path.join(caseDir, 'app/dep.ts')
+        await fs.rm(depPath)
+        await emitWatchEvent(assetServer, depPath, 'unlink')
+        let depIndexPath = await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
+        await emitWatchEvent(assetServer, depIndexPath, 'add')
 
-        let afterBody = await waitFor(
-          async () => {
-            let response = await get(assetServer, '/assets/app/entry.ts')
-            assert.ok(response)
-            return response.text()
-          },
-          (body) => /\/assets\/app\/dep\.js\/index\.js/.test(body),
-          watchTestTimeoutMs,
-        )
+        let after = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(after)
+        let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/dep\.js\/index\.js/)
         assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
