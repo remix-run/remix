@@ -1,4 +1,4 @@
 interface:
-  display_name: "Expert TypeScript Programmer"
-  short_description: "Write robust, precise TypeScript"
-  default_prompt: "Use $expert-typescript-programmer to write or review TypeScript code with strict, precise types and Remix repo conventions."
+  display_name: 'Expert TypeScript Programmer'
+  short_description: 'Write robust, precise TypeScript'
+  default_prompt: 'Use $expert-typescript-programmer to write or review TypeScript code with strict, precise types and Remix repo conventions.'
