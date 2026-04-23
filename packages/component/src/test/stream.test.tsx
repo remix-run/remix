@@ -1412,6 +1412,247 @@ describe('stream', () => {
         entries.some((entry) => entry.moduleUrl === '/button.js' && entry.exportName === 'Button'),
       ).toBe(true)
     })
+
+    it('resolves opaque client-entry ids during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function ResolverCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(<Counter initialCount={42} />, {
+          async resolveClientEntry(entryId, component) {
+            expect(entryId).toBe('file:///app/components/counter.tsx')
+            expect(component.name).toBe('ResolverCounter')
+            return {
+              href: '/scripts/counter.js',
+              exportName: 'Counter',
+            }
+          },
+        }),
+      )
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0].entryId).toBeUndefined()
+      expect(entries[0]).toEqual({
+        moduleUrl: '/scripts/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('resolves opaque client-entry ids inside blocking frames during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function BlockingFrameCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <Frame src="/child" />
+            </body>
+          </html>,
+          {
+            resolveFrame: async () =>
+              drain(
+                renderToStream(
+                  <html>
+                    <body>
+                      <Counter initialCount={42} />
+                    </body>
+                  </html>,
+                  {
+                    async resolveClientEntry(entryId, component) {
+                      expect(entryId).toBe('file:///app/components/counter.tsx')
+                      expect(component.name).toBe('BlockingFrameCounter')
+                      return {
+                        href: '/js/counter.js',
+                        exportName: 'Counter',
+                      }
+                    },
+                  },
+                ),
+              ),
+          },
+        ),
+      )
+
+      expect(html).toContain('<div>Count: 42</div>')
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let data = Array.from(shelf.content.querySelectorAll(rmxDataScriptSelector)).reduce<any>(
+        (merged, script) => {
+          let next = JSON.parse(script.textContent || '{}')
+          if (next.h) merged.h = { ...(merged.h ?? {}), ...next.h }
+          if (next.f) merged.f = { ...(merged.f ?? {}), ...next.f }
+          return merged
+        },
+        {},
+      )
+
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('calls resolveClientEntry only once per unique entry id during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function DedupedResolverCounter(handle: Handle) {
+          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        },
+      )
+
+      let resolveCalls: Array<{ entryId: string; componentName: string }> = []
+      let html = await drain(
+        renderToStream(
+          <div>
+            <Counter initialCount={1} />
+            <Counter initialCount={2} />
+            <Counter initialCount={3} />
+          </div>,
+          {
+            async resolveClientEntry(entryId, component) {
+              resolveCalls.push({ entryId, componentName: component.name })
+              return {
+                href: '/js/counter.js',
+                exportName: 'Counter',
+              }
+            },
+          },
+        ),
+      )
+
+      expect(resolveCalls).toEqual([
+        {
+          entryId: 'file:///app/components/counter.tsx',
+          componentName: 'DedupedResolverCounter',
+        },
+      ])
+      expect(html).toContain('<div>Count: 1</div>')
+      expect(html).toContain('<div>Count: 2</div>')
+      expect(html).toContain('<div>Count: 3</div>')
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(3)
+      expect(entries.every((entry) => entry.moduleUrl === '/js/counter.js')).toBe(true)
+      expect(entries.every((entry) => entry.exportName === 'Counter')).toBe(true)
+    })
+
+    it('uses the component name as the default export name during SSR', async () => {
+      let Counter = clientEntry('/js/counter.js', function NamedCounter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      let html = await drain(renderToStream(<Counter initialCount={42} />))
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'NamedCounter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('throws during SSR when an entry still has no export name after resolution', async () => {
+      let anonymousComponent = function () {
+        return () => <div>Test</div>
+      }
+      Object.defineProperty(anonymousComponent, 'name', { value: '' })
+
+      let EntryComponent = clientEntry('/js/test.js', anonymousComponent)
+
+      await expect(async () => {
+        await drain(renderToStream(<EntryComponent />))
+      }).rejects.toThrow(
+        'clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one.',
+      )
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty exportName', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '/scripts/counter.js',
+                exportName: '',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty href', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '',
+                exportName: 'Counter',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty href')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an invalid value', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return null as any
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return an object with href and exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry throws', async () => {
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
+        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      })
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              throw new Error('resolver failed')
+            },
+          }),
+        )
+      }).rejects.toThrow('resolver failed')
+    })
   })
 
   describe('frames', () => {

@@ -32,6 +32,13 @@ export interface RenderToStreamOptions {
     target?: string,
     context?: ResolveFrameContext,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  /**
+   * Callback used to resolve runtime module metadata for client entry modules during SSR.
+   */
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry
 }
 
 /**
@@ -48,6 +55,17 @@ interface HydrationData {
   moduleUrl: string
   exportName: string
   props: Record<string, unknown>
+}
+
+interface UnresolvedHydrationData {
+  entryId: string
+  component: EntryComponent
+  props: Record<string, unknown>
+}
+
+interface ResolvedClientEntry {
+  href: string
+  exportName: string
 }
 
 interface FrameData {
@@ -68,6 +86,7 @@ interface RenderContext {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
+  unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -183,6 +202,7 @@ export function renderToStream(
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
+    unresolvedHydrationData: new Map(),
     frameData: new Map(),
     blockingFrameTails: [],
     serverIdScope: crypto.randomUUID().slice(0, 8),
@@ -194,6 +214,8 @@ export function renderToStream(
       try {
         let root = buildSegment(node, context, rootFrameState)
         await resolveBlocking(root)
+        await resolveClientEntries(context, options?.resolveClientEntry)
+        validateClientEntriesForHydration(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
         let bytes = encoder.encode(finalHtml)
@@ -882,15 +904,104 @@ function buildEntrySegment(
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
-  context.hydrationData.set(instanceId, {
-    moduleUrl: type.$moduleUrl,
-    exportName: type.$exportName,
+  context.unresolvedHydrationData.set(instanceId, {
+    entryId: type.$entryId,
+    component: type,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
   let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
   let end = staticSeg('<!-- /rmx:h -->')
   return compositeSeg([start, rendered, end])
+}
+
+function resolveDefaultClientEntry(
+  entryId: string,
+  component: EntryComponent,
+): ResolvedClientEntry {
+  let fallbackExportName = component.name || ''
+  let hashIndex = entryId.lastIndexOf('#')
+  if (hashIndex === -1 && fallbackExportName) {
+    return {
+      exportName: fallbackExportName,
+      href: entryId,
+    }
+  }
+
+  if (hashIndex !== -1) {
+    let exportName = entryId.slice(hashIndex + 1) || fallbackExportName
+    if (exportName) {
+      return {
+        exportName,
+        href: entryId.slice(0, hashIndex),
+      }
+    }
+  }
+
+  throw new Error(
+    `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one. Received "${entryId}".`,
+  )
+}
+
+async function resolveClientEntries(
+  context: RenderContext,
+  resolveClientEntry?: (
+    entryId: string,
+    component: EntryComponent,
+  ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
+): Promise<void> {
+  if (context.unresolvedHydrationData.size === 0) return
+
+  let resolvedEntries = new Map<string, ResolvedClientEntry>()
+
+  for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
+    let { entryId, component, props } = unresolvedHydrationData
+    let resolvedEntry = resolvedEntries.get(entryId)
+    if (!resolvedEntry) {
+      resolvedEntry = resolveClientEntry
+        ? await Promise.resolve(resolveClientEntry(entryId, component))
+        : resolveDefaultClientEntry(entryId, component)
+      validateResolvedClientEntry(entryId, resolvedEntry)
+      resolvedEntries.set(entryId, resolvedEntry)
+    }
+
+    context.hydrationData.set(hydrationId, {
+      exportName: resolvedEntry.exportName,
+      moduleUrl: resolvedEntry.href,
+      props,
+    })
+  }
+
+  context.unresolvedHydrationData.clear()
+}
+
+function validateResolvedClientEntry(
+  entryId: string,
+  resolvedEntry: ResolvedClientEntry,
+): asserts resolvedEntry is ResolvedClientEntry {
+  if (!resolvedEntry || typeof resolvedEntry !== 'object') {
+    throw new Error(
+      `resolveClientEntry must return an object with href and exportName. Received "${entryId}".`,
+    )
+  }
+
+  if (!resolvedEntry.href) {
+    throw new Error(`resolveClientEntry must return a non-empty href. Received "${entryId}".`)
+  }
+
+  if (!resolvedEntry.exportName) {
+    throw new Error(`resolveClientEntry must return a non-empty exportName. Received "${entryId}".`)
+  }
+}
+
+function validateClientEntriesForHydration(context: RenderContext): void {
+  if (context.unresolvedHydrationData.size > 0) {
+    let [hydrationId, unresolvedHydrationData] = context.unresolvedHydrationData.entries().next()
+      .value as [string, UnresolvedHydrationData]
+    throw new Error(
+      `Client entry was not resolved for hydration. Received "${unresolvedHydrationData.entryId}" (${hydrationId}).`,
+    )
+  }
 }
 
 // Resolve all blocking frame content once
