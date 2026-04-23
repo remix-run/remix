@@ -1,1 +1,0 @@
-BREAKING CHANGE: mixin render callbacks no longer receive `children` or `innerHTML`, and returned mixin elements cannot override host subtree content. `handle.element` and `createElement(handle.element, ...)` are now limited to patching host props and nested `mix` values.

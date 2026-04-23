@@ -1,1 +1,0 @@
-Add an `attrs(...)` mixin for applying default host props through `mix`. Recipe authors can now provide attributes such as `type="button"` without overriding explicit JSX props, which makes it easier to build reusable element recipes that include both styling and safe defaults.
