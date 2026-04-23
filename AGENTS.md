@@ -67,5 +67,4 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 For working on Remix code in demos or writing Remix app code, use the skills in `skills/`:
 
-- `remix-project-layout` at `skills/remix-project-layout/SKILL.md`: Define or scaffold the on-disk layout and conventions for a Remix app.
-- `remix-ui` at `skills/remix-ui/SKILL.md`: Build Remix app UI, including pages, layouts, interactions, styling, and UI tests.
+- `remix` at `skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
