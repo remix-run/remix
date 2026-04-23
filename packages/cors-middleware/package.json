@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cors-middleware",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Middleware for handling CORS in Fetch API servers",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

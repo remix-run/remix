@@ -2,6 +2,35 @@
 
 This is the changelog for [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Removed adapter options
+
+  **Affected APIs**
+
+  - `PostgresDatabaseAdapterOptions` type: removed
+  - `createPostgresDatabaseAdapter` function: `options` arg removed
+  - `PostgresDatabaseAdapter` constructor: `options` arg removed
+
+  **Why**
+
+  Adapter options existed solely for tests to override adapter capabilities.
+  If you must override capabilities, you can do so directly via mutation:
+
+  ```ts
+  let adapter = createPostgresDatabaseAdapter(postgres)
+  adapter.capabilities = {
+    ...adapter.capabilities,
+    returning: false,
+  }
+  ```
+
+- Types for `createPostgresDatabaseAdapter` now accept a `Client` in addition to `Pool` and `PoolClient`.
+
+  This is a type-only change that aligns the function signature with existing runtime behavior.
+
 ## v0.2.0
 
 ### Minor Changes

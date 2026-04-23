@@ -1,1 +1,0 @@
-`handle.signal` in mixins now aborts when that specific mixin slot is removed, even if the host node stays mounted. This fixes cleanup patterns that expect `handle.signal` to match the mixin `remove` lifecycle.

@@ -1,1 +1,0 @@
-Allow nested arrays in `mix` props and flatten them during JSX normalization. This makes it easier to compose reusable style and behavior recipes without manually spreading arrays before passing them to elements or components.
