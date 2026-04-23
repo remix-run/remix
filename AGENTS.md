@@ -50,6 +50,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
+- `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.

@@ -151,11 +151,10 @@ npm i remix <peer-dependency>
 - License section format:
   - `See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)`
 
-8. Do not manually update the generated `remix` package in PRs.
+8. Handle generated `remix` package updates deliberately.
 
 - `packages/remix` is generated automatically in CI.
-- Do not manually edit `packages/remix/package.json` or `packages/remix/src/*` in new pull requests.
-- Do not add `packages/remix/.changes/*` change files in new pull requests.
+- Do not hand-edit `packages/remix/package.json` or `packages/remix/src/*`; run the generator when generated output is required.
 - If user asks for full surfacing, you can still update root `README.md` package list when applicable.
 
 9. Validate before finishing.
@@ -168,7 +167,6 @@ npm i remix <peer-dependency>
   - `pnpm run lint`
 - Add or update a change file under `packages/<package-name>/.changes/` when requested by contribution workflow.
 - For a brand-new package, the initial change file should use a `minor.` filename (for example, `minor.initial-release.md`) so the first release bumps `0.0.0` to `0.1.0`.
-- Exception: do not add a change file under `packages/remix/.changes/`; `remix` package updates are CI-generated.
 
 ## Templates
 
