@@ -12,4 +12,3 @@ This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/mai
 
 - Bumped `@remix-run/*` dependencies:
   - [`route-pattern@0.20.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.20.1)
-
