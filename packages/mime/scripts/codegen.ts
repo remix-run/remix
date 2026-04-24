@@ -81,6 +81,19 @@ export function generateMimeTypesContent(): string {
     }
   }
 
+  // Manual overrides for extensions where the codegen picks an uncommon type.
+  // See https://github.com/remix-run/remix/issues/11106 (mp4)
+  // See https://github.com/remix-run/remix/issues/11107 (ico)
+  let preferredOverrides: Record<string, string> = {
+    // RFC 4337 §2: video/mp4 is the general-purpose type for .mp4 files
+    mp4: 'video/mp4',
+    // image/x-icon is historically used by Microsoft and browsers
+    ico: 'image/x-icon',
+  }
+  for (let [ext, mimeType] of Object.entries(preferredOverrides)) {
+    extensionMap[ext] = mimeType
+  }
+
   // Sort by extension for consistent output
   let sortedExtensions = Object.keys(extensionMap).sort()
   let entries = sortedExtensions.map((ext) => `  ${formatKey(ext)}: '${extensionMap[ext]}',`)
