@@ -1,5 +1,5 @@
 import * as fs from 'node:fs'
-import * as path from 'node:path'
+import picomatch from 'picomatch'
 
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
 
@@ -37,7 +37,8 @@ export function createFileMatcher(
     return (filePath) => filePath === resolvedPatternPath
   }
 
-  return (filePath) => path.posix.matchesGlob(filePath, resolvedPatternPath)
+  let globMatcher = picomatch(resolvedPatternPath, { dot: true })
+  return (filePath) => globMatcher(filePath)
 }
 
 function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
