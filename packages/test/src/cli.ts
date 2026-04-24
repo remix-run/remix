@@ -9,6 +9,9 @@ import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import type { Counts } from './lib/utils.ts'
 
+// https://bun.com/docs/guides/util/detect-bun
+const isBun = typeof process.versions.bun === 'string'
+
 const config = await loadConfig()
 
 let hasExited = false
@@ -142,25 +145,14 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
   serverFiles: string[]
   e2eFiles: string[]
 }> {
-  async function findFiles(pattern: string) {
-    let files: string[] = []
-    let exclude = ['node_modules/**', '.git/**']
-
-    for await (let file of fsp.glob(pattern, { cwd: process.cwd(), exclude })) {
-      files.push(path.resolve(process.cwd(), file))
-    }
-
-    return files
-  }
-
-  let files = await findFiles(config.glob.test)
+  let files = await findFiles(config.glob.test, config.glob.exclude)
 
   if (files.length === 0) {
     console.log(`No test files found matching pattern: ${config.glob.test}`)
     process.exit(1)
   }
 
-  let e2eSet = new Set(await findFiles(config.glob.e2e))
+  let e2eSet = new Set(await findFiles(config.glob.e2e, config.glob.exclude))
 
   let types = new Set(config.type.split(','))
   let e2eFiles = types.has('e2e') ? files.filter((f) => e2eSet.has(f)) : []
@@ -182,6 +174,32 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
     serverFiles,
     e2eFiles,
   }
+}
+
+async function findFiles(pattern: string, excludePattern: string) {
+  let cwd = process.cwd()
+  let files: string[] = []
+
+  if (isBun) {
+    // Bun's `fs.promises.glob` follows symlinks and doesn't prune traversal
+    // via `exclude`, so it enters pnpm symlink cycles in `node_modules`.
+    // Use Bun's native Glob, which defaults to `followSymlinks: false`.
+    // @ts-expect-error — bun module is only resolvable under the Bun runtime
+    let { Glob } = await import('bun')
+    let glob = new Glob(pattern)
+    let excludeGlob = new Glob(excludePattern)
+    for await (let file of glob.scan({ cwd, absolute: true })) {
+      if (!excludeGlob.match(path.relative(cwd, file))) {
+        files.push(file)
+      }
+    }
+    return files
+  }
+
+  for await (let file of fsp.glob(pattern, { cwd, exclude: [excludePattern] })) {
+    files.push(path.resolve(cwd, file))
+  }
+  return files
 }
 
 function queueRerun(reason: string) {

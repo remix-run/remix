@@ -21,6 +21,10 @@ const cliOptions = {
     type: 'string',
     description: 'Glob pattern for E2E test files',
   },
+  'glob.exclude': {
+    type: 'string',
+    description: 'Glob pattern for paths to exclude from discovery',
+  },
   'glob.test': {
     type: 'string',
     description: 'Glob pattern for all test files',
@@ -72,8 +76,9 @@ const defaultValues: ResolvedRemixTestConfig = {
   },
   concurrency: os.availableParallelism(),
   glob: {
-    test: '**/*.test?(.e2e).{ts,tsx}',
+    test: '**/*.test{,.e2e}.{ts,tsx}',
     e2e: '**/*.test.e2e.{ts,tsx}',
+    exclude: 'node_modules/**',
   },
   reporter: process.env.CI === 'true' ? 'dot' : 'spec',
   type: 'server,e2e',
@@ -97,10 +102,12 @@ export interface RemixTestConfig {
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
    *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
+   *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
     test?: string
     e2e?: string
+    exclude?: string
   }
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
@@ -133,6 +140,7 @@ export interface ResolvedRemixTestConfig {
   glob: {
     test: string
     e2e: string
+    exclude: string
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string | undefined
@@ -191,6 +199,7 @@ function resolveConfig(
         fileConfig.glob?.test ??
         defaultValues.glob.test,
       e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
+      exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
     },
     browser: {
       echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
