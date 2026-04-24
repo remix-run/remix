@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import { attrs } from './attrs-mixin.tsx'
+import { attrs } from './attrs-mixin.ts'
 
 describe('attrs mixin', () => {
   it('applies default props when the element does not provide them', () => {

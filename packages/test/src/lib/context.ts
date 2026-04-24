@@ -1,12 +1,10 @@
-import type { Browser, Page } from 'playwright'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
-import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
-import type { render } from './render.ts'
-
-import type { CreateServerFunction } from './e2e-server.ts'
-import type { getPlaywrightPageOptions } from './playwright.ts'
-import type { V8CoverageEntry } from './coverage.ts'
 import type { RemixNode, VirtualRoot, VirtualRootOptions } from '@remix-run/component'
+import type { Browser, Page } from 'playwright'
+import type { V8CoverageEntry } from './coverage.ts'
+import type { CreateServerFunction } from './e2e-server.ts'
+import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
+import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is

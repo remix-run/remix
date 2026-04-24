@@ -1,11 +1,11 @@
-import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 import type { createCoverageMap as CreateCoverageMap } from 'istanbul-lib-coverage'
 import type { createContext as CreateContext } from 'istanbul-lib-report'
 import type IstanbulReports from 'istanbul-reports'
-import { colors } from './utils.ts'
+import * as fsp from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { colors } from './colors.ts'
 import { transformTypeScript } from './ts-transform.ts'
 
 // Istanbul packages are loaded lazily so that FORCE_COLOR can be set based on

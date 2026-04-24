@@ -1,8 +1,8 @@
+import { createAssetServer, type AssetServerOptions } from '@remix-run/assets'
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
 import { createRequestListener } from '@remix-run/node-fetch-server'
-import { createScriptServer, type ScriptServerOptions } from '@remix-run/script-server'
 import * as http from 'node:http'
 import * as path from 'node:path'
 import { IS_RUNNING_FROM_SRC } from '../lib/config.ts'
@@ -108,26 +108,30 @@ function getScriptServer(browserFiles: string[]) {
 
   let relativeFiles = browserFiles.map((f) => path.relative(rootDir, f))
   let testPaths = relativeFiles.map((f) => `/scripts/test/${f}`)
-  let opts: ScriptServerOptions = {
-    root: rootDir,
-    routes: [
-      {
-        urlPattern: `/scripts/app/*path`,
-        filePattern: `${clientDir}/*path`,
-      },
-      ...relativeFiles.map((_, i) => ({
-        urlPattern: testPaths[i],
-        filePattern: relativeFiles[i],
-      })),
-      {
-        urlPattern: `/scripts/*path`,
-        filePattern: '*path',
-      },
-    ],
+  let opts: AssetServerOptions = {
+    rootDir,
+    fileMap: {
+      [`/scripts/app/*path`]: `${clientDir}/*path`,
+      [`/scripts/test/*path`]: '*path',
+      [`/scripts/*path`]: '*path',
+      ...relativeFiles.reduce(
+        (acc, _, i) =>
+          Object.assign(acc, {
+            [testPaths[i]]: relativeFiles[i],
+          }),
+        {},
+      ),
+    },
     allow: ['**', 'node_modules/**', 'node_modules/.pnpm/**'],
-    sourceMaps: 'inline',
+    watch: false,
+    scripts: {
+      sourceMaps: 'inline',
+    },
+    onError(error) {
+      console.error(`[remix-test] Error serving asset: ${error}`)
+    },
   }
-  let scriptServer = createScriptServer(opts)
+  let scriptServer = createAssetServer(opts)
   return { scriptServer, testPaths }
 }
 

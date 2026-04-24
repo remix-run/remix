@@ -1,9 +1,8 @@
-import type { Counts } from '../utils.ts'
-import type { TestResults } from '../executor.ts'
-import { SpecReporter } from './spec.ts'
-import { TapReporter } from './tap.ts'
 import { DotReporter } from './dot.ts'
 import { FilesReporter } from './files.ts'
+import type { Counts, TestResults } from './results.ts'
+import { SpecReporter } from './spec.ts'
+import { TapReporter } from './tap.ts'
 
 export interface Reporter {
   onResult(results: TestResults, env?: string): void
@@ -11,7 +10,7 @@ export interface Reporter {
   onSectionStart(label: string): void
 }
 
-export { SpecReporter, TapReporter, DotReporter, FilesReporter }
+export { DotReporter, FilesReporter, SpecReporter, TapReporter }
 
 export function createReporter(type: string): Reporter {
   switch (type) {

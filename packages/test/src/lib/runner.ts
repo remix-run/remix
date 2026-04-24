@@ -9,11 +9,9 @@ import {
   type CoverageMap,
   type V8CoverageEntry,
 } from './coverage.ts'
-import type { TestResults } from './executor.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
-import type { Counts } from './utils.ts'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
+import type { Counts, TestResults } from './reporters/results.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)

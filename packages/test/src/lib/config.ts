@@ -1,6 +1,6 @@
+import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
 import * as util from 'node:util'
 import type { PlaywrightTestConfig } from 'playwright/test'
 import { importModule } from './import-module.ts'

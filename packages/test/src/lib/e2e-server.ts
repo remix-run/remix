@@ -1,5 +1,5 @@
-import * as http from 'node:http'
 import { createRequestListener } from '@remix-run/node-fetch-server'
+import * as http from 'node:http'
 
 export interface CreateServerFunction {
   (handler: (req: Request) => Promise<Response>): Promise<{

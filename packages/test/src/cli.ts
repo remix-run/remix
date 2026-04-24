@@ -2,15 +2,16 @@
 import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
+import { IS_RUNNING_FROM_SRC, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
+import { generateCombinedCoverageReport } from './lib/coverage.ts'
+import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
+import { createReporter } from './lib/reporters/index.ts'
 import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
-import { createReporter } from './lib/reporters/index.ts'
-import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
-import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
-import { IS_RUNNING_FROM_SRC, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
-import { IS_BUN, type Counts } from './lib/utils.ts'
+import type { Counts } from './lib/reporters/results.ts'
+import { IS_BUN } from './lib/normalize.ts'
 
 const config = await loadConfig()
 

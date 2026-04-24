@@ -1,7 +1,8 @@
 import * as path from 'node:path'
-import { colors, normalizeLine, type Counts } from '../utils.ts'
-import type { TestResult, TestResults } from '../executor.ts'
+import { colors } from '../colors.ts'
+import { normalizeLine } from '../normalize.ts'
 import type { Reporter } from './index.ts'
+import type { Counts, TestResult, TestResults } from './results.ts'
 
 export class FilesReporter implements Reporter {
   #failures: { suiteName: string; name: string; error: TestResult['error'] }[] = []

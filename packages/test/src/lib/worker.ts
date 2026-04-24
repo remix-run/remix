@@ -1,9 +1,10 @@
-import * as path from 'node:path'
 import * as mod from 'node:module'
-import { workerData, parentPort } from 'node:worker_threads'
-import { runTests, type TestResults } from './executor.ts'
+import * as path from 'node:path'
+import { parentPort, workerData } from 'node:worker_threads'
+import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
-import { IS_BUN } from './utils.ts'
+import { IS_BUN } from './normalize.ts'
+import type { TestResults } from './reporters/results.ts'
 
 try {
   // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which

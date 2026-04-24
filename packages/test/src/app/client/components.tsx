@@ -1,15 +1,6 @@
 import { clientEntry, css, on, type Handle } from '@remix-run/component'
-import type { TestResults } from '../../lib/executor.ts'
-import { normalizeLine } from '../../lib/utils.ts'
-
-type TestResult = {
-  name: string
-  suiteName: string
-  filePath?: string
-  status: 'passed' | 'failed' | 'skipped' | 'todo'
-  error?: { message: string; stack?: string }
-  duration: number
-}
+import { normalizeLine } from '../../lib/normalize.ts'
+import type { TestResult, TestResults } from '../../lib/reporters/results.ts'
 
 const styles = {
   container: css({ fontFamily: 'monospace', padding: '16px', maxWidth: '900px' }),
