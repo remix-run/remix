@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it, mock } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import {
   type FileUploadHandler,
@@ -55,7 +55,7 @@ describe('parseFormData', () => {
     assert.equal(await file.text(), 'This is an example file.')
   })
 
-  it('calls the file upload handler for each file part', async () => {
+  it('calls the file upload handler for each file part', async (t) => {
     let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
@@ -76,7 +76,7 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let fileUploadHandler = mock.fn<FileUploadHandler>()
+    let fileUploadHandler = t.mock.fn<FileUploadHandler>()
 
     await parseFormData(request, fileUploadHandler)
 

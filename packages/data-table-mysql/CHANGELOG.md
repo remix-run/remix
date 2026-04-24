@@ -2,6 +2,31 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Removed adapter options
+
+  **Affected APIs**
+
+  - `MysqlDatabaseAdapterOptions` type: removed
+  - `createMysqlDatabaseAdapter` function: `options` arg removed
+  - `MysqlDatabaseAdapter` constructor: `options` arg removed
+
+  **Why**
+
+  Adapter options existed solely for tests to override adapter capabilities.
+  If you must override capabilities, you can do so directly via mutation:
+
+  ```ts
+  let adapter = createMysqlDatabaseAdapter(mysql)
+  adapter.capabilities = {
+    ...adapter.capabilities,
+    upsert: false,
+  }
+  ```
+
 ## v0.2.0
 
 ### Minor Changes

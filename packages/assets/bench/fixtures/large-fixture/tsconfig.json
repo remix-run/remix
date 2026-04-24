@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@remix-run/component",
+    "types": ["node", "dom-navigation"],
+    "paths": {
+      "#packages/*": ["./packages/*"]
+    }
+  },
+  "include": ["project", "packages"],
+  "exclude": []
+}

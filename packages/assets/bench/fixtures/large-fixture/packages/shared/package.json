@@ -1,0 +1,5 @@
+{
+  "name": "@bench/shared",
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,66 @@
+{
+  "name": "@remix-run/assets",
+  "version": "0.1.0",
+  "description": "Fetch-based server for compiling browser JS/TS assets on demand",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/assets"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/assets#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/assets.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*",
+    "chokidar": "^5.0.0",
+    "es-module-lexer": "^2.0.0",
+    "get-tsconfig": "^4.13.6",
+    "magic-string": "^0.30.21",
+    "oxc-minify": "^0.121.0",
+    "oxc-parser": "^0.121.0",
+    "oxc-resolver": "^11.19.1",
+    "oxc-transform": "^0.121.0",
+    "source-map-js": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "bench": "pnpm --dir ./bench run bench",
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "scripts",
+    "assets",
+    "transform",
+    "server"
+  ]
+}

@@ -2,6 +2,42 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-alpha.5
+
+### Pre-release Changes
+
+- Added `package.json` `exports`:
+
+  - `remix/assert` to re-export APIs from `@remix-run/assert`
+  - `remix/test` to re-export APIs from `@remix-run/test`
+
+  Added `package.json` `bin` commands:
+
+  - `remix-test` delegating to `@remix-run/test`
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assert@0.1.0`](https://github.com/remix-run/remix/releases/tag/assert@0.1.0)
+  - [`assets@0.1.0`](https://github.com/remix-run/remix/releases/tag/assets@0.1.0)
+  - [`async-context-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.2.1)
+  - [`auth@0.1.1`](https://github.com/remix-run/remix/releases/tag/auth@0.1.1)
+  - [`auth-middleware@0.1.1`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.1.1)
+  - [`component@0.7.0`](https://github.com/remix-run/remix/releases/tag/component@0.7.0)
+  - [`compression-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.5)
+  - [`cop-middleware@0.1.1`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.1)
+  - [`cors-middleware@0.1.1`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.1)
+  - [`csrf-middleware@0.1.1`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.1)
+  - [`data-table-mysql@0.3.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.3.0)
+  - [`data-table-postgres@0.3.0`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.3.0)
+  - [`data-table-sqlite@0.3.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.3.0)
+  - [`fetch-router@0.18.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.1)
+  - [`form-data-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.2.1)
+  - [`logger-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.1.5)
+  - [`method-override-middleware@0.1.6`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.6)
+  - [`route-pattern@0.20.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.20.1)
+  - [`session-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.2.1)
+  - [`static-middleware@0.4.6`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.6)
+  - [`test@0.1.0`](https://github.com/remix-run/remix/releases/tag/test@0.1.0)
+
 ## v3.0.0-alpha.4
 
 ### Pre-release Changes

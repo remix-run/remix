@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/session-middleware",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Middleware for managing sessions with cookie-based storage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -32,10 +32,12 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/session": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
@@ -48,7 +50,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

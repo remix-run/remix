@@ -7,7 +7,7 @@ A test framework for Remix applications
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
-- Mock functions and spies via `t.mock` / `t.spyOn`
+- Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Coverage reporting
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -206,11 +206,18 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Create a mock function with an optional implementation
-  mock<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
+  mock: {
+    // Create a mock function with an optional implementation
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 
-  // Spy on an object method with an optional implementation override
-  spyOn<T extends object, K extends keyof T>(obj: T, method: K): MockFunction
+    // Mock an object method with an optional implementation override
+    method<T extends object, K extends keyof T>(
+      obj: T,
+      methodName: K,
+      impl?: Function,
+    ): MockFunction
+  }
 
   // E2E only: start a server with the given request handler, returns a Playwright Page
   serve(handler: (req: Request) => Promise<Response>): Promise<Page>
@@ -219,20 +226,20 @@ interface TestContext {
 
 #### Mocks and Spies
 
-Use `t.mock()`/`t.spyOn()` to set up mocks and spies. This is preferred over the standalone `mock` import because TestContext mocks/spies wll be automatically cleaned up after the test runs.
+Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
 
 ```ts
 it('mocks and spies', (t) => {
   // Create a mock function
-  let fn = t.mock((x: number) => x * 2)
+  let fn = t.mock.fn((x: number) => x * 2)
   fn(3)
   fn.mock.calls[0].result // 6
 
-  // Spy on an existing method
-  let spy = t.spyOn(console, 'warn')
+  // Mock an existing method
+  let spy = t.mock.method(console, 'warn')
   console.warn('test')
   spy.mock.calls.length // 1
-  // both fn and spy are restored automatically when the test ends
+  // spy is restored automatically when the test ends
 })
 ```
 
@@ -267,7 +274,7 @@ When you need a mock outside of a test body, import `mock` directly and call `re
 ```ts
 import { mock } from 'remix/test'
 
-let spy = mock.spyOn(console, 'log')
+let spy = mock.method(console, 'log')
 // ...
 spy.mock.restore?.()
 ```

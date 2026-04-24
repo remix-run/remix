@@ -1,0 +1,18 @@
+{
+  "name": "assets-bench",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/assets": "workspace:*",
+    "@remix-run/component": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "bench": "node --disable-warning=ExperimentalWarning runner.ts",
+    "typecheck": "tsc --noEmit -p ./fixtures/basic-fixture/tsconfig.json && tsc --noEmit -p ./fixtures/large-fixture/tsconfig.json"
+  }
+}

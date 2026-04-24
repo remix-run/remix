@@ -2,6 +2,46 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v0.7.0
+
+### Minor Changes
+
+- BREAKING CHANGE: mixin render callbacks no longer receive `children` or `innerHTML`, and returned mixin elements cannot override host subtree content. `handle.element` and `createElement(handle.element, ...)` are now limited to patching host props and nested `mix` values.
+
+- Add an `attrs(...)` mixin for applying default host props through `mix`. Recipe authors can now provide attributes such as `type="button"` without overriding explicit JSX props, which makes it easier to build reusable element recipes that include both styling and safe defaults.
+
+- Allow nested arrays in `mix` props and flatten them during JSX normalization. This makes it easier to compose reusable style and behavior recipes without manually spreading arrays before passing them to elements or components.
+
+- `renderToStream()` now accepts a `resolveClientEntry(entryId, component)` callback for resolving opaque client entry IDs during server rendering.
+
+  For example:
+
+  ```ts
+  import type { RemixNode } from 'remix/component'
+  import { renderToStream } from 'remix/component/server'
+
+  import { resolveEntryId } from './resolve-entry-id.ts'
+
+  export function render(node: RemixNode) {
+    return renderToStream(node, {
+      async resolveClientEntry(entryId, component) {
+        return {
+          href: await resolveEntryId(entryId),
+          exportName: entryId.split('#')[1] || component.name,
+        }
+      },
+    })
+  }
+  ```
+
+### Patch Changes
+
+- Fix controlled `<select>` restore timing so `change` handlers can read and commit the newly selected value.
+
+  When a browser dispatches `input` before `change` for a select interaction, Remix Component now defers controlled restoration for selects to the `change` phase instead of restoring on `input`, which prevents stale controlled values from clobbering the pending selection before app handlers run.
+
+- `handle.signal` in mixins now aborts when that specific mixin slot is removed, even if the host node stays mounted. This fixes cleanup patterns that expect `handle.signal` to match the mixin `remove` lifecycle.
+
 ## v0.6.0
 
 ### Minor Changes

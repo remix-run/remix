@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/static-middleware",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -32,11 +32,13 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/method-override-middleware": "workspace:*",
     "@remix-run/mime": "workspace:*",
     "@remix-run/response": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
@@ -51,7 +53,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

@@ -2,6 +2,26 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.20.1
+
+### Patch Changes
+
+- Matches return decoded values for params in hostname
+
+  ```ts
+  pattern = new RoutePattern('://:subdomain.example.com/posts/:slug')
+
+  url = new URL('https://café.example.com/posts/123')
+  pattern.match(url)?.params.subdomain
+  // Before -> 'xn--caf-dma'
+  // After -> 'café'
+
+  url = new URL('https://北京.example.com/posts/123')
+  pattern.match(url)?.params.subdomain
+  // Before -> 'xn--1lq90i'
+  // After -> '北京'
+  ```
+
 ## v0.20.0
 
 ### Minor Changes

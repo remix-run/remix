@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it, mock } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import type * as http from 'node:http'
 import * as stream from 'node:stream'
@@ -8,7 +8,7 @@ import { type FetchHandler } from './fetch-handler.ts'
 import { createRequest, createRequestListener } from './request-listener.ts'
 
 describe('createRequestListener', () => {
-  it('returns a request listener', async () => {
+  it('returns a request listener', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => new Response('Hello, world!')
 
@@ -19,11 +19,11 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let chunks: Uint8Array[] = []
-      mock.method(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Hello, world!')
         resolve()
@@ -33,7 +33,7 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('returns custom status, statusText, and header values (HTTP/1)', async () => {
+  it('returns custom status, statusText, and header values (HTTP/1)', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () =>
         new Response('Hello, world!', {
@@ -52,7 +52,7 @@ describe('createRequestListener', () => {
       req.httpVersionMajor = 1
       let res = createMockResponse({ req })
 
-      mock.method(
+      t.mock.method(
         res,
         'writeHead',
         (status: number, statusText: string, headers: Record<string, string | string[]>) => {
@@ -63,13 +63,13 @@ describe('createRequestListener', () => {
         },
       )
 
-      mock.method(res, 'end', () => resolve())
+      t.mock.method(res, 'end', () => resolve())
 
       listener(req, res)
     })
   })
 
-  it('returns custom status, statusText, and header values (HTTP/2)', async () => {
+  it('returns custom status, statusText, and header values (HTTP/2)', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () =>
         new Response('Hello, world!', {
@@ -88,7 +88,7 @@ describe('createRequestListener', () => {
       req.httpVersionMajor = 2
       let res = createMockResponse({ req })
 
-      mock.method(
+      t.mock.method(
         res,
         'writeHead',
         (status: number, headers: Record<string, string | string[]>) => {
@@ -98,18 +98,18 @@ describe('createRequestListener', () => {
         },
       )
 
-      mock.method(res, 'end', () => resolve())
+      t.mock.method(res, 'end', () => resolve())
 
       listener(req, res)
     })
   })
 
-  it('calls onError when an error is thrown in the request handler', async () => {
+  it('calls onError when an error is thrown in the request handler', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
         throw new Error('boom!')
       }
-      let errorHandler = mock.fn()
+      let errorHandler = t.mock.fn()
 
       let listener = createRequestListener(handler, { onError: errorHandler })
       assert.ok(listener)
@@ -117,7 +117,7 @@ describe('createRequestListener', () => {
       let req = createMockRequest()
       let res = createMockResponse({ req })
 
-      mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(errorHandler.mock.calls.length, 1)
         resolve()
       })
@@ -126,7 +126,7 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('returns a 500 "Internal Server Error" response when an error is thrown in the request handler', async () => {
+  it('returns a 500 "Internal Server Error" response when an error is thrown in the request handler', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
         throw new Error('boom!')
@@ -142,16 +142,16 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let status: number | undefined
-      mock.method(res, 'writeHead', (statusCode: number) => {
+      t.mock.method(res, 'writeHead', (statusCode: number) => {
         status = statusCode
       })
 
       let chunks: Uint8Array[] = []
-      mock.method(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(status, 500)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Internal Server Error')
@@ -234,7 +234,7 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('sets multiple Set-Cookie headers', async () => {
+  it('sets multiple Set-Cookie headers', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
         let headers = new Headers()
@@ -252,7 +252,7 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let headers: Record<string, string | string[]>
-      mock.method(
+      t.mock.method(
         res,
         'writeHead',
         (_status: number, _statusText: string, headersObj: Record<string, string | string[]>) => {
@@ -260,7 +260,7 @@ describe('createRequestListener', () => {
         },
       )
 
-      mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.deepEqual(headers, {
           'content-type': 'text/plain',
           'set-cookie': ['a=1', 'b=2'],
@@ -272,7 +272,7 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('truncates the response body when the request method is HEAD', async () => {
+  it('truncates the response body when the request method is HEAD', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => new Response('Hello, world!')
 
@@ -283,11 +283,11 @@ describe('createRequestListener', () => {
       let res = createMockResponse({ req })
 
       let chunks: Uint8Array[] = []
-      mock.method(res, 'write', (chunk: Uint8Array) => {
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk)
       })
 
-      mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', () => {
         assert.equal(chunks.length, 0)
         resolve()
       })

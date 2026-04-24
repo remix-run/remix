@@ -39,8 +39,7 @@ export type SerializableProps = {
  */
 export type EntryMetadata = {
   $entry: true
-  $moduleUrl: string
-  $exportName: string
+  $entryId: string
 }
 
 /**
@@ -55,7 +54,8 @@ export type EntryComponent<context = NoContext, setup = undefined, props = {}> =
 /**
  * Marks a component as a client entry for client-side hydration.
  *
- * @param href Module URL with optional export name (format: "/js/module.js#ExportName")
+ * @param entryId Module URL with optional export name (format: "/js/module.js#ExportName") by
+ * default, or a custom entry identifier when paired with `resolveClientEntry`
  * @param component Component function that will be hydrated on the client
  * @returns The component augmented with entry metadata
  *
@@ -88,32 +88,19 @@ export function clientEntry<
   setup extends SerializableValue = undefined,
   props extends SerializableProps = {},
 >(
-  href: string,
+  entryId: string,
   component: (handle: Handle<context>, setup: setup) => (props: props) => RemixNode,
 ): EntryComponent<context, setup, props>
 
 // Implementation
-export function clientEntry(href: string, component: any): any {
-  // Parse module URL and export name
-  let [moduleUrl, exportName] = href.split('#')
-
-  if (!moduleUrl) {
-    throw new Error('clientEntry() requires a module URL')
-  }
-
-  // Use component name as fallback if no export name provided
-  let finalExportName = exportName || component.name
-
-  if (!finalExportName) {
-    throw new Error(
-      'clientEntry() requires either an export name in the href (e.g., "/js/module.js#ComponentName") or a named component function',
-    )
+export function clientEntry(entryId: string, component: any): any {
+  if (!entryId) {
+    throw new Error('clientEntry() requires an entry ID')
   }
 
   // Augment the component with entry metadata
   component.$entry = true
-  component.$moduleUrl = moduleUrl
-  component.$exportName = finalExportName
+  component.$entryId = entryId
 
   return component
 }

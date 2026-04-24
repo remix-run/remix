@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Browser login, OAuth, and OIDC helpers for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -32,6 +32,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/auth-middleware": "workspace:*",
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
@@ -39,6 +40,7 @@
     "@remix-run/headers": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
@@ -50,7 +52,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

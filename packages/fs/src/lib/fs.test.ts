@@ -1,9 +1,9 @@
-import * as assert from 'node:assert'
+import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { beforeEach, afterEach, describe, it } from 'node:test'
+import { beforeEach, afterEach, describe, it } from '@remix-run/test'
 
 import { openLazyFile, writeFile } from './fs.ts'
 

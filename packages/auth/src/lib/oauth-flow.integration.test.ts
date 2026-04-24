@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { afterEach, beforeEach, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 
 import { auth, Auth, requireAuth, createSessionAuthScheme } from '@remix-run/auth-middleware'
 import { createCookie } from '@remix-run/cookie'

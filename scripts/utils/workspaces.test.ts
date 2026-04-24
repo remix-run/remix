@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import assert from '@remix-run/assert'
+import { test } from '@remix-run/test'
 import {
   getAffectedWorkspaceDirs,
   getChangedWorkspaceDirs,

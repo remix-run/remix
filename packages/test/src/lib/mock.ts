@@ -42,7 +42,7 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
   return fn
 }
 
-function createSpy<T extends object, K extends keyof T>(
+function createMethodMock<T extends object, K extends keyof T>(
   obj: T,
   method: K,
   impl?: T[K] extends (...args: any[]) => any ? (...args: Parameters<T[K]>) => any : never,
@@ -58,7 +58,8 @@ function createSpy<T extends object, K extends keyof T>(
 }
 
 /**
- * Utilities for creating mock functions and spies.
+ * Utilities for creating mock functions and method spies. Mirrors the names
+ * on Node.js's built-in `MockTracker` from `node:test`.
  *
  * @example
  * // Standalone mock
@@ -66,8 +67,8 @@ function createSpy<T extends object, K extends keyof T>(
  * fn(3)
  * assert.equal(fn.mock.calls[0].result, 6)
  *
- * // Spy on an existing method
- * const spy = mock.spyOn(console, 'log')
+ * // Mock an existing method
+ * const spy = mock.method(console, 'log')
  * console.log('hello')
  * assert.equal(spy.mock.calls.length, 1)
  * spy.mock.restore?.()
@@ -80,9 +81,9 @@ export const mock = {
    */
   fn: createMockFn,
   /**
-   * Replaces `obj[method]` with a spy and records every call. The original
-   * method is used as the implementation unless `impl` is provided. Call
-   * `spy.mock.restore()` to revert.
+   * Replaces `obj[methodName]` with a mock and records every call. The
+   * original method is used as the implementation unless `impl` is provided.
+   * Call `mockFn.mock.restore()` to revert.
    */
-  spyOn: createSpy,
+  method: createMethodMock,
 }

@@ -2,6 +2,31 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Removed adapter options
+
+  **Affected APIs**
+
+  - `SqliteDatabaseAdapterOptions` type: removed
+  - `createSqliteDatabaseAdapter` function: `options` arg removed
+  - `SqliteDatabaseAdapter` constructor: `options` arg removed
+
+  **Why**
+
+  Adapter options existed solely for tests to override adapter capabilities.
+  If you must override capabilities, you can do so directly via mutation:
+
+  ```ts
+  let adapter = createSqliteDatabaseAdapter(sqlite)
+  adapter.capabilities = {
+    ...adapter.capabilities,
+    returning: false,
+  }
+  ```
+
 ## v0.2.0
 
 ### Minor Changes

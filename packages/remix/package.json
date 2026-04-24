@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-alpha.5",
   "description": "Remix Web Framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -19,6 +19,7 @@
   "type": "module",
   "exports": {
     "./assert": "./src/assert.ts",
+    "./assets": "./src/assets.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
@@ -86,6 +87,10 @@
       "./assert": {
         "types": "./dist/assert.d.ts",
         "default": "./dist/assert.js"
+      },
+      "./assets": {
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
       },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
@@ -339,6 +344,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@remix-run/assets": "workspace:^",
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/auth": "workspace:^",
     "@remix-run/auth-middleware": "workspace:^",

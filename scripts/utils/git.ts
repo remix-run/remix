@@ -1,7 +1,7 @@
 import * as cp from 'node:child_process'
 
-function execGit(args: string[]): string {
-  return cp.execFileSync('git', args, { stdio: 'pipe', encoding: 'utf-8' }).trim()
+function execGit(args: string[], cwd?: string): string {
+  return cp.execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf-8' }).trim()
 }
 
 function parseVersionFromPackageJson(content: string): string | null {
@@ -13,9 +13,9 @@ function parseVersionFromPackageJson(content: string): string | null {
   }
 }
 
-function getPackageVersionAtRef(ref: string, packageJsonPath: string): string | null {
+function getPackageVersionAtRef(ref: string, packageJsonPath: string, cwd?: string): string | null {
   try {
-    let content = execGit(['show', `${ref}:${packageJsonPath}`])
+    let content = execGit(['show', `${ref}:${packageJsonPath}`], cwd)
     return parseVersionFromPackageJson(content)
   } catch {
     return null
@@ -29,12 +29,13 @@ function getPackageVersionAtRef(ref: string, packageJsonPath: string): string | 
 export function findVersionIntroductionCommit(
   packageJsonPath: string,
   version: string,
+  cwd?: string,
 ): string | null {
   let normalizedPath = packageJsonPath.replaceAll('\\', '/')
 
   let output: string
   try {
-    output = execGit(['log', '--format=%H', '--', normalizedPath])
+    output = execGit(['log', '--format=%H', '--', normalizedPath], cwd)
   } catch {
     return null
   }
@@ -46,12 +47,12 @@ export function findVersionIntroductionCommit(
   let commits = output.split('\n').filter((line) => line.length > 0)
 
   for (let commit of commits) {
-    let commitVersion = getPackageVersionAtRef(commit, normalizedPath)
+    let commitVersion = getPackageVersionAtRef(commit, normalizedPath, cwd)
     if (commitVersion !== version) {
       continue
     }
 
-    let parentLine = execGit(['rev-list', '--parents', '-n', '1', commit])
+    let parentLine = execGit(['rev-list', '--parents', '-n', '1', commit], cwd)
     let [_commit, ...parents] = parentLine.split(' ').filter((line) => line.length > 0)
 
     if (parents.length === 0) {
@@ -60,7 +61,7 @@ export function findVersionIntroductionCommit(
 
     let introducedInCommit = false
     for (let parent of parents) {
-      let parentVersion = getPackageVersionAtRef(parent, normalizedPath)
+      let parentVersion = getPackageVersionAtRef(parent, normalizedPath, cwd)
       if (parentVersion !== version) {
         introducedInCommit = true
         break
@@ -79,9 +80,9 @@ export function findVersionIntroductionCommit(
  * Gets the local commit target for a tag.
  * Returns null when the tag does not exist locally.
  */
-export function getLocalTagTarget(tag: string): string | null {
+export function getLocalTagTarget(tag: string, cwd?: string): string | null {
   try {
-    return execGit(['rev-parse', '--verify', `refs/tags/${tag}^{commit}`])
+    return execGit(['rev-parse', '--verify', `refs/tags/${tag}^{commit}`], cwd)
   } catch {
     return null
   }
