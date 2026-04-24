@@ -32,9 +32,7 @@ describe('new RequestContext()', () => {
     assert.equal(req.headers.get('X-New'), null)
   })
 
-  it(
-    'stores and reads FormData using the FormData constructor as a context key',
-    async () => {
+  it('stores and reads FormData using the FormData constructor as a context key', async () => {
     let context = new RequestContext(new Request('https://remix.run/test', { method: 'POST' }))
     let formData = new FormData()
     let file = new File(['hello'], 'hello.txt', { type: 'text/plain' })
@@ -52,8 +50,7 @@ describe('new RequestContext()', () => {
     assert.equal(avatar.name, file.name)
     assert.equal(avatar.type, file.type)
     assert.equal(await avatar.text(), await file.text())
-    },
-  )
+  })
 
   it('sets and gets values in request context', () => {
     let key = createContextKey('hello')
