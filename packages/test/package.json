@@ -45,6 +45,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node src/cli.ts",
+    "test:bun": "bun --bun src/cli.ts --glob.test 'src/**/*.test.{ts,tsx}' --glob.e2e 'src/**/*.test.e2e.{ts,tsx}' --type server",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

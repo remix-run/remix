@@ -14,6 +14,13 @@ import { createRouter } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
 
+// Native File normalizes some MIME types differently across runtimes (for example
+// Bun adds charset for text types and rewrites application/javascript), so derive
+// the input type from the current runtime before asserting the response headers.
+function normalizeFileType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
 describe('formData middleware', () => {
   it('parses application/x-www-form-urlencoded form data from the request body', async () => {
     let router = createRouter({
@@ -90,6 +97,7 @@ describe('formData middleware', () => {
     })
 
     let boundary = '----WebKitFormBoundary1234567890'
+    let fileType = normalizeFileType('text/plain')
     let response = await router.fetch('https://remix.run/', {
       method: 'POST',
       headers: {
@@ -98,12 +106,12 @@ describe('formData middleware', () => {
       body: [
         `--${boundary}`,
         'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
-        'Content-Type: text/plain',
+        `Content-Type: ${fileType}`,
         '',
         'test 1',
         `--${boundary}`,
         'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
-        'Content-Type: text/plain',
+        `Content-Type: ${fileType}`,
         '',
         'test 2',
         `--${boundary}--`,
@@ -115,12 +123,12 @@ describe('formData middleware', () => {
       file1: {
         isFile: true,
         name: 'test1.txt',
-        type: 'text/plain',
+        type: fileType,
       },
       file2: {
         isFile: true,
         name: 'test2.txt',
-        type: 'text/plain',
+        type: fileType,
       },
     })
   })
@@ -387,6 +395,7 @@ describe('formData middleware', () => {
     router.post('/', () => new Response('home'))
 
     let boundary = '----WebKitFormBoundary1234567890'
+    let fileType = normalizeFileType('text/plain')
     let response = await router.fetch('https://remix.run/', {
       method: 'POST',
       headers: {
@@ -395,12 +404,12 @@ describe('formData middleware', () => {
       body: [
         `--${boundary}`,
         'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
-        'Content-Type: text/plain',
+        `Content-Type: ${fileType}`,
         '',
         'test 1',
         `--${boundary}`,
         'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
-        'Content-Type: text/plain',
+        `Content-Type: ${fileType}`,
         '',
         'test 2',
         `--${boundary}--`,
@@ -416,14 +425,14 @@ describe('formData middleware', () => {
     let upload1 = call0.arguments[0]
     assert.equal(upload1.fieldName, 'file1')
     assert.equal(upload1.name, 'test1.txt')
-    assert.equal(upload1.type, 'text/plain')
+    assert.equal(upload1.type, fileType)
     assert.equal(await upload1.text(), 'test 1')
 
     let call1 = uploadHandler.mock.calls[1]
     let upload2 = call1.arguments[0]
     assert.equal(upload2.fieldName, 'file2')
     assert.equal(upload2.name, 'test2.txt')
-    assert.equal(upload2.type, 'text/plain')
+    assert.equal(upload2.type, fileType)
     assert.equal(await upload2.text(), 'test 2')
   })
 

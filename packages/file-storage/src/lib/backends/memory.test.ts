@@ -4,6 +4,13 @@ import { parseFormData } from '@remix-run/form-data-parser'
 
 import { createMemoryFileStorage } from './memory.ts'
 
+// Native File normalizes some MIME types differently across runtimes (for example
+// Bun adds charset for text types and rewrites application/javascript), so derive
+// the input type from the current runtime before asserting the response headers.
+function normalizeFileType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
 describe('createMemoryFileStorage', () => {
   it('stores and retrieves files', async () => {
     let storage = createMemoryFileStorage()
@@ -17,7 +24,7 @@ describe('createMemoryFileStorage', () => {
 
     assert.ok(retrieved)
     assert.equal(retrieved!.name, 'hello.txt')
-    assert.equal(retrieved!.type, 'text/plain')
+    assert.equal(retrieved!.type, file.type)
     assert.equal(retrieved!.size, 13)
 
     let text = await retrieved.text()
@@ -104,6 +111,7 @@ describe('createMemoryFileStorage', () => {
       let storage = createMemoryFileStorage()
 
       let boundary = '----WebKitFormBoundaryzv5f5B8XUeVl7e0A'
+      let fileType = normalizeFileType('text/plain')
       let request = new Request('http://example.com', {
         method: 'POST',
         headers: {
@@ -112,7 +120,7 @@ describe('createMemoryFileStorage', () => {
         body: [
           `--${boundary}`,
           'Content-Disposition: form-data; name="a"; filename="hello.txt"',
-          'Content-Type: text/plain',
+          `Content-Type: ${fileType}`,
           '',
           'Hello, world!',
           `--${boundary}--`,
@@ -131,7 +139,7 @@ describe('createMemoryFileStorage', () => {
       assert.equal(files[0].key, 'hello')
       assert.equal(files[0].name, 'hello.txt')
       assert.equal(files[0].size, 13)
-      assert.equal(files[0].type, 'text/plain')
+      assert.equal(files[0].type, fileType)
       assert.ok(files[0].lastModified)
     })
   })

@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises'
 import { chromium, firefox, webkit } from 'playwright'
 import type { BrowserContextOptions, LaunchOptions } from 'playwright'
 import type { PlaywrightTestConfig } from 'playwright/test'
-import { tsImport } from 'tsx/esm/api'
+import { importModule } from './import-module.ts'
 
 export type PlaywrightUseOpts = PlaywrightTestConfig['use']
 
@@ -20,7 +20,7 @@ export async function loadPlaywrightConfig(
   for (let configPath of candidates) {
     try {
       await fs.access(configPath)
-      let mod = await tsImport(configPath, { parentURL: import.meta.url })
+      let mod = await importModule(configPath, import.meta)
       return mod.default ?? mod
     } catch {
       // not found or failed to load — try next

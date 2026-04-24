@@ -1,9 +1,9 @@
 import { workerData, parentPort } from 'node:worker_threads'
-import { tsImport } from 'tsx/esm/api'
 import { runTests, type TestResults } from './executor.ts'
+import { importModule } from './import-module.ts'
 
 try {
-  await tsImport(workerData.file, import.meta.url)
+  await importModule(workerData.file, import.meta)
 
   let results = await runTests()
   parentPort!.postMessage(results)

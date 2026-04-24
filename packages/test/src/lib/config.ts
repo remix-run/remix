@@ -2,8 +2,8 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import * as util from 'node:util'
-import { tsImport } from 'tsx/esm/api'
 import type { PlaywrightTestConfig } from 'playwright/test'
+import { importModule } from './import-module.ts'
 
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
@@ -220,7 +220,7 @@ async function loadConfigFile(configPath?: string): Promise<RemixTestConfig> {
   for (let candidate of candidates) {
     try {
       await fsp.access(candidate)
-      let mod = await tsImport(candidate, { parentURL: import.meta.url })
+      let mod = await importModule(candidate, import.meta)
       return mod.default ?? mod
     } catch {
       // not found or failed to load — try next

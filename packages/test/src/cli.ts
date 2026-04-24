@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
 import { createWatcher } from './lib/watcher.ts'
+import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import type { Counts } from './lib/utils.ts'
@@ -40,9 +40,7 @@ async function executeRun() {
 
   try {
     if (config.setup) {
-      let mod = await tsImport(path.resolve(process.cwd(), config.setup), {
-        parentURL: import.meta.url,
-      })
+      let mod = await importModule(path.resolve(process.cwd(), config.setup), import.meta)
       let globalSetup: (() => Promise<void> | void) | undefined = mod.globalSetup
       globalTeardown = mod.globalTeardown
       await globalSetup?.()

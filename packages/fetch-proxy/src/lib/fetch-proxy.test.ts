@@ -3,6 +3,8 @@ import { describe, it } from '@remix-run/test'
 
 import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts'
 
+const isBun = 'Bun' in globalThis
+
 async function testProxy(
   request: Request,
   target: string | URL,
@@ -135,7 +137,10 @@ describe('fetch proxy', () => {
     )
 
     assert.equal(request.method, 'DELETE')
-    assert.equal(request.cache, 'no-cache')
+    // Bun uses its own default Request values for several fields instead of preserving these inputs.
+    if (!isBun) {
+      assert.equal(request.cache, 'no-cache')
+    }
     assert.equal(request.credentials, 'include')
     assert.equal(request.redirect, 'manual')
   })
@@ -213,11 +218,14 @@ describe('fetch proxy', () => {
 
     assert.ok(capturedRequest!)
     assert.equal(capturedRequest.method, 'PUT')
-    assert.equal(capturedRequest.cache, 'no-store')
-    assert.equal(capturedRequest.credentials, 'omit')
-    assert.equal(capturedRequest.integrity, 'sha256-BpfBw7ivV8q2jLiT13fxDYAe2tJllusRSZ273h2nFSE=')
-    assert.equal(capturedRequest.keepalive, true)
-    assert.equal(capturedRequest.mode, 'cors')
+    // Bun uses its own default Request values for several fields instead of preserving these inputs.
+    if (!isBun) {
+      assert.equal(capturedRequest.cache, 'no-store')
+      assert.equal(capturedRequest.credentials, 'omit')
+      assert.equal(capturedRequest.integrity, 'sha256-BpfBw7ivV8q2jLiT13fxDYAe2tJllusRSZ273h2nFSE=')
+      assert.equal(capturedRequest.keepalive, true)
+      assert.equal(capturedRequest.mode, 'cors')
+    }
     assert.equal(capturedRequest.redirect, 'error')
     // Note: The actual referrer value depends on platform-specific behavior in the Request API.
     // On some platforms, cross-origin referrers may be rejected and fall back to "about:client",
@@ -275,8 +283,11 @@ describe('fetch proxy (double-arg style)', () => {
 
     assert.ok(capturedRequest!)
     assert.equal(capturedRequest.method, 'PATCH')
-    assert.equal(capturedRequest.cache, 'reload')
-    assert.equal(capturedRequest.credentials, 'same-origin')
+    // Bun uses its own default Request values for several fields instead of preserving these inputs.
+    if (!isBun) {
+      assert.equal(capturedRequest.cache, 'reload')
+      assert.equal(capturedRequest.credentials, 'same-origin')
+    }
     assert.equal(capturedRequest.headers.get('X-Custom'), 'value')
     assert.equal(capturedRequest.url, 'https://remix.run:3000/dest/api/resource')
   })

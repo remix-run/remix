@@ -51,6 +51,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
+    "test:bun": "bun x --bun remix-test --glob.test 'src/**/*.test.{ts,tsx}' --glob.e2e 'src/**/*.test.e2e.{ts,tsx}' --type server",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
