@@ -1,5 +1,5 @@
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test'
+import { describe, it } from 'remix/test/dom'
 import { RestfulForm } from './restful-form.tsx'
 
 describe('RestfulForm', () => {

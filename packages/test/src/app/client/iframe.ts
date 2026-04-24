@@ -1,3 +1,4 @@
+import { createDomTestContext } from '../../lib/context-dom.ts'
 import { runTests } from '../../lib/executor.ts'
 import { render } from '../../lib/render.ts'
 
@@ -6,7 +7,9 @@ const testFile = params.get('file')!
 
 try {
   await import(testFile)
-  let results = await runTests({ render })
+  let results = await runTests({
+    createTestContext: (opts) => createDomTestContext({ ...opts, render }),
+  })
   window.parent.postMessage({ type: 'test-results', results }, '*')
 } catch (error: any) {
   window.parent.postMessage(

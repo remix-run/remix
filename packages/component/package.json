@@ -57,7 +57,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@types/dom-navigation": "^1.0.7"
+    "@types/dom-navigation": "1.0.6"
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",

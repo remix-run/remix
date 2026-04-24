@@ -23,11 +23,12 @@ export function createFakeTimers(): FakeTimers {
     pending = pending.filter((t) => t.id !== id)
   }
 
-  globalThis.setTimeout = ((fn: () => void, delay = 0) => schedule(fn, delay)) as typeof setTimeout
-  globalThis.clearTimeout = cancel as typeof clearTimeout
+  globalThis.setTimeout = ((fn: () => void, delay = 0) =>
+    schedule(fn, delay)) as unknown as typeof setTimeout
+  globalThis.clearTimeout = cancel as unknown as typeof clearTimeout
   globalThis.setInterval = ((fn: () => void, delay = 0) =>
-    schedule(fn, delay, Math.max(0, delay))) as typeof setInterval
-  globalThis.clearInterval = cancel as typeof clearInterval
+    schedule(fn, delay, Math.max(0, delay))) as unknown as typeof setInterval
+  globalThis.clearInterval = cancel as unknown as typeof clearInterval
 
   return {
     advance(ms: number) {

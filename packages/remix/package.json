@@ -81,6 +81,7 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./test/dom": "./src/test/dom.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -337,6 +338,10 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./test/dom": {
+        "types": "./dist/test/dom.d.ts",
+        "default": "./dist/test/dom.js"
+      },
       "./package.json": "./package.json"
     },
     "bin": {
@@ -344,7 +349,6 @@
     }
   },
   "devDependencies": {
-    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },

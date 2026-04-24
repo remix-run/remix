@@ -1,12 +1,16 @@
 import type { Browser, BrowserContextOptions } from 'playwright'
-import { createTestContext } from './context.ts'
+import {
+  createTestContext,
+  type CreateTestContextOptions,
+  type TestContext,
+  type TestContextFactoryResult,
+} from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { CreateServerFunction } from './e2e-server.ts'
-import type { render } from './render.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 
 export async function runTests(options?: {
-  render?: typeof render
+  createTestContext?: (opts: CreateTestContextOptions) => TestContextFactoryResult<TestContext>
   createServer?: CreateServerFunction
   browser?: Browser
   open?: boolean
@@ -93,8 +97,8 @@ export async function runTests(options?: {
         duration: 0,
       }
 
-      let { testContext, cleanup } = createTestContext({
-        render: options?.render,
+      let factory = options?.createTestContext ?? createTestContext
+      let { testContext, cleanup } = factory({
         createServer: options?.createServer,
         browser: options?.browser,
         open: options?.open,

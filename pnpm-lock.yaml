@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@types/dom-navigation':
-      specifier: 1.0.6
-      version: 1.0.6
     '@types/node':
       specifier: ^24.6.0
       version: 24.10.4
@@ -85,9 +82,6 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -107,9 +101,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -129,9 +120,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -179,9 +167,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -238,9 +223,6 @@ importers:
         specifier: ^7.7.3
         version: 7.7.3
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
@@ -265,9 +247,6 @@ importers:
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -333,9 +312,6 @@ importers:
         specifier: workspace:*
         version: link:../../component
     devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -430,8 +406,8 @@ importers:
   packages/component:
     dependencies:
       '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
+        specifier: 1.0.6
+        version: 1.0.6
     devDependencies:
       '@vitest/browser':
         specifier: ^3.2.4
@@ -548,9 +524,6 @@ importers:
         specifier: workspace:^
         version: link:../../remix
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1462,9 +1435,6 @@ importers:
         specifier: workspace:^
         version: link:../test
     devDependencies:
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1771,9 +1741,6 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
-      '@types/dom-navigation':
-        specifier: 'catalog:'
-        version: 1.0.6
       '@types/istanbul-lib-coverage':
         specifier: ^2.0.6
         version: 2.0.6
@@ -3600,9 +3567,6 @@ packages:
 
   '@types/dom-navigation@1.0.6':
     resolution: {integrity: sha512-4srBpebg8rFDm0LafYuWhZMgLoSr5J4gx4q1uaTqOXwVk00y+CkTdJ4SC57sR1cMhP0ZRjApMRdHVcFYOvPGTw==}
-
-  '@types/dom-navigation@1.0.7':
-    resolution: {integrity: sha512-Di4W+i2faYquHUnyWUg3bBQp5pTNvjDDA7mIYfD/1WlLgan6sKkeVjGbdL78K0CuNEk5Pfc/c0rfelwkz10mnQ==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -6861,8 +6825,6 @@ snapshots:
   '@types/deep-eql@4.0.2': {}
 
   '@types/dom-navigation@1.0.6': {}
-
-  '@types/dom-navigation@1.0.7': {}
 
   '@types/estree@1.0.8': {}
 

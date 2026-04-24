@@ -1,6 +1,6 @@
 import decamelize from 'decamelize'
 import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { describe, it } from '@remix-run/test/dom'
 import { on, type Handle } from '@remix-run/component'
 
 describe('Counter', () => {

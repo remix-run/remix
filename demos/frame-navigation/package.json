@@ -6,7 +6,6 @@
     "remix": "workspace:*"
   },
   "devDependencies": {
-    "@types/dom-navigation": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
