@@ -1,7 +1,6 @@
 import type { Browser, Page, Request } from 'playwright'
-import type { TestResults } from './executor.ts'
 import type { Reporter } from './reporters/index.ts'
-import { colors } from './utils.ts'
+import type { TestResults } from './reporters/results.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
@@ -9,6 +8,7 @@ import {
   type PlaywrightUseOpts,
 } from './playwright.ts'
 import { routes } from '../app/client/routes.ts'
+import { colors } from './colors.ts'
 
 export interface TestRunOptions {
   baseUrl: string

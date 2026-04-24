@@ -1,11 +1,9 @@
-import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import type { TestResults } from './executor.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
-import type { Counts } from './utils.ts'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
+import type { Counts, TestResults } from './reporters/results.ts'
 
 const workerUrl = new URL(IS_RUNNING_FROM_SRC ? `./worker.ts` : `./worker.js`, import.meta.url)
 const workerE2EUrl = new URL(

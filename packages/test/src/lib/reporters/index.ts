@@ -1,9 +1,8 @@
-import type { Counts } from '../utils.ts'
-import type { TestResults } from '../executor.ts'
 import { SpecReporter } from './spec.ts'
 import { TapReporter } from './tap.ts'
 import { DotReporter } from './dot.ts'
 import { FilesReporter } from './files.ts'
+import type { Counts, TestResults } from './results.ts'
 
 export interface Reporter {
   onResult(results: TestResults, env?: string): void

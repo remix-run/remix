@@ -2,26 +2,7 @@ import type { Browser, BrowserContextOptions } from 'playwright'
 import { createTestContext } from './context.ts'
 import type { render } from './render.ts'
 import type { CreateServerFunction } from './e2e-server.ts'
-
-export interface TestResult {
-  name: string
-  suiteName: string
-  filePath?: string
-  status: 'passed' | 'failed' | 'skipped' | 'todo'
-  error?: {
-    message: string
-    stack?: string
-  }
-  duration: number
-}
-
-export interface TestResults {
-  passed: number
-  failed: number
-  skipped: number
-  todo: number
-  tests: TestResult[]
-}
+import type { TestResult, TestResults } from './reporters/results.ts'
 
 export async function runTests(options?: {
   render?: typeof render

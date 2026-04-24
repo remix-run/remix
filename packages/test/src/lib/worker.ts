@@ -1,6 +1,7 @@
 import { workerData, parentPort } from 'node:worker_threads'
 import { tsImport } from 'tsx/esm/api'
-import { runTests, type TestResults } from './executor.ts'
+import { runTests } from './executor.ts'
+import type { TestResults } from './reporters/results.ts'
 
 try {
   await tsImport(workerData.file, import.meta.url)

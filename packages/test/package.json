@@ -48,6 +48,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@remix-run/assets": "workspace:*",
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",

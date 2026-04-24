@@ -1689,6 +1689,9 @@ importers:
 
   packages/test:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@remix-run/component':
         specifier: workspace:*
         version: link:../component
