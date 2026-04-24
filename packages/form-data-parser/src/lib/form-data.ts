@@ -80,6 +80,21 @@ function isMultipartLimitError(error: unknown): boolean {
   )
 }
 
+async function* parseFormDataParts(
+  request: Request,
+  parserOptions: MultipartParserOptions,
+): AsyncGenerator<MultipartPart, void, unknown> {
+  try {
+    yield* parseMultipartRequest(request, parserOptions)
+  } catch (error) {
+    if (error instanceof FormDataParseError || isMultipartLimitError(error)) {
+      throw error
+    }
+
+    throw new FormDataParseError('Cannot parse form data', { cause: error })
+  }
+}
+
 /**
  * Options for parsing form data.
  */
@@ -162,30 +177,22 @@ export async function parseFormData(
   let formData = new FormData()
   let fileCount = 0
 
-  try {
-    for await (let part of parseMultipartRequest(request, parserOptions)) {
-      let fieldName = part.name
-      if (!fieldName) continue
+  for await (let part of parseFormDataParts(request, parserOptions)) {
+    let fieldName = part.name
+    if (!fieldName) continue
 
-      if (part.isFile) {
-        if (++fileCount > maxFiles) {
-          throw new MaxFilesExceededError(maxFiles)
-        }
-
-        let value = await uploadHandler(new FileUpload(part, fieldName))
-        if (value != null) {
-          formData.append(fieldName, value)
-        }
-      } else {
-        formData.append(fieldName, part.text)
+    if (part.isFile) {
+      if (++fileCount > maxFiles) {
+        throw new MaxFilesExceededError(maxFiles)
       }
-    }
-  } catch (error) {
-    if (error instanceof FormDataParseError || isMultipartLimitError(error)) {
-      throw error
-    }
 
-    throw new FormDataParseError('Cannot parse form data', { cause: error })
+      let value = await uploadHandler(new FileUpload(part, fieldName))
+      if (value != null) {
+        formData.append(fieldName, value)
+      }
+    } else {
+      formData.append(fieldName, part.text)
+    }
   }
 
   return formData

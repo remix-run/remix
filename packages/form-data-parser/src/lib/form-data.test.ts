@@ -7,7 +7,7 @@ import {
   MaxFilesExceededError,
   parseFormData,
 } from './form-data.ts'
-import { MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
+import { MultipartParseError, MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -154,6 +154,32 @@ describe('parseFormData', () => {
     assert.equal(await file.text(), 'This is an example file.')
   })
 
+  it('allows errors thrown by the upload handler to propagate directly', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is an example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    })
+    let uploadError = new Error('Upload failed')
+
+    await assert.rejects(
+      async () =>
+        await parseFormData(request, () => {
+          throw uploadError
+        }),
+      (error: unknown) => error === uploadError,
+    )
+  })
+
   it('throws MaxFilesExceededError when the number of files exceeds the limit', async () => {
     let request = new Request('https://remix.run', {
       method: 'POST',
@@ -266,9 +292,13 @@ describe('parseFormData', () => {
       body: 'invalid',
     })
 
-    await assert.rejects(async () => {
-      await parseFormData(request)
-    }, FormDataParseError)
+    await assert.rejects(
+      async () => {
+        await parseFormData(request)
+      },
+      (error: unknown) =>
+        error instanceof FormDataParseError && error.cause instanceof MultipartParseError,
+    )
   })
 
   it('parses a multipart file without a media type', async () => {
