@@ -137,7 +137,7 @@ export async function resolveModule(
     if (!resolvedImport) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module. ` +
+          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script module. ` +
             `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
           {
             code: 'IMPORT_NOT_SUPPORTED',
@@ -153,8 +153,8 @@ export async function resolveModule(
     if (!args.isAllowed(resolvedImport.identityPath)) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not allowed by the asset server allow/deny configuration. ` +
-            `Add a matching allow rule, remove a conflicting deny rule, or mark this import as external.`,
+          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+            `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
           },
@@ -170,7 +170,7 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is outside all configured fileMap entries. ` +
+          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
             `Add a matching fileMap entry for this file path, or mark this import as external.`,
           {
             code: 'IMPORT_OUTSIDE_FILE_MAP',
