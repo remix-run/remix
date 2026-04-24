@@ -3,7 +3,7 @@ import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
-import { describe, it } from './framework.ts'
+import { describe, it } from '../lib/framework.ts'
 
 const html = async (n: RemixNode) =>
   new Response(await renderToString(n), {
