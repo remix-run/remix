@@ -7,10 +7,7 @@ import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
-import type { Counts } from './lib/utils.ts'
-
-// https://bun.com/docs/guides/util/detect-bun
-const isBun = typeof process.versions.bun === 'string'
+import { IS_BUN, type Counts } from './lib/utils.ts'
 
 const config = await loadConfig()
 
@@ -180,7 +177,7 @@ async function findFiles(pattern: string, excludePattern: string) {
   let cwd = process.cwd()
   let files: string[] = []
 
-  if (isBun) {
+  if (IS_BUN) {
     // Bun's `fs.promises.glob` follows symlinks and doesn't prune traversal
     // via `exclude`, so it enters pnpm symlink cycles in `node_modules`.
     // Use Bun's native Glob, which defaults to `followSymlinks: false`.

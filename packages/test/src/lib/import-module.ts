@@ -1,4 +1,5 @@
 import { tsImport } from 'tsx/esm/api'
+import { IS_BUN } from './utils'
 
 interface ImportMetaWithResolve extends ImportMeta {
   resolve(specifier: string, parent?: string | URL): string
@@ -16,7 +17,7 @@ function hasImportMetaResolve(meta: ImportMeta): meta is ImportMetaWithResolve {
  * @returns The imported module namespace.
  */
 export async function importModule(specifier: string, meta: ImportMeta) {
-  if ('Bun' in globalThis) {
+  if (IS_BUN) {
     if (!hasImportMetaResolve(meta)) {
       throw new Error('importModule() requires import.meta.resolve() in Bun')
     }
