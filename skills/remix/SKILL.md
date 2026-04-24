@@ -35,28 +35,26 @@ Use this skill for:
 
 ## Load Only The References You Need
 
-Classify the task first, then load the smallest useful reference set:
+Classify the task first, then load the smallest useful reference set. Each reference file starts
+with a "What This Covers" section that lists the topics inside it — read that first to confirm
+the file is relevant before reading the rest.
 
-- **Routes, controllers, params, `href()` generation, resources** ->
-  [./references/routing-and-controllers.md](./references/routing-and-controllers.md)
-- **Server bootstrap, middleware ordering, context keys, static files, uploads, request
-  lifecycle** -> [./references/middleware-and-server.md](./references/middleware-and-server.md)
-- **Browser module serving, asset URL namespaces, preloads, and fingerprinted client scripts** ->
-  [./references/assets-and-browser-modules.md](./references/assets-and-browser-modules.md)
-- **Schemas, FormData parsing, database tables, queries, migrations** ->
-  [./references/data-and-validation.md](./references/data-and-validation.md)
-- **Sessions, auth providers, route protection, login/logout flows** ->
-  [./references/auth-and-sessions.md](./references/auth-and-sessions.md)
-- **Core component shape, state, `queueTask`, global listeners** ->
-  [./references/component-model.md](./references/component-model.md)
-- **Host behavior, styles, refs, keyboard and press helpers, animation mixins** ->
-  [./references/mixins-styling-events.md](./references/mixins-styling-events.md)
-- **`clientEntry`, `run`, frames, navigation, `<head>`, prop serialization** ->
-  [./references/hydration-frames-navigation.md](./references/hydration-frames-navigation.md)
-- **Router tests and component tests** ->
-  [./references/testing-patterns.md](./references/testing-patterns.md)
-- **Animation-heavy work** -> [./references/animate-elements.md](./references/animate-elements.md)
-- **Reusable mixins** -> [./references/create-mixins.md](./references/create-mixins.md)
+Use the table below to find candidates. Loading more than two or three files at once is usually a
+sign that the task hasn't been narrowed enough yet.
+
+| Task involves... | Start with |
+| --- | --- |
+| Defining URLs, writing controllers and actions, returning responses | `references/routing-and-controllers.md` |
+| Composing the request lifecycle, ordering middleware, bridging to a server | `references/middleware-and-server.md` |
+| Compiling and serving browser modules, asset URL namespaces, preloads | `references/assets-and-browser-modules.md` |
+| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md` |
+| Per-browser state, login flows, route protection, identity | `references/auth-and-sessions.md` |
+| Component setup, state, lifecycle, updates, `queueTask`, context | `references/component-model.md` |
+| Event handlers, styles, refs, press and key helpers, simple animations | `references/mixins-styling-events.md` |
+| `clientEntry`, `run`, `<Frame>`, navigation, `<head>` | `references/hydration-frames-navigation.md` |
+| Router tests, component tests, test isolation | `references/testing-patterns.md` |
+| Spring physics, tweens, layout transitions | `references/animate-elements.md` |
+| Authoring custom reusable mixins | `references/create-mixins.md` |
 
 Common bundles:
 
@@ -148,11 +146,17 @@ When code could live in multiple places:
 - Treat `app/routes.ts` as the source of truth for URLs. Use `routes.<name>.href(...)` for
   redirects, links, tests, and internal URL construction
 - Controllers and actions should return explicit `Response` objects, including redirects, 404s, and
-  validation failures
+  validation failures. At the route boundary, prefer returning a `Response` for expected outcomes
+  (validation errors, conflicts, not found) over throwing for control flow
 - Model HTTP behavior explicitly. Status codes, headers, redirects, cache rules, and content types
   are part of the route contract
+- Make the server route correct first. A POST should already return the right HTML, redirect, or
+  error response on its own before `clientEntry(...)` layers interactivity on top
+- Validate input at the boundary using `remix/data-schema` (and `remix/data-schema/form-data` for
+  forms). `parseSafe` makes the failure path a return value instead of an exception
 - Derive `AppContext` from the root middleware stack so `get(Database)`, `get(Session)`,
-  `get(Auth)`, and similar keys stay typed
+  `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't
+  need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the
   middleware stack
 - Remix Component is not React: keep state in setup-scope variables, call `handle.update()`
@@ -198,6 +202,16 @@ When code could live in multiple places:
 - Calling `getContext()` without `asyncContext()` in the middleware stack
 - Getting middleware order wrong; fast exits like static files belong early, request enrichment later
 - Skipping boundary validation and trusting raw `FormData`, params, cookies, or external payloads
+- Letting route-local domain errors leak out of the controller. Translate expected outcomes
+  (validation, conflicts, not-found) into the HTTP `Response` the route means to return rather than
+  throwing a custom `Error` subclass and catching it elsewhere
+- Reaching for `createCookie` when a tamper-sensitive or server-managed per-browser fact really
+  wants `remix/session`. If editing the value would be a bug, use a session
+- Building a JSON-only RPC layer when a normal form POST, redirect, or resource route would be
+  simpler. Fetch-from-the-client is a layer on top of sound route behavior, not a replacement for
+  it
+- Treating JSON state endpoints and `<Frame>` reloads as mutually exclusive patterns. Pick the
+  lightest sync mechanism that fits the UX; small widgets may reasonably poll a JSON endpoint
 - Assuming authentication is enough without per-resource authorization checks
 - Dropping shared code into vague buckets like `utils.ts`, `helpers.ts`, or `common.ts` when
   ownership is known
@@ -205,72 +219,115 @@ When code could live in multiple places:
 
 ## Package Map
 
+Use this map to find the right package quickly. Each entry says what the package is for, not just
+what it exports. Open the linked reference file when you need full examples.
+
 ### Routing, Server, and Responses
 
-- `remix/fetch-router` -> `createRouter`, middleware and controller types
-- `remix/fetch-router/routes` -> `route`, `get`, `post`, `put`, `del`, `form`, `resources`
-- `remix/node-fetch-server` -> `createRequestListener` for Node `http`
-- `remix/assets` -> `createAssetServer` for browser module serving, public asset hrefs, and preloads
-- `remix/headers` -> `Accept`, `Cookie`, `SetCookie`, `CacheControl`, `Vary`, and raw header helpers
-- `remix/response/redirect` -> `redirect`
-- `remix/response/html` -> `createHtmlResponse`
-- `remix/response/compress` -> `compressResponse`
-- `remix/response/file` -> file download responses
-- `remix/route-pattern` -> URL matching and generation
-- `remix/fetch-proxy` -> HTTP proxying via Fetch API
+- `remix/fetch-router` — the router itself. Use for `createRouter`, controller and middleware
+  types, and registering routes
+- `remix/fetch-router/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`,
+  `del`, `form`, `resources` when defining `app/routes.ts`
+- `remix/node-fetch-server` — adapter from Node's `http` module to a Fetch-style router. Use for
+  `createRequestListener` in `server.ts`
+- `remix/assets` — browser module server. Use for `createAssetServer` when serving compiled
+  client modules, getting public hrefs, and emitting preloads
+- `remix/headers` — typed header parsers and builders. Use when reading `Accept`, `Cookie`, or
+  setting `CacheControl`, `Vary`, etc., instead of hand-formatting strings
+- `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect"
+  pattern and other location changes
+- `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string
+  or stream without rendering through `remix/component`
+- `remix/response/compress` — `compressResponse`. Use when compressing one-off responses outside
+  the global `compression()` middleware
+- `remix/response/file` — file-download responses. Use for `Content-Disposition: attachment`
+  responses
+- `remix/route-pattern` — low-level URL matching and generation. Use when working with raw
+  patterns outside the router (custom matchers, scripts)
+- `remix/fetch-proxy` — Fetch-based HTTP proxying. Use to forward a request to another origin
 
 ### Data, Validation, and Persistence
 
-- `remix/data-schema` -> schema builders, `parse`, `parseSafe`
-- `remix/data-schema/checks` -> `email`, `minLength`, `maxLength`, and other checks
-- `remix/data-schema/coerce` -> coercion helpers for strings, numbers, booleans, dates, and ids
-- `remix/data-schema/form-data` -> `f.object`, `f.field` for `FormData` parsing
-- `remix/data-table` -> `table`, `column`, `createDatabase`, `Database`
-- `remix/data-table-sqlite`, `remix/data-table-postgres`, `remix/data-table-mysql` -> database
-  adapters
-- `remix/data-table/migrations` -> `createMigration`, `createMigrationRunner`
-- `remix/data-table/migrations/node` -> `loadMigrations` from disk
-- `remix/data-table/operators` -> query operators such as `inList(...)`
+- `remix/data-schema` — schema builders for runtime validation. Use for `parse` and `parseSafe`
+  to validate any input that crosses a trust boundary
+- `remix/data-schema/checks` — common check helpers (`email`, `minLength`, `maxLength`, etc.).
+  Use to compose into a schema
+- `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids.
+  Use when input arrives as a string but should be a typed value
+- `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use
+  in actions that read browser forms
+- `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`,
+  `createDatabase` when modeling persisted data
+- `remix/data-table-sqlite`, `remix/data-table-postgres`, `remix/data-table-mysql` — adapters.
+  Use to back `createDatabase` with a real engine
+- `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`,
+  `createMigrationRunner`
+- `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that
+  apply migrations
+- `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses
+  need set or comparison logic
 
 ### Auth, Sessions, and Cookies
 
-- `remix/auth` -> credentials, OAuth, and OIDC providers
-- `remix/auth-middleware` -> `auth`, `requireAuth`, `Auth`
-- `remix/session` -> `Session`, `createSession`
-- `remix/session-middleware` -> session middleware factory
-- `remix/session-storage-redis` -> Redis-backed shared session storage
-- `remix/session-storage-memcache` -> Memcache-backed shared session storage
-- `remix/session/fs-storage`, `remix/session/memory-storage`, `remix/session/cookie-storage` ->
-  session storage backends
-- `remix/cookie` -> `createCookie`
+- `remix/session` — the `Session` object: `get`, `set`, `flash`, `unset`, `regenerateId`. Use for
+  any per-browser state where tampering would be a bug (login, "I submitted this form already",
+  cart, flash messages)
+- `remix/session-middleware` — `session(cookie, storage)`. Use to wire a session cookie and
+  storage backend into the root middleware stack
+- `remix/session/fs-storage`, `remix/session/memory-storage`, `remix/session/cookie-storage` —
+  storage backends. Use `fs-storage` for single-process apps, `memory-storage` for tests,
+  `cookie-storage` for stateless deployments where data fits in a cookie
+- `remix/session-storage-redis` — Redis-backed storage. Use for multi-process or multi-host
+  deployments
+- `remix/session-storage-memcache` — Memcache-backed storage. Same multi-host use case as Redis
+- `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive
+  preferences where the client is allowed to control the value (theme, locale, dismissed banner).
+  For state where tampering matters, prefer `remix/session`
+- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified
+- `remix/auth-middleware` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to
+  resolve identity into the request context and to gate routes
 
 ### UI, Hydration, and Browser Behavior
 
-- `remix/component` -> components, mixins, `clientEntry`, `run`
-- `remix/component/server` -> `renderToStream`
-- `remix/component/jsx-runtime` -> JSX transform
-- `remix/html-template` -> escaped HTML templates
-- `remix/file-storage` -> backend-agnostic `File` storage interface
-- `remix/file-storage/fs`, `remix/file-storage/memory`, `remix/file-storage-s3` -> file storage
-  backends
+- `remix/component` — the component model: components, mixins, `clientEntry`, `run`, `<Frame>`,
+  navigation helpers. Use for everything UI
+- `remix/component/server` — server rendering: `renderToStream`, `renderToString`. Use in the
+  `render(...)` helper that returns HTML responses
+- `remix/component/jsx-runtime` — JSX transform target. Configured in `tsconfig.json`, rarely
+  imported directly
+- `remix/html-template` — escaped HTML template literals. Use when generating HTML outside the
+  component system (RSS feeds, email bodies, error pages)
+- `remix/file-storage` — backend-agnostic `File` storage interface. Use as the type bound for
+  upload destinations
+- `remix/file-storage/fs`, `remix/file-storage/memory`, `remix/file-storage-s3` — storage
+  backends. Use to implement an upload destination
 
 ### Middleware
 
-- `remix/static-middleware` -> `staticFiles`
-- `remix/form-data-middleware` -> `formData`
-- `remix/form-data-parser` -> `parseFormData`, `FileUpload`
-- `remix/compression-middleware` -> `compression`
-- `remix/logger-middleware` -> `logger`
-- `remix/method-override-middleware` -> `methodOverride`
-- `remix/async-context-middleware` -> `asyncContext`, `getContext`
-- `remix/cors-middleware` -> CORS headers
-- `remix/csrf-middleware` -> CSRF protection
-- `remix/cop-middleware` -> cross-origin protection
+- `remix/static-middleware` — `staticFiles(dir)`. Use to serve files from `public/` exactly as
+  they exist on disk
+- `remix/form-data-middleware` — `formData()`. Use to parse `FormData` once and expose it via
+  `get(FormData)` instead of calling `await request.formData()` in each action
+- `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing
+  custom upload handlers
+- `remix/compression-middleware` — `compression()`. Use globally for text-like responses
+- `remix/logger-middleware` — `logger()`. Use in development for request logs
+- `remix/method-override-middleware` — `methodOverride()`. Use when HTML forms need `PUT`,
+  `PATCH`, or `DELETE`
+- `remix/async-context-middleware` — `asyncContext()`, `getContext()`. Use when helpers outside
+  actions need request context without threading it through every call
+- `remix/cors-middleware` — `cors(opts?)`. Use for endpoints called cross-origin
+- `remix/csrf-middleware` — `csrf(opts?)`. Use when session-backed forms mutate state and need
+  synchronizer-token CSRF protection
+- `remix/cop-middleware` — cross-origin protection. Use to reject unsafe cross-origin browser
+  requests
 
 ### Test
 
-- `remix/test` -> `remix-test`, `describe`, `it`, hooks
-- `remix/assert` -> assertions
+- `remix/test` — `remix-test` runner plus `describe`, `it`, lifecycle hooks. Use as the test
+  framework
+- `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly
+  in the runner
 
 ## Canonical Patterns
 
@@ -300,28 +357,26 @@ export const routes = route({
 ### Type controllers against the route contract
 
 ```typescript
-import { requireAuth } from 'remix/auth-middleware'
-import type { BuildAction, Controller } from 'remix/fetch-router'
+import type { Controller } from 'remix/fetch-router'
 
 import type { AppContext } from '../router.ts'
 import { routes } from '../routes.ts'
 
-export const home: BuildAction<'GET', typeof routes.home> = {
-  handler() {
-    return render(<HomePage />)
-  },
-}
-
 export default {
-  middleware: [requireAuth()],
   actions: {
     async index({ get }) {
       let db = get(Database)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
-      return render(<IndexPage allBooks={allBooks} />)
+      return render(<BooksIndexPage allBooks={allBooks} />)
+    },
+    async show({ get, params }) {
+      let db = get(Database)
+      let book = await db.findOne(books, { where: { slug: params.slug } })
+      if (!book) return new Response('Not Found', { status: 404 })
+      return render(<BookShowPage book={book} />)
     },
   },
-} satisfies Controller<typeof routes.admin, AppContext>
+} satisfies Controller<typeof routes.books, AppContext>
 ```
 
 ### Compose middleware deliberately
@@ -363,6 +418,43 @@ middleware.push(loadAuth())
 
 let router = createRouter({ middleware })
 ```
+
+### Mutate, validate, and respond
+
+```typescript
+import { redirect } from 'remix/response/redirect'
+import * as s from 'remix/data-schema'
+import * as f from 'remix/data-schema/form-data'
+import { Session } from 'remix/session'
+import { Database } from 'remix/data-table'
+
+let bookSchema = f.object({
+  slug: f.field(s.string()),
+  title: f.field(s.string()),
+})
+
+export default {
+  actions: {
+    async create({ get }) {
+      let parsed = s.parseSafe(bookSchema, get(FormData))
+      if (!parsed.success) {
+        return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
+      }
+
+      let db = get(Database)
+      let book = await db.create(books, parsed.value)
+
+      let session = get(Session)
+      session.flash('message', `Added ${book.title}.`)
+
+      return redirect(routes.books.show.href({ slug: book.slug }))
+    },
+  },
+} satisfies Controller<typeof routes.books, AppContext>
+```
+
+This shape works without JavaScript, returns a `Response` for every outcome, and is ready for
+`clientEntry(...)` interactivity when the UI needs it.
 
 ### Build UI as setup plus render
 

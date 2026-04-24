@@ -1,5 +1,20 @@
 # Routing and Controllers
 
+## What This Covers
+
+Patterns for declaring URLs, handling requests, and wiring routes to controllers. Read this when
+the task involves:
+
+- Defining or changing the URL surface of the app
+- Writing or reorganizing controllers and actions
+- Reading request data (`params`, `url`, `request`, context values)
+- Returning a `Response` for HTML, redirects, JSON, or errors
+- Generating internal URLs with `.href()`
+
+The companion reference for shaping `Request` bodies, validating input, and dealing with persisted
+data is `data-and-validation.md`. For request lifecycle and middleware ordering, see
+`middleware-and-server.md`.
+
 ## Route Builders
 
 Import all route builders from `remix/fetch-router/routes`.
@@ -101,11 +116,103 @@ The handler receives a context object with:
 Actions with inline middleware:
 
 ```typescript
+import { requireAuth } from 'remix/auth-middleware'
+
 router.get(routes.account, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   handler: accountAction.handler,
 })
 ```
+
+## Returning Responses
+
+An action returns a `Response`. The shape of that response is part of the route contract, and
+choosing it well saves a lot of glue elsewhere.
+
+### Render HTML
+
+For pages, render a component tree and return the resulting `Response`:
+
+```typescript
+async handler({ get }) {
+  let db = get(Database)
+  let books = await db.findMany(books, { orderBy: ['id', 'asc'] })
+  return render(<IndexPage books={books} />)
+}
+```
+
+### Redirect after a mutation
+
+For state-changing routes (POST, PUT, PATCH, DELETE), the canonical reply is a redirect to the
+resulting page. Pass `303` explicitly when you want a POST-redirect-GET flow:
+
+```typescript
+import { redirect } from 'remix/response/redirect'
+
+async create({ get }) {
+  let formData = get(FormData)
+  let parsed = s.parseSafe(bookSchema, formData)
+  if (!parsed.success) {
+    return render(<NewBookPage errors={parsed.issues} />, { status: 400 })
+  }
+
+  let db = get(Database)
+  let book = await db.create(books, parsed.value)
+
+  return redirect(routes.books.show.href({ slug: book.slug }), 303)
+}
+```
+
+This pattern works without JavaScript and stays compatible with `clientEntry(...)` enhancements
+on top.
+
+### Return an error response
+
+For expected failures — validation, conflict, not found — return a `Response` directly. Reserve
+thrown errors for genuinely unexpected failures.
+
+```typescript
+async show({ get, params }) {
+  let db = get(Database)
+  let book = await db.find(books, params.bookId)
+  if (!book) return new Response('Not Found', { status: 404 })
+  return render(<ShowPage book={book} />)
+}
+```
+
+For form re-rendering with errors, return the page component with the parsed issues:
+
+```typescript
+let formData = get(FormData)
+let parsed = s.parseSafe(signupSchema, formData)
+if (!parsed.success) {
+  return render(<SignupPage errors={parsed.issues} values={Object.fromEntries(formData)} />, {
+    status: 400,
+  })
+}
+```
+
+### Return JSON
+
+For routes consumed by client code rather than rendered as a page (autocomplete endpoints, polling
+APIs, inter-service calls), return a JSON `Response`. Use `remix/headers` for cache headers
+instead of hand-formatting strings:
+
+```typescript
+import { CacheControl } from 'remix/headers'
+
+return new Response(JSON.stringify({ results }), {
+  headers: {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': new CacheControl({ noStore: true }).toString(),
+  },
+})
+```
+
+If you find yourself returning JSON for what is really a browser form submission, prefer the
+redirect-after-POST pattern instead. JSON-only mutation endpoints make it harder to support
+non-JS clients, harder to share rendering logic, and easier for the client to drift out of sync
+with the server.
 
 ## Controllers
 

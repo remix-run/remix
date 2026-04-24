@@ -1,5 +1,20 @@
 # Testing
 
+## What This Covers
+
+How to test the two layers most Remix code lives in: HTTP behavior and DOM behavior. Read this when
+the task involves:
+
+- Driving the router with `router.fetch(new Request(...))` and asserting on the returned `Response`
+- Building a fresh router per test for session, storage, or database isolation
+- Rendering components into a real DOM with `createRoot` and synchronizing with `root.flush()`
+- Choosing which layer to test for a given behavior
+
+For session and auth test setup, see `auth-and-sessions.md`. For component lifecycle, see
+`component-model.md`.
+
+## Two Shapes
+
 Remix tests run with the `remix-test` CLI (from `remix/test`) and use `remix/assert` for
 assertions. Two main shapes:
 

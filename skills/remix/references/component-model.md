@@ -1,6 +1,22 @@
 # Component Model
 
-Every component has two phases:
+## What This Covers
+
+How a Remix Component is shaped and how its state, lifecycle, and updates behave. Read this when
+the task involves:
+
+- Writing a component (setup function plus render function)
+- Managing component-local state, derived values, or post-render DOM work
+- Using `handle.update()`, `handle.queueTask()`, `handle.signal`, `handle.id`, or `handle.context`
+- Listening to global events with cleanup tied to the component lifecycle
+
+For host-element behavior (event handlers, styles, refs, animations), see
+`mixins-styling-events.md`. For browser hydration, frames, and navigation, see
+`hydration-frames-navigation.md`.
+
+## Phases
+
+A component has two phases:
 
 1. **Setup phase** — runs once when the component is created
 2. **Render phase** — returned function runs on initial render and every update
@@ -85,6 +101,9 @@ the component re-renders or is removed. Use for post-render DOM work, reactive d
 hydration-sensitive setup:
 
 ```tsx
+let data = null
+let requestedUrl: string | null = null
+
 // Post-render DOM work in an event handler
 on('click', () => {
   showDetails = true
@@ -94,15 +113,22 @@ on('click', () => {
   })
 })
 
-// Reactive data loading in render (re-runs when props change)
+// Reactive data loading keyed by props.url
 return (props: { url: string }) => {
-  handle.queueTask(async (signal) => {
-    let response = await fetch(props.url, { signal })
-    let json = await response.json()
-    if (signal.aborted) return
-    data = json
-    handle.update()
-  })
+  if (requestedUrl !== props.url) {
+    let nextUrl = props.url
+    requestedUrl = nextUrl
+    data = null
+
+    handle.queueTask(async (signal) => {
+      let response = await fetch(nextUrl, { signal })
+      let json = await response.json()
+      if (signal.aborted || requestedUrl !== nextUrl) return
+      data = json
+      handle.update()
+    })
+  }
+
   return <div>{data ?? 'Loading...'}</div>
 }
 ```

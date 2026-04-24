@@ -1,5 +1,43 @@
 # Authentication and Sessions
 
+## What This Covers
+
+How to remember things about a browser between requests and how to identify a user. Read this when
+the task involves:
+
+- Storing per-browser state across requests (login, cart, "I have submitted this form")
+- Adding a credentials login flow or an OAuth provider
+- Protecting routes with `requireAuth()` or stacking authorization checks
+- Reading or writing `Session`, `Auth`, or other identity-related context values
+- Logging in, logging out, or rotating session IDs
+
+For raw cookies that are not session-backed (theme, locale, dismissed-banner), see
+`createCookie` in this file plus the broader `Package Map` in `SKILL.md`.
+
+## Sessions vs Plain Cookies
+
+Reach for `remix/session` when state is sensitive, must be tamper-resistant, or represents the
+identity of a request: who is logged in, which form a browser already submitted, what items are in
+a cart. Sessions sign or encrypt their backing cookie with a server-held secret and give you a
+typed `Session` object you can `get`, `set`, `flash`, `unset`, and `regenerateId`.
+
+Reach for `remix/cookie` directly when the browser is allowed to carry the value and the server
+does not need session semantics. This often means preferences (theme, locale, dismissed banner),
+but a signed cookie can also be fine for small low-risk values where you truly only need one
+cookie-shaped fact and do not need `Session` helpers.
+
+If a malicious user editing the value would be a bug, or if the value needs server-managed
+lifecycle, reach for a session.
+
+### Quick chooser
+
+| Need | Best fit | Why |
+| --- | --- | --- |
+| Theme, locale, dismissed banner | `remix/cookie` | Browser-controlled preference |
+| Small signed hint with minimal lifecycle | `remix/cookie` | One value, no `Session` helpers needed |
+| "This browser already submitted", cart, flash messages, login state | `remix/session` | Tamper-sensitive, server-managed per-browser state |
+| "One real person only", ownership, durable identity | account/auth | Cookies or sessions alone do not prove personhood |
+
 ## Session Setup
 
 ### Create a session cookie
@@ -7,14 +45,24 @@
 ```typescript
 import { createCookie } from 'remix/cookie'
 
+let sessionSecret = process.env.SESSION_SECRET
+if (!sessionSecret && process.env.NODE_ENV !== 'test') {
+  throw new Error('SESSION_SECRET is required')
+}
+
 export let sessionCookie = createCookie('session', {
-  secrets: [process.env.SESSION_SECRET ?? 's3cr3t'],
+  secrets: [sessionSecret ?? 'test-only-secret'],
   httpOnly: true,
   sameSite: 'Lax',
+  secure: process.env.NODE_ENV === 'production',
   maxAge: 2592000, // 30 days
   path: '/',
 })
 ```
+
+The cookie should always be `httpOnly`, default to `sameSite: 'Lax'`, and be `secure` in
+production. Demo defaults like `'s3cr3t'` are fine in tests but should never reach production —
+fail fast when the secret is missing.
 
 ### Create session storage
 
@@ -67,6 +115,37 @@ async function handler({ get }) {
 }
 ```
 
+### Sessions for non-auth state
+
+Sessions are not just for login. They are the right place to store any tamper-sensitive
+per-browser fact: which form a browser already submitted, how many free actions are left in a
+trial, which feature flags a tester opted into, what items are in a cart.
+
+```typescript
+async function submit({ get }) {
+  let session = get(Session)
+  if (session.get('hasSubmitted')) {
+    return render(<AlreadySubmittedPage />, { status: 409 })
+  }
+
+  let parsed = s.parseSafe(submitSchema, get(FormData))
+  if (!parsed.success) {
+    return render(<SubmitPage errors={parsed.issues} />, { status: 400 })
+  }
+
+  await saveSubmission(parsed.value)
+  session.set('hasSubmitted', true)
+  session.flash('message', 'Thanks for submitting!')
+
+  return redirect(routes.thanks.href())
+}
+```
+
+Notice that there is no manual `Set-Cookie` plumbing in the action — the session middleware handles
+that, and the handler returns an ordinary `Response`. Per-browser state enforced this way is still
+bypassable by clearing cookies; if the guarantee needs to survive that, you also need an account
+(see auth providers below).
+
 ## Auth Middleware
 
 ### Basic setup
@@ -105,7 +184,7 @@ import { Auth } from 'remix/auth-middleware'
 function handler({ get }) {
   let auth = get(Auth)
 
-  if (auth.identity) {
+  if (auth.ok) {
     // User is authenticated
     let user = auth.identity
   }
@@ -272,8 +351,10 @@ export default {
 Apply middleware to a single route:
 
 ```typescript
+import { Auth, requireAuth } from 'remix/auth-middleware'
+
 router.get(routes.account, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   handler(context) {
     let auth = context.get(Auth)
     return render(<AccountPage identity={auth.identity} />)
@@ -281,20 +362,18 @@ router.get(routes.account, {
 })
 ```
 
-### Custom requireAuth with redirect
+### Redirect on auth failure
 
 ```typescript
+import { requireAuth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
-import { Auth } from 'remix/auth-middleware'
 
-export function requireAuth() {
-  return (context, next) => {
-    let auth = context.get(Auth)
-    if (!auth.identity) {
+export function requireAuthRedirect() {
+  return requireAuth({
+    onFailure(context) {
       let returnTo = encodeURIComponent(context.url.pathname)
-      return redirect(routes.auth.login.href() + `?returnTo=${returnTo}`)
-    }
-    return next()
-  }
+      return redirect(routes.auth.login.href() + `?returnTo=${returnTo}`, 303)
+    },
+  })
 }
 ```

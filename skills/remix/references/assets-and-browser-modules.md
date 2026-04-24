@@ -1,7 +1,23 @@
 # Assets and Browser Modules
 
-Use `remix/assets` when the app needs to serve browser JavaScript or TypeScript modules from source
-files. This is the right tool for client entrypoints, browser-only helpers under `app/assets/`, and
+## What This Covers
+
+How to serve browser JavaScript and TypeScript modules from source. Read this when the task
+involves:
+
+- Configuring `createAssetServer` (`fileMap`, `allow`, `deny`, fingerprinting)
+- Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source
+  modules that need import rewriting, preloads, or fingerprinted URLs
+- Generating script URLs or `<link rel="modulepreload">` tags for a client entry
+- Keeping server-only files out of the browser via `deny` rules
+
+For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry
+hydration, see `hydration-frames-navigation.md`.
+
+## When To Reach For It
+
+Use `remix/assets` when the app serves browser JavaScript or TypeScript modules from source files.
+This is the right tool for client entrypoints, browser-only helpers under `app/assets/`, and
 monorepo code that should be compiled and served under a public URL namespace.
 
 Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use
@@ -28,7 +44,7 @@ let assetServer = createAssetServer({
 
 let router = createRouter()
 
-router.get('/assets/{path...}', ({ request }) => {
+router.get('/assets/*path', ({ request }) => {
   return assetServer.fetch(request)
 })
 ```

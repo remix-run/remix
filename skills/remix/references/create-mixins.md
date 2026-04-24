@@ -1,5 +1,17 @@
 # Creating Mixins
 
+## What This Covers
+
+How to author your own reusable host-element behavior with `createMixin`. Read this when the task
+involves:
+
+- Combining multiple low-level events or DOM hooks into one semantic mixin
+- Dispatching custom DOM events from a host node
+- Encapsulating imperative DOM setup that several components share
+- Typing custom events on `HTMLElementEventMap` for use with `on(...)`
+
+For the built-in mixins most code should use, see `mixins-styling-events.md`.
+
 Use `createMixin` from `remix/component` to author reusable host-element behavior.
 
 Most app code should use built-in mixins (`on`, `css`, `ref`, `link`, `pressEvents`, `keysEvents`,

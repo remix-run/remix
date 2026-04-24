@@ -1,5 +1,43 @@
 # Hydration, Frames, and Navigation
 
+## What This Covers
+
+How server-rendered UI becomes interactive in the browser, and how the page updates without a full
+navigation. Read this when the task involves:
+
+- Marking a component for client-side hydration with `clientEntry`
+- Booting the client runtime with `run`
+- Streaming server content into a region of the page with `<Frame>` and reloading those regions
+- Triggering Navigation API transitions with `navigate(...)` or `link(...)`
+- Server rendering with `renderToStream` or `renderToString`
+- Managing the document `<head>`
+
+For component-local state and updates, see `component-model.md`. For host-element behavior and
+events, see `mixins-styling-events.md`.
+
+## Server First, Then Hydrate
+
+Make the server route correct before adding `clientEntry(...)`. A POST should already do the right
+thing on its own — return HTML, a redirect, or an error response — and a GET should already render
+the page the user expects. `clientEntry` exists to layer interactivity on top of UI that already
+works without it.
+
+When server state changes after a mutation, prefer reloading a `<Frame>` when the UI region already
+maps cleanly to a server-rendered route. Frames re-fetch the same route, so the rendering logic
+stays in one place and the client does not need a parallel "state" API.
+
+```tsx
+on('submit', async (event) => {
+  event.preventDefault()
+  await fetch(routes.cart.add.href(), { method: 'POST', body: new FormData(event.currentTarget) })
+  await handle.frames.get('cart-summary')?.reload()
+})
+```
+
+Use polling or a small JSON state endpoint when the data changes outside this page, or when a tiny
+shared widget would be heavier to model as a frame. Pick the lightest sync mechanism that preserves
+clear ownership of rendering logic.
+
 ## Client Entries
 
 Use `clientEntry` to mark a component for client-side hydration. The first argument is the module

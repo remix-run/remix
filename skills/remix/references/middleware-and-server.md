@@ -1,7 +1,18 @@
 # Middleware and Server Setup
 
-Use this reference when a task is about choosing, ordering, or configuring built-in middleware, or
-when bridging a router to a server runtime.
+## What This Covers
+
+How to compose the request lifecycle and bridge the router to a runtime. Read this when the task
+involves:
+
+- Choosing or ordering built-in middleware in the root stack
+- Writing custom middleware that sets typed context values
+- Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers
+  (sessions, auth, data loading)
+- Booting a Node `http` server with `createRequestListener`
+
+For data and persistence specifics, see `data-and-validation.md`. For session and auth specifics,
+see `auth-and-sessions.md`.
 
 ## Middleware Stack
 
@@ -115,8 +126,7 @@ Use `context.set(key, value)` to add typed values accessible downstream via `con
 
 ```typescript
 import type { Middleware } from 'remix/fetch-router'
-import { createContextKey } from 'remix/fetch-router'
-import { Database, createDatabase } from 'remix/data-table'
+import { Database } from 'remix/data-table'
 
 export function loadDatabase(): Middleware {
   return async (context, next) => {
@@ -130,7 +140,6 @@ export function loadDatabase(): Middleware {
 
 ```typescript
 import { Auth } from 'remix/auth-middleware'
-import { redirect } from 'remix/response/redirect'
 
 export function requireAdmin(): Middleware {
   return (context, next) => {
@@ -198,7 +207,7 @@ Middleware can be applied at three levels:
 3. **Action-level** — runs for a single route:
    ```typescript
    router.get(routes.account, {
-     middleware: [requireAuth],
+     middleware: [requireAuth()],
      handler: accountAction.handler,
    })
    ```

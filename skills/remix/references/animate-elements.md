@@ -1,6 +1,17 @@
 # Animating Elements
 
-Use animation mixins and the `spring` / `tween` APIs from `remix/component`.
+## What This Covers
+
+How to animate insertion, removal, and layout changes of elements. Read this when the task
+involves:
+
+- Adding entrance, exit, or shared-layout transitions to UI
+- Choosing between spring physics (`spring(...)`) and time-based easing (`tween`)
+- Coordinating CSS transitions with the same easing as JS animations
+- Imperative animation loops via `requestAnimationFrame`
+
+For the smaller set of animation helpers that show up alongside other mixins, see
+`mixins-styling-events.md`.
 
 ## Animation Mixins
 
@@ -87,7 +98,7 @@ Physics-based spring animation. Returns a `SpringIterator` with `duration`, `eas
 | -------- | ------ | -------- | --------------------------- |
 | `smooth` | -0.3   | 400ms    | Overdamped, no overshoot    |
 | `snappy` | 0      | 200ms    | Critically damped, quick    |
-| `bouncy` | 0.3    | 300ms    | Underdamped, visible bounce |
+| `bouncy` | 0.3    | 400ms    | Underdamped, visible bounce |
 
 ```tsx
 spring('bouncy')

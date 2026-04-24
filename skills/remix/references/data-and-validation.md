@@ -1,5 +1,18 @@
 # Data Access and Validation
 
+## What This Covers
+
+How input becomes a value the app trusts, and how that value reaches storage. Read this when the
+task involves:
+
+- Defining database tables, columns, relations, and migrations
+- Querying or mutating persisted data with `Database`
+- Parsing and validating user input from forms, query strings, or external payloads
+- Choosing between schema-level checks, table validation hooks, and migration-level constraints
+
+For where validation runs in the request lifecycle, see `routing-and-controllers.md`. For session
+or identity-bound writes, see `auth-and-sessions.md`.
+
 ## Table Definitions (`remix/data-table`)
 
 Define tables with typed columns, relations, and optional validation hooks:
@@ -256,17 +269,58 @@ let formData = get(FormData)
 let { name, email, password } = s.parse(signupSchema, formData)
 ```
 
-### Safe parsing
+### Reading FormData: middleware vs `request.formData()`
 
-Use `s.parseSafe` for validation where you handle errors yourself:
+There are two ways to get a `FormData` value inside an action.
+
+The recommended way: register `formData()` middleware in the root stack and read with
+`get(FormData)`. The body is parsed once per request, and the typed `FormData` value flows through
+the context system. This also lets `methodOverride()` and CSRF middleware work uniformly.
 
 ```typescript
-let result = s.parseSafe(signupSchema, context.get(FormData))
+import { formData } from 'remix/form-data-middleware'
+
+let router = createRouter({
+  middleware: [/* ... */, formData(), /* ... */],
+})
+
+// In an action:
+let parsed = s.parseSafe(signupSchema, get(FormData))
+```
+
+The fallback: `await request.formData()` directly. This works without middleware and is fine for
+small one-off cases, but it bypasses the context system, runs once per call site, and doesn't
+compose with middleware that depends on parsed form fields.
+
+### Safe parsing
+
+`s.parse` throws on invalid input. `s.parseSafe` returns a tagged result and is usually what an
+action wants, since validation failure is an expected outcome (re-render the form with errors)
+rather than an exception:
+
+```typescript
+let result = s.parseSafe(signupSchema, get(FormData))
 if (!result.success) {
-  return render(<SignupPage errors={result.issues} />)
+  return render(<SignupPage errors={result.issues} />, { status: 400 })
 }
 let { name, email, password } = result.value
 ```
+
+Returning a `Response` for validation failures keeps the route contract honest: the same action
+returns 200 on success, 400 with errors on bad input, no out-of-band exception flow.
+
+### Anti-patterns
+
+Avoid these shapes when reading and validating input:
+
+- **Raw `formData.get('name')` plus an `if (typeof name !== 'string')` guard**, then a thrown
+  custom error. This reinvents what `data-schema` already does, loses the typed result, and
+  pushes error translation into a `try/catch` instead of a return value.
+- **Letting route-local domain errors leak out of the action.** Translate expected outcomes (bad
+  input, missing record, duplicate entry) into the `Response` the route means to return instead of
+  throwing a custom `Error` subclass with a `status` field and catching it later.
+- **Trusting `params`, query strings, or external payloads without a schema.** Anything that
+  crosses a trust boundary should be parsed before it reaches business logic.
 
 ### Common patterns
 

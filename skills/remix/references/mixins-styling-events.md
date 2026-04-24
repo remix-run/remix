@@ -1,5 +1,21 @@
 # Mixins, Styling, and Events
 
+## What This Covers
+
+How to attach behavior, styles, and DOM-aware setup to host elements with `mix={[...]}`. Read this
+when the task involves:
+
+- DOM event handling with `on(...)`
+- Static styling with `css(...)` and dynamic styling with `style`
+- Imperative DOM access via `ref(...)`
+- Navigation behavior on non-anchor elements with `link(...)`
+- Press, key, or attribute helpers (`pressEvents`, `keysEvents`, `attrs`)
+- Element-level animation mixins (`animateEntrance`, `animateExit`, `animateLayout`)
+
+For richer animation work (springs, tweens, layout transitions), see `animate-elements.md`. For
+authoring custom mixins, see `create-mixins.md`. For component lifecycle and updates, see
+`component-model.md`.
+
 Compose behavior on host elements with `mix`. All mixins are imported from `remix/component`.
 
 ## `on(type, handler, capture?)`
