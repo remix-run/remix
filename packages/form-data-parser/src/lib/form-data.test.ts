@@ -323,4 +323,94 @@ describe('parseFormData', () => {
     assert.equal(file.type, 'application/octet-stream')
     assert.equal(await file.text(), 'This is an example file.')
   })
+
+  it('parses multipart uploads with non-ASCII filenames', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----BOUNDARY',
+      },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="japanese"; filename="テスト画像.png"',
+        'Content-Type: image/png',
+        '',
+        'Japanese file content.',
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="chinese"; filename="文件.png"',
+        'Content-Type: image/png',
+        '',
+        'Chinese file content.',
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="korean"; filename="파일.png"',
+        'Content-Type: image/png',
+        '',
+        'Korean file content.',
+        '------BOUNDARY--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+
+    let japaneseFile = formData.get('japanese')
+    assert.ok(japaneseFile instanceof File)
+    assert.equal(japaneseFile.name, 'テスト画像.png')
+    assert.equal(await japaneseFile.text(), 'Japanese file content.')
+
+    let chineseFile = formData.get('chinese')
+    assert.ok(chineseFile instanceof File)
+    assert.equal(chineseFile.name, '文件.png')
+    assert.equal(await chineseFile.text(), 'Chinese file content.')
+
+    let koreanFile = formData.get('korean')
+    assert.ok(koreanFile instanceof File)
+    assert.equal(koreanFile.name, '파일.png')
+    assert.equal(await koreanFile.text(), 'Korean file content.')
+  })
+
+  it('preserves non-ASCII multipart field names and filenames', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----BOUNDARY',
+      },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="名前"; filename="テスト画像.png"',
+        'Content-Type: image/png',
+        '',
+        'This is an example file.',
+        '------BOUNDARY--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('名前')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'テスト画像.png')
+    assert.equal(file.type, 'image/png')
+    assert.equal(await file.text(), 'This is an example file.')
+  })
+
+  it('preserves literal percent sequences in multipart filenames', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----BOUNDARY',
+      },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="file"; filename="%2Fetc%2Fpasswd"',
+        'Content-Type: text/plain',
+        '',
+        'This is an example file.',
+        '------BOUNDARY--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, '%2Fetc%2Fpasswd')
+  })
 })

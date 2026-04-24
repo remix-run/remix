@@ -215,6 +215,90 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts[0].text, 'File content')
   })
 
+  it('exposes decoded part headers as a plain object', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        'X-Custom: one',
+        'X-Custom: two',
+        '',
+        'File content',
+        `--${boundary}--`,
+      ].join(CRLF),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(
+      parts[0].headers['content-disposition'],
+      'form-data; name="file"; filename="test.txt"',
+    )
+    assert.equal(parts[0].headers['content-type'], 'text/plain')
+    assert.equal(parts[0].headers['x-custom'], 'one, two')
+    assert.equal(parts[0].headers['Content-Type'], undefined)
+    assert.equal(Object.isFrozen(parts[0].headers), true)
+  })
+
+  it('preserves non-ASCII field names and filenames', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        名前: {
+          filename: 'テスト画像.png',
+          mediaType: 'image/png',
+          content: 'image content',
+        },
+      }),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, '名前')
+    assert.equal(parts[0].filename, 'テスト画像.png')
+    assert.equal(parts[0].mediaType, 'image/png')
+  })
+
+  it('preserves literal percent-encoded sequences in filenames', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        file: {
+          filename: '%2Fetc%2Fpasswd',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
+    })
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].filename, '%2Fetc%2Fpasswd')
+  })
+
   it('parses multiple fields and a file upload', async () => {
     let request = new Request('https://example.com', {
       method: 'POST',
@@ -484,7 +568,7 @@ describe('parseMultipartRequest', async () => {
     }
 
     assert.equal(parts.length, 1)
-    assert.equal(parts[0].headers.get('Invalid-Header'), null)
+    assert.equal(parts[0].headers['invalid-header'], undefined)
     assert.equal(parts[0].text, 'Some content')
   })
 

@@ -39,7 +39,7 @@ export default {
 
             await bucket.put(uniqueKey, part.bytes, {
               httpMetadata: {
-                contentType: part.headers.get('Content-Type')!,
+                contentType: part.headers['content-type']!,
               },
             })
 

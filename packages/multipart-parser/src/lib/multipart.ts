@@ -1,4 +1,4 @@
-import { ContentDisposition, ContentType, parse as parseRawHeaders } from '@remix-run/headers'
+import { ContentDisposition, ContentType } from '@remix-run/headers'
 
 import {
   createSearch,
@@ -502,6 +502,29 @@ export class MultipartParser {
 const decoder = new TextDecoder('utf-8', { fatal: true })
 
 /**
+ * The decoded headers for a multipart part, keyed by lower-case header name.
+ */
+export interface MultipartHeaders {
+  readonly [name: string]: string | undefined
+}
+
+function parseMultipartHeaders(raw: string): MultipartHeaders {
+  let headers: Record<string, string> = Object.create(null)
+
+  for (let line of raw.split('\r\n')) {
+    let match = line.match(/^([^:]+):(.*)/)
+    if (match) {
+      let name = match[1].trim().toLowerCase()
+      let value = match[2].trim()
+      let existingValue = headers[name]
+      headers[name] = existingValue === undefined ? value : `${existingValue}, ${value}`
+    }
+  }
+
+  return Object.freeze(headers)
+}
+
+/**
  * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
@@ -511,7 +534,7 @@ export class MultipartPart {
   readonly content: Uint8Array[]
 
   #header: Uint8Array
-  #headers?: Headers
+  #headers?: MultipartHeaders
 
   /**
    * @param header The raw header bytes
@@ -546,11 +569,11 @@ export class MultipartPart {
   }
 
   /**
-   * The headers associated with this part.
+   * The decoded headers associated with this part, keyed by lower-case header name.
    */
-  get headers(): Headers {
+  get headers(): MultipartHeaders {
     if (!this.#headers) {
-      this.#headers = parseRawHeaders(decoder.decode(this.#header))
+      this.#headers = parseMultipartHeaders(decoder.decode(this.#header))
     }
 
     return this.#headers
@@ -574,21 +597,21 @@ export class MultipartPart {
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | undefined {
-    return ContentDisposition.from(this.headers.get('content-disposition')).preferredFilename
+    return ContentDisposition.from(this.headers['content-disposition'] ?? null).preferredFilename
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | undefined {
-    return ContentType.from(this.headers.get('content-type')).mediaType
+    return ContentType.from(this.headers['content-type'] ?? null).mediaType
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | undefined {
-    return ContentDisposition.from(this.headers.get('content-disposition')).name
+    return ContentDisposition.from(this.headers['content-disposition'] ?? null).name
   }
 
   /**
