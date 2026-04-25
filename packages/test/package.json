@@ -52,6 +52,7 @@
     "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/terminal": "workspace:^",
     "esbuild": "^0.27.1",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
