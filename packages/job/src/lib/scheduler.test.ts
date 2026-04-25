@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import * as s from '@remix-run/data-schema'
 
 import type { JobStorage } from './storage.ts'

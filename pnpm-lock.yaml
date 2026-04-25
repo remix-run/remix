@@ -1108,6 +1108,12 @@ importers:
         specifier: workspace:^
         version: link:../data-schema
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1124,6 +1130,9 @@ importers:
         specifier: workspace:^
         version: link:../job
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
       '@remix-run/data-table-mysql':
         specifier: workspace:*
         version: link:../data-table-mysql
@@ -1133,6 +1142,9 @@ importers:
       '@remix-run/data-table-sqlite':
         specifier: workspace:*
         version: link:../data-table-sqlite
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -1161,6 +1173,12 @@ importers:
         specifier: workspace:^
         version: link:../job
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { getTableName } from '@remix-run/data-table'
 
 import type { Database } from '@remix-run/data-table'
