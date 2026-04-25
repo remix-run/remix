@@ -3,6 +3,9 @@ export interface StyleCode {
   readonly close: string
 }
 
+/**
+ * Names of ANSI text modifier styles supported by terminal style helpers.
+ */
 export type TerminalModifierName =
   | 'bold'
   | 'dim'
@@ -13,6 +16,9 @@ export type TerminalModifierName =
   | 'strikethrough'
   | 'underline'
 
+/**
+ * Names of ANSI foreground color styles supported by terminal style helpers.
+ */
 export type TerminalForegroundColorName =
   | 'black'
   | 'blackBright'
@@ -33,6 +39,9 @@ export type TerminalForegroundColorName =
   | 'yellow'
   | 'yellowBright'
 
+/**
+ * Names of ANSI background color styles supported by terminal style helpers.
+ */
 export type TerminalBackgroundColorName =
   | 'bgBlack'
   | 'bgBlackBright'
@@ -53,11 +62,20 @@ export type TerminalBackgroundColorName =
   | 'bgYellow'
   | 'bgYellowBright'
 
+/**
+ * Any named terminal style supported by `createStyles()`.
+ */
 export type TerminalStyleName =
   | TerminalModifierName
   | TerminalForegroundColorName
   | TerminalBackgroundColorName
 
+/**
+ * Function that formats text with a terminal style.
+ *
+ * @param value Text to format.
+ * @returns Formatted text, or the original text when styles are disabled.
+ */
 export type TerminalStyle = (value: string) => string
 
 export const ansiResetCode = '\x1b[0m'

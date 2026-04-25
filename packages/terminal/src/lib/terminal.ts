@@ -6,138 +6,408 @@ import {
   type TerminalStyleName,
 } from './styles.ts'
 
+/**
+ * Environment variables used to decide terminal behavior.
+ */
 export type TerminalEnvironment = Record<string, string | undefined>
 
+/**
+ * Input stream shape used for terminal interactivity detection.
+ */
 export interface TerminalInputStream {
+  /**
+   * Whether the input stream is attached to a TTY.
+   */
   readonly isTTY?: boolean
 }
 
+/**
+ * Output stream shape used for terminal writes and display detection.
+ */
 export interface TerminalOutputStream {
+  /**
+   * Whether the output stream is attached to a TTY.
+   */
   readonly isTTY?: boolean
+  /**
+   * Current terminal column count, when known.
+   */
   readonly columns?: number
+  /**
+   * Current terminal row count, when known.
+   */
   readonly rows?: number
+  /**
+   * Writes a chunk of text to the output stream.
+   *
+   * @param chunk Text chunk to write.
+   * @returns Stream-specific write result.
+   */
   write(chunk: string): unknown
 }
 
+/**
+ * Options that control ANSI color detection.
+ */
 export interface UseColorOptions {
   /**
-   * Explicitly enables or disables ANSI styles, overriding automatic detection.
+   * Explicitly enables or disables ANSI styles instead of using automatic detection.
    */
   colors?: boolean
   /**
-   * The stream whose TTY support should be used for color detection.
-   *
-   * @default process.stdout
+   * Output stream whose TTY support should be used for color detection (defaults to `process.stdout`).
    */
   stream?: TerminalOutputStream
   /**
-   * Environment variables used for color detection.
-   *
-   * @default process.env
+   * Environment variables used for color detection (defaults to `process.env`).
    */
   env?: TerminalEnvironment
 }
 
+/**
+ * Style helpers returned by `createStyles()` and `createTerminal()`.
+ */
 export interface TerminalStyles {
+  /**
+   * Whether style helpers emit ANSI escape sequences.
+   */
   readonly enabled: boolean
+  /**
+   * ANSI reset sequence when styles are enabled, otherwise an empty string.
+   */
   readonly reset: string
+  /**
+   * Formats text with a black background.
+   */
   bgBlack: TerminalStyle
+  /**
+   * Formats text with a bright black background.
+   */
   bgBlackBright: TerminalStyle
+  /**
+   * Formats text with a blue background.
+   */
   bgBlue: TerminalStyle
+  /**
+   * Formats text with a bright blue background.
+   */
   bgBlueBright: TerminalStyle
+  /**
+   * Formats text with a cyan background.
+   */
   bgCyan: TerminalStyle
+  /**
+   * Formats text with a bright cyan background.
+   */
   bgCyanBright: TerminalStyle
+  /**
+   * Formats text with a gray background.
+   */
   bgGray: TerminalStyle
+  /**
+   * Formats text with a green background.
+   */
   bgGreen: TerminalStyle
+  /**
+   * Formats text with a bright green background.
+   */
   bgGreenBright: TerminalStyle
+  /**
+   * Formats text with a grey background.
+   */
   bgGrey: TerminalStyle
+  /**
+   * Formats text with a magenta background.
+   */
   bgMagenta: TerminalStyle
+  /**
+   * Formats text with a bright magenta background.
+   */
   bgMagentaBright: TerminalStyle
+  /**
+   * Formats text with a red background.
+   */
   bgRed: TerminalStyle
+  /**
+   * Formats text with a bright red background.
+   */
   bgRedBright: TerminalStyle
+  /**
+   * Formats text with a white background.
+   */
   bgWhite: TerminalStyle
+  /**
+   * Formats text with a bright white background.
+   */
   bgWhiteBright: TerminalStyle
+  /**
+   * Formats text with a yellow background.
+   */
   bgYellow: TerminalStyle
+  /**
+   * Formats text with a bright yellow background.
+   */
   bgYellowBright: TerminalStyle
+  /**
+   * Formats text with black foreground color.
+   */
   black: TerminalStyle
+  /**
+   * Formats text with bright black foreground color.
+   */
   blackBright: TerminalStyle
+  /**
+   * Formats text with blue foreground color.
+   */
   blue: TerminalStyle
+  /**
+   * Formats text with bright blue foreground color.
+   */
   blueBright: TerminalStyle
+  /**
+   * Formats text with bold intensity.
+   */
   bold: TerminalStyle
+  /**
+   * Formats text with cyan foreground color.
+   */
   cyan: TerminalStyle
+  /**
+   * Formats text with bright cyan foreground color.
+   */
   cyanBright: TerminalStyle
+  /**
+   * Formats text with dim intensity.
+   */
   dim: TerminalStyle
+  /**
+   * Formats text with one or more named terminal styles.
+   *
+   * @param value Text to format.
+   * @param styles Style names to apply, from outermost to innermost.
+   * @returns Formatted text, or the original text when styles are disabled.
+   */
   format(value: string, ...styles: TerminalStyleName[]): string
+  /**
+   * Formats text with gray foreground color.
+   */
   gray: TerminalStyle
+  /**
+   * Formats text with green foreground color.
+   */
   green: TerminalStyle
+  /**
+   * Formats text with bright green foreground color.
+   */
   greenBright: TerminalStyle
+  /**
+   * Formats text with grey foreground color.
+   */
   grey: TerminalStyle
+  /**
+   * Formats text as hidden.
+   */
   hidden: TerminalStyle
+  /**
+   * Formats text with inverted foreground and background colors.
+   */
   inverse: TerminalStyle
+  /**
+   * Formats text with italic styling.
+   */
   italic: TerminalStyle
+  /**
+   * Formats text with magenta foreground color.
+   */
   magenta: TerminalStyle
+  /**
+   * Formats text with bright magenta foreground color.
+   */
   magentaBright: TerminalStyle
+  /**
+   * Formats text with an overline.
+   */
   overline: TerminalStyle
+  /**
+   * Formats text with red foreground color.
+   */
   red: TerminalStyle
+  /**
+   * Formats text with bright red foreground color.
+   */
   redBright: TerminalStyle
+  /**
+   * Formats text with a strikethrough.
+   */
   strikethrough: TerminalStyle
+  /**
+   * Formats text with an underline.
+   */
   underline: TerminalStyle
+  /**
+   * Formats text with white foreground color.
+   */
   white: TerminalStyle
+  /**
+   * Formats text with bright white foreground color.
+   */
   whiteBright: TerminalStyle
+  /**
+   * Formats text with yellow foreground color.
+   */
   yellow: TerminalStyle
+  /**
+   * Formats text with bright yellow foreground color.
+   */
   yellowBright: TerminalStyle
 }
 
+/**
+ * Options used to create a terminal abstraction.
+ */
 export interface TerminalOptions extends UseColorOptions {
   /**
-   * Input stream used to detect whether the terminal is interactive.
-   *
-   * @default process.stdin
+   * Input stream used to detect whether the terminal is interactive (defaults to `process.stdin`).
    */
   stdin?: TerminalInputStream
   /**
-   * Output stream used for normal output.
-   *
-   * @default process.stdout
+   * Output stream used for normal output (defaults to `process.stdout`).
    */
   stdout?: TerminalOutputStream
   /**
-   * Output stream used for error output.
-   *
-   * @default process.stderr
+   * Output stream used for error output (defaults to `process.stderr`).
    */
   stderr?: TerminalOutputStream
 }
 
+/**
+ * Testable abstraction around terminal input, output, styles, and controls.
+ */
 export interface Terminal {
+  /**
+   * Environment variables used by this terminal.
+   */
   readonly env: TerminalEnvironment
+  /**
+   * Output stream used for error output.
+   */
   readonly stderr: TerminalOutputStream
+  /**
+   * Input stream used for interactivity detection.
+   */
   readonly stdin: TerminalInputStream
+  /**
+   * Output stream used for normal output.
+   */
   readonly stdout: TerminalOutputStream
+  /**
+   * Style helpers configured for this terminal's output stream.
+   */
   readonly styles: TerminalStyles
+  /**
+   * Current output column count, when known.
+   */
   readonly columns: number | undefined
+  /**
+   * Current output row count, when known.
+   */
   readonly rows: number | undefined
+  /**
+   * Whether both input and output streams are attached to TTYs.
+   */
   readonly isInteractive: boolean
+  /**
+   * Whether the output stream is attached to a TTY.
+   */
   readonly isTTY: boolean
+  /**
+   * Clears the current output line.
+   */
   clearLine(): void
+  /**
+   * Moves the output cursor to a zero-based column and optional row.
+   *
+   * @param column Zero-based output column.
+   * @param row Optional zero-based output row.
+   */
   cursorTo(column: number, row?: number): void
+  /**
+   * Erases output from the cursor through the end of the terminal.
+   */
   eraseDown(): void
+  /**
+   * Writes a value to the error output stream.
+   *
+   * @param value Text to write.
+   */
   error(value: string): void
+  /**
+   * Writes a value and trailing newline to the error output stream.
+   *
+   * @param value Text to write (defaults to an empty string).
+   */
   errorLine(value?: string): void
+  /**
+   * Hides the terminal cursor.
+   */
   hideCursor(): void
+  /**
+   * Moves the output cursor by relative column and row offsets.
+   *
+   * @param columns Relative column offset.
+   * @param rows Relative row offset.
+   */
   moveCursor(columns: number, rows: number): void
+  /**
+   * Shows the terminal cursor.
+   */
   showCursor(): void
+  /**
+   * Writes a value to the normal output stream.
+   *
+   * @param value Text to write.
+   */
   write(value: string): void
+  /**
+   * Writes a value and trailing newline to the normal output stream.
+   *
+   * @param value Text to write (defaults to an empty string).
+   */
   writeLine(value?: string): void
 }
 
+/**
+ * Raw ANSI escape sequences and helpers for terminal controls.
+ */
 export const ansi = {
+  /**
+   * Resets all ANSI styles.
+   */
   reset: ansiResetCode,
   ...ansiStyleCodes,
+  /**
+   * Clears the current terminal line.
+   */
   clearLine: '\x1b[2K',
+  /**
+   * Erases from the cursor through the end of the terminal.
+   */
   eraseDown: '\x1b[J',
+  /**
+   * Hides the terminal cursor.
+   */
   hideCursor: '\x1b[?25l',
+  /**
+   * Shows the terminal cursor.
+   */
   showCursor: '\x1b[?25h',
+  /**
+   * Creates an ANSI sequence that moves the cursor to a zero-based column and optional row.
+   *
+   * @param column Zero-based output column.
+   * @param row Optional zero-based output row.
+   * @returns ANSI cursor position sequence.
+   */
   cursorTo(column: number, row?: number): string {
     let normalizedColumn = normalizePosition(column) + 1
 
@@ -148,6 +418,13 @@ export const ansi = {
     let normalizedRow = normalizePosition(row) + 1
     return `\x1b[${normalizedRow};${normalizedColumn}H`
   },
+  /**
+   * Creates an ANSI sequence that moves the cursor by relative column and row offsets.
+   *
+   * @param columns Relative column offset.
+   * @param rows Relative row offset.
+   * @returns ANSI cursor movement sequence.
+   */
   moveCursor(columns: number, rows: number): string {
     let horizontal = normalizeOffset(columns)
     let vertical = normalizeOffset(rows)
