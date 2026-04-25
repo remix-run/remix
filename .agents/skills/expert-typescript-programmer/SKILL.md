@@ -39,6 +39,13 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Share constants from a single owning module when separate modules must agree on protocol values, escape sequences, sentinels, or discriminants. Avoid duplicating magic strings that can drift.
 - After public API changes, check the package barrel, README examples, tests, and change files together so documentation and exports match the actual supported surface.
 
+## API Documentation
+
+- When adding or tightening public JSDoc, use the `write-api-docs` skill; it owns detailed JSDoc style, ESLint expectations, and API-docs workflow.
+- Treat JSDoc as part of the public type contract. It should document behavior, defaults, units, and edge cases that TypeScript cannot express, not repeat type syntax.
+- Use names and docs that do not over-promise. If an API only counts code points, do not describe it as terminal display width; if a helper is not ready as a supported contract, keep it internal.
+- Keep package metadata, README examples, JSDoc, tests, and change files aligned with the same public API surface.
+
 ## Type Design
 
 - Let inference work for local variables and callback parameters when the initializer or context is obvious.
@@ -105,6 +112,8 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Do package-level exports point directly at the owning modules where symbols are defined?
 - Did the change avoid turning `src/lib` modules into pass-through barrels or accidental public API aggregators?
 - Is every exported helper/type something consumers should depend on now, not just an implementation convenience?
+- Are public JSDoc comments written from the consumer's point of view, documenting semantics instead of repeating types?
+- Do package metadata, README examples, JSDoc, and tests describe the same public API surface?
 - Are `any`, assertions, non-null assertions, and suppressions absent? If not, is each one isolated, proved by nearby runtime logic, and impossible to express with safer TypeScript?
 - Are generics necessary, minimal, and inference-friendly?
 - Are unions narrowed explicitly enough that each branch is safe?

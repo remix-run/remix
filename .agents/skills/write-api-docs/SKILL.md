@@ -12,6 +12,8 @@ Use this skill when documenting public APIs in Remix packages.
 The goal is to document the API users can actually import, not every helper in `src/lib`.
 Work from the package exports outward, add concise JSDoc to the public declarations, and make sure the result passes the repo's ESLint JSDoc rules.
 
+This skill owns detailed JSDoc style and lint expectations. If documenting an API reveals that the TypeScript contract itself should change, use the `expert-typescript-programmer` skill for the type design work.
+
 ## Workflow
 
 1. Identify the package's public exports.
