@@ -1,8 +1,8 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import { loadMigrations } from './migrations-node.ts'
 

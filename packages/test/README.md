@@ -8,6 +8,7 @@ A test framework for Remix applications
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Coverage reporting
 - Watch mode
 - Config file support (`remix-test.config.ts`)
 
@@ -67,6 +68,22 @@ export default {
   // Max number of concurrent test workers (default `os.availableParallelism()`)
   concurrency: 2,
 
+  // Code coverage options
+  coverage: {
+    // Enable coverage reporting
+    enabled: true,
+    // Output directory (default: ".coverage")
+    dir: '.coverage',
+    // Glob patterns to include/exclude
+    include: ['src/**'],
+    exclude: ['src/**/*.test.ts'],
+    // Minimum thresholds (%)
+    statements: 80,
+    lines: 80,
+    branches: 80,
+    functions: 80,
+  },
+
   glob: {
     // Glob pattern identifying all test files (default: "**/*.test?(.e2e).{ts,tsx}")
     test: '**/*.test?(.e2e).ts',
@@ -119,6 +136,14 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--browser.echo`            |       |
 | `--browser.open`            |       |
 | `--concurrency <n>`         | `-c`  |
+| `--coverage`                |       |
+| `--coverage.dir <path>`     |       |
+| `--coverage.include`        |       |
+| `--coverage.exclude`        |       |
+| `--coverage.statements`     |       |
+| `--coverage.lines`          |       |
+| `--coverage.branches`       |       |
+| `--coverage.functions`      |       |
 | `--glob.test`               |       |
 | `--glob.e2e`                |       |
 | `--playwrightConfig <path>` |       |

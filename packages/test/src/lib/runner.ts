@@ -1,11 +1,21 @@
+import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
+import {
+  collectE2ECoverageMap,
+  collectServerCoverageMap,
+  type CoverageConfig,
+  type CoverageMap,
+  type V8CoverageEntry,
+} from './coverage.ts'
 import type { TestResults } from './executor.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts } from './utils.ts'
 
+// Ensure we load the right file whether we're running in the monorepo (TS) or
+// from a published package (JS)
 const ext = path.extname(import.meta.url)
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
@@ -19,9 +29,11 @@ export async function runServerTests(
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
+    coverage?: CoverageConfig
   } = {},
-): Promise<Counts> {
+): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
+  let coverageMap: CoverageMap | null = null
   let envLabel = options.projectName ? `${type}:${options.projectName}` : type
 
   function accumulate(results: TestResults, file: string) {
@@ -36,26 +48,59 @@ export async function runServerTests(
   }
 
   if (type === 'e2e') {
+    let allBrowserCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
+
     await runInConcurrentWorkers(
       files,
       concurrency,
       (file) =>
-        runFileInWorker(file, type, (results) => accumulate(results, file), {
-          ...options,
-          playwrightUseOpts: options.playwrightUseOpts,
-        }),
+        runFileInWorker(
+          file,
+          type,
+          (results) => {
+            accumulate(results, file)
+            if (results.e2eBrowserCoverageEntries) {
+              allBrowserCoverageEntries.push(...results.e2eBrowserCoverageEntries)
+            }
+          },
+          {
+            ...options,
+            playwrightUseOpts: options.playwrightUseOpts,
+          },
+        ),
       () => counts.failed++,
     )
+
+    if (options.coverage && allBrowserCoverageEntries.length > 0) {
+      coverageMap = await collectE2ECoverageMap(
+        allBrowserCoverageEntries,
+        process.cwd(),
+        new Set(files),
+      )
+    }
   } else {
+    let coverageDataDir: string | undefined
+    if (options.coverage) {
+      coverageDataDir = path.resolve(options.coverage.dir)
+      await fsp.mkdir(coverageDataDir, { recursive: true })
+      process.env.NODE_V8_COVERAGE = coverageDataDir
+    }
+
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) => runFileInWorker(file, type, (results) => accumulate(results, file)),
+      (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
       () => counts.failed++,
     )
+
+    if (coverageDataDir) {
+      delete process.env.NODE_V8_COVERAGE
+      let serverMap = await collectServerCoverageMap(coverageDataDir, process.cwd(), new Set(files))
+      coverageMap = serverMap
+    }
   }
 
-  return { ...counts }
+  return { ...counts, coverageMap }
 }
 
 async function runInConcurrentWorkers(
@@ -106,6 +151,7 @@ function runFileInWorker(
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
   options: {
+    coverage?: CoverageConfig
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
   } = {},
@@ -117,6 +163,7 @@ function runFileInWorker(
             workerData: {
               file: pathToFileURL(file).href,
               type,
+              coverage: options.coverage,
               open: options.open,
               playwrightUseOpts: options.playwrightUseOpts,
             },
@@ -125,6 +172,7 @@ function runFileInWorker(
             workerData: {
               file: pathToFileURL(file).href,
               type,
+              coverage: options.coverage,
             },
           })
     worker.once('message', (msg: TestResults) => onResults(msg))

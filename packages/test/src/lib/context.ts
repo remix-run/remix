@@ -3,6 +3,7 @@ import { mock, type MockFunction, type MockCall, type MockContext } from './mock
 
 import type { CreateServerFunction } from './e2e-server.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
+import type { V8CoverageEntry } from './coverage.ts'
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -71,6 +72,8 @@ export function createTestContext(options: {
   browser?: Browser
   open?: boolean
   playwrightPageOptions?: ReturnType<typeof getPlaywrightPageOptions>
+  coverage?: boolean
+  addE2ECoverageEntries?: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
 }): { testContext: TestContext; cleanup(): Promise<void> } {
   let cleanups: Array<() => void | Promise<void>> = []
 
@@ -101,6 +104,18 @@ export function createTestContext(options: {
       }
       if (options.playwrightPageOptions?.actionTimeout != null) {
         page.setDefaultTimeout(options.playwrightPageOptions.actionTimeout)
+      }
+
+      let coverageEnabled = options.coverage && options.browser.browserType().name() === 'chromium'
+      if (coverageEnabled) {
+        await page.coverage.startJSCoverage({ resetOnNavigation: false })
+        cleanups.push(async () => {
+          let entries = await page.coverage.stopJSCoverage()
+          options.addE2ECoverageEntries?.({
+            entries: entries as unknown as V8CoverageEntry[],
+            baseUrl: server.baseUrl,
+          })
+        })
       }
 
       cleanups.push(async () => {

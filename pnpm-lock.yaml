@@ -301,6 +301,9 @@ importers:
       oxc-transform:
         specifier: ^0.121.0
         version: 0.121.0
+      picomatch:
+        specifier: ^4.0.4
+        version: 4.0.4
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.1
@@ -308,6 +311,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
@@ -686,6 +692,12 @@ importers:
 
   packages/data-table:
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -705,6 +717,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -721,6 +739,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -740,6 +764,12 @@ importers:
         specifier: workspace:^
         version: link:../data-table
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -1692,13 +1722,37 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../node-fetch-server
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+      istanbul-lib-coverage:
+        specifier: ^3.2.2
+        version: 3.2.2
+      istanbul-lib-report:
+        specifier: ^3.0.1
+        version: 3.0.1
+      istanbul-reports:
+        specifier: ^3.2.0
+        version: 3.2.0
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
+      v8-to-istanbul:
+        specifier: ^9.3.0
+        version: 9.3.0
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@types/istanbul-lib-coverage':
+        specifier: ^2.0.6
+        version: 2.0.6
+      '@types/istanbul-lib-report':
+        specifier: ^3.0.3
+        version: 3.0.3
+      '@types/istanbul-reports':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -3532,6 +3586,15 @@ packages:
   '@types/http-errors@2.0.4':
     resolution: {integrity: sha512-D0CFMMtydbJAegzOyHjtiKPLlvnm3iTZyZRSZoLq2mRhDdmLfIWOCYPfQJ4cu2erKghU++QvjcUjp/5h7hESpA==}
 
+  '@types/istanbul-lib-coverage@2.0.6':
+    resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
+
+  '@types/istanbul-lib-report@3.0.3':
+    resolution: {integrity: sha512-NQn7AHQnk/RSLOxrBbGyJM/aVQ+pjj5HCgasFxc0K/KhoATfQ/47AyUl15I2yBUpihjmas+a+VJBOqecrFH+uA==}
+
+  '@types/istanbul-reports@3.0.4':
+    resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
+
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
 
@@ -3546,6 +3609,9 @@ packages:
 
   '@types/pg@8.16.0':
     resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
+
+  '@types/picomatch@4.0.3':
+    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
 
   '@types/qs@6.9.15':
     resolution: {integrity: sha512-uXHQKES6DQKKCLh441Xv/dwxOq1TVS3JPUMlEqoEglvlhR6Mxnlew/Xq/LRVHpLyk7iK3zODe1qYHIMltO7XGg==}
@@ -4778,6 +4844,10 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
+  picomatch@4.0.4:
+    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
+    engines: {node: '>=12'}
+
   playwright-core@1.59.0:
     resolution: {integrity: sha512-PW/X/IoZ6BMUUy8rpwHEZ8Kc0IiLIkgKYGNFaMs5KmQhcfLILNx9yCQD0rnWeWfz1PNeqcFP1BsihQhDOBCwZw==}
     engines: {node: '>=18'}
@@ -5289,6 +5359,10 @@ packages:
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
+
+  v8-to-istanbul@9.3.0:
+    resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
+    engines: {node: '>=10.12.0'}
 
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
@@ -6774,6 +6848,16 @@ snapshots:
 
   '@types/http-errors@2.0.4': {}
 
+  '@types/istanbul-lib-coverage@2.0.6': {}
+
+  '@types/istanbul-lib-report@3.0.3':
+    dependencies:
+      '@types/istanbul-lib-coverage': 2.0.6
+
+  '@types/istanbul-reports@3.0.4':
+    dependencies:
+      '@types/istanbul-lib-report': 3.0.3
+
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -6793,6 +6877,8 @@ snapshots:
       '@types/node': 24.10.4
       pg-protocol: 1.11.0
       pg-types: 2.2.0
+
+  '@types/picomatch@4.0.3': {}
 
   '@types/qs@6.9.15': {}
 
@@ -8200,6 +8286,8 @@ snapshots:
 
   picomatch@4.0.3: {}
 
+  picomatch@4.0.4: {}
+
   playwright-core@1.59.0: {}
 
   playwright@1.59.0:
@@ -8774,6 +8862,12 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   utils-merge@1.0.1: {}
+
+  v8-to-istanbul@9.3.0:
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@types/istanbul-lib-coverage': 2.0.6
+      convert-source-map: 2.0.0
 
   vary@1.1.2: {}
 

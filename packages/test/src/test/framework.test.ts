@@ -8,7 +8,7 @@ import {
   it,
   suite,
   test,
-} from './framework.ts'
+} from '../lib/framework.ts'
 
 // During test execution, currentSuite is null so describe() can be called freely.
 // captureRegistration() splices any newly-registered suites back out of __testSuites

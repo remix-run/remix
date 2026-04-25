@@ -1,8 +1,4 @@
-import {
-  ContentDisposition,
-  ContentType,
-  stringify as stringifyRawHeaders,
-} from '@remix-run/headers'
+import { ContentDisposition, ContentType } from '@remix-run/headers'
 
 export type PartValue =
   | string
@@ -32,31 +28,28 @@ export function createMultipartMessage(
       pushLine(`--${boundary}`)
 
       if (typeof value === 'string') {
-        let headers = new Headers({
-          'Content-Disposition': ContentDisposition.from({
+        pushLine(
+          `Content-Disposition: ${ContentDisposition.from({
             type: 'form-data',
             name,
-          }).toString(),
-        })
-
-        pushLine(stringifyRawHeaders(headers))
+          })}`,
+        )
         pushLine()
         pushLine(value)
       } else {
-        let headers = new Headers({
-          'Content-Disposition': ContentDisposition.from({
+        pushLine(
+          `Content-Disposition: ${ContentDisposition.from({
             type: 'form-data',
             name,
             filename: value.filename,
             filenameSplat: value.filenameSplat,
-          }).toString(),
-        })
+          })}`,
+        )
 
         if (value.mediaType) {
-          headers.set('Content-Type', ContentType.from({ mediaType: value.mediaType }).toString())
+          pushLine(`Content-Type: ${ContentType.from({ mediaType: value.mediaType })}`)
         }
 
-        pushLine(stringifyRawHeaders(headers))
         pushLine()
         if (typeof value.content === 'string') {
           pushLine(value.content)

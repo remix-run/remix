@@ -92,7 +92,37 @@ npm publish --access public
 npm publish --access public --otp <code>
 ```
 
-5. Verify and report.
+5. Wait for the placeholder to appear on npm, then configure trusted publishing.
+
+- New package names may take a short time to become visible in the registry after `npm publish`.
+- Poll until `0.0.0` resolves before running `npm trust`:
+
+```sh
+for attempt in $(seq 1 18); do
+  version=$(npm view <package-name>@0.0.0 version --silent 2>/dev/null || true)
+  if [ "$version" = "0.0.0" ]; then
+    break
+  fi
+
+  echo "Waiting for <package-name>@0.0.0 to appear on npm..."
+  sleep 10
+done
+
+if [ "$version" != "0.0.0" ]; then
+  echo "Package did not appear on npm in time"
+  exit 1
+fi
+```
+
+- As soon as it resolves, configure the GitHub Actions trusted publisher from the same local machine where you published the placeholder:
+
+```sh
+npm trust github <package-name> --repo remix-run/remix --file publish.yaml --yes
+```
+
+- This follow-up should be done immediately after placeholder publish while local npm auth is already available.
+
+6. Verify and report.
 
 - Verify the published version:
 
@@ -103,9 +133,9 @@ npm view <package-name>@0.0.0 version
 - Report:
   - package name
   - published version (`0.0.0`)
-  - confirmation that npm package exists for OIDC permission setup
+  - confirmation that `npm trust github` succeeded for `.github/workflows/publish.yaml`
 
-6. Clean up temp files.
+7. Clean up temp files.
 
 ```sh
 rm -rf "$tmp_dir"
@@ -115,3 +145,4 @@ rm -rf "$tmp_dir"
 
 - Keep placeholder publish minimal. Do not publish full source code for this step.
 - This is a one-time bootstrap step. Normal releases should continue through CI.
+- Do not stop after `npm publish`; the placeholder is only fully ready once `npm trust github` has been configured.

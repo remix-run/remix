@@ -1,5 +1,9 @@
 // Re-export all core functionality
-export type { ParseMultipartOptions, MultipartParserOptions } from './lib/multipart.ts'
+export type {
+  ParseMultipartOptions,
+  MultipartParserOptions,
+  MultipartHeaders,
+} from './lib/multipart.ts'
 export {
   MultipartParseError,
   MaxHeaderSizeExceededError,

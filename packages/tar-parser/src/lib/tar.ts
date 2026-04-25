@@ -468,16 +468,17 @@ export class TarParser {
   }
 
   #parseBody(): void {
-    if (this.#missing >= this.#buffer!.length) {
+    if (this.#missing > this.#buffer!.length) {
       this.#bodyController!.enqueue(this.#buffer!)
       this.#missing -= this.#buffer!.length
       this.#buffer = null
-    } else {
-      this.#bodyController!.enqueue(this.#read(this.#missing))
-      this.#bodyController!.close()
-      this.#bodyController = null
-      this.#missing = overflow(this.#header!.size)
+      return
     }
+
+    this.#bodyController!.enqueue(this.#read(this.#missing))
+    this.#bodyController!.close()
+    this.#bodyController = null
+    this.#missing = overflow(this.#header!.size)
   }
 
   #read(size: number): Uint8Array {

@@ -42,10 +42,12 @@
     "oxc-parser": "^0.121.0",
     "oxc-resolver": "^11.19.1",
     "oxc-transform": "^0.121.0",
+    "picomatch": "^4.0.4",
     "source-map-js": "^1.2.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/picomatch": "^4.0.3",
     "@typescript/native-preview": "catalog:"
   },
   "scripts": {
