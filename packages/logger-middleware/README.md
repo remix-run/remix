@@ -7,6 +7,7 @@ HTTP request/response logging middleware for Remix. It logs request metadata and
 - **Request/Response Logging** - Logs method, path, status, and response metadata
 - **Token-Based Formatting** - Customize log output with built-in placeholders
 - **Structured Timing Data** - Includes request duration and timestamps
+- **Colorized Output** - Highlights method, status, duration, and content length in TTY output
 
 ## Installation
 
@@ -72,6 +73,27 @@ let router = createRouter({
   ],
 })
 ```
+
+### Colorized Output
+
+Logger output automatically uses ANSI colors for high-signal tokens when running in a TTY. Set `colors` to `false` to disable colorized output. When the `process` global is defined, the `NO_COLOR` environment variable disables colors regardless of the `colors` option.
+
+```ts
+let router = createRouter({
+  middleware: [
+    logger({
+      colors: false,
+    }),
+  ],
+})
+```
+
+The following tokens are colorized when colors are enabled:
+
+- `%method`
+- `%status`
+- `%duration`
+- `%contentLength`
 
 ### Custom Logger
 
