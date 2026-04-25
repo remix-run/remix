@@ -1,0 +1,68 @@
+{
+  "name": "@remix-run/job-redis",
+  "version": "0.0.0",
+  "description": "Redis storage for remix/job",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/job-redis"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/job-redis#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/job": "workspace:^"
+  },
+  "peerDependencies": {
+    "redis": "^5.9.0"
+  },
+  "peerDependenciesMeta": {
+    "redis": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "redis": "^5.9.0"
+  },
+  "scripts": {
+    "build": "pnpm run generate:scripts && tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "check:scripts": "node ./scripts/generate-lua.ts --check",
+    "generate:scripts": "node ./scripts/generate-lua.ts",
+    "prepublishOnly": "pnpm run build",
+    "test": "pnpm run check:scripts && remix-test",
+    "test:integration": "pnpm run check:scripts && remix-test --glob.test 'src/lib/storage.integration.test.ts'",
+    "typecheck": "pnpm run check:scripts && tsgo --noEmit"
+  },
+  "keywords": [
+    "job",
+    "queue",
+    "scheduler",
+    "redis"
+  ]
+}

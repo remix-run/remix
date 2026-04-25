@@ -43,6 +43,8 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
+  // Whether the source entry only exports type symbols
+  typeOnly: boolean
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -108,9 +110,15 @@ async function getRemixRunPackages() {
     let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, _] of Object.entries(packageExports)) {
+      for (let [exportPath, packageExport] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
         if (binExports.has(exportPath)) continue
+
+        let sourceEntryPath = resolveSourceEntryPath(packageExport)
+        let typeOnly =
+          sourceEntryPath == null
+            ? false
+            : await isTypeOnlyEntry(path.join(packagesDir, packageDirName, sourceEntryPath))
 
         if (exportPath === '.') {
           // Main export
@@ -118,6 +126,7 @@ async function getRemixRunPackages() {
             sourceFile: `${shortName}.ts`,
             exportPath: `./${shortName}`,
             reExportFrom: packageName,
+            typeOnly,
           })
         } else {
           // Sub-export (e.g., "./cookie-storage")
@@ -126,6 +135,7 @@ async function getRemixRunPackages() {
             sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${shortName}/${subExport}`,
             reExportFrom: `${packageName}/${subExport}`,
+            typeOnly,
           })
         }
       }
@@ -169,9 +179,10 @@ async function updateRemixPackage() {
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
+    let exportStatement = entry.typeOnly ? 'export type * from' : 'export * from'
     let content = [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'\n`,
+      `${exportStatement} '${entry.reExportFrom}'\n`,
     ].join('\n')
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
@@ -239,6 +250,42 @@ async function updateRemixPackage() {
     remixPackageJsonPath,
     JSON.stringify(remixPackageJson, null, 2) + '\n',
     'utf-8',
+  )
+}
+
+function resolveSourceEntryPath(exportEntry: unknown): string | null {
+  if (typeof exportEntry === 'string') {
+    return exportEntry.startsWith('./') ? exportEntry.slice(2) : exportEntry
+  }
+
+  if (exportEntry != null && typeof exportEntry === 'object') {
+    let defaultEntry = (exportEntry as { default?: unknown }).default
+
+    if (typeof defaultEntry === 'string') {
+      return defaultEntry.startsWith('./') ? defaultEntry.slice(2) : defaultEntry
+    }
+  }
+
+  return null
+}
+
+async function isTypeOnlyEntry(entryPath: string): Promise<boolean> {
+  if (!entryPath.endsWith('.ts')) {
+    return false
+  }
+
+  let source = await fs.readFile(entryPath, 'utf-8')
+  let exportLines = source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('export '))
+
+  if (exportLines.length === 0) {
+    return false
+  }
+
+  return exportLines.every(
+    (line) => line.startsWith('export type ') || line.startsWith('export interface '),
   )
 }
 

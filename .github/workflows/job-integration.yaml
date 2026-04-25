@@ -1,25 +1,33 @@
-name: Data Table Integration Tests
+name: Job Scheduler Integration Tests
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/data-table-integration.yaml'
-      - 'packages/data-table/**'
-      - 'packages/data-table-postgres/**'
-      - 'packages/data-table-mysql/**'
-      - 'packages/data-table-sqlite/**'
-      - 'pnpm-workspace.yaml'
+      - '.github/workflows/job-integration.yaml'
+      - 'packages/job/**'
+      - 'packages/job-data-table/**'
+      - 'packages/job-redis/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/job.ts'
+      - 'packages/remix/src/job-data-table.ts'
+      - 'packages/remix/src/job-redis.ts'
+      - 'packages/remix/src/job/**'
+      - 'pnpm-lock.yaml'
       - 'package.json'
   pull_request:
     paths:
-      - '.github/workflows/data-table-integration.yaml'
-      - 'packages/data-table/**'
-      - 'packages/data-table-postgres/**'
-      - 'packages/data-table-mysql/**'
-      - 'packages/data-table-sqlite/**'
-      - 'pnpm-workspace.yaml'
+      - '.github/workflows/job-integration.yaml'
+      - 'packages/job/**'
+      - 'packages/job-data-table/**'
+      - 'packages/job-redis/**'
+      - 'packages/remix/package.json'
+      - 'packages/remix/src/job.ts'
+      - 'packages/remix/src/job-data-table.ts'
+      - 'packages/remix/src/job-redis.ts'
+      - 'packages/remix/src/job/**'
+      - 'pnpm-lock.yaml'
       - 'package.json'
 
 jobs:
@@ -43,24 +51,54 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run data-table package checks
+      - name: Run job package checks
         run: |
-          pnpm --filter @remix-run/data-table run typecheck
-          pnpm --filter @remix-run/data-table run test
-          pnpm --filter @remix-run/data-table run test:coverage
-          pnpm --filter @remix-run/data-table run build
-          pnpm --filter @remix-run/data-table-postgres run typecheck
-          pnpm --filter @remix-run/data-table-postgres run test
-          pnpm --filter @remix-run/data-table-postgres run test:coverage
-          pnpm --filter @remix-run/data-table-postgres run build
-          pnpm --filter @remix-run/data-table-mysql run typecheck
-          pnpm --filter @remix-run/data-table-mysql run test
-          pnpm --filter @remix-run/data-table-mysql run test:coverage
-          pnpm --filter @remix-run/data-table-mysql run build
-          pnpm --filter @remix-run/data-table-sqlite run typecheck
-          pnpm --filter @remix-run/data-table-sqlite run test
-          pnpm --filter @remix-run/data-table-sqlite run test:coverage
-          pnpm --filter @remix-run/data-table-sqlite run build
+          pnpm --filter @remix-run/job run typecheck
+          pnpm --filter @remix-run/job run test
+          pnpm --filter @remix-run/job run build
+          pnpm --filter @remix-run/job-data-table run typecheck
+          pnpm --filter @remix-run/job-data-table run test
+          pnpm --filter @remix-run/job-data-table run build
+          pnpm --filter @remix-run/job-redis run typecheck
+          pnpm --filter @remix-run/job-redis run test
+          pnpm --filter @remix-run/job-redis run build
+
+  redis-integration:
+    name: Redis Integration
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run redis integration tests
+        env:
+          JOB_REDIS_INTEGRATION: '1'
+          JOB_REDIS_URL: redis://127.0.0.1:6379
+        run: pnpm --filter @remix-run/job-redis run test:integration
 
   postgres-integration:
     name: Postgres Integration
@@ -101,7 +139,7 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
-        run: pnpm --filter @remix-run/data-table-postgres run test:integration
+        run: pnpm --filter @remix-run/job-data-table run test:integration:postgres
 
   mysql-integration:
     name: MySQL Integration
@@ -141,7 +179,7 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
-        run: pnpm --filter @remix-run/data-table-mysql run test:integration
+        run: pnpm --filter @remix-run/job-data-table run test:integration:mysql
 
   sqlite-integration:
     name: SQLite Integration
@@ -166,7 +204,7 @@ jobs:
       - name: Build sqlite native module
         run: pnpm rebuild better-sqlite3
 
-      - name: Run sqlite adapter tests
+      - name: Run sqlite integration tests
         env:
           DATA_TABLE_INTEGRATION: '1'
-        run: pnpm --filter @remix-run/data-table-sqlite run test:integration
+        run: pnpm --filter @remix-run/job-data-table run test:integration:sqlite

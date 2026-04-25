@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/data-table-mysql",
-  "version": "0.3.0",
-  "description": "MySQL adapter for remix/data-table",
+  "name": "@remix-run/job",
+  "version": "0.0.0",
+  "description": "Background job scheduling for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/data-table-mysql"
+    "directory": "packages/job"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table-mysql#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/job#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -18,9 +18,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./storage": "./src/storage.ts",
+    "./worker": "./src/worker.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -29,42 +30,37 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./storage": {
+        "types": "./dist/storage.d.ts",
+        "default": "./dist/storage.js"
+      },
+      "./worker": {
+        "types": "./dist/worker.d.ts",
+        "default": "./dist/worker.js"
+      },
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@remix-run/data-schema": "workspace:^"
+  },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/data-table": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "mysql2": "^3.15.3"
-  },
-  "dependencies": {
-    "@remix-run/data-table": "workspace:^"
-  },
-  "peerDependencies": {
-    "mysql2": "^3.15.3"
-  },
-  "peerDependenciesMeta": {
-    "mysql2": {
-      "optional": true
-    }
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
-    "test:integration": "remix-test --glob.test 'src/lib/adapter.integration.test.ts'",
-    "test:coverage": "remix-test --coverage",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "remix",
-    "orm",
-    "mysql",
-    "database",
-    "sql"
+    "job",
+    "queue",
+    "scheduler",
+    "remix"
   ]
 }
