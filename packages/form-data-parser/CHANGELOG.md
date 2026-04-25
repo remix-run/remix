@@ -48,7 +48,7 @@ This is the changelog for [`form-data-parser`](https://github.com/remix-run/remi
 
 ## v0.9.1 (2025-06-13)
 
-- Export `FormDataParserError` and `MaxFilesExceededError`
+- Export `FormDataParseError` and `MaxFilesExceededError`
 - Re-export `MultipartParseError`, `MaxHeaderSizeExceededError`, and `MaxFileSizeExceededError` from multipart parser
 
 ## v0.9.0 (2025-06-13)
