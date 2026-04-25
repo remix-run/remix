@@ -19,30 +19,22 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./storage": "./src/storage.ts",
-    "./worker": "./src/worker.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "default": "./dist/storage.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "default": "./dist/worker.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./storage": {
-        "types": "./dist/storage.d.ts",
-        "default": "./dist/storage.js"
-      },
-      "./worker": {
-        "types": "./dist/worker.d.ts",
-        "default": "./dist/worker.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/data-schema": "workspace:^"
+    "@remix-run/data-schema": "remix-run/remix#preview/pr-11100&path:packages/data-schema"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
