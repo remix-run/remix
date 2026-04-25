@@ -28,6 +28,17 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Use repo style: `let` for locals, module-scope `const`, regular functions by default, arrows for callbacks, object method shorthand, native class fields, and `#private`.
 - Use descriptive lowercase generic names in this repo, such as `source`, `pattern`, or `method`, instead of single-letter names unless local code already uses that convention.
 
+## Package Structure
+
+- Keep public barrels honest: top-level `src/*.ts` export files should re-export each public symbol directly from the module where it is defined, not through a `src/lib` pass-through barrel.
+- Treat `src/lib` files as implementation owners. Split implementation by responsibility, but do not add thin re-export wrappers or indirect ownership inside `src/lib`.
+- Export only APIs that a package consumer should rely on. Do not expose internal factories, data tables, or helper types just because they are useful across implementation modules.
+- When moving functionality between modules, move the owning types with it or re-export them only from the package-level public entry point. Avoid making an implementation module look like a public API aggregator.
+- Prefer internal factories or closures for configuration that should not leak into helper signatures. Public-facing helpers should not require callers to thread implementation booleans or mode flags through repeated calls.
+- If a helper name implies a stronger semantic contract than the implementation provides, either narrow the name or keep it private until a package actually needs it. For example, terminal display width is different from code point length.
+- Share constants from a single owning module when separate modules must agree on protocol values, escape sequences, sentinels, or discriminants. Avoid duplicating magic strings that can drift.
+- After public API changes, check the package barrel, README examples, tests, and change files together so documentation and exports match the actual supported surface.
+
 ## Type Design
 
 - Let inference work for local variables and callback parameters when the initializer or context is obvious.
@@ -91,6 +102,9 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Does the type model match real runtime behavior, including errors and absent values?
 - Did the change preserve package export boundaries and type ownership?
 - Are type-only imports and `.ts` extensions correct?
+- Do package-level exports point directly at the owning modules where symbols are defined?
+- Did the change avoid turning `src/lib` modules into pass-through barrels or accidental public API aggregators?
+- Is every exported helper/type something consumers should depend on now, not just an implementation convenience?
 - Are `any`, assertions, non-null assertions, and suppressions absent? If not, is each one isolated, proved by nearby runtime logic, and impossible to express with safer TypeScript?
 - Are generics necessary, minimal, and inference-friendly?
 - Are unions narrowed explicitly enough that each branch is safe?
