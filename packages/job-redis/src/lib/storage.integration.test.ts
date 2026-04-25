@@ -1,4 +1,4 @@
-import { after, before, describe } from 'node:test'
+import { after, before, describe } from '@remix-run/test'
 import { createClient, type RedisClientType } from 'redis'
 
 import { runJobStorageContract } from '../../../job/src/lib/test/storage-contract.ts'

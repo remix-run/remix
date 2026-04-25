@@ -43,6 +43,8 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "redis": "^5.9.0"
@@ -53,8 +55,8 @@
     "check:scripts": "node ./scripts/generate-lua.ts --check",
     "generate:scripts": "node ./scripts/generate-lua.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "pnpm run check:scripts && node --disable-warning=ExperimentalWarning --test ./src/lib/storage.test.ts",
-    "test:integration": "pnpm run check:scripts && node --disable-warning=ExperimentalWarning --test ./src/lib/storage.integration.test.ts",
+    "test": "pnpm run check:scripts && remix-test",
+    "test:integration": "pnpm run check:scripts && remix-test --glob.test 'src/lib/storage.integration.test.ts'",
     "typecheck": "pnpm run check:scripts && tsgo --noEmit"
   },
   "keywords": [

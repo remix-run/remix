@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { after, before, describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { after, before, describe, it } from '@remix-run/test'
 import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 import { createDatabase } from '@remix-run/data-table'
 import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
