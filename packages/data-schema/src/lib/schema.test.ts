@@ -387,8 +387,9 @@ describe('modifiers', () => {
     assert.equal(result.issues[0].message, 'Must be positive')
   })
 
-  it('supports transform predicates', () => {
+  it('supports transform functions', () => {
     let schema = number().transform((n) => n.toString())
+    expectType<Equal<InferOutput<typeof schema>, string>>()
 
     let ok = schema['~standard'].validate(42)
     let bad = schema['~standard'].validate('not-a-number')

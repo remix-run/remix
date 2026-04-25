@@ -224,7 +224,7 @@ export function createSchema<input, output>(
         return result
       })
     },
-    transform<newOutput>(predicate: (value: output) => newOutput): Schema<input, newOutput> {
+    transform<newOutput>(transformer: (value: output) => newOutput): Schema<input, newOutput> {
       return createSchema<input, newOutput>(function validate(value, context) {
         let result = schema['~run'](value, context)
 
@@ -232,7 +232,7 @@ export function createSchema<input, output>(
           return result
         }
 
-        return { value: predicate(result.value) }
+        return { value: transformer(result.value) }
       })
     },
   }
