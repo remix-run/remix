@@ -3,14 +3,11 @@ import { describe, it } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
+import { createStyles } from '@remix-run/terminal'
 
 import { logger } from './logger.ts'
 
-const reset = '\x1b[0m'
-const green = (value: string): string => `\x1b[32m${value}${reset}`
-const cyan = (value: string): string => `\x1b[36m${value}${reset}`
-const yellow = (value: string): string => `\x1b[33m${value}${reset}`
-const red = (value: string): string => `\x1b[31m${value}${reset}`
+const styles = createStyles({ colors: true, env: {} })
 
 describe('logger', () => {
   it('logs the request', async () => {
@@ -45,10 +42,10 @@ describe('logger', () => {
 
       let [method, status, duration, contentLength] = message.split(' ')
 
-      assert.equal(method, green('GET'))
-      assert.equal(status, green('200'))
-      assert.match(duration, /^\x1b\[(32|33|35|31)m\d+\x1b\[0m$/)
-      assert.equal(contentLength, cyan('2048'))
+      assert.equal(method, styles.green('GET'))
+      assert.equal(status, styles.green('200'))
+      assert.match(duration, /^\x1b\[(32|33|35|31)m\d+\x1b\[39m$/)
+      assert.equal(contentLength, styles.cyan('2048'))
     })
   })
 
@@ -70,7 +67,10 @@ describe('logger', () => {
         }),
       })
 
-      assert.equal(message, `${red('DELETE')} ${yellow('404')} ${yellow('204800')}`)
+      assert.equal(
+        message,
+        `${styles.red('DELETE')} ${styles.yellow('404')} ${styles.yellow('204800')}`,
+      )
     })
   })
 
@@ -92,11 +92,10 @@ describe('logger', () => {
     })
   })
 
-  it('respects NO_COLOR when the process global is defined', async () => {
+  it('respects NO_COLOR by default when the process global is defined', async () => {
     await withNoColor('1', async () => {
       let { message } = await logRequest({
         loggerOptions: {
-          colors: true,
           format: '%method %status %contentLength',
         },
         response: new Response('Home', {
@@ -110,8 +109,21 @@ describe('logger', () => {
     })
   })
 
+  it('forces colors on with the colors option', async () => {
+    await withNoColor('1', async () => {
+      let { message } = await logRequest({
+        loggerOptions: {
+          colors: true,
+          format: '%method %status',
+        },
+      })
+
+      assert.equal(message, `${styles.green('GET')} ${styles.green('200')}`)
+    })
+  })
+
   it('enables colors by default in TTY environments', async () => {
-    await withNoColor(undefined, async () => {
+    await withDefaultColorEnvironment(async () => {
       await withTTY(true, async () => {
         let { message } = await logRequest({
           loggerOptions: {
@@ -119,13 +131,13 @@ describe('logger', () => {
           },
         })
 
-        assert.equal(message, `${green('GET')} ${green('200')}`)
+        assert.equal(message, `${styles.green('GET')} ${styles.green('200')}`)
       })
     })
   })
 
   it('leaves colors off by default outside TTY environments', async () => {
-    await withNoColor(undefined, async () => {
+    await withDefaultColorEnvironment(async () => {
       await withTTY(false, async () => {
         let { message } = await logRequest({
           loggerOptions: {
@@ -198,26 +210,44 @@ async function logRequest({
   }
 }
 
+async function withDefaultColorEnvironment<result>(
+  callback: () => Promise<result>,
+): Promise<result> {
+  return withEnv('NO_COLOR', undefined, () =>
+    withEnv('FORCE_COLOR', undefined, () =>
+      withEnv('CI', undefined, () => withEnv('TERM', undefined, callback)),
+    ),
+  )
+}
+
 async function withNoColor<result>(
   value: string | undefined,
   callback: () => Promise<result>,
 ): Promise<result> {
-  let hadNoColor = Object.hasOwn(process.env, 'NO_COLOR')
-  let previous = process.env.NO_COLOR
+  return withEnv('NO_COLOR', value, callback)
+}
+
+async function withEnv<result>(
+  name: string,
+  value: string | undefined,
+  callback: () => Promise<result>,
+): Promise<result> {
+  let hadValue = Object.hasOwn(process.env, name)
+  let previous = process.env[name]
 
   if (value === undefined) {
-    delete process.env.NO_COLOR
+    delete process.env[name]
   } else {
-    process.env.NO_COLOR = value
+    process.env[name] = value
   }
 
   try {
     return await callback()
   } finally {
-    if (hadNoColor) {
-      process.env.NO_COLOR = previous
+    if (hadValue) {
+      process.env[name] = previous
     } else {
-      delete process.env.NO_COLOR
+      delete process.env[name]
     }
   }
 }

@@ -76,7 +76,7 @@ let router = createRouter({
 
 ### Colorized Output
 
-Logger output automatically uses ANSI colors for high-signal tokens when running in a TTY. Set `colors` to `false` to disable colorized output. When the `process` global is defined, the `NO_COLOR` environment variable disables colors regardless of the `colors` option.
+Logger output automatically uses ANSI colors for high-signal tokens when terminal color detection allows them. Set `colors` to `false` to disable colorized output or `true` to force it on. When the `process` global is defined, color detection respects `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams.
 
 ```ts
 let router = createRouter({

@@ -1,5 +1,7 @@
 import type { Middleware } from '@remix-run/fetch-router'
 
+import { createStyles } from '@remix-run/terminal'
+
 /**
  * Options for the {@link logger} middleware.
  */
@@ -40,9 +42,9 @@ export interface LoggerOptions {
   /**
    * Enables ANSI colors for high-signal log tokens.
    *
-   * By default, colors are enabled when running in a TTY and disabled otherwise. Set this to `false`
-   * to opt out. When the `process` global is defined, the `NO_COLOR` environment variable disables
-   * colors regardless of this option.
+   * By default, colors are enabled when terminal color detection allows them. Set this to `false`
+   * to opt out or `true` to force colors on. When the `process` global is defined, color
+   * detection respects `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams.
    *
    * The following tokens are colorized when colors are enabled:
    *
@@ -109,14 +111,6 @@ export function logger(options: LoggerOptions = {}): Middleware {
 }
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const ansi = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',
-  cyan: '\x1b[36m',
-  yellow: '\x1b[33m',
-  magenta: '\x1b[35m',
-  red: '\x1b[31m',
-}
 
 interface Colorizer {
   contentLength(value: string, bytes: number | undefined): string
@@ -126,70 +120,54 @@ interface Colorizer {
 }
 
 function getColorizer(option: boolean | undefined): Colorizer {
-  let enabled = shouldUseColors(option)
+  let styles = createStyles({ colors: option })
 
   return {
     contentLength(value, bytes) {
-      if (!enabled || bytes === undefined) return value
-      if (bytes >= 1024 * 1024) return colorize(value, ansi.red)
-      if (bytes >= 100 * 1024) return colorize(value, ansi.yellow)
-      if (bytes >= 1024) return colorize(value, ansi.cyan)
+      if (!styles.enabled || bytes === undefined) return value
+      if (bytes >= 1024 * 1024) return styles.red(value)
+      if (bytes >= 100 * 1024) return styles.yellow(value)
+      if (bytes >= 1024) return styles.cyan(value)
       return value
     },
     duration(ms) {
       let value = String(ms)
-      if (!enabled) return value
-      if (ms >= 1000) return colorize(value, ansi.red)
-      if (ms >= 500) return colorize(value, ansi.magenta)
-      if (ms >= 100) return colorize(value, ansi.yellow)
-      return colorize(value, ansi.green)
+      if (!styles.enabled) return value
+      if (ms >= 1000) return styles.red(value)
+      if (ms >= 500) return styles.magenta(value)
+      if (ms >= 100) return styles.yellow(value)
+      return styles.green(value)
     },
     method(method) {
-      if (!enabled) return method
+      if (!styles.enabled) return method
 
       switch (method.toUpperCase()) {
         case 'GET':
         case 'HEAD':
-          return colorize(method, ansi.green)
+          return styles.green(method)
         case 'POST':
-          return colorize(method, ansi.cyan)
+          return styles.cyan(method)
         case 'PUT':
         case 'PATCH':
-          return colorize(method, ansi.yellow)
+          return styles.yellow(method)
         case 'DELETE':
-          return colorize(method, ansi.red)
+          return styles.red(method)
         case 'OPTIONS':
-          return colorize(method, ansi.magenta)
+          return styles.magenta(method)
         default:
           return method
       }
     },
     status(status) {
       let value = String(status)
-      if (!enabled) return value
-      if (status >= 500) return colorize(value, ansi.red)
-      if (status >= 400) return colorize(value, ansi.yellow)
-      if (status >= 300) return colorize(value, ansi.cyan)
-      if (status >= 200) return colorize(value, ansi.green)
+      if (!styles.enabled) return value
+      if (status >= 500) return styles.red(value)
+      if (status >= 400) return styles.yellow(value)
+      if (status >= 300) return styles.cyan(value)
+      if (status >= 200) return styles.green(value)
       return value
     },
   }
-}
-
-function shouldUseColors(option: boolean | undefined): boolean {
-  if (typeof process !== 'undefined' && process.env?.NO_COLOR != null) {
-    return false
-  }
-
-  if (option !== undefined) {
-    return option
-  }
-
-  return typeof process !== 'undefined' && process.stdout?.isTTY === true
-}
-
-function colorize(value: string, color: string): string {
-  return `${color}${value}${ansi.reset}`
 }
 
 function parseContentLength(value: string | null): number | undefined {

@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/logger-middleware",
-  "version": "0.1.5",
-  "description": "Middleware for logging HTTP requests and responses",
+  "name": "@remix-run/terminal",
+  "version": "0.0.0",
+  "description": "Terminal output utilities for Remix packages",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/logger-middleware"
+    "directory": "packages/terminal"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/logger-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/terminal#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -32,30 +32,21 @@
     }
   },
   "devDependencies": {
-    "@remix-run/assert": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
-  },
-  "dependencies": {
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/terminal": "workspace:^"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
+    "test": "node --disable-warning=ExperimentalWarning --test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "fetch",
-    "router",
-    "middleware",
-    "logger",
-    "logging",
-    "http-logger"
+    "terminal",
+    "ansi",
+    "colors",
+    "cli",
+    "output"
   ]
 }
