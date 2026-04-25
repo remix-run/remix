@@ -238,6 +238,30 @@ let Profile = object({
 })
 ```
 
+## Output transforms with `.transform()`
+
+Map a validated value into the shape your app wants. The transformer runs after the schema validates and changes the parsed output type.
+
+```ts
+import { object, parse, string } from '@remix-run/data-schema'
+
+let Event = object({
+  id: string(),
+  createdAt: string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), 'Expected valid date')
+    .transform((value) => new Date(value)),
+})
+
+let event = parse(Event, {
+  id: 'evt_1',
+  createdAt: '2026-04-25T00:00:00.000Z',
+})
+
+event.createdAt // Date
+```
+
+Use `.refine()` for checks that reject values without changing them. Use `.transform()` for safe, synchronous mappings; thrown errors are propagated instead of converted into validation issues.
+
 ## Validation pipelines with `.pipe()`
 
 Compose reusable `Check` objects for common constraints.
