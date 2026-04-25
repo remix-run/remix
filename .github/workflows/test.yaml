@@ -56,8 +56,7 @@ jobs:
 
   test-bun-main:
     name: test (bun, ubuntu-latest)
-    # TODO: Uncomment before merging so this runs only on push/main.
-    # if: github.event_name == 'push'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
