@@ -5,21 +5,41 @@ import { LazyFile } from '@remix-run/lazy-file'
 
 import { createFileResponse, type FileLike } from './file.ts'
 
+// Bun's Blob/File `slice().stream()` still returns the full body instead of the
+// sliced body here, so these ranged body assertions fail under Bun.
+// Upstream issues:
+//  - https://github.com/oven-sh/bun/issues/7057
+//  - https://github.com/oven-sh/bun/issues/8718
+const skipRangedResponseAssertionsOnBun = 'Bun' in globalThis
+
 // Type assertions: ensure FileLike is compatible with native File and LazyFile.
 // If FileLike drifts from their APIs, TypeScript will error here.
 null as unknown as File satisfies FileLike
 null as unknown as LazyFile satisfies FileLike
 
+// Native File normalizes some MIME types differently across runtimes (for example
+// Bun adds charset for text types and rewrites application/javascript), so derive
+// the input type from the current runtime before asserting the response headers.
+function normalizeFileType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
+// Bun adds charset=utf-8 automatically, so we need to append it only if it's not present.
+function appendUtf8Charset(type: string): string {
+  return type.includes('charset') ? type : `${type}; charset=utf-8`
+}
+
 describe('createFileResponse()', () => {
   it('serves a file', async () => {
-    let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+    let fileType = normalizeFileType('text/plain')
+    let mockFile = new File(['Hello, World!'], 'test.txt', { type: fileType })
     let request = new Request('http://localhost/test.txt')
 
     let response = await createFileResponse(mockFile, request)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(fileType))
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -36,14 +56,15 @@ describe('createFileResponse()', () => {
   })
 
   it('serves a file with HEAD request', async () => {
-    let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+    let fileType = normalizeFileType('text/plain')
+    let mockFile = new File(['Hello, World!'], 'test.txt', { type: fileType })
     let request = new Request('http://localhost/test.txt', { method: 'HEAD' })
 
     let response = await createFileResponse(mockFile, request)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(fileType))
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -710,7 +731,7 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Accept-Ranges'), null)
     })
 
-    it('handles simple range request', async () => {
+    it('handles simple range request', { skip: skipRangedResponseAssertionsOnBun }, async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
       let request = new Request('http://localhost/video.mp4', {
         headers: { Range: 'bytes=0-4' },
@@ -893,54 +914,62 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Range'), null)
     })
 
-    it('returns 206 (Partial Content) when If-Match succeeds with Range request (strong ETag)', async () => {
-      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
-      let request1 = new Request('http://localhost/video.mp4')
+    it(
+      'returns 206 (Partial Content) when If-Match succeeds with Range request (strong ETag)',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+        let request1 = new Request('http://localhost/video.mp4')
 
-      // Get the strong ETag
-      let response1 = await createFileResponse(mockFile, request1, {
-        etag: 'strong',
-      })
-      let etag = response1.headers.get('ETag')
-      assert.ok(etag)
-      assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+        // Get the strong ETag
+        let response1 = await createFileResponse(mockFile, request1, {
+          etag: 'strong',
+        })
+        let etag = response1.headers.get('ETag')
+        assert.ok(etag)
+        assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
 
-      // If-Match passes, Range should be processed
-      let request2 = new Request('http://localhost/video.mp4', {
-        headers: {
-          'If-Match': etag,
-          Range: 'bytes=0-4',
-        },
-      })
-      let response2 = await createFileResponse(mockFile, request2, {
-        etag: 'strong',
-      })
+        // If-Match passes, Range should be processed
+        let request2 = new Request('http://localhost/video.mp4', {
+          headers: {
+            'If-Match': etag,
+            Range: 'bytes=0-4',
+          },
+        })
+        let response2 = await createFileResponse(mockFile, request2, {
+          etag: 'strong',
+        })
 
-      assert.equal(response2.status, 206)
-      assert.equal(await response2.text(), '01234')
-      assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response2.status, 206)
+        assert.equal(await response2.text(), '01234')
+        assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
-    it('returns 206 (Partial Content) when If-Unmodified-Since passes with Range request', async () => {
-      let fileDate = new Date('2025-01-01')
-      let futureDate = new Date('2026-01-01')
-      let mockFile = new File(['0123456789'], 'video.mp4', {
-        type: 'video/mp4',
-        lastModified: fileDate.getTime(),
-      })
-      let request = new Request('http://localhost/video.mp4', {
-        headers: {
-          'If-Unmodified-Since': futureDate.toUTCString(),
-          Range: 'bytes=0-4',
-        },
-      })
+    it(
+      'returns 206 (Partial Content) when If-Unmodified-Since passes with Range request',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let fileDate = new Date('2025-01-01')
+        let futureDate = new Date('2026-01-01')
+        let mockFile = new File(['0123456789'], 'video.mp4', {
+          type: 'video/mp4',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/video.mp4', {
+          headers: {
+            'If-Unmodified-Since': futureDate.toUTCString(),
+            Range: 'bytes=0-4',
+          },
+        })
 
-      let response = await createFileResponse(mockFile, request)
+        let response = await createFileResponse(mockFile, request)
 
-      assert.equal(response.status, 206)
-      assert.equal(await response.text(), '01234')
-      assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response.status, 206)
+        assert.equal(await response.text(), '01234')
+        assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
     it('returns 412 (Precondition Failed) when If-Unmodified-Since fails before processing Range', async () => {
       let fileDate = new Date('2025-01-01')
@@ -985,21 +1014,25 @@ describe('createFileResponse()', () => {
       assert.equal(response2.headers.get('Content-Range'), null)
     })
 
-    it('returns 206 (Partial Content) when If-None-Match does not match', async () => {
-      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
-      let request = new Request('http://localhost/video.mp4', {
-        headers: {
-          'If-None-Match': '"wrong-etag"',
-          Range: 'bytes=0-4',
-        },
-      })
+    it(
+      'returns 206 (Partial Content) when If-None-Match does not match',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+        let request = new Request('http://localhost/video.mp4', {
+          headers: {
+            'If-None-Match': '"wrong-etag"',
+            Range: 'bytes=0-4',
+          },
+        })
 
-      let response = await createFileResponse(mockFile, request)
+        let response = await createFileResponse(mockFile, request)
 
-      assert.equal(response.status, 206)
-      assert.equal(await response.text(), '01234')
-      assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response.status, 206)
+        assert.equal(await response.text(), '01234')
+        assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
     it('returns 304 (Not Modified) when If-Modified-Since matches', async () => {
       let fileDate = new Date('2025-01-01')
@@ -1025,47 +1058,55 @@ describe('createFileResponse()', () => {
       assert.equal(response2.headers.get('Content-Range'), null)
     })
 
-    it('returns 206 (Partial Content) when If-Modified-Since does not match', async () => {
-      let fileDate = new Date('2025-01-01')
-      let pastDate = new Date('2024-01-01')
-      let mockFile = new File(['0123456789'], 'video.mp4', {
-        type: 'video/mp4',
-        lastModified: fileDate.getTime(),
-      })
-      let request = new Request('http://localhost/video.mp4', {
-        headers: {
-          'If-Modified-Since': pastDate.toUTCString(),
-          Range: 'bytes=0-4',
-        },
-      })
+    it(
+      'returns 206 (Partial Content) when If-Modified-Since does not match',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let fileDate = new Date('2025-01-01')
+        let pastDate = new Date('2024-01-01')
+        let mockFile = new File(['0123456789'], 'video.mp4', {
+          type: 'video/mp4',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/video.mp4', {
+          headers: {
+            'If-Modified-Since': pastDate.toUTCString(),
+            Range: 'bytes=0-4',
+          },
+        })
 
-      let response = await createFileResponse(mockFile, request)
+        let response = await createFileResponse(mockFile, request)
 
-      assert.equal(response.status, 206)
-      assert.equal(await response.text(), '01234')
-      assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response.status, 206)
+        assert.equal(await response.text(), '01234')
+        assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
-    it('returns 206 (Partial Content) when If-Range matches Last-Modified date', async () => {
-      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
-      let request1 = new Request('http://localhost/video.mp4')
+    it(
+      'returns 206 (Partial Content) when If-Range matches Last-Modified date',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+        let request1 = new Request('http://localhost/video.mp4')
 
-      let response1 = await createFileResponse(mockFile, request1)
-      let lastModified = response1.headers.get('Last-Modified')
-      assert.ok(lastModified)
+        let response1 = await createFileResponse(mockFile, request1)
+        let lastModified = response1.headers.get('Last-Modified')
+        assert.ok(lastModified)
 
-      let request2 = new Request('http://localhost/video.mp4', {
-        headers: {
-          Range: 'bytes=0-4',
-          'If-Range': lastModified,
-        },
-      })
-      let response2 = await createFileResponse(mockFile, request2)
+        let request2 = new Request('http://localhost/video.mp4', {
+          headers: {
+            Range: 'bytes=0-4',
+            'If-Range': lastModified,
+          },
+        })
+        let response2 = await createFileResponse(mockFile, request2)
 
-      assert.equal(response2.status, 206)
-      assert.equal(await response2.text(), '01234')
-      assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response2.status, 206)
+        assert.equal(await response2.text(), '01234')
+        assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
     it('returns 200 (OK, full file) when If-Range does not match Last-Modified date', async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
@@ -1196,31 +1237,35 @@ describe('createFileResponse()', () => {
       assert.equal(response2.headers.get('Content-Range'), null)
     })
 
-    it('returns 206 (Partial Content) with If-None-Match + If-Range when If-Range matches and If-None-Match does not match', async () => {
-      let fileDate = new Date('2025-01-01')
-      let mockFile = new File(['0123456789'], 'video.mp4', {
-        type: 'video/mp4',
-        lastModified: fileDate.getTime(),
-      })
-      let request1 = new Request('http://localhost/video.mp4')
+    it(
+      'returns 206 (Partial Content) with If-None-Match + If-Range when If-Range matches and If-None-Match does not match',
+      { skip: skipRangedResponseAssertionsOnBun },
+      async () => {
+        let fileDate = new Date('2025-01-01')
+        let mockFile = new File(['0123456789'], 'video.mp4', {
+          type: 'video/mp4',
+          lastModified: fileDate.getTime(),
+        })
+        let request1 = new Request('http://localhost/video.mp4')
 
-      let response1 = await createFileResponse(mockFile, request1)
-      let lastModified = response1.headers.get('Last-Modified')
-      assert.ok(lastModified)
+        let response1 = await createFileResponse(mockFile, request1)
+        let lastModified = response1.headers.get('Last-Modified')
+        assert.ok(lastModified)
 
-      let request2 = new Request('http://localhost/video.mp4', {
-        headers: {
-          'If-None-Match': '"wrong-etag"',
-          'If-Range': lastModified,
-          Range: 'bytes=0-4',
-        },
-      })
-      let response2 = await createFileResponse(mockFile, request2)
+        let request2 = new Request('http://localhost/video.mp4', {
+          headers: {
+            'If-None-Match': '"wrong-etag"',
+            'If-Range': lastModified,
+            Range: 'bytes=0-4',
+          },
+        })
+        let response2 = await createFileResponse(mockFile, request2)
 
-      assert.equal(response2.status, 206)
-      assert.equal(await response2.text(), '01234')
-      assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
+        assert.equal(response2.status, 206)
+        assert.equal(await response2.text(), '01234')
+        assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
+      },
+    )
 
     it('returns 200 (OK) with If-None-Match + If-Range when both If-None-Match and If-Range do not match', async () => {
       let fileDate = new Date('2025-01-01')
@@ -1270,24 +1315,24 @@ describe('createFileResponse()', () => {
   describe('Content-Type', () => {
     it('sets Content-Type from file with charset for text-based types', async () => {
       let testCases = [
-        { type: 'text/html', name: 'test.html', expected: 'text/html; charset=utf-8' },
-        { type: 'text/css', name: 'test.css', expected: 'text/css; charset=utf-8' },
-        { type: 'text/plain', name: 'test.txt', expected: 'text/plain; charset=utf-8' },
-        { type: 'text/javascript', name: 'test.js', expected: 'text/javascript; charset=utf-8' },
+        { type: 'text/html', name: 'test.html' },
+        { type: 'text/css', name: 'test.css' },
+        { type: 'text/plain', name: 'test.txt' },
+        { type: 'text/javascript', name: 'test.js' },
         {
           type: 'application/json',
           name: 'test.json',
-          expected: 'application/json; charset=utf-8',
         },
       ]
 
-      for (let { type, name, expected } of testCases) {
-        let mockFile = new File(['test content'], name, { type })
+      for (let { type, name } of testCases) {
+        let fileType = normalizeFileType(type)
+        let mockFile = new File(['test content'], name, { type: fileType })
         let request = new Request(`http://localhost/${name}`)
 
         let response = await createFileResponse(mockFile, request)
         assert.equal(response.status, 200)
-        assert.equal(response.headers.get('Content-Type'), expected)
+        assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(fileType))
       }
     })
 
@@ -1308,12 +1353,13 @@ describe('createFileResponse()', () => {
     })
 
     it('sets Content-Type with charset for application/javascript', async () => {
-      let mockFile = new File(['test content'], 'app.js', { type: 'application/javascript' })
+      let fileType = normalizeFileType('application/javascript')
+      let mockFile = new File(['test content'], 'app.js', { type: fileType })
       let request = new Request('http://localhost/app.js')
 
       let response = await createFileResponse(mockFile, request)
       assert.equal(response.status, 200)
-      assert.equal(response.headers.get('Content-Type'), 'application/javascript; charset=utf-8')
+      assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(fileType))
     })
 
     it('does not add charset to binary types', async () => {

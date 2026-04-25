@@ -2,8 +2,8 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import * as util from 'node:util'
-import { tsImport } from 'tsx/esm/api'
 import type { PlaywrightTestConfig } from 'playwright/test'
+import { importModule } from './import-module.ts'
 
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
@@ -20,6 +20,10 @@ const cliOptions = {
   'glob.e2e': {
     type: 'string',
     description: 'Glob pattern for E2E test files',
+  },
+  'glob.exclude': {
+    type: 'string',
+    description: 'Glob pattern for paths to exclude from discovery',
   },
   'glob.test': {
     type: 'string',
@@ -115,8 +119,9 @@ const defaultValues: ResolvedRemixTestConfig = {
     functions: undefined,
   },
   glob: {
-    test: '**/*.test?(.e2e).{ts,tsx}',
+    test: '**/*.test{,.e2e}.{ts,tsx}',
     e2e: '**/*.test.e2e.{ts,tsx}',
+    exclude: 'node_modules/**',
   },
   reporter: process.env.CI === 'true' ? 'dot' : 'spec',
   type: 'server,e2e',
@@ -140,10 +145,12 @@ export interface RemixTestConfig {
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
    *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
+   *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
     test?: string
     e2e?: string
+    exclude?: string
   }
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
@@ -202,6 +209,7 @@ export interface ResolvedRemixTestConfig {
   glob: {
     test: string
     e2e: string
+    exclude: string
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string | undefined
@@ -261,6 +269,7 @@ function resolveConfig(
         fileConfig.glob?.test ??
         defaultValues.glob.test,
       e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
+      exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
     },
     browser: {
       echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
@@ -328,7 +337,7 @@ async function loadConfigFile(configPath?: string): Promise<RemixTestConfig> {
   for (let candidate of candidates) {
     try {
       await fsp.access(candidate)
-      let mod = await tsImport(candidate, { parentURL: import.meta.url })
+      let mod = await importModule(candidate, import.meta)
       return mod.default ?? mod
     } catch {
       // not found or failed to load — try next

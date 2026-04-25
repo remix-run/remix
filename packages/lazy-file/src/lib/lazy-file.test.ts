@@ -7,6 +7,13 @@ import { type LazyContent, LazyBlob, LazyFile } from './lazy-file.ts'
 null as unknown as LazyBlob satisfies Record<keyof Blob, unknown>
 null as unknown as LazyFile satisfies Record<keyof File, unknown>
 
+// Native File/Blob normalizes some MIME types differently across runtimes (for example
+// Bun adds charset for text types and rewrites application/javascript), so derive
+// the input type from the current runtime before asserting the response headers.
+function normalizeFileOrBlobType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
 function createLazyContent(value = ''): LazyContent {
   let buffer = new TextEncoder().encode(value)
   return {
@@ -82,12 +89,13 @@ describe('LazyBlob', () => {
 
   describe('toBlob()', () => {
     it('converts to a native Blob', async () => {
-      let lazyBlob = new LazyBlob(createLazyContent('hello world'), { type: 'text/plain' })
+      let blobType = normalizeFileOrBlobType('text/plain')
+      let lazyBlob = new LazyBlob(createLazyContent('hello world'), { type: blobType })
       let blob = await lazyBlob.toBlob()
 
       assert.equal(blob instanceof Blob, true)
       assert.equal(blob.size, 11)
-      assert.equal(blob.type, 'text/plain')
+      assert.equal(blob.type, blobType)
       assert.equal(await blob.text(), 'hello world')
     })
   })
@@ -189,8 +197,9 @@ describe('LazyFile', () => {
   describe('toFile()', () => {
     it('converts to a native File', async () => {
       let now = Date.now()
+      let fileType = normalizeFileOrBlobType('text/plain')
       let lazyFile = new LazyFile(createLazyContent('hello world'), 'hello.txt', {
-        type: 'text/plain',
+        type: fileType,
         lastModified: now,
       })
       let file = await lazyFile.toFile()
@@ -198,7 +207,7 @@ describe('LazyFile', () => {
       assert.equal(file instanceof File, true)
       assert.equal(file.name, 'hello.txt')
       assert.equal(file.size, 11)
-      assert.equal(file.type, 'text/plain')
+      assert.equal(file.type, fileType)
       assert.equal(file.lastModified, now)
       assert.equal(await file.text(), 'hello world')
     })
@@ -206,14 +215,15 @@ describe('LazyFile', () => {
 
   describe('toBlob()', () => {
     it('converts to a native Blob', async () => {
+      let fileType = normalizeFileOrBlobType('text/plain')
       let lazyFile = new LazyFile(createLazyContent('hello world'), 'hello.txt', {
-        type: 'text/plain',
+        type: fileType,
       })
       let blob = await lazyFile.toBlob()
 
       assert.equal(blob instanceof Blob, true)
       assert.equal(blob.size, 11)
-      assert.equal(blob.type, 'text/plain')
+      assert.equal(blob.type, fileType)
       assert.equal(await blob.text(), 'hello world')
     })
   })

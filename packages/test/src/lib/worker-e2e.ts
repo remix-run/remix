@@ -1,7 +1,7 @@
 import { workerData, parentPort } from 'node:worker_threads'
-import { tsImport } from 'tsx/esm/api'
 import { createServer } from './e2e-server.ts'
 import { runTests, type TestResults } from './executor.ts'
+import { importModule } from './import-module.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
@@ -9,7 +9,7 @@ import {
 } from './playwright.ts'
 
 try {
-  await tsImport(workerData.file, import.meta.url)
+  await importModule(workerData.file, import.meta)
 
   let launcher = await getBrowserLauncher(workerData.playwrightUseOpts)
   let opts = getPlaywrightLaunchOptions(workerData.playwrightUseOpts)

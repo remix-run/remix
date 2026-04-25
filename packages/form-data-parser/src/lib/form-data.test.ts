@@ -9,6 +9,13 @@ import {
 } from './form-data.ts'
 import { MultipartParseError, MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
 
+// Native File normalizes some MIME types differently across runtimes (for example
+// Bun adds charset for text types and rewrites application/javascript), so derive
+// the input type from the current runtime before asserting the response headers.
+function normalizeFileType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
     let request = new Request('https://remix.run', {
@@ -25,6 +32,7 @@ describe('parseFormData', () => {
   })
 
   it('parses a multipart/form-data request', async () => {
+    let fileType = normalizeFileType('text/plain')
     let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
@@ -37,7 +45,7 @@ describe('parseFormData', () => {
         'Hello, World!',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW',
         'Content-Disposition: form-data; name="file"; filename="example.txt"',
-        'Content-Type: text/plain',
+        `Content-Type: ${fileType}`,
         '',
         'This is an example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
@@ -51,7 +59,7 @@ describe('parseFormData', () => {
     let file = formData.get('file')
     assert.ok(file instanceof File)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, 'text/plain')
+    assert.equal(file.type, fileType)
     assert.equal(await file.text(), 'This is an example file.')
   })
 
@@ -141,16 +149,17 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let formData = await parseFormData(
-      request,
-      async (upload) => new File([await upload.text()], 'example.txt', { type: 'text/plain' }),
-    )
+    let uploadedFile: File | null = null
+    let formData = await parseFormData(request, async (upload) => {
+      uploadedFile = new File([await upload.text()], 'example.txt', { type: 'text/plain' })
+      return uploadedFile
+    })
 
     let file = formData.get('file')
 
     assert.ok(file instanceof File)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, 'text/plain')
+    assert.equal(file.type, uploadedFile!.type)
     assert.equal(await file.text(), 'This is an example file.')
   })
 

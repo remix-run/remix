@@ -7,6 +7,10 @@ import { parseFormData } from '@remix-run/form-data-parser'
 
 import { createFsFileStorage } from './fs.ts'
 
+function normalizeFileType(type: string): string {
+  return new File([''], '', { type }).type
+}
+
 describe('fs file storage', () => {
   let tmpDir: string
   beforeEach(() => {
@@ -33,7 +37,7 @@ describe('fs file storage', () => {
 
     assert.ok(retrieved)
     assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
+    assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
 
@@ -189,7 +193,7 @@ describe('fs file storage', () => {
     assert.ok(await storage.has('hello'))
     assert.ok(retrieved)
     assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
+    assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
   })
@@ -199,6 +203,7 @@ describe('fs file storage', () => {
       let storage = createFsFileStorage(tmpDir)
 
       let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+      let fileType = normalizeFileType('text/plain')
       let request = new Request('http://example.com', {
         method: 'POST',
         headers: {
@@ -207,7 +212,7 @@ describe('fs file storage', () => {
         body: [
           `--${boundary}`,
           'Content-Disposition: form-data; name="hello"; filename="hello.txt"',
-          'Content-Type: text/plain',
+          `Content-Type: ${fileType}`,
           '',
           'Hello, world!',
           `--${boundary}--`,
@@ -226,7 +231,7 @@ describe('fs file storage', () => {
       assert.equal(files[0].key, 'hello')
       assert.equal(files[0].name, 'hello.txt')
       assert.equal(files[0].size, 13)
-      assert.equal(files[0].type, 'text/plain')
+      assert.equal(files[0].type, fileType)
       assert.ok(files[0].lastModified)
     })
   })

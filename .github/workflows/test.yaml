@@ -54,6 +54,34 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  test-bun-main:
+    name: test (bun, ubuntu-latest)
+    # TODO: Uncomment before merging so this runs only on push/main.
+    # if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Bun tests
+        run: pnpm test:bun
+
   test-windows-pr:
     name: test (windows-latest, changed packages)
     if: github.event_name == 'pull_request'

@@ -33,6 +33,7 @@
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
     "test": "pnpm --parallel run test",
+    "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",
     "typecheck": "pnpm -r typecheck",
     "typecheck:changed": "node ./scripts/run-changed-workspaces.ts typecheck"
