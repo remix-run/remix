@@ -1,0 +1,1 @@
+Fix wrong error name in this changelog.
