@@ -1,7 +1,7 @@
 {
   "name": "remix",
   "version": "3.0.0-alpha.5",
-  "description": "Remix Web Framework",
+  "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

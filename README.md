@@ -34,7 +34,7 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 ## Packages
 
-Remix 3 includes the following packages:
+Remix is composed of lots of small, focused sub-packages that are composed together under the `remix` "umbrella" package. This encourages strong, clear boundaries between different areas of functionality and makes it easier to swap out implementations when needed.
 
 - [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
 - [assets](packages/assets): Fetch-based server for compiling browser JS/TS assets on demand
@@ -67,7 +67,6 @@ Remix 3 includes the following packages:
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
-- [remix](packages/remix): Remix Web Framework
 - [response](packages/response): Response helpers for the web Fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
 - [session](packages/session): Session management for JavaScript
