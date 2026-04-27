@@ -50,7 +50,9 @@ export const Tests = clientEntry(
         function onMessage(event: MessageEvent) {
           if (event.source !== iframe.contentWindow) return
           window.removeEventListener('message', onMessage)
-          iframe.remove()
+          // Hide instead of remove so when coverage is enabled the iframe remains attached
+          // so V8 retains its scripts and Playwright can collect coverage at run end.
+          iframe.style.display = 'none'
           if (event.data.type === 'test-results') {
             let { passed, failed, skipped, todo, tests } = event.data.results as TestResults
             resolve({

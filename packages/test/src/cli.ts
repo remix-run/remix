@@ -61,10 +61,7 @@ async function executeRun() {
 
     if (browserFiles.length > 0 && !browserServer) {
       let { startServer } = IS_RUNNING_FROM_SRC
-        ? await importModule('./app/server.tsx', import.meta, {
-            // TODO: Do we need this?
-            tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
-          })
+        ? await importModule('./app/server.tsx', import.meta)
         : await import(`./app/server.js`)
       let result = await startServer(browserFiles)
       browserServer = result.server
@@ -132,10 +129,12 @@ async function executeRun() {
             ? runBrowserTests({
                 baseUrl: `http://localhost:${browserPort}`,
                 console: config.browser?.echo,
+                coverage: !!config.coverage,
                 open: config.browser?.open,
                 playwrightUseOpts: project.playwrightUseOpts,
                 projectName: project.name,
                 reporter,
+                testFiles: browserFiles,
               })
             : null,
           e2eFiles.length > 0
@@ -153,6 +152,7 @@ async function executeRun() {
         counts.skipped += (browserResult?.results.skipped ?? 0) + (e2eResult?.skipped ?? 0)
         counts.todo += (browserResult?.results.todo ?? 0) + (e2eResult?.todo ?? 0)
         allCoverageMaps.push(e2eResult?.coverageMap)
+        allCoverageMaps.push(browserResult?.coverageMap)
 
         if (browserResult) lastBrowserResult = browserResult
       }

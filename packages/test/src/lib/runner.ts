@@ -12,10 +12,11 @@ import {
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
-const ext = path.extname(import.meta.url)
+const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
 

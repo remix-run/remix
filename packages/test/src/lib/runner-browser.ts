@@ -1,6 +1,8 @@
 import type { Browser, Page, Request } from 'playwright'
 import { routes } from '../app/client/routes.ts'
 import { colors } from './colors.ts'
+import { getBrowserTestRootDir } from './config.ts'
+import { collectBrowserCoverageMap, type CoverageMap, type V8CoverageEntry } from './coverage.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
@@ -13,14 +15,19 @@ import type { TestResults } from './reporters/results.ts'
 export interface TestRunOptions {
   baseUrl: string
   console?: boolean
+  coverage?: boolean
   open?: boolean
   playwrightUseOpts?: PlaywrightUseOpts
   projectName?: string
   reporter: Reporter
+  // Test file paths so coverage collection can skip them when mapping V8
+  // entries back to filesystem files.
+  testFiles?: string[]
 }
 
 export async function runBrowserTests(options: TestRunOptions): Promise<{
   results: TestResults
+  coverageMap: CoverageMap | null
   close: () => Promise<void>
   disconnected: Promise<void>
 }> {
@@ -34,6 +41,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     page = undefined
   }
   let results: TestResults
+  let coverageMap: CoverageMap | null = null
 
   try {
     browser = await getBrowserLauncher(options.playwrightUseOpts).launch(
@@ -43,6 +51,13 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     if (options.console) {
       page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
+    }
+
+    // Playwright's JS coverage is Chromium-only. Start before navigation so
+    // the harness scripts and test modules are instrumented from first parse.
+    let coverageEnabled = options.coverage && browser.browserType().name() === 'chromium'
+    if (coverageEnabled) {
+      await page.coverage.startJSCoverage({ resetOnNavigation: false })
     }
 
     let totalPassed = 0
@@ -60,22 +75,20 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       await route.fulfill({ status: 200 })
     })
 
-    // Fail the tests if any of our harness scripts or test modules fail to load
+    // Fail the tests if any /scripts/ request fails (harness scripts, test
+    // modules, or their transitive imports — all served via the same prefix).
     let errorPromise = new Promise((_, reject) => {
-      let isTestHarnessRequest = (request: Request) => {
-        let url = new URL(request.url())
-        let match = routes.scripts.match(url)
-        return (
-          match && (match.params.path?.startsWith('app/') || match.params.path?.startsWith('test/'))
-        )
+      let isScriptRequest = (request: Request) => {
+        let match = routes.scripts.match(new URL(request.url()))
+        return match != null
       }
       page!.on('response', (response) => {
-        if (!response.ok() && isTestHarnessRequest(response.request())) {
+        if (!response.ok() && isScriptRequest(response.request())) {
           reject(new Error(`Failed to load script: ${response.request().url()}`))
         }
       })
       page!.on('requestfailed', (request) => {
-        if (isTestHarnessRequest(request)) {
+        if (isScriptRequest(request)) {
           reject(new Error(`Failed to load script: ${request.url()}`))
         }
       })
@@ -86,6 +99,17 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     await page.goto(options.baseUrl)
     await Promise.race([page.waitForFunction('window.__testsDone'), errorPromise])
+
+    if (coverageEnabled) {
+      let entries = (await page.coverage.stopJSCoverage()) as unknown as V8CoverageEntry[]
+      if (entries.length > 0) {
+        coverageMap = await collectBrowserCoverageMap(
+          entries,
+          getBrowserTestRootDir(),
+          new Set(options.testFiles ?? []),
+        )
+      }
+    }
 
     results = {
       passed: totalPassed,
@@ -108,6 +132,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   if (options.open) {
     return {
       results,
+      coverageMap,
       close,
       disconnected: new Promise((r) => browser!.on('disconnected', () => r())),
     }
@@ -115,6 +140,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     await close()
     return {
       results,
+      coverageMap,
       close,
       disconnected: Promise.resolve(),
     }

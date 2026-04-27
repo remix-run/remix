@@ -5,6 +5,7 @@ import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
 import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 
 try {
   // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which
@@ -15,7 +16,7 @@ try {
   if (workerData.coverage && !IS_BUN) {
     // Ensure we load the right file whether we're running in the monorepo (TS) or
     // from a published package (JS)
-    let ext = path.extname(import.meta.url)
+    let ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
     mod.register(new URL(`./coverage-loader${ext}`, import.meta.url), import.meta.url)
     await import(workerData.file)
   } else {

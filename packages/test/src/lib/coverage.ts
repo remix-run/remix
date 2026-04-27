@@ -69,12 +69,7 @@ function filterCoverageMap(
 ): CoverageMap {
   let filtered = getIstanbul().createCoverageMap({})
   for (let filePath of coverageMap.files()) {
-    // Browser coverage entries are keyed as /scripts/@test/<relative> (the dev server path),
-    // not the real filesystem path, so path.relative would produce a ../../.. mess.
-    let scriptTestPrefix = '/scripts/@test/'
-    let idx = filePath.indexOf(scriptTestPrefix)
-    let relative =
-      idx >= 0 ? filePath.slice(idx + scriptTestPrefix.length) : path.relative(cwd, filePath)
+    let relative = path.relative(cwd, filePath)
 
     if (config.include && config.include.length > 0) {
       if (!matchesGlobs(relative, config.include)) continue
@@ -292,6 +287,66 @@ export async function collectE2ECoverageMap(
       } catch {
         // Skip files that can't be converted
       }
+    }
+  }
+
+  return converted > 0 ? coverageMap : null
+}
+
+// Resolve a browser test entry URL (served by the harness server at
+// `/scripts/<rel-from-rootDir>`) to an absolute file path, or null if it
+// should be skipped (node_modules, test files, etc.).
+async function resolveBrowserEntryPath(
+  url: string,
+  rootDir: string,
+  testFiles: Set<string>,
+): Promise<string | null> {
+  let urlPath: string
+  try {
+    urlPath = new URL(url).pathname
+  } catch {
+    return null
+  }
+
+  if (!urlPath.startsWith('/scripts/')) return null
+  let relative = urlPath.slice('/scripts/'.length)
+  if (!relative) return null
+
+  let filePath = path.resolve(rootDir, relative)
+  if (!filePath.startsWith(rootDir + path.sep)) return null
+  if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null
+  if (testFiles.has(filePath)) return null
+
+  try {
+    await fsp.access(filePath)
+  } catch {
+    return null
+  }
+
+  return filePath
+}
+
+export async function collectBrowserCoverageMap(
+  entries: V8CoverageEntry[],
+  rootDir: string,
+  testFiles: Set<string>,
+): Promise<CoverageMap | null> {
+  let { createCoverageMap } = getIstanbul()
+  let coverageMap = createCoverageMap({})
+  let converted = 0
+
+  for (let entry of entries) {
+    let filePath = await resolveBrowserEntryPath(entry.url, rootDir, testFiles)
+    if (!filePath) continue
+
+    // The harness server transforms TypeScript with the same esbuild options
+    // as the server-side coverage loader, so re-running that transform here
+    // produces byte-identical JS. Reuse the shared collector so the inline
+    // source map V8 saw is the one v8-to-istanbul reads.
+    try {
+      if (await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions)) converted++
+    } catch {
+      // Skip files that can't be converted
     }
   }
 

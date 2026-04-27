@@ -1,6 +1,9 @@
 import type { RemixTestConfig } from './src'
 
 export default {
+  coverage: {
+    include: ['src/**/*.{ts,tsx}'],
+  },
   playwrightConfig: {
     projects: [
       {

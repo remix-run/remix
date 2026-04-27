@@ -1,11 +1,34 @@
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as util from 'node:util'
 import type { PlaywrightTestConfig } from 'playwright/test'
 import { importModule } from './import-module.ts'
 
 export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
+
+/**
+ * The root directory for the test code. Coverage URLs are emitted as
+ * `/scripts/<rel-from-rootDir>` and resolved back via the same anchor.
+ *
+ *   - In a published install: `process.cwd()`, since deps and user source all
+ *     live under it.
+ *   - In monorepo src mode: the monorepo root, computed by walking back from
+ *     the resolved `@remix-run/test` source path. `process.cwd()` doesn't work
+ *     here because workspace deps and node_modules live above the per-package
+ *     cwd.
+ */
+export function getBrowserTestRootDir(): string {
+  return IS_RUNNING_FROM_SRC
+    ? // Resolve to packages/test/src/index.ts and the pop 3 directories off to the repo root
+      path
+        .dirname(fileURLToPath(import.meta.resolve('@remix-run/test')))
+        .split(path.sep)
+        .slice(0, -3)
+        .join(path.sep)
+    : process.cwd()
+}
 
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
