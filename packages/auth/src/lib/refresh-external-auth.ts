@@ -4,11 +4,14 @@ import type { OAuthProvider, OAuthTokens } from './provider.ts'
 /**
  * Completed result returned from a successful refresh-token exchange.
  */
-export interface RefreshedExternalAuthResult<provider extends string = string> {
+export interface RefreshedExternalAuthResult<
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+> {
   /** Provider name whose token bundle was refreshed. */
   provider: provider
   /** Updated token bundle returned by the provider runtime. */
-  tokens: OAuthTokens
+  tokens: tokens
 }
 
 /**
@@ -18,10 +21,14 @@ export interface RefreshedExternalAuthResult<provider extends string = string> {
  * @param tokens The current provider token bundle, including a refresh token when available.
  * @returns The provider name plus the refreshed token bundle.
  */
-export async function refreshExternalAuth<profile = never, provider extends string = string>(
-  provider: OAuthProvider<profile, provider>,
-  tokens: OAuthTokens,
-): Promise<RefreshedExternalAuthResult<provider>> {
+export async function refreshExternalAuth<
+  profile = never,
+  provider extends string = string,
+  tokens extends OAuthTokens = OAuthTokens,
+>(
+  provider: OAuthProvider<profile, provider, tokens>,
+  tokens: tokens,
+): Promise<RefreshedExternalAuthResult<provider, tokens>> {
   let runtime = getOAuthProviderRuntime(provider)
 
   if (runtime.refreshTokens == null) {
