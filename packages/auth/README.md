@@ -4,7 +4,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 
 ## Features
 
-- Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
+- Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `refreshExternalAuth()`, and `completeAuth()`
 - Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
@@ -19,11 +19,12 @@ npm i remix
 
 ## Usage
 
-`remix/auth` exposes four primitives:
+`remix/auth` exposes five primitives:
 
 - `verifyCredentials(provider, context)` parses submitted credentials and returns the authenticated result or `null`
 - `startExternalAuth(provider, context, options?)` stores the in-progress OAuth transaction in the session and returns the provider redirect response
-- `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`
+- `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`, including any provider tokens in `result.tokens`
+- `refreshExternalAuth(provider, tokens)` exchanges a previously stored `refreshToken` for a fresh provider token bundle when the provider runtime supports refresh
 - `completeAuth(context)` rotates the current session id and returns the session for auth writes
 
 The route owns redirects, flashes, and other app-specific behavior. `remix/auth` owns the protocol work.
@@ -149,6 +150,7 @@ import {
   completeAuth,
   createGoogleAuthProvider,
   finishExternalAuth,
+  refreshExternalAuth,
   startExternalAuth,
 } from 'remix/auth'
 import { createCookie } from 'remix/cookie'
@@ -188,6 +190,10 @@ let googleProvider = createGoogleAuthProvider({
   clientId: env.GOOGLE_CLIENT_ID,
   clientSecret: env.GOOGLE_CLIENT_SECRET,
   redirectUri: new URL(routes.auth.google.callback.href(), env.APP_ORIGIN),
+  authorizationParams: {
+    access_type: 'offline',
+    prompt: 'consent',
+  },
 })
 
 let router = createRouter({
@@ -229,11 +235,27 @@ router.get(routes.auth.google.callback, async (context) => {
   let { result, returnTo } = await finishExternalAuth(googleProvider, context)
 
   let user = await users.upsertFromGoogle(result.profile)
+  await persistProviderTokens(user.id, result.tokens)
+
   let session = completeAuth(context)
   session.set('auth', { userId: user.id })
 
   return redirect(returnTo ?? routes.app.dashboard.href())
 })
+
+async function getGoogleAccessToken(userId: string) {
+  let tokens = await readStoredProviderTokens(userId)
+  if (tokens == null) {
+    return null
+  }
+
+  if (tokens.expiresAt != null && tokens.expiresAt.getTime() <= Date.now()) {
+    tokens = (await refreshExternalAuth(googleProvider, tokens)).tokens
+    await persistProviderTokens(userId, tokens)
+  }
+
+  return tokens.accessToken
+}
 
 router.get(routes.app.dashboard, {
   middleware: [requireAuth()],
@@ -254,8 +276,10 @@ A typical external auth flow looks like this:
 1. Create the provider once at module scope.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
-4. Call `completeAuth(context)` and write your auth record into the returned session.
-5. Return your own redirect or other response.
+4. Persist any provider tokens you want to reuse later.
+5. Call `completeAuth(context)` and write your auth record into the returned session.
+6. On a later follow-up request, load the stored provider tokens, refresh them with `refreshExternalAuth()` only if needed, then save the refreshed bundle back to storage.
+7. Return your own redirect or other response.
 
 ## Built-in External Auth Providers
 
@@ -327,6 +351,8 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
+- `refreshExternalAuth()` supports built-in OIDC providers and X when the stored token bundle includes a refresh token
+- Providers only return refresh tokens when configured to request offline access, such as `authorizationParams: { access_type: 'offline' }` for Google or adding `offline.access` to X scopes
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
 Default scopes for OAuth providers that don't use OIDC discovery:

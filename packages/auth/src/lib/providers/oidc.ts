@@ -5,8 +5,10 @@ import {
   createAuthorizationURL,
   createOAuthProvider,
   exchangeAuthorizationCode,
+  exchangeRefreshToken,
   fetchJson,
   getAuthorizationCode,
+  mergeRefreshedTokens,
 } from '../provider.ts'
 import { createCodeChallenge } from '../utils.ts'
 
@@ -183,6 +185,21 @@ export function createOIDCAuthProvider<
         profile,
         tokens,
       }
+    },
+    async refreshTokens(currentTokens): Promise<OAuthTokens> {
+      if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+        throw new Error(`OIDC provider "${name}" did not receive a refresh token.`)
+      }
+
+      let metadata = await getMetadata()
+      let refreshedTokens = await exchangeRefreshToken({
+        tokenEndpoint: metadata.token_endpoint,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        refreshToken: currentTokens.refreshToken,
+      })
+
+      return mergeRefreshedTokens(currentTokens, refreshedTokens)
     },
   })
 }
