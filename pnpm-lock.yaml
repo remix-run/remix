@@ -1297,12 +1297,6 @@ importers:
 
   packages/node-fetch-server:
     devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1725,12 +1719,6 @@ importers:
 
   packages/terminal:
     devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
