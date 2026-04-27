@@ -1,6 +1,3 @@
-// https://bun.com/docs/guides/util/detect-bun
-export const IS_BUN = typeof process.versions.bun === 'string'
-
 function normalizeFilePath(path: string): string {
   let locSuffix = path.match(/(:\d+:\d+)$/)?.[0] || ''
   let normalized =

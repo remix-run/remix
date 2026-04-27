@@ -11,7 +11,7 @@ import { runServerTests } from './lib/runner.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
 import type { Counts } from './lib/reporters/results.ts'
-import { IS_BUN } from './lib/normalize.ts'
+import { IS_BUN } from './lib/runtime.ts'
 
 const config = await loadConfig()
 

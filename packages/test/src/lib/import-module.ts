@@ -1,5 +1,5 @@
 import { tsImport } from 'tsx/esm/api'
-import { IS_BUN } from './utils.ts'
+import { IS_BUN } from './runtime.ts'
 
 interface ImportMetaWithResolve extends ImportMeta {
   resolve(specifier: string, parent?: string | URL): string
