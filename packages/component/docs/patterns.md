@@ -503,7 +503,7 @@ function DataLoader(handle: Handle<{ url: string }>) {
       error = null
       handle.update()
 
-    let response = await fetch(handle.props.url, { signal })
+      let response = await fetch(handle.props.url, { signal })
       let json = await response.json()
       if (signal.aborted) return
       data = json

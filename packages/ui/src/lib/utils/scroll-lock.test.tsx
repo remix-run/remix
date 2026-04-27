@@ -20,7 +20,8 @@ function dispatchBeforeToggle(target: HTMLElement, newState: 'closed' | 'open') 
 }
 
 function ScrollLockSurface(handle: Handle<{ mounted?: boolean }>) {
-  return () => (handle.props.mounted ?? true ? <div id="surface" mix={lockScrollOnToggle()} /> : null)
+  return () =>
+    (handle.props.mounted ?? true) ? <div id="surface" mix={lockScrollOnToggle()} /> : null
 }
 
 function renderSurface(props: { mounted?: boolean } = {}) {

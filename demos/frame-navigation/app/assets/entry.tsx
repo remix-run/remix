@@ -110,13 +110,13 @@ function ErrorCard(handle: Handle<ErrorCardProps>) {
   return () => {
     let { eyebrow, title, message, action, animated } = handle.props
     return (
-    <div mix={animated ? [cardCss, animateGentlyIn] : cardCss}>
-      <p mix={eyebrowCss}>{eyebrow}</p>
-      <h1 mix={titleCss}>{title}</h1>
-      <p mix={messageCss}>{message}</p>
-      {action}
-    </div>
-  )
+      <div mix={animated ? [cardCss, animateGentlyIn] : cardCss}>
+        <p mix={eyebrowCss}>{eyebrow}</p>
+        <h1 mix={titleCss}>{title}</h1>
+        <p mix={messageCss}>{message}</p>
+        {action}
+      </div>
+    )
   }
 }
 

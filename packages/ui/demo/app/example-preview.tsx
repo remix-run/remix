@@ -3,44 +3,44 @@ import type { Handle, RemixNode } from 'remix/component'
 import { Glyph } from '@remix-run/ui/glyph'
 import { theme } from '@remix-run/ui/theme'
 interface ExamplePreviewProps {
-    children: RemixNode
-    code: string
-    description?: string
-    href?: string
-    title?: string
+  children: RemixNode
+  code: string
+  description?: string
+  href?: string
+  title?: string
 }
 
 export function ExamplePreview(handle: Handle<ExamplePreviewProps>) {
   return () => {
     let { children, code, description, href, title } = handle.props
     return (
-    <div mix={exampleBlockCss}>
-      {title || description ? (
-        <div mix={exampleIntroCss}>
-          {title ? <h3 mix={exampleTitleCss}>{title}</h3> : null}
-          {description ? <p mix={exampleDescriptionCss}>{description}</p> : null}
-        </div>
-      ) : null}
-      <article mix={exampleCardCss}>
-        {href ? (
-          <a
-            aria-label="Open standalone example"
-            href={href}
-            mix={exampleExpandLinkCss}
-            title="Open standalone example"
-          >
-            <Glyph mix={exampleExpandGlyphCss} name="expand" />
-          </a>
+      <div mix={exampleBlockCss}>
+        {title || description ? (
+          <div mix={exampleIntroCss}>
+            {title ? <h3 mix={exampleTitleCss}>{title}</h3> : null}
+            {description ? <p mix={exampleDescriptionCss}>{description}</p> : null}
+          </div>
         ) : null}
-        <div mix={examplePreviewSurfaceCss}>
-          <div mix={exampleCanvasCss}>{children}</div>
-        </div>
-        <div mix={exampleCodePanelCss}>
-          <code mix={exampleCodeCss}>{code}</code>
-        </div>
-      </article>
-    </div>
-  )
+        <article mix={exampleCardCss}>
+          {href ? (
+            <a
+              aria-label="Open standalone example"
+              href={href}
+              mix={exampleExpandLinkCss}
+              title="Open standalone example"
+            >
+              <Glyph mix={exampleExpandGlyphCss} name="expand" />
+            </a>
+          ) : null}
+          <div mix={examplePreviewSurfaceCss}>
+            <div mix={exampleCanvasCss}>{children}</div>
+          </div>
+          <div mix={exampleCodePanelCss}>
+            <code mix={exampleCodeCss}>{code}</code>
+          </div>
+        </article>
+      </div>
+    )
   }
 }
 

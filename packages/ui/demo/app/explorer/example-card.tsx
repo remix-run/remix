@@ -5,9 +5,9 @@ import type { ExampleEntry } from '../examples/index.tsx'
 import { getExampleContentHref } from '../examples/index.tsx'
 
 interface ExplorerExampleCardProps {
-    description?: string
-    example: ExampleEntry
-    title?: string
+  description?: string
+  example: ExampleEntry
+  title?: string
 }
 
 export function ExplorerExampleCard(handle: Handle<ExplorerExampleCardProps>) {

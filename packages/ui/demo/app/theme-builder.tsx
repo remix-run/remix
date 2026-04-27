@@ -145,9 +145,9 @@ export function ThemeBuilder(handle: Handle) {
 }
 
 interface TokenControlProps {
-    onChange: (value: ThemeLeafValue) => void
-    token: ThemeToken
-    value: ThemeLeafValue
+  onChange: (value: ThemeLeafValue) => void
+  token: ThemeToken
+  value: ThemeLeafValue
 }
 
 function TokenControl(handle: Handle<TokenControlProps>) {
@@ -296,43 +296,43 @@ function ComponentGallery() {
 }
 
 interface PreviewCardProps {
-    children: RemixNode
-    description: string
-    title: string
+  children: RemixNode
+  description: string
+  title: string
 }
 
 function PreviewCard(handle: Handle<PreviewCardProps>) {
   return () => {
     let { children, description, title } = handle.props
     return (
-    <article mix={previewCardCss}>
-      <div mix={previewCardHeaderCss}>
-        <h3 mix={cardTitleCss}>{title}</h3>
-        <p mix={cardDescriptionCss}>{description}</p>
-      </div>
-      <div mix={previewCardBodyCss}>{children}</div>
-    </article>
-  )
+      <article mix={previewCardCss}>
+        <div mix={previewCardHeaderCss}>
+          <h3 mix={cardTitleCss}>{title}</h3>
+          <p mix={cardDescriptionCss}>{description}</p>
+        </div>
+        <div mix={previewCardBodyCss}>{children}</div>
+      </article>
+    )
   }
 }
 
 interface FieldProps {
-    children: RemixNode
-    htmlFor: string
-    label: string
+  children: RemixNode
+  htmlFor: string
+  label: string
 }
 
 function Field(handle: Handle<FieldProps>) {
   return () => {
     let { children, htmlFor, label } = handle.props
     return (
-    <div mix={fieldCss}>
-      <label for={htmlFor} mix={fieldLabelCss}>
-        {label}
-      </label>
-      {children}
-    </div>
-  )
+      <div mix={fieldCss}>
+        <label for={htmlFor} mix={fieldLabelCss}>
+          {label}
+        </label>
+        {children}
+      </div>
+    )
   }
 }
 

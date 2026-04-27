@@ -54,20 +54,20 @@ export function SettingsLayout(handle: Handle<SettingsLayoutProps>) {
   return () => {
     let { activeItem, children } = handle.props
     return (
-    <section mix={contentShellStyle}>
-      <aside mix={secondarySidebarStyle}>
-        <p mix={secondarySidebarTitleStyle}>Settings</p>
-        <nav mix={secondaryNavStyle}>
-          {settingsItems.map((item) => (
-            <NavLink route={item.route} target={frames.settings} active={activeItem === item.id}>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-      <section mix={secondaryContentStyle}>{children}</section>
-    </section>
-  )
+      <section mix={contentShellStyle}>
+        <aside mix={secondarySidebarStyle}>
+          <p mix={secondarySidebarTitleStyle}>Settings</p>
+          <nav mix={secondaryNavStyle}>
+            {settingsItems.map((item) => (
+              <NavLink route={item.route} target={frames.settings} active={activeItem === item.id}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
+        <section mix={secondaryContentStyle}>{children}</section>
+      </section>
+    )
   }
 }
 

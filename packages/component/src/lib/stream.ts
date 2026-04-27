@@ -618,9 +618,10 @@ function createSsrMixinHandle(
     type: hostType,
     key: null,
     props: handle.props,
-  })) as ((
-    handle: { props: ElementProps; update(): Promise<AbortSignal> },
-  ) => () => RemixElement) & {
+  })) as ((handle: {
+    props: ElementProps
+    update(): Promise<AbortSignal>
+  }) => () => RemixElement) & {
     __rmxMixinElementType: string
   }
   element.__rmxMixinElementType = hostType

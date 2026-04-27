@@ -3,51 +3,51 @@ import type { Handle, RemixNode } from 'remix/component'
 import { Glyph } from '@remix-run/ui/glyph'
 import { theme } from '@remix-run/ui/theme'
 interface PageSectionProps {
-    children: RemixNode
-    description?: string
-    title?: string
+  children: RemixNode
+  description?: string
+  title?: string
 }
 
 export function PageSection(handle: Handle<PageSectionProps>) {
   return () => {
     let { children, description, title } = handle.props
     return (
-    <section mix={sectionCss}>
-      {title || description ? (
-        <div mix={sectionHeaderCss}>
-          {title ? <h2 mix={sectionTitleCss}>{title}</h2> : null}
-          {description ? <p mix={sectionDescriptionCss}>{description}</p> : null}
-        </div>
-      ) : null}
-      {children}
-    </section>
-  )
+      <section mix={sectionCss}>
+        {title || description ? (
+          <div mix={sectionHeaderCss}>
+            {title ? <h2 mix={sectionTitleCss}>{title}</h2> : null}
+            {description ? <p mix={sectionDescriptionCss}>{description}</p> : null}
+          </div>
+        ) : null}
+        {children}
+      </section>
+    )
   }
 }
 
 interface ShowcaseLinkCardProps {
-    description: string
-    eyebrow: string
-    href: string
-    title: string
+  description: string
+  eyebrow: string
+  href: string
+  title: string
 }
 
 export function ShowcaseLinkCard(handle: Handle<ShowcaseLinkCardProps>) {
   return () => {
     let { description, eyebrow, href, title } = handle.props
     return (
-    <a href={href} mix={[panelCss, linkCardCss]}>
-      <div mix={linkCardHeaderCss}>
-        <p mix={eyebrowTextCss}>{eyebrow}</p>
-        <h3 mix={panelTitleTextCss}>{title}</h3>
-        <p mix={panelDescriptionTextCss}>{description}</p>
-      </div>
-      <span mix={linkCardActionCss}>
-        <span mix={captionTextCss}>Open page</span>
-        <Glyph mix={linkCardGlyphCss} name="chevronRight" />
-      </span>
-    </a>
-  )
+      <a href={href} mix={[panelCss, linkCardCss]}>
+        <div mix={linkCardHeaderCss}>
+          <p mix={eyebrowTextCss}>{eyebrow}</p>
+          <h3 mix={panelTitleTextCss}>{title}</h3>
+          <p mix={panelDescriptionTextCss}>{description}</p>
+        </div>
+        <span mix={linkCardActionCss}>
+          <span mix={captionTextCss}>Open page</span>
+          <Glyph mix={linkCardGlyphCss} name="chevronRight" />
+        </span>
+      </a>
+    )
   }
 }
 

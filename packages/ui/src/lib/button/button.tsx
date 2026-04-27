@@ -1,7 +1,13 @@
 // @jsxRuntime classic
 // @jsx createElement
 import { attrs, createElement, createMixin, css } from '@remix-run/component'
-import type { CSSMixinDescriptor, ElementProps, Handle, Props, RemixNode } from '@remix-run/component'
+import type {
+  CSSMixinDescriptor,
+  ElementProps,
+  Handle,
+  Props,
+  RemixNode,
+} from '@remix-run/component'
 
 import { theme } from '../theme/theme.ts'
 

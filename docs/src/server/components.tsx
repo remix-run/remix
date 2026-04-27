@@ -34,7 +34,9 @@ export type ServerContext = {
   slug?: string
 }
 
-export function ServerPage(handle: Handle<{ children?: RemixNode | RemixNode[] } & ServerContext, ServerContext>) {
+export function ServerPage(
+  handle: Handle<{ children?: RemixNode | RemixNode[] } & ServerContext, ServerContext>,
+) {
   handle.context.set(handle.props)
   return () => (
     <Document>

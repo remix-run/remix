@@ -478,7 +478,6 @@ export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
     let { children, indicator, mix, type, ...buttonProps } = handle.props
     let disabled = item.disabled || handle.props.disabled === true
 
-
     let button = (
       <button
         {...buttonProps}

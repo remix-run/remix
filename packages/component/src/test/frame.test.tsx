@@ -134,21 +134,24 @@ describe('run', () => {
   })
 
   it('hydrates multiple components', async () => {
-    let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle<{ text: string }>) {
-      let clicked = false
-      return () => (
-        <button
-          mix={[
-            on('click', () => {
-              clicked = true
-              handle.update()
-            }),
-          ]}
-        >
-          {clicked ? `${handle.props.text} clicked!` : handle.props.text}
-        </button>
-      )
-    })
+    let Button = clientEntry(
+      '/js/button.js#Button',
+      function Button(handle: Handle<{ text: string }>) {
+        let clicked = false
+        return () => (
+          <button
+            mix={[
+              on('click', () => {
+                clicked = true
+                handle.update()
+              }),
+            ]}
+          >
+            {clicked ? `${handle.props.text} clicked!` : handle.props.text}
+          </button>
+        )
+      },
+    )
 
     let stream = renderToStream(
       <div>

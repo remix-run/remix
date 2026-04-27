@@ -8,39 +8,39 @@ export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }
   return () => {
     let { page } = handle.props
     return (
-    <html>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        />
-        <script async type="module" src="/assets/entry.js" />
-        <title>{`${page.title} | Remix UI Demo`}</title>
-        <RMX_01 />
-      </head>
-      <body mix={bodyCss}>
-        <RMX_01_GLYPHS />
-        <div mix={shellCss}>
-          <aside mix={sidebarFrameCss}>
-            <div mix={sidebarStickyCss}>
-              <Sidebar currentPath={page.path} />
-            </div>
-          </aside>
+      <html>
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          />
+          <script async type="module" src="/assets/entry.js" />
+          <title>{`${page.title} | Remix UI Demo`}</title>
+          <RMX_01 />
+        </head>
+        <body mix={bodyCss}>
+          <RMX_01_GLYPHS />
+          <div mix={shellCss}>
+            <aside mix={sidebarFrameCss}>
+              <div mix={sidebarStickyCss}>
+                <Sidebar currentPath={page.path} />
+              </div>
+            </aside>
 
-          <main mix={mainCss}>
-            <div mix={pageWrapCss}>
-              <PageHeader page={page} />
-              {page.render()}
-            </div>
-          </main>
-        </div>
-      </body>
-    </html>
-  )
+            <main mix={mainCss}>
+              <div mix={pageWrapCss}>
+                <PageHeader page={page} />
+                {page.render()}
+              </div>
+            </main>
+          </div>
+        </body>
+      </html>
+    )
   }
 }
 
@@ -48,37 +48,37 @@ function Sidebar(handle: Handle<{ currentPath: string }>) {
   return () => {
     let { currentPath } = handle.props
     return (
-    <div mix={sidebarPanelCss}>
-      <div mix={sidebarIntroCss}>
-        <p mix={eyebrowTextCss}>Preview Documentation</p>
-        <h1 mix={sidebarTitleCss}>Remix UI</h1>
-        <p mix={bodyTextCss}>
-          This is a preview of the Remix UI library. It is not yet ready for production use.
-        </p>
-      </div>
+      <div mix={sidebarPanelCss}>
+        <div mix={sidebarIntroCss}>
+          <p mix={eyebrowTextCss}>Preview Documentation</p>
+          <h1 mix={sidebarTitleCss}>Remix UI</h1>
+          <p mix={bodyTextCss}>
+            This is a preview of the Remix UI library. It is not yet ready for production use.
+          </p>
+        </div>
 
-      {NAV_SECTIONS.map((section) => (
-        <section key={section.id} mix={sidebarSectionCss}>
-          <p mix={sidebarHeadingCss}>{section.label}</p>
-          <nav aria-label={`${section.label} pages`} mix={sidebarNavCss}>
-            {section.pageIds.map((pageId) => {
-              let navPage = PAGES[pageId]
-              return (
-                <a
-                  key={navPage.path}
-                  href={navPage.path}
-                  aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
-                  mix={getNavItemMix(navPage, currentPath)}
-                >
-                  {navPage.navLabel}
-                </a>
-              )
-            })}
-          </nav>
-        </section>
-      ))}
-    </div>
-  )
+        {NAV_SECTIONS.map((section) => (
+          <section key={section.id} mix={sidebarSectionCss}>
+            <p mix={sidebarHeadingCss}>{section.label}</p>
+            <nav aria-label={`${section.label} pages`} mix={sidebarNavCss}>
+              {section.pageIds.map((pageId) => {
+                let navPage = PAGES[pageId]
+                return (
+                  <a
+                    key={navPage.path}
+                    href={navPage.path}
+                    aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
+                    mix={getNavItemMix(navPage, currentPath)}
+                  >
+                    {navPage.navLabel}
+                  </a>
+                )
+              })}
+            </nav>
+          </section>
+        ))}
+      </div>
+    )
   }
 }
 
@@ -86,12 +86,12 @@ function PageHeader(handle: Handle<{ page: ShowcasePageDefinition }>) {
   return () => {
     let { page } = handle.props
     return (
-    <header mix={pageHeaderCss}>
-      <p mix={eyebrowTextCss}>{page.eyebrow}</p>
-      <h2 mix={pageTitleCss}>{page.title}</h2>
-      <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
-    </header>
-  )
+      <header mix={pageHeaderCss}>
+        <p mix={eyebrowTextCss}>{page.eyebrow}</p>
+        <h2 mix={pageTitleCss}>{page.title}</h2>
+        <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
+      </header>
+    )
   }
 }
 

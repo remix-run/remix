@@ -6,10 +6,14 @@ Before:
 function Counter(handle: Handle<CounterContext>, setup: { initialCount: number }) {
   let count = setup.initialCount
 
-  return (props: { label: string }) => <button>{props.label}: {count}</button>
+  return (props: { label: string }) => (
+    <button>
+      {props.label}: {count}
+    </button>
+  )
 }
 
-<Counter setup={{ initialCount: 10 }} label="Count" />
+;<Counter setup={{ initialCount: 10 }} label="Count" />
 ```
 
 After:
@@ -18,10 +22,14 @@ After:
 function Counter(handle: Handle<{ initialCount: number; label: string }, CounterContext>) {
   let count = handle.props.initialCount
 
-  return () => <button>{handle.props.label}: {count}</button>
+  return () => (
+    <button>
+      {handle.props.label}: {count}
+    </button>
+  )
 }
 
-<Counter initialCount={10} label="Count" />
+;<Counter initialCount={10} label="Count" />
 ```
 
 The `handle.props` object keeps the same identity for the component lifetime while its values are updated before each render, so destructuring `let { props, update } = handle` remains safe. The `setup` prop is no longer special and is treated like any other prop.
