@@ -197,14 +197,14 @@ describe('popover', () => {
     expect(surface.style.position).toBe('fixed')
     expect(surface.style.top).toBe('70px')
     expect(surface.style.left).toBe('100px')
-    expect(document.body.style.position).toBe('fixed')
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(document.body.style.position).toBe('')
+    expect(document.body.style.overflow).toBe('')
 
     click(insideClose)
     await settle(root)
 
-    expect(document.body.style.position).toBe('')
-    expect(document.body.style.overflow).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
   })
 
   it('moves focus to the registered show target when opening', async () => {

@@ -488,7 +488,7 @@ describe('modules', () => {
       }),
     )
 
-    expect(html).toMatch(/min-height: var\(--rmx-control-height-lg\)/)
+    expect(html).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
     expect(html).toMatch(/outline: 2px solid var\(--rmx-color-focus-ring\)/)
     expect(html).toMatch(
       /\[data-surface-visible="true"\]\[aria-activedescendant\]:focus-visible \{\s*outline: none;/,
