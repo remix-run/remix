@@ -1,6 +1,6 @@
 # `test`
 
-A test framework for Remix applications
+A test framework for JavaScript and TypeScript projects.
 
 ## Features
 

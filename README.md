@@ -36,7 +36,8 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 Remix 3 includes the following packages:
 
-- [assert](packages/assert): Test assertions
+- [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
+- [assets](packages/assets): Fetch-based server for compiling browser JS/TS assets on demand
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
@@ -75,7 +76,8 @@ Remix 3 includes the following packages:
 - [session-storage-redis](packages/session-storage-redis): Redis session storage for remix/session
 - [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
-- [test](packages/test): Test runner supporting unit and E2E testing
+- [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
+- [test](packages/test): A test framework for JavaScript and TypeScript projects
 
 ## Installation
 
