@@ -8,7 +8,7 @@ A test framework for Remix applications
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
-- Coverage reporting
+- Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Config file support (`remix-test.config.ts`)
 
