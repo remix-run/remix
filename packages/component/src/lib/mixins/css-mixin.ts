@@ -1,4 +1,5 @@
 import { createMixin, renderMixinElement } from '../mixin.ts'
+import type { MixinDescriptor } from '../mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import { invariant } from '../invariant.ts'
 import { processStyleClass } from '../style/index.ts'
@@ -10,6 +11,8 @@ type StyleManagerLike = {
   insert(className: string, rule: string): void
   remove(className: string): void
 }
+
+export type CSSMixinDescriptor = MixinDescriptor<Element, [styles: CSSProps], ElementProps>
 
 const clientStyleCache: StyleCache = new Map()
 

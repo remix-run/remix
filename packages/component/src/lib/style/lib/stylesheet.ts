@@ -1,235 +1,79 @@
-// .rmx-23ace { color: red; }
-// <ul>{item.map(() => <li className="rmxc-123">)}
-
 type RuleEntry = { count: number; index: number }
-type ActiveManager = { layer: string; ruleMap: Map<string, RuleEntry> }
+type ServerStyleSource = ParentNode | Iterable<Node>
 
-type ServerStyleState = {
-  sheet: CSSStyleSheet
-  text: string
-  refCount: number
-  observer: MutationObserver | null
-  processed: WeakSet<HTMLStyleElement>
-  adoptedTexts: Set<string>
-  selectorsByLayer: Map<string, Set<string>>
+const SERVER_STYLE_SELECTOR = 'style[data-rmx]'
+const DEFAULT_STYLE_LAYER = 'rmx'
+
+function getStyleLayerName(className: string, layer: string = DEFAULT_STYLE_LAYER): string {
+  return `${layer}.${className}`
 }
 
-let serverStyleState: ServerStyleState | null = null
-const activeManagers = new Set<ActiveManager>()
+function compareNodesInDocumentOrder(a: Node, b: Node): number {
+  if (a === b) return 0
+
+  let position = a.compareDocumentPosition(b)
+  if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1
+  if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1
+  return 0
+}
+
+function isParentNode(value: ServerStyleSource): value is ParentNode {
+  return 'querySelectorAll' in value
+}
+
+function collectServerStyleTagsFromNode(node: Node, into: Set<HTMLStyleElement>): void {
+  if (isHtmlStyleElement(node) && node.matches(SERVER_STYLE_SELECTOR)) {
+    into.add(node)
+    return
+  }
+
+  if (
+    !(node instanceof Element) &&
+    !(node instanceof Document) &&
+    !(node instanceof DocumentFragment)
+  ) {
+    return
+  }
+
+  let nested = node.querySelectorAll?.(SERVER_STYLE_SELECTOR) ?? []
+  for (let i = 0; i < nested.length; i++) {
+    let el = nested[i]
+    if (isHtmlStyleElement(el)) {
+      into.add(el)
+    }
+  }
+}
+
+function collectServerStyleTags(source: ServerStyleSource): HTMLStyleElement[] {
+  let styles = new Set<HTMLStyleElement>()
+
+  if (isParentNode(source)) {
+    collectServerStyleTagsFromNode(source as unknown as Node, styles)
+  } else {
+    for (let node of source) {
+      collectServerStyleTagsFromNode(node, styles)
+    }
+  }
+
+  return Array.from(styles).sort(compareNodesInDocumentOrder)
+}
 
 function isHtmlStyleElement(node: unknown): node is HTMLStyleElement {
   return typeof node === 'object' && node !== null && node instanceof HTMLStyleElement
 }
 
-function getLayerName(rule: CSSRule): string | null {
-  if (typeof (globalThis as any).CSSLayerBlockRule === 'undefined') return null
-  if (!(rule instanceof (globalThis as any).CSSLayerBlockRule)) return null
-  // CSSLayerBlockRule.name exists in modern browsers, but it's not always in TS DOM libs
-  return ((rule as any).name as string | undefined) ?? null
-}
-
-function isCssStyleRule(rule: CSSRule): rule is CSSStyleRule {
-  if (typeof (globalThis as any).CSSStyleRule === 'undefined') return false
-  return rule instanceof (globalThis as any).CSSStyleRule
-}
-
-function walkRulesForSelectors(
-  rules: CSSRuleList,
-  layerName: string | null,
-  addSelector: (layerName: string, selector: string) => void,
-) {
-  for (let i = 0; i < rules.length; i++) {
-    let rule = rules[i]
-    if (!rule) continue
-
-    let nextLayerName = getLayerName(rule) ?? layerName
-
-    if (isCssStyleRule(rule)) {
-      if (!nextLayerName) continue
-      // Extract class-based css mixin selectors (.rmxc-*).
-      let classMatches = rule.selectorText.matchAll(/\.((?:rmxc-[a-z0-9]+))/g)
-      for (let match of classMatches) {
-        let selector = match[1]
-        if (selector) addSelector(nextLayerName, selector)
-      }
-      continue
-    }
-
-    // Recurse through grouping rules (@media, @supports, @layer, etc.)
-    let childRules = (rule as any).cssRules as CSSRuleList | undefined
-    if (childRules) {
-      walkRulesForSelectors(childRules, nextLayerName, addSelector)
-    }
-  }
-}
-
-function seedManagersWithServerSelectors(layerName: string, selectors: Set<string>) {
-  for (let mgr of activeManagers) {
-    if (mgr.layer !== layerName) continue
-    for (let selector of selectors) {
-      if (!mgr.ruleMap.has(selector)) {
-        // Track as existing (count: 1, index: -1 since it's in the shared server stylesheet)
-        mgr.ruleMap.set(selector, { count: 1, index: -1 })
-      }
-    }
-  }
-}
-
-function ensureServerStyleState(): ServerStyleState {
-  if (serverStyleState) return serverStyleState
-
-  let sheet = new CSSStyleSheet()
-  document.adoptedStyleSheets.push(sheet)
-
-  serverStyleState = {
-    sheet,
-    text: '',
-    refCount: 0,
-    observer: null,
-    processed: new WeakSet(),
-    adoptedTexts: new Set(),
-    selectorsByLayer: new Map(),
-  }
-
-  adoptAllServerStyleTags()
-  startServerStyleObserver()
-
-  return serverStyleState
-}
-
-function adoptAllServerStyleTags() {
-  if (!serverStyleState) return
-
-  let styles = document.querySelectorAll('style[data-rmx-styles]')
-  for (let i = 0; i < styles.length; i++) {
-    let el = styles[i]
-    if (isHtmlStyleElement(el)) adoptServerStyleTag(el)
-  }
-}
-
-function startServerStyleObserver() {
-  if (!serverStyleState) return
-  if (serverStyleState.observer) return
-
-  // Adopt streamed chunks that include their own <style data-rmx-styles> tags.
-  // We watch the whole document so templates inserted into <body> are covered too.
-  let root = document.documentElement
-  if (!root) return
-
-  serverStyleState.observer = new MutationObserver((mutations) => {
-    for (let mutation of mutations) {
-      for (let node of mutation.addedNodes) {
-        if (!node) continue
-        if (isHtmlStyleElement(node)) {
-          if (node.matches('style[data-rmx-styles]')) adoptServerStyleTag(node)
-          continue
-        }
-        if (node instanceof Element) {
-          let nested = node.querySelectorAll?.('style[data-rmx-styles]') ?? []
-          for (let i = 0; i < nested.length; i++) {
-            let el = nested[i]
-            if (isHtmlStyleElement(el)) adoptServerStyleTag(el)
-          }
-        }
-      }
-    }
-  })
-
-  serverStyleState.observer.observe(root, { childList: true, subtree: true })
-}
-
-function adoptServerStyleTag(styleEl: HTMLStyleElement) {
-  if (!serverStyleState) return
-  if (serverStyleState.processed.has(styleEl)) return
-  serverStyleState.processed.add(styleEl)
-
-  let addedSelectorsByLayer = new Map<string, Set<string>>()
-  function addSelector(layerName: string, selector: string) {
-    let layerSet = serverStyleState!.selectorsByLayer.get(layerName)
-    if (!layerSet) {
-      layerSet = new Set()
-      serverStyleState!.selectorsByLayer.set(layerName, layerSet)
-    }
-    if (layerSet.has(selector)) return
-    layerSet.add(selector)
-
-    let addedSet = addedSelectorsByLayer.get(layerName)
-    if (!addedSet) {
-      addedSet = new Set()
-      addedSelectorsByLayer.set(layerName, addedSet)
-    }
-    addedSet.add(selector)
-  }
-
-  try {
-    if (styleEl.sheet) {
-      walkRulesForSelectors(styleEl.sheet.cssRules, null, addSelector)
-    }
-  } catch {
-    // If CSSOM access fails, we still adopt the CSS text below.
-  }
-
-  let adopted = false
-  let cssText = styleEl.textContent?.trim() ?? ''
-  if (cssText.length === 0) {
-    adopted = true
-  } else if (serverStyleState.adoptedTexts.has(cssText)) {
-    // Duplicate chunk - safe to remove the tag
-    adopted = true
-  } else {
-    try {
-      if (typeof (serverStyleState.sheet as any).replaceSync === 'function') {
-        serverStyleState.text += (serverStyleState.text ? '\n' : '') + cssText
-        ;(serverStyleState.sheet as any).replaceSync(serverStyleState.text)
-        serverStyleState.adoptedTexts.add(cssText)
-        adopted = true
-      } else if (styleEl.sheet) {
-        let rules = styleEl.sheet.cssRules
-        for (let i = 0; i < rules.length; i++) {
-          let rule = rules[i]
-          serverStyleState.sheet.insertRule(rule.cssText, serverStyleState.sheet.cssRules.length)
-        }
-        serverStyleState.adoptedTexts.add(cssText)
-        adopted = true
-      }
-    } catch {
-      // If adoption fails (e.g. invalid CSS), keep the <style> tag in the DOM so styles
-      // still apply. We'll still seed selectors so the client won't duplicate rules.
-    }
-  }
-
-  // Remove the server-rendered <style> tag now that we've adopted its content.
-  if (adopted) {
-    styleEl.remove()
-  }
-
-  // Ensure existing managers treat these as pre-existing rules.
-  for (let [layerName, selectors] of addedSelectorsByLayer) {
-    seedManagersWithServerSelectors(layerName, selectors)
-  }
-}
-
-function teardownServerStyleStateIfUnused() {
-  if (!serverStyleState) return
-  if (serverStyleState.refCount > 0) return
-
-  if (serverStyleState.observer) {
-    serverStyleState.observer.disconnect()
-  }
-
-  document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter(
-    (s) => s !== serverStyleState!.sheet,
-  )
-
-  serverStyleState = null
+function getStyleSelector(styleEl: HTMLStyleElement): string | null {
+  let selector = styleEl.getAttribute('data-rmx')?.trim()
+  return selector ? selector : null
 }
 
 export function createStyleManager(layer: string = 'rmx') {
-  let server = ensureServerStyleState()
-  server.refCount++
-  adoptAllServerStyleTags()
-
   let stylesheet: CSSStyleSheet | null = null
+
+  // Track usage count and rule index per className
+  // Using an object to track both count and index together
+  let ruleMap = new Map<string, RuleEntry>()
+
   function getStylesheet(): CSSStyleSheet {
     if (!stylesheet) {
       stylesheet = new CSSStyleSheet()
@@ -238,20 +82,46 @@ export function createStyleManager(layer: string = 'rmx') {
     return stylesheet
   }
 
-  // Track usage count and rule index per className
-  // Using an object to track both count and index together
-  let ruleMap = new Map<string, RuleEntry>()
+  function removeStylesheet() {
+    if (!stylesheet) return
+    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter(
+      (s) => s !== stylesheet,
+    )
+    stylesheet = null
+  }
 
-  // Seed from any already-adopted server selectors for this layer
-  let serverSelectors = server.selectorsByLayer.get(layer)
-  if (serverSelectors) {
-    for (let selector of serverSelectors) {
-      ruleMap.set(selector, { count: 1, index: -1 })
+  function clearStylesheet() {
+    if (!stylesheet) return
+    for (let i = stylesheet.cssRules.length - 1; i >= 0; i--) {
+      stylesheet.deleteRule(i)
     }
   }
 
-  let manager: ActiveManager = { layer, ruleMap }
-  activeManagers.add(manager)
+  function adoptServerStyleTag(styleEl: HTMLStyleElement) {
+    let selector = getStyleSelector(styleEl)
+    if (!selector) return
+
+    if (ruleMap.has(selector)) {
+      styleEl.remove()
+      return
+    }
+
+    let cssText = styleEl.textContent?.trim() ?? ''
+    if (cssText.length === 0) {
+      styleEl.remove()
+      return
+    }
+
+    try {
+      let sheet = getStylesheet()
+      let index = sheet.cssRules.length
+      sheet.insertRule(cssText, index)
+      ruleMap.set(selector, { count: 1, index })
+      styleEl.remove()
+    } catch {
+      // If adoption fails, keep the <style> tag in the DOM so styles still apply.
+    }
+  }
 
   function has(className: string) {
     let entry = ruleMap.get(className)
@@ -272,7 +142,7 @@ export function createStyleManager(layer: string = 'rmx') {
     let index = sheet.cssRules.length
     // This may throw for invalid CSS. If it does, we intentionally let it
     // bubble so the rule is not tracked unless insertion actually succeeds.
-    sheet.insertRule(`@layer ${layer} { ${rule} }`, index)
+    sheet.insertRule(`@layer ${getStyleLayerName(className, layer)} { ${rule} }`, index)
     ruleMap.set(className, { count: 1, index })
   }
 
@@ -294,13 +164,8 @@ export function createStyleManager(layer: string = 'rmx') {
     // Remove from tracking
     ruleMap.delete(className)
 
-    // Server-rendered rules (index: -1) live in the shared server stylesheet, nothing to delete
-    if (indexToDelete < 0) return
-
-    // If we somehow don't have a sheet, there's nothing to delete
-    if (!stylesheet) return
-
     // TODO: just search and remove, stop re-indexing
+    if (!stylesheet) return
     stylesheet.deleteRule(indexToDelete)
 
     // Update indices for all rules that came after the deleted one
@@ -312,19 +177,24 @@ export function createStyleManager(layer: string = 'rmx') {
     }
   }
 
-  function dispose() {
-    if (stylesheet) {
-      // Remove stylesheet from document
-      document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter(
-        (s) => s !== stylesheet,
-      )
-    }
-    // Clear internal state
+  function reset() {
+    clearStylesheet()
     ruleMap.clear()
-    activeManagers.delete(manager)
-    server.refCount--
-    teardownServerStyleStateIfUnused()
+    removeStylesheet()
   }
 
-  return { insert, remove, has, dispose }
+  function adoptServerStyles(source: ServerStyleSource) {
+    let styles = collectServerStyleTags(source)
+    for (let styleEl of styles) {
+      adoptServerStyleTag(styleEl)
+    }
+  }
+
+  function dispose() {
+    removeStylesheet()
+    // Clear internal state
+    ruleMap.clear()
+  }
+
+  return { insert, remove, has, reset, adoptServerStyles, dispose }
 }

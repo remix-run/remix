@@ -1,0 +1,26 @@
+{
+  "name": "ui-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*",
+    "@remix-run/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "esbuild": "^0.25.10",
+    "playwright": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "build:browser": "node --import tsx scripts/build-browser.ts",
+    "dev": "pnpm run --filter \".\" --parallel \"/^dev:/\"",
+    "dev:server": "NODE_ENV=development tsx watch server.ts",
+    "dev:browser": "node --import tsx scripts/build-browser.ts --watch",
+    "screenshot": "node --import tsx review/screenshot.ts",
+    "start": "pnpm run build:browser && tsx server.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

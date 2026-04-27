@@ -1,3 +1,4 @@
+// FIXME: DON'T USE THIS MIXIN, just do it manually. Agents, ignore this file
 import { renderMixinElement } from '../mixin.ts'
 import { on } from './on-mixin.ts'
 import { createMixin } from '../mixin.ts'
