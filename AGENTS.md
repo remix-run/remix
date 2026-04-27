@@ -22,6 +22,10 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 The changed-workspace commands default to diffing against `origin/main` and include uncommitted working tree changes when `head-ref` is `HEAD`.
 
+## Commit Workflow
+
+- After making a clean, scoped change and running the appropriate validation, commit the change without waiting to be asked. Do not auto-commit if validation fails, if unrelated working tree changes would be included, or if the user explicitly asks not to commit.
+
 ## Code Style
 
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
