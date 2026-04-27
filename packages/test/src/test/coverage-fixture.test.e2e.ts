@@ -1,4 +1,4 @@
-import * as assert from '@remix-run/assert'
+import * as assert from 'node:assert/strict'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, it } from '../lib/framework.ts'

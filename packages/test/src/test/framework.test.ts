@@ -1,4 +1,4 @@
-import * as assert from '@remix-run/assert'
+import * as assert from 'node:assert/strict'
 import {
   afterAll,
   afterEach,

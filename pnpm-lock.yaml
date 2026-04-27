@@ -1771,9 +1771,6 @@ importers:
         specifier: ^9.3.0
         version: 9.3.0
     devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
       '@types/istanbul-lib-coverage':
         specifier: ^2.0.6
         version: 2.0.6

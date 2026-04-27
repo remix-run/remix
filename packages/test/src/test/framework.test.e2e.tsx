@@ -1,4 +1,4 @@
-import assert from '@remix-run/assert'
+import * as assert from 'node:assert/strict'
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
