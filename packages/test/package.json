@@ -68,7 +68,6 @@
   },
   "devDependencies": {
     "@remix-run/component": "workspace:^",
-    "@remix-run/fetch-router": "workspace:^",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",

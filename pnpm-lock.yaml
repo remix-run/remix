@@ -1768,9 +1768,6 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
-      '@remix-run/fetch-router':
-        specifier: workspace:^
-        version: link:../fetch-router
       '@types/istanbul-lib-coverage':
         specifier: ^2.0.6
         version: 2.0.6

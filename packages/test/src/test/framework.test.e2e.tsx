@@ -1,8 +1,6 @@
 import * as assert from 'node:assert/strict'
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
-import { createRouter } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
 import { describe, it } from '../lib/framework.ts'
 
 const html = async (n: RemixNode) =>
@@ -11,7 +9,7 @@ const html = async (n: RemixNode) =>
   })
 
 describe('e2e tests', () => {
-  it('runs playwright against a fetch-router instance', async (t) => {
+  it('runs playwright against a fetch handler', async (t) => {
     function Doc() {
       return ({ children }: { children: RemixNode }) => (
         <html>
@@ -23,25 +21,29 @@ describe('e2e tests', () => {
       )
     }
 
-    let routes = route({ home: '/', about: '/about' })
-    let router = createRouter()
-    router.get(routes.home, async () =>
-      html(
-        <Doc>
-          <h1>Hello Remix</h1>
-          <a href="/about">About</a>
-        </Doc>,
-      ),
-    )
-    router.get(routes.about, async () =>
-      html(
-        <Doc>
-          <h1>About Remix</h1>
-        </Doc>,
-      ),
-    )
+    let page = await t.serve(async (request) => {
+      let url = new URL(request.url)
 
-    let page = await t.serve(router.fetch)
+      if (url.pathname === '/') {
+        return html(
+          <Doc>
+            <h1>Hello Remix</h1>
+            <a href="/about">About</a>
+          </Doc>,
+        )
+      }
+
+      if (url.pathname === '/about') {
+        return html(
+          <Doc>
+            <h1>About Remix</h1>
+          </Doc>,
+        )
+      }
+
+      return new Response('Not found', { status: 404 })
+    })
+
     await page.goto('/')
     assert.equal(await page.locator('h1').textContent(), 'Hello Remix')
     await page.click('[href="/about"]')
