@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
-import { describe, it } from '../lib/framework.ts'
-import { add, classify, greet } from './coverage-fixture.ts'
+import { describe, it } from '../../lib/framework.ts'
+import { add, classify, greet } from './fixture.ts'
 
 // Expected coverage for coverage-fixture.ts (same as the server/e2e fixture
 // tests):

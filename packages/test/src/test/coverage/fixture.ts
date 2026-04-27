@@ -1,6 +1,6 @@
 // This file exists solely to validate coverage accuracy.
 // Each function has a known expected coverage profile based on
-// which paths coverage-fixture.test.ts exercises.
+// which paths the associated tests exercise.
 
 // Fully covered — both statements and the single branch
 export function add(a: number, b: number): number {

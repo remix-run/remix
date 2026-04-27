@@ -1,10 +1,10 @@
 import * as assert from '@remix-run/assert'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { describe, it } from '../lib/framework.ts'
-import { transformTypeScript } from '../lib/ts-transform.ts'
+import { describe, it } from '../../lib/framework.ts'
+import { transformTypeScript } from '../../lib/ts-transform.ts'
 
-// Expected coverage for coverage-fixture.ts (same as the server fixture test):
+// Expected coverage for coverage/fixture.ts (same as the server fixture test):
 //
 //   add             — 100% functions, statements, lines, branches
 //   classify        — function covered, but only the `n > 0` branch is hit
@@ -14,7 +14,7 @@ import { transformTypeScript } from '../lib/ts-transform.ts'
 describe('e2e coverage fixture', () => {
   it('exercises some but not all code paths in the browser', async (t) => {
     // Compile the fixture TypeScript to browser-ready JS
-    let fixturePath = path.resolve(import.meta.dirname, './coverage-fixture.ts')
+    let fixturePath = path.resolve(import.meta.dirname, './fixture.ts')
     let fixtureSource = await fsp.readFile(fixturePath, 'utf-8')
     let { code: fixtureJs } = await transformTypeScript(fixtureSource, fixturePath)
 
@@ -28,7 +28,7 @@ describe('e2e coverage fixture', () => {
 <body>
   <div id="result"></div>
   <script type="module">
-    import { add, classify, greet } from '/src/test/coverage-fixture.ts'
+    import { add, classify, greet } from '/src/test/coverage/fixture.ts'
 
     // Exercise the same paths as the server fixture test:
     // - add: fully covered
@@ -51,7 +51,7 @@ describe('e2e coverage fixture', () => {
       }
 
       // Serve the compiled fixture at the path the import expects
-      if (url.pathname === '/src/test/coverage-fixture.ts') {
+      if (url.pathname === '/src/test/coverage/fixture.ts') {
         return new Response(fixtureJs, {
           headers: { 'Content-Type': 'application/javascript' },
         })

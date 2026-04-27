@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
-import { describe, it } from '../lib/framework.ts'
-import { add, classify, greet } from './coverage-fixture.ts'
+import { describe, it } from '../../lib/framework.ts'
+import { add, classify, greet } from './fixture.ts'
 
 // Expected coverage for coverage-fixture.ts:
 //
@@ -11,7 +11,7 @@ import { add, classify, greet } from './coverage-fixture.ts'
 //   greet           — function covered, but only the truthy `name` branch is hit
 //                     (the fallback `Hello, stranger!` line is uncovered)
 
-describe('coverage-fixture', () => {
+describe('coverage/fixture.ts', () => {
   it('add returns the sum', () => {
     assert.equal(add(2, 3), 5)
     assert.equal(add(-1, 1), 0)
