@@ -1740,14 +1740,8 @@ importers:
 
   packages/test:
     dependencies:
-      '@remix-run/component':
-        specifier: workspace:*
-        version: link:../component
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../fetch-router
       '@remix-run/node-fetch-server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../node-fetch-server
       '@remix-run/terminal':
         specifier: workspace:^
@@ -1771,6 +1765,12 @@ importers:
         specifier: ^9.3.0
         version: 9.3.0
     devDependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
       '@types/istanbul-lib-coverage':
         specifier: ^2.0.6
         version: 2.0.6
