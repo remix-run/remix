@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createRoot, on, type RemixNode } from '@remix-run/component'
 
-import { Menu, MenuItem, MenuSelectEvent, onMenuSelect, Submenu } from './menu.tsx'
+import { Menu, MenuItem, onMenuSelect, Submenu, type MenuSelectEvent } from './menu.tsx'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []
