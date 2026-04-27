@@ -1,13 +1,6 @@
 import type { RemixTestConfig } from './src'
 
 export default {
-  coverage: {
-    include: [
-      'src/{app,lib}/**/*.{ts,tsx}',
-      // Needed for coverage parity test
-      'src/test/coverage/fixture.ts',
-    ],
-  },
   playwrightConfig: {
     projects: [
       {

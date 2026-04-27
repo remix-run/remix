@@ -6,6 +6,7 @@ import { init as initEsModuleLexer, parse as parseEsModule } from 'es-module-lex
 import MagicString from 'magic-string'
 import * as fsp from 'node:fs/promises'
 import * as http from 'node:http'
+import { createRequire } from 'node:module'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
@@ -13,6 +14,8 @@ import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 import { Tests } from './client/components.tsx'
 import { routes } from './client/routes.ts'
+
+const NODE_MAJOR = Number(process.versions.node.split('.')[0])
 
 export async function startServer(
   browserFiles: string[],
@@ -260,16 +263,23 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
   let resolvedPath: string
   if (spec.startsWith('.') || spec.startsWith('/')) {
     resolvedPath = path.resolve(path.dirname(importerFile), spec)
-  } else {
-    let importerUrl = pathToFileURL(importerFile).href
-    let resolvedUrl: string
+  } else if (NODE_MAJOR >= 23) {
     try {
-      resolvedUrl = import.meta.resolve(spec, importerUrl)
+      let resolvedUrl = import.meta.resolve(spec, pathToFileURL(importerFile).href)
+      if (!resolvedUrl.startsWith('file://')) return null
+      resolvedPath = fileURLToPath(resolvedUrl)
     } catch {
       return null
     }
-    if (!resolvedUrl.startsWith('file://')) return null
-    resolvedPath = fileURLToPath(resolvedUrl)
+  } else {
+    // `import.meta.resolve(spec, parent)`'s `parent` argument was experimental
+    // through Node 22 and silently ignored, falling back to `import.meta.url` of
+    // the calling module — which made bare specifiers only resolvable when they
+    // were direct deps of `@remix-run/test` itself (so `remix/assert` failed even
+    // when the importing package depended on `remix`). The argument is stable in
+    // Node 23+, so we use the native resolver there and fall back to
+    // `createRequire` (stable since Node 12) on older runtimes.
+    resolvedPath = createRequire(importerFile).resolve(spec)
   }
 
   return filePathToUrl(resolvedPath, rootDir)

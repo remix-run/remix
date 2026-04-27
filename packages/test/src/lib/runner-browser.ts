@@ -1,3 +1,4 @@
+import * as path from 'node:path'
 import type { Browser, Page, Request } from 'playwright'
 import { routes } from '../app/client/routes.ts'
 import { colors } from './colors.ts'
@@ -11,6 +12,15 @@ import {
 } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { TestResults } from './reporters/results.ts'
+
+// The harness reports each test result with `filePath` set to the
+// `/scripts/<rel>` URL the iframe loaded. Reporters expect a real filesystem
+// path so they can compute `path.relative(cwd, ...)` cleanly; otherwise they
+// produce noisy `../../../scripts/...` strings.
+function urlPathToFilePath(urlPath: string, rootDir: string): string {
+  if (!urlPath.startsWith('/scripts/')) return urlPath
+  return path.resolve(rootDir, urlPath.slice('/scripts/'.length))
+}
 
 export interface TestRunOptions {
   baseUrl: string
@@ -63,9 +73,13 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let totalPassed = 0
     let totalFailed = 0
     let testFileUrls = new Set<string>()
+    let rootDir = getBrowserTestRootDir()
 
     await page.route('**/file-results', async (route) => {
       let results = route.request().postDataJSON() as TestResults
+      for (let test of results.tests) {
+        if (test.filePath) test.filePath = urlPathToFilePath(test.filePath, rootDir)
+      }
       options.reporter.onResult(results, envLabel)
       totalPassed += results.passed
       totalFailed += results.failed

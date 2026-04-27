@@ -27,6 +27,11 @@ async function runWithCoverage(spec: RunSpec, dir: string): Promise<void> {
     '--coverage',
     '--coverage.dir',
     dir,
+    '--coverage.include',
+    'src/{app,lib}/**/*.{ts,tsx}',
+    // Needed for coverage parity test
+    '--coverage.include',
+    'src/test/coverage/fixture.ts',
     '--type',
     spec.type,
     '--glob.test',

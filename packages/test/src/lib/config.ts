@@ -153,7 +153,7 @@ const defaultValues: ResolvedRemixTestConfig = {
     e2e: '**/*.test.e2e.{ts,tsx}',
     exclude: 'node_modules/**',
   },
-  reporter: process.env.CI === 'true' ? 'dot' : 'spec',
+  reporter: process.env.CI === 'true' ? 'files' : 'spec',
   type: 'server,browser,e2e',
   setup: undefined,
   playwrightConfig: undefined,

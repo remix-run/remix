@@ -61,7 +61,10 @@ async function executeRun() {
 
     if (browserFiles.length > 0 && !browserServer) {
       let { startServer } = IS_RUNNING_FROM_SRC
-        ? await importModule('./app/server.tsx', import.meta)
+        ? await importModule('./app/server.tsx', import.meta, {
+            // Needed for remix/component JSX runtime
+            tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
+          })
         : await import(`./app/server.js`)
       let result = await startServer(browserFiles)
       browserServer = result.server
