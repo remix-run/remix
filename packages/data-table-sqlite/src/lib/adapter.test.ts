@@ -1,8 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import Database from 'better-sqlite3'
 import type { DataMigrationOperation } from '@remix-run/data-table'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
+import { createNativeSqliteDatabase } from '../../../data-table/test/native-sqlite.ts'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
@@ -34,9 +34,7 @@ const accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
-const sqliteAvailable = canOpenSqliteDatabase()
-
-describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
+describe('sqlite adapter', () => {
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
     let prepareCalls = 0
     let sqlite = {
@@ -126,15 +124,11 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('enables read uncommitted pragma for read-uncommitted transactions', async () => {
-    let pragmas: string[] = []
     let execs: string[] = []
 
     let sqlite = {
       prepare() {
         throw new Error('not used')
-      },
-      pragma(statement: string) {
-        pragmas.push(statement)
       },
       exec(statement: string) {
         execs.push(statement)
@@ -145,8 +139,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     let token = await adapter.beginTransaction({ isolationLevel: 'read uncommitted' })
     await adapter.commitTransaction(token)
 
-    assert.deepEqual(pragmas, ['read_uncommitted = true'])
-    assert.deepEqual(execs, ['begin', 'commit'])
+    assert.deepEqual(execs, ['pragma read_uncommitted = true', 'begin', 'commit'])
   })
 
   it('supports rollback and savepoint lifecycle with escaped names', async () => {
@@ -641,7 +634,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('supports typed writes, reads, and nested transactions', async () => {
-    let sqlite = new Database(':memory:')
+    let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
@@ -679,7 +672,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('supports upsert and returning', async () => {
-    let sqlite = new Database(':memory:')
+    let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
@@ -704,7 +697,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('accepts transaction options as best-effort hints', async () => {
-    let sqlite = new Database(':memory:')
+    let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
@@ -731,7 +724,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('supports column-to-column comparisons from string references', async () => {
-    let sqlite = new Database(':memory:')
+    let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
@@ -847,7 +840,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
   })
 
   it('treats dotted select aliases as single identifiers', async () => {
-    let sqlite = new Database(':memory:')
+    let sqlite = createNativeSqliteDatabase()
     sqlite.exec(
       'create table accounts (id integer primary key, email text not null, status text not null)',
     )
@@ -863,13 +856,3 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     sqlite.close()
   })
 })
-
-function canOpenSqliteDatabase(): boolean {
-  try {
-    let database = new Database(':memory:')
-    database.close()
-    return true
-  } catch {
-    return false
-  }
-}
