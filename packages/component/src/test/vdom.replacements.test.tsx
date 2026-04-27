@@ -109,16 +109,17 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<span>Goodbye</span><span>1</span>')
     })
 
-    it('updates a stable component props object', () => {
+    it('updates a stable destructured component props object', () => {
       let container = document.createElement('div')
       let capturedProps: { title: string; description?: string } | undefined
 
       function App(handle: Handle<{ title: string; description?: string }>) {
-        capturedProps = handle.props
+        let { props } = handle
+        capturedProps = props
         return () => (
           <div>
-            {handle.props.title}
-            {handle.props.description ? ` ${handle.props.description}` : ''}
+            {props.title}
+            {props.description ? ` ${props.description}` : ''}
           </div>
         )
       }
