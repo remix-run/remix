@@ -1,14 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import {
-  ansi,
-  createStyles,
-  createTerminal,
-  shouldUseColors,
-  stripAnsi,
-  type TerminalOutputStream,
-} from './terminal.ts'
+import { shouldUseColors } from './color-support.ts'
+import { createStyles } from './styles.ts'
+import { ansi, createTerminal, stripAnsi, type TerminalOutputStream } from './terminal.ts'
 
 describe('shouldUseColors', () => {
   it('uses explicit color options', () => {
@@ -16,48 +11,33 @@ describe('shouldUseColors', () => {
       shouldUseColors({
         colors: true,
         env: { CI: 'true', NO_COLOR: '', TERM: 'dumb' },
-        stream: { isTTY: false, write() {} },
+        stream: { isTTY: false },
       }),
       true,
     )
-    assert.equal(
-      shouldUseColors({ colors: false, env: { FORCE_COLOR: '1' }, stream: { write() {} } }),
-      false,
-    )
+    assert.equal(shouldUseColors({ colors: false, env: { FORCE_COLOR: '1' }, stream: {} }), false)
   })
 
   it('disables colors with NO_COLOR when colors are not explicit', () => {
-    assert.equal(
-      shouldUseColors({ env: { NO_COLOR: '' }, stream: { isTTY: true, write() {} } }),
-      false,
-    )
+    assert.equal(shouldUseColors({ env: { NO_COLOR: '' }, stream: { isTTY: true } }), false)
   })
 
   it('disables colors in CI when colors are not explicit', () => {
-    assert.equal(
-      shouldUseColors({ env: { CI: 'true' }, stream: { isTTY: true, write() {} } }),
-      false,
-    )
+    assert.equal(shouldUseColors({ env: { CI: 'true' }, stream: { isTTY: true } }), false)
   })
 
   it('respects FORCE_COLOR when colors are not explicit', () => {
     assert.equal(shouldUseColors({ env: { FORCE_COLOR: '1' } }), true)
-    assert.equal(
-      shouldUseColors({ env: { FORCE_COLOR: '0' }, stream: { isTTY: true, write() {} } }),
-      false,
-    )
+    assert.equal(shouldUseColors({ env: { FORCE_COLOR: '0' }, stream: { isTTY: true } }), false)
   })
 
   it('falls back to TTY support', () => {
-    assert.equal(shouldUseColors({ env: {}, stream: { isTTY: true, write() {} } }), true)
-    assert.equal(shouldUseColors({ env: {}, stream: { isTTY: false, write() {} } }), false)
+    assert.equal(shouldUseColors({ env: {}, stream: { isTTY: true } }), true)
+    assert.equal(shouldUseColors({ env: {}, stream: { isTTY: false } }), false)
   })
 
   it('disables colors for dumb terminals', () => {
-    assert.equal(
-      shouldUseColors({ env: { TERM: 'dumb' }, stream: { isTTY: true, write() {} } }),
-      false,
-    )
+    assert.equal(shouldUseColors({ env: { TERM: 'dumb' }, stream: { isTTY: true } }), false)
   })
 })
 
