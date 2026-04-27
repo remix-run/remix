@@ -8,7 +8,7 @@ import { importModule } from './import-module.ts'
 
 export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
 
-/**
+/*
  * The root directory for the test code. Coverage URLs are emitted as
  * `/scripts/<rel-from-rootDir>` and resolved back via the same anchor.
  *

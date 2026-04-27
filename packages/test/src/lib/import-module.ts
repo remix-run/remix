@@ -9,7 +9,7 @@ function hasImportMetaResolve(meta: ImportMeta): meta is ImportMetaWithResolve {
   return 'resolve' in meta && typeof meta.resolve === 'function'
 }
 
-/**
+/*
  * Loads a module specifier relative to the caller's module context.
  *
  * @param specifier The module specifier or file path to load.
