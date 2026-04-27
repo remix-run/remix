@@ -6,11 +6,7 @@ export type TerminalEnvironment = Record<string, string | undefined>
 /**
  * Options that control ANSI color detection.
  */
-export interface UseColorOptions {
-  /**
-   * Explicitly enables or disables ANSI styles instead of using automatic detection.
-   */
-  colors?: boolean
+export interface ColorSupportOptions {
   /**
    * Output stream whose TTY support should be used for color detection (defaults to `process.stdout`).
    */
@@ -32,12 +28,8 @@ export interface UseColorOptions {
  * @param options Color detection options
  * @returns `true` when ANSI colors should be emitted
  */
-export function shouldUseColors(options: UseColorOptions = {}): boolean {
+export function shouldUseColors(options: ColorSupportOptions = {}): boolean {
   let env = options.env ?? getDefaultEnvironment()
-
-  if (options.colors !== undefined) {
-    return options.colors
-  }
 
   if (env.NO_COLOR !== undefined) {
     return false
@@ -71,6 +63,6 @@ export function getDefaultEnvironment(): TerminalEnvironment {
   return typeof process === 'undefined' ? {} : process.env
 }
 
-function getDefaultColorStream(): NonNullable<UseColorOptions['stream']> {
+function getDefaultColorStream(): NonNullable<ColorSupportOptions['stream']> {
   return typeof process === 'undefined' ? {} : process.stdout
 }

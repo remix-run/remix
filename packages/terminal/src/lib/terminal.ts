@@ -1,10 +1,6 @@
 import { ansi } from './ansi.ts'
-import {
-  getDefaultEnvironment,
-  type TerminalEnvironment,
-  type UseColorOptions,
-} from './color-support.ts'
-import { createStyles, type TerminalStyles } from './styles.ts'
+import { getDefaultEnvironment, type TerminalEnvironment } from './env.ts'
+import { createStyles, type CreateStylesOptions, type TerminalStyles } from './styles.ts'
 
 /**
  * Input stream shape used for terminal interactivity detection.
@@ -36,7 +32,7 @@ export interface TerminalOutputStream {
 /**
  * Options used to create a terminal abstraction.
  */
-export interface TerminalOptions extends UseColorOptions {
+export interface TerminalOptions extends CreateStylesOptions {
   /**
    * Input stream used to detect whether the terminal is interactive (defaults to `process.stdin`).
    */
@@ -156,11 +152,11 @@ export function createTerminal(options: TerminalOptions = {}): Terminal {
   let stdout = options.stdout ?? getDefaultStdout()
   let stderr = options.stderr ?? getDefaultStderr()
   let env = options.env ?? getDefaultEnvironment()
-  let styles = createStyles({
-    colors: options.colors,
-    env,
-    stream: options.stream ?? stdout,
-  })
+  let colorDetectionStream = options.stream ?? stdout
+  let styles =
+    options.colors === undefined
+      ? createStyles({ env, stream: colorDetectionStream })
+      : createStyles({ colors: options.colors, env, stream: colorDetectionStream })
 
   return {
     env,

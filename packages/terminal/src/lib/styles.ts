@@ -1,5 +1,5 @@
 import { ansiResetCode, ansiStyleCodes, type TerminalStyleName } from './ansi.ts'
-import { shouldUseColors, type UseColorOptions } from './color-support.ts'
+import { shouldUseColors, type ColorSupportOptions } from './env.ts'
 
 interface StyleCode {
   readonly open: string
@@ -208,6 +208,16 @@ export interface TerminalStyles {
   yellowBright: TerminalStyle
 }
 
+/**
+ * Options used to create terminal style helpers.
+ */
+export interface CreateStylesOptions extends ColorSupportOptions {
+  /**
+   * Explicitly enables or disables ANSI styles instead of using automatic color detection.
+   */
+  colors?: boolean
+}
+
 const close = {
   backgroundColor: '\x1b[49m',
   foregroundColor: '\x1b[39m',
@@ -285,8 +295,9 @@ function createStyleFormatter(enabled: boolean): {
  * @param options Style options
  * @returns Terminal style helpers
  */
-export function createStyles(options: UseColorOptions = {}): TerminalStyles {
-  let enabled = shouldUseColors(options)
+export function createStyles(options: CreateStylesOptions = {}): TerminalStyles {
+  let { colors, ...colorSupportOptions } = options
+  let enabled = colors ?? shouldUseColors(colorSupportOptions)
   let { createStyle, format } = createStyleFormatter(enabled)
 
   return {
