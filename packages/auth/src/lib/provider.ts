@@ -63,6 +63,7 @@ export interface OAuthProviderRuntime<profile, provider extends string = string>
     context: RequestContext,
     transaction: OAuthTransaction,
   ): Promise<OAuthResult<profile, provider>>
+  refreshTokens?(tokens: OAuthTokens): Promise<OAuthTokens>
 }
 
 export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
@@ -74,15 +75,23 @@ export type InternalOAuthProvider<profile, provider extends string = string> = O
   [oauthProviderRuntime]: OAuthProviderRuntime<profile, provider>
 }
 
-export interface ExchangeAuthorizationCodeOptions {
+interface ExchangeTokenOptionsBase {
   tokenEndpoint: string | URL
   clientId: string
   clientSecret: string
+  clientAuthentication?: 'request-body' | 'basic'
+  headers?: HeadersInit
+}
+
+export interface ExchangeAuthorizationCodeOptions extends ExchangeTokenOptionsBase {
   redirectUri: string | URL
   code: string
   codeVerifier: string
-  clientAuthentication?: 'request-body' | 'basic'
-  headers?: HeadersInit
+}
+
+export interface ExchangeRefreshTokenOptions extends ExchangeTokenOptionsBase {
+  refreshToken: string
+  scopes?: string[]
 }
 
 export function createOAuthProvider<profile, provider extends string>(
@@ -124,59 +133,53 @@ export function createAuthorizationURL(
 export async function exchangeAuthorizationCode(
   options: ExchangeAuthorizationCodeOptions,
 ): Promise<OAuthTokens> {
-  let clientAuthentication = options.clientAuthentication ?? 'request-body'
-  let params = new URLSearchParams({
-    code: options.code,
-    code_verifier: options.codeVerifier,
-    grant_type: 'authorization_code',
-    redirect_uri: toURLString(options.redirectUri),
-  })
-
-  if (clientAuthentication === 'request-body') {
-    params.set('client_id', options.clientId)
-    params.set('client_secret', options.clientSecret)
-  }
-
-  let response = await fetch(options.tokenEndpoint, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-      ...(clientAuthentication === 'basic'
-        ? {
-            Authorization: `Basic ${encodeBasicAuth(options.clientId, options.clientSecret)}`,
-          }
-        : undefined),
-      ...options.headers,
+  return exchangeOAuthTokens(
+    {
+      ...options,
+      fallbackError: 'OAuth token exchange failed.',
     },
-    body: params,
+    new URLSearchParams({
+      code: options.code,
+      code_verifier: options.codeVerifier,
+      grant_type: 'authorization_code',
+      redirect_uri: toURLString(options.redirectUri),
+    }),
+  )
+}
+
+export async function exchangeRefreshToken(
+  options: ExchangeRefreshTokenOptions,
+): Promise<OAuthTokens> {
+  let params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: options.refreshToken,
   })
-  let json = await readJson(response)
 
-  if (!response.ok || hasOAuthError(json)) {
-    throw new Error(getOAuthErrorMessage(json, 'OAuth token exchange failed.'))
+  if (options.scopes != null && options.scopes.length > 0) {
+    params.set('scope', options.scopes.join(' '))
   }
 
-  if (typeof json !== 'object' || json == null || Array.isArray(json)) {
-    throw new Error('Expected OAuth provider to return a JSON object.')
-  }
+  return exchangeOAuthTokens(
+    {
+      ...options,
+      fallbackError: 'OAuth refresh token exchange failed.',
+    },
+    params,
+  )
+}
 
-  let data = json as Record<string, unknown>
-
-  if (typeof data.access_token !== 'string' || data.access_token.length === 0) {
-    throw new Error('OAuth token response did not include an access token.')
-  }
-
+export function mergeRefreshedTokens(
+  currentTokens: OAuthTokens,
+  refreshedTokens: OAuthTokens,
+): OAuthTokens {
   return {
-    accessToken: data.access_token,
-    refreshToken: typeof data.refresh_token === 'string' ? data.refresh_token : undefined,
-    tokenType: typeof data.token_type === 'string' ? data.token_type : undefined,
-    expiresAt:
-      typeof data.expires_in === 'number'
-        ? new Date(Date.now() + data.expires_in * 1000)
-        : undefined,
-    scope: parseScope(data.scope),
-    idToken: typeof data.id_token === 'string' ? data.id_token : undefined,
+    ...currentTokens,
+    ...refreshedTokens,
+    refreshToken: refreshedTokens.refreshToken ?? currentTokens.refreshToken,
+    tokenType: refreshedTokens.tokenType ?? currentTokens.tokenType,
+    expiresAt: refreshedTokens.expiresAt ?? currentTokens.expiresAt,
+    scope: refreshedTokens.scope ?? currentTokens.scope,
+    idToken: refreshedTokens.idToken ?? currentTokens.idToken,
   }
 }
 
@@ -202,6 +205,64 @@ export function getAuthorizationCode(context: RequestContext): string {
   }
 
   return code
+}
+
+async function exchangeOAuthTokens(
+  options: ExchangeTokenOptionsBase & { fallbackError: string },
+  params: URLSearchParams,
+): Promise<OAuthTokens> {
+  let clientAuthentication = options.clientAuthentication ?? 'request-body'
+
+  if (clientAuthentication === 'request-body') {
+    params.set('client_id', options.clientId)
+    params.set('client_secret', options.clientSecret)
+  }
+
+  let response = await fetch(options.tokenEndpoint, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(clientAuthentication === 'basic'
+        ? {
+            Authorization: `Basic ${encodeBasicAuth(options.clientId, options.clientSecret)}`,
+          }
+        : undefined),
+      ...options.headers,
+    },
+    body: params,
+  })
+  let json = await readJson(response)
+
+  if (!response.ok || hasOAuthError(json)) {
+    throw new Error(getOAuthErrorMessage(json, options.fallbackError))
+  }
+
+  return normalizeOAuthTokenResponse(json)
+}
+
+function normalizeOAuthTokenResponse(json: unknown): OAuthTokens {
+  if (typeof json !== 'object' || json == null || Array.isArray(json)) {
+    throw new Error('Expected OAuth provider to return a JSON object.')
+  }
+
+  let data = json as Record<string, unknown>
+
+  if (typeof data.access_token !== 'string' || data.access_token.length === 0) {
+    throw new Error('OAuth token response did not include an access token.')
+  }
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: typeof data.refresh_token === 'string' ? data.refresh_token : undefined,
+    tokenType: typeof data.token_type === 'string' ? data.token_type : undefined,
+    expiresAt:
+      typeof data.expires_in === 'number'
+        ? new Date(Date.now() + data.expires_in * 1000)
+        : undefined,
+    scope: parseScope(data.scope),
+    idToken: typeof data.id_token === 'string' ? data.id_token : undefined,
+  }
 }
 
 function getOAuthErrorMessage(json: unknown, fallback: string): string {

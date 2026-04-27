@@ -33,4 +33,29 @@ describe('google provider', () => {
     assert.equal(location.pathname, '/o/oauth2/v2/auth')
     assert.equal(location.searchParams.get('scope'), 'openid email profile')
   })
+
+  it('includes configured authorization params in the Google login redirect', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let provider = createGoogleAuthProvider({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      redirectUri: 'https://app.example.com/auth/google/callback',
+      authorizationParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.get('/login/google', (context) => startExternalAuth(provider, context))
+
+    let response = await router.fetch('https://app.example.com/login/google')
+    let location = new URL(response.headers.get('Location')!)
+
+    assert.equal(location.searchParams.get('access_type'), 'offline')
+    assert.equal(location.searchParams.get('prompt'), 'consent')
+  })
 })

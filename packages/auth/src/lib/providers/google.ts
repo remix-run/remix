@@ -31,6 +31,8 @@ export interface GoogleAuthProviderOptions {
   redirectUri: string | URL
   /** Requested scopes for the Google login flow. */
   scopes?: string[]
+  /** Additional authorization parameters appended to the login redirect, such as `access_type=offline`. */
+  authorizationParams?: Record<string, string | undefined>
 }
 
 /**
