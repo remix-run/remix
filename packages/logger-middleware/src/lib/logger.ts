@@ -1,5 +1,7 @@
 import type { Middleware } from '@remix-run/fetch-router'
 
+import { createStyles } from '@remix-run/terminal'
+
 /**
  * Options for the {@link logger} middleware.
  */
@@ -37,6 +39,23 @@ export interface LoggerOptions {
    * @default console.log
    */
   log?: (message: string) => void
+  /**
+   * Enables ANSI colors for high-signal log tokens.
+   *
+   * By default, colors are enabled when terminal color detection allows them. Set this to `false`
+   * to opt out or `true` to force colors on. When the `process` global is defined, color
+   * detection respects `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams.
+   *
+   * The following tokens are colorized when colors are enabled:
+   *
+   * - `%method`
+   * - `%status`
+   * - `%duration`
+   * - `%contentLength`
+   *
+   * @default undefined
+   */
+  colors?: boolean
 }
 
 /**
@@ -46,22 +65,30 @@ export interface LoggerOptions {
  * @returns The logger middleware
  */
 export function logger(options: LoggerOptions = {}): Middleware {
-  let { format = '[%date] %method %path %status %contentLength', log = console.log } = options
+  let {
+    colors,
+    format = '[%date] %method %path %status %contentLength',
+    log = console.log,
+  } = options
+  let colorizer = getColorizer(colors)
 
   return async ({ request, url }, next) => {
     let start = new Date()
     let response = await next()
     let end = new Date()
+    let duration = end.getTime() - start.getTime()
+    let contentLength = response.headers.get('Content-Length')
+    let contentLengthValue = parseContentLength(contentLength)
 
     let tokens: Record<string, () => string> = {
       date: () => formatApacheDate(start),
       dateISO: () => start.toISOString(),
-      duration: () => String(end.getTime() - start.getTime()),
-      contentLength: () => response.headers.get('Content-Length') ?? '-',
+      duration: () => colorizer.duration(duration),
+      contentLength: () => colorizer.contentLength(contentLength ?? '-', contentLengthValue),
       contentType: () => response.headers.get('Content-Type') ?? '-',
       host: () => url.host,
       hostname: () => url.hostname,
-      method: () => request.method,
+      method: () => colorizer.method(request.method),
       path: () => url.pathname + url.search,
       pathname: () => url.pathname,
       port: () => url.port,
@@ -69,7 +96,7 @@ export function logger(options: LoggerOptions = {}): Middleware {
       query: () => url.search,
       referer: () => request.headers.get('Referer') ?? '-',
       search: () => url.search,
-      status: () => String(response.status),
+      status: () => colorizer.status(response.status),
       statusText: () => response.statusText,
       url: () => url.href,
       userAgent: () => request.headers.get('User-Agent') ?? '-',
@@ -84,6 +111,71 @@ export function logger(options: LoggerOptions = {}): Middleware {
 }
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+interface Colorizer {
+  contentLength(value: string, bytes: number | undefined): string
+  duration(ms: number): string
+  method(method: string): string
+  status(status: number): string
+}
+
+function getColorizer(option: boolean | undefined): Colorizer {
+  let styles = createStyles({ colors: option })
+
+  return {
+    contentLength(value, bytes) {
+      if (!styles.enabled || bytes === undefined) return value
+      if (bytes >= 1024 * 1024) return styles.red(value)
+      if (bytes >= 100 * 1024) return styles.yellow(value)
+      if (bytes >= 1024) return styles.cyan(value)
+      return value
+    },
+    duration(ms) {
+      let value = String(ms)
+      if (!styles.enabled) return value
+      if (ms >= 1000) return styles.red(value)
+      if (ms >= 500) return styles.magenta(value)
+      if (ms >= 100) return styles.yellow(value)
+      return styles.green(value)
+    },
+    method(method) {
+      if (!styles.enabled) return method
+
+      switch (method.toUpperCase()) {
+        case 'GET':
+        case 'HEAD':
+          return styles.green(method)
+        case 'POST':
+          return styles.cyan(method)
+        case 'PUT':
+        case 'PATCH':
+          return styles.yellow(method)
+        case 'DELETE':
+          return styles.red(method)
+        case 'OPTIONS':
+          return styles.magenta(method)
+        default:
+          return method
+      }
+    },
+    status(status) {
+      let value = String(status)
+      if (!styles.enabled) return value
+      if (status >= 500) return styles.red(value)
+      if (status >= 400) return styles.yellow(value)
+      if (status >= 300) return styles.cyan(value)
+      if (status >= 200) return styles.green(value)
+      return value
+    },
+  }
+}
+
+function parseContentLength(value: string | null): number | undefined {
+  if (value === null) return undefined
+
+  let bytes = Number(value)
+  return Number.isSafeInteger(bytes) && bytes >= 0 ? bytes : undefined
+}
 
 /**
  * Formats a date in Apache/nginx log format: "dd/Mon/yyyy:HH:mm:ss ±zzzz"

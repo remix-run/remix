@@ -37,7 +37,7 @@ describe('s3 file storage', () => {
 
     assert.ok(retrieved)
     assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
+    assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
     assert.equal(await retrieved.text(), 'Hello, world!')
@@ -139,7 +139,7 @@ describe('s3 file storage', () => {
     assert.equal(files.length, 1)
     assert.equal(files[0].key, 'hello')
     assert.equal(files[0].name, 'hello.txt')
-    assert.equal(files[0].type, 'text/plain')
+    assert.equal(files[0].type, file.type)
     assert.equal(files[0].lastModified, lastModified)
     assert.equal(files[0].size, 13)
   })

@@ -1,6 +1,7 @@
 import type { Browser, BrowserContextOptions } from 'playwright'
 import { createTestContext } from './context.ts'
 import type { CreateServerFunction } from './e2e-server.ts'
+import type { V8CoverageEntry } from './coverage.ts'
 
 export interface TestResult {
   name: string
@@ -20,6 +21,7 @@ export interface TestResults {
   skipped: number
   todo: number
   tests: TestResult[]
+  e2eBrowserCoverageEntries?: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>
 }
 
 export async function runTests(options?: {
@@ -27,8 +29,10 @@ export async function runTests(options?: {
   browser?: Browser
   open?: boolean
   playwrightPageOptions?: BrowserContextOptions
+  coverage?: boolean
 }): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
+  let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
     passed: 0,
     failed: 0,
@@ -112,6 +116,8 @@ export async function runTests(options?: {
         browser: options?.browser,
         open: options?.open,
         playwrightPageOptions: options?.playwrightPageOptions,
+        coverage: options?.coverage,
+        addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
       })
 
       try {
@@ -157,6 +163,10 @@ export async function runTests(options?: {
   // Clear suites in-place so the shared framework module is reset
   // for the next test file (which reuses the same cached module instance)
   suites.length = 0
+
+  if (e2eCoverageEntries.length > 0) {
+    results.e2eBrowserCoverageEntries = e2eCoverageEntries
+  }
 
   return results
 }

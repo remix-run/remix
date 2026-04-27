@@ -39,13 +39,15 @@
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^"
+    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/terminal": "workspace:^"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
+    "test:bun": "bun x --bun remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

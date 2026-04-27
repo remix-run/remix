@@ -1,0 +1,1 @@
+BREAKING CHANGE: `MultipartPart.headers` from `remix/multipart-parser` and `remix/multipart-parser/node` is now a plain decoded object keyed by lower-case header name instead of a native `Headers` instance. Access part headers with bracket notation like `part.headers['content-type']` instead of `part.headers.get('content-type')`.

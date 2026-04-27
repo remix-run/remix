@@ -3138,7 +3138,7 @@ describe('asset-server', () => {
   it('supports absolute allow rules and deny overrides', async () => {
     let allowedPath = await write(dir, 'app/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
-    await write(dir, 'app/.hidden.ts', 'export const hidden = true')
+    await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
     let assetServer = createAssetServerForTest({
       allow: [allowedPath, path.join(dir, 'app')],
       deny: [path.join(dir, 'app/blocked.ts')],
@@ -3148,12 +3148,12 @@ describe('asset-server', () => {
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
     let blockedResponse = await get(assetServer, '/assets/app/blocked.ts')
-    let hiddenResponse = await get(assetServer, '/assets/app/.hidden.ts')
+    let dotfileResponse = await get(assetServer, '/assets/app/.dotfile.ts')
     assert.ok(allowedResponse)
     assert.equal(allowedResponse.status, 200)
     assert.equal(blockedResponse, null)
-    assert.ok(hiddenResponse)
-    assert.equal(hiddenResponse.status, 200)
+    assert.ok(dotfileResponse)
+    assert.equal(dotfileResponse.status, 200)
   })
 
   it('rejects unnamed route wildcards because fileMap entries must be reversible', async () => {
@@ -3183,6 +3183,26 @@ describe('asset-server', () => {
     assert.ok(allowedResponse)
     assert.equal(allowedResponse.status, 200)
     assert.equal(blockedResponse, null)
+  })
+
+  it('matches dot-prefixed files and directories in glob-style allow rules', async () => {
+    await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
+    await write(dir, 'node_modules/.dotdir/example/index.ts', 'export const dotdir = true')
+    let assetServer = createAssetServerForTest({
+      allow: ['app/**/*', 'node_modules/**/*'],
+      rootDir: dir,
+      fileMap: {
+        '/assets/app/*path': 'app/*path',
+        '/assets/npm/*path': 'node_modules/*path',
+      },
+    })
+
+    let dotfileResponse = await get(assetServer, '/assets/app/.dotfile.ts')
+    let dotdirResponse = await get(assetServer, '/assets/npm/.dotdir/example/index.ts')
+    assert.ok(dotfileResponse)
+    assert.equal(dotfileResponse.status, 200)
+    assert.ok(dotdirResponse)
+    assert.equal(dotdirResponse.status, 200)
   })
 
   it('does not call onError for denied direct requests', async () => {
@@ -3694,6 +3714,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /not a supported script file/)
     assert.match(receivedError.message, /"\.\/data\.json"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/data\.json/)
   })
 
   it('calls onError for import resolution failures', async () => {
@@ -3770,6 +3791,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /secret\.css/)
   })
 
   it('calls onError when a CSS import is outside configured fileMap entries', async () => {
@@ -3795,6 +3817,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /outside all configured fileMap entries/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
   })
 
   it('calls onError for CommonJS modules', async () => {
@@ -3835,6 +3858,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
   })
 
   it('calls onError when an imported module is outside configured fileMap entries', async () => {
@@ -3856,6 +3880,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /outside all configured fileMap entries/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /shared\/util\.ts/)
   })
 
   it('uses a custom response returned from onError', async () => {

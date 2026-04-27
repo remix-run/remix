@@ -48,7 +48,7 @@ This is the changelog for [`form-data-parser`](https://github.com/remix-run/remi
 
 ## v0.9.1 (2025-06-13)
 
-- Export `FormDataParserError` and `MaxFilesExceededError`
+- Export `FormDataParseError` and `MaxFilesExceededError`
 - Re-export `MultipartParseError`, `MaxHeaderSizeExceededError`, and `MaxFileSizeExceededError` from multipart parser
 
 ## v0.9.0 (2025-06-13)
@@ -57,6 +57,7 @@ This release updates to `multipart-parser` 0.10.0 and removes the restrictions o
 
 - `FileUpload` is now a normal subclass of `File` with all the same functionality (instead of just implementing the same interface)
 - Add `maxFiles` option to `parseFormData` to allow limiting the number of files uploaded in a single request
+- BREAKING CHANGE: `parseFormData()` now defaults to `maxFiles = 20`; set `maxFiles` explicitly to allow larger batch uploads.
 
 ```ts
 let formData = await parseFormData(request, { maxFiles: 5 })

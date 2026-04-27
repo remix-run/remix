@@ -79,6 +79,7 @@
     "./session/memory-storage": "./src/session/memory-storage.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./tar-parser": "./src/tar-parser.ts",
+    "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
     "./package.json": "./package.json"
   },
@@ -328,6 +329,10 @@
         "types": "./dist/tar-parser.d.ts",
         "default": "./dist/tar-parser.js"
       },
+      "./terminal": {
+        "types": "./dist/terminal.d.ts",
+        "default": "./dist/terminal.js"
+      },
       "./test": {
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
@@ -383,7 +388,8 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
-    "@remix-run/test": "workspace:^"
+    "@remix-run/test": "workspace:^",
+    "@remix-run/terminal": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

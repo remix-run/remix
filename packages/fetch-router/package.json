@@ -52,6 +52,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
+    "test:bun": "bun x --bun remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

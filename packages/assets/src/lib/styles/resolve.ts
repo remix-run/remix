@@ -202,7 +202,8 @@ function resolveImportDependency(
 
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
-      `Resolved import "${url}" in ${importerPath} is not allowed by the asset server allow/deny configuration.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+        `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
       {
         code: 'IMPORT_NOT_ALLOWED',
       },
@@ -211,7 +212,8 @@ function resolveImportDependency(
 
   if (!args.routes.toUrlPathname(identityPath)) {
     throw createAssetServerCompilationError(
-      `Resolved import "${url}" in ${importerPath} is outside all configured fileMap entries.`,
+      `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is outside all configured fileMap entries. ` +
+        `Add a matching fileMap entry for this file path, or mark this import as external.`,
       {
         code: 'IMPORT_OUTSIDE_FILE_MAP',
       },

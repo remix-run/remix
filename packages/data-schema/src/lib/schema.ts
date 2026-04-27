@@ -101,6 +101,16 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    */
   refine: (predicate: (value: output) => boolean, message?: string) => Schema<input, output>
   /**
+   * Transform the output of this schema with a function.
+   *
+   * The transform function runs after the underlying schema has validated and produced an `output` value.
+   * The returned schema has a different output type.
+   *
+   * @param transformer A function that transforms the validated output
+   * @returns A new schema with the transformation applied
+   */
+  transform: <newOutput>(transformer: (value: output) => newOutput) => Schema<input, newOutput>
+  /**
    * Internal validator used to validate nested values while preserving `path`/`options`.
    */
   '~run': (value: unknown, context: ValidationContext) => ValidationResult<output>
@@ -212,6 +222,17 @@ export function createSchema<input, output>(
         }
 
         return result
+      })
+    },
+    transform<newOutput>(transformer: (value: output) => newOutput): Schema<input, newOutput> {
+      return createSchema<input, newOutput>(function validate(value, context) {
+        let result = schema['~run'](value, context)
+
+        if (result.issues) {
+          return result
+        }
+
+        return { value: transformer(result.value) }
       })
     },
   }

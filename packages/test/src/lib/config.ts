@@ -2,8 +2,8 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import * as util from 'node:util'
-import { tsImport } from 'tsx/esm/api'
 import type { PlaywrightTestConfig } from 'playwright/test'
+import { importModule } from './import-module.ts'
 
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
@@ -21,6 +21,10 @@ const cliOptions = {
     type: 'string',
     description: 'Glob pattern for E2E test files',
   },
+  'glob.exclude': {
+    type: 'string',
+    description: 'Glob pattern for paths to exclude from discovery',
+  },
   'glob.test': {
     type: 'string',
     description: 'Glob pattern for all test files',
@@ -33,6 +37,40 @@ const cliOptions = {
   config: {
     type: 'string',
     description: 'Path to config file (default: remix-test.config.ts)',
+  },
+  coverage: {
+    type: 'boolean',
+    description: 'Enable or disable coverage collection (default: false)',
+  },
+  'coverage.dir': {
+    type: 'string',
+    description: 'Directory to output coverage reports (default: .coverage)',
+  },
+  'coverage.include': {
+    type: 'string',
+    multiple: true,
+    description: 'Glob pattern(s) for files to include in coverage',
+  },
+  'coverage.exclude': {
+    type: 'string',
+    multiple: true,
+    description: 'Glob pattern(s) for files to exclude from coverage',
+  },
+  'coverage.branches': {
+    type: 'string',
+    description: 'Branches coverage threshold percentage',
+  },
+  'coverage.functions': {
+    type: 'string',
+    description: 'Functions coverage threshold percentage',
+  },
+  'coverage.lines': {
+    type: 'string',
+    description: 'Lines coverage threshold percentage',
+  },
+  'coverage.statements': {
+    type: 'string',
+    description: 'Statements coverage threshold percentage',
   },
   setup: {
     type: 'string',
@@ -71,9 +109,19 @@ const defaultValues: ResolvedRemixTestConfig = {
     open: false,
   },
   concurrency: os.availableParallelism(),
+  coverage: {
+    dir: '.coverage',
+    include: undefined,
+    exclude: undefined,
+    statements: undefined,
+    lines: undefined,
+    branches: undefined,
+    functions: undefined,
+  },
   glob: {
-    test: '**/*.test?(.e2e).{ts,tsx}',
+    test: '**/*.test{,.e2e}.{ts,tsx}',
     e2e: '**/*.test.e2e.{ts,tsx}',
+    exclude: 'node_modules/**',
   },
   reporter: process.env.CI === 'true' ? 'dot' : 'spec',
   type: 'server,e2e',
@@ -97,13 +145,30 @@ export interface RemixTestConfig {
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
    *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
+   *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
     test?: string
     e2e?: string
+    exclude?: string
   }
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
+  /**
+   * Coverage configuration. `true` enables with defaults; an object enables with settings;
+   * `false` disables. CLI `--coverage` flag overrides the boolean aspect.
+   */
+  coverage?:
+    | boolean
+    | {
+        dir?: string
+        include?: string[]
+        exclude?: string[]
+        statements?: number | string
+        lines?: number | string
+        branches?: number | string
+        functions?: number | string
+      }
   /**
    * Path to a module that exports `globalSetup` and/or `globalTeardown` functions,
    * called once before and after the test run respectively. (--setup)
@@ -130,9 +195,21 @@ export interface ResolvedRemixTestConfig {
     open?: boolean
   }
   concurrency: number
+  coverage:
+    | {
+        dir: string
+        include?: string[]
+        exclude?: string[]
+        statements?: number
+        lines?: number
+        branches?: number
+        functions?: number
+      }
+    | undefined
   glob: {
     test: string
     e2e: string
+    exclude: string
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string | undefined
@@ -183,6 +260,7 @@ function resolveConfig(
   fileConfig: RemixTestConfig,
   { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
 ): ResolvedRemixTestConfig {
+  let fileCoverage = typeof fileConfig.coverage === 'boolean' ? {} : fileConfig.coverage || {}
   return {
     glob: {
       test:
@@ -191,6 +269,7 @@ function resolveConfig(
         fileConfig.glob?.test ??
         defaultValues.glob.test,
       e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
+      exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
     },
     browser: {
       echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
@@ -199,6 +278,44 @@ function resolveConfig(
     concurrency: Number(
       cliValues.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
     ),
+    coverage:
+      cliValues.coverage === true || !!fileConfig.coverage
+        ? {
+            dir: cliValues['coverage.dir'] ?? fileCoverage.dir ?? defaultValues.coverage!.dir,
+            include:
+              cliValues['coverage.include'] ??
+              fileCoverage.include ??
+              defaultValues.coverage!.include,
+            exclude:
+              cliValues['coverage.exclude'] ??
+              fileCoverage.exclude ??
+              defaultValues.coverage!.exclude,
+            statements:
+              cliValues['coverage.statements'] !== undefined
+                ? Number(cliValues['coverage.statements'])
+                : fileCoverage.statements !== undefined
+                  ? Number(fileCoverage.statements)
+                  : undefined,
+            lines:
+              cliValues['coverage.lines'] !== undefined
+                ? Number(cliValues['coverage.lines'])
+                : fileCoverage.lines !== undefined
+                  ? Number(fileCoverage.lines)
+                  : undefined,
+            branches:
+              cliValues['coverage.branches'] !== undefined
+                ? Number(cliValues['coverage.branches'])
+                : fileCoverage.branches !== undefined
+                  ? Number(fileCoverage.branches)
+                  : undefined,
+            functions:
+              cliValues['coverage.functions'] !== undefined
+                ? Number(cliValues['coverage.functions'])
+                : fileCoverage.functions !== undefined
+                  ? Number(fileCoverage.functions)
+                  : undefined,
+          }
+        : undefined,
     setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
     playwrightConfig:
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
@@ -220,7 +337,7 @@ async function loadConfigFile(configPath?: string): Promise<RemixTestConfig> {
   for (let candidate of candidates) {
     try {
       await fsp.access(candidate)
-      let mod = await tsImport(candidate, { parentURL: import.meta.url })
+      let mod = await importModule(candidate, import.meta)
       return mod.default ?? mod
     } catch {
       // not found or failed to load — try next

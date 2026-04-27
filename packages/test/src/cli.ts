@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { tsImport } from 'tsx/esm/api'
 import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
+import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createWatcher } from './lib/watcher.ts'
+import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
-import type { Counts } from './lib/utils.ts'
+import { IS_BUN, type Counts } from './lib/utils.ts'
 
 const config = await loadConfig()
 
@@ -40,9 +41,7 @@ async function executeRun() {
 
   try {
     if (config.setup) {
-      let mod = await tsImport(path.resolve(process.cwd(), config.setup), {
-        parentURL: import.meta.url,
-      })
+      let mod = await importModule(path.resolve(process.cwd(), config.setup), import.meta)
       let globalSetup: (() => Promise<void> | void) | undefined = mod.globalSetup
       globalTeardown = mod.globalTeardown
       await globalSetup?.()
@@ -69,15 +68,19 @@ async function executeRun() {
       skipped: 0,
       todo: 0,
     }
+    let allCoverageMaps: Array<ReturnType<typeof Object.values>[number] | null | undefined> = []
 
     // Run server tests
     if (serverFiles.length > 0) {
       reporter.onSectionStart('\nRunning server tests:')
-      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server')
+      let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, 'server', {
+        coverage: config.coverage,
+      })
       counts.failed += serverResult.failed
       counts.passed += serverResult.passed
       counts.skipped += serverResult.skipped
       counts.todo += serverResult.todo
+      allCoverageMaps.push(serverResult.coverageMap)
     }
 
     // Run e2e tests for all browsers configured by the user
@@ -111,6 +114,7 @@ async function executeRun() {
                 open: config.browser?.open,
                 playwrightUseOpts: project.playwrightUseOpts,
                 projectName: project.name,
+                coverage: config.coverage,
               })
             : null
 
@@ -118,12 +122,21 @@ async function executeRun() {
         counts.failed += e2eResult?.failed ?? 0
         counts.skipped += e2eResult?.skipped ?? 0
         counts.todo += e2eResult?.todo ?? 0
+        allCoverageMaps.push(e2eResult?.coverageMap)
       }
     }
 
     reporter.onSummary(counts, performance.now() - startTime)
 
-    latestExitCode = counts.failed > 0 ? 1 : 0
+    let thresholdsPassed = true
+    if (config.coverage) {
+      thresholdsPassed = await generateCombinedCoverageReport(
+        allCoverageMaps,
+        process.cwd(),
+        config.coverage,
+      )
+    }
+    latestExitCode = counts.failed > 0 || !thresholdsPassed ? 1 : 0
   } catch (error) {
     console.error('Error running tests:', error)
     latestExitCode = 1
@@ -144,25 +157,14 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
   serverFiles: string[]
   e2eFiles: string[]
 }> {
-  async function findFiles(pattern: string) {
-    let files: string[] = []
-    let exclude = ['node_modules/**', '.git/**']
-
-    for await (let file of fsp.glob(pattern, { cwd: process.cwd(), exclude })) {
-      files.push(path.resolve(process.cwd(), file))
-    }
-
-    return files
-  }
-
-  let files = await findFiles(config.glob.test)
+  let files = await findFiles(config.glob.test, config.glob.exclude)
 
   if (files.length === 0) {
     console.log(`No test files found matching pattern: ${config.glob.test}`)
     process.exit(1)
   }
 
-  let e2eSet = new Set(await findFiles(config.glob.e2e))
+  let e2eSet = new Set(await findFiles(config.glob.e2e, config.glob.exclude))
 
   let types = new Set(config.type.split(','))
   let e2eFiles = types.has('e2e') ? files.filter((f) => e2eSet.has(f)) : []
@@ -184,6 +186,32 @@ async function discoverTests(config: ResolvedRemixTestConfig): Promise<{
     serverFiles,
     e2eFiles,
   }
+}
+
+async function findFiles(pattern: string, excludePattern: string) {
+  let cwd = process.cwd()
+  let files: string[] = []
+
+  if (IS_BUN) {
+    // Bun's `fs.promises.glob` follows symlinks and doesn't prune traversal
+    // via `exclude`, so it enters pnpm symlink cycles in `node_modules`.
+    // Use Bun's native Glob, which defaults to `followSymlinks: false`.
+    // @ts-expect-error — bun module is only resolvable under the Bun runtime
+    let { Glob } = await import('bun')
+    let glob = new Glob(pattern)
+    let excludeGlob = new Glob(excludePattern)
+    for await (let file of glob.scan({ cwd, absolute: true })) {
+      if (!excludeGlob.match(path.relative(cwd, file))) {
+        files.push(file)
+      }
+    }
+    return files
+  }
+
+  for await (let file of fsp.glob(pattern, { cwd, exclude: [excludePattern] })) {
+    files.push(path.resolve(cwd, file))
+  }
+  return files
 }
 
 function queueRerun(reason: string) {

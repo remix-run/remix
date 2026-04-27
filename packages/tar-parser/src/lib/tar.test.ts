@@ -192,6 +192,24 @@ describe('tar-stream test cases', () => {
     ])
   })
 
+  it('parses a file body that ends at a chunk boundary', async () => {
+    let archive = await bufferBytes(readFixture(fixtures.multiFile))
+    let chunkBoundary = 512 + 'i am file-1\n'.length
+
+    let entries: [string, string][] = []
+    await parseTar(
+      [archive.subarray(0, chunkBoundary), archive.subarray(chunkBoundary)],
+      async (entry) => {
+        entries.push([entry.name, await bufferString(entry.body)])
+      },
+    )
+
+    assert.deepEqual(entries, [
+      ['file-1.txt', 'i am file-1\n'],
+      ['file-2.txt', 'i am file-2\n'],
+    ])
+  })
+
   it('parses pax.tar', async () => {
     let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.pax), async (entry) => {

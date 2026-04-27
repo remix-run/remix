@@ -33,7 +33,9 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
     "@remix-run/data-table": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "^8.15.6",
     "@typescript/native-preview": "catalog:",
@@ -54,8 +56,8 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 --test ./src/lib/adapter.test.ts ./src/lib/sql-compiler.test.ts",
+    "test": "remix-test",
+    "test:coverage": "remix-test --coverage",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

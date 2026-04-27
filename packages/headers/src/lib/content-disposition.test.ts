@@ -3,6 +3,15 @@ import { describe, it } from '@remix-run/test'
 
 import { ContentDisposition } from './content-disposition.ts'
 
+function supportsTextEncoding(encoding: string): boolean {
+  try {
+    new TextDecoder(encoding)
+    return true
+  } catch {
+    return false
+  }
+}
+
 describe('ContentDisposition', () => {
   it('initializes with an empty string', () => {
     let header = new ContentDisposition('')
@@ -186,10 +195,15 @@ describe('ContentDisposition', () => {
       assert.equal(header.preferredFilename, 'föo.txt')
     })
 
-    it('correctly decodes ISO-8859-15 encoded filename', () => {
-      let header = new ContentDisposition("attachment; filename*=ISO-8859-15''file%A4.txt")
-      assert.equal(header.preferredFilename, 'file€.txt')
-    })
+    it(
+      'correctly decodes ISO-8859-15 encoded filename',
+      // Bun v1.3.4 does not support ISO-8859-15
+      { skip: !supportsTextEncoding('ISO-8859-15') },
+      () => {
+        let header = new ContentDisposition("attachment; filename*=ISO-8859-15''file%A4.txt")
+        assert.equal(header.preferredFilename, 'file€.txt')
+      },
+    )
 
     it('correctly decodes windows-1252 encoded filename', () => {
       let header = new ContentDisposition("attachment; filename*=windows-1252''file%80.txt")
