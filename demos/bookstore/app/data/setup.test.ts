@@ -1,12 +1,14 @@
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test'
+import { afterAll, describe, it } from 'remix/test'
 import { fileURLToPath } from 'node:url'
 import { sql } from 'remix/data-table'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 
-import { db, initializeBookstoreDatabase } from './setup.ts'
+import { closeBookstoreDatabase, db, initializeBookstoreDatabase } from './setup.ts'
 import { users } from './schema.ts'
 import { verifyPassword } from '../utils/password-hash.ts'
+
+afterAll(() => closeBookstoreDatabase())
 
 function getRows(result: { rows?: Record<string, unknown>[] }): Record<string, unknown>[] {
   return result.rows ?? []

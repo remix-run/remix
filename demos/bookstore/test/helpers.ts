@@ -1,10 +1,12 @@
 import { createCookie } from 'remix/cookie'
 import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session/memory-storage'
+import { afterAll } from 'remix/test'
 
 import { createBookstoreRouter } from '../app/router.ts'
-import { beforeAll } from 'remix/test'
-import { initializeBookstoreDatabase } from '../app/data/setup.ts'
+import { closeBookstoreDatabase, initializeBookstoreDatabase } from '../app/data/setup.ts'
+
+afterAll(() => closeBookstoreDatabase())
 
 export async function createTestRouter() {
   // Initialize the DB before every test suite - needs to run per-worker
