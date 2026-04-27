@@ -75,7 +75,7 @@ const popoverSurfaceCss: CSSMixinDescriptor = css({
 export const contentStyle = popoverContentCss
 export const surfaceStyle = [popoverSurfaceCss, popoverSurfaceTransitionCss] as const
 
-function PopoverProvider(handle: Handle<PopoverContext>) {
+function PopoverProvider(handle: Handle<PopoverProps, PopoverContext>) {
   handle.context.set({
     hideFocusTarget: null,
     showFocusTarget: null,
@@ -83,7 +83,7 @@ function PopoverProvider(handle: Handle<PopoverContext>) {
     anchor: null,
   })
 
-  return (props: PopoverProps) => props.children
+  return () => handle.props.children
 }
 
 export interface PopoverSurfaceOptions {

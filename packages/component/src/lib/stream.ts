@@ -613,15 +613,14 @@ function createSsrMixinHandle(
   context: RenderContext,
   frameState: SsrFrameState,
 ) {
-  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
     $rmx: true as const,
     type: hostType,
     key: null,
-    props,
+    props: handle.props,
   })) as ((
-    handle: { update(): Promise<AbortSignal> },
-    setup: unknown,
-  ) => (props: ElementProps) => RemixElement) & {
+    handle: { props: ElementProps; update(): Promise<AbortSignal> },
+  ) => () => RemixElement) & {
     __rmxMixinElementType: string
   }
   element.__rmxMixinElementType = hostType

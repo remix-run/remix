@@ -13,13 +13,13 @@ import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
-  function Counter(handle: Handle, setup: number) {
-    let count = setup
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-    return (props: { label: string }) => (
+    return () => (
       <div>
         <span>
-          {props.label}: {count}
+          {handle.props.label}: {count}
         </span>
         <button
           mix={[

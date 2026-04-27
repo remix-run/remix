@@ -47,8 +47,8 @@ describe('run', () => {
   it('hydrates a single component', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => (
           <button
             mix={[
@@ -64,7 +64,7 @@ describe('run', () => {
       },
     )
 
-    let stream = renderToStream(<Counter setup={5} />)
+    let stream = renderToStream(<Counter initialCount={5} />)
     let html = await drain(stream)
 
     document.body.innerHTML = html
@@ -134,9 +134,9 @@ describe('run', () => {
   })
 
   it('hydrates multiple components', async () => {
-    let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle) {
+    let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle<{ text: string }>) {
       let clicked = false
-      return ({ text }: { text: string }) => (
+      return () => (
         <button
           mix={[
             on('click', () => {
@@ -145,7 +145,7 @@ describe('run', () => {
             }),
           ]}
         >
-          {clicked ? `${text} clicked!` : text}
+          {clicked ? `${handle.props.text} clicked!` : handle.props.text}
         </button>
       )
     })
@@ -329,20 +329,25 @@ describe('run', () => {
   })
 
   it('handles complex props', async () => {
-    let Card = clientEntry('/js/card.js#Card', function Card() {
-      return (props: { title: string; count: number; enabled: boolean; items: string[] }) => (
-        <div>
-          <h2>{props.title}</h2>
-          <p>Count: {props.count}</p>
-          <p>Enabled: {String(props.enabled)}</p>
-          <ul>
-            {props.items.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )
-    })
+    let Card = clientEntry(
+      '/js/card.js#Card',
+      function Card(
+        handle: Handle<{ title: string; count: number; enabled: boolean; items: string[] }>,
+      ) {
+        return () => (
+          <div>
+            <h2>{handle.props.title}</h2>
+            <p>Count: {handle.props.count}</p>
+            <p>Enabled: {String(handle.props.enabled)}</p>
+            <ul>
+              {handle.props.items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )
+      },
+    )
 
     let stream = renderToStream(
       <Card title="Test" count={42} enabled={true} items={['one', 'two', 'three']} />,
@@ -1392,8 +1397,8 @@ describe('run', () => {
   it('hydrates components without waiting for pending frames', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => (
           <button
             id="counter"
@@ -1414,7 +1419,7 @@ describe('run', () => {
 
     let stream = renderToStream(
       <div>
-        <Counter setup={0} />
+        <Counter initialCount={0} />
         <Frame src="/slow" fallback={<span id="frame">Loading…</span>} />
       </div>,
       { resolveFrame: () => framePromise },
@@ -1578,8 +1583,8 @@ describe('run', () => {
   it('hydrates a component inside a nested frame', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => (
           <button
             id="nested-counter"
@@ -1600,7 +1605,7 @@ describe('run', () => {
     let neverResolve = () => new Promise<string>(() => {})
 
     // Render inner frame content (hydrated Counter).
-    let innerContent = await drain(renderToStream(<Counter setup={10} />))
+    let innerContent = await drain(renderToStream(<Counter initialCount={10} />))
 
     // Render outer frame content (pending inner frame with fallback).
     let outerStream = renderToStream(
@@ -1951,13 +1956,13 @@ describe('run', () => {
   it('logs a clear error when hydrating client entries without loadModule', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => <button>{count}</button>
       },
     )
 
-    let html = await drain(renderToStream(<Counter setup={2} />))
+    let html = await drain(renderToStream(<Counter initialCount={2} />))
     let container = document.createElement('div')
     let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -1993,13 +1998,13 @@ describe('run', () => {
   it('logs a clear error when loadModule resolves to a non-function export', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => <button>{count}</button>
       },
     )
 
-    let html = await drain(renderToStream(<Counter setup={3} />))
+    let html = await drain(renderToStream(<Counter initialCount={3} />))
     let container = document.createElement('div')
     let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -2199,8 +2204,8 @@ describe('run', () => {
   })
 
   it('renders Frame semantics from entry children during initial hydration', async () => {
-    let Card = clientEntry('/js/card.js#Card', function Card() {
-      return (props: { children: any }) => <section>{props.children}</section>
+    let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle<{ children?: any }>) {
+      return () => <section>{handle.props.children}</section>
     })
 
     let [framePromise, resolveFramePromise] = withResolvers<string>()

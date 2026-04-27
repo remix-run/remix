@@ -1,7 +1,7 @@
 // @jsxRuntime classic
 // @jsx createElement
 import { css, createElement } from '@remix-run/component'
-import type { Props, RemixNode } from '@remix-run/component'
+import type { Handle, Props, RemixNode } from '@remix-run/component'
 
 import { Glyph } from '../glyph/glyph.tsx'
 import { theme } from '../theme/theme.ts'
@@ -74,8 +74,9 @@ const textCss = css({
   whiteSpace: 'nowrap',
 })
 
-export function Breadcrumbs() {
-  return ({ 'aria-label': ariaLabel, items, separator, mix, ...navProps }: BreadcrumbsProps) => {
+export function Breadcrumbs(handle: Handle<BreadcrumbsProps>) {
+  return () => {
+    let { 'aria-label': ariaLabel, items, separator, mix, ...navProps } = handle.props
     let currentIndex = items.findIndex((item) => item.current)
     if (currentIndex === -1) {
       currentIndex = Math.max(0, items.length - 1)

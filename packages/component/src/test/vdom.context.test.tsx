@@ -7,9 +7,9 @@ describe('vnode rendering', () => {
     it('provides and reads context', () => {
       let container = document.createElement('div')
 
-      function App(handle: Handle<{ value: string }>) {
+      function App(handle: Handle<{ children?: RemixNode }, { value: string }>) {
         handle.context.set({ value: 'test' })
-        return ({ children }: { children: RemixNode }) => <div>{children}</div>
+        return () => <div>{handle.props.children}</div>
       }
 
       function Child(handle: Handle) {
@@ -30,13 +30,13 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let capturedUpdate = () => {}
-      function App(handle: Handle<{ value: string }>) {
+      function App(handle: Handle<{ children?: RemixNode }, { value: string }>) {
         handle.context.set({ value: 'test' })
         capturedUpdate = () => {
           handle.context.set({ value: 'test2' })
           handle.update()
         }
-        return ({ children }: { children: RemixNode }) => <div>{children}</div>
+        return () => <div>{handle.props.children}</div>
       }
 
       function Child(handle: Handle) {
@@ -65,7 +65,9 @@ describe('vnode rendering', () => {
       let options: string[] = []
       let renderListbox = () => {}
 
-      function Listbox(handle: Handle<{ registerOption: (option: string) => void }>) {
+      function Listbox(
+        handle: Handle<{ children?: RemixNode }, { registerOption: (option: string) => void }>,
+      ) {
         handle.context.set({
           registerOption: (option: string) => {
             options.push(option)
@@ -74,16 +76,16 @@ describe('vnode rendering', () => {
 
         renderListbox = handle.update
 
-        return ({ children }: { children: RemixNode }) => {
+        return () => {
           options = []
-          return <div>{children}</div>
+          return <div>{handle.props.children}</div>
         }
       }
 
-      function Option(handle: Handle) {
+      function Option(handle: Handle<{ value: string }>) {
         let { registerOption } = handle.context.get(Listbox)
-        return ({ value }: { value: string }) => {
-          registerOption(value)
+        return () => {
+          registerOption(handle.props.value)
           return <div>Option</div>
         }
       }

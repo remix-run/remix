@@ -1,17 +1,17 @@
 import { css } from 'remix/component'
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { Glyph } from '@remix-run/ui/glyph'
 import { theme } from '@remix-run/ui/theme'
-export function PageSection() {
-  return ({
-    children,
-    description,
-    title,
-  }: {
+interface PageSectionProps {
     children: RemixNode
     description?: string
     title?: string
-  }) => (
+}
+
+export function PageSection(handle: Handle<PageSectionProps>) {
+  return () => {
+    let { children, description, title } = handle.props
+    return (
     <section mix={sectionCss}>
       {title || description ? (
         <div mix={sectionHeaderCss}>
@@ -22,20 +22,20 @@ export function PageSection() {
       {children}
     </section>
   )
+  }
 }
 
-export function ShowcaseLinkCard() {
-  return ({
-    description,
-    eyebrow,
-    href,
-    title,
-  }: {
+interface ShowcaseLinkCardProps {
     description: string
     eyebrow: string
     href: string
     title: string
-  }) => (
+}
+
+export function ShowcaseLinkCard(handle: Handle<ShowcaseLinkCardProps>) {
+  return () => {
+    let { description, eyebrow, href, title } = handle.props
+    return (
     <a href={href} mix={[panelCss, linkCardCss]}>
       <div mix={linkCardHeaderCss}>
         <p mix={eyebrowTextCss}>{eyebrow}</p>
@@ -48,6 +48,7 @@ export function ShowcaseLinkCard() {
       </span>
     </a>
   )
+  }
 }
 
 export const panelCss = css({

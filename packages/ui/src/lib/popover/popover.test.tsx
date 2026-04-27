@@ -27,7 +27,7 @@ function renderApp(node: RemixNode) {
 }
 
 function renderPopover(options: RenderPopoverOptions = {}) {
-  return renderApp(<PopoverHarness setup={options} />)
+  return renderApp(<PopoverHarness {...options} />)
 }
 
 function isPopoverOpen(element: HTMLElement) {
@@ -82,7 +82,7 @@ async function settle(root: ReturnType<typeof createRoot>) {
   root.flush()
 }
 
-function PopoverHarness(handle: Handle, setup: RenderPopoverOptions) {
+function PopoverHarness(handle: Handle<RenderPopoverOptions>) {
   let open = false
 
   function openPopover() {
@@ -101,7 +101,7 @@ function PopoverHarness(handle: Handle, setup: RenderPopoverOptions) {
         id="anchor"
         mix={[
           popover.anchor({ placement: 'bottom-start' }),
-          setup.withHideFocus ? popover.focusOnHide() : null,
+          handle.props.withHideFocus ? popover.focusOnHide() : null,
           on<HTMLButtonElement>('click', openPopover),
         ]}
       >
@@ -111,21 +111,21 @@ function PopoverHarness(handle: Handle, setup: RenderPopoverOptions) {
       <div
         id="surface"
         mix={popover.surface({
-          closeOnAnchorClick: setup.closeOnAnchorClick,
+          closeOnAnchorClick: handle.props.closeOnAnchorClick,
           open,
           onHide(request) {
-            setup.onHide?.(request)
+            handle.props.onHide?.(request)
 
-            if (setup.closeOnHide === false) {
+            if (handle.props.closeOnHide === false) {
               return
             }
 
             closePopover()
           },
-          restoreFocusOnHide: setup.restoreFocusOnHide,
+          restoreFocusOnHide: handle.props.restoreFocusOnHide,
         })}
       >
-        {setup.withShowFocus ? (
+        {handle.props.withShowFocus ? (
           <button id="show-focus" mix={popover.focusOnShow()}>
             Focus on show
           </button>

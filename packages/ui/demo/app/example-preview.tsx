@@ -1,21 +1,19 @@
 import { css } from 'remix/component'
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { Glyph } from '@remix-run/ui/glyph'
 import { theme } from '@remix-run/ui/theme'
-export function ExamplePreview() {
-  return ({
-    children,
-    code,
-    description,
-    href,
-    title,
-  }: {
+interface ExamplePreviewProps {
     children: RemixNode
     code: string
     description?: string
     href?: string
     title?: string
-  }) => (
+}
+
+export function ExamplePreview(handle: Handle<ExamplePreviewProps>) {
+  return () => {
+    let { children, code, description, href, title } = handle.props
+    return (
     <div mix={exampleBlockCss}>
       {title || description ? (
         <div mix={exampleIntroCss}>
@@ -43,6 +41,7 @@ export function ExamplePreview() {
       </article>
     </div>
   )
+  }
 }
 
 export const standaloneExampleBodyCss = css({

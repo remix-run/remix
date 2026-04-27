@@ -214,12 +214,11 @@ function getOptionSearchValue(option: {
   return option.searchValue ?? option.textValue ?? option.label
 }
 
-function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
+function ComboboxProvider(handle: Handle<ComboboxContextProps, ComboboxContextValue>) {
   let inputRef: HTMLInputElement | undefined
   let listboxRef: listbox.ListboxRef | undefined
   let surfaceRef: HTMLElement | undefined
 
-  let props: ComboboxContextProps = {}
   let hasInitialized = false
   let hasProvidedRef = false
 
@@ -476,7 +475,7 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
     strategy: ComboboxOpenStrategy = 'selected',
     nextShowReason: ShowReason = 'nav',
   ) {
-    if (props.disabled) {
+    if (handle.props.disabled) {
       return
     }
 
@@ -700,7 +699,7 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
       return activeId
     },
     get disabled() {
-      return props.disabled === true
+      return handle.props.disabled === true
     },
     get filterText() {
       return filterText
@@ -715,7 +714,7 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
       return listId
     },
     get name() {
-      return props.name
+      return handle.props.name
     },
     get showReason() {
       return showReason
@@ -748,12 +747,10 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
     unregisterSurface,
   })
 
-  return (nextProps: ComboboxContextProps) => {
-    props = nextProps
-
+  return () => {
     if (!hasInitialized) {
-      value = nextProps.defaultValue ?? null
-      inputText = nextProps.defaultValue ?? ''
+      value = handle.props.defaultValue ?? null
+      inputText = handle.props.defaultValue ?? ''
       hasInitialized = true
     }
 
@@ -770,7 +767,7 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
 
     if (!hasProvidedRef) {
       handle.queueTask(() => {
-        props.ref?.(publicHandle)
+        handle.props.ref?.(publicHandle)
       })
       hasProvidedRef = true
     }
@@ -800,7 +797,7 @@ function ComboboxProvider(handle: Handle<ComboboxContextValue>) {
           selectionFlashAttribute="data-combobox-flash"
           value={value}
         >
-          {nextProps.children}
+          {handle.props.children}
         </listbox.Context>
       </popover.Context>
     )
@@ -977,9 +974,9 @@ export function onComboboxChange(handler: ComboboxChangeHandler, captureBoolean?
   )
 }
 
-export function Combobox() {
-  return (props: ComboboxProps) => {
-    let { children, defaultValue, disabled, inputId, name, placeholder, ...divProps } = props
+export function Combobox(handle: Handle<ComboboxProps>) {
+  return () => {
+    let { children, defaultValue, disabled, inputId, name, placeholder, ...divProps } = handle.props
 
     return (
       <combobox.Context defaultValue={defaultValue} disabled={disabled} name={name}>
@@ -1000,9 +997,9 @@ export function Combobox() {
   }
 }
 
-export function ComboboxOption() {
-  return (props: ComboboxOptionProps) => {
-    let { children, disabled, label, mix, searchValue, value, ...divProps } = props
+export function ComboboxOption(handle: Handle<ComboboxOptionProps>) {
+  return () => {
+    let { children, disabled, label, mix, searchValue, value, ...divProps } = handle.props
 
     return (
       <div

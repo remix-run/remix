@@ -1,18 +1,18 @@
 import { Frame } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import type { ExampleEntry } from '../examples/index.tsx'
 import { getExampleContentHref } from '../examples/index.tsx'
 
-export function ExplorerExampleCard() {
-  return ({
-    description,
-    example,
-    title,
-  }: {
+interface ExplorerExampleCardProps {
     description?: string
     example: ExampleEntry
     title?: string
-  }) => {
+}
+
+export function ExplorerExampleCard(handle: Handle<ExplorerExampleCardProps>) {
+  return () => {
+    let { description, example, title } = handle.props
     let nextTitle = title ?? example.title
     let nextDescription = description ?? example.description
 

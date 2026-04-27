@@ -6,49 +6,37 @@ describe('clientEntry', () => {
   /* oxlint-disable eslint/no-unused-vars */
   describe('types', () => {
     it('keeps original types', () => {
-      function Input(handle: Handle, props: { defaultValue?: string }) {
-        let value = props.defaultValue ?? ''
-        return ({ label }: { label: string }) => (
+      function Input(handle: Handle<{ defaultValue?: string; label: string }>) {
+        let value = handle.props.defaultValue ?? ''
+        return () => (
           <label>
-            {label}: <input type="text" value={value} />
+            {handle.props.label}: <input type="text" value={value} />
           </label>
         )
       }
 
       let HydratedInput = clientEntry('/js/test.js#Input', Input)
 
-      // @ts-expect-error - should require default render prop
+      // @ts-expect-error - should require label prop
       let el = <Input />
-      // @ts-expect-error - should require default render prop
+      // @ts-expect-error - should require label prop
       let el2 = <HydratedInput />
 
       expect(true).toBe(true)
     })
 
     it('only allows serializable props', () => {
-      function Input(handle: Handle, props: { defaultValue?: string; func: () => void }) {
-        let value = props.defaultValue ?? ''
-        return ({ label }: { label: string }) => (
+      function Input(handle: Handle<{ defaultValue?: string; func: () => void; label: string }>) {
+        let value = handle.props.defaultValue ?? ''
+        return () => (
           <label>
-            {label}: <input type="text" value={value} />
+            {handle.props.label}: <input type="text" value={value} />
           </label>
         )
       }
 
       // @ts-expect-error - should disallow non-serializable function prop
       let HydratedInput = clientEntry('/js/test.js#Input', Input)
-
-      function Input2(handle: Handle, props: { defaultValue?: string }) {
-        let value = props.defaultValue ?? ''
-        return ({ label }: { label: string; func: () => void }) => (
-          <label>
-            {label}: <input type="text" value={value} />
-          </label>
-        )
-      }
-
-      // @ts-expect-error - should disallow non-serializable function prop
-      let HydratedInput2 = clientEntry('/js/test.js#Input', Input2)
 
       expect(true).toBe(true)
     })
@@ -56,8 +44,8 @@ describe('clientEntry', () => {
 
   describe('basic functionality', () => {
     it('marks a component as an entry', () => {
-      function TestComponent(handle: Handle, props: { count: number }) {
-        return () => <div>Count: {props.count}</div>
+      function TestComponent(handle: Handle<{ count: number }>) {
+        return () => <div>Count: {handle.props.count}</div>
       }
 
       let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
@@ -77,12 +65,12 @@ describe('clientEntry', () => {
     })
 
     it('preserves the original component functionality', () => {
-      function TestComponent(handle: Handle, props: { initialCount: number }) {
-        let count = props.initialCount
+      function TestComponent(handle: Handle<{ initialCount: number; label: string }>) {
+        let count = handle.props.initialCount
 
-        return (props: { label: string }) => (
+        return () => (
           <button>
-            {props.label}: {count}
+            {handle.props.label}: {count}
           </button>
         )
       }
@@ -93,14 +81,17 @@ describe('clientEntry', () => {
       expect(typeof EntryComponent).toBe('function')
 
       // Mock Handle for testing
-      let mockHandle = {} as Handle
+      let mockHandle = { props: { initialCount: 5, label: 'Count' } } as Handle<{
+        initialCount: number
+        label: string
+      }>
 
       // Should work the same as the original component
-      let renderFn = EntryComponent(mockHandle, { initialCount: 5 })
+      let renderFn = EntryComponent(mockHandle)
       expect(typeof renderFn).toBe('function')
 
       if (typeof renderFn === 'function') {
-        let element = renderFn({ label: 'Count' })
+        let element = renderFn(mockHandle.props)
         expect(element).toEqual({
           $rmx: true,
           type: 'button',
@@ -151,16 +142,16 @@ describe('clientEntry', () => {
     it('accepts components with serializable props', () => {
       // This should compile without errors
       function ValidComponent(
-        handle: Handle,
-        props: {
+        handle: Handle<{
           str: string
           num: number
           bool: boolean
           obj: { nested: string }
           arr: number[]
           element: JSX.Element
-        },
+        }>,
       ) {
+        void handle
         return () => <div>Valid</div>
       }
 
@@ -170,7 +161,8 @@ describe('clientEntry', () => {
 
     // Type-level rejection: non-serializable props should be disallowed
     it('rejects components with non-serializable props', () => {
-      function InvalidComponent(handle: Handle, props: { func: () => void }) {
+      function InvalidComponent(handle: Handle<{ func: () => void }>) {
+        void handle
         return () => <div>Invalid</div>
       }
 
@@ -179,10 +171,9 @@ describe('clientEntry', () => {
       expect(true).toBe(true)
     })
 
-    it('accepts primitive setup types', () => {
-      // Setup can be a primitive like number, string, boolean
-      function Counter(handle: Handle, setup: number) {
-        let count = setup ?? 0
+    it('accepts primitive prop values', () => {
+      function Counter(handle: Handle<{ count: number }>) {
+        let count = handle.props.count ?? 0
         return () => <div>Count: {count}</div>
       }
 
@@ -190,28 +181,28 @@ describe('clientEntry', () => {
       expect(EntryCounter.$entry).toBe(true)
     })
 
-    it('accepts null and undefined setup types', () => {
-      function NullSetup(handle: Handle, setup: null) {
-        return () => <div>Null setup</div>
+    it('accepts null and undefined prop values', () => {
+      function NullValue(handle: Handle<{ value: null }>) {
+        return () => <div>Null value: {String(handle.props.value)}</div>
       }
 
-      function UndefinedSetup(handle: Handle, setup: undefined) {
-        return () => <div>Undefined setup</div>
+      function UndefinedValue(handle: Handle<{ value?: undefined }>) {
+        return () => <div>Undefined value: {String(handle.props.value)}</div>
       }
 
-      let EntryNull = clientEntry('/js/null.js#NullSetup', NullSetup)
-      let EntryUndefined = clientEntry('/js/undefined.js#UndefinedSetup', UndefinedSetup)
+      let EntryNull = clientEntry('/js/null.js#NullValue', NullValue)
+      let EntryUndefined = clientEntry('/js/undefined.js#UndefinedValue', UndefinedValue)
 
       expect(EntryNull.$entry).toBe(true)
       expect(EntryUndefined.$entry).toBe(true)
     })
 
-    it('accepts array setup types', () => {
-      function ArraySetup(handle: Handle, setup: string[]) {
-        return () => <div>{setup.join(', ')}</div>
+    it('accepts array prop values', () => {
+      function ArrayValue(handle: Handle<{ values: string[] }>) {
+        return () => <div>{handle.props.values.join(', ')}</div>
       }
 
-      let EntryArray = clientEntry('/js/array.js#ArraySetup', ArraySetup)
+      let EntryArray = clientEntry('/js/array.js#ArrayValue', ArrayValue)
       expect(EntryArray.$entry).toBe(true)
     })
   })
@@ -250,13 +241,13 @@ describe('clientEntry', () => {
   })
 
   describe('complex components', () => {
-    it('handles stateful components with setup and render phases', () => {
-      function Counter(handle: Handle, setupProps: { initialCount: number }) {
-        let count = setupProps.initialCount
+    it('handles stateful components with initialization and render phases', () => {
+      function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+        let count = handle.props.initialCount
 
-        return (renderProps: { label: string }) => (
+        return () => (
           <button type="button">
-            {renderProps.label} {count}
+            {handle.props.label} {count}
           </button>
         )
       }
@@ -268,8 +259,8 @@ describe('clientEntry', () => {
     })
 
     it('handles simple components that return JSX directly', () => {
-      function SimpleComponent(handle: Handle, props: { message: string }) {
-        return () => <div>{props.message}</div>
+      function SimpleComponent(handle: Handle<{ message: string }>) {
+        return () => <div>{handle.props.message}</div>
       }
 
       let EntrySimple = clientEntry('/js/simple.js#SimpleComponent', SimpleComponent)

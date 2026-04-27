@@ -1,10 +1,13 @@
 import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 
-export function ExplorerDocument() {
-  return ({ page }: { page: ShowcasePageDefinition }) => (
+export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }>) {
+  return () => {
+    let { page } = handle.props
+    return (
     <html>
       <head>
         <meta charSet="utf-8" />
@@ -38,10 +41,13 @@ export function ExplorerDocument() {
       </body>
     </html>
   )
+  }
 }
 
-function Sidebar() {
-  return ({ currentPath }: { currentPath: string }) => (
+function Sidebar(handle: Handle<{ currentPath: string }>) {
+  return () => {
+    let { currentPath } = handle.props
+    return (
     <div mix={sidebarPanelCss}>
       <div mix={sidebarIntroCss}>
         <p mix={eyebrowTextCss}>Preview Documentation</p>
@@ -73,16 +79,20 @@ function Sidebar() {
       ))}
     </div>
   )
+  }
 }
 
-function PageHeader() {
-  return ({ page }: { page: ShowcasePageDefinition }) => (
+function PageHeader(handle: Handle<{ page: ShowcasePageDefinition }>) {
+  return () => {
+    let { page } = handle.props
+    return (
     <header mix={pageHeaderCss}>
       <p mix={eyebrowTextCss}>{page.eyebrow}</p>
       <h2 mix={pageTitleCss}>{page.title}</h2>
       <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
     </header>
   )
+  }
 }
 
 function getNavItemMix(page: ShowcasePageDefinition, currentPath: string) {

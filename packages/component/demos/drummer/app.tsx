@@ -14,7 +14,7 @@ import {
 } from './components.tsx'
 import { createVoiceLooper } from './voice-looper.ts'
 
-export function App(handle: Handle<Drummer>) {
+export function App(handle: Handle<{}, Drummer>) {
   let drummer = new Drummer(80)
 
   handle.context.set(drummer)

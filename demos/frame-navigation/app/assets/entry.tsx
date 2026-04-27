@@ -1,4 +1,4 @@
-import type { FrameContent, RemixNode } from 'remix/component'
+import type { FrameContent, Handle, RemixNode } from 'remix/component'
 import { animateEntrance, createRoot, css, on, run, spring } from 'remix/component'
 
 import { routes } from '../routes.ts'
@@ -106,8 +106,10 @@ type ErrorCardProps = {
   animated?: boolean
 }
 
-function ErrorCard() {
-  return ({ eyebrow, title, message, action, animated }: ErrorCardProps) => (
+function ErrorCard(handle: Handle<ErrorCardProps>) {
+  return () => {
+    let { eyebrow, title, message, action, animated } = handle.props
+    return (
     <div mix={animated ? [cardCss, animateGentlyIn] : cardCss}>
       <p mix={eyebrowCss}>{eyebrow}</p>
       <h1 mix={titleCss}>{title}</h1>
@@ -115,6 +117,7 @@ function ErrorCard() {
       {action}
     </div>
   )
+  }
 }
 
 const pageCss = css({

@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { routes } from '../routes.ts'
@@ -20,8 +20,10 @@ const navItems = [
   { id: 'settings', label: 'Settings', route: routes.settings.index },
 ]
 
-export function Layout() {
-  return ({ title, activeNav, children }: LayoutProps) => (
+export function Layout(handle: Handle<LayoutProps>) {
+  return () => {
+    let { title, activeNav, children } = handle.props
+    return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
@@ -60,6 +62,7 @@ export function Layout() {
       </body>
     </html>
   )
+  }
 }
 
 const bodyStyle = css({

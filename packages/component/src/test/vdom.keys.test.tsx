@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
-import { Fragment } from '../lib/component.ts'
+import { Fragment, type Handle } from '../lib/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -11,17 +11,17 @@ describe('vnode rendering (keys)', () => {
 
       type CardData = { id: string; title: string }
 
-      function Card() {
-        return ({ card }: { card: CardData }) => <div data-id={card.id}>{card.title}</div>
+      function Card(handle: Handle<{ card: CardData }>) {
+        return () => <div data-id={handle.props.card.id}>{handle.props.card.title}</div>
       }
 
-      function Column() {
-        return ({ cards, isAddingCard }: { cards: CardData[]; isAddingCard: boolean }) => (
+      function Column(handle: Handle<{ cards: CardData[]; isAddingCard: boolean }>) {
+        return () => (
           <div>
-            {cards.map((card) => (
+            {handle.props.cards.map((card) => (
               <Card key={card.id} card={card} />
             ))}
-            {isAddingCard ? <div id="form">Form</div> : <button>Add</button>}
+            {handle.props.isAddingCard ? <div id="form">Form</div> : <button>Add</button>}
           </div>
         )
       }
@@ -61,10 +61,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: (string | number)[] }) => (
+      function List(handle: Handle<{ values: (string | number)[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -89,10 +89,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ol>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -124,10 +124,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -160,10 +160,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -195,10 +195,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -229,10 +229,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -266,10 +266,10 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List() {
-        return ({ values }: { values: string[] }) => (
+      function List(handle: Handle<{ values: string[] }>) {
+        return () => (
           <ul>
-            {values.map((value) => (
+            {handle.props.values.map((value) => (
               <li key={value} data-id={value}>
                 {value}
               </li>
@@ -336,8 +336,8 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function Item() {
-        return ({ label }: { label: string }) => <li>{label}</li>
+      function Item(handle: Handle<{ label: string }>) {
+        return () => <li>{handle.props.label}</li>
       }
 
       root.render(
@@ -369,10 +369,10 @@ describe('vnode rendering (keys)', () => {
       let root = createRoot(container)
       let warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      function List() {
-        return ({ labels }: { labels: string[] }) => (
+      function List(handle: Handle<{ labels: string[] }>) {
+        return () => (
           <ul>
-            {labels.map((label, index) => (
+            {handle.props.labels.map((label, index) => (
               <li key="dup" data-index={index}>
                 {label}
               </li>
@@ -477,13 +477,13 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function Item() {
-        return ({ id, label }: { id: string; label: string }) => (
+      function Item(handle: Handle<{ id: string; label: string }>) {
+        return () => (
           <>
-            <span key={id + '-label'} data-id={id}>
-              {label}
+            <span key={handle.props.id + '-label'} data-id={handle.props.id}>
+              {handle.props.label}
             </span>
-            <button key={id + '-button'} data-id={id + '-btn'}>
+            <button key={handle.props.id + '-button'} data-id={handle.props.id + '-btn'}>
               click
             </button>
           </>

@@ -425,9 +425,8 @@ function focusNode(node: HTMLElement | undefined) {
   }
 }
 
-function MenuProvider(handle: Handle<MenuContextValue>) {
+function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   let parent = handle.context.get(MenuProvider)
-  let props: MenuProviderProps = {}
 
   let activeId: string | null = null
   let childMenus: MenuContextValue[] = []
@@ -835,7 +834,7 @@ function MenuProvider(handle: Handle<MenuContextValue>) {
     },
 
     get label() {
-      return props.label
+      return handle.props.label
     },
 
     get listId() {
@@ -958,13 +957,12 @@ function MenuProvider(handle: Handle<MenuContextValue>) {
 
   handle.context.set(context)
 
-  return (nextProps: MenuProviderProps) => {
+  return () => {
     childMenus = []
     items = []
-    props = nextProps
     parent?.registerChild(context)
 
-    return <popover.Context>{props.children}</popover.Context>
+    return <popover.Context>{handle.props.children}</popover.Context>
   }
 }
 
@@ -1433,11 +1431,11 @@ export interface SubmenuProps
   menuLabel?: string
 }
 
-export function Menu() {
+export function Menu(handle: Handle<MenuProps>) {
   let buttonRef: HTMLButtonElement | undefined
 
-  return (props: MenuProps) => {
-    let { children, label, menuLabel, mix, type, ...buttonProps } = props
+  return () => {
+    let { children, label, menuLabel, mix, type, ...buttonProps } = handle.props
 
     return (
       <menu.Context label={menuLabel}>
@@ -1480,9 +1478,9 @@ export function Menu() {
   }
 }
 
-export function MenuList() {
-  return (props: MenuListProps) => {
-    let { children, mix, ...divProps } = props
+export function MenuList(handle: Handle<MenuListProps>) {
+  return () => {
+    let { children, mix, ...divProps } = handle.props
 
     return (
       <div mix={[popover.surfaceStyle, popoverStyle, menu.popover()]}>
@@ -1494,10 +1492,10 @@ export function MenuList() {
   }
 }
 
-export function MenuItem() {
-  return (props: MenuItemProps) => {
+export function MenuItem(handle: Handle<MenuItemProps>) {
+  return () => {
     let { checked, children, disabled, label, mix, name, searchValue, type, value, ...divProps } =
-      props
+      handle.props
 
     return (
       <div
@@ -1517,10 +1515,10 @@ export function MenuItem() {
   }
 }
 
-export function Submenu(handle: Handle) {
-  return (props: SubmenuProps) => {
+export function Submenu(handle: Handle<SubmenuProps>) {
+  return () => {
     let { children, disabled, label, listProps, menuLabel, mix, searchValue, value, ...divProps } =
-      props
+      handle.props
 
     return (
       <menu.Context label={menuLabel}>

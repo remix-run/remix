@@ -493,8 +493,8 @@ describe('createRangeRoot', () => {
       container.appendChild(start)
       container.appendChild(end)
 
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => (
           <button
             mix={[
@@ -510,7 +510,7 @@ describe('createRangeRoot', () => {
       }
 
       let root = createRangeRoot([start, end])
-      root.render(<Counter setup={0} />)
+      root.render(<Counter initialCount={0} />)
       root.flush()
 
       let button = container.querySelector('button')

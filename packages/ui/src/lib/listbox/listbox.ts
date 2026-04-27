@@ -69,16 +69,6 @@ export interface ListboxRef {
   selectActive: () => Promise<void>
 }
 
-const UNSET_PROPS = {
-  value: null,
-  activeValue: null,
-  flashSelection: false,
-  selectionFlashAttribute: 'data-listbox-flash',
-  onSelect: () => {},
-  onSelectSettled: () => {},
-  onHighlight: () => {},
-}
-
 export interface ListboxRegisteredOption extends ListboxOption {
   readonly hidden: boolean
   readonly node: HTMLElement
@@ -168,9 +158,8 @@ export const optionStyle = itemCss
 export const glyphStyle = itemGlyphCss
 export const labelStyle = itemLabelCss
 
-function ListboxProvider(handle: Handle<ListboxContext>) {
+function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
   let options: RegisteredOption[] = []
-  let props: ListboxProviderProps = UNSET_PROPS
   let state = State.Idle
 
   function getOption(value: ListboxValue) {
@@ -200,7 +189,7 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
     })
   }
 
-  function findSearchMatch(text: string, fromValue = props.activeValue) {
+  function findSearchMatch(text: string, fromValue = handle.props.activeValue) {
     let interactableOptions = getInteractableOptions()
     let fromIndex = interactableOptions.findIndex((option) => option.value === fromValue)
 
@@ -214,13 +203,13 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
 
   let ref: ListboxRef = {
     get active() {
-      return getOption(props.activeValue)
+      return getOption(handle.props.activeValue)
     },
     get options() {
       return options
     },
     get selected() {
-      return getOption(props.value)
+      return getOption(handle.props.value)
     },
     highlight(value) {
       context.highlight(value)
@@ -228,7 +217,7 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
     highlightSearchMatch(text) {
       context.highlightSearchMatch(text)
     },
-    matchSearchText(text, fromValue = props.activeValue) {
+    matchSearchText(text, fromValue = handle.props.activeValue) {
       return findSearchMatch(text, fromValue)
     },
     navigateFirst() {
@@ -250,21 +239,21 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
       return context.select(value)
     },
     selectActive() {
-      return context.select(props.activeValue)
+      return context.select(handle.props.activeValue)
     },
   }
 
   handle.queueTask(() => {
-    props.ref?.(ref)
+    handle.props.ref?.(ref)
   })
 
   context = {
     get value() {
-      return props.value
+      return handle.props.value
     },
 
     get activeValue() {
-      return props.activeValue
+      return handle.props.activeValue
     },
 
     registerOption(option) {
@@ -281,27 +270,31 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
         state = State.Idle
         return
       }
-      props.onSelect(value, option)
-      if (option && props.flashSelection) {
-        await flashAttribute(option.node, props.selectionFlashAttribute ?? 'data-listbox-flash', 60)
+      handle.props.onSelect(value, option)
+      if (option && handle.props.flashSelection) {
+        await flashAttribute(
+          option.node,
+          handle.props.selectionFlashAttribute ?? 'data-listbox-flash',
+          60,
+        )
       }
-      await props.onSelectSettled?.(value, option)
+      await handle.props.onSelectSettled?.(value, option)
       state = State.Idle
     },
 
     highlight(value) {
       if (state === State.Selecting) return
       let option = getOption(value)
-      props.onHighlight(value, option)
+      handle.props.onHighlight(value, option)
     },
 
     highlightSearchMatch(text) {
       if (state === State.Selecting) return
 
-      let option = findSearchMatch(text, props.activeValue)
+      let option = findSearchMatch(text, handle.props.activeValue)
 
       if (option) {
-        props.onHighlight(option.value, option)
+        handle.props.onHighlight(option.value, option)
         scrollOptionIntoView(option)
       }
     },
@@ -312,7 +305,7 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
       let option: RegisteredOption | undefined
       let interactableOptions = getInteractableOptions()
       let activeIndex = interactableOptions.findIndex(
-        (option) => option.value === props.activeValue,
+        (option) => option.value === handle.props.activeValue,
       )
 
       switch (strategy) {
@@ -334,22 +327,21 @@ function ListboxProvider(handle: Handle<ListboxContext>) {
       }
 
       if (option) {
-        props.onHighlight(option.value, option)
+        handle.props.onHighlight(option.value, option)
         scrollOptionIntoView(option)
       }
     },
 
     scrollActiveOptionIntoView() {
-      scrollOptionIntoView(getOption(props.activeValue))
+      scrollOptionIntoView(getOption(handle.props.activeValue))
     },
   }
 
   handle.context.set(context)
 
-  return (nextProps: ListboxProviderProps) => {
+  return () => {
     options = []
-    props = nextProps
-    return props.children
+    return handle.props.children
   }
 }
 
