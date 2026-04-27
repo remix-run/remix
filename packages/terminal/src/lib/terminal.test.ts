@@ -146,7 +146,7 @@ describe('ANSI string helpers', () => {
 
 describe('createTerminal', () => {
   it('writes to injected output streams', () => {
-    let stdout = createMemoryStream({ isTTY: true, columns: 80, rows: 24 })
+    let stdout = createMemoryStream({ isTTY: true })
     let stderr = createMemoryStream()
     let terminal = createTerminal({
       colors: true,
@@ -156,8 +156,6 @@ describe('createTerminal', () => {
       stderr,
     })
 
-    assert.equal(terminal.columns, 80)
-    assert.equal(terminal.rows, 24)
     assert.equal(terminal.isTTY, true)
     assert.equal(terminal.isInteractive, true)
 
@@ -177,14 +175,10 @@ interface MemoryStream extends TerminalOutputStream {
   output: string
 }
 
-function createMemoryStream(
-  options: { columns?: number; isTTY?: boolean; rows?: number } = {},
-): MemoryStream {
+function createMemoryStream(options: { isTTY?: boolean } = {}): MemoryStream {
   return {
-    columns: options.columns,
     isTTY: options.isTTY,
     output: '',
-    rows: options.rows,
     write(chunk) {
       this.output += chunk
     },

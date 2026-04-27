@@ -22,21 +22,13 @@ export interface TerminalInputStream {
 }
 
 /**
- * Output stream shape used for terminal writes and display detection.
+ * Output stream shape used for terminal writes and TTY detection.
  */
 export interface TerminalOutputStream {
   /**
    * Whether the output stream is attached to a TTY.
    */
   readonly isTTY?: boolean
-  /**
-   * Current terminal column count, when known.
-   */
-  readonly columns?: number
-  /**
-   * Current terminal row count, when known.
-   */
-  readonly rows?: number
   /**
    * Writes a chunk of text to the output stream.
    *
@@ -300,14 +292,6 @@ export interface Terminal {
    * Style helpers configured for this terminal's output stream.
    */
   readonly styles: TerminalStyles
-  /**
-   * Current output column count, when known.
-   */
-  readonly columns: number | undefined
-  /**
-   * Current output row count, when known.
-   */
-  readonly rows: number | undefined
   /**
    * Whether both input and output streams are attached to TTYs.
    */
@@ -575,12 +559,6 @@ export function createTerminal(options: TerminalOptions = {}): Terminal {
     stdin,
     stdout,
     styles,
-    get columns() {
-      return stdout.columns
-    },
-    get rows() {
-      return stdout.rows
-    },
     get isInteractive() {
       return stdin.isTTY === true && stdout.isTTY === true
     },
