@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { DataMigrationOperation } from '@remix-run/data-table'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
+
 import { createNativeSqliteDatabase } from '../../../data-table/test/native-sqlite.ts'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
