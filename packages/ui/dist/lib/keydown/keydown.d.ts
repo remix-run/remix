@@ -1,0 +1,1 @@
+export declare const onKeyDown: <boundNode extends HTMLElement = HTMLElement>(key: string, handler: (event: KeyboardEvent) => void) => import("@remix-run/component").MixinDescriptor<boundNode, [key: string, handler: (event: KeyboardEvent) => void], import("@remix-run/component").ElementProps>;

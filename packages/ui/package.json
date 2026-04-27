@@ -21,123 +21,62 @@
   "sideEffects": false,
   "exports": {
     "./accordion": {
-      "types": "./src/accordion.ts",
-      "default": "./src/accordion.ts"
+      "types": "./dist/accordion.d.ts",
+      "default": "./dist/accordion.js"
     },
     "./anchor": {
-      "types": "./src/lib/anchor/anchor.ts",
-      "default": "./src/lib/anchor/anchor.ts"
+      "types": "./dist/lib/anchor/anchor.d.ts",
+      "default": "./dist/lib/anchor/anchor.js"
     },
     "./breadcrumbs": {
-      "types": "./src/lib/breadcrumbs/breadcrumbs.tsx",
-      "default": "./src/lib/breadcrumbs/breadcrumbs.tsx"
+      "types": "./dist/lib/breadcrumbs/breadcrumbs.d.ts",
+      "default": "./dist/lib/breadcrumbs/breadcrumbs.js"
     },
     "./button": {
-      "types": "./src/button.ts",
-      "default": "./src/button.ts"
+      "types": "./dist/button.d.ts",
+      "default": "./dist/button.js"
     },
     "./combobox": {
-      "types": "./src/combobox.ts",
-      "default": "./src/combobox.ts"
+      "types": "./dist/combobox.d.ts",
+      "default": "./dist/combobox.js"
     },
     "./glyph": {
-      "types": "./src/lib/glyph/glyph.tsx",
-      "default": "./src/lib/glyph/glyph.tsx"
+      "types": "./dist/lib/glyph/glyph.d.ts",
+      "default": "./dist/lib/glyph/glyph.js"
     },
     "./listbox": {
-      "types": "./src/listbox.ts",
-      "default": "./src/listbox.ts"
+      "types": "./dist/listbox.d.ts",
+      "default": "./dist/listbox.js"
     },
     "./menu": {
-      "types": "./src/menu.ts",
-      "default": "./src/menu.ts"
+      "types": "./dist/menu.d.ts",
+      "default": "./dist/menu.js"
     },
     "./popover": {
-      "types": "./src/popover.ts",
-      "default": "./src/popover.ts"
+      "types": "./dist/popover.d.ts",
+      "default": "./dist/popover.js"
     },
     "./select": {
-      "types": "./src/select.ts",
-      "default": "./src/select.ts"
+      "types": "./dist/select.d.ts",
+      "default": "./dist/select.js"
     },
     "./separator": {
-      "types": "./src/separator.ts",
-      "default": "./src/separator.ts"
+      "types": "./dist/separator.d.ts",
+      "default": "./dist/separator.js"
     },
     "./theme": {
-      "types": "./src/lib/theme/theme.ts",
-      "default": "./src/lib/theme/theme.ts"
+      "types": "./dist/lib/theme/theme.d.ts",
+      "default": "./dist/lib/theme/theme.js"
     },
     "./scroll-lock": {
-      "types": "./src/lib/utils/scroll-lock.ts",
-      "default": "./src/lib/utils/scroll-lock.ts"
+      "types": "./dist/lib/utils/scroll-lock.d.ts",
+      "default": "./dist/lib/utils/scroll-lock.js"
     },
     "./on-outside-pointer-down": {
-      "types": "./src/lib/utils/outside-pointerdown.ts",
-      "default": "./src/lib/utils/outside-pointerdown.ts"
+      "types": "./dist/lib/utils/outside-pointerdown.d.ts",
+      "default": "./dist/lib/utils/outside-pointerdown.js"
     },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      "./accordion": {
-        "types": "./dist/accordion.d.ts",
-        "default": "./dist/accordion.js"
-      },
-      "./anchor": {
-        "types": "./dist/lib/anchor/anchor.d.ts",
-        "default": "./dist/lib/anchor/anchor.js"
-      },
-      "./breadcrumbs": {
-        "types": "./dist/lib/breadcrumbs/breadcrumbs.d.ts",
-        "default": "./dist/lib/breadcrumbs/breadcrumbs.js"
-      },
-      "./button": {
-        "types": "./dist/button.d.ts",
-        "default": "./dist/button.js"
-      },
-      "./combobox": {
-        "types": "./dist/combobox.d.ts",
-        "default": "./dist/combobox.js"
-      },
-      "./glyph": {
-        "types": "./dist/lib/glyph/glyph.d.ts",
-        "default": "./dist/lib/glyph/glyph.js"
-      },
-      "./listbox": {
-        "types": "./dist/listbox.d.ts",
-        "default": "./dist/listbox.js"
-      },
-      "./menu": {
-        "types": "./dist/menu.d.ts",
-        "default": "./dist/menu.js"
-      },
-      "./popover": {
-        "types": "./dist/popover.d.ts",
-        "default": "./dist/popover.js"
-      },
-      "./select": {
-        "types": "./dist/select.d.ts",
-        "default": "./dist/select.js"
-      },
-      "./separator": {
-        "types": "./dist/separator.d.ts",
-        "default": "./dist/separator.js"
-      },
-      "./theme": {
-        "types": "./dist/lib/theme/theme.d.ts",
-        "default": "./dist/lib/theme/theme.js"
-      },
-      "./scroll-lock": {
-        "types": "./dist/lib/utils/scroll-lock.d.ts",
-        "default": "./dist/lib/utils/scroll-lock.js"
-      },
-      "./on-outside-pointer-down": {
-        "types": "./dist/lib/utils/outside-pointerdown.d.ts",
-        "default": "./dist/lib/utils/outside-pointerdown.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/component": "workspace:*",
@@ -151,7 +90,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "remix-run/remix#preview/pr-11273&path:packages/component"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

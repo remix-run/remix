@@ -19,21 +19,15 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/assets.ts",
+    ".": {
+      "types": "./dist/assets.d.ts",
+      "default": "./dist/assets.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/assets.d.ts",
-        "default": "./dist/assets.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/headers": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/headers": "remix-run/remix#preview/pr-11273&path:packages/headers",
+    "@remix-run/route-pattern": "remix-run/remix#preview/pr-11273&path:packages/route-pattern",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "get-tsconfig": "^4.13.6",

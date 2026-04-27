@@ -1,0 +1,32 @@
+import { createStyles } from '@remix-run/terminal';
+// https://bun.com/docs/guides/util/detect-bun
+export const IS_BUN = typeof process.versions.bun === 'string';
+const terminalStyles = createStyles();
+export const colors = {
+    reset: terminalStyles.reset,
+    dim: terminalStyles.dim,
+    green: terminalStyles.green,
+    red: terminalStyles.red,
+    cyan: terminalStyles.cyan,
+    yellow(value) {
+        return terminalStyles.format(value, 'dim', 'yellow');
+    },
+};
+function normalizeFilePath(path) {
+    let locSuffix = path.match(/(:\d+:\d+)$/)?.[0] || '';
+    let normalized = path
+        .replace(/^\/scripts\/@pkg\/([^):]+)/g, (...args) => args[1])
+        .replace(/^\/scripts\/@test\/([^):]+)/g, (...args) => args[1])
+        .replace(/^\/scripts\/([^):]+)/g, (...args) => args[1])
+        .replace(/^\s+/, '  ') + locSuffix;
+    return path.includes('/@test/') ? `./${normalized}` : normalized;
+}
+export function normalizeLine(line) {
+    let match = line.match(/ \(.*\)$/);
+    if (match) {
+        let filepath = match[0].slice(2, -1);
+        filepath = filepath.replace(/https?:\/\/localhost:\d+\//g, '/');
+        return line.slice(0, match.index) + ' (' + normalizeFilePath(filepath) + ')';
+    }
+    return line;
+}
