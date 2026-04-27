@@ -8,7 +8,7 @@ import { IS_BUN } from '../lib/runtime.ts'
 
 const PKG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PARITY_DIR = path.join(PKG_DIR, '.coverage', 'parity')
-const FIXTURE_PATH = 'src/test/coverage/fixture.ts'
+const FIXTURE_PATH = path.join('src', 'test', 'coverage', 'fixture.ts')
 
 interface RunSpec {
   type: 'server' | 'browser' | 'e2e'
