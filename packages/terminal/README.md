@@ -45,7 +45,7 @@ Style helpers preserve outer styles when nested formatted strings close an inner
 console.log(styles.red(`Error: ${styles.bold('fatal')} retrying`))
 ```
 
-Supported modifiers include `bold`, `dim`, `italic`, `underline`, `overline`, `inverse`, `hidden`, and `strikethrough`. Supported colors include the base foreground/background ANSI colors, bright variants, and `gray`/`grey` aliases.
+Supported modifiers include `bold`, `dim`, `italic`, `underline`, `overline`, `inverse`, and `strikethrough`. Supported colors include the base foreground/background ANSI colors, bright variants, and `gray`/`grey` aliases.
 
 By default, color detection disables styles in CI, when `NO_COLOR` is present, for `TERM=dumb`, and outside TTY output streams. Set `colors` to `true` or `false` to override automatic detection.
 

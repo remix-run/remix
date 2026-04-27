@@ -9,7 +9,6 @@ export interface StyleCode {
 export type TerminalModifierName =
   | 'bold'
   | 'dim'
-  | 'hidden'
   | 'inverse'
   | 'italic'
   | 'overline'
@@ -83,7 +82,6 @@ export const ansiResetCode = '\x1b[0m'
 const close = {
   backgroundColor: '\x1b[49m',
   foregroundColor: '\x1b[39m',
-  hidden: '\x1b[28m',
   intensity: '\x1b[22m',
   inverse: '\x1b[27m',
   italic: '\x1b[23m',
@@ -98,7 +96,6 @@ export const ansiStyleCodes = {
   italic: '\x1b[3m',
   underline: '\x1b[4m',
   inverse: '\x1b[7m',
-  hidden: '\x1b[8m',
   strikethrough: '\x1b[9m',
   overline: '\x1b[53m',
   black: '\x1b[30m',
@@ -142,7 +139,6 @@ export const ansiStyleCodes = {
 export const styleCodes: Record<TerminalStyleName, StyleCode> = {
   bold: { open: ansiStyleCodes.bold, close: close.intensity },
   dim: { open: ansiStyleCodes.dim, close: close.intensity },
-  hidden: { open: ansiStyleCodes.hidden, close: close.hidden },
   inverse: { open: ansiStyleCodes.inverse, close: close.inverse },
   italic: { open: ansiStyleCodes.italic, close: close.italic },
   overline: { open: ansiStyleCodes.overline, close: close.overline },

@@ -205,10 +205,6 @@ export interface TerminalStyles {
    */
   grey: TerminalStyle
   /**
-   * Formats text as hidden.
-   */
-  hidden: TerminalStyle
-  /**
    * Formats text with inverted foreground and background colors.
    */
   inverse: TerminalStyle
@@ -540,7 +536,6 @@ export function createStyles(options: UseColorOptions = {}): TerminalStyles {
     green: createStyle('green'),
     greenBright: createStyle('greenBright'),
     grey: createStyle('grey'),
-    hidden: createStyle('hidden'),
     inverse: createStyle('inverse'),
     italic: createStyle('italic'),
     magenta: createStyle('magenta'),
