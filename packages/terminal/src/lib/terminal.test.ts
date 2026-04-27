@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { ansi, stripAnsi } from './ansi.ts'
 import { shouldUseColors } from './color-support.ts'
 import { createStyles } from './styles.ts'
-import { ansi, createTerminal, stripAnsi, type TerminalOutputStream } from './terminal.ts'
+import { createTerminal, type TerminalOutputStream } from './terminal.ts'
 
 describe('shouldUseColors', () => {
   it('uses explicit color options', () => {

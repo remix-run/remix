@@ -1,9 +1,10 @@
+import { ansi } from './ansi.ts'
 import {
   getDefaultEnvironment,
   type TerminalEnvironment,
   type UseColorOptions,
 } from './color-support.ts'
-import { ansiResetCode, ansiStyleCodes, createStyles, type TerminalStyles } from './styles.ts'
+import { createStyles, type TerminalStyles } from './styles.ts'
 
 /**
  * Input stream shape used for terminal interactivity detection.
@@ -138,84 +139,6 @@ export interface Terminal {
   writeLine(value?: string): void
 }
 
-/**
- * Raw ANSI escape sequences and helpers for terminal controls.
- */
-export const ansi = {
-  /**
-   * Resets all ANSI styles.
-   */
-  reset: ansiResetCode,
-  ...ansiStyleCodes,
-  /**
-   * Clears the current terminal line.
-   */
-  clearLine: '\x1b[2K',
-  /**
-   * Erases from the cursor through the end of the terminal.
-   */
-  eraseDown: '\x1b[J',
-  /**
-   * Hides the terminal cursor.
-   */
-  hideCursor: '\x1b[?25l',
-  /**
-   * Shows the terminal cursor.
-   */
-  showCursor: '\x1b[?25h',
-  /**
-   * Creates an ANSI sequence that moves the cursor to a zero-based column and optional row.
-   *
-   * @param column Zero-based output column.
-   * @param row Optional zero-based output row.
-   * @returns ANSI cursor position sequence.
-   */
-  cursorTo(column: number, row?: number): string {
-    let normalizedColumn = normalizePosition(column) + 1
-
-    if (row === undefined) {
-      return `\x1b[${normalizedColumn}G`
-    }
-
-    let normalizedRow = normalizePosition(row) + 1
-    return `\x1b[${normalizedRow};${normalizedColumn}H`
-  },
-  /**
-   * Creates an ANSI sequence that moves the cursor by relative column and row offsets.
-   *
-   * @param columns Relative column offset.
-   * @param rows Relative row offset.
-   * @returns ANSI cursor movement sequence.
-   */
-  moveCursor(columns: number, rows: number): string {
-    let horizontal = normalizeOffset(columns)
-    let vertical = normalizeOffset(rows)
-    let sequence = ''
-
-    if (horizontal > 0) {
-      sequence += `\x1b[${horizontal}C`
-    } else if (horizontal < 0) {
-      sequence += `\x1b[${Math.abs(horizontal)}D`
-    }
-
-    if (vertical > 0) {
-      sequence += `\x1b[${vertical}B`
-    } else if (vertical < 0) {
-      sequence += `\x1b[${Math.abs(vertical)}A`
-    }
-
-    return sequence
-  },
-}
-
-const escapeCharacter = String.fromCharCode(27)
-const bellCharacter = String.fromCharCode(7)
-const ansiPattern = new RegExp(
-  `(?:${escapeCharacter}\\][\\s\\S]*?(?:${bellCharacter}|${escapeCharacter}\\\\))` +
-    `|${escapeCharacter}\\[[0-?]*[ -/]*[@-~]`,
-  'g',
-)
-
 const noopOutputStream: TerminalOutputStream = {
   write() {},
 }
@@ -282,28 +205,6 @@ export function createTerminal(options: TerminalOptions = {}): Terminal {
       stdout.write(value + '\n')
     },
   }
-}
-
-/**
- * Removes ANSI escape sequences from a string.
- *
- * @param value The string to strip
- * @returns The string without ANSI escape sequences
- */
-export function stripAnsi(value: string): string {
-  return value.replace(ansiPattern, '')
-}
-
-function normalizePosition(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0
-  }
-
-  return Math.max(0, Math.trunc(value))
-}
-
-function normalizeOffset(value: number): number {
-  return Number.isFinite(value) ? Math.trunc(value) : 0
 }
 
 function getDefaultStdin(): TerminalInputStream {
