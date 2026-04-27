@@ -8,14 +8,12 @@ import * as fsp from 'node:fs/promises'
 import * as http from 'node:http'
 import { createRequire } from 'node:module'
 import * as path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 import { Tests } from './client/components.tsx'
 import { routes } from './client/routes.ts'
-
-const NODE_MAJOR = Number(process.versions.node.split('.')[0])
 
 export async function startServer(
   browserFiles: string[],
@@ -263,23 +261,23 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
   let resolvedPath: string
   if (spec.startsWith('.') || spec.startsWith('/')) {
     resolvedPath = path.resolve(path.dirname(importerFile), spec)
-  } else if (NODE_MAJOR >= 23) {
+  } else {
+    // Bare specifiers must be resolved from the importer's filesystem
+    // location, not this module's. `import.meta.resolve(spec, parent)` looks
+    // like the right tool but its `parent` argument is gated behind
+    // `--experimental-import-meta-resolve` through at least Node 24 —
+    // without the flag, the parent argument is silently ignored and
+    // resolution happens from `import.meta.url` of the calling module. That
+    // made bare specifiers only resolvable when they were direct deps of
+    // `@remix-run/test` itself (so `remix/assert` failed even when the
+    // importing package depended on `remix`). `createRequire` walks
+    // node_modules from the importer's actual location and has been stable
+    // since Node 12 with no flags.
     try {
-      let resolvedUrl = import.meta.resolve(spec, pathToFileURL(importerFile).href)
-      if (!resolvedUrl.startsWith('file://')) return null
-      resolvedPath = fileURLToPath(resolvedUrl)
+      resolvedPath = createRequire(importerFile).resolve(spec)
     } catch {
       return null
     }
-  } else {
-    // `import.meta.resolve(spec, parent)`'s `parent` argument was experimental
-    // through Node 22 and silently ignored, falling back to `import.meta.url` of
-    // the calling module — which made bare specifiers only resolvable when they
-    // were direct deps of `@remix-run/test` itself (so `remix/assert` failed even
-    // when the importing package depended on `remix`). The argument is stable in
-    // Node 23+, so we use the native resolver there and fall back to
-    // `createRequire` (stable since Node 12) on older runtimes.
-    resolvedPath = createRequire(importerFile).resolve(spec)
   }
 
   return filePathToUrl(resolvedPath, rootDir)
