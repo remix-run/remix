@@ -395,8 +395,6 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
     "typecheck": "tsc --noEmit"
   },
   "bin": {

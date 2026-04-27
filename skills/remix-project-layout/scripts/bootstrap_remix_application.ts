@@ -301,7 +301,7 @@ function createPackageJson(config: BootstrapConfig): string {
         scripts: {
           dev: 'tsx watch server.ts',
           start: 'tsx server.ts',
-          test: 'NODE_ENV=test tsx --test',
+          test: 'NODE_ENV=test remix-test',
           typecheck: 'tsc --noEmit',
         },
         dependencies: {

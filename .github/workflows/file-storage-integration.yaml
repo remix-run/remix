@@ -96,4 +96,6 @@ jobs:
           FILE_STORAGE_S3_ACCESS_KEY_ID: test
           FILE_STORAGE_S3_SECRET_ACCESS_KEY: test
           FILE_STORAGE_S3_FORCE_PATH_STYLE: '1'
-        run: node --disable-warning=ExperimentalWarning --test './packages/file-storage-s3/src/lib/s3.integration.test.ts'
+        run: |
+          cd packages/file-storage-s3
+          pnpm test src/lib/s3.integration.test.ts

@@ -51,7 +51,9 @@ jobs:
         env:
           SESSION_MEMCACHE_INTEGRATION: '1'
           SESSION_MEMCACHE_SERVER: 127.0.0.1:11211
-        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-memcache/src/lib/memcache-storage.integration.test.ts'
+        run: |
+          cd packages/session-storage-memcache
+          pnpm test src/lib/memcache-storage.integration.test.ts
 
   redis-integration:
     name: Redis Integration
@@ -88,4 +90,6 @@ jobs:
         env:
           SESSION_REDIS_INTEGRATION: '1'
           SESSION_REDIS_URL: redis://127.0.0.1:6379
-        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-redis/src/lib/redis-storage.integration.test.ts'
+        run: |
+          cd packages/session-storage-redis
+          pnpm test src/lib/redis-storage.integration.test.ts

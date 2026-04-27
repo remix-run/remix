@@ -101,7 +101,9 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-postgres/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-postgres
+          pnpm test src/lib/adapter.integration.test.ts
 
   mysql-integration:
     name: MySQL Integration
@@ -141,7 +143,9 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-mysql/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-mysql
+          pnpm test src/lib/adapter.integration.test.ts
 
   sqlite-integration:
     name: SQLite Integration
@@ -169,4 +173,6 @@ jobs:
       - name: Run sqlite adapter tests
         env:
           DATA_TABLE_INTEGRATION: '1'
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-sqlite/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-sqlite
+          pnpm test src/lib/adapter.integration.test.ts
