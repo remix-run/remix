@@ -60,15 +60,28 @@ async function executeRun() {
     }
 
     if (browserFiles.length > 0 && !browserServer) {
-      let { startServer } = IS_RUNNING_FROM_SRC
-        ? await importModule('./app/server.tsx', import.meta, {
-            // Needed for remix/component JSX runtime
-            tsconfig: new URL('../tsconfig.json', import.meta.url).pathname,
-          })
-        : await import(`./app/server.js`)
-      let result = await startServer(browserFiles)
-      browserServer = result.server
-      browserPort = result.port
+      if (IS_RUNNING_FROM_SRC) {
+        let url = new URL('../tsconfig.json', import.meta.url)
+        let tsConfigPath = url.pathname
+        console.log({
+          importMeta: import.meta,
+          importMetaUrl: import.meta.url,
+          tsConfigPath,
+          url: new URL('../tsconfig.json', import.meta.url).toString(),
+        })
+        let { startServer } = await importModule('./app/server.tsx', import.meta, {
+          // Needed for remix/component JSX runtime
+          tsconfig: tsConfigPath,
+        })
+        let result = await startServer(browserFiles)
+        browserServer = result.server
+        browserPort = result.port
+      } else {
+        let { startServer } = await import(`./app/server.js`)
+        let result = await startServer(browserFiles)
+        browserServer = result.server
+        browserPort = result.port
+      }
     }
 
     let playwrightConfig =
