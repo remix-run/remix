@@ -7,10 +7,13 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
+import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
-import type { ModuleRecord } from './store.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
+import type { EmittedModule } from './emit.ts'
+
+type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
 export const resolverExtensionAlias = {
   '.js': ['.js', '.ts', '.tsx', '.jsx'],
@@ -35,7 +38,7 @@ type RelativeImportResolution = {
   specifier: string
 }
 
-export type TrackedResolution = RelativeImportResolution & {
+type TrackedResolution = RelativeImportResolution & {
   resolvedIdentityPath: string | null
 }
 
@@ -45,19 +48,15 @@ export type ResolvedModule = {
   identityPath: string
   imports: ResolvedImport[]
   trackedFiles: string[]
-  trackedResolutions: TrackedResolution[]
   rawCode: string
   resolvedPath: string
   sourceMap: string | null
   stableUrlPathname: string
 }
 
-export type ResolutionFailureState = {
-  trackedFiles: readonly string[]
-  trackedResolutions: readonly TrackedResolution[]
-}
-
-type ResolveResult =
+type ResolveResult = {
+  tracking: ModuleTracking
+} & (
   | {
       ok: true
       value: ResolvedModule
@@ -65,8 +64,8 @@ type ResolveResult =
   | {
       ok: false
       error: AssetServerCompilationError
-      tracking: ResolutionFailureState
     }
+)
 
 export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
@@ -83,7 +82,7 @@ type ResolvedSpec = {
 }
 
 export async function resolveModule(
-  record: ModuleRecord,
+  record: ScriptRecord,
   transformed: TransformedModule,
   args: ResolveArgs,
 ): Promise<ResolveResult> {
@@ -137,7 +136,7 @@ export async function resolveModule(
     if (!resolvedImport) {
       return failResolve(
         createAssetServerCompilationError(
-          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script module. ` +
+          `Resolved import "${unresolved.specifier}" in ${transformed.resolvedPath} is not a supported script file. ` +
             `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
           {
             code: 'IMPORT_NOT_SUPPORTED',
@@ -210,13 +209,13 @@ export async function resolveModule(
 
   return {
     ok: true,
+    tracking: toResolveTracking(trackedFiles, trackedResolutions),
     value: {
       deps: [...deps],
       fingerprint: transformed.fingerprint,
       identityPath: record.identityPath,
       imports: importsWithPaths,
       trackedFiles: [...trackedFiles],
-      trackedResolutions,
       rawCode: transformed.rawCode,
       resolvedPath: transformed.resolvedPath,
       sourceMap: transformed.sourceMap,
@@ -384,13 +383,25 @@ function failResolve(
   return {
     ok: false,
     error: toResolveError(error, importerPath),
-    tracking: {
-      trackedFiles: [...trackedFiles],
-      trackedResolutions: appendFailedTrackedResolution(
-        trackedResolutions,
-        options.trackedResolution,
-      ),
-    },
+    tracking: toResolveTracking(
+      trackedFiles,
+      appendFailedTrackedResolution(trackedResolutions, options.trackedResolution),
+    ),
+  }
+}
+
+function toResolveTracking(
+  trackedFiles: ReadonlySet<string> | readonly string[],
+  trackedResolutions: readonly TrackedResolution[],
+): ModuleTracking {
+  return {
+    trackedFiles: [
+      ...trackedFiles,
+      ...trackedResolutions.flatMap((trackedResolution) => trackedResolution.candidatePaths),
+    ],
+    trackedDirectories: trackedResolutions.flatMap(
+      (trackedResolution) => trackedResolution.candidatePrefixes,
+    ),
   }
 }
 

@@ -5,16 +5,16 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import { hashContent } from '../fingerprint.ts'
-import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
+import type { ResolvedStyle } from './resolve.ts'
 
 export type EmittedAsset = {
   content: string
   etag: string
 }
 
-export type EmittedModule = {
+export type EmittedStyle = {
   code: EmittedAsset
   fingerprint: string | null
   importUrls: string[]
@@ -24,15 +24,15 @@ export type EmittedModule = {
 type EmitResult =
   | {
       ok: true
-      value: EmittedModule
+      value: EmittedStyle
     }
   | {
-      ok: false
       error: AssetServerCompilationError
+      ok: false
     }
 
-export async function emitResolvedModule(
-  resolvedModule: ResolvedModule,
+export async function emitResolvedStyle(
+  resolvedStyle: ResolvedStyle,
   options: {
     getServedUrl(identityPath: string): Promise<string>
     sourceMaps?: 'external' | 'inline'
@@ -40,17 +40,17 @@ export async function emitResolvedModule(
 ): Promise<EmitResult> {
   try {
     let importUrls = await Promise.all(
-      resolvedModule.deps.map((depPath) => options.getServedUrl(depPath)),
+      resolvedStyle.deps.map((depPath) => options.getServedUrl(depPath)),
     )
-    let rewriteResult = await rewriteImports(resolvedModule, options)
+    let rewriteResult = await rewriteDependencies(resolvedStyle, options)
     let finalCode = rewriteResult.code
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
-        finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
+        finalCode += `\n/*# sourceMappingURL=data:application/json;base64,${encoded} */`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n//# sourceMappingURL=${await options.getServedUrl(resolvedModule.identityPath)}.map`
+        finalCode += `\n/*# sourceMappingURL=${await options.getServedUrl(resolvedStyle.identityPath)}.map */`
       }
     }
 
@@ -58,7 +58,7 @@ export async function emitResolvedModule(
       ok: true,
       value: {
         code: await createEmittedAsset(finalCode),
-        fingerprint: resolvedModule.fingerprint,
+        fingerprint: resolvedStyle.fingerprint,
         importUrls,
         sourceMap: rewriteResult.sourceMap
           ? await createEmittedAsset(rewriteResult.sourceMap)
@@ -67,39 +67,54 @@ export async function emitResolvedModule(
     }
   } catch (error) {
     return {
+      error: toEmitError(error, resolvedStyle.identityPath),
       ok: false,
-      error: toEmitError(error, resolvedModule.identityPath),
     }
   }
 }
 
-async function rewriteImports(
-  resolvedModule: ResolvedModule,
+async function rewriteDependencies(
+  resolvedStyle: ResolvedStyle,
   options: {
     getServedUrl(identityPath: string): Promise<string>
   },
 ): Promise<{ code: string; sourceMap: string | null }> {
-  let rewrittenSource = new MagicString(resolvedModule.rawCode)
-
-  for (let imported of resolvedModule.imports) {
-    let url = await options.getServedUrl(imported.depPath)
-    rewrittenSource.overwrite(
-      imported.start,
-      imported.end,
-      imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
-    )
+  if (resolvedStyle.dependencies.length === 0) {
+    return {
+      code: resolvedStyle.rawCode,
+      sourceMap: resolvedStyle.sourceMap,
+    }
   }
 
-  let code = rewrittenSource.toString()
-  let sourceMap =
-    resolvedModule.sourceMap && resolvedModule.imports.length > 0
+  let rewrittenSource = new MagicString(resolvedStyle.rawCode)
+
+  for (let dependency of resolvedStyle.dependencies) {
+    let replacement =
+      dependency.kind === 'external'
+        ? dependency.replacement
+        : `${await options.getServedUrl(dependency.depPath)}${dependency.suffix}`
+    let start = resolvedStyle.rawCode.indexOf(dependency.placeholder)
+    if (start < 0) {
+      throw createAssetServerCompilationError(
+        `Missing dependency placeholder "${dependency.placeholder}" while emitting style ${resolvedStyle.identityPath}.`,
+        {
+          code: 'EMIT_FAILED',
+        },
+      )
+    }
+
+    rewrittenSource.overwrite(start, start + dependency.placeholder.length, replacement)
+  }
+
+  return {
+    code: rewrittenSource.toString(),
+    sourceMap: resolvedStyle.sourceMap
       ? composeSourceMaps(
           rewrittenSource.generateMap({ hires: true }).toString(),
-          resolvedModule.sourceMap,
+          resolvedStyle.sourceMap,
         )
-      : resolvedModule.sourceMap
-
-  return { code, sourceMap }
+      : null,
+  }
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {
@@ -113,7 +128,7 @@ function toEmitError(error: unknown, identityPath: string): AssetServerCompilati
   if (isAssetServerCompilationError(error)) return error
 
   return createAssetServerCompilationError(
-    `Failed to emit script ${identityPath}. ${error instanceof Error ? error.message : String(error)}`,
+    `Failed to emit style ${identityPath}. ${error instanceof Error ? error.message : String(error)}`,
     {
       cause: error,
       code: 'EMIT_FAILED',

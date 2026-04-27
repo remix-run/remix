@@ -11,10 +11,8 @@ export const assetServer = createAssetServer({
     [`${assetsBase}/app/*path`]: 'demos/bookstore/app/*path',
     [`${assetsBase}/packages/*path`]: 'packages/*path',
   },
-  scripts: {
-    sourceMaps: isDevelopment ? 'external' : undefined,
-    minify: !isDevelopment,
-  },
+  sourceMaps: isDevelopment ? 'external' : undefined,
+  minify: !isDevelopment,
   fingerprint: isDevelopment
     ? undefined
     : { buildId: process.env.GITHUB_SHA || String(Date.now()) },

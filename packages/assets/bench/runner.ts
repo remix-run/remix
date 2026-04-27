@@ -78,7 +78,7 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getBasicFixture()
       return async function run() {
-        let assetServer = createBenchAssetServer(fixture, { scripts: { minify: true } })
+        let assetServer = createBenchAssetServer(fixture, { minify: true })
         let source = await readHandledResponseText(
           assetServer,
           await assetServer.getHref(fixture.entryPoint),
@@ -105,7 +105,7 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       return async function run() {
-        let assetServer = createBenchAssetServer(fixture, { scripts: { minify: true } })
+        let assetServer = createBenchAssetServer(fixture, { minify: true })
         let urls = await assetServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }

@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/assets",
   "version": "0.1.0",
-  "description": "Fetch-based server for compiling browser JS/TS assets on demand",
+  "description": "Fetch-based server for compiling browser JS/TS and CSS assets on demand",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,7 @@
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "get-tsconfig": "^4.13.6",
+    "lightningcss": "^1.32.0",
     "magic-string": "^0.30.21",
     "oxc-minify": "^0.121.0",
     "oxc-parser": "^0.121.0",
@@ -59,6 +60,8 @@
   "keywords": [
     "remix",
     "scripts",
+    "styles",
+    "css",
     "assets",
     "transform",
     "server"

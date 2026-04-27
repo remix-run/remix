@@ -1,17 +1,17 @@
 type AssetServerCompilationErrorCode =
-  | 'MODULE_NOT_FOUND'
-  | 'MODULE_NOT_ALLOWED'
-  | 'MODULE_OUTSIDE_FILE_MAP'
-  | 'MODULE_COMMONJS_NOT_SUPPORTED'
-  | 'MODULE_TRANSFORM_FAILED'
-  | 'MODULE_EMIT_FAILED'
+  | 'FILE_NOT_FOUND'
+  | 'FILE_NOT_ALLOWED'
+  | 'FILE_OUTSIDE_FILE_MAP'
+  | 'COMMONJS_NOT_SUPPORTED'
+  | 'TRANSFORM_FAILED'
+  | 'EMIT_FAILED'
   | 'IMPORT_RESOLUTION_FAILED'
   | 'IMPORT_NOT_SUPPORTED'
   | 'IMPORT_NOT_ALLOWED'
   | 'IMPORT_OUTSIDE_FILE_MAP'
 
 /**
- * Internal error used by the request-time module compilation pipeline.
+ * Internal error used by the request-time asset compilation pipeline.
  */
 export class AssetServerCompilationError extends Error {
   code: AssetServerCompilationErrorCode

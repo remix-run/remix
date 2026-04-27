@@ -6,23 +6,30 @@ import { getContext } from 'remix/async-context-middleware'
 import { assetServer } from '../utils/assets.ts'
 
 interface AssetEntry {
-  src: string
-  preloads: string[]
+  scriptSrc: string
+  scriptPreloads: string[]
+  stylesheetHref: string
 }
 
 const assetsEntryKey = createContextKey<AssetEntry>()
-const defaultEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
+const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
+const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../assets/app.css')
 
-export function loadAssetEntry(entry = defaultEntry): Middleware {
+export function loadAssetEntry(
+  scriptEntry = defaultScriptEntry,
+  stylesheetEntry = defaultStylesheetEntry,
+): Middleware {
   return async (context, next) => {
-    let [src, preloads] = await Promise.all([
-      assetServer.getHref(entry),
-      assetServer.getPreloads(entry).catch(() => []),
+    let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
+      assetServer.getHref(scriptEntry),
+      assetServer.getPreloads(scriptEntry).catch(() => []),
+      assetServer.getHref(stylesheetEntry),
     ])
 
     context.set(assetsEntryKey, {
-      src,
-      preloads,
+      scriptSrc,
+      scriptPreloads,
+      stylesheetHref,
     })
     return next()
   }
