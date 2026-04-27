@@ -156,6 +156,41 @@ describe('assert.throws', () => {
       assert.AssertionError,
     )
   })
+
+  it('validates error against an object of expected properties', () => {
+    assert.throws(
+      () => {
+        let err = new Error('boom') as NodeJS.ErrnoException
+        err.code = 'ERR_INVALID_ARG_VALUE'
+        throw err
+      },
+      { code: 'ERR_INVALID_ARG_VALUE', message: 'boom' },
+    )
+  })
+
+  it('matches RegExp values inside an object validator against string properties', () => {
+    assert.throws(
+      () => {
+        throw new Error('boom: bad input')
+      },
+      { message: /bad input/ },
+    )
+  })
+
+  it('throws when an object validator property does not match', () => {
+    nodeAssert.throws(
+      () =>
+        assert.throws(
+          () => {
+            let err = new Error('boom') as NodeJS.ErrnoException
+            err.code = 'ERR_OTHER'
+            throw err
+          },
+          { code: 'ERR_INVALID_ARG_VALUE' },
+        ),
+      assert.AssertionError,
+    )
+  })
 })
 
 describe('assert.doesNotThrow', () => {

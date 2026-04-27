@@ -1,5 +1,5 @@
-import { after, before, describe, it, mock } from 'node:test'
-import assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
+import { after, before, describe, it } from '@remix-run/test'
 import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
@@ -3248,9 +3248,9 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
   })
 
-  it('logs watcher errors', async () => {
+  it('logs watcher errors', async (t) => {
     let caseDir = await makeTmpDir()
-    let onError = mock.fn<(error: unknown) => void>()
+    let onError = t.mock.fn<(error: unknown) => void>()
 
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
@@ -3259,7 +3259,7 @@ describe('asset-server', () => {
       })
       let chokidarWatcher = getInternalChokidarWatcher(assetServer)
       assert.ok(chokidarWatcher)
-      let consoleError = mock.method(console, 'error', () => {})
+      let consoleError = t.mock.method(console, 'error', () => {})
 
       try {
         assert.ok(
@@ -3280,7 +3280,6 @@ describe('asset-server', () => {
           'EMFILE',
         )
       } finally {
-        consoleError.mock.restore?.()
         await assetServer.close()
       }
     } finally {

@@ -209,15 +209,18 @@ export function doesNotMatch(string: string, regexp: RegExp, message?: string): 
 /**
  * Asserts that `fn` throws. Optionally validates the thrown error against
  * `expectedError`, which may be an `Error` constructor, an `Error` instance
- * (matched by message), a `RegExp` (matched against the error message), or a
- * validator function that returns `true` for a valid error.
+ * (matched by message), a `RegExp` (matched against the error message), a
+ * plain object (each property checked against the error, with `RegExp` values
+ * matching string properties), or a validator function that returns `true`
+ * for a valid error.
  *
  * @example
  * assert.throws(() => JSON.parse('invalid'))
  * assert.throws(() => riskyOp(), SyntaxError)
+ * assert.throws(() => riskyOp(), { code: 'ERR_INVALID_ARG_VALUE' })
  *
  * @param fn - The function expected to throw.
- * @param expectedError - Optional error constructor, instance, RegExp, or validator.
+ * @param expectedError - Optional error constructor, instance, RegExp, object, or validator.
  * @param message - Optional failure message.
  */
 export function throws(fn: () => any, expectedError?: any, message?: string): void {
@@ -368,6 +371,25 @@ function checkError(error: any, expectedError: any, operator: string): void {
         expected: expectedError,
         operator,
       })
+    }
+  } else if (expectedError !== null && typeof expectedError === 'object') {
+    // Validate each property on the expected object against the error.
+    // RegExp values match string properties; everything else uses deep equality.
+    for (let key of Object.keys(expectedError)) {
+      let expectedValue = expectedError[key]
+      let actualValue = error == null ? undefined : error[key]
+      let matches =
+        expectedValue instanceof RegExp
+          ? typeof actualValue === 'string' && expectedValue.test(actualValue)
+          : isDeepEqual(actualValue, expectedValue)
+      if (!matches) {
+        throw new AssertionError({
+          message: `Error property "${key}" doesn't match`,
+          actual: actualValue,
+          expected: expectedValue,
+          operator,
+        })
+      }
     }
   }
 }
