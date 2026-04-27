@@ -206,6 +206,7 @@ suite('My Test Suite', () => {
 Each test callback receives a `TestContext` (`t`) as its first argument with helpful test utilities.
 
 ```ts
+// from 'remix/test'
 interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
@@ -223,14 +224,21 @@ interface TestContext {
     ): MockFunction
   }
 
-  // Browser only: render a component into the DOM
-  render(node: RemixNode, opts?: RenderOptions): RenderResult
-
-  // Browser only: replace global timer functions with fake implementations
+  // Replace global timer functions with controllable fakes
   useFakeTimers(): FakeTimers
 
   // E2E only: start a server with the given request handler, returns a Playwright Page
   serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+}
+```
+
+For browser tests, import `describe`/`it`/etc. from `remix/test/dom` instead of `remix/test`. The DOM context extends the base `TestContext` with a `render` method:
+
+```ts
+// from 'remix/test/dom'
+interface DomTestContext extends TestContext {
+  // Render a component into the DOM
+  render(node: RemixNode, opts?: RenderOptions): RenderResult
 }
 ```
 
@@ -267,9 +275,11 @@ it('cleanup', (t) => {
 
 #### Browser Testing (`render`)
 
-In browser test files, `t.render()` mounts a component into the DOM and returns scoped utilities for querying and interacting with it. The rendered component is automatically removed from the DOM after the test. See [Browser Testing](#browser-testing) for details.
+In browser test files, `t.render()` mounts a component into the DOM and returns scoped utilities for querying and interacting with it. The rendered component is automatically removed from the DOM after the test. To get `t.render` on the test context, import `describe`/`it` from `remix/test/dom` (not `remix/test`). See [Browser Testing](#browser-testing) for details.
 
 ```ts
+import { describe, it } from 'remix/test/dom'
+
 it('increments on click', async (t) => {
   let { $, act } = t.render(<Counter />)
   await act(() => $('[data-action="increment"]')?.click())
@@ -279,18 +289,26 @@ it('increments on click', async (t) => {
 
 #### Fake Timers
 
-In browser test files, `t.useFakeTimers()` replaces the global timer functions with controllable fakes which are are automatically cleaned up after each test. See [Browser Testing](#browser-testing) for details.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
 ```ts
-it('debounces search', async (t) => {
+it('debounces a callback', (t) => {
   let timers = t.useFakeTimers()
-  let { $, act } = t.render(<SearchInput />)
-  await act(() => $('input')?.dispatchEvent(new InputEvent('input')))
-  assert.equal($('[data-results]')?.childElementCount, 0)
-  timers.advance(300)
-  assert.equal($('[data-results]')?.childElementCount, 5)
+  let calls = 0
+  let debounced = debounce(() => calls++, 300)
+
+  debounced()
+  timers.advance(299)
+  assert.equal(calls, 0)
+  timers.advance(1)
+  assert.equal(calls, 1)
 })
 ```
+
+| Method        | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
+| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `restore()`   | Restore the original timer functions (called automatically after each test) |
 
 #### E2E
 
@@ -318,7 +336,7 @@ spy.mock.restore?.()
 
 ### Browser Testing
 
-Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to a it's own `document` instance.
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests, but **must be imported from `remix/test/dom`** so the test context is typed with `t.render`. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
 
 #### `t.render()`
 
@@ -326,7 +344,7 @@ Mounts a component into the DOM and returns a `RenderContext`:
 
 ```ts
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test'
+import { describe, it } from 'remix/test/dom'
 import { Counter } from './counter.tsx'
 
 describe('Counter', () => {
@@ -351,27 +369,7 @@ describe('Counter', () => {
 | `act(fn)`       | Runs `fn` and flushes pending component updates                           |
 | `cleanup()`     | Unmounts and removes the container (called automatically after each test) |
 
-#### `t.useFakeTimers()`
-
-Replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes, then restores them automatically after the test:
-
-```ts
-it('debounces input', async (t) => {
-  let timers = t.useFakeTimers()
-  let { $, act } = t.render(<SearchInput />)
-
-  await act(() => $('input')?.dispatchEvent(new InputEvent('input')))
-  timers.advance(300) // trigger the debounce
-  assert.equal($('[data-results]')?.childElementCount, 5)
-})
-```
-
-`FakeTimers` provides:
-
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+`t.useFakeTimers()` is also available inside browser tests — see [Fake Timers](#fake-timers).
 
 ### E2E Testing
 
