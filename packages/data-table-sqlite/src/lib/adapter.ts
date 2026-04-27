@@ -18,12 +18,42 @@ import {
   quoteLiteral as quoteLiteralHelper,
   quoteTableRef as quoteTableRefHelper,
 } from '@remix-run/data-table/sql-helpers'
-import type { Database as BetterSqliteDatabase, RunResult } from 'better-sqlite3'
 
 import { compileSqliteOperation } from './sql-compiler.ts'
 
 /**
- * `DatabaseAdapter` implementation for Better SQLite3.
+ * Synchronous SQLite database client accepted by the sqlite adapter.
+ *
+ * This matches the shared surface of Node's `node:sqlite` `DatabaseSync`, Bun's `bun:sqlite`
+ * `Database`, and `better-sqlite3` database instances.
+ */
+export interface SqliteDatabase {
+  prepare(sql: string): SqliteStatement
+  exec(sql: string): unknown
+}
+
+/**
+ * Prepared statement shape used by {@link SqliteDatabase}.
+ */
+export interface SqliteStatement {
+  all(...values: unknown[]): unknown[]
+  get(...values: unknown[]): unknown
+  run(...values: unknown[]): SqliteRunResult
+  reader?: boolean
+  columns?: () => unknown[]
+  columnNames?: string[]
+}
+
+/**
+ * SQLite write execution metadata.
+ */
+export interface SqliteRunResult {
+  changes: number
+  lastInsertRowid: unknown
+}
+
+/**
+ * `DatabaseAdapter` implementation for synchronous SQLite clients.
  */
 export class SqliteDatabaseAdapter implements DatabaseAdapter {
   /**
@@ -36,11 +66,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
-  #database: BetterSqliteDatabase
+  #database: SqliteDatabase
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: BetterSqliteDatabase) {
+  constructor(database: SqliteDatabase) {
     this.#database = database
     this.capabilities = {
       returning: true,
@@ -82,7 +112,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     let statement = this.compileSql(request.operation)[0]
     let prepared = this.#database.prepare(statement.text)
 
-    if (prepared.reader) {
+    if (shouldReadStatement(request.operation, prepared)) {
       let rows = normalizeRows(prepared.all(...statement.values))
 
       if (request.operation.kind === 'count' || request.operation.kind === 'exists') {
@@ -175,7 +205,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     if (options?.isolationLevel === 'read uncommitted') {
-      this.#database.pragma('read_uncommitted = true')
+      this.#database.exec('pragma read_uncommitted = true')
     }
 
     this.#database.exec('begin')
@@ -251,21 +281,20 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a sqlite `DatabaseAdapter`.
- * @param database Better SQLite3 database instance.
- * @param options Optional adapter capability overrides.
+ * @param database Synchronous SQLite database client.
  * @returns A configured sqlite adapter.
  * @example
  * ```ts
- * import BetterSqlite3 from 'better-sqlite3'
+ * import { DatabaseSync } from 'node:sqlite'
  * import { createDatabase } from 'remix/data-table'
  * import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
  *
- * let sqlite = new BetterSqlite3('./data/app.db')
+ * let sqlite = new DatabaseSync('./data/app.db')
  * let adapter = createSqliteDatabaseAdapter(sqlite)
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(database: BetterSqliteDatabase): SqliteDatabaseAdapter {
+export function createSqliteDatabaseAdapter(database: SqliteDatabase): SqliteDatabaseAdapter {
   return new SqliteDatabaseAdapter(database)
 }
 
@@ -339,7 +368,7 @@ function normalizeInsertIdForReader(
 
 function normalizeAffectedRowsForRun(
   kind: DataManipulationRequest['operation']['kind'],
-  result: RunResult,
+  result: SqliteRunResult,
 ): number | undefined {
   if (kind === 'select' || kind === 'count' || kind === 'exists') {
     return undefined
@@ -351,7 +380,7 @@ function normalizeAffectedRowsForRun(
 function normalizeInsertIdForRun(
   kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
-  result: RunResult,
+  result: SqliteRunResult,
 ): unknown {
   if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
     return undefined
@@ -362,6 +391,33 @@ function normalizeInsertIdForRun(
   }
 
   return result.lastInsertRowid
+}
+
+function shouldReadStatement(
+  operation: DataManipulationRequest['operation'],
+  statement: SqliteStatement,
+): boolean {
+  if (operation.kind === 'select' || operation.kind === 'count' || operation.kind === 'exists') {
+    return true
+  }
+
+  if (operation.kind !== 'raw') {
+    return operation.returning !== undefined
+  }
+
+  if (typeof statement.reader === 'boolean') {
+    return statement.reader
+  }
+
+  if (statement.columns) {
+    return statement.columns().length > 0
+  }
+
+  try {
+    return statement.columnNames !== undefined && statement.columnNames.length > 0
+  } catch {
+    return false
+  }
 }
 
 function quoteIdentifier(value: string): string {

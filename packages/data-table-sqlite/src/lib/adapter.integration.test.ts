@@ -1,5 +1,4 @@
 import { after, before, describe } from '@remix-run/test'
-import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 import { createDatabase } from '@remix-run/data-table'
 
 import {
@@ -8,20 +7,24 @@ import {
   teardownAdapterIntegrationSchema,
 } from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
+import {
+  createNativeSqliteDatabase,
+  type NativeSqliteDatabase,
+} from '../../../data-table/test/native-sqlite.ts'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-const integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1' && canOpenSqliteDatabase()
+const integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1'
 
 describe('sqlite adapter integration', () => {
-  let sqlite: BetterSqliteDatabase
+  let sqlite: NativeSqliteDatabase
 
   before(async () => {
     if (!integrationEnabled) {
       return
     }
 
-    sqlite = new BetterSqlite3(':memory:')
+    sqlite = createNativeSqliteDatabase()
     await setupAdapterIntegrationSchema(async (statement) => {
       sqlite.exec(statement)
     }, 'sqlite')
@@ -48,13 +51,3 @@ describe('sqlite adapter integration', () => {
     },
   })
 })
-
-function canOpenSqliteDatabase(): boolean {
-  try {
-    let database = new BetterSqlite3(':memory:')
-    database.close()
-    return true
-  } catch {
-    return false
-  }
-}
