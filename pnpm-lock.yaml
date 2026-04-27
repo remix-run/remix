@@ -811,9 +811,6 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
-      '@remix-run/data-schema':
-        specifier: workspace:^
-        version: link:../data-schema
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -829,6 +826,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../../cookie
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../../../data-schema
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../..
@@ -863,6 +863,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../../cookie
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../../../data-schema
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../..
@@ -900,6 +903,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../../cookie
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../../../data-schema
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../..
