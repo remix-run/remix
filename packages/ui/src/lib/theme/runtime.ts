@@ -1,4 +1,4 @@
-import { createElement } from '@remix-run/component'
+import { createElement, type Handle } from '@remix-run/component'
 
 import {
   theme,
@@ -17,10 +17,10 @@ export function createTheme(values: ThemeValues, options: CreateThemeOptions = {
   let vars = Object.freeze(collectThemeVars(themeVariableNames, values))
   let cssText = serializeThemeCss(selector, vars, { reset })
 
-  function Theme() {
-    return (props: ThemeStyleProps = {}) =>
+  function Theme(handle: Handle<ThemeStyleProps>) {
+    return () =>
       createElement('style', {
-        nonce: props.nonce,
+        nonce: handle.props.nonce,
         'data-rmx-theme': '',
         'data-rmx-theme-selector': selector,
         innerHTML: escapeStyleText(cssText),

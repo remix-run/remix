@@ -1,4 +1,4 @@
-import type { Handle, NoContext, RemixNode } from './component.ts'
+import type { Handle, NoContext, RemixNode, RenderFn } from './component.ts'
 
 /**
  * Serializable primitive types that can be passed as props to entry components
@@ -45,10 +45,9 @@ export type EntryMetadata = {
 /**
  * An entry component preserves the exact function type with added metadata
  */
-export type EntryComponent<context = NoContext, setup = undefined, props = {}> = ((
-  handle: Handle<context>,
-  setup: setup,
-) => (props: props) => RemixNode) &
+export type EntryComponent<props extends SerializableProps = {}, context = NoContext> = ((
+  handle: Handle<props, context>,
+) => RenderFn<props>) &
   EntryMetadata
 
 /**
@@ -63,10 +62,10 @@ export type EntryComponent<context = NoContext, setup = undefined, props = {}> =
  * ```tsx
  * export const Counter = clientEntry(
  *   '/js/counter.js#Counter',
- *   (handle: Handle, setup: number) {
- *     let count = setup
+ *   function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+ *     let count = handle.props.initialCount ?? 0
  *
- *     return ({ label }: { label: string }) => (
+ *     return () => (
  *       <button
  *         type="button"
  *         mix={[
@@ -76,21 +75,21 @@ export type EntryComponent<context = NoContext, setup = undefined, props = {}> =
  *           }),
  *         ]}
  *       >
- *         {label} {count}
+ *         {handle.props.label} {count}
  *       </button>
  *     )
  *   }
  * )
  * ```
  */
-export function clientEntry<
-  context = NoContext,
-  setup extends SerializableValue = undefined,
-  props extends SerializableProps = {},
->(
+export function clientEntry<props extends SerializableProps = {}, context = NoContext>(
   entryId: string,
-  component: (handle: Handle<context>, setup: setup) => (props: props) => RemixNode,
-): EntryComponent<context, setup, props>
+  component: (handle: Handle<props, context>) => RenderFn,
+): EntryComponent<props, context>
+export function clientEntry<props extends SerializableProps = {}, context = NoContext>(
+  entryId: string,
+  component: (handle: Handle<Record<string, never>, context>) => RenderFn<props>,
+): EntryComponent<props, context>
 
 // Implementation
 export function clientEntry(entryId: string, component: any): any {

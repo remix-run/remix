@@ -1,5 +1,5 @@
 import { createElement } from '@remix-run/component'
-import type { Props, RemixElement } from '@remix-run/component'
+import type { Handle, Props, RemixElement } from '@remix-run/component'
 
 import {
   glyphContract,
@@ -12,7 +12,7 @@ export type { GlyphName, GlyphSymbol, GlyphValues } from '../theme/glyph-contrac
 
 export type GlyphSheetProps = Omit<Props<'svg'>, 'children'>
 
-type GlyphSheetRenderer = () => (props?: GlyphSheetProps) => RemixElement
+type GlyphSheetRenderer = (handle: Handle<GlyphSheetProps>) => () => RemixElement
 
 export type GlyphSheetComponent = GlyphSheetRenderer & {
   ids: Readonly<Record<GlyphName, string>>
@@ -31,9 +31,9 @@ export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
     >,
   )
 
-  function GlyphSheet() {
-    return (props: GlyphSheetProps = {}) => {
-      let { style, ...svgProps } = props
+  function GlyphSheet(handle: Handle<GlyphSheetProps>) {
+    return () => {
+      let { style, ...svgProps } = handle.props
       let hiddenStyle = {
         position: 'absolute',
         width: '0',
@@ -48,11 +48,11 @@ export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
         'svg',
         {
           ...svgProps,
-          'aria-hidden': props['aria-hidden'] ?? true,
-          focusable: props.focusable ?? 'false',
-          height: props.height ?? '0',
+          'aria-hidden': handle.props['aria-hidden'] ?? true,
+          focusable: handle.props.focusable ?? 'false',
+          height: handle.props.height ?? '0',
           style: nextStyle,
-          width: props.width ?? '0',
+          width: handle.props.width ?? '0',
           xmlns: 'http://www.w3.org/2000/svg',
         },
         glyphNames.map((name) => {
@@ -70,20 +70,20 @@ export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
   })
 }
 
-export function Glyph() {
-  return (props: GlyphProps) => {
-    let { fill, name, ...svgProps } = props
+export function Glyph(handle: Handle<GlyphProps>) {
+  return () => {
+    let { fill, name, ...svgProps } = handle.props
     let glyphId = glyphContract[name].id
     let hiddenByDefault =
-      props['aria-hidden'] === undefined &&
-      props['aria-label'] === undefined &&
-      props['aria-labelledby'] === undefined
+      handle.props['aria-hidden'] === undefined &&
+      handle.props['aria-label'] === undefined &&
+      handle.props['aria-labelledby'] === undefined
 
     return createElement(
       'svg',
       {
         ...svgProps,
-        'aria-hidden': hiddenByDefault ? true : props['aria-hidden'],
+        'aria-hidden': hiddenByDefault ? true : handle.props['aria-hidden'],
         fill: fill ?? 'none',
         xmlns: 'http://www.w3.org/2000/svg',
       },

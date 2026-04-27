@@ -39,7 +39,7 @@ function dispatchClick(
   )
 }
 
-function OutsideCounter(handle: Handle) {
+function OutsideCounter(handle: Handle<{ active?: boolean; mixCount?: 0 | 1 | 2 }>) {
   let outsideEvents: string[] = []
   let outsideClickCount = 0
 
@@ -48,37 +48,40 @@ function OutsideCounter(handle: Handle) {
     void handle.update()
   }
 
-  return ({ active = true, mixCount = 1 }: { active?: boolean; mixCount?: 0 | 1 | 2 }) => (
-    <div>
-      <div
-        id="host"
-        mix={[
-          active && mixCount >= 1 ? onOutsidePress(handleOutsidePress) : undefined,
-          active && mixCount >= 2 ? onOutsidePress(handleOutsidePress) : undefined,
-        ]}
-      >
-        <button id="inside" type="button">
-          Inside
+  return () => {
+    let { active = true, mixCount = 1 } = handle.props
+    return (
+      <div>
+        <div
+          id="host"
+          mix={[
+            active && mixCount >= 1 ? onOutsidePress(handleOutsidePress) : undefined,
+            active && mixCount >= 2 ? onOutsidePress(handleOutsidePress) : undefined,
+          ]}
+        >
+          <button id="inside" type="button">
+            Inside
+          </button>
+        </div>
+        <button id="outside" type="button">
+          Outside
         </button>
+        <button
+          id="outside-click"
+          type="button"
+          mix={on('click', () => {
+            outsideClickCount++
+            void handle.update()
+          })}
+        >
+          Outside Click
+        </button>
+        <output id="event-count">{outsideEvents.length}</output>
+        <output id="event-types">{outsideEvents.join(',')}</output>
+        <output id="click-count">{outsideClickCount}</output>
       </div>
-      <button id="outside" type="button">
-        Outside
-      </button>
-      <button
-        id="outside-click"
-        type="button"
-        mix={on('click', () => {
-          outsideClickCount++
-          void handle.update()
-        })}
-      >
-        Outside Click
-      </button>
-      <output id="event-count">{outsideEvents.length}</output>
-      <output id="event-types">{outsideEvents.join(',')}</output>
-      <output id="click-count">{outsideClickCount}</output>
-    </div>
-  )
+    )
+  }
 }
 
 function renderCounter(props: { active?: boolean; mixCount?: 0 | 1 | 2 } = {}) {

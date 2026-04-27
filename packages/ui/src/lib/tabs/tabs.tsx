@@ -158,18 +158,17 @@ function toIdFragment(value: string) {
   return fragment || 'tab'
 }
 
-function TabsProvider(handle: Handle<TabsContextValue>) {
-  let props: TabsContextProps = {}
+function TabsProvider(handle: Handle<TabsContextProps, TabsContextValue>) {
   let registeredTabs: RegisteredTab[] = []
   let hasInitialized = false
   let uncontrolledValue: string | null = null
 
   function getValue() {
-    return props.value !== undefined ? props.value : uncontrolledValue
+    return handle.props.value !== undefined ? handle.props.value : uncontrolledValue
   }
 
   function getOrientation() {
-    return props.orientation ?? 'horizontal'
+    return handle.props.orientation ?? 'horizontal'
   }
 
   function isActiveTab(tab: RegisteredTab | undefined): tab is RegisteredTab {
@@ -242,12 +241,12 @@ function TabsProvider(handle: Handle<TabsContextValue>) {
       return
     }
 
-    if (props.value === undefined) {
+    if (handle.props.value === undefined) {
       uncontrolledValue = value
       void handle.update()
     }
 
-    props.onValueChange?.(value)
+    handle.props.onValueChange?.(value)
     dispatchChange(value, previousValue ?? null)
   }
 
@@ -302,19 +301,18 @@ function TabsProvider(handle: Handle<TabsContextValue>) {
     select,
   })
 
-  return (nextProps: TabsContextProps) => {
+  return () => {
     registeredTabs = []
-    props = nextProps
 
     if (!hasInitialized) {
-      uncontrolledValue = props.defaultValue ?? null
+      uncontrolledValue = handle.props.defaultValue ?? null
       hasInitialized = true
     }
 
     handle.queueTask(() => {
-      props.ref?.(tabsRef)
+      handle.props.ref?.(tabsRef)
 
-      if (props.value !== undefined) {
+      if (handle.props.value !== undefined) {
         return
       }
 
@@ -327,7 +325,7 @@ function TabsProvider(handle: Handle<TabsContextValue>) {
       void handle.update()
     })
 
-    return props.children
+    return handle.props.children
   }
 }
 
@@ -454,16 +452,16 @@ export function onTabsChange(handler: TabsChangeHandler, captureBoolean?: boolea
   return on<HTMLElement, typeof TABS_CHANGE_EVENT>(TABS_CHANGE_EVENT, handler, captureBoolean)
 }
 
-export function Tabs() {
-  return (props: TabsProps) => {
-    let { children, ...contextProps } = props
+export function Tabs(handle: Handle<TabsProps>) {
+  return () => {
+    let { children, ...contextProps } = handle.props
     return <tabs.Context {...contextProps}>{children}</tabs.Context>
   }
 }
 
-export function TabsList() {
-  return (props: TabsListProps) => {
-    let { children, mix, ...divProps } = props
+export function TabsList(handle: Handle<TabsListProps>) {
+  return () => {
+    let { children, mix, ...divProps } = handle.props
 
     return (
       <div {...divProps} mix={[listStyle, tabs.list(), mix]}>
@@ -473,9 +471,9 @@ export function TabsList() {
   }
 }
 
-export function Tab() {
-  return (props: TabProps) => {
-    let { children, disabled, mix, type, value, ...buttonProps } = props
+export function Tab(handle: Handle<TabProps>) {
+  return () => {
+    let { children, disabled, mix, type, value, ...buttonProps } = handle.props
 
     return (
       <button
@@ -490,9 +488,9 @@ export function Tab() {
   }
 }
 
-export function TabsPanel() {
-  return (props: TabsPanelProps) => {
-    let { children, mix, value, ...divProps } = props
+export function TabsPanel(handle: Handle<TabsPanelProps>) {
+  return () => {
+    let { children, mix, value, ...divProps } = handle.props
 
     return (
       <div {...divProps} mix={[tabs.panel({ value }), mix]}>

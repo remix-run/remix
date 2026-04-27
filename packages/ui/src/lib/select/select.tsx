@@ -109,13 +109,12 @@ interface SelectContextValue {
   unregisterTrigger: (node: HTMLButtonElement) => void
 }
 
-function SelectProvider(handle: Handle<SelectContextValue>) {
+function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) {
   let triggerRef: HTMLButtonElement | undefined
   let listboxRef: listbox.ListboxRef | undefined
   let surfaceRef: HTMLElement | undefined
   let popoverContextRef: popover.PopoverContext | undefined
 
-  let props: SelectContextProps = { defaultLabel: '' }
   let state: State = State.Initializing
 
   let value: listbox.ListboxValue = null
@@ -129,7 +128,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
   let listId = `${handle.id}-list`
 
   function open() {
-    if (state !== State.Closed || props.disabled) return
+    if (state !== State.Closed || handle.props.disabled) return
     state = State.Open
     activeValue = value
     handle.update()
@@ -180,7 +179,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
     activeValue = nextValue
     activeId = option?.id
     selectedId = option?.id
-    selectedLabel = option ? option.label : props.defaultLabel
+    selectedLabel = option ? option.label : handle.props.defaultLabel
     syncPopoverContext()
 
     if (syncDisplayedLabel) {
@@ -249,7 +248,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
   }
 
   function selectTypeaheadMatch(text: string) {
-    if (state !== State.Closed || props.disabled) return
+    if (state !== State.Closed || handle.props.disabled) return
 
     let option = listboxRef?.matchSearchText(text, value)
     if (!option) return
@@ -279,7 +278,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
     },
 
     get disabled() {
-      return !!props.disabled
+      return !!handle.props.disabled
     },
 
     get displayedLabel() {
@@ -299,7 +298,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
     },
 
     get name() {
-      return props.name
+      return handle.props.name
     },
 
     get selectedId() {
@@ -356,12 +355,10 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
     },
   })
 
-  return (nextProps: SelectContextProps) => {
-    props = nextProps
-
+  return () => {
     if (state === State.Initializing) {
-      selectedLabel = displayedLabel = props.defaultLabel
-      value = props.defaultValue ?? null
+      selectedLabel = displayedLabel = handle.props.defaultLabel
+      value = handle.props.defaultValue ?? null
       activeValue = value
       state = State.Closed
 
@@ -392,7 +389,7 @@ function SelectProvider(handle: Handle<SelectContextValue>) {
         onHighlight={highlightOption}
         selectionFlashAttribute="data-select-flash"
       >
-        {props.children}
+        {handle.props.children}
       </listbox.Context>
     )
   }
@@ -545,9 +542,9 @@ function SelectLabel(handle: Handle) {
   return () => <span mix={button.labelStyle}>{context.displayedLabel}</span>
 }
 
-export function Select() {
-  return (props: SelectProps) => {
-    let { children, defaultLabel, defaultValue, disabled, name, mix, ...buttonProps } = props
+export function Select(handle: Handle<SelectProps>) {
+  return () => {
+    let { children, defaultLabel, defaultValue, disabled, name, mix, ...buttonProps } = handle.props
 
     return (
       <select.Context
@@ -571,9 +568,9 @@ export function Select() {
   }
 }
 
-export function Option() {
-  return (props: SelectOptionProps) => {
-    let { label, value, disabled, textValue, children, mix, ...divProps } = props
+export function Option(handle: Handle<SelectOptionProps>) {
+  return () => {
+    let { label, value, disabled, textValue, children, mix, ...divProps } = handle.props
 
     return (
       <div
@@ -581,7 +578,7 @@ export function Option() {
         mix={[listbox.optionStyle, select.option({ value, label, disabled, textValue }), mix]}
       >
         <Glyph mix={listbox.glyphStyle} name="check" />
-        <span mix={listbox.labelStyle}>{children ?? props.label}</span>
+        <span mix={listbox.labelStyle}>{children ?? handle.props.label}</span>
       </div>
     )
   }

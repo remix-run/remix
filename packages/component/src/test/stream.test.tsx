@@ -132,8 +132,8 @@ describe('stream', () => {
 
   describe('component nodes', () => {
     it('renders component nodes', async () => {
-      function Greeting() {
-        return ({ name }: { name: string }) => <div>Hello, {name}!</div>
+      function Greeting(handle: Handle<{ name: string }>) {
+        return () => <div>Hello, {handle.props.name}!</div>
       }
       let stream = renderToStream(<Greeting name="World" />)
       let html = await drain(stream)
@@ -162,9 +162,9 @@ describe('stream', () => {
     it('provides and reads context', async () => {
       type ThemeContext = { color: string; size: number }
 
-      function ThemeProvider(handle: Handle<ThemeContext>) {
+      function ThemeProvider(handle: Handle<{ children?: RemixNode }, ThemeContext>) {
         handle.context.set({ color: 'blue', size: 16 })
-        return ({ children }: { children: any }) => children
+        return () => handle.props.children
       }
 
       function ThemedText(handle: Handle) {
@@ -191,14 +191,14 @@ describe('stream', () => {
       type ThemeContext = { color: string }
       type UserContext = { name: string }
 
-      function ThemeProvider(handle: Handle<ThemeContext>) {
+      function ThemeProvider(handle: Handle<{ children?: RemixNode }, ThemeContext>) {
         handle.context.set({ color: 'red' })
-        return ({ children }: { children: any }) => children
+        return () => handle.props.children
       }
 
-      function UserProvider(handle: Handle<UserContext>) {
+      function UserProvider(handle: Handle<{ children?: RemixNode }, UserContext>) {
         handle.context.set({ name: 'John' })
-        return ({ children }: { children: any }) => children
+        return () => handle.props.children
       }
 
       function Display(handle: Handle) {
@@ -227,9 +227,9 @@ describe('stream', () => {
     it('provides context to multiple consumers', async () => {
       type CountContext = { count: number }
 
-      function CountProvider(handle: Handle<CountContext>) {
+      function CountProvider(handle: Handle<{ children?: RemixNode }, CountContext>) {
         handle.context.set({ count: 42 })
-        return ({ children }: { children: any }) => children
+        return () => handle.props.children
       }
 
       function CountDisplay(handle: Handle) {
@@ -524,11 +524,9 @@ describe('stream', () => {
     })
 
     it('reads ancestor component context from mixins during SSR', async () => {
-      function Provider(handle: Handle<{ value: string }>) {
-        return ({ children }: { children?: RemixNode }) => {
-          handle.context.set({ value: 'from-context' })
-          return <section>{children}</section>
-        }
+      function Provider(handle: Handle<{ children?: RemixNode }, { value: string }>) {
+        handle.context.set({ value: 'from-context' })
+        return () => <section>{handle.props.children}</section>
       }
 
       let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
@@ -820,10 +818,10 @@ describe('stream', () => {
     })
 
     it('handles css mixin in components', async () => {
-      function StyledButton() {
-        return ({ label }: { label: string }) => (
+      function StyledButton(handle: Handle<{ label: string }>) {
+        return () => (
           <button mix={[css({ background: 'blue', color: 'white', padding: '10px' })]}>
-            {label}
+            {handle.props.label}
           </button>
         )
       }
@@ -1135,9 +1133,12 @@ describe('stream', () => {
   describe('hydration', () => {
     it('renders hydrated component with hydration script', async () => {
       // Create a simple hydrated component
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
-      })
+      let Counter = clientEntry(
+        '/js/counter.js#Counter',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
 
       // Render the component
       let stream = renderToStream(<Counter initialCount={42} />)
@@ -1172,8 +1173,10 @@ describe('stream', () => {
     })
 
     it('escapes rmx-data payloads that contain script end tags', async () => {
-      let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
-        return ({ label }: { label: string }) => <div>{label}</div>
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter(
+        handle: Handle<{ label: string }>,
+      ) {
+        return () => <div>{handle.props.label}</div>
       })
 
       let scriptBreakingLabel = '</script><script>alert("xss")</script>'
@@ -1195,8 +1198,10 @@ describe('stream', () => {
 
     it('renders multiple hydrated components with unique instance IDs', async () => {
       // Create hydrated components
-      let Button = clientEntry('/js/button.js#Button', function Button() {
-        return ({ text }: { text: string }) => <button>{text}</button>
+      let Button = clientEntry('/js/button.js#Button', function Button(
+        handle: Handle<{ text: string }>,
+      ) {
+        return () => <button>{handle.props.text}</button>
       })
 
       // Render multiple hydrated components
@@ -1222,24 +1227,26 @@ describe('stream', () => {
     })
 
     it('renders hydrated component with complex props', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card() {
-        return (props: {
+      let Card = clientEntry('/js/card.js#Card', function Card(
+        handle: Handle<{
           title: string
           count: number
           enabled: boolean
           items: string[]
           nested: { value: number }
-        }) => (
+        }>,
+      ) {
+        return () => (
           <div>
-            <h2>{props.title}</h2>
-            <p>Count: {props.count}</p>
-            <section>Enabled: {String(props.enabled)}</section>
+            <h2>{handle.props.title}</h2>
+            <p>Count: {handle.props.count}</p>
+            <section>Enabled: {String(handle.props.enabled)}</section>
             <ul>
-              {props.items.map((item, i) => (
+              {handle.props.items.map((item, i) => (
                 <li key={i}>{item}</li>
               ))}
             </ul>
-            <main>Nested value: {props.nested.value}</main>
+            <main>Nested value: {handle.props.nested.value}</main>
           </div>
         )
       })
@@ -1286,11 +1293,13 @@ describe('stream', () => {
     })
 
     it('serializes virtual host elements', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card() {
-        return (props: { children: RemixNode }) => (
+      let Card = clientEntry('/js/card.js#Card', function Card(
+        handle: Handle<{ children?: RemixNode }>,
+      ) {
+        return () => (
           <div>
             <h1>Test Card</h1>
-            {props.children}
+            {handle.props.children}
           </div>
         )
       })
@@ -1318,11 +1327,13 @@ describe('stream', () => {
     })
 
     it('serializes virtual component elements', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card() {
-        return (props: { children: RemixNode }) => (
+      let Card = clientEntry('/js/card.js#Card', function Card(
+        handle: Handle<{ children?: RemixNode }>,
+      ) {
+        return () => (
           <div>
             <h1>Test Card</h1>
-            {props.children}
+            {handle.props.children}
           </div>
         )
       })
@@ -1373,8 +1384,10 @@ describe('stream', () => {
     })
 
     it('serializes Frame elements in entry props as frame descriptors', async () => {
-      let Card = clientEntry('/js/card.js#Card', function Card() {
-        return (props: { children: RemixNode }) => <div>{props.children}</div>
+      let Card = clientEntry('/js/card.js#Card', function Card(
+        handle: Handle<{ children?: RemixNode }>,
+      ) {
+        return () => <div>{handle.props.children}</div>
       })
 
       let stream = renderToStream(
@@ -1409,8 +1422,10 @@ describe('stream', () => {
     })
 
     it('nests hydrated components', async () => {
-      let Card = clientEntry('/card.js#Card', function Card() {
-        return ({ children }: { children: RemixNode }) => <div>{children}</div>
+      let Card = clientEntry('/card.js#Card', function Card(
+        handle: Handle<{ children?: RemixNode }>,
+      ) {
+        return () => <div>{handle.props.children}</div>
       })
 
       let Button = clientEntry('/button.js#Button', function Button() {
@@ -1442,8 +1457,8 @@ describe('stream', () => {
     it('resolves opaque client-entry ids during SSR', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
-        function ResolverCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        function ResolverCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
         },
       )
 
@@ -1474,8 +1489,8 @@ describe('stream', () => {
     it('resolves opaque client-entry ids inside blocking frames during SSR', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
-        function BlockingFrameCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        function BlockingFrameCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
         },
       )
 
@@ -1536,8 +1551,8 @@ describe('stream', () => {
     it('calls resolveClientEntry only once per unique entry id during SSR', async () => {
       let Counter = clientEntry(
         'file:///app/components/counter.tsx',
-        function DedupedResolverCounter(handle: Handle) {
-          return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+        function DedupedResolverCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
         },
       )
 
@@ -1579,8 +1594,10 @@ describe('stream', () => {
     })
 
     it('uses the component name as the default export name during SSR', async () => {
-      let Counter = clientEntry('/js/counter.js', function NamedCounter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      let Counter = clientEntry('/js/counter.js', function NamedCounter(
+        handle: Handle<{ initialCount: number }>,
+      ) {
+        return () => <div>Count: {handle.props.initialCount}</div>
       })
 
       let html = await drain(renderToStream(<Counter initialCount={42} />))
@@ -1611,8 +1628,10 @@ describe('stream', () => {
     })
 
     it('throws during SSR when resolveClientEntry returns an empty exportName', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(
+        handle: Handle<{ initialCount: number }>,
+      ) {
+        return () => <div>Count: {handle.props.initialCount}</div>
       })
 
       await expect(async () => {
@@ -1630,8 +1649,10 @@ describe('stream', () => {
     })
 
     it('throws during SSR when resolveClientEntry returns an empty href', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(
+        handle: Handle<{ initialCount: number }>,
+      ) {
+        return () => <div>Count: {handle.props.initialCount}</div>
       })
 
       await expect(async () => {
@@ -1649,8 +1670,10 @@ describe('stream', () => {
     })
 
     it('throws during SSR when resolveClientEntry returns an invalid value', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(
+        handle: Handle<{ initialCount: number }>,
+      ) {
+        return () => <div>Count: {handle.props.initialCount}</div>
       })
 
       await expect(async () => {
@@ -1665,8 +1688,10 @@ describe('stream', () => {
     })
 
     it('throws during SSR when resolveClientEntry throws', async () => {
-      let EntryComponent = clientEntry('opaque-entry-id', function Counter(handle: Handle) {
-        return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
+      let EntryComponent = clientEntry('opaque-entry-id', function Counter(
+        handle: Handle<{ initialCount: number }>,
+      ) {
+        return () => <div>Count: {handle.props.initialCount}</div>
       })
 
       await expect(async () => {
@@ -2093,15 +2118,15 @@ describe('stream', () => {
         topFrameSrc: string
       }> = []
 
-      function Inspect(handle: Handle) {
-        return ({ label }: { label: string }) => {
-          seen.set(label, {
+      function Inspect(handle: Handle<{ label: string }>) {
+        return () => {
+          seen.set(handle.props.label, {
             frameSrc: handle.frame.src,
             topFrameSrc: handle.frames.top.src,
             sameFrame: handle.frame === handle.frames.top,
           })
 
-          return <div data-label={label}>{handle.frame.src}</div>
+          return <div data-label={handle.props.label}>{handle.frame.src}</div>
         }
       }
 

@@ -10,13 +10,13 @@ describe('vnode rendering', () => {
 
       let capturedParentUpdate = () => {}
       let appRenderCount = 0
-      function Parent(handle: Handle) {
+      function Parent(handle: Handle<{ children?: RemixNode }>) {
         capturedParentUpdate = () => {
           handle.update()
         }
-        return ({ children }: { children: RemixNode }) => {
+        return () => {
           appRenderCount++
-          return children
+          return handle.props.children
         }
       }
 

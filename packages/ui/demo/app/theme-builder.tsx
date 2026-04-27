@@ -144,16 +144,15 @@ export function ThemeBuilder(handle: Handle) {
   }
 }
 
-function TokenControl() {
-  return ({
-    onChange,
-    token,
-    value,
-  }: {
+interface TokenControlProps {
     onChange: (value: ThemeLeafValue) => void
     token: ThemeToken
     value: ThemeLeafValue
-  }) => {
+}
+
+function TokenControl(handle: Handle<TokenControlProps>) {
+  return () => {
+    let { onChange, token, value } = handle.props
     let range = getRangeInput(value, token.path)
 
     return (
@@ -296,16 +295,16 @@ function ComponentGallery() {
   )
 }
 
-function PreviewCard() {
-  return ({
-    children,
-    description,
-    title,
-  }: {
+interface PreviewCardProps {
     children: RemixNode
     description: string
     title: string
-  }) => (
+}
+
+function PreviewCard(handle: Handle<PreviewCardProps>) {
+  return () => {
+    let { children, description, title } = handle.props
+    return (
     <article mix={previewCardCss}>
       <div mix={previewCardHeaderCss}>
         <h3 mix={cardTitleCss}>{title}</h3>
@@ -314,18 +313,19 @@ function PreviewCard() {
       <div mix={previewCardBodyCss}>{children}</div>
     </article>
   )
+  }
 }
 
-function Field() {
-  return ({
-    children,
-    htmlFor,
-    label,
-  }: {
+interface FieldProps {
     children: RemixNode
     htmlFor: string
     label: string
-  }) => (
+}
+
+function Field(handle: Handle<FieldProps>) {
+  return () => {
+    let { children, htmlFor, label } = handle.props
+    return (
     <div mix={fieldCss}>
       <label for={htmlFor} mix={fieldLabelCss}>
         {label}
@@ -333,6 +333,7 @@ function Field() {
       {children}
     </div>
   )
+  }
 }
 
 function ComboboxPreview(handle: Handle) {

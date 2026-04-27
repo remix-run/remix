@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 
 type DocumentProps = {
   title: string
@@ -6,8 +6,10 @@ type DocumentProps = {
   children?: RemixNode
 }
 
-export function Document() {
-  return ({ title, maxWidth = '760px', children }: DocumentProps) => (
+export function Document(handle: Handle<DocumentProps>) {
+  return () => {
+    let { title, maxWidth = '760px', children } = handle.props
+    return (
     <html>
       <head>
         <meta charSet="utf-8" />
@@ -29,4 +31,5 @@ export function Document() {
       </body>
     </html>
   )
+  }
 }

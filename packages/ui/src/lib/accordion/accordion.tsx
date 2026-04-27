@@ -231,28 +231,27 @@ function isMultipleProps(props: AccordionProps | null): props is AccordionMultip
   return props?.type === 'multiple'
 }
 
-function AccordionImpl(handle: Handle<AccordionContext>) {
+function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>) {
   let rootNode: HTMLElement | null = null
   let registeredItems: RegisteredItem[] = []
-  let currentProps: AccordionProps | null = null
   let uncontrolledSingleValue: string | null = null
   let uncontrolledMultipleValue: string[] = []
   let hasInitializedSingle = false
   let hasInitializedMultiple = false
 
-  let getType = () => (isMultipleProps(currentProps) ? 'multiple' : 'single')
+  let getType = () => (isMultipleProps(handle.props) ? 'multiple' : 'single')
 
   let getSingleValue = () => {
-    if (!currentProps || isMultipleProps(currentProps)) {
+    if (isMultipleProps(handle.props)) {
       return null
     }
 
-    if (currentProps.value !== undefined) {
-      return currentProps.value
+    if (handle.props.value !== undefined) {
+      return handle.props.value
     }
 
     if (!hasInitializedSingle) {
-      uncontrolledSingleValue = currentProps.defaultValue ?? null
+      uncontrolledSingleValue = handle.props.defaultValue ?? null
       hasInitializedSingle = true
     }
 
@@ -260,16 +259,16 @@ function AccordionImpl(handle: Handle<AccordionContext>) {
   }
 
   let getMultipleValue = () => {
-    if (!isMultipleProps(currentProps)) {
+    if (!isMultipleProps(handle.props)) {
       return []
     }
 
-    if (currentProps.value !== undefined) {
-      return currentProps.value
+    if (handle.props.value !== undefined) {
+      return handle.props.value
     }
 
     if (!hasInitializedMultiple) {
-      uncontrolledMultipleValue = [...(currentProps.defaultValue ?? [])]
+      uncontrolledMultipleValue = [...(handle.props.defaultValue ?? [])]
       hasInitializedMultiple = true
     }
 
@@ -294,39 +293,39 @@ function AccordionImpl(handle: Handle<AccordionContext>) {
   }
 
   let toggleItem = (itemValue: string) => {
-    if (!currentProps || currentProps.disabled) {
+    if (handle.props.disabled) {
       return
     }
 
-    if (isMultipleProps(currentProps)) {
+    if (isMultipleProps(handle.props)) {
       let currentValue = getMultipleValue()
       let nextValue = currentValue.includes(itemValue)
         ? currentValue.filter((value) => value !== itemValue)
         : [...currentValue, itemValue]
 
-      if (currentProps.value === undefined) {
+      if (handle.props.value === undefined) {
         uncontrolledMultipleValue = nextValue
         void handle.update()
       }
 
-      currentProps.onValueChange?.(nextValue)
+      handle.props.onValueChange?.(nextValue)
       dispatchChange(itemValue, nextValue)
       return
     }
 
     let isCurrentItemOpen = getSingleValue() === itemValue
-    if (isCurrentItemOpen && !(currentProps.collapsible ?? true)) {
+    if (isCurrentItemOpen && !(handle.props.collapsible ?? true)) {
       return
     }
 
     let nextValue = isCurrentItemOpen ? null : itemValue
 
-    if (currentProps.value === undefined) {
+    if (handle.props.value === undefined) {
       uncontrolledSingleValue = nextValue
       void handle.update()
     }
 
-    currentProps.onValueChange?.(nextValue)
+    handle.props.onValueChange?.(nextValue)
     dispatchChange(itemValue, nextValue)
   }
 
@@ -367,8 +366,8 @@ function AccordionImpl(handle: Handle<AccordionContext>) {
 
   let getPanelId = (value: string) => `${handle.id}-${value}-panel`
 
-  return (props: AccordionProps) => {
-    let collapsible = 'collapsible' in props ? props.collapsible : undefined
+  return () => {
+    let collapsible = 'collapsible' in handle.props ? handle.props.collapsible : undefined
     let {
       children,
       defaultValue,
@@ -379,11 +378,10 @@ function AccordionImpl(handle: Handle<AccordionContext>) {
       type,
       value,
       ...divProps
-    } = props
+    } = handle.props
     void defaultValue
     void onValueChange
     void value
-    currentProps = props
     registeredItems = []
 
     handle.context.set({
@@ -428,13 +426,13 @@ export function onAccordionChange(handler: AccordionChangeHandler, captureBoolea
 
 export const Accordion = AccordionImpl
 
-export function AccordionItem(handle: Handle<AccordionItemContext>) {
+export function AccordionItem(handle: Handle<AccordionItemProps, AccordionItemContext>) {
   let triggerNode: HTMLButtonElement | null = null
   let triggerId = `${handle.id}-trigger`
   let panelId = `${handle.id}-panel`
 
-  return (props: AccordionItemProps) => {
-    let { children, disabled: itemDisabled, mix, value, ...divProps } = props
+  return () => {
+    let { children, disabled: itemDisabled, mix, value, ...divProps } = handle.props
     let accordion = handle.context.get(Accordion)
     let disabled = accordion.disabled || itemDisabled === true
     let open = accordion.isOpen(value)
@@ -472,14 +470,14 @@ export function AccordionItem(handle: Handle<AccordionItemContext>) {
   }
 }
 
-export function AccordionTrigger(handle: Handle) {
-  return (props: AccordionTriggerProps) => {
+export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
+  return () => {
     let accordion = handle.context.get(Accordion)
     let item = handle.context.get(AccordionItem)
     let headingTag = `h${item.headingLevel}` as keyof JSX.IntrinsicElements
-    let disabled = item.disabled || props.disabled === true
+    let { children, indicator, mix, type, ...buttonProps } = handle.props
+    let disabled = item.disabled || handle.props.disabled === true
 
-    let { children, indicator, mix, type, ...buttonProps } = props
 
     let button = (
       <button
@@ -544,10 +542,10 @@ export function AccordionTrigger(handle: Handle) {
   }
 }
 
-export function AccordionContent(handle: Handle) {
-  return (props: AccordionContentProps) => {
+export function AccordionContent(handle: Handle<AccordionContentProps>) {
+  return () => {
     let item = handle.context.get(AccordionItem)
-    let { children, mix, ...panelProps } = props
+    let { children, mix, ...panelProps } = handle.props
 
     return (
       <div

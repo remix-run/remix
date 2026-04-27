@@ -85,8 +85,8 @@ describe('hydration', () => {
     })
 
     it('hydrates nested hydration boundaries', async () => {
-      let Outer = clientEntry('/outer.js#Outer', function Outer() {
-        return (props: { children: any }) => <div className="outer">{props.children}</div>
+      let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle<{ children?: any }>) {
+        return () => <div className="outer">{handle.props.children}</div>
       })
 
       let Inner = clientEntry('/inner.js#Inner', function Inner() {
@@ -123,8 +123,8 @@ describe('hydration', () => {
     })
 
     it('hydrates component with state preservation', async () => {
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
         return () => (
           <button
             mix={[
@@ -139,7 +139,7 @@ describe('hydration', () => {
         )
       }
 
-      let html = await renderToString(<Counter setup={5} />)
+      let html = await renderToString(<Counter initialCount={5} />)
       container.innerHTML = html
 
       let existingButton = container.querySelector('button')
@@ -147,7 +147,7 @@ describe('hydration', () => {
       expect(existingButton.textContent).toBe('Count: 5')
 
       let root = createRoot(container)
-      root.render(<Counter setup={5} />)
+      root.render(<Counter initialCount={5} />)
       root.flush()
 
       // Button should be adopted
@@ -163,9 +163,9 @@ describe('hydration', () => {
 
   describe('additional scenarios', () => {
     it('hydrates context across component boundaries', async () => {
-      function Provider(handle: Handle<{ value: string }>) {
+      function Provider(handle: Handle<{ children?: any }, { value: string }>) {
         handle.context.set({ value: 'from context' })
-        return (props: { children: any }) => <div className="provider">{props.children}</div>
+        return () => <div className="provider">{handle.props.children}</div>
       }
 
       function Consumer(handle: Handle) {

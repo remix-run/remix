@@ -130,7 +130,7 @@ export const homeAction = {
           </div>
         </div>
 
-        <MessageStream setup={{ limit }} />
+        <MessageStream limit={limit} />
       </Layout>,
     )
   },

@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { describe, it } from '../lib/framework.ts'
+import type { Handle } from '../../../component/src/lib/component.ts'
 
 const html = async (n: RemixNode) =>
   new Response(await renderToString(n), {
@@ -10,13 +11,13 @@ const html = async (n: RemixNode) =>
 
 describe('e2e tests', () => {
   it('runs playwright against a fetch handler', async (t) => {
-    function Doc() {
-      return ({ children }: { children: RemixNode }) => (
+    function Doc(handle: Handle<{ children?: RemixNode }>) {
+      return () => (
         <html>
           <head>
             <title>Test</title>
           </head>
-          <body>{children}</body>
+          <body>{handle.props.children}</body>
         </html>
       )
     }

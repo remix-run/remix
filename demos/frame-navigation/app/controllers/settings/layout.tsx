@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { frames, routes } from '../../routes.ts'
@@ -50,8 +50,10 @@ const settingsItems = [
   },
 ]
 
-export function SettingsLayout() {
-  return ({ activeItem, children }: SettingsLayoutProps) => (
+export function SettingsLayout(handle: Handle<SettingsLayoutProps>) {
+  return () => {
+    let { activeItem, children } = handle.props
+    return (
     <section mix={contentShellStyle}>
       <aside mix={secondarySidebarStyle}>
         <p mix={secondarySidebarTitleStyle}>Settings</p>
@@ -66,6 +68,7 @@ export function SettingsLayout() {
       <section mix={secondaryContentStyle}>{children}</section>
     </section>
   )
+  }
 }
 
 const contentShellStyle = css({

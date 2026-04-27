@@ -54,21 +54,21 @@ function Counter(handle: Handle) {
 // ============================================================================
 // Components - Greeting
 // ============================================================================
-function Greeting() {
-  return (props: { name: string }) => <h1>Hello, {props.name}!</h1>
+function Greeting(handle: Handle<{ name: string }>) {
+  return () => <h1>Hello, {handle.props.name}!</h1>
 }
 
 // ============================================================================
 // Stateful Components - CounterWithSetup
 // ============================================================================
-function CounterWithSetup(handle: Handle, setup: number) {
-  // Setup phase: runs once
-  let count = setup
+function CounterWithSetup(handle: Handle<{ initialCount: number; label?: string }>) {
+  // Component function: runs once
+  let count = handle.props.initialCount
 
   // Return render function: runs on every update
-  return (props: { label?: string }) => (
+  return () => (
     <div>
-      {props.label || 'Count'}: {count}
+      {handle.props.label || 'Count'}: {count}
       <button
         mix={[
           on('click', () => {
@@ -86,13 +86,12 @@ function CounterWithSetup(handle: Handle, setup: number) {
 // ============================================================================
 // Setup Prop vs Props - CounterWithLabel
 // ============================================================================
-function CounterWithLabel(handle: Handle, setup: number) {
-  let count = setup // use setup for initialization
+function CounterWithLabel(handle: Handle<{ initialCount: number; label?: string }>) {
+  let count = handle.props.initialCount
 
-  return (props: { label?: string }) => (
-    // props only contains render-time values
+  return () => (
     <div>
-      {props.label}: {count}
+      {handle.props.label}: {count}
       <button
         mix={[
           on('click', () => {
@@ -495,7 +494,7 @@ function LabeledInput(handle: Handle) {
 // ============================================================================
 // Context API - Theme Provider and Consumer
 // ============================================================================
-function ThemeProvider(handle: Handle<{ theme: string }>) {
+function ThemeProvider(handle: Handle<{}, { theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
@@ -539,7 +538,7 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function ThemeProviderAdvanced(handle: Handle<Theme>) {
+function ThemeProviderAdvanced(handle: Handle<{}, Theme>) {
   let theme = new Theme()
   handle.context.set(theme)
 
@@ -605,11 +604,11 @@ function ListWithFragment() {
 // ============================================================================
 // Example Container Component
 // ============================================================================
-function Example() {
-  return (props: { title: string; children: RemixNode }) => (
+function Example(handle: Handle<{ title: string; children: RemixNode }>) {
+  return () => (
     <div className="example">
-      <h2>{props.title}</h2>
-      <div className="example-content">{props.children}</div>
+      <h2>{handle.props.title}</h2>
+      <div className="example-content">{handle.props.children}</div>
     </div>
   )
 }
@@ -633,11 +632,11 @@ function DemoApp() {
       </Example>
 
       <Example title="Counter with Setup">
-        <CounterWithSetup setup={10} label="Total" />
+        <CounterWithSetup initialCount={10} label="Total" />
       </Example>
 
       <Example title="Setup vs Props">
-        <CounterWithLabel setup={5} label="Score" />
+        <CounterWithLabel initialCount={5} label="Score" />
       </Example>
 
       <Example title="Events - Search Input">

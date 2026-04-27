@@ -1,7 +1,7 @@
 // @jsxRuntime classic
 // @jsx createElement
 import { attrs, createElement, createMixin, css } from '@remix-run/component'
-import type { CSSMixinDescriptor, ElementProps, Props, RemixNode } from '@remix-run/component'
+import type { CSSMixinDescriptor, ElementProps, Handle, Props, RemixNode } from '@remix-run/component'
 
 import { theme } from '../theme/theme.ts'
 
@@ -117,9 +117,9 @@ export type ButtonProps = Omit<Props<'button'>, 'children'> & {
   readonly tone?: ButtonTone
 }
 
-export function Button() {
-  return (props: ButtonProps) => {
-    let { children, endIcon, mix, startIcon, tone = 'secondary', ...buttonProps } = props
+export function Button(handle: Handle<ButtonProps>) {
+  return () => {
+    let { children, endIcon, mix, startIcon, tone = 'secondary', ...buttonProps } = handle.props
 
     return (
       <button {...buttonProps} mix={[baseStyle, toneStyleByTone[tone], mix]}>

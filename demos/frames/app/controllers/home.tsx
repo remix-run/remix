@@ -82,7 +82,7 @@ function HomePage() {
         >
           <h2 style={{ marginTop: 0, fontSize: 16 }}>Main</h2>
           <p style={{ color: '#b9c6ff', marginTop: 0 }}>The counter below is a client entry.</p>
-          <Counter setup={0} label="Clicks" />
+          <Counter initialCount={0} label="Clicks" />
           <ClientFrameExample />
 
           <div style={{ height: 16 }} />

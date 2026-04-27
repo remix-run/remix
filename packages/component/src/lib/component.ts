@@ -9,7 +9,7 @@ export type Task = (signal: AbortSignal) => void
 /**
  * Runtime handle passed to component setup functions.
  */
-export interface Handle<C = Record<string, never>> {
+export interface Handle<Props = Record<string, never>, ContextValue = NoContext> {
   /**
    * Stable identifier per component instance. Useful for HTML APIs like
    * htmlFor, aria-owns, etc. so consumers don't have to supply an id.
@@ -17,10 +17,16 @@ export interface Handle<C = Record<string, never>> {
   id: string
 
   /**
+   * Stable props object for the component instance. The object identity does not
+   * change across updates, but its values are updated before each render.
+   */
+  props: Props
+
+  /**
    * Set and get values in an element tree for indirect ancestor/descendant
    * communication.
    */
-  context: Context<C>
+  context: Context<ContextValue>
 
   /**
    * Schedules an update for the component to render again. Returns a promise
@@ -96,18 +102,17 @@ export type NoContext = Record<string, never>
 /**
  * Component factory shape used by the Remix component runtime.
  */
-export type Component<Context = NoContext, Setup = undefined, Props = ElementProps> = (
-  handle: Handle<Context>,
-  setup: Setup,
-) => (props: Props) => RemixNode
+export type Component<Props = ElementProps, ContextValue = NoContext> = (
+  handle: Handle<Props, ContextValue>,
+) => RenderFn
 
 /**
  * Infers the context provided by a component or handle-compatible function.
  */
 export type ContextFrom<ComponentType> =
-  ComponentType extends Component<infer Provided, any, any>
+  ComponentType extends Component<any, infer Provided>
     ? Provided
-    : ComponentType extends (handle: Handle<infer Provided>, ...args: any[]) => any
+    : ComponentType extends (handle: Handle<any, infer Provided>, ...args: any[]) => any
       ? Provided
       : never
 
@@ -162,17 +167,16 @@ export interface FrameProps {
 }
 
 /**
- * Component factory function that receives setup input and returns a render function.
+ * Component factory function that receives a handle and returns a render function.
  */
-export type ComponentFn<Context = NoContext, Setup = undefined, Props = Record<string, never>> = (
-  handle: Handle<Context>,
-  setup: Setup,
-) => RenderFn<Props>
+export type ComponentFn<Props = Record<string, never>, ContextValue = NoContext> = (
+  handle: Handle<Props, ContextValue>,
+) => RenderFn
 
 /**
  * Render function returned by a component factory.
  */
-export type RenderFn<P = {}> = (props: P) => RemixNode
+export type RenderFn<Props = ElementProps> = (props: Props) => RemixNode
 
 export type { RemixNode } from './jsx.ts'
 
@@ -233,10 +237,11 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     return connectedCtrl.signal
   }
 
-  let getContent: null | ((props: ElementProps) => RemixNode) = null
+  let getContent: null | RenderFn = null
   let scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
+  let props = {} as ElementProps
 
   let context: Context<C> = {
     set: (value: C) => {
@@ -245,8 +250,9 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     get: (type: Component) => config.getContext(type),
   }
 
-  let handle: Handle<C> = {
+  let handle: Handle<ElementProps, C> = {
     id: config.id,
+    props,
     update: () =>
       new Promise((resolve) => {
         taskQueue.push((signal) => resolve(signal))
@@ -292,23 +298,24 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
       renderCtrl = null
     }
 
-    if (!getContent) {
-      // Extract setup prop (passed to component setup function, not render)
-      let { setup } = props as { setup?: unknown }
-      let result = config.type(handle, setup)
+    syncProps(handle.props, props)
+
+    let renderContent = getContent
+    if (!renderContent) {
+      let result = config.type(handle)
       if (typeof result !== 'function') {
         let name = config.type.name || 'Anonymous'
         throw new Error(`${name} must return a render function, received ${typeof result}`)
       } else {
-        getContent = (props) => {
-          // Strip setup from props since it's only for setup
-          let { setup: _, ...rest } = props as { setup?: unknown }
-          return result(rest)
-        }
+        getContent = result
+        renderContent = result
       }
     }
+    if (!renderContent) {
+      throw new Error('component render function was not initialized')
+    }
 
-    let node = getContent(props)
+    let node = renderContent(handle.props)
     return [node, dequeueTasks()]
   }
 
@@ -329,24 +336,38 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue }
 }
 
+function syncProps(target: ElementProps, next: ElementProps): void {
+  for (let key in target) {
+    if (!(key in next)) {
+      delete target[key]
+    }
+  }
+
+  for (let key in next) {
+    target[key] = next[key]
+  }
+}
+
 /**
  * Built-in component used to render nested frame content.
  *
  * @param handle Component handle for the frame instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Frame(handle: Handle<FrameHandle>) {
+export function Frame(handle: Handle<FrameProps, FrameHandle>) {
   void handle
-  return (_: FrameProps) => null // reconciler renders
+  return () => null // reconciler renders
 }
 
 /**
  * Built-in component used to group children without adding a host element.
  *
+ * @param handle Component handle for the fragment instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Fragment() {
-  return (_: FragmentProps) => null // reconciler renders
+export function Fragment(handle: Handle<FragmentProps>) {
+  void handle
+  return () => null // reconciler renders
 }
 
 /**

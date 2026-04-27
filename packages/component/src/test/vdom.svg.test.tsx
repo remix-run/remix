@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { on } from '../index.ts'
-import type { RemixNode } from '../lib/component.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
   describe('svg', () => {
@@ -235,10 +235,8 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function SvgGroup() {
-        return ({ href, children }: { href: string; children?: RemixNode }) => (
-          <g href={href}>{children}</g>
-        )
+      function SvgGroup(handle: Handle<{ href: string; children?: RemixNode }>) {
+        return () => <g href={handle.props.href}>{handle.props.children}</g>
       }
 
       root.render(

@@ -189,7 +189,7 @@ describe('createTheme', () => {
 
   it('renders a style tag component', async () => {
     let Theme = createTheme(sampleTheme)
-    let html = await renderToString(Theme()())
+    let html = await renderToString(createElement(Theme, {}))
 
     expect(html).toContain('<style')
     expect(html).toContain('data-rmx-theme')

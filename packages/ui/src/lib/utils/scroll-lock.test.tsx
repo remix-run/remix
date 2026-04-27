@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot } from '@remix-run/component'
+import { createRoot, type Handle } from '@remix-run/component'
 
 import { lockScroll, lockScrollOnToggle } from './scroll-lock.ts'
 
@@ -19,9 +19,8 @@ function dispatchBeforeToggle(target: HTMLElement, newState: 'closed' | 'open') 
   target.dispatchEvent(event)
 }
 
-function ScrollLockSurface() {
-  return ({ mounted = true }: { mounted?: boolean }) =>
-    mounted ? <div id="surface" mix={lockScrollOnToggle()} /> : null
+function ScrollLockSurface(handle: Handle<{ mounted?: boolean }>) {
+  return () => (handle.props.mounted ?? true ? <div id="surface" mix={lockScrollOnToggle()} /> : null)
 }
 
 function renderSurface(props: { mounted?: boolean } = {}) {

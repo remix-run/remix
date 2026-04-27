@@ -1,4 +1,5 @@
 import { Frame, css } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'
 
 import {
@@ -17,8 +18,10 @@ type ExampleContentProps = {
   title?: string
 }
 
-export function ExampleDocument() {
-  return ({ example, pad = false }: { example: ExampleEntry; pad?: boolean }) => (
+export function ExampleDocument(handle: Handle<{ example: ExampleEntry; pad?: boolean }>) {
+  return () => {
+    let { example, pad = false } = handle.props
+    return (
     <html>
       <head>
         <meta charSet="utf-8" />
@@ -45,17 +48,13 @@ export function ExampleDocument() {
       </body>
     </html>
   )
+  }
 }
 
-export function ExampleContent() {
-  return ({
-    ExampleComponent,
-    code,
-    description,
-    example,
-    standalone = false,
-    title,
-  }: ExampleContentProps) => (
+export function ExampleContent(handle: Handle<ExampleContentProps>) {
+  return () => {
+    let { ExampleComponent, code, description, example, standalone = false, title } = handle.props
+    return (
     <ExamplePreview
       code={code}
       description={description ?? example.description}
@@ -65,6 +64,7 @@ export function ExampleContent() {
       <ExampleComponent />
     </ExamplePreview>
   )
+  }
 }
 
 let shellCss = css({

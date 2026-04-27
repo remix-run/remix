@@ -21,44 +21,47 @@ function click(target: HTMLElement, detail = 1) {
   )
 }
 
-function OutsideCounter(handle: Handle) {
+function OutsideCounter(handle: Handle<{ active?: boolean }>) {
   let outsideCount = 0
   let outsideClickCount = 0
 
-  return ({ active = true }: { active?: boolean }) => (
-    <div>
-      <div
-        id="host"
-        mix={
-          active
-            ? onOutsidePointerDown(() => {
-                outsideCount++
-                void handle.update()
-              })
-            : undefined
-        }
-      >
-        <button id="inside" type="button">
-          Inside
+  return () => {
+    let { active = true } = handle.props
+    return (
+      <div>
+        <div
+          id="host"
+          mix={
+            active
+              ? onOutsidePointerDown(() => {
+                  outsideCount++
+                  void handle.update()
+                })
+              : undefined
+          }
+        >
+          <button id="inside" type="button">
+            Inside
+          </button>
+        </div>
+        <button id="outside" type="button">
+          Outside
         </button>
+        <button
+          id="outside-click"
+          type="button"
+          mix={on('click', () => {
+            outsideClickCount++
+            void handle.update()
+          })}
+        >
+          Outside Click
+        </button>
+        <output id="count">{outsideCount}</output>
+        <output id="click-count">{outsideClickCount}</output>
       </div>
-      <button id="outside" type="button">
-        Outside
-      </button>
-      <button
-        id="outside-click"
-        type="button"
-        mix={on('click', () => {
-          outsideClickCount++
-          void handle.update()
-        })}
-      >
-        Outside Click
-      </button>
-      <output id="count">{outsideCount}</output>
-      <output id="click-count">{outsideClickCount}</output>
-    </div>
-  )
+    )
+  }
 }
 
 function createApp(props: { active?: boolean } = {}) {
