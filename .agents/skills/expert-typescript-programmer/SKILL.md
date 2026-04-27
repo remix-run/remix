@@ -37,6 +37,7 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Prefer internal factories or closures for configuration that should not leak into helper signatures. Public-facing helpers should not require callers to thread implementation booleans or mode flags through repeated calls.
 - If a helper name implies a stronger semantic contract than the implementation provides, either narrow the name or keep it private until a package actually needs it. For example, terminal display width is different from code point length.
 - Share constants from a single owning module when separate modules must agree on protocol values, escape sequences, sentinels, or discriminants. Avoid duplicating magic strings that can drift.
+- Keep module dependency graphs one-way. When splitting modules, choose clear ownership so lower-level modules do not import from higher-level consumers, even for type-only imports.
 - After public API changes, check the package barrel, README examples, tests, and change files together so documentation and exports match the actual supported surface.
 
 ## API Documentation
