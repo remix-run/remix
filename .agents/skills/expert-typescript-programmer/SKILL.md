@@ -16,7 +16,8 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 2. Model the runtime contract first: inputs, outputs, failure modes, ownership boundaries, and public API shape.
 3. Use TypeScript to make invalid states hard to represent, but keep the implementation readable JavaScript.
 4. Validate unknown external data at the boundary; do not pretend unvalidated data already matches an internal type.
-5. Run the narrowest meaningful validation command before finishing: package typecheck/test for package changes, `pnpm run typecheck:changed` and `pnpm run test:changed` for broader changes, and `pnpm run lint` when practical.
+5. When adding or changing tests, use the `write-tests` skill for runner, fixture, assertion, dependency, and validation conventions.
+6. Run the narrowest meaningful validation command before finishing: package typecheck/test for package changes, `pnpm run typecheck:changed` and `pnpm run test:changed` for broader changes, and `pnpm run lint` when practical.
 
 ## Repo Rules
 
@@ -39,6 +40,7 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Share constants from a single owning module when separate modules must agree on protocol values, escape sequences, sentinels, or discriminants. Avoid duplicating magic strings that can drift.
 - Keep module dependency graphs one-way. When splitting modules, choose clear ownership so lower-level modules do not import from higher-level consumers, even for type-only imports.
 - After public API changes, check the package barrel, README examples, tests, and change files together so documentation and exports match the actual supported surface.
+- When test code changes, apply the `write-tests` skill rather than encoding detailed test-runner policy here.
 
 ## API Documentation
 
