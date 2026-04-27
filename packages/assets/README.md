@@ -1,13 +1,13 @@
 # assets
 
-Fetch-based server for compiling browser JS/TS assets on demand.
+Fetch-based server for compiling browser JS/TS and CSS assets on demand.
 
 ## Features
 
-- **On-Demand Compilation** - Compile browser assets on demand
+- **On-Demand Compilation** - Compile browser scripts and styles on demand
 - **Custom File Mapping** - Define patterns for mapping public URLs to file paths on disk
 - **Access Control** - Control exactly which files can be served with allow and deny rules
-- **Preloads** - Generate modulepreload URLs for `<link>` tags or `Link` headers
+- **Preloads** - Generate preload URLs for scripts and styles based on imports
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
@@ -20,7 +20,7 @@ npm i remix
 
 ## Usage
 
-Use `createAssetServer` to serve browser modules from a URL namespace in your app.
+Use `createAssetServer` to serve browser JS/TS and CSS assets from a URL namespace in your app.
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
@@ -41,7 +41,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser JS modules from `app/assets` and `node_modules`.
+This example gives you an `/assets/*` endpoint that serves compiled browser assets from `app/assets` and `node_modules`.
 
 ## Root Directory
 
@@ -151,7 +151,7 @@ let src = await assetServer.getHref('app/assets/entry.tsx')
 
 ## Preloads
 
-Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">` tags or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
+Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">`, stylesheet preload tags, or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
 
 ```ts
 let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/assets/search.tsx'])
@@ -166,9 +166,9 @@ let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/asset
 
 ## Fingerprinting
 
-By default, scripts are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the asset server instance.
+By default, assets are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the asset server instance.
 
-If you want clients to cache scripts aggressively without revalidation, you can opt into source-based fingerprinting.
+If you want clients to cache assets aggressively without revalidation, you can opt into source-based fingerprinting.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -183,15 +183,60 @@ let assetServer = createAssetServer({
 })
 ```
 
-When fingerprinting is enabled, scripts use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
+When fingerprinting is enabled, assets use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
 
-Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted modules are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so fingerprinting requires `watch: false`.
+Source fingerprints are based on the original file contents and the build ID. The build ID must change for each deployment so that fingerprinted assets are invalidated together. This fingerprinting strategy assumes that files on disk won't change, so fingerprinting requires `watch: false`.
 
-## Script Options
+## Target
+
+Use `target` to lower emitted syntax to a specific browser support policy and/or ECMAScript version.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  target: {
+    chrome: '109',
+    ios: '15.6',
+    es: '2020',
+  },
+})
+```
+
+Supported target options are `chrome`, `firefox`, `safari`, `edge`, `opera`, `ios`, `samsung`, and `es` (ECMAScript version).
+
+### Source Maps
+
+Enable sourcemaps with either `'external'` or `'inline'` using `sourceMaps`:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  sourceMaps: 'external',
+})
+```
+
+By default, sourcemap `sources` use URLs so they're presented alongside the compiled output in your browser's developer tools. You can also use file system paths instead with `sourceMapSourcePaths`:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  fileMap: { '/assets/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  sourceMaps: 'inline',
+  sourceMapSourcePaths: 'absolute',
+})
+```
 
 ### Minification
 
-Enable minification with `scripts.minify`:
+Enable minification with `minify`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -199,29 +244,11 @@ import { createAssetServer } from 'remix/assets'
 let assetServer = createAssetServer({
   fileMap: { '/assets/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
-  scripts: {
-    minify: true,
-  },
+  minify: true,
 })
 ```
 
-### Target
-
-Use `scripts.target` to lower emitted syntax to a specific ECMAScript version.
-
-```ts
-import { createAssetServer } from 'remix/assets'
-
-let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
-  scripts: {
-    target: 'es2019',
-  },
-})
-```
-
-The default target is `esnext`, which means all syntax is preserved.
+## Script Options
 
 ### Define
 
@@ -237,43 +264,11 @@ let assetServer = createAssetServer({
     define: {
       'process.env.NODE_ENV': '"production"',
     },
-    minify: true,
   },
 })
 ```
 
 Values are injected exactly as defined, so string literals must include their own quotes, e.g. `process.env.NODE_ENV` must be `"production"` rather than `production`.
-
-### Source Maps
-
-Enable sourcemaps with either `'external'` or `'inline'` using `scripts.sourceMaps`:
-
-```ts
-import { createAssetServer } from 'remix/assets'
-
-let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
-  scripts: {
-    sourceMaps: 'external',
-  },
-})
-```
-
-By default, sourcemap `sources` use URLs so they're presented alongside the compiled output in your browser's developer tools. You can also use file system paths instead with `scripts.sourceMapSourcePaths`:
-
-```ts
-import { createAssetServer } from 'remix/assets'
-
-let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
-  scripts: {
-    sourceMaps: 'inline',
-    sourceMapSourcePaths: 'absolute',
-  },
-})
-```
 
 ### External Imports
 
@@ -291,6 +286,17 @@ let assetServer = createAssetServer({
 })
 ```
 
+## CSS Imports
+
+Relative CSS `@import` rules are rewritten to asset server URLs. External `@import` URLs are left unchanged automatically. `url()` references are preserved as authored.
+
+```css
+/* Rewritten to asset server URL: */
+@import './reset.css';
+/* External URL: */
+@import 'https://fonts.googleapis.com/css2?family=Inter';
+```
+
 ## Error Handling
 
 Use `onError` to report unexpected compilation failures and/or return a custom response.
@@ -302,8 +308,8 @@ let assetServer = createAssetServer({
   fileMap: { '/assets/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   onError(error) {
-    console.error('Failed to build client module', error)
-    return new Response('Client module build failed', { status: 500 })
+    console.error('Failed to build client assets', error)
+    return new Response('Client asset build failed', { status: 500 })
   },
 })
 ```

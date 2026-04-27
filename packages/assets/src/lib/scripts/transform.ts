@@ -15,11 +15,15 @@ import {
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import { generateFingerprint } from '../fingerprint.ts'
+import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
-import type { ScriptsTarget } from '../asset-server.ts'
-import type { ModuleRecord } from './store.ts'
 import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
+import type { EmittedModule } from './emit.ts'
+import type { ResolvedScriptTarget } from '../target.ts'
+import type { ResolvedModule } from './resolve.ts'
+
+type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
 type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
 
@@ -72,19 +76,18 @@ export type TransformedModule = {
   unresolvedImports: UnresolvedImport[]
 }
 
-export type TransformFailureState = {
-  trackedFiles: readonly string[]
-}
-
-type TransformResult =
+type TransformResult = {
+  tracking: ModuleTracking
+} & (
   | {
       ok: true
       value: TransformedModule
     }
-  | ({
+  | {
       ok: false
       error: AssetServerCompilationError
-    } & TransformFailureState)
+    }
+)
 
 type TsconfigTransformOptions = {
   trackedFiles: string[]
@@ -103,7 +106,7 @@ export type TransformArgs = {
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps: 'external' | 'inline' | null
-  target: ScriptsTarget | null
+  target: ResolvedScriptTarget | null
   tsconfigTransformOptionsResolver: TsconfigTransformOptionsResolver
 }
 
@@ -144,17 +147,19 @@ export function createTsconfigTransformOptionsResolver() {
 }
 
 export async function transformModule(
-  record: ModuleRecord,
+  record: ScriptRecord,
   args: TransformArgs,
 ): Promise<TransformResult> {
   let resolvedPath = args.resolveActualPath(record.identityPath)
   if (!resolvedPath) {
     return {
       ok: false,
-      error: createAssetServerCompilationError(`Module not found: ${record.identityPath}`, {
-        code: 'MODULE_NOT_FOUND',
+      error: createAssetServerCompilationError(`File not found: ${record.identityPath}`, {
+        code: 'FILE_NOT_FOUND',
       }),
-      trackedFiles: args.isWatchIgnored(record.identityPath) ? [] : [record.identityPath],
+      tracking: {
+        trackedFiles: args.isWatchIgnored(record.identityPath) ? [] : [record.identityPath],
+      },
     }
   }
 
@@ -173,17 +178,21 @@ export async function transformModule(
     if (isNoEntityError(error)) {
       return {
         ok: false,
-        error: createAssetServerCompilationError(`Module not found: ${resolvedPath}`, {
+        error: createAssetServerCompilationError(`File not found: ${resolvedPath}`, {
           cause: error,
-          code: 'MODULE_NOT_FOUND',
+          code: 'FILE_NOT_FOUND',
         }),
-        trackedFiles,
+        tracking: {
+          trackedFiles,
+        },
       }
     }
     return {
       ok: false,
       error: toTransformFailedError(error, resolvedPath),
-      trackedFiles,
+      tracking: {
+        trackedFiles,
+      },
     }
   }
 
@@ -205,7 +214,7 @@ export async function transformModule(
           `This module uses CommonJS (require/module.exports) which is not supported. ` +
           `Please use an ESM-compatible module.`,
         {
-          code: 'MODULE_COMMONJS_NOT_SUPPORTED',
+          code: 'COMMONJS_NOT_SUPPORTED',
         },
       )
     }
@@ -213,9 +222,9 @@ export async function transformModule(
     let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
     if (!stableUrlPathname) {
       throw createAssetServerCompilationError(
-        `Module ${record.identityPath} is outside all configured fileMap entries.`,
+        `File ${record.identityPath} is outside all configured fileMap entries.`,
         {
-          code: 'MODULE_OUTSIDE_FILE_MAP',
+          code: 'FILE_OUTSIDE_FILE_MAP',
         },
       )
     }
@@ -226,11 +235,15 @@ export async function transformModule(
           resolvedPath,
           stableUrlPathname,
           args.sourceMapSourcePaths,
+          sourceText,
         )
       : null
 
     return {
       ok: true,
+      tracking: {
+        trackedFiles,
+      },
       value: {
         fingerprint:
           args.buildId === null
@@ -256,7 +269,9 @@ export async function transformModule(
     return {
       ok: false,
       error: toTransformFailedError(error, resolvedPath),
-      trackedFiles,
+      tracking: {
+        trackedFiles,
+      },
     }
   }
 }
@@ -288,7 +303,7 @@ async function analyzeModuleSource(
     define?: Record<string, string>
     minify: boolean
     sourceMaps?: 'external' | 'inline'
-    target?: ScriptsTarget
+    target?: ResolvedScriptTarget
   },
 ) {
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
@@ -302,10 +317,10 @@ async function analyzeModuleSource(
   } catch (error) {
     if (isAssetServerCompilationError(error)) throw error
     throw createAssetServerCompilationError(
-      `Failed to transform module ${resolvedPath}. ${formatUnknownError(error)}`,
+      `Failed to transform script ${resolvedPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
-        code: 'MODULE_TRANSFORM_FAILED',
+        code: 'TRANSFORM_FAILED',
       },
     )
   }
@@ -335,7 +350,7 @@ async function analyzeModuleSource(
 async function minifyModule(
   rawCode: string,
   resolvedPath: string,
-  target: string | undefined,
+  target: ResolvedScriptTarget | undefined,
   sourceMaps?: 'external' | 'inline',
 ) {
   try {
@@ -350,10 +365,10 @@ async function minifyModule(
   } catch (error) {
     if (isAssetServerCompilationError(error)) throw error
     throw createAssetServerCompilationError(
-      `Failed to minify module ${resolvedPath}. ${formatUnknownError(error)}`,
+      `Failed to minify script ${resolvedPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
-        code: 'MODULE_TRANSFORM_FAILED',
+        code: 'TRANSFORM_FAILED',
       },
     )
   }
@@ -365,7 +380,7 @@ function getTransformOptions(
   options: {
     define?: Record<string, string>
     sourceMaps?: 'external' | 'inline'
-    target?: string
+    target?: ResolvedScriptTarget
   },
 ): OxcTransformOptions {
   let compilerOptions = transformOptions.tsconfigRaw?.compilerOptions as
@@ -436,7 +451,7 @@ function getJsxOptions(
       `Unsupported tsconfig compilerOptions.jsx = "${jsx}" for ${resolvedPath}. ` +
         `Asset server must compile JSX to browser-runnable JavaScript.`,
       {
-        code: 'MODULE_TRANSFORM_FAILED',
+        code: 'TRANSFORM_FAILED',
       },
     )
   }
@@ -500,9 +515,9 @@ function assertNoCompilerErrors(
   if (!errors || errors.length === 0) return
 
   throw createAssetServerCompilationError(
-    `Failed to ${operation} module ${resolvedPath}. ${errors[0].message ?? 'Unknown error'}`,
+    `Failed to ${operation} script ${resolvedPath}. ${errors[0].message ?? 'Unknown error'}`,
     {
-      code: 'MODULE_TRANSFORM_FAILED',
+      code: 'TRANSFORM_FAILED',
     },
   )
 }
@@ -579,10 +594,10 @@ function toTransformFailedError(error: unknown, resolvedPath: string): AssetServ
   if (isAssetServerCompilationError(error)) return error
 
   return createAssetServerCompilationError(
-    `Failed to transform module ${resolvedPath}. ${formatUnknownError(error)}`,
+    `Failed to transform script ${resolvedPath}. ${formatUnknownError(error)}`,
     {
       cause: error,
-      code: 'MODULE_TRANSFORM_FAILED',
+      code: 'TRANSFORM_FAILED',
     },
   )
 }
