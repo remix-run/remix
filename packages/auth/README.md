@@ -5,7 +5,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 ## Features
 
 - Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `refreshExternalAuth()`, and `completeAuth()`
-- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
+- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, X, and Atmosphere
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
@@ -273,7 +273,7 @@ router.get(routes.app.dashboard, {
 
 A typical external auth flow looks like this:
 
-1. Create the provider once at module scope.
+1. Create the provider once at module scope, or for Atmosphere create the shared factory once and call it with the request-time handle or DID.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
 4. Persist any provider tokens you want to reuse later.
@@ -283,11 +283,12 @@ A typical external auth flow looks like this:
 
 ## Built-in External Auth Providers
 
-When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, and X use built-in custom OAuth flows.
+When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, X, and Atmosphere use built-in custom OAuth flows.
 
 ```ts
 import {
   createAuth0AuthProvider,
+  createAtmosphereAuthProvider,
   createFacebookAuthProvider,
   createGitHubAuthProvider,
   createGoogleAuthProvider,
@@ -301,6 +302,12 @@ let auth0Provider = createAuth0AuthProvider({
   clientId: env.AUTH0_CLIENT_ID,
   clientSecret: env.AUTH0_CLIENT_SECRET,
   redirectUri: new URL('/auth/auth0/callback', env.APP_ORIGIN),
+})
+
+let atmosphereProvider = createAtmosphereAuthProvider({
+  clientId: new URL('/oauth/client-metadata.json', env.APP_ORIGIN),
+  redirectUri: new URL('/auth/atmosphere/callback', env.APP_ORIGIN),
+  sessionSecret: env.SESSION_SECRET,
 })
 
 let facebookProvider = createFacebookAuthProvider({
@@ -351,7 +358,10 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- `refreshExternalAuth()` supports built-in OIDC providers and X when the stored token bundle includes a refresh token
+- `createAtmosphereAuthProvider()` returns a factory so apps can share options globally and resolve a handle or DID at request time with `await atmosphereProvider(handleOrDid)`
+- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
+- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, and `dpop` JWK state for follow-up DPoP-signed requests
+- `refreshExternalAuth()` supports built-in OIDC providers, X, and Atmosphere when the stored token bundle includes a refresh token
 - Providers only return refresh tokens when configured to request offline access, such as `authorizationParams: { access_type: 'offline' }` for Google or adding `offline.access` to X scopes
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
